@@ -89,6 +89,8 @@ Implemented per `Shell-SPEC.md`. One tool per ownership layer:
 - direnv activates repository-scoped settings.
 - SOPS/age encrypts optional API and MCP credentials.
 - `just` exposes the canonical local and CI commands.
+- `scripts/check-agent-context.sh` keeps the active handoff coupled to project
+  changes without depending on an agent vendor or CI provider.
 
 Offline build, lint, test, and minimum conformance must not need credentials or
 network access. Network integrations explicitly declare required variables and

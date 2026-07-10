@@ -47,6 +47,7 @@ implemented, `just proof` runs the conformance commands in
 | --- | --- |
 | `just setup` | Converge on the pinned toolchain and dependencies |
 | `just doctor` | Machine-readable environment check → `target/bootstrap-evidence/doctor.jsonl` |
+| `just context-check` | Validate agent handoff structure and freshness |
 | `just build` | `cargo build --workspace` |
 | `just check` | fmt, clippy, `--locked` check, `cargo deny`, gitleaks |
 | `just test` | `cargo test --workspace --all-features --locked` |
@@ -59,6 +60,18 @@ implemented, `just proof` runs the conformance commands in
 | `just integration <name>` | Validate and run a declared API/MCP integration |
 
 CI invokes the same recipes via `devbox run -- just ...` (`.github/workflows/ci.yml`).
+
+## Agent context and handoff
+
+Repository-local agent memory lives under `.agents/`. `CURRENT_STATUS.md` is the
+resumable handoff; `OBSERVED_DEBT.md` holds out-of-scope gaps; `LESSONS.md` holds
+only durable project-specific learning; and `OPEN_QUESTIONS.md` holds decisions
+that research cannot resolve.
+
+`just context-check` validates the required handoff sections and fails when
+project files change without a corresponding status update. The script is plain
+POSIX shell and accepts an optional `CONTEXT_BASE_REF`, so local tools and any CI
+provider can use the same contract.
 
 ## Secrets (SOPS + age)
 
@@ -95,6 +108,24 @@ Builds, formatting, clippy, unit tests, `cargo deny` (licenses/bans/sources),
 and gitleaks run without credentials or network. Only `cargo deny check
 advisories` fetches the RustSec database. Missing secrets block declared
 integrations only — never the foundation gates (§4, §10.3).
+
+## Diagnostics and observability
+
+The CLI emits newline-delimited JSON diagnostics to stderr through Rust's
+`tracing` ecosystem. Set `RUST_LOG` to control filtering; the default is `info`.
+
+```sh
+RUST_LOG=debug cargo run -p sea-forge-cli
+```
+
+Runtime diagnostics use stable event names and include `run_id`, `component`,
+and `error_class`. They are distinct from the governed lifecycle events that the
+minimum kernel will persist in `.sea-forge/runs/<run_id>/trace.jsonl`.
+
+The one-shot minimum CLI intentionally has no aggregate metrics or external
+telemetry exporter. Metrics and cross-process tracing belong at the full spec's
+M3 server/integration boundary; they do not require Docker, but they do require
+an explicit monitoring consumer.
 
 ## Project layout
 

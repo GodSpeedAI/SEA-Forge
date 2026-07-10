@@ -370,6 +370,7 @@ Recipes are verb-first and documented. A failing wrapper ends with
 `just check` MUST run:
 
 ```sh
+scripts/check-agent-context.sh
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo check --workspace --all-targets --locked
@@ -480,6 +481,8 @@ Mandatory rules:
 - [ ] Appendix A tree exists with committed pin and lock files.
 - [ ] The two minimum crates build on stable Rust edition 2021.
 - [ ] Required `just` recipes exist and print corrective failures.
+- [ ] Agent context freshness is enforced locally and in CI by the same
+  vendor-agnostic script.
 - [ ] Offline gates pass without credentials or network.
 - [ ] SOPS/age API/MCP secret lifecycle and redaction tests pass.
 - [ ] CI runs the same check and test recipes.
@@ -508,6 +511,10 @@ sea-rs/
 ├── secrets/
 │   ├── README.md
 │   └── dev.enc.env
+├── scripts/
+│   ├── check-agent-context.sh
+│   ├── doctor.sh
+│   └── tests/check-agent-context.sh
 ├── crates/
 │   ├── sea-forge-core/
 │   │   ├── Cargo.toml

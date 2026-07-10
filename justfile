@@ -43,6 +43,8 @@ build:
 check:
     #!/usr/bin/env bash
     {{set}}
+    echo "[check] agent context"
+    scripts/check-agent-context.sh
     echo "[check] cargo fmt"
     cargo fmt --all -- --check
     echo "[check] cargo clippy"
@@ -54,6 +56,11 @@ check:
     echo "[check] gitleaks"
     gitleaks detect --no-banner --redact
     echo "[check] all gates green"
+
+# Validate agent handoff structure and freshness without vendor-specific tooling.
+[group('quality')]
+context-check:
+    scripts/check-agent-context.sh
 
 # Run the test suite (Shell-SPEC §10.3).
 [group('quality')]

@@ -7,13 +7,35 @@
 #![forbid(unsafe_code)]
 
 use std::process::ExitCode;
+use tracing_subscriber::EnvFilter;
 
 const NOT_IMPLEMENTED: &str = "sea-forge: minimum slice not implemented yet \
                                (see .agents/specs/spec-minimum.md)";
 
 fn main() -> ExitCode {
-    eprintln!("{NOT_IMPLEMENTED}");
+    init_diagnostics();
+    tracing::error!(
+        event = "startup_failed",
+        run_id = "none",
+        component = "sea-forge-cli",
+        error_class = "not_implemented_error",
+        message = NOT_IMPLEMENTED,
+    );
     ExitCode::from(64)
+}
+
+fn init_diagnostics() {
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    tracing_subscriber::fmt()
+        .json()
+        .flatten_event(true)
+        .with_env_filter(filter)
+        .with_writer(std::io::stderr)
+        .with_target(false)
+        .with_current_span(false)
+        .with_span_list(false)
+        .init();
 }
 
 #[cfg(test)]

@@ -7,9 +7,8 @@ not a successful run unless settlement accepts the declared outcome.
 
 ## Commands
 
-The repository is currently specification-first; the Rust workspace may not
-exist yet. Once its root `Cargo.toml` has been created, prefer narrow feedback
-before workspace-wide checks.
+The Rust workspace and Shell-SPEC foundation are implemented; the governed
+minimum kernel is not. Prefer narrow feedback before workspace-wide checks.
 
 ```sh
 # Fast feedback
@@ -19,10 +18,9 @@ cargo test -p sea-forge-core <test_name>
 cargo test -p sea-forge-cli <test_name>
 
 # Required before declaring a minimum-slice change complete
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace
-cargo build --workspace
+devbox run -- just context-check
+devbox run -- just check
+devbox run -- just test
 ```
 
 For end-to-end acceptance, run the proof commands in
@@ -55,6 +53,7 @@ request; do not silently turn them into implementation debt.
 
 - `.agents/specs/spec-minimum.md`: normative minimum vertical slice and build order.
 - `.agents/specs/spec-full.md`: additive full-system milestones and conformance gates.
+- `.agents/specs/Shell-SPEC.md`: implemented foundation, tools, secrets, and CI.
 - `.agents/plans/`: implementation plans; keep them aligned with the specs.
 - `.agents/CURRENT_STATUS.md`: resumable handoff for active work.
 - `.agents/OBSERVED_DEBT.md`: out-of-scope problems discovered while working.
@@ -114,8 +113,8 @@ in full spec §6.2. Kernel crates remain synchronous. Tokio belongs only in
 - Preserve user changes and unrelated worktree edits. Do not reformat unrelated files.
 - Update specs or an ADR when changing a public contract, persisted schema,
   architecture boundary, proof level, or implementation-defined behavior.
-- Review diffs for correctness, security, compatibility, and needless complexity.
-- Do not commit, push, open a pull request, deploy, or publish unless the user asks.
+- Review diffs for correctness, security, compatibility, needless complexity, and coherence to the overall system design.
+- Do many small commits; DO NOT push, open a pull request, deploy, or publish unless the user asks.
 
 ## Local Agent Memory
 
@@ -140,6 +139,8 @@ remove or resolve stale entries. Tell the user when a directory has distinct
 commands, architecture, risks, generated-file rules, or conventions that warrant
 a scoped local `AGENTS.md`; recommend its scope and key rules rather than silently
 creating instruction sprawl.
+Run `just context-check` before handoff; its required status sections and
+change-coupling rules are tool-agnostic and also run in CI.
 
 ## Safety Boundaries
 
@@ -148,6 +149,8 @@ creating instruction sprawl.
 - Give children a minimal explicit environment and enforce timeouts.
 - Keep secrets, credentials, private keys, `.env` contents, and sensitive payloads
   out of code, fixtures, logs, traces, evidence, and agent instructions.
+- Always use portable paths and avoid OS-specific features unless explicitly required. Do not assume
+  a specific shell, filesystem, or OS behavior.
 
 Ask first:
 
