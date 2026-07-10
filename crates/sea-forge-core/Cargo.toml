@@ -7,5 +7,15 @@ license.workspace = true
 repository.workspace = true
 description = "SEA Forge governed capability-execution kernel types and lifecycle."
 
+[dependencies]
+chrono.workspace = true
+getrandom.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+sha2.workspace = true
+unicode-normalization.workspace = true
+wait-timeout.workspace = true
+
 [lints]
 workspace = true

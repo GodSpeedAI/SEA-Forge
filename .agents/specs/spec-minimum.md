@@ -697,6 +697,10 @@ Idempotency rule: re-running the same intent MUST create a new run directory and
 - The implementation MUST pass a minimal environment (§7.3.6) and MUST NOT inherit the parent environment wholesale.
 - The implementation MUST enforce the timeout by killing the child process and recording `timed_out`.
 - The implementation MUST capture stdout and stderr to `artifacts/stdout.txt` / `artifacts/stderr.txt` (streaming to file, not buffered in memory unboundedly).
+- Implementation-defined capture behavior: because stdout/stderr are streamed directly
+  to their final `artifacts/` paths, evidence capture hashes those files in place and
+  MUST NOT copy or rewrite them. Workspace work products such as `model.sea` are
+  copied once into `artifacts/` before hashing.
 
 ### 10.4 Settlement Rules
 
