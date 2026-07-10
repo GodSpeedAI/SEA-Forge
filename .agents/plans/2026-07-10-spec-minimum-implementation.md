@@ -20,11 +20,11 @@
 
 **Produces:** All §7 record types with serde round trips; ID constructors/validators; canonical hash input support; typed input/config/planner/IO/execution errors.
 
-- [ ] Add focused failing tests for ID grammar, enum JSON names, top-level round trips, attribution, extension/projection slots, and path lexical validation.
-- [ ] Add only the approved dependencies required by the spec and implement the minimum types/errors.
-- [ ] Run `cargo test -p sea-forge-core ids types errors`; expect all focused tests to pass.
-- [ ] Run `cargo fmt --all -- --check && cargo check -p sea-forge-core`.
-- [ ] Commit the independently compiling type foundation.
+- [x] Add focused failing tests for ID grammar, enum JSON names, top-level round trips, attribution, extension/projection slots, and path lexical validation.
+- [x] Add only the approved dependencies required by the spec and implement the minimum types/errors.
+- [x] Run `cargo test -p sea-forge-core ids types errors`; expect all focused tests to pass.
+- [x] Run `cargo fmt --all -- --check && cargo check -p sea-forge-core`.
+- [x] Commit the independently compiling type foundation.
 
 ## Task 2: Flush-safe trace and evidence writers
 
@@ -32,10 +32,10 @@
 
 **Consumes:** `TraceEvent`, `EvidenceRecord`, sequenced ID helpers. **Produces:** `JsonlTraceRecorder::append`, `JsonlEvidenceWriter::append_artifact`, SHA-256 and deterministic pre-mint identity helpers.
 
-- [ ] Write failing temp-directory tests proving monotonic IDs, one valid JSON object per flushed line, artifact copies, matching hashes, and stable `model.sea` pre-mint identity.
-- [ ] Implement append-and-flush writers and safe artifact metadata construction.
-- [ ] Run the focused trace/evidence tests, then `cargo check -p sea-forge-core`.
-- [ ] Commit the record writers.
+- [x] Write failing temp-directory tests proving monotonic IDs, one valid JSON object per flushed line, artifact copies, matching hashes, and stable `model.sea` pre-mint identity.
+- [x] Implement append-and-flush writers and safe artifact metadata construction.
+- [x] Run the focused trace/evidence tests, then `cargo check -p sea-forge-core`.
+- [x] Commit the record writers.
 
 ## Task 3: Validated policy and fail-closed authority
 
@@ -43,10 +43,10 @@
 
 **Produces:** `AuthorityPolicyBundle::load`, canonical bundle hash, request construction, identity resolution, and `PolicyAuthorityEngine::evaluate`.
 
-- [ ] Write failing tests for all §8.3 config classes, default deny, allow, escalate, unresolved identity, deterministic decisions, audit shape, generated-zone/secret hard boundaries, unclassified input, and reserved surfaces.
-- [ ] Implement strict YAML validation/defaults, stable canonical hashing, first-match rules, and hard-boundary evaluation.
-- [ ] Run `cargo test -p sea-forge-core authority` and `cargo check -p sea-forge-core`.
-- [ ] Commit the authority fabric.
+- [x] Write failing tests for all §8.3 config classes, default deny, allow, escalate, unresolved identity, deterministic decisions, audit shape, generated-zone/secret hard boundaries, unclassified input, and reserved surfaces.
+- [x] Implement strict YAML validation/defaults, stable canonical hashing, first-match rules, and hard-boundary evaluation.
+- [x] Run `cargo test -p sea-forge-core authority` and `cargo check -p sea-forge-core`.
+- [x] Commit the authority fabric.
 
 ## Task 4: Deterministic domain planner
 
@@ -54,10 +54,10 @@
 
 **Produces:** `domain::interpret` and `DeterministicPlanner::plan`, including the exact fixed model bytes and test-only conformance variants scoped by the spec.
 
-- [ ] Write failing tests for recognized case-insensitive demo intent, unknown/empty/oversized input, exact operations/criteria, and unsafe constructed paths.
-- [ ] Implement the fixed pattern table and plan construction without using intent text in paths, content, or argv.
-- [ ] Run focused planner tests and `cargo check -p sea-forge-core`.
-- [ ] Commit the planner slice.
+- [x] Write failing tests for recognized case-insensitive demo intent, unknown/empty/oversized input, exact operations/criteria, and unsafe constructed paths.
+- [x] Implement the fixed pattern table and plan construction without using intent text in paths, content, or argv.
+- [x] Run focused planner tests and `cargo check -p sea-forge-core`.
+- [x] Commit the planner slice.
 
 ## Task 5: Workspace safety and synchronous execution
 
@@ -65,10 +65,10 @@
 
 **Produces:** `safe_join`, `LocalWorkspaceSandbox`, and `ProcessExecutor::execute` with file-backed stdout/stderr and timeout termination.
 
-- [ ] Write failing tests for relative/absolute/traversal/bad-character/symlink paths, workspace-only writes, minimal child environment, nonzero completion, spawn failure, and timeout with no surviving child.
-- [ ] Implement safe workspace materialization and argv-only synchronous execution with explicit PATH/HOME plus requested env.
-- [ ] Run focused sandbox/runtime tests and `cargo check -p sea-forge-core`.
-- [ ] Commit the execution boundary.
+- [x] Write failing tests for relative/absolute/traversal/bad-character/symlink paths, workspace-only writes, minimal child environment, nonzero completion, spawn failure, and timeout with no surviving child.
+- [x] Implement safe workspace materialization and argv-only synchronous execution with explicit PATH/HOME plus requested env.
+- [x] Run focused sandbox/runtime tests and `cargo check -p sea-forge-core`.
+- [x] Commit the execution boundary.
 
 ## Task 6: Settlement and capability memory
 
@@ -76,10 +76,10 @@
 
 **Produces:** `RuleBasedSettlementEvaluator::settle`, append-only envelope storage, and read-only newest-first recall filtering.
 
-- [ ] Write failing tests for allow/deny/escalate precedence, false success, spawn failure, timeout, stdout checks, append-per-run, malformed-line tolerance, filters, limits, and no-match behavior.
-- [ ] Implement the exact §16.2 basis vocabulary and line-oriented capability scan/append.
-- [ ] Run focused settlement/capability tests and `cargo check -p sea-forge-core`.
-- [ ] Commit settlement and memory.
+- [x] Write failing tests for allow/deny/escalate precedence, false success, spawn failure, timeout, stdout checks, append-per-run, malformed-line tolerance, filters, limits, and no-match behavior.
+- [x] Implement the exact §16.2 basis vocabulary and line-oriented capability scan/append.
+- [x] Run focused settlement/capability tests and `cargo check -p sea-forge-core`.
+- [x] Commit settlement and memory.
 
 ## Task 7: Governed pipeline
 
@@ -87,10 +87,10 @@
 
 **Produces:** `run_intent(RunOptions) -> RunOutcome`, enforcing preflight-before-run-dir and the §9.1 lifecycle order.
 
-- [ ] Write failing integration tests for happy path, all-deny, escalation, false success, nonzero, timeout, repeated-run identity, cross-link resolution, case state, and exact accepted/halted trace order.
-- [ ] Implement decide-all-then-execute orchestration, write-once JSON records, evidence collection, settlement, case close, envelope append, and typed exit classification.
-- [ ] Run core pipeline tests and `cargo test -p sea-forge-core`.
-- [ ] Commit the end-to-end library slice.
+- [x] Write failing integration tests for happy path, all-deny, escalation, false success, nonzero, timeout, repeated-run identity, cross-link resolution, case state, and exact accepted/halted trace order.
+- [x] Implement decide-all-then-execute orchestration, write-once JSON records, evidence collection, settlement, case close, envelope append, and typed exit classification.
+- [x] Run core pipeline tests and `cargo test -p sea-forge-core`.
+- [x] Commit the end-to-end library slice.
 
 ## Task 8: CLI commands and diagnostics
 
@@ -98,21 +98,21 @@
 
 **Produces:** clap command surface and exit codes 0/1/2/3/4; exact validator output; JSONL recall; six-record inspect output; contextual JSON diagnostics.
 
-- [ ] Write failing binary tests for validator valid/invalid cases, run flag defaults/overrides and output, typed preflight failures, recall filters/read-only behavior, inspect, and diagnostics fields.
-- [ ] Implement command dispatch and map core outcomes/errors to the specified stdout/stderr and exit codes.
-- [ ] Run `cargo test -p sea-forge-cli` and `cargo check --workspace --all-features --locked`.
-- [ ] Commit the CLI surface.
+- [x] Write failing binary tests for validator valid/invalid cases, run flag defaults/overrides and output, typed preflight failures, recall filters/read-only behavior, inspect, and diagnostics fields.
+- [x] Implement command dispatch and map core outcomes/errors to the specified stdout/stderr and exit codes.
+- [x] Run `cargo test -p sea-forge-cli` and `cargo check --workspace --all-features --locked`.
+- [x] Commit the CLI surface.
 
 ## Task 9: Conformance proofs, documentation, and handoff
 
 **Files:** integration tests/fixtures as needed, `README.md`, `.agents/{CURRENT_STATUS,OBSERVED_DEBT,LESSONS,OPEN_QUESTIONS}.md`, `justfile` only if the existing proof recipe needs source-driven completion.
 
-- [ ] Add/finish §17.1 and §17.2 integration tests, including kill-9 valid-prefix durability where supported; mark genuinely unsupported platform checks skipped with reason.
-- [ ] Run P1–P4b against fresh temporary roots and inspect all produced records and hashes.
-- [ ] Update README with the §15 process-level sandbox limitation and working command examples; resolve the runtime-diagnostics debt entry.
-- [ ] Run `cargo fmt --all -- --check`, focused clippy/checks, `devbox run -- just context-check`, `devbox run -- just check`, and `devbox run -- just test`.
-- [ ] Perform the canonical multi-axis code review; fix findings and rerun affected gates.
-- [ ] Refresh `CURRENT_STATUS.md` with exact verification and remaining limitations, then commit the final conformance/documentation increment.
+- [x] Add/finish §17.1 and §17.2 integration tests, including kill-9 valid-prefix durability where supported; mark genuinely unsupported platform checks skipped with reason.
+- [x] Run P1–P4b against fresh temporary roots and inspect all produced records and hashes.
+- [x] Update README with the §15 process-level sandbox limitation and working command examples; resolve the runtime-diagnostics debt entry.
+- [x] Run `cargo fmt --all -- --check`, focused clippy/checks, `devbox run -- just context-check`, `devbox run -- just check`, and `devbox run -- just test`.
+- [x] Perform the canonical multi-axis code review; fix findings and rerun affected gates.
+- [x] Refresh `CURRENT_STATUS.md` with exact verification and remaining limitations, then commit the final conformance/documentation increment.
 
 ## Risks and Mitigations
 

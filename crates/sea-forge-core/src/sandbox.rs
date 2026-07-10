@@ -27,28 +27,90 @@ pub fn validate_relative_path(path: &str) -> Result<(), ForgeError> {
 pub fn safe_join(root: &Path, rel: &str) -> Result<PathBuf, ForgeError> {
     validate_relative_path(rel)?;
     fs::create_dir_all(root).map_err(|e| ForgeError::io("create workspace", e))?;
-    if rel == "." {
-        return root
-            .canonicalize()
-            .map_err(|e| ForgeError::io("canonicalize workspace", e));
-    }
-    let candidate = root.join(rel);
-    let parent = candidate
-        .parent()
-        .ok_or_else(|| ForgeError::UnsafePath(rel.into()))?;
-    fs::create_dir_all(parent).map_err(|e| ForgeError::io("create workspace parent", e))?;
     let canonical_root = root
         .canonicalize()
         .map_err(|e| ForgeError::io("canonicalize workspace", e))?;
-    let canonical_parent = parent
-        .canonicalize()
-        .map_err(|e| ForgeError::io("canonicalize target parent", e))?;
-    if !canonical_parent.starts_with(canonical_root) {
+    if rel == "." {
+        return Ok(canonical_root);
+    }
+    let relative = Path::new(rel);
+    checked_parent(&canonical_root, relative, rel, true)?;
+    let candidate = canonical_root.join(relative);
+    if fs::symlink_metadata(&candidate).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
         return Err(ForgeError::UnsafePath(format!(
-            "path escapes workspace: {rel}"
+            "target is a symlink: {rel}"
         )));
     }
     Ok(candidate)
+}
+pub fn safe_existing(root: &Path, rel: &str) -> Result<PathBuf, ForgeError> {
+    validate_relative_path(rel)?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|e| ForgeError::io("canonicalize workspace", e))?;
+    let relative = Path::new(rel);
+    checked_parent(&canonical_root, relative, rel, false)?;
+    let candidate = canonical_root.join(relative);
+    if fs::symlink_metadata(&candidate)
+        .map_err(|e| ForgeError::io("inspect existing workspace path", e))?
+        .file_type()
+        .is_symlink()
+    {
+        return Err(ForgeError::UnsafePath(format!(
+            "existing path is a symlink: {rel}"
+        )));
+    }
+    let canonical = candidate
+        .canonicalize()
+        .map_err(|e| ForgeError::io("canonicalize existing workspace path", e))?;
+    if !canonical.starts_with(&canonical_root) {
+        return Err(ForgeError::UnsafePath(format!(
+            "existing path escapes workspace: {rel}"
+        )));
+    }
+    Ok(canonical)
+}
+fn checked_parent(
+    canonical_root: &Path,
+    relative: &Path,
+    original: &str,
+    create_missing: bool,
+) -> Result<PathBuf, ForgeError> {
+    let parent = relative
+        .parent()
+        .ok_or_else(|| ForgeError::UnsafePath(original.into()))?;
+    let mut safe_parent = canonical_root.to_path_buf();
+    for component in parent.components() {
+        let Component::Normal(name) = component else {
+            continue;
+        };
+        let next = safe_parent.join(name);
+        match fs::symlink_metadata(&next) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(ForgeError::UnsafePath(format!(
+                    "parent is a symlink: {original}"
+                )))
+            }
+            Ok(metadata) if !metadata.is_dir() => {
+                return Err(ForgeError::UnsafePath(format!(
+                    "parent is not a directory: {original}"
+                )))
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && create_missing => {
+                fs::create_dir(&next)
+                    .map_err(|error| ForgeError::io("create workspace parent", error))?
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Err(ForgeError::UnsafePath(format!(
+                    "parent does not exist: {original}"
+                )))
+            }
+            Err(error) => return Err(ForgeError::io("inspect workspace parent", error)),
+        }
+        safe_parent = next;
+    }
+    Ok(safe_parent)
 }
 pub fn materialize(root: &Path, operation: &crate::types::Operation) -> Result<(), ForgeError> {
     if let crate::types::Operation::WriteFile { path, content_hint } = operation {
@@ -62,10 +124,33 @@ pub fn materialize(root: &Path, operation: &crate::types::Operation) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
     #[test]
     fn lexical_escape_is_rejected() {
         assert!(validate_relative_path("../x").is_err());
         assert!(validate_relative_path("/x").is_err());
+        assert!(validate_relative_path("bad path").is_err());
         assert!(validate_relative_path("ok/model.sea").is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_parent_escape_is_rejected() {
+        use std::os::unix::fs::symlink;
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let parent = std::env::temp_dir().join(format!("sea-forge-safe-join-{nonce}"));
+        let root = parent.join("workspace");
+        let outside = parent.join("outside");
+        fs::create_dir_all(&root).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        symlink(&outside, root.join("linked")).unwrap();
+        assert!(safe_join(&root, "linked/escape.txt").is_err());
+        assert!(!outside.join("escape.txt").exists());
+        symlink(outside.join("file.txt"), root.join("file.txt")).unwrap();
+        assert!(safe_join(&root, "file.txt").is_err());
+        fs::remove_dir_all(parent).unwrap();
     }
 }

@@ -1,6 +1,9 @@
 use sea_forge_core::errors::ForgeError;
 use std::{fs, path::Path};
 pub fn execute(root: &Path, run_id: &str) -> Result<u8, ForgeError> {
+    if !sea_forge_core::ids::valid_run_id(run_id) {
+        return Err(ForgeError::Input("invalid run_id".into()));
+    }
     let run = root.join("runs").join(run_id);
     for name in [
         "plan.json",

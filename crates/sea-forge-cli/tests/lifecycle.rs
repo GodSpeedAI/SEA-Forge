@@ -1,5 +1,6 @@
 use std::{
     fs,
+    io::Write,
     path::PathBuf,
     process::Command,
     time::{SystemTime, UNIX_EPOCH},
@@ -25,7 +26,8 @@ fn policy(root: &std::path::Path, rules: &str) -> PathBuf {
 fn intent_to_settlement_produces_complete_accepted_run() {
     let parent = temp_root("accepted");
     let root = parent.join("state");
-    let policy=policy(&parent,"  - name: allow-model-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self-validate\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    let policy = parent.join("policy.yaml");
+    fs::write(&policy, "version: \"0.1\"\nidentity:\n  source: test-binding\n  allow_unresolved: false\nrules:\n  - name: allow-model-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self-validate\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n").unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
         .args([
             "run",
@@ -63,17 +65,219 @@ fn intent_to_settlement_produces_complete_accepted_run() {
     let settlement: serde_json::Value =
         serde_json::from_slice(&fs::read(run.join("settlement.json")).unwrap()).unwrap();
     assert_eq!(settlement["status"], "accepted");
+    let authority: serde_json::Value =
+        serde_json::from_slice(&fs::read(run.join("authority.json")).unwrap()).unwrap();
+    assert!(authority[0]["action_request"]["context"]["workspace_root"]
+        .as_str()
+        .is_some_and(|path| std::path::Path::new(path).is_absolute()));
+    assert_eq!(
+        authority[0]["identity_binding"]["identity_binding_source"],
+        "test-binding"
+    );
+    let trace_kinds: Vec<String> = fs::read_to_string(run.join("trace.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| {
+            serde_json::from_str::<serde_json::Value>(line).unwrap()["kind"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(
+        trace_kinds,
+        [
+            "case_created",
+            "run_started",
+            "plan_created",
+            "authority_evaluated",
+            "authority_evaluated",
+            "workspace_created",
+            "command_started",
+            "command_finished",
+            "artifact_captured",
+            "artifact_captured",
+            "artifact_captured",
+            "settlement_recorded",
+            "run_finished",
+            "case_closed"
+        ]
+    );
     let envelope: serde_json::Value =
         serde_json::from_slice(&fs::read(run.join("semantic-envelope.json")).unwrap()).unwrap();
     assert!(envelope["artifact_refs"]
         .as_array()
         .is_some_and(|v| v.len() == 1));
+    assert_eq!(envelope["settlement_ref"], settlement["settlement_id"]);
+    let decision_ids: Vec<&str> = authority
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|decision| decision["decision_id"].as_str().unwrap())
+        .collect();
+    assert!(envelope["authority_decisions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|id| decision_ids.contains(&id.as_str().unwrap())));
+    let trace_ids: Vec<String> = fs::read_to_string(run.join("trace.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| {
+            serde_json::from_str::<serde_json::Value>(line).unwrap()["event_id"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    let evidence_records: Vec<serde_json::Value> = fs::read_to_string(run.join("evidence.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    let evidence_ids: Vec<&str> = evidence_records
+        .iter()
+        .map(|record| record["evidence_id"].as_str().unwrap())
+        .collect();
+    assert!(envelope["evidence_refs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|id| evidence_ids.contains(&id.as_str().unwrap())));
+    assert!(authority.as_array().unwrap().iter().all(|decision| {
+        decision["audit_record"]["evidence_refs"]
+            .as_array()
+            .is_some_and(|refs| {
+                !refs.is_empty()
+                    && refs
+                        .iter()
+                        .all(|id| evidence_ids.contains(&id.as_str().unwrap()))
+            })
+    }));
+    for record in &evidence_records {
+        match record["kind"].as_str().unwrap() {
+            "artifact" => {
+                let uri = record["uri"].as_str().unwrap();
+                assert_eq!(
+                    sea_forge_core::evidence::sha256_file(&run.join(uri)).unwrap(),
+                    record["sha256"].as_str().unwrap()
+                );
+            }
+            "authority_decision" => {
+                assert!(decision_ids.contains(&record["uri"].as_str().unwrap()))
+            }
+            "execution_result" => assert!(trace_ids
+                .iter()
+                .any(|id| id == record["uri"].as_str().unwrap())),
+            other => panic!("unexpected evidence kind {other}"),
+        }
+    }
+    let plan_record: sea_forge_core::types::CasePlan =
+        serde_json::from_slice(&fs::read(run.join("plan.json")).unwrap()).unwrap();
+    assert_eq!(
+        envelope["plan_ref"].as_str().unwrap(),
+        plan_record.plan_id.to_string()
+    );
+    assert_eq!(
+        serde_json::from_slice::<sea_forge_core::types::CasePlan>(
+            &serde_json::to_vec(&plan_record).unwrap()
+        )
+        .unwrap(),
+        plan_record
+    );
+    let authority_records: Vec<sea_forge_core::types::AuthorityDecision> =
+        serde_json::from_slice(&fs::read(run.join("authority.json")).unwrap()).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Vec<sea_forge_core::types::AuthorityDecision>>(
+            &serde_json::to_vec(&authority_records).unwrap()
+        )
+        .unwrap(),
+        authority_records
+    );
+    for line in fs::read_to_string(run.join("trace.jsonl")).unwrap().lines() {
+        let record: sea_forge_core::types::TraceEvent = serde_json::from_str(line).unwrap();
+        assert_eq!(
+            serde_json::from_str::<sea_forge_core::types::TraceEvent>(
+                &serde_json::to_string(&record).unwrap()
+            )
+            .unwrap(),
+            record
+        );
+    }
+    for line in fs::read_to_string(run.join("evidence.jsonl"))
+        .unwrap()
+        .lines()
+    {
+        let record: sea_forge_core::types::EvidenceRecord = serde_json::from_str(line).unwrap();
+        assert_eq!(
+            serde_json::from_str::<sea_forge_core::types::EvidenceRecord>(
+                &serde_json::to_string(&record).unwrap()
+            )
+            .unwrap(),
+            record
+        );
+    }
+    let settlement_record: sea_forge_core::types::SettlementEvent =
+        serde_json::from_slice(&fs::read(run.join("settlement.json")).unwrap()).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<sea_forge_core::types::SettlementEvent>(
+            &serde_json::to_vec(&settlement_record).unwrap()
+        )
+        .unwrap(),
+        settlement_record
+    );
+    let envelope_record: sea_forge_core::types::SemanticEnvelope =
+        serde_json::from_slice(&fs::read(run.join("semantic-envelope.json")).unwrap()).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<sea_forge_core::types::SemanticEnvelope>(
+            &serde_json::to_vec(&envelope_record).unwrap()
+        )
+        .unwrap(),
+        envelope_record
+    );
     assert_eq!(
         fs::read_to_string(root.join("capabilities.jsonl"))
             .unwrap()
             .lines()
             .count(),
         1
+    );
+    let inspect = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args(["inspect", run_id, "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(inspect.status.code(), Some(0));
+    let inspected = String::from_utf8(inspect.stdout).unwrap();
+    for name in [
+        "plan.json",
+        "authority.json",
+        "trace.jsonl",
+        "evidence.jsonl",
+        "settlement.json",
+        "semantic-envelope.json",
+    ] {
+        assert!(inspected.contains(&format!("== {name} ==")));
+    }
+    let no_match = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args(["recall", "does-not-match", "--root", root.to_str().unwrap()])
+        .status()
+        .unwrap();
+    assert_eq!(no_match.code(), Some(3));
+    let case_path = root
+        .join("cases")
+        .join(format!("{}.json", envelope["case_ref"].as_str().unwrap()));
+    let case: serde_json::Value = serde_json::from_slice(&fs::read(case_path).unwrap()).unwrap();
+    assert_eq!(case["state"], "completed");
+    assert_eq!(case["case_id"], envelope["case_ref"]);
+    assert_eq!(case["plan_ref"], envelope["plan_ref"]);
+    assert_eq!(case["run_ids"][0], run_id);
+    let case_record: sea_forge_core::types::Case = serde_json::from_value(case).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<sea_forge_core::types::Case>(
+            &serde_json::to_vec(&case_record).unwrap()
+        )
+        .unwrap(),
+        case_record
     );
     fs::remove_dir_all(parent).unwrap();
 }
@@ -101,9 +305,64 @@ fn authority_denial_settles_rejected_without_command_start() {
         .lines()
         .find_map(|l| l.strip_prefix("run_id="))
         .unwrap();
-    let trace = fs::read_to_string(root.join("runs").join(run_id).join("trace.jsonl")).unwrap();
-    assert!(!trace.contains("command_started"));
-    assert!(trace.contains("run_halted"));
+    let run = root.join("runs").join(run_id);
+    let trace_kinds: Vec<String> = fs::read_to_string(run.join("trace.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| {
+            serde_json::from_str::<serde_json::Value>(line).unwrap()["kind"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(
+        trace_kinds,
+        [
+            "case_created",
+            "run_started",
+            "plan_created",
+            "authority_evaluated",
+            "authority_evaluated",
+            "run_halted",
+            "settlement_recorded",
+            "run_finished",
+            "case_closed"
+        ]
+    );
+    assert!(run.join("workspace").is_dir());
+    assert_eq!(fs::read_dir(run.join("workspace")).unwrap().count(), 0);
+    let decisions: Vec<serde_json::Value> =
+        serde_json::from_slice(&fs::read(run.join("authority.json")).unwrap()).unwrap();
+    assert!(decisions
+        .iter()
+        .all(|decision| decision["verdict"] == "deny"
+            && decision["matched_rule"].is_null()
+            && decision["audit_record"]["engine"].is_string()
+            && decision["audit_record"]["disposition"].is_string()
+            && decision["audit_record"]["subject"].is_string()));
+    let authority_evidence = fs::read_to_string(run.join("evidence.jsonl"))
+        .unwrap()
+        .lines()
+        .filter(|line| {
+            serde_json::from_str::<serde_json::Value>(line).unwrap()["kind"] == "authority_decision"
+        })
+        .count();
+    assert_eq!(authority_evidence, decisions.len());
+    let envelope: serde_json::Value =
+        serde_json::from_slice(&fs::read(run.join("semantic-envelope.json")).unwrap()).unwrap();
+    let plan: serde_json::Value =
+        serde_json::from_slice(&fs::read(run.join("plan.json")).unwrap()).unwrap();
+    assert_eq!(envelope["plan_ref"], plan["plan_id"]);
+    let case_file = root
+        .join("cases")
+        .join(format!("{}.json", envelope["case_ref"].as_str().unwrap()));
+    let case: serde_json::Value = serde_json::from_slice(&fs::read(case_file).unwrap()).unwrap();
+    assert_eq!(case["state"], "terminated");
+    assert_eq!(case["close_reason"], "rejected");
+    assert_eq!(case["case_id"], envelope["case_ref"]);
+    assert_eq!(case["plan_ref"], envelope["plan_ref"]);
+    assert_eq!(case["run_ids"], serde_json::json!([run_id]));
     fs::remove_dir_all(parent).unwrap();
 }
 
@@ -135,9 +394,50 @@ fn escalation_halts_and_requires_review() {
         serde_json::from_slice(&fs::read(run.join("settlement.json")).unwrap()).unwrap();
     assert_eq!(settlement["status"], "escalated");
     assert_eq!(settlement["review_required"], true);
-    assert!(!fs::read_to_string(run.join("trace.jsonl"))
+    let decisions: Vec<serde_json::Value> =
+        serde_json::from_slice(&fs::read(run.join("authority.json")).unwrap()).unwrap();
+    assert!(decisions
+        .iter()
+        .all(|decision| decision["audit_record"]["engine"].is_string()
+            && decision["audit_record"]["disposition"] == "escalate"));
+    let trace_kinds: Vec<String> = fs::read_to_string(run.join("trace.jsonl"))
         .unwrap()
-        .contains("command_started"));
+        .lines()
+        .map(|line| {
+            serde_json::from_str::<serde_json::Value>(line).unwrap()["kind"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(
+        trace_kinds,
+        [
+            "case_created",
+            "run_started",
+            "plan_created",
+            "authority_evaluated",
+            "authority_evaluated",
+            "run_halted",
+            "settlement_recorded",
+            "run_finished",
+            "case_closed"
+        ]
+    );
+    let envelope: serde_json::Value =
+        serde_json::from_slice(&fs::read(run.join("semantic-envelope.json")).unwrap()).unwrap();
+    let plan: serde_json::Value =
+        serde_json::from_slice(&fs::read(run.join("plan.json")).unwrap()).unwrap();
+    assert_eq!(envelope["plan_ref"], plan["plan_id"]);
+    let case_file = root
+        .join("cases")
+        .join(format!("{}.json", envelope["case_ref"].as_str().unwrap()));
+    let case: serde_json::Value = serde_json::from_slice(&fs::read(case_file).unwrap()).unwrap();
+    assert_eq!(case["state"], "terminated");
+    assert_eq!(case["close_reason"], "escalated");
+    assert_eq!(case["case_id"], envelope["case_ref"]);
+    assert_eq!(case["plan_ref"], envelope["plan_ref"]);
+    assert_eq!(case["run_ids"], serde_json::json!([run_id]));
     fs::remove_dir_all(parent).unwrap();
 }
 
@@ -170,15 +470,34 @@ fn repeated_runs_have_stable_artifact_identity_and_recall_is_read_only() {
             .lines()
             .find_map(|line| line.strip_prefix("run_id="))
             .unwrap();
-        let envelope: serde_json::Value = serde_json::from_slice(
-            &fs::read(
-                root.join("runs")
-                    .join(run_id)
-                    .join("semantic-envelope.json"),
+        let run = root.join("runs").join(run_id);
+        let envelope: serde_json::Value =
+            serde_json::from_slice(&fs::read(run.join("semantic-envelope.json")).unwrap()).unwrap();
+        let work_product: serde_json::Value = fs::read_to_string(run.join("evidence.jsonl"))
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+            .find(|record| record["uri"] == "artifacts/model.sea")
+            .unwrap();
+        let artifact = &work_product["metadata"]["artifact"];
+        assert_eq!(artifact["content_sha256"], work_product["sha256"]);
+        let identity_input = serde_json::json!({"artifact_type":artifact["artifact_type"],"stage":artifact["stage"],"owner":artifact["owner"],"license":artifact["license"],"review_status":artifact["review_status"],"content_sha256":artifact["content_sha256"],"source_refs":artifact["source_refs"]});
+        let expected_identity = format!(
+            "ifl:hash:{}",
+            sea_forge_core::evidence::sha256_bytes(
+                &sea_forge_core::evidence::canonical_json(&identity_input).unwrap()
             )
-            .unwrap(),
-        )
-        .unwrap();
+        );
+        assert_eq!(artifact["pre_mint_identity"], expected_identity);
+        assert!(envelope["artifact_refs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(
+                |reference| reference["evidence_id"] == work_product["evidence_id"]
+                    && reference["artifact_id"] == artifact["artifact_id"]
+                    && reference["pre_mint_identity"] == artifact["pre_mint_identity"]
+            ));
         identities.push(
             envelope["artifact_refs"][0]["pre_mint_identity"]
                 .as_str()
@@ -187,6 +506,37 @@ fn repeated_runs_have_stable_artifact_identity_and_recall_is_read_only() {
         );
     }
     assert_eq!(identities[0], identities[1]);
+    assert_eq!(identities[0].len(), "ifl:hash:".len() + 64);
+    assert!(identities[0]
+        .strip_prefix("ifl:hash:")
+        .is_some_and(|hash| hash
+            .chars()
+            .all(|character| character.is_ascii_hexdigit() && !character.is_ascii_uppercase())));
+    let deny_policy = parent.join("deny.yaml");
+    fs::write(&deny_policy, "version: \"0.1\"\nrules: []\n").unwrap();
+    let denied = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            deny_policy.to_str().unwrap(),
+            "--entity",
+            "team_b",
+            "--process",
+            "agent_2",
+            "--intent",
+            "Generate and validate a simple DomainForge .sea model",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(denied.status.code(), Some(3));
+    fs::OpenOptions::new()
+        .append(true)
+        .open(root.join("capabilities.jsonl"))
+        .unwrap()
+        .write_all(b"not-json\n")
+        .unwrap();
     let before = fs::read(root.join("capabilities.jsonl")).unwrap();
     let recall = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
         .args([
@@ -203,8 +553,43 @@ fn repeated_runs_have_stable_artifact_identity_and_recall_is_read_only() {
         .unwrap();
     assert_eq!(recall.status.code(), Some(0));
     assert_eq!(String::from_utf8(recall.stdout).unwrap().lines().count(), 2);
+    let warning: serde_json::Value = serde_json::from_slice(&recall.stderr).unwrap();
+    assert_eq!(warning["error_class"], "capability_parse_error");
+    let rejected = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "recall",
+            "generate",
+            "--root",
+            root.to_str().unwrap(),
+            "--entity",
+            "team_b",
+            "--process",
+            "agent_2",
+            "--result",
+            "rejected",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(rejected.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8(rejected.stdout).unwrap().lines().count(),
+        1
+    );
+    let newest = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "recall",
+            "generate",
+            "--root",
+            root.to_str().unwrap(),
+            "--limit",
+            "1",
+        ])
+        .output()
+        .unwrap();
+    let newest_envelope: serde_json::Value = serde_json::from_slice(&newest.stdout).unwrap();
+    assert_eq!(newest_envelope["attribution"]["entity_id"], "team_b");
     assert_eq!(before, fs::read(root.join("capabilities.jsonl")).unwrap());
-    assert_eq!(fs::read_dir(root.join("runs")).unwrap().count(), 2);
+    assert_eq!(fs::read_dir(root.join("runs")).unwrap().count(), 3);
     fs::remove_dir_all(parent).unwrap();
 }
 
@@ -233,5 +618,201 @@ fn validator_accepts_only_the_stub_contract() {
             .code(),
         Some(1)
     );
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn false_success_and_nonzero_execution_settle_rejected_with_evidence() {
+    let parent = temp_root("failures");
+    let policy = policy(&parent, "  - name: allow-model-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    for (intent, expected_basis) in [
+        (
+            "TEST_ONLY: false success",
+            "required_artifact_missing:model.sea",
+        ),
+        ("TEST_ONLY: nonzero", "exit_nonzero"),
+    ] {
+        let root = parent.join(intent.replace([':', ' '], "-"));
+        let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+            .args([
+                "run",
+                "--root",
+                root.to_str().unwrap(),
+                "--policy",
+                policy.to_str().unwrap(),
+                "--intent",
+                intent,
+            ])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(3));
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let run_id = stdout
+            .lines()
+            .find_map(|line| line.strip_prefix("run_id="))
+            .unwrap();
+        let run = root.join("runs").join(run_id);
+        let settlement: serde_json::Value =
+            serde_json::from_slice(&fs::read(run.join("settlement.json")).unwrap()).unwrap();
+        assert!(settlement["basis"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|basis| basis == expected_basis));
+        if intent.ends_with("nonzero") {
+            assert!(fs::read_to_string(run.join("artifacts/stderr.txt"))
+                .unwrap()
+                .contains("model invalid"));
+        }
+    }
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn pipeline_timeout_is_governed_and_rejected() {
+    let parent = temp_root("pipeline-timeout");
+    let root = parent.join("state");
+    let policy = policy(&parent, "  - name: allow-self\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--timeout",
+            "0",
+            "--intent",
+            "TEST_ONLY: timeout",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(3));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("execution=timed_out"));
+    let run_id = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("run_id="))
+        .unwrap();
+    let settlement: serde_json::Value = serde_json::from_slice(
+        &fs::read(root.join("runs").join(run_id).join("settlement.json")).unwrap(),
+    )
+    .unwrap();
+    assert!(settlement["basis"]
+        .as_array()
+        .unwrap()
+        .contains(&serde_json::json!("timed_out")));
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn kill_9_leaves_a_valid_jsonl_prefix_without_capability_corruption() {
+    use std::{collections::HashSet, process::Stdio, thread, time::Duration};
+    let parent = temp_root("kill9");
+    let root = parent.join("state");
+    let policy = policy(&parent, "  - name: allow-model-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    let seed = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--intent",
+            "Generate and validate a simple DomainForge .sea model",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(seed.status.code(), Some(0));
+    let capability_before = fs::read(root.join("capabilities.jsonl")).unwrap();
+    let existing: HashSet<_> = fs::read_dir(root.join("runs"))
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--timeout",
+            "30",
+            "--intent",
+            "TEST_ONLY: timeout",
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let mut trace = None;
+    for _ in 0..200 {
+        if let Ok(runs) = fs::read_dir(root.join("runs")) {
+            for run in runs
+                .flatten()
+                .filter(|run| !existing.contains(&run.file_name()))
+            {
+                let candidate = run.path().join("trace.jsonl");
+                if fs::read_to_string(&candidate).is_ok_and(|text| text.contains("command_started"))
+                {
+                    trace = Some(candidate);
+                    break;
+                }
+            }
+        }
+        if trace.is_some() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    let trace = trace.expect("command should start before kill timeout");
+    let status = Command::new("kill")
+        .args(["-9", &child.id().to_string()])
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let _ = child.wait().unwrap();
+    let text = fs::read_to_string(trace).unwrap();
+    assert!(!text.is_empty());
+    for line in text.lines() {
+        serde_json::from_str::<serde_json::Value>(line).unwrap();
+    }
+    assert_eq!(
+        fs::read(root.join("capabilities.jsonl")).unwrap(),
+        capability_before
+    );
+    for line in String::from_utf8(capability_before).unwrap().lines() {
+        serde_json::from_str::<serde_json::Value>(line).unwrap();
+    }
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn post_start_internal_error_is_run_correlated_and_traced() {
+    let parent = temp_root("internal-error");
+    let root = parent.join("state");
+    fs::create_dir_all(root.join("capabilities.jsonl")).unwrap();
+    let policy = policy(&parent, "  - name: allow-model-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--intent",
+            "Generate and validate a simple DomainForge .sea model",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let diagnostic: serde_json::Value = serde_json::from_slice(&output.stderr).unwrap();
+    let run_id = diagnostic["run_id"].as_str().unwrap();
+    assert!(run_id.starts_with("run_"));
+    assert_eq!(diagnostic["error_class"], "internal_error");
+    let trace = fs::read_to_string(root.join("runs").join(run_id).join("trace.jsonl")).unwrap();
+    let last: serde_json::Value = serde_json::from_str(trace.lines().last().unwrap()).unwrap();
+    assert_eq!(last["kind"], "internal_error");
     fs::remove_dir_all(parent).unwrap();
 }

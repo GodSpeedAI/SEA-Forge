@@ -1,10 +1,14 @@
-use std::{fs, path::Path};
+use std::{fs::File, io::Read, path::Path};
 
 use chrono::Utc;
 
-use crate::{types::*, RECORD_VERSION};
+use crate::{errors::ForgeError, types::*, RECORD_VERSION};
 
-pub fn settle(claim: &SettlementClaim, workspace: &Path, run_dir: &Path) -> SettlementEvent {
+pub fn settle(
+    claim: &SettlementClaim,
+    workspace: &Path,
+    run_dir: &Path,
+) -> Result<SettlementEvent, ForgeError> {
     let mut basis = Vec::new();
     let (status, review_required) = if claim.authority_verdicts.contains(&Verdict::Escalate) {
         basis.push("authority_escalate".into());
@@ -33,7 +37,8 @@ pub fn settle(claim: &SettlementClaim, workspace: &Path, run_dir: &Path) -> Sett
                         accepted &= zero;
                     }
                     for path in &claim.criteria.required_artifacts {
-                        let present = workspace.join(path).is_file();
+                        let present = crate::sandbox::safe_existing(workspace, path)
+                            .is_ok_and(|candidate| candidate.is_file());
                         basis.push(format!(
                             "required_artifact_{}:{path}",
                             if present { "present" } else { "missing" }
@@ -41,9 +46,9 @@ pub fn settle(claim: &SettlementClaim, workspace: &Path, run_dir: &Path) -> Sett
                         accepted &= present;
                     }
                     if let Some(needle) = &claim.criteria.stdout_must_contain {
-                        let stdout = fs::read_to_string(run_dir.join(&execution.stdout_path))
-                            .unwrap_or_default();
-                        let matches = stdout.contains(needle);
+                        let stdout =
+                            crate::sandbox::safe_existing(run_dir, &execution.stdout_path)?;
+                        let matches = file_contains(&stdout, needle)?;
                         basis.push(
                             if matches {
                                 "stdout_match"
@@ -66,7 +71,7 @@ pub fn settle(claim: &SettlementClaim, workspace: &Path, run_dir: &Path) -> Sett
             },
         }
     };
-    SettlementEvent {
+    Ok(SettlementEvent {
         version: RECORD_VERSION.into(),
         settlement_id: "set_01".into(),
         run_id: claim.run_id.clone(),
@@ -74,6 +79,37 @@ pub fn settle(claim: &SettlementClaim, workspace: &Path, run_dir: &Path) -> Sett
         basis,
         review_required,
         settled_at: Utc::now().to_rfc3339(),
+    })
+}
+
+fn file_contains(path: &Path, needle: &str) -> Result<bool, ForgeError> {
+    if needle.is_empty() {
+        return Ok(true);
+    }
+    let mut file =
+        File::open(path).map_err(|error| ForgeError::io("open captured stdout", error))?;
+    let needle = needle.as_bytes();
+    let mut chunk = [0_u8; 8192];
+    let mut overlap = Vec::new();
+    loop {
+        let count = file
+            .read(&mut chunk)
+            .map_err(|error| ForgeError::io("read captured stdout", error))?;
+        if count == 0 {
+            return Ok(false);
+        }
+        let mut window = Vec::with_capacity(overlap.len() + count);
+        window.extend_from_slice(&overlap);
+        window.extend_from_slice(&chunk[..count]);
+        if window
+            .windows(needle.len())
+            .any(|candidate| candidate == needle)
+        {
+            return Ok(true);
+        }
+        let keep = needle.len().saturating_sub(1).min(window.len());
+        overlap.clear();
+        overlap.extend_from_slice(&window[window.len() - keep..]);
     }
 }
 
@@ -94,8 +130,46 @@ mod tests {
             authority_verdicts: vec![Verdict::Deny, Verdict::Escalate],
         };
         assert_eq!(
-            settle(&claim, Path::new("."), Path::new(".")).status,
+            settle(&claim, Path::new("."), Path::new("."))
+                .unwrap()
+                .status,
             SettlementStatus::Escalated
         );
+    }
+
+    #[test]
+    fn zero_exit_without_required_artifact_is_rejected() {
+        let root =
+            std::env::temp_dir().join(format!("sea-forge-false-success-{}", std::process::id()));
+        let workspace = root.join("workspace");
+        let artifacts = root.join("artifacts");
+        std::fs::create_dir_all(&workspace).unwrap();
+        std::fs::create_dir_all(&artifacts).unwrap();
+        std::fs::write(artifacts.join("stdout.txt"), "sea-forge: model valid").unwrap();
+        let execution = ExecutionResult {
+            status: ExecutionStatus::Completed,
+            exit_code: Some(0),
+            stdout_path: "artifacts/stdout.txt".into(),
+            stderr_path: "artifacts/stderr.txt".into(),
+            started_at: "start".into(),
+            finished_at: "finish".into(),
+        };
+        let claim = SettlementClaim {
+            run_id: "run".into(),
+            plan_item_id: "item_01".into(),
+            criteria: SettlementCriteria {
+                require_exit_zero: true,
+                required_artifacts: vec!["model.sea".into()],
+                stdout_must_contain: Some("model valid".into()),
+            },
+            execution: Some(execution),
+            authority_verdicts: vec![Verdict::Allow],
+        };
+        let event = settle(&claim, &workspace, &root).unwrap();
+        assert_eq!(event.status, SettlementStatus::Rejected);
+        assert!(event
+            .basis
+            .contains(&"required_artifact_missing:model.sea".into()));
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

@@ -4,52 +4,62 @@ Updated: 2026-07-10
 
 ## Objective
 
-Bootstrap Rust-native CLI diagnostics and make repository context sufficient for
-a new agent to diagnose the foundation and resume active work without re-discovery.
+Implement `.agents/specs/spec-minimum.md` as the synchronous two-crate governed
+kernel and keep the specification aligned with implementation-defined choices.
 
 ## Worktree State
 
-`main` contains uncommitted observability and context-freshness changes. No commit
-or push has been requested. Preserve all listed changes as one active workstream.
+Implementation is isolated at `.worktrees/feature-spec-minimum` on branch
+`feature/spec-minimum`. Four atomic implementation/conformance commits contain
+the completed slice. Nothing has been pushed.
 
 ## Changed Files
 
-- Agent context: `AGENTS.md`, `.github/copilot-instructions.md`,
-  `.agents/{CURRENT_STATUS,OBSERVED_DEBT,OPEN_QUESTIONS}.md`.
-- Context gate: `scripts/check-agent-context.sh`,
-  `scripts/tests/check-agent-context.sh`, `justfile`.
-- Observability: root `Cargo.toml`, `Cargo.lock`,
-  `crates/sea-forge-cli/{Cargo.toml,src/main.rs,tests/diagnostics.rs}`.
-- Documentation: `README.md`, `ARCHITECTURE.md`,
-  `.agents/specs/Shell-SPEC.md`.
+- Core lifecycle: `crates/sea-forge-core/src/{ids,types,errors,trace,evidence,authority,domain,planner,sandbox,runtime,settlement,capability,pipeline}.rs`.
+- CLI: `crates/sea-forge-cli/src/main.rs`, `src/commands/`, and integration tests.
+- Dependencies: workspace and crate `Cargo.toml` files plus `Cargo.lock`.
+- Contract/docs: `.agents/specs/spec-minimum.md`, implementation plan,
+  `README.md`, `justfile`, and repository-local memory.
 
 ## Completed
 
-- Added JSON stderr diagnostics with `tracing` and `tracing-subscriber`.
-- Added stable `event`, `run_id`, `component`, and `error_class` fields.
-- Added `RUST_LOG` filtering with an `info` fallback for invalid/missing filters.
-- Added an integration test that parses and verifies the emitted JSON.
-- Documented diagnostics versus governed `trace.jsonl` in `README.md`.
-- Added a vendor-agnostic context gate with local-dirty and base-revision tests.
-- Wired context validation into `just check` and documented local-memory roles.
-- Added a Copilot compatibility pointer to the canonical root `AGENTS.md`.
-- Added structured debt and open-question templates and recorded the real runtime
-  diagnostic gap as minimum-kernel acceptance work.
+- Implemented plan → decide-all authority → workspace/runtime → trace/evidence
+  → settlement → case close → semantic envelope/capability append.
+- Added fail-closed canonical `AuthorityAction` coverage for executable,
+  reserved, and unclassified surfaces while keeping planner operations closed.
+- Added deterministic policy/request/identity hashing, hard boundary precedence,
+  minimal child environments, argv-only execution, timeout termination, safe
+  path joins, artifact hashing, and stable pre-mint identity.
+- Added `run`, hidden `validate`, `recall`, and `inspect` CLI commands with the
+  specified exit semantics.
+- Replaced the placeholder proof recipe with executable P1–P4b checks.
+- Added conformance tests covering accepted/denied/escalated outcomes, false
+  success, nonzero exit, timeout, kill-9 JSONL durability, config/input failures,
+  deterministic authority, reserved surfaces, symlink escape, minimal env,
+  case state, recall, validator, inspection, and repeated artifact identity.
+- Updated `spec-minimum.md` for `AuthorityAction`, final-write ordering,
+  in-place execution-evidence hashing, atomic case closure, and the fixed
+  conformance harness.
 
 ## Verification
 
-- `cargo test --workspace --all-features --locked`: 3 passed, 0 failed.
-- Formatting, Clippy with warnings denied, and locked checks pass.
-- `devbox run -- just check`: passes cargo-deny and gitleaks; no leaks found.
-- Manual CLI run emits one JSON diagnostic to stderr and exits 64.
-- `sh scripts/tests/check-agent-context.sh`: 6 scenarios passed.
-- `sh scripts/check-agent-context.sh`: current handoff passes.
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
+- `cargo build --workspace --all-features --locked`: passed.
+- `cargo test --workspace --all-features --locked`: 35 passed, 0 failed,
+  0 ignored.
+- `just proof`: P1–P4b passed.
+- `devbox run -- just context-check`: passed.
+- `devbox run -- just check`: passed (Cargo Deny reported only unmatched
+  allowlist warnings; advisories, bans, licenses, sources, and gitleaks passed).
+- `devbox run -- just test`: 35 passed, 0 failed, 0 ignored.
+- Final correctness, readability, architecture, security, and performance diff
+  review: passed; no open findings.
 
 ## Remaining
 
-- Instrument minimum-kernel lifecycle modules as they are implemented.
-- Add aggregate metrics and cross-process tracing at the full spec M3 boundary,
-  when a server and monitoring consumer exist.
+None for the minimum slice. Branch integration is intentionally left to the
+user; no push, pull request, deployment, or publication was performed.
 
 ## Blockers
 
@@ -57,8 +67,10 @@ None.
 
 ## Decisions
 
-- Keep the freshness contract in POSIX shell under `scripts/`; CI providers and
-  agent tools call the same script rather than owning separate implementations.
-- Use worktree and optional base-revision comparison instead of date expiry, so a
-  stable project is not marked stale merely because no work occurred recently.
-- Do not scaffold metrics or lifecycle telemetry before the minimum kernel exists.
+- Separate non-executable `AuthorityAction` from planner/runtime `Operation` so
+  reserved and malformed surfaces can fail closed without becoming executable.
+- Write `semantic-envelope.json` before `run_finished`; atomically close the case
+  before `case_closed`; append the envelope to `capabilities.jsonl` as the final
+  lifecycle commit write.
+- Stream stdout/stderr directly to their final artifact paths and hash in place;
+  copy workspace work products into artifacts exactly once.

@@ -23,7 +23,13 @@ pub fn execute(
         },
     )?;
     if malformed > 0 {
-        eprintln!("sea-forge: recall skipped {malformed} malformed line(s)");
+        tracing::warn!(
+            event = "recall_malformed_lines",
+            run_id = "none",
+            component = "sea-forge-cli::recall",
+            error_class = "capability_parse_error",
+            malformed_lines = malformed
+        );
     }
     for envelope in &matches {
         println!("{}", serde_json::to_string(envelope)?);

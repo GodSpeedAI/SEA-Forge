@@ -93,21 +93,40 @@ proof:
     test -f "$run/trace.jsonl" && test -f "$run/evidence.jsonl"
     test -f "$run/settlement.json" && test -f "$run/semantic-envelope.json"
     jq -e '.status == "accepted" and (.basis | length > 0)' "$run/settlement.json" >/dev/null
-    jq -e '.settlement_ref and (.artifact_refs | length == 1) and (.extension_refs|type=="array") and (.projection_refs|type=="array")' "$run/semantic-envelope.json" >/dev/null
+    settlement_id="$(jq -r '.settlement_id' "$run/settlement.json")"
+    jq -e --arg settlement_id "$settlement_id" '.settlement_ref == $settlement_id and (.artifact_refs | length == 1) and (.extension_refs|type=="array") and (.projection_refs|type=="array")' "$run/semantic-envelope.json" >/dev/null
+    while read -r decision_id; do jq -e --arg id "$decision_id" 'any(.[]; .decision_id == $id)' "$run/authority.json" >/dev/null; done < <(jq -r '.authority_decisions[]' "$run/semantic-envelope.json")
+    while read -r evidence_id; do jq -e --arg id "$evidence_id" 'select(.evidence_id == $id)' "$run/evidence.jsonl" >/dev/null; done < <(jq -r '.evidence_refs[]' "$run/semantic-envelope.json")
+    case_id="$(jq -r '.case_ref' "$run/semantic-envelope.json")"
+    jq -e --arg run_id "$run_id" '.state == "completed" and (.run_ids | index($run_id))' "$tmp/state/cases/$case_id.json" >/dev/null
+    jq -e '.artifact_refs[0].pre_mint_identity | test("^ifl:hash:[a-f0-9]{64}$")' "$run/semantic-envelope.json" >/dev/null
+    jq -e 'select(.kind=="artifact" and .uri=="artifacts/model.sea") | .metadata.artifact.pre_mint_identity | test("^ifl:hash:[a-f0-9]{64}$")' "$run/evidence.jsonl" >/dev/null
     jq -e 'all(.[]; (.determinism.policy_bundle_hash|test("^sha256:[a-f0-9]{64}$")) and .audit_record.engine and .audit_record.disposition and .audit_record.subject)' "$run/authority.json" >/dev/null
     while IFS=$'\t' read -r uri hash; do
-      printf '%s  %s\n' "$hash" "$run/$uri" | sha256sum -c - >/dev/null
+      if command -v sha256sum >/dev/null 2>&1; then
+        printf '%s  %s\n' "$hash" "$run/$uri" | sha256sum -c - >/dev/null
+      else
+        printf '%s  %s\n' "$hash" "$run/$uri" | shasum -a 256 -c - >/dev/null
+      fi
     done < <(jq -r 'select(.kind=="artifact") | [.uri,.sha256] | @tsv' "$run/evidence.jsonl")
     set +e
     target/debug/sea-forge run --root "$tmp/denied" --policy "$deny" \
-      --intent "Generate and validate a simple DomainForge .sea model" >/dev/null
+      --intent "Generate and validate a simple DomainForge .sea model" >"$tmp/denied.out"
     denied_exit=$?
     target/debug/sea-forge run --root "$tmp/boundary" --policy "$policy" \
-      --intent "TEST_ONLY: write generated zone" >/dev/null
+      --intent "TEST_ONLY: write generated zone" >"$tmp/boundary.out"
     boundary_exit=$?
     set -e
     test "$denied_exit" -eq 3
     test "$boundary_exit" -eq 3
+    denied_run="$tmp/denied/runs/$(sed -n 's/^run_id=//p' "$tmp/denied.out")"
+    jq -e 'all(.[]; .verdict == "deny" and .matched_rule == null)' "$denied_run/authority.json" >/dev/null
+    ! grep -q '"kind":"command_started"' "$denied_run/trace.jsonl"
+    test -d "$denied_run/workspace"
+    test -z "$(ls -A "$denied_run/workspace")"
+    test "$(jq -r 'select(.kind=="authority_decision") | .evidence_id' "$denied_run/evidence.jsonl" | wc -l)" -eq "$(jq 'length' "$denied_run/authority.json")"
+    boundary_run="$tmp/boundary/runs/$(sed -n 's/^run_id=//p' "$tmp/boundary.out")"
+    jq -e 'any(.[]; .reason_codes | index("generated_zone_denied"))' "$boundary_run/authority.json" >/dev/null
     test ! -e "$tmp/boundary/runs"/*/workspace/src/gen/model.sea
     echo "[proof] P1-P4b passed"
 

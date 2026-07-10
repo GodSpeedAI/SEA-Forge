@@ -4,16 +4,33 @@ use crate::{
     types::*,
     RECORD_VERSION,
 };
+
 pub const DEMO_MODEL: &str = r#"{"domain": "demo", "entities": [{"name": "Sample"}]}"#;
+
 pub fn plan(
     intent: &Intent,
     case_id: &str,
     run_id: &str,
     executable: &str,
 ) -> Result<CasePlan, ForgeError> {
-    let path = match domain::interpret(&intent.summary)? {
-        IntentPattern::Demo => "model.sea",
-        IntentPattern::GeneratedZone => "src/gen/model.sea",
+    let (operations, settlement_criteria) = match domain::interpret(&intent.summary)? {
+        IntentPattern::Demo => file_plan(executable, "model.sea", DEMO_MODEL, "model.sea"),
+        IntentPattern::GeneratedZone => {
+            file_plan(executable, "src/gen/model.sea", DEMO_MODEL, "model.sea")
+        }
+        IntentPattern::FalseSuccess => file_plan(executable, "other.sea", DEMO_MODEL, "other.sea"),
+        IntentPattern::Nonzero => file_plan(executable, "model.sea", "{}", "model.sea"),
+        IntentPattern::Timeout => (
+            vec![Operation::ExecuteCommand {
+                argv: vec![executable.into(), "internal-test-sleep".into(), "5".into()],
+                cwd: ".".into(),
+            }],
+            SettlementCriteria {
+                require_exit_zero: true,
+                required_artifacts: vec![],
+                stdout_must_contain: None,
+            },
+        ),
     };
     Ok(CasePlan {
         version: RECORD_VERSION.into(),
@@ -24,22 +41,34 @@ pub fn plan(
         items: vec![PlanItem {
             plan_item_id: "item_01".into(),
             name: "generate_and_validate_sea_model".into(),
-            operations: vec![
-                Operation::WriteFile {
-                    path: path.into(),
-                    content_hint: DEMO_MODEL.into(),
-                },
-                Operation::ExecuteCommand {
-                    argv: vec![executable.into(), "validate".into(), "model.sea".into()],
-                    cwd: ".".into(),
-                },
-            ],
+            operations,
             entry_criteria: vec![],
-            settlement_criteria: SettlementCriteria {
-                require_exit_zero: true,
-                required_artifacts: vec!["model.sea".into()],
-                stdout_must_contain: Some("sea-forge: model valid".into()),
-            },
+            settlement_criteria,
         }],
     })
+}
+
+fn file_plan(
+    executable: &str,
+    path: &str,
+    content: &str,
+    validate_path: &str,
+) -> (Vec<Operation>, SettlementCriteria) {
+    (
+        vec![
+            Operation::WriteFile {
+                path: path.into(),
+                content_hint: content.into(),
+            },
+            Operation::ExecuteCommand {
+                argv: vec![executable.into(), "validate".into(), validate_path.into()],
+                cwd: ".".into(),
+            },
+        ],
+        SettlementCriteria {
+            require_exit_zero: true,
+            required_artifacts: vec!["model.sea".into()],
+            stdout_must_contain: Some("sea-forge: model valid".into()),
+        },
+    )
 }

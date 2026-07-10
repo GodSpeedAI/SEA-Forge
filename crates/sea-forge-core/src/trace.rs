@@ -18,6 +18,42 @@ pub struct JsonlTraceRecorder {
     actor_id: String,
     sequence: usize,
 }
+
+pub fn append_internal_error(path: &Path, run_id: &str, actor_id: &str, error_class: &str) {
+    let Ok(bytes) = std::fs::read(path) else {
+        return;
+    };
+    if !bytes.ends_with(b"\n") {
+        return;
+    }
+    let mut sequence = 0;
+    for line in bytes
+        .split(|byte| *byte == b'\n')
+        .filter(|line| !line.is_empty())
+    {
+        if serde_json::from_slice::<TraceEvent>(line).is_err() {
+            return;
+        }
+        sequence += 1;
+    }
+    let event = TraceEvent {
+        version: RECORD_VERSION.into(),
+        event_id: seq_id("tev", 4, sequence + 1),
+        run_id: run_id.into(),
+        plan_item_id: None,
+        kind: TraceKind::InternalError,
+        actor_id: actor_id.into(),
+        timestamp: Utc::now().to_rfc3339(),
+        payload: serde_json::json!({"error_class":error_class}),
+    };
+    let Ok(mut encoded) = serde_json::to_vec(&event) else {
+        return;
+    };
+    encoded.push(b'\n');
+    if let Ok(mut file) = OpenOptions::new().append(true).open(path) {
+        let _ = file.write_all(&encoded).and_then(|_| file.flush());
+    }
+}
 impl JsonlTraceRecorder {
     pub fn create(path: &Path, run_id: &str, actor_id: &str) -> Result<Self, ForgeError> {
         let file = OpenOptions::new()

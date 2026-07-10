@@ -55,6 +55,52 @@ pub enum Operation {
     ExecuteCommand { argv: Vec<String>, cwd: String },
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum AuthorityAction {
+    WriteFile {
+        path: String,
+        content_hint: String,
+    },
+    ExecuteCommand {
+        argv: Vec<String>,
+        cwd: String,
+    },
+    ExternalApi {
+        host: String,
+    },
+    GitCommit {
+        paths: Vec<String>,
+    },
+    GithubPr {
+        has_required_evidence: bool,
+    },
+    Reserved {
+        resource_type: String,
+        resource_id: String,
+        parameters: Value,
+    },
+    Unclassified {
+        raw_kind: String,
+        parameters: Value,
+    },
+}
+
+impl From<&Operation> for AuthorityAction {
+    fn from(operation: &Operation) -> Self {
+        match operation {
+            Operation::WriteFile { path, content_hint } => Self::WriteFile {
+                path: path.clone(),
+                content_hint: content_hint.clone(),
+            },
+            Operation::ExecuteCommand { argv, cwd } => Self::ExecuteCommand {
+                argv: argv.clone(),
+                cwd: cwd.clone(),
+            },
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ActorRole {
@@ -141,7 +187,7 @@ pub struct AuthorityDecision {
     pub plan_item_id: String,
     pub action_id: String,
     pub correlation_id: String,
-    pub operation: Operation,
+    pub operation: AuthorityAction,
     pub outcome: Verdict,
     pub verdict: Verdict,
     pub normalized_disposition: NormalizedDisposition,
@@ -196,6 +242,7 @@ pub enum TraceKind {
     RunHalted,
     RunFinished,
     CaseClosed,
+    InternalError,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct TraceEvent {

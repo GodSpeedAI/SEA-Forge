@@ -1,6 +1,6 @@
 # SEA Forge — Minimum Vertical Slice Specification
 
-Status: Draft v0.1
+Status: Implemented v0.1 (conformance green 2026-07-10)
 
 Scope: Rust (stable toolchain, edition 2021), Linux/macOS. Synchronous, single-process. No Tokio, no server, no UI.
 
@@ -315,6 +315,16 @@ Operation (tagged enum, serde `{"kind": ..., ...}`):
 - `{ "kind": "write_file", "path": <workspace-relative path>, "content_hint": <string> }`
 - `{ "kind": "execute_command", "argv": [<string>, ...], "cwd": <workspace-relative path or "."> }`
 
+`AuthorityAction` is the canonical authority-boundary union. Its `write_file`
+and `execute_command` variants have the same serialized fields as `Operation`;
+it additionally represents reserved surfaces (`external_api`, `git_commit`,
+`github_pr`, or `{kind: "reserved", resource_type, resource_id, parameters}`)
+and `{kind: "unclassified", raw_kind, parameters}`. The planner and runtime
+MUST remain restricted to `Operation`; only authority tests and future adapters
+construct the additional variants. This separation lets the single authority
+fabric fail closed over future or malformed actions without making them
+executable planner operations.
+
 Minimum executable resource classes (derived from operations by the authority module, not stored separately on disk):
 
 - `{ "kind": "path", "value": <workspace-relative path> }`
@@ -345,14 +355,25 @@ AuthorityRequest (canonical action model v0.1, stored in decision metadata as `a
 - `context`: `repo` (optional), `branch` (optional), `environment` (`local-slice`), `workspace_root`, `source_platform` (`cli`), `channel` (`cli`).
 - `evidence`: `identity_binding_source`, `tool_trace_ref`, `payload_hash`.
 
+Persisted authority requests MUST NOT contain raw write payloads. For
+`write_file`, `action.parameters` records `path` plus `content_sha256`, while
+`evidence.payload_hash` binds the complete in-memory action presented to the
+engine. This preserves deterministic authorization without copying attempted
+secret/env content into audit records.
+
 AuthorityDecision:
 
 - `decision_id` (string, `auth_` + 2-digit seq).
 - `run_id`, `plan_item_id`, `action_id`, `correlation_id` (strings).
-- `operation` (Operation, echoed).
+- `operation` (`AuthorityAction`, governance-safe echo; executable actions retain
+  the `Operation` JSON shape, but `write_file.content_hint` is replaced by
+  `sha256:<content hash>` so denied secret payloads never enter authority records).
 - `outcome` / `verdict` (enum: `allow | deny | escalate`; both names serialize for v0.1 compatibility).
 - `normalized_disposition` (enum: `allow | deny | escalate | boundary | degraded`) — in the slice this is equal to outcome except future conflict-resolution evidence may normalize `boundary` and `degraded`.
-- `matched_rule` (string or null) — rule name from policy; null with verdict `deny` means default-deny fired.
+- `matched_rule` (string or null) — explicit rule name or policy-surface selector;
+  null means no named rule/surface matched. `reason_codes: ["default_deny"]`
+  identifies default-deny specifically; malformed `unclassified` actions also
+  have no matched rule.
 - `reason_codes` (array of strings) — machine-readable; `"unclassified"` and `"unsupported_action_surface"` are reserved per §7.3.4.
 - `reason` (string) — human-readable summary derived from reason codes.
 - `policy_refs` (array of strings) — e.g. `local-policy:<rule>`, `file-access-policy:deny`, `api-allowlist:default`.
@@ -384,7 +405,7 @@ Purpose: append-only timeline. Used by: trace recorder, proofs, future replay.
 - `version` ("0.1").
 - `event_id` (string, `tev_` + zero-padded 4-digit monotonic seq per run, starting `tev_0001`). ← required; fixes review C2.
 - `run_id`, `plan_item_id` (string or null for run-level events).
-- `kind` (enum: `case_created | run_started | plan_created | authority_evaluated | workspace_created | command_started | command_finished | artifact_captured | settlement_recorded | run_halted | run_finished | case_closed`).
+- `kind` (enum: `case_created | run_started | plan_created | authority_evaluated | workspace_created | command_started | command_finished | artifact_captured | settlement_recorded | run_halted | run_finished | case_closed | internal_error`). `internal_error` is best-effort and appears only after a post-start internal failure; it is not part of successful/halted minimum ordering.
 - `actor_id` (string).
 - `timestamp` (RFC 3339).
 - `payload` (JSON object; kind-specific, MAY be empty `{}`).
@@ -603,11 +624,12 @@ The system accepts one intent string from `sea-forge run --intent "<text>"`.
 parse intent → preflight (§8.5) → create case record + run dir → emit case_created, run_started
   → plan (plan.json, plan_created)
   → authority per operation (authority.json, authority_evaluated × N, evidence per decision)
-  → if any verdict ≠ allow: run_halted → settlement (rejected|escalated) → envelope → exit
+  → if any verdict ≠ allow: run_halted → settlement (rejected|escalated) → terminal records → envelope → exit
   → create workspace (workspace_created) → materialize write_file operations
   → execute command (command_started/command_finished) → capture artifacts + work-product identity metadata (artifact_captured, evidence)
-  → settlement (settlement_recorded) → envelope → capability append
-  → close case (state per §7.3.2, case_closed) → run_finished emitted before case_closed → exit
+  → settlement (settlement_recorded) → semantic envelope file
+  → run_finished → close case (state per §7.3.2, case_closed)
+  → capability append as the final commit write → exit
 ```
 
 #### Flow Diagram
@@ -624,13 +646,20 @@ flowchart TD
   F -->|completed| G[capture artifacts]
   F -->|spawn_failed / timed_out| G
   G --> H[settlement evaluation]
-  X1 --> I[envelope + capability append]
+  X1 --> I[run_finished + case_closed]
   X2 --> I
   H --> I
-  I --> J[run_finished, exit code per §3.3]
+  I --> J[final capability append]
 ```
 
 There is no retry path in this slice: any failure settles and terminates (retries are a full-spec orchestrator concern).
+
+Structural allocation creates an empty retained `workspace/` for every run,
+including governed halts, as required by §3.1. The `workspace_created` trace
+event means the already-allocated workspace was authorized for activation and
+materialization; it therefore appears only after all-allow authority and is
+absent from halted traces. No planned write or command occurs in a halted
+workspace.
 
 ### 9.2 States (of the Run)
 
@@ -659,7 +688,9 @@ Idempotency rule: re-running the same intent MUST create a new run directory and
 - Authority verdict computed (per operation) — emits `authority_evaluated` + an `authority_decision` EvidenceRecord.
 - Process exit / spawn error / timeout fired — emits `command_finished` with status, triggers artifact capture.
 - Settlement computed — emits `settlement_recorded`, writes `settlement.json`.
-- Envelope written — appends to `capabilities.jsonl`, emits `run_finished`.
+- Settlement writes the semantic envelope file before emitting `run_finished`;
+  `case_closed` follows the atomic terminal case update. Appending that envelope
+  to `capabilities.jsonl` is the final lifecycle commit write.
 
 ### 9.5 Important Nuances
 
@@ -685,6 +716,10 @@ Idempotency rule: re-running the same intent MUST create a new run directory and
 - The implementation MUST deny with reason `unclassified` any malformed or unknown operation it cannot map to §7.3.4 vocabulary (defense in depth; the planner should have prevented it). A well-formed reserved resource class without a slice executor yields `escalate`, reason `unsupported_action_surface`, and required step `extend-authority-policy`.
 - The implementation MUST compute and persist `policy_bundle_hash`, `action_request_hash`, and `identity_binding_hash` on every decision. Re-evaluating the same canonical request against the same validated bundle and identity binding MUST produce the same `outcome`, `reason_codes`, `policy_refs`, and `required_next_steps`.
 - The implementation MUST apply hard surface boundaries before allow rules. Direct generated-zone writes, `.git` writes, secret/env writes, protected governance-path git commits, unknown API hosts, and unsupported PR merges MUST NOT be made allowable by a generic rule.
+- Basename policy matching does not establish executable identity. Before an
+  `execute_command` allow rule may match, authority MUST canonicalize argv0 and
+  require it to equal the running `sea-forge` executable. Substitutes with the
+  same basename deny with `untrusted_executable`.
 - The implementation MUST write every decision to `authority.json`, emit an `authority_evaluated` trace event, and write an `authority_decision` EvidenceRecord — for allow, deny, and escalate alike (Evidence rule from the brief).
 - Every authority decision MUST also include a common audit record with keys `{engine, disposition, subject, reason, evidence_refs, recorded_at}`. The slice may store it inline in `authority.json`; full spec may additionally mirror it into a governance audit trail.
 - The implementation MUST NOT let the sandbox/runtime modules see the policy file; they receive only allowed `ExecutionRequest`s. (Prevents the runtime becoming policy-bearing by accident — report failure mode 2.)
@@ -696,6 +731,10 @@ Idempotency rule: re-running the same intent MUST create a new run directory and
 - The implementation MUST apply the path-safety algorithm (§16.1) to every `write_file` target and to artifact collection paths.
 - The implementation MUST pass a minimal environment (§7.3.6) and MUST NOT inherit the parent environment wholesale.
 - The implementation MUST enforce the timeout by killing the child process and recording `timed_out`.
+- On the slice's Linux/macOS platforms, the executor MUST place the child in a
+  new process group and terminate/reap that group on timeout so descendants
+  cannot survive as orphans. This enforcement action is runtime control, not a
+  planned external operation, and never invokes a shell.
 - The implementation MUST capture stdout and stderr to `artifacts/stdout.txt` / `artifacts/stderr.txt` (streaming to file, not buffered in memory unboundedly).
 - Implementation-defined capture behavior: because stdout/stderr are streamed directly
   to their final `artifacts/` paths, evidence capture hashes those files in place and
@@ -756,6 +795,14 @@ SettlementCriteria: `require_exit_zero: true`, `required_artifacts: ["model.sea"
 
 ArtifactDescriptor for `model.sea`: `artifact_type: sea_model`, `stage: intellectual`, `owner: <Intent.actor_id>`, `license: internal-unlicensed`, `review_status: draft`, `source_refs: []`, and deterministic `pre_mint_identity` per §7.3.8.
 
+Implementation-defined conformance harness: exact intents prefixed `TEST_ONLY:`
+MAY select fixed planner entries for false-success, nonzero-exit, timeout, and
+kill-9 recovery tests. They MUST still pass ordinary authority evaluation and
+MUST invoke only hidden self-commands in the current `sea-forge` executable via
+tokenized argv. The harness MUST NOT accept arbitrary argv, shell text, paths,
+or content from the intent. Hidden self-commands are not a supported operator
+interface and exist only to make §13/§17 recovery behavior deterministic.
+
 ### 11.3 Invocation contract
 
 - Invocation: tokenized argv via `std::process::Command`; never a shell.
@@ -793,7 +840,11 @@ jq -e --arg id "$(jq -r .settlement_id $RUN/settlement.json)" \
 # P3: artifact hashes verify
 jq -r 'select(.kind=="artifact") | [.uri, .sha256] | @tsv' $RUN/evidence.jsonl \
   | while IFS=$'\t' read -r uri hash; do
-      echo "$hash  $RUN/$uri" | sha256sum -c -
+      if command -v sha256sum >/dev/null 2>&1; then
+        echo "$hash  $RUN/$uri" | sha256sum -c -
+      else
+        echo "$hash  $RUN/$uri" | shasum -a 256 -c -
+      fi
     done
 
 # P3b: generated work product carries stable pre-mint identity metadata
@@ -824,7 +875,12 @@ A proof passes when its stated condition holds; it fails otherwise. P1–P4b tog
 
 ### 12.3 Logs, Metrics, and Traces
 
-Required log context on every stderr diagnostic line: `run_id`, component (module name), error class. Required trace events: the `kind` list in §7.3.7 — each MUST appear at its §9.1 position. Metrics: none in this slice (a one-shot CLI's metrics are its run records).
+Required log context on every stderr diagnostic line: `run_id`, component (module name), error class. Required trace events: the normal lifecycle `kind` list in §7.3.7 MUST appear at its §9.1 position; conditional `internal_error` appears only when best-effort failure recording is needed. Metrics: none in this slice (a one-shot CLI's metrics are its run records).
+
+The exact clap usage output and hidden validator protocol output in §8.6/§11.1
+are command-protocol messages, not runtime diagnostics, and retain their specified
+plain-text formats. All application diagnostics, including recall warnings, use
+the structured context above.
 
 ## 13. Repeatability and Variation Requirements
 
@@ -857,6 +913,11 @@ Required recovery cases:
 - Pre-execution failure (planner/authority IO): abort; the partial run dir stands as its own diagnostic.
 - Execution failure: never aborts the pipeline — it flows into settlement (§10.4).
 - Post-execution failure (evidence/settlement/envelope IO): log to stderr and exit 1; do not attempt to rewrite or repair earlier records.
+- If the final capability append fails after settlement and case closure, the
+  case retains the terminal state dictated by settlement, but the invocation is
+  incomplete: CLI exit 1 plus the conditional `internal_error` trace is the
+  authoritative completion signal. A terminal case record alone MUST NOT be
+  interpreted as satisfying §10.7.
 - Cleanup: there is no cleanup phase — workspaces are retained by design (they are evidence).
 
 On failure the system MUST NOT: delete or rewrite any already-written record; write outside `.sea-forge/`; report exit 0.
@@ -896,11 +957,12 @@ function safe_join(workspace_root, rel_path):
   reject if rel_path is absolute
   reject if rel_path contains a ".." segment (lexical check, before touching the FS)
   reject if rel_path fails charset [A-Za-z0-9._/-]+
-  candidate = workspace_root.join(rel_path)
-  create parent directories of candidate as needed (inside root by construction above)
-  canonical_parent = canonicalize(candidate.parent())   # resolves symlinks
   canonical_root  = canonicalize(workspace_root)
-  reject unless canonical_parent starts_with canonical_root
+  walk each candidate parent component from canonical_root:
+    reject an existing symbolic link or non-directory component
+    create a missing component one level at a time only after its parent is safe
+  candidate = canonical_root.join(rel_path)
+  reject if candidate already exists as a symbolic link
   return candidate
 ```
 
@@ -978,20 +1040,20 @@ Not applicable beyond §17.1 — the "integration" (child process) is exercised 
 
 ## 18. Implementation Checklist / Definition of Done
 
-- [ ] Workspace builds with the two-crate layout of §6.2 (`cargo build --workspace`).
-- [ ] All §7 types compile with the stated derives and serde `snake_case` enums.
-- [ ] `sea-forge validate` behaves exactly per §11.1.
-- [ ] `sea-forge run` demo intent passes proof P1; P2–P4 pass.
-- [ ] All §17.1 conformance tests green; §17.2 variation/recovery green.
-- [ ] Denied/escalated/failed runs leave complete evidence (spot-check trace/evidence/settlement on each).
-- [ ] `capabilities.jsonl` accumulates one envelope per run of any outcome, each carrying a complete `attribution` block and `case_ref`.
-- [ ] `model.sea` EvidenceRecord includes an `ArtifactDescriptor`; the envelope includes its `{evidence_id, artifact_id, pre_mint_identity}`; repeated demo runs produce the same pre-mint identity.
-- [ ] Every run belongs to a case; the case record's `state` always agrees with the settlement.
-- [ ] `sea-forge recall` behaves per §10.5 and its two conformance tests pass.
-- [ ] `sea-forge inspect <run_id>` pretty-prints the six records (convenience; 30 lines, no new logic).
-- [ ] No code path invokes a shell, the network, or writes outside `.sea-forge/`.
-- [ ] README in the workspace root states the §15 known limitation verbatim.
-- [ ] A developer can answer all eight §0 questions from this spec alone.
+- [x] Workspace builds with the two-crate layout of §6.2 (`cargo build --workspace`).
+- [x] All §7 types compile with the stated derives and serde `snake_case` enums.
+- [x] `sea-forge validate` behaves exactly per §11.1.
+- [x] `sea-forge run` demo intent passes proof P1; P2–P4 pass.
+- [x] All §17.1 conformance tests green; §17.2 variation/recovery green.
+- [x] Denied/escalated/failed runs leave complete evidence (spot-check trace/evidence/settlement on each).
+- [x] `capabilities.jsonl` accumulates one envelope per run of any outcome, each carrying a complete `attribution` block and `case_ref`.
+- [x] `model.sea` EvidenceRecord includes an `ArtifactDescriptor`; the envelope includes its `{evidence_id, artifact_id, pre_mint_identity}`; repeated demo runs produce the same pre-mint identity.
+- [x] Every run belongs to a case; the case record's `state` always agrees with the settlement.
+- [x] `sea-forge recall` behaves per §10.5 and its two conformance tests pass.
+- [x] `sea-forge inspect <run_id>` pretty-prints the six records (convenience; 30 lines, no new logic).
+- [x] No code path invokes a shell, the network, or writes outside `.sea-forge/`.
+- [x] README in the workspace root states the §15 known limitation verbatim.
+- [x] A developer can answer all eight §0 questions from this spec alone.
 
 ## Appendix A. Build order for the implementing agent (dependency-explicit)
 

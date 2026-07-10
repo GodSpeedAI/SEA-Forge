@@ -1,6 +1,7 @@
 use crate::{
     errors::ForgeError,
     ids::{random_id, seq_id},
+    sandbox::safe_join,
     types::*,
     RECORD_VERSION,
 };
@@ -112,7 +113,7 @@ pub fn capture_file(
     descriptor: Option<(&Intent, &str)>,
 ) -> Result<(EvidenceRecord, Option<ArtifactDescriptor>), ForgeError> {
     fs::create_dir_all(artifacts).map_err(|e| ForgeError::io("create artifacts directory", e))?;
-    let destination = artifacts.join(name);
+    let destination = safe_join(artifacts, name)?;
     if source != destination {
         fs::copy(source, &destination)
             .map_err(|e| ForgeError::io(format!("copy artifact {name}"), e))?;
@@ -137,7 +138,10 @@ pub fn capture_file(
             review_status: ReviewStatus::Draft,
             source_refs: vec![],
             content_sha256: digest.clone(),
-            pre_mint_identity: format!("ifl:{}", hash_canonical(&identity_input)?),
+            pre_mint_identity: format!(
+                "ifl:hash:{}",
+                sha256_bytes(&canonical_json(&identity_input)?)
+            ),
         };
         metadata.insert("artifact".into(), serde_json::to_value(&artifact)?);
         output_descriptor = Some(artifact);

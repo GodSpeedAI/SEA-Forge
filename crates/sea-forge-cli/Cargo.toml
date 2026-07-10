@@ -9,7 +9,7 @@ description = "SEA Forge one-shot CLI: run, validate, inspect, recall."
 
 [dependencies]
 clap.workspace = true
-sea-forge-core = { path = "../sea-forge-core" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 serde_json.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

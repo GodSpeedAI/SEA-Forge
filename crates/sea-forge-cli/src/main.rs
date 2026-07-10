@@ -36,6 +36,8 @@ enum Command {
     },
     #[command(hide = true)]
     Validate { file: PathBuf },
+    #[command(hide = true)]
+    InternalTestSleep { seconds: u64 },
     Recall {
         query: String,
         #[arg(long, default_value = ".sea-forge")]
@@ -76,7 +78,8 @@ fn main() -> ExitCode {
     match dispatch(Cli::parse()) {
         Ok(code) => ExitCode::from(code),
         Err((code, error)) => {
-            tracing::error!(event="command_failed",run_id="none",component="sea-forge-cli",error_class=error.class(),message=%error);
+            let run_id = error.run_id().unwrap_or("none");
+            tracing::error!(event="command_failed",run_id=run_id,component="sea-forge-cli",error_class=error.class(),message=%error);
             ExitCode::from(code)
         }
     }
@@ -84,6 +87,10 @@ fn main() -> ExitCode {
 fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
     match cli.command {
         Command::Validate { file } => Ok(commands::validate::execute(&file)),
+        Command::InternalTestSleep { seconds } => {
+            std::thread::sleep(std::time::Duration::from_secs(seconds));
+            Ok(0)
+        }
         Command::Run {
             intent,
             policy,

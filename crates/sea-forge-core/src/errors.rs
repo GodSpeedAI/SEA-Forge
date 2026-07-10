@@ -16,6 +16,10 @@ pub enum ForgeError {
     },
     Serialization(String),
     Internal(String),
+    Run {
+        run_id: String,
+        source: Box<ForgeError>,
+    },
 }
 
 impl ForgeError {
@@ -34,6 +38,21 @@ impl ForgeError {
             Self::Io { .. } => "io_error",
             Self::Serialization(_) => "serialization_error",
             Self::Internal(_) => "internal_error",
+            Self::Run { .. } => "internal_error",
+        }
+    }
+
+    pub fn run(run_id: impl Into<String>, source: Self) -> Self {
+        Self::Run {
+            run_id: run_id.into(),
+            source: Box::new(source),
+        }
+    }
+
+    pub fn run_id(&self) -> Option<&str> {
+        match self {
+            Self::Run { run_id, .. } => Some(run_id),
+            _ => None,
         }
     }
 }
@@ -54,6 +73,7 @@ impl fmt::Display for ForgeError {
                 write!(f, "{class}: {}: {message}", path.display())
             }
             Self::Io { context, source } => write!(f, "{context}: {source}"),
+            Self::Run { source, .. } => source.fmt(f),
         }
     }
 }
@@ -62,6 +82,7 @@ impl Error for ForgeError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Io { source, .. } => Some(source),
+            Self::Run { source, .. } => Some(source.as_ref()),
             _ => None,
         }
     }
