@@ -153,6 +153,16 @@ pub struct PolicyAuthorityEngine {
     bundle: AuthorityPolicyBundle,
     bundle_hash: String,
 }
+
+pub struct AuthorityEvaluation<'a> {
+    pub actor: &'a Actor,
+    pub binding: IdentityBinding,
+    pub run_id: &'a str,
+    pub plan_item_id: &'a str,
+    pub sequence: usize,
+    pub operation: &'a Operation,
+    pub workspace_root: &'a Path,
+}
 impl PolicyAuthorityEngine {
     pub fn new(bundle: AuthorityPolicyBundle) -> Result<Self, ForgeError> {
         let bundle_hash = hash_canonical(&bundle)?;
@@ -163,14 +173,17 @@ impl PolicyAuthorityEngine {
     }
     pub fn evaluate(
         &self,
-        actor: &Actor,
-        binding: IdentityBinding,
-        run_id: &str,
-        plan_item_id: &str,
-        sequence: usize,
-        operation: &Operation,
-        workspace_root: &Path,
+        input: AuthorityEvaluation<'_>,
     ) -> Result<AuthorityDecision, ForgeError> {
+        let AuthorityEvaluation {
+            actor,
+            binding,
+            run_id,
+            plan_item_id,
+            sequence,
+            operation,
+            workspace_root,
+        } = input;
         let now = Utc::now().to_rfc3339();
         let action_id = random_id("act")?;
         let (kind, resource_id, parameters) = match operation {

@@ -1,5 +1,5 @@
 use crate::{
-    authority::{AuthorityPolicyBundle, PolicyAuthorityEngine},
+    authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine},
     capability,
     errors::ForgeError,
     evidence::{capture_file, JsonlEvidenceWriter},
@@ -39,6 +39,12 @@ pub struct RunOutcome {
 fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
     let bytes = serde_json::to_vec_pretty(value)?;
     fs::write(path, bytes).map_err(|e| ForgeError::io(format!("write {}", path.display()), e))
+}
+fn replace_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
+    let temporary = path.with_extension("json.tmp");
+    write_json(&temporary, value)?;
+    fs::rename(&temporary, path)
+        .map_err(|error| ForgeError::io(format!("replace {}", path.display()), error))
 }
 fn validate_attribution(value: &str, name: &str) -> Result<(), ForgeError> {
     if value.is_empty()
@@ -93,7 +99,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         created_at: now,
         closed_at: None,
     };
-    write_json(
+    replace_json(
         &options.root.join("cases").join(format!("{case_id}.json")),
         &case,
     )?;
@@ -122,15 +128,15 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
     };
     let mut decisions = Vec::new();
     for (index, operation) in item.operations.iter().enumerate() {
-        let decision = engine.evaluate(
-            &actor,
-            binding.clone(),
-            &run_id,
-            &item.plan_item_id,
-            index + 1,
+        let decision = engine.evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding: binding.clone(),
+            run_id: &run_id,
+            plan_item_id: &item.plan_item_id,
+            sequence: index + 1,
             operation,
-            &workspace,
-        )?;
+            workspace_root: &workspace,
+        })?;
         let event = trace.append(
             TraceKind::AuthorityEvaluated,
             Some(item.plan_item_id.clone()),

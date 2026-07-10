@@ -22,7 +22,13 @@ pub fn execute(
     })?;
     println!("run_id={}", outcome.run_id);
     for d in &outcome.decisions {
-        println!("authority={}:{:?}", d.decision_id, d.verdict);
+        println!(
+            "authority={}:{}",
+            d.decision_id,
+            serde_json::to_value(&d.verdict)?
+                .as_str()
+                .expect("verdict serializes as a string")
+        );
     }
     println!(
         "execution={}",
@@ -32,7 +38,12 @@ pub fn execute(
             .map_or("not_run".into(), |e| format!("{:?}", e.status)
                 .to_lowercase())
     );
-    println!("settlement={:?}", outcome.settlement.status);
+    println!(
+        "settlement={}",
+        serde_json::to_value(&outcome.settlement.status)?
+            .as_str()
+            .expect("settlement status serializes as a string")
+    );
     println!("run_dir={}", outcome.run_dir.display());
     Ok(match outcome.settlement.status {
         SettlementStatus::Accepted => 0,

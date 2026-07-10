@@ -6,9 +6,30 @@ allowed work in an isolated workspace, records trace and evidence, settles the
 declared outcome, and appends a semantic capability envelope.
 
 This repository is **specification-first**. The development foundation
-(`.agents/specs/Shell-SPEC.md`) is implemented here; the governed kernel
-(`.agents/specs/spec-minimum.md`) and full system (`.agents/specs/spec-full.md`)
-are implemented incrementally on top of it.
+(`.agents/specs/Shell-SPEC.md`) and governed minimum kernel
+(`.agents/specs/spec-minimum.md`) are implemented here. The full system
+(`.agents/specs/spec-full.md`) remains an additive roadmap.
+
+## Minimum kernel
+
+Create a local authority policy from the schema in `spec-minimum.md` §8.2, then
+run the governed lifecycle:
+
+```sh
+cargo run -p sea-forge-cli -- run \
+  --policy sea-forge-policy.yaml \
+  --intent "Generate and validate a simple DomainForge .sea model"
+cargo run -p sea-forge-cli -- recall generate
+```
+
+Every invocation records its case, plan, authority decisions, trace, evidence,
+settlement, and semantic envelope under `.sea-forge/`. Denied and failed work is
+recorded too; only an accepted settlement exits zero.
+
+Known limitation: `LocalWorkspaceSandbox` is a process-level sandbox — a
+malicious child can write outside the workspace because there is no OS jail.
+The minimum kernel therefore only allow-lists its trusted self-validator. An OS
+jail is required before any untrusted command is allow-listed.
 
 ## Prerequisites
 

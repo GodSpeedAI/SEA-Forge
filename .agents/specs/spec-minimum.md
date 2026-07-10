@@ -650,7 +650,7 @@ There is no retry path in this slice: any failure settles and terminates (retrie
 - `executed → settled_*` per §10.4.
 - `halted → settled_rejected` (all-deny) or `settled_escalated` (any escalate).
 
-Idempotency rule: re-running the same intent MUST create a new run directory and MUST NOT modify any prior run directory. Within a run, every file is written exactly once (JSONL files are append-only during the run and never rewritten).
+Idempotency rule: re-running the same intent MUST create a new run directory and MUST NOT modify any prior run directory. Within a run, every run-directory file is written exactly once (JSONL files are append-only during the run and never rewritten). The case record is the sole lifecycle exception: it is first written `active`, then atomically replaced once at closure with its terminal state; after `case_closed` it is immutable.
 
 ### 9.4 Transition Triggers
 

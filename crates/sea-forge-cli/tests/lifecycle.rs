@@ -106,3 +106,132 @@ fn authority_denial_settles_rejected_without_command_start() {
     assert!(trace.contains("run_halted"));
     fs::remove_dir_all(parent).unwrap();
 }
+
+#[test]
+fn escalation_halts_and_requires_review() {
+    let parent = temp_root("escalated");
+    let root = parent.join("state");
+    let policy = policy(&parent, "  - name: review-write\n    verdict: escalate\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: review-command\n    verdict: escalate\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--intent",
+            "Generate and validate a simple DomainForge .sea model",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(4));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let run_id = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("run_id="))
+        .unwrap();
+    let run = root.join("runs").join(run_id);
+    let settlement: serde_json::Value =
+        serde_json::from_slice(&fs::read(run.join("settlement.json")).unwrap()).unwrap();
+    assert_eq!(settlement["status"], "escalated");
+    assert_eq!(settlement["review_required"], true);
+    assert!(!fs::read_to_string(run.join("trace.jsonl"))
+        .unwrap()
+        .contains("command_started"));
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn repeated_runs_have_stable_artifact_identity_and_recall_is_read_only() {
+    let parent = temp_root("repeat");
+    let root = parent.join("state");
+    let policy = policy(&parent, "  - name: allow-model-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self-validate\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    let mut identities = Vec::new();
+    for _ in 0..2 {
+        let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+            .args([
+                "run",
+                "--root",
+                root.to_str().unwrap(),
+                "--policy",
+                policy.to_str().unwrap(),
+                "--entity",
+                "team_a",
+                "--process",
+                "agent_1",
+                "--intent",
+                "Generate and validate a simple DomainForge .sea model",
+            ])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(0));
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let run_id = stdout
+            .lines()
+            .find_map(|line| line.strip_prefix("run_id="))
+            .unwrap();
+        let envelope: serde_json::Value = serde_json::from_slice(
+            &fs::read(
+                root.join("runs")
+                    .join(run_id)
+                    .join("semantic-envelope.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        identities.push(
+            envelope["artifact_refs"][0]["pre_mint_identity"]
+                .as_str()
+                .unwrap()
+                .to_owned(),
+        );
+    }
+    assert_eq!(identities[0], identities[1]);
+    let before = fs::read(root.join("capabilities.jsonl")).unwrap();
+    let recall = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "recall",
+            "generate",
+            "--root",
+            root.to_str().unwrap(),
+            "--entity",
+            "team_a",
+            "--process",
+            "agent_1",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(recall.status.code(), Some(0));
+    assert_eq!(String::from_utf8(recall.stdout).unwrap().lines().count(), 2);
+    assert_eq!(before, fs::read(root.join("capabilities.jsonl")).unwrap());
+    assert_eq!(fs::read_dir(root.join("runs")).unwrap().count(), 2);
+    fs::remove_dir_all(parent).unwrap();
+}
+
+#[test]
+fn validator_accepts_only_the_stub_contract() {
+    let parent = temp_root("validate");
+    let valid = parent.join("valid.sea");
+    fs::write(
+        &valid,
+        r#"{"domain":"demo","entities":[{"name":"Sample"}]}"#,
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args(["validate", valid.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(output.stdout, b"sea-forge: model valid\n");
+    let invalid = parent.join("invalid.sea");
+    fs::write(&invalid, r#"{"domain":"demo","entities":[]}"#).unwrap();
+    assert_eq!(
+        Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+            .args(["validate", invalid.to_str().unwrap()])
+            .status()
+            .unwrap()
+            .code(),
+        Some(1)
+    );
+    fs::remove_dir_all(parent).unwrap();
+}

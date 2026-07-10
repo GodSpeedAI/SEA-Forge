@@ -72,15 +72,44 @@ test:
 proof:
     #!/usr/bin/env bash
     {{set}}
-    if ! cargo run -q -p sea-forge-cli -- --help >/dev/null 2>&1 \
-       && ! cargo run -q -p sea-forge-cli >/dev/null 2>&1; then
-        echo "sea-forge: minimum slice not implemented yet (see .agents/specs/spec-minimum.md §12.2)"
-        echo "next move: implement the minimum kernel, then run 'just proof'"
-        exit 1
-    fi
     echo "[proof] running spec-minimum §12.2 P1-P4b"
-    cargo run -q -p sea-forge-cli -- run --intent "Generate and validate a simple DomainForge .sea model" || true
-    echo "[proof] full P1-P4b verification belongs to the minimum slice conformance tests."
+    cargo build -q -p sea-forge-cli
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' EXIT
+    policy="$tmp/permissive.yaml"
+    deny="$tmp/deny.yaml"
+    printf '%s\n' 'version: "0.1"' 'rules:' \
+      '  - name: allow-model-write' '    verdict: allow' \
+      '    actor_role: operator' '    operation_kind: write_file' \
+      '    path_prefix: ""' '  - name: allow-self-validate' \
+      '    verdict: allow' '    actor_role: operator' \
+      '    operation_kind: execute_command' '    argv0: sea-forge' >"$policy"
+    printf '%s\n' 'version: "0.1"' 'rules: []' >"$deny"
+    target/debug/sea-forge run --root "$tmp/state" --policy "$policy" \
+      --intent "Generate and validate a simple DomainForge .sea model" >"$tmp/run.out"
+    run_id="$(sed -n 's/^run_id=//p' "$tmp/run.out")"
+    run="$tmp/state/runs/$run_id"
+    test -f "$run/plan.json" && test -f "$run/authority.json"
+    test -f "$run/trace.jsonl" && test -f "$run/evidence.jsonl"
+    test -f "$run/settlement.json" && test -f "$run/semantic-envelope.json"
+    jq -e '.status == "accepted" and (.basis | length > 0)' "$run/settlement.json" >/dev/null
+    jq -e '.settlement_ref and (.artifact_refs | length == 1) and (.extension_refs|type=="array") and (.projection_refs|type=="array")' "$run/semantic-envelope.json" >/dev/null
+    jq -e 'all(.[]; (.determinism.policy_bundle_hash|test("^sha256:[a-f0-9]{64}$")) and .audit_record.engine and .audit_record.disposition and .audit_record.subject)' "$run/authority.json" >/dev/null
+    while IFS=$'\t' read -r uri hash; do
+      printf '%s  %s\n' "$hash" "$run/$uri" | sha256sum -c - >/dev/null
+    done < <(jq -r 'select(.kind=="artifact") | [.uri,.sha256] | @tsv' "$run/evidence.jsonl")
+    set +e
+    target/debug/sea-forge run --root "$tmp/denied" --policy "$deny" \
+      --intent "Generate and validate a simple DomainForge .sea model" >/dev/null
+    denied_exit=$?
+    target/debug/sea-forge run --root "$tmp/boundary" --policy "$policy" \
+      --intent "TEST_ONLY: write generated zone" >/dev/null
+    boundary_exit=$?
+    set -e
+    test "$denied_exit" -eq 3
+    test "$boundary_exit" -eq 3
+    test ! -e "$tmp/boundary/runs"/*/workspace/src/gen/model.sea
+    echo "[proof] P1-P4b passed"
 
 # --- clean --------------------------------------------------------------
 
