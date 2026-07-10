@@ -1,0 +1,26 @@
+# Rust build output
+/target/
+
+# Devbox / Nix
+/.devbox/
+/.direnv/
+
+# direnv
+/.envrc.local
+# .envrc itself IS tracked (Shell-SPEC Appendix A); re-include despite global ignores.
+!/.envrc
+
+# Generated bootstrap evidence (Shell-SPEC §3.1)
+/target/bootstrap-evidence/
+
+# SEA Forge runtime output (never commit runtime records)
+/.sea-forge/
+
+# Local secret artifacts: only *.enc.env may be tracked under secrets/
+/secrets/*.env
+!/secrets/*.enc.env
+/secrets/.decrypted/
+
+# Editor / OS noise
+*.swp
+.DS_Store

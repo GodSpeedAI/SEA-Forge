@@ -23,9 +23,11 @@ implementation to meet a still-valid requirement, or update the spec and this
 document in the same change when evidence shows the design must change. Never
 edit this file to conceal drift.
 
-Current state: the repository is specification-first. Components below are
-planned until their files and conformance evidence exist. “Current baseline”
-means the first architecture to implement, not a claim that it already runs.
+Current state: the `Shell-SPEC.md` development foundation is implemented —
+Devbox, pinned Rust toolchain, `just` command surface, SOPS/age secrets, CI,
+and the two-crate workspace skeleton build and test green. The minimum
+governed kernel (§2.2) and full-system milestones (§2.3) remain planned until
+their files and conformance evidence exist.
 
 ## 1. System at a Glance
 
@@ -79,7 +81,7 @@ approvals, and event subscriptions; it does not introduce a second pipeline.
 
 ### 2.1 Development foundation
 
-`Shell-SPEC.md` defines one tool per ownership layer:
+Implemented per `Shell-SPEC.md`. One tool per ownership layer:
 
 - Devbox pins system tools.
 - `rust-toolchain.toml` pins stable Rust, rustfmt, and Clippy.

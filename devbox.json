@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/main/.schema/devbox.schema.json",
+  "packages": {
+    "git": "2.49.0",
+    "rustup": "1.28.2",
+    "just": "1.55.1",
+    "direnv": "2.37.0",
+    "sops": "3.10.2",
+    "age": "1.2.1",
+    "gitleaks": "8.30.1",
+    "cargo-deny": "0.19.9"
+  },
+  "env": {
+    "RUSTUP_TOOLCHAIN": ""
+  },
+  "shell": {
+    "init_hook": [
+      "direnv allow 2>/dev/null || true"
+    ]
+  }
+}

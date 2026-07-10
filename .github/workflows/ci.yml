@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: Shell-SPEC gates (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@v0.13.0
+        with:
+          enable-cache: true
+
+      - name: Setup
+        run: devbox run -- just setup
+
+      - name: Doctor
+        run: devbox run -- just doctor
+
+      - name: Check
+        run: devbox run -- just check
+
+      - name: Test
+        run: devbox run -- just test
+
+      - name: Upload doctor evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-evidence
+          path: target/bootstrap-evidence/
+
+  macos:
+    name: Shell-SPEC gates (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@v0.13.0
+        with:
+          enable-cache: true
+
+      - name: Setup
+        run: devbox run -- just setup
+
+      - name: Doctor
+        run: devbox run -- just doctor
+
+      - name: Check
+        run: devbox run -- just check
+
+      - name: Test
+        run: devbox run -- just test
