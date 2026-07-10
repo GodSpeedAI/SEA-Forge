@@ -1,0 +1,784 @@
+# SEA Forge — Extended Full System Specification
+
+Status: Draft v0.1
+
+Scope: Rust (stable, edition 2021), Linux primary / macOS secondary. Tokio async where stated. Multi-crate workspace.
+
+Purpose: Grow the minimum vertical slice (`spec-minimum.md`) into the full governed capability substrate: a unified authority fabric, pluggable sandboxes with OS-level enforcement, a CMMN-subset case engine (cases, stages, sentries, milestones, discretionary items), versioned plan templates, an operator approval loop, a long-running server, governed semantic memory, environment contracts with evaluator-based and batch settlement, first-class spec-to-code pipelines, artifact-to-IP promotion, DomainForge/.sea projection, and SeaCell federation readiness.
+
+Owner: SEA Forge core team
+
+Prerequisite: **`spec-minimum.md` implemented and green.** This spec never redefines the kernel types, lifecycle, ID grammar, record formats, authority hashes, audit record shape, or fail-closed rules — it extends them. Authority is not an extension capability; it is the invariant substrate for every extension. Where a section here is silent, the minimum spec governs. Corrections R1–R10 from `build-report-review.md` apply throughout.
+
+## 0. Spec Frame
+
+1. What should be built? — The kernel workspace of the build report, populated by graduating the minimum slice's modules into crates, hardening the authority fabric into a policy-gateway-compatible runtime, and adding ten extension capabilities (E1–E10 below) in milestone order.
+2. What result should it produce? — The same governed run record as the slice, now for: long-lived cases with sentry-activated plan items, untrusted commands under OS-level jails, operator-approved escalations and discretionary planning, concurrent cases via a server, spec-to-code projections, artifact-to-IP transitions, and machine-consumable capability/projection outputs.
+3. How will we know the result is real? — Each milestone has its own conformance gate (§17); a milestone that cannot pass the *minimum* spec's proofs P1–P4b unchanged has broken the kernel and MUST be rejected.
+4. What capability should get stronger after repeated use? — Capability memory becomes queryable: operators and downstream generators can ask "what has this system proven it can do, at what reliability," and get an evidence-linked answer.
+5. What evidence proves the capability claim? — `CapabilityRecord`s aggregate envelopes with success/failure counts and evidence links (§7.3); spec-to-code runs prove each ADR/PRD/SDS/SEA/AST/IR/manifest/generated-code/last-mile step by hash-linked records; artifact-to-IP runs prove every maturity transition with a TransitionToken; `sea-forge capability list` reproduces capability records from raw envelopes byte-identically (rebuildable projection).
+6. What fails safely? — Everything in the minimum spec, plus: identity resolution failures escalate; policy-gateway or OPA/GovernedSpeed transport failures deny or escalate, never allow; jail violations kill the run and settle `rejected`; unapproved escalations expire to `rejected`; a dead server leaves resumable, self-describing run directories.
+7. What must repeat until reliable? — §13/§17.2 per milestone; especially jail-violation tests and approval-expiry tests.
+8. What changes when evidence disagrees with the design? — §5 claim table; notably, if Landlock proves impractical for the workload, the sandbox backend contract (§11.2) is the isolation seam and a MicroVM backend replaces it without kernel changes.
+
+## Normative Language
+
+RFC 2119 keywords as in the minimum spec. `Implementation-defined` likewise.
+
+## 1. Problem Statement
+
+The minimum slice proves the lifecycle for one trusted command in one process. The full system exists because real governed work is not like that:
+
+Job-to-be-done:
+
+- When an operator or agent needs SEA Forge to run *untrusted* or *multi-step* work, possibly *concurrently*, with humans approving escalations, they need the same governed lifecycle to hold — authority before side effects, evidence for everything, settlement over exit codes — under isolation strong enough that the guarantee survives a hostile payload.
+
+Current failure mode (of the slice, honestly stated):
+
+- Process-level sandboxing: a hostile child escapes trivially (documented limitation, minimum spec §15).
+- One node, one run, no operator loop: `escalate` dead-ends instead of routing to a human.
+- Envelopes accumulate but nothing consumes them: capability memory is write-only.
+
+Important boundary:
+
+- The full system is still a substrate — not an agent framework. Agents/LLMs are *callers* (they submit intents and plans) and *payloads* (they run inside sandboxes); they are never trusted components of the kernel.
+- Successful execution still means settlement acceptance, now potentially including a human approval as a settlement input.
+
+## 2. Goals and Non-Goals
+
+### 2.1 Authority invariant — before the ten extension capabilities
+
+Full SEA Forge MUST keep one authority fabric across CLI, server, shell, API, tool adapters, generators, and artifact/IP commands:
+
+- Canonical action requests use the minimum spec's CAM-compatible shape: actor, action, resource, context, evidence, and deterministic hashes.
+- Identity onboarding resolves the actor before any protected action. Automated agents (`R-AA`) require a human or service sponsor for privileged actions.
+- Policy bundles are hash-addressed and may be composed from file, command, API, git commit, PR merge, prompt-risk, memory-recall, spec-pipeline, artifact-transition, attestation, approval, deployment, secret, and policy-mutation surfaces.
+- Every protected ingress route calls the authority mediator before execution. Missing, unreachable, undecidable, or unsupported authority paths fail closed (`deny` or `escalate`) and still emit evidence.
+- The common governance verdict model normalizes candidate results using disposition precedence `deny > boundary > allow > degraded > escalate`; the most restrictive result wins when engines disagree.
+- OPA and GovernedSpeed are policy/risk evaluators, not owners of authority. The policy gateway / authority service owns the final decision and audit record; OPA "pass" or fail-open modes are invalid for action gating.
+- Every decision emits the common audit shape `{engine, disposition, subject, reason, evidence_refs, recorded_at}` and is linkable from run evidence, case events, approvals, capability memory, spec pipeline records, and artifact transition tokens.
+
+### 2.2 Core / first-party extension / plugin boundary
+
+SEA Forge MUST distinguish what must be baked into the kernel from what can be installed later:
+
+| Bucket | Must be present from the beginning | Rationale |
+|---|---|---|
+| Kernel invariants | record IDs/versions, canonical JSON hashing, trace/evidence/settlement/envelope records, capability append, authority fabric, artifact descriptors, extension descriptors, projection refs, projection purity rules, and compatibility/version-skew reading | These define the durable truth model. Retrofitting them later would re-key history or create bypass paths. |
+| Kernel extension ABI | `ExtensionDescriptor`, `ProjectionRef`, `ProjectionAdapter`, `RuntimeAdapter`, `EventSink`, `SandboxBackend`, `Evaluator`, `ArtifactAttestor`, and import/export descriptor shapes | Plugins can vary, but their contracts, authority surface, determinism requirements, and evidence outputs must be stable before plugins exist. |
+| First-party extensions | jail sandbox, case engine, server/approval loop, capability projection, governed semantic memory, spec-to-code pipeline, DomainForge projection adapter, templates/environments/evaluators, SeaCell bundles, artifact-to-IP | These are SEA Forge capabilities that share kernel state and proof gates. They ship as milestones, not third-party plugins. |
+| Later plugins/adapters | UI clients, chat/Slack/GitHub adapters, alternate KG backends, additional projection targets, additional runtime adapters, notification channels, NATS/EventSink, MicroVM sandbox, egress proxy, vector-memory index, EnvHub importers, RL reward exporters, public marketplace bridges | They can be added without changing kernel records if they obey the extension ABI and authority fabric. |
+
+Plugins/add-ons MUST NOT own truth. They may read source records, request authority, produce evidence, emit projections, or call external systems through adapters. Any state they need to persist must be either rebuildable from source records plus descriptor versions, or captured as evidence/artifact records with settlement.
+
+DomainForge compatibility rule: `.sea` remains the semantic source/projection language; CALM, RDF, SBVR, SHACL, KG projection events, manifests, and generated contracts are projection targets. A DomainForge-compatible adapter MUST implement the projection ABI, declare input/output schemas, preserve concept IDs/semantic refs, write quarantine records for rejected mappings, and settle on validation, not on file creation.
+
+### 2.3 Goals — the ten extension capabilities
+
+- E1 **Hardened pluggable sandboxes**: `ExecutionSandbox` backends — `local` (from the slice), `jail` (Landlock on Linux / Seatbelt on macOS; Shepherd's pattern), later `microvm` (CubeSandbox's pattern) — selected per run by authority-checked policy. Untrusted argv0s MUST only be allowed on `jail` or stronger.
+- E2 **CMMN-subset case engine** (review §6): work is organized as long-lived Cases, not one-shot runs. A `CasePlanModel` contains Stages and PlanItems whose activation is driven by **sentries** — event-condition rules evaluated over the trace/case-file ledger SEA Forge already emits — rather than a prescribed sequence (`depends_on` survives only as sugar compiling to an entry criterion). Milestones are first-class, entry-criteria-gated achievements generalizing settlement; a case completes by its auto-complete condition (all `required` items completed, none active), not by reaching the end of a list. Discretionary items make runtime plan mutation a governed act: adding a task mid-case is an authority-checked operation with evidence. Adopted element subset and exclusions per review §6 (notation, DMN decision tasks, and CaseTask are out; CaseTask is roadmap). Knowledge work is case-shaped — activities partly known in advance, order unknowable at start — which is SEA Forge's actual workload.
+- E3 **Operator interface and escalation loop**: `sea-forge-server` (Tokio) + event subscription; `escalate` verdicts become pending approvals that a human resolves via CLI (`sea-forge approve|reject <run_id> <decision_id>`) within a TTL (AgentPet's hooks→daemon→notify pattern, minus the pet).
+- E4 **Capability memory**: `CapabilityRecord` aggregation over envelopes; `sea-forge capability list|show`; records are a rebuildable projection of `capabilities.jsonl`, never a second source of truth.
+- E5 **Governed spec-to-code and generator pipelines**: SEA Forge owns the whole projection chain as governed work, not a side script: ADR → PRD → SDS → SEA → AST → IR → manifest → generated contracts → handwritten last-mile adapter/runtime → acceptance evidence. Each stage is a case plan item with authority, deterministic input/output digests, quarantine for invalid records, and settlement. Generated zones stay projections; runtime readiness requires the last-mile proof path. DomainForge/.sea projection (`sea-forge project <case_id..>`) is the first generator pipeline over envelopes and memory, but it is only one instance of this larger spec-to-code invariant.
+- E6 **Federation readiness (SeaCell)**: every persisted record already carries `version` + IDs; this milestone adds a `cell_id` field, an export bundle format, and an `EventSink` trait with a JSONL implementation — NATS or another bus is a later adapter behind that trait, not a dependency.
+- E7 **Governed semantic memory** (Memori delta, review §5): capability memory becomes a read/write loop — typed `MemoryItem`s extracted from envelopes and traces, attribution-scoped (entity × process × session, Memori's model), indexed in a rebuildable SQLite FTS projection, and recalled under authority: recall is an `Operation`, scope rules gate who may read whose memory, and every recall emits evidence so a settled run shows which memories informed it. Memori proves the memory mechanics; the authority/evidence wrapping is SEA Forge's addition.
+- E8 **Plan templates** (Archon delta, review §7 D6): named, versioned, parameterized CasePlanModel definitions in YAML (`.sea-forge/templates/<name>@<version>.yaml`), instantiated per case via `sea-forge run --template <name>@<version> --param k=v`. The template is the durable process asset — "what Dockerfiles did for infrastructure" — and completes CMMN's design-time/run-time distinction: template = design time, case = run time. Instantiation output is an ordinary CasePlan that passes full schema validation and per-operation authority; templates confer zero privilege by themselves.
+- E9 **Environment contracts and evaluators** (AEnvironment delta, review §7 D7/D8): an `EnvironmentSpec` (`name@version`) declares a sandbox's *content* — the commands/tools it provides and the `Evaluator`s it ships — orthogonal to its isolation class. Settlement criteria can then reference `evaluator: <env>.<name>` instead of only exit-code/artifact checks, and batch criteria score record collections. Environments are local artifacts first; a shareable hub and reward export for RL training are roadmap seams, not scope.
+- E10 **Artifact-to-IP pipeline**: every work product starts as a content-addressed artifact and may progress only by governed transitions: `cognitive` → `intellectual` → `product` → `capital`. Each transition emits a TransitionToken, validates stage gates, binds ownership/license/review status, records semantic anchors where required, and optionally promotes `ifl:hash` to an attested `ifl:token`. Capitalization requires human approval and evidence of reuse or quality; no artifact may teleport across stages.
+
+### 2.4 Non-Goals
+
+- Building a UI (web or desktop). The operator surface is CLI + machine-readable event stream; a UI is a future client of E3's contracts.
+- Reproducing CubeSandbox's cluster control plane (CubeMaster/Cubelet multi-node scheduling). Single-host server only; multi-host arrives with federation, if ever.
+- LLM-based planning inside the kernel. An LLM MAY produce a `Plan` *proposal* externally; the kernel validates it like any untrusted input (§8.6).
+- Agent personality/gamification (AgentPet's product surface — review C1).
+- Distributed transactions, exactly-once delivery, or byzantine tolerance in federation. Export/import of signed-by-hash bundles only.
+- KV-cache-aware agent replay (Shepherd's research contribution). Trace replay here means re-execution comparison, not model-state restoration.
+- A hosted memory cloud, embeddings, or a vector database. Memori itself is SQL-native and beats vector-first systems on LoCoMo at a fraction of the tokens; SEA Forge follows: SQLite FTS first, Postgres adapter as roadmap, vectors only if FTS measurably fails a real recall workload.
+- Automatic LLM-conversation interception inside sandboxes (Memori delta D5). Roadmap only: it composes with the future egress-proxy layer (CubeSandbox's pattern) — captured turns would enter as trace events. Do not build a client-wrapper SDK.
+- CMMN as *notation*: no diagram rendering, no XML/CMMN-DI interchange, no planning-table UI. SEA Forge adopts CMMN's execution semantics (review §6), not its drawing standard. Also excluded: DecisionTask/DMN (authority is the decision layer) and CaseTask (case-invokes-case — roadmap once a real composition need appears).
+- An EnvHub-style public registry for environments or templates (AEnvironment's EnvHub). Local artifact stores first; federation bundles (E6) MAY carry templates/environments between cells — that is the sharing mechanism.
+- RL-trainer integration (AEnvironment/AReaL's use case). Scored settlements are exportable as reward signals by construction; the export adapter is roadmap.
+- A visual workflow builder, chat UI, or Slack/Telegram/GitHub adapters (Archon's product surface). The server's Unix-socket event stream is the adapter seam; adapters are future clients, not substrate.
+- A public IP marketplace, financial valuation engine, royalty system, or legal title transfer. E10 records internal maturity, ownership, license, review, attestation, and reuse evidence; external legal/commercial processes remain outside SEA Forge.
+
+## 3. Outcome Contract
+
+### 3.1 Output Produced
+
+Everything in minimum spec §3.1, per execution episode — run directories move under their case (`.sea-forge/cases/<case_id>/runs/<run_id>/`, M0 migration §7.1), the case directory adds `case.json` + `case-events.jsonl`, and settlement/artifacts gain `plan_item_id` scoping — plus:
+
+- `.sea-forge/capabilities/` — rebuildable `CapabilityRecord` projection (E4).
+- `.sea-forge/memory/items.jsonl` — extracted `MemoryItem`s (source of truth) and `.sea-forge/memory/index.sqlite` — FTS index, rebuildable from `items.jsonl` (E7).
+- `.sea-forge/approvals.jsonl` — approval requests and resolutions (E3).
+- `.sea-forge/authority/policy-bundles/<policy_bundle_hash>.json` — canonical validated authority bundle snapshots, including identity, role, SoD, file, API, git, PR, prompt, spec-pipeline, artifact-transition, attestation, deployment, secret, and policy-mutation surfaces.
+- `.sea-forge/authority/decisions.jsonl` — append-only mirror of final authority decisions across all ingress paths.
+- `.sea-forge/authority/audit.jsonl` — common governance audit records normalized from policy gateway / OPA / GovernedSpeed / local engines.
+- `.sea-forge/authority/opaque-constraints.json` — bounded-undecidability constraints created when policy engines cannot resolve a conflict; matching actions halt/escalate before other rules run.
+- `.sea-forge/extensions/registry.json` — installed/built-in extension descriptors, their versions, capabilities, schema hashes, authority surfaces, and trust level.
+- `.sea-forge/extensions/descriptors/<extension_id>@<version>.json` — immutable descriptor snapshots referenced by runs and projections.
+- `.sea-forge/spec-pipelines/<pipeline_id>/` — spec-to-code run records: stage manifests, input/output hash chains, generated-zone diffs, last-mile gap reports, acceptance proof references, and quarantine files for rejected projection records (E5).
+- `.sea-forge/projections/<projection_id>/projection.json` — projection record with adapter descriptor, inputs, outputs, validation result, quarantine refs, and settlement ref.
+- `.sea-forge/projections/<projection_id>/outputs/` — generated DomainForge/SEA, CALM, RDF, SBVR, SHACL, KG-event, manifest, or implementation-defined projection outputs (E5), plus `quarantine/<stage>.jsonl` for filtered-out records with provenance.
+- `.sea-forge/artifacts/catalog.jsonl` — content-addressed work-product descriptors from the minimum spec, extended with stage history (E10).
+- `.sea-forge/artifacts/transitions.jsonl` — append-only TransitionTokens for cognitive→intellectual→product→capital movement (E10).
+- `.sea-forge/ip/capital/<artifact_id>.json` — rebuildable intellectual-capital projection for artifacts that passed capitalization (E10).
+- `.sea-forge/templates/<name>@<version>.yaml` — plan templates (E8); immutable once referenced by a case (new content = new version).
+- `.sea-forge/environments/<name>@<version>.yaml` — environment contracts (E9); same immutability rule.
+- `.sea-forge/export/<bundle_id>.tar` — federation bundles (E6); MAY include templates and environments.
+
+### 3.2 Outcome Verified
+
+Per milestone gates in §17. Globally: minimum-spec proofs P1–P4b MUST pass unchanged at every milestone (kernel non-regression), and every new record kind MUST satisfy the same cross-linkage proof style as P2.
+
+A run MUST NOT be reported complete while any node's settlement is missing or any approval is unresolved (pending approvals hold the run in `awaiting_approval`, §9).
+
+### 3.3 Consumer and Handoff
+
+Consumers: operators (CLI + event stream), downstream generators/spec-to-code runners (E5), artifact/IP governance surfaces (E10), other cells (E6), and the capability query surface (E4). Handoff completes per the minimum spec, extended with exit code 5 = `awaiting_approval` (run parked, resumable).
+
+## 4. Capability Claim
+
+After repeated use, operators and downstream systems should be better able to (a) route new intents to proven capabilities, (b) refuse work the system has never safely demonstrated — using `sea-forge capability show <name>` instead of tribal knowledge — (c) let new runs be informed by prior runs' facts, decisions, and outcomes through governed recall, without hand-carrying context (E7), (d) regenerate code from authority and know exactly where generated contracts stop and handwritten runtime proof begins (E5), and (e) know which artifacts are raw notes, structured knowledge, product deliverables, or reusable capital with evidence (E10).
+
+Proven only if:
+
+- Capability records reproduce byte-identically from raw envelopes (`sea-forge capability rebuild` diff-clean).
+- Reliability counts distinguish accepted / rejected / escalated per capability and update after each run.
+- At least one real routing decision (allow-list of `attempted_capability` values in policy) is exercised in tests: an intent mapping to an unproven capability under a `require_proven` policy is denied with evidence.
+- Spec-to-code pipeline records reproduce the generated-contract manifest and last-mile gap status from the same inputs; a generated contract alone never upgrades the proof classification above `generated-contract`.
+- Artifact capital records are rebuildable from `catalog.jsonl` + `transitions.jsonl`; every capital artifact has a complete transition chain from its initial stage and a human-approved capitalization token.
+
+Not proven by: envelope accumulation alone; generated files under `src/gen`; dashboards; documentation.
+
+## 5. Evidence and Claim Discipline
+
+| Claim | Level | Required evidence | Current evidence | Gap |
+|---|---|---|---|---|
+| Kernel lifecycle survives all ten extensions | Assumption | P1–P4b green at every milestone | slice-level only (once minimum ships) | build milestones |
+| Landlock/Seatbelt jails can enforce ReadOnly/ReadWrite roots for arbitrary child processes | Evidence-backed (by reference) | Shepherd does exactly this in production alpha | verified in review §1 | port the pattern to Rust (`landlock` crate exists; Seatbelt via `sandbox-exec` profile) |
+| MicroVM backend is achievable behind `ExecutionSandbox` | Roadmap | CubeSandbox demonstrates the runtime model | reference only | not required for conformance of this spec |
+| JSONL remains sufficient at server concurrency | Assumption | R-jsonl test (§17.2) at 8 concurrent runs | none | if it fails: per-run files already isolate writes; only `capabilities.jsonl` and `approvals.jsonl` are shared — move those two behind a single writer task |
+| Yjs-style collaborative state is needed | Rejected | — | Traycer needs it for co-editing UIs; SEA Forge has no co-editing surface | none — deliberate omission |
+| Approval-over-CLI is a sufficient operator surface | Partially proven | E3 tests + one human dry run | AgentPet shows notification-driven supervision works | run the dry run |
+| Unified authority can cover file/API/git/PR/prompt/tool/spec/artifact surfaces without a second gate | Evidence-backed (by repo authority model) | M0 authority gate: onboarding, deterministic decision hashes, file/API/git/PR/prompt/shell fixtures, fail-closed gateway/OPA behavior, common audit trail, conflict precedence, opaque constraints | SEA repo already has policy-gateway `/policy/authority/evaluate`, CAM-shaped requests, file/API/git/PR/prompt policy fixtures, GovernedSpeed verdict normalization, and fail-closed edge mediators | wire as the first kernel crate seam and forbid bypass surfaces |
+| Plugin/add-on features can be delayed without re-keying records | Assumption | M0 extension descriptor validation + M5 ProjectionRecord rebuild proof | DomainForge projection contracts already map DSL to CALM/RDF/SBVR/SHACL and existing KG writer uses projection-event + DLQ semantics | implement the registry/ABI before optional plugins; keep plugin state rebuildable or evidenced |
+| SQLite FTS recall is sufficient (no embeddings) | Evidence-backed (by reference) | E7 recall tests on realistic envelope volumes | Memori achieves 81.95% LoCoMo accuracy SQL-natively at ~5% of full-context tokens | validate on SEA Forge's own data shape |
+| Deterministic extraction yields useful MemoryItems without an LLM | Assumption | E7 extraction tests: items are deduplicated, provenance-linked, and recall-relevant | none | if too shallow: LLM-assisted extraction as untrusted proposals (§8.6 pattern), never in-kernel |
+| Sentries over the existing trace ledger suffice as the case engine (no separate workflow engine) | Assumption | M2 sentry-replay determinism + the full M2 gate | the ledger and event kinds already exist from the slice; CMMN semantics are event-condition rules by definition | if predicate needs outgrow `if`-parts: extend the predicate vocabulary, never add hidden engine state |
+| Versioned templates make agent processes repeatable across projects | Evidence-backed (by reference) | M2 template gate: same template + params ⇒ identical CasePlan | Archon demonstrates the model in production use | instantiation determinism test |
+| Declarative evaluators cover most settlement needs beyond exit/artifact checks | Assumption | M7 gate: demo evaluator + batch threshold settle correctly | AEnvironment (`@register_reward`) and DataFlow (eval operators) both converge on this shape | if declarative predicates are too weak: evaluators become sandboxed commands whose exit/stdout is the score — same governance, more power |
+| Spec-to-code can be governed as ordinary case work rather than a separate control plane | Evidence-backed (by repo invariant) | M5 gate: ADR/PRD/SDS/SEA/AST/IR/manifest/codegen/last-mile chain hash-linked and deterministically replayed | SEA repo already uses spec-first generator-first and last-mile routes | wire as case-plan items; keep generated zones read-only |
+| Artifact-to-IP progression prevents provenance loss | Partially proven | M8 gate: no-teleportation, TransitionToken hash chain, stage gate validation, capitalization approval | ProjectCase artifact pipeline defines cognitive→intellectual→product→capital and TransitionTokens | implement catalog/projection and IFL attestation adapter |
+
+## 6. System Overview
+
+### 6.1 Architecture Pattern
+
+- Pattern: library kernel + one-shot CLI (unchanged) + **optional resident server** (Tokio) that runs the same pipeline concurrently and exposes an event stream. The CLI works fully without the server; the server adds concurrency, approvals routing, and subscriptions.
+- Async boundary (review R2 resolved): `sea-forge-server`, the event stream, and approval TTL timers are async (Tokio). The kernel crates stay synchronous; the server drives each run on `spawn_blocking` (or a worker thread pool). Kernel traits do NOT become `async fn` — the seam is at the server, not in the domain. This keeps the kernel testable without a runtime and is revisited only if a sandbox backend is inherently async (MicroVM control APIs may force a small async adapter in `sea-forge-runtime`; isolate it there).
+- Patterns rejected: event-bus-first design (premature; `EventSink` trait keeps the door open), microservices (single host), database-first storage (JSONL + rebuildable projections until proven insufficient).
+
+### 6.2 Main Components — crate graduation map
+
+The kernel crates from the report are populated by moving the minimum slice's modules (mechanical per review R1). Two pipeline crates are added because spec-to-code and artifact-to-IP are not UI conveniences; they are governed lifecycle capabilities with their own persistence and proof rules.
+
+| Crate | From slice module | Extension content (milestone) |
+|---|---|---|
+| `sea-forge-core` | ids/types/errors | `cell_id` field, bundle types (M6) |
+| `sea-forge-domain` | domain.rs | intent vocabulary registry; plan-proposal validation (M2); recall consultation at plan time (M4b) |
+| `sea-forge-authority` | authority.rs | CAM request/decision model, identity onboarding, policy bundle snapshots, RBAC/SoD, file/API/git/PR/prompt/shell governance, policy-gateway client, GovernedSpeed/OPA verdict adapters, conflict precedence, opaque constraints, sandbox-class rules, `require_proven` rules, approval TTL policy (M0–M3) |
+| `sea-forge-planner` | planner.rs | case plans (stages/sentries/milestones/markers), `depends_on`→sentry compilation, plan-proposal ingestion, discretionary-item validation, plan templates (E8) (M2) |
+| `sea-forge-sandbox` | sandbox.rs | `SandboxBackend` enum + `jail` backend (M1); `EnvironmentSpec` contracts (E9, M7); `microvm` (roadmap) |
+| `sea-forge-runtime` | runtime.rs | per-backend executor selection (M1) |
+| `sea-forge-trace` | trace.rs | `EventSink` trait; live tail (M3) |
+| `sea-forge-evidence` | evidence.rs | unchanged + approval evidence kind (M3) |
+| `sea-forge-settlement` | settlement.rs | approval-input criteria; per-item settlement, milestone achievement, case rollup (M2, M3); evaluator references + batch thresholds (E9, M7) |
+| `sea-forge-capability` | capability.rs | `CapabilityRecord` projection + rebuild + query (M4a); `MemoryItem` extraction, SQLite FTS index, governed recall (M4b, E7) |
+| `sea-forge-extension` | slice descriptor types | extension registry, descriptor validation, projection adapter ABI, install/adopt records, compatibility checks (M0, M5+) |
+| `sea-forge-interface` | — (new) | operator event subscription, notification hooks, approve/reject commands (M3) |
+| `sea-forge-spec-pipeline` | — (new) | ADR/PRD/SDS/SEA/AST/IR/manifest/codegen/last-mile stage records, deterministic replay, generated-zone guard, gap/proof classification (M5) |
+| `sea-forge-artifact-ip` | — (new) | artifact catalog, TransitionTokens, no-teleportation validation, pre-mint/attested identity binding, capital projection (M8) |
+| `sea-forge-cell` | — (new) | bundle export/import, `cell_id` management (M6) |
+| `sea-forge-cli` | cli crate | new subcommands per milestone |
+| `sea-forge-server` | — (new) | Tokio daemon: run queue, concurrency limit, Unix-socket API (M3) |
+
+#### Component Diagram
+
+```mermaid
+flowchart LR
+  OpCLI["operator CLI"] --> Auth["authority fabric"]
+  Server["sea-forge-server (Tokio)"] --> Auth
+  Shell["shell / API / tool adapters"] --> Auth
+  Auth -->|allow| K["kernel pipeline (sync)"]
+  Auth -->|deny / escalate| Records
+  Server -->|spawn_blocking per run| K
+  OpCLI -.->|approve / reject / subscribe| Server
+  K --> Sandbox["sandbox backends: local | jail | (microvm)"]
+  K --> Records["run records (JSONL)"]
+  Auth --> Audit["authority decisions + common audit"]
+  Audit --> Records
+  Records --> Cap["capability projection"]
+  Records --> SpecPipe["spec-to-code pipeline records"]
+  Ext["extension registry + descriptors"] --> Auth
+  Ext --> Proj["projection adapters"]
+  Records --> Proj
+  Proj --> DF["DomainForge outputs: .sea | CALM | RDF | SBVR | SHACL | KG event"]
+  Records --> IP["artifact/IP catalog + transitions"]
+  Records --> Cell["export bundles"]
+  Server --> Notif["notification hooks (exec: user command)"]
+```
+
+### 6.3 External Dependencies (beyond minimum spec)
+
+- `tokio` — server runtime only. Failure: server won't start; CLI-only operation unaffected.
+- `landlock` crate (Linux) / `sandbox-exec` profile generation (macOS) — jail backend. Failure at jail setup: run refuses to execute (fail closed), settles `rejected` with basis `jail_unavailable` — it MUST NOT fall back to `local` silently.
+- `rusqlite` — memory FTS index (M4b) only. Failure: recall falls back to the `items.jsonl` linear scan (§10.5); never blocks a run.
+- `tar` (crate) — export bundles. Failure: typed export error; no partial bundle left behind.
+- Unix domain socket (std/tokio) — server API. Failure: client CLI reports server-unavailable; one-shot mode still works.
+
+## 7. Core Domain Model — extensions only
+
+All minimum-spec entities stand. New/extended (kept additive; every change bumps record `version` to "0.2"):
+
+### 7.0 AuthorityFabric (M0 prerequisite)
+
+**IdentityBinding** extends the minimum shape with: `identity_id`, `principal`, `roles` (array of `R-DS | R-AG | R-LC | R-SO | R-RM | R-DEV | R-AA | implementation-defined`), `source`, `binding_resolution`, `sponsor`, `issued_at`, `expires_at`, and `identity_binding_hash`. Automated agents with role `R-AA` MUST include a non-agent sponsor for privileged operations.
+
+**AuthorityPolicyBundle**:
+
+- `bundle_id`, `policy_bundle_hash`, `policy_bundle_version`, `loaded_at`.
+- `sources`: array of `{surface, path, sha256}`. Required first-class surfaces: `authority_hooks`, `identity_map`, `file_access`, `api_allowlist`, `git_commit`, `pr_merge`, `prompt_risk`, `memory_recall`, `spec_pipeline`, `artifact_transition`, `attestation`, `approval`, `deployment`, `secret_access`, `policy_mutation`, `evidence_mutation`.
+- `roles` and `permissions`: RBAC grants for the role names above.
+- `sod_rules`: separation-of-duty rules. Required rules: proposer != approver in production, semantic-debt requester != acceptor, break-glass requester != approver and approver has `R-SO`, key generator != key approver, capitalization requester != approver.
+- `policy_engine_refs`: candidate evaluators (`local`, `opa`, `governedspeed`, implementation-defined) and their fail modes. Action-gating evaluators MUST be fail-closed; fail-open/pass modes are schema errors.
+
+**CanonicalActionRequest** is the minimum spec `AuthorityRequest`, extended only by optional fields. It MUST be the one wire shape for file writes, shell commands, API calls, git commits, PR merges, recalls, spec pipeline stages, artifact transitions, approvals, deployments, secret access, policy mutation, and evidence mutation.
+
+**AuthorityDecision** extends the minimum shape with:
+
+- `candidate_verdicts`: array of GovernanceVerdict records from local rules, policy gateway, OPA, GovernedSpeed, or other engines.
+- `winning_source` and `precedence_reason`.
+- `approval_request_id` when `outcome: escalate` created a human approval.
+- `opaque_constraint_id` when the decision halted inside a bounded-undecidability region.
+
+**GovernanceVerdict**:
+
+- `engine` (`local | policy-gateway | opa | governedspeed | implementation-defined`).
+- `disposition` (`deny | boundary | allow | degraded | escalate`).
+- `subject` (action/resource identity), `reason`, `evidence_refs`, `recorded_at`.
+- Resolver precedence is fixed: `deny > boundary > allow > degraded > escalate`. Missing required evidence resolves to `deny`; all-escalate conflicts create or reference an opaque constraint and halt as `escalate`.
+
+**AuthorityAuditRecord** is the common audit shape from `GovernanceVerdict` plus `decision_id`, `case_id`, `run_id`, `policy_bundle_hash`, `action_request_hash`, and `identity_binding_hash`.
+
+**OpaqueConstraint**:
+
+- `constraint_id`, `target` (`resource_type`, `resource_id` or namespace pattern), `created_by_decision_id`, `reason`, `created_at`, `expires_at` (optional).
+- Any matching action MUST halt before ordinary policy evaluation and return `escalate` with required step `resolve-governance-ambiguity`.
+
+### 7.0b Extension and projection ABI (M0 contract, M5+ use)
+
+The minimum spec defines `ExtensionDescriptor` and `ProjectionRef`. Full spec persists and enforces them.
+
+**ExtensionRegistry** (`.sea-forge/extensions/registry.json`):
+
+- `version`, `updated_at`.
+- `extensions`: array of `{extension_id, version, descriptor_sha256, trust_level, status}`.
+- `trust_level` (enum: `built_in | first_party | workspace | imported | quarantined`).
+- `status` (enum: `active | disabled | quarantined | superseded`).
+
+**ExtensionInstallRecord** (`extensions/descriptors/<extension_id>@<version>.json` plus evidence):
+
+- `descriptor` (ExtensionDescriptor from the minimum spec).
+- `installed_by`, `installed_at`, `source_uri`, `source_sha256`.
+- `authority_refs`, `evidence_refs`, `settlement_ref`.
+- `compatibility`: `{ min_kernel_version, max_kernel_version, required_record_versions, required_authority_surfaces }`.
+- `adopted_from_bundle_id` (optional; imported extensions are inert until adopted by authority-checked command).
+
+**ProjectionAdapter** is an extension kind with this stable contract:
+
+- Inputs: source records by typed ref (`run_id`, `case_id`, `evidence_id`, `artifact_id`, `envelope_id`, `memory_id`, `pipeline_stage_id`), plus descriptor version.
+- Outputs: one or more files/events with `{projection_kind, output_uri, output_sha256}` and optional quarantine JSONL.
+- Required methods: `plan`, `project`, `validate`, `explain`, `rebuild`.
+- Required properties: deterministic output for same inputs and descriptor version; no network or external write unless authority grants that resource class; validation failure produces `status: quarantined` or `rejected`, not a partial success.
+
+**ProjectionRecord** (`.sea-forge/projections/<projection_id>/projection.json`):
+
+- `projection_id`, `projection_kind` (`sea | calm | rdf | sbvr | shacl | kg_event | manifest | generated_contract | memory_index | capability_record | capital_record | implementation-defined`).
+- `adapter_ref` (`extension_id@version`), `case_id`, `run_id`.
+- `source_refs` (non-empty), `input_hash`, `output_refs`, `quarantine_refs`.
+- `validation`: `{ status, validator_ref, basis }`.
+- `authority_refs`, `evidence_refs`, `settlement_ref`, `created_at`.
+- `rebuild_hash`: hash of canonical `{adapter_ref, source_refs, descriptor_sha256, input_hash, output_refs}`.
+
+DomainForge-compatible projection adapter requirements:
+
+- `.sea` projection uses SEA DSL syntax and annotations, including CQRS annotations where flows are emitted and `@read_model` where a query projection is declared.
+- CALM projection maps entities/resources/flows/policies to architecture nodes, relationships, and controls.
+- RDF/KG projection preserves `conceptId`/semantic refs when present and produces stable IRIs from canonical IDs.
+- SBVR projection preserves policy modality and quantifiers.
+- SHACL projection validates graph integrity and carries failure messages into quarantine records.
+- KG event projection follows the existing projection-event pattern: event type, event ID/hash, payload with evidence/spec node IDs, relationship, timestamp, and source evidence.
+- Every projection output is a derived view. The source of truth remains the input spec/run/evidence/artifact records plus the adapter descriptor.
+
+### 7.1 Extended entities (E2 case engine)
+
+**Case** (from the slice) gains: `stages`, reopen support (`completed/terminated → active` is an authority-checked operator operation, evidenced), and multi-episode `run_ids`. The case directory grows to `.sea-forge/cases/<case_id>/` containing `case.json`, the case-level event log `case-events.jsonl`, and `runs/` (run directories move under their case; the slice's flat layout is migrated in M0 by a one-shot `sea-forge migrate` command).
+
+**PlanItem** gains: `item_kind` (enum: `sandboxed_task | human_task | milestone | stage | timer_listener | user_event_listener`), `sandbox_class` (enum: `local | jail | microvm`; sandboxed_task only), `parent_stage` (item id or null = case plan root), `markers`: `{ required: bool (default false), repetition: bool (default false), manual_activation: bool (default false) }`, `entry_criteria` / `exit_criteria` (arrays of Sentry). Repetition subsumes the retry concept: a `repetition` item re-instantiates when its entry sentry fires again, bounded by `max_instances` (u32, default 1; repetition requires > 1).
+
+**Sentry** (new): `{ "on": { "source": <plan_item_id or "case">, "event": <trace event kind | "milestone_achieved" | "case_file_item_added"> }, "if": <optional predicate over the case file: { "artifact_exists": <path> } | { "settlement_status": ... }> }`. A sentry is satisfied when its `on` event has occurred and its `if` predicate holds at that moment. Entry criteria are OR-of-sentries (any one satisfies, per CMMN); an empty list means "available at stage activation" (the slice's degenerate rule, unchanged).
+
+**Milestone**: a PlanItem of `item_kind: milestone` — no operations; when its entry criteria are satisfied it emits `milestone_achieved` (a new trace event kind) and an evidence record. The slice's implicit "settlement accepted = case milestone" becomes an explicit default milestone the planner generates.
+
+**HumanTask**: a PlanItem whose activation creates an operator work item (E3 machinery); it completes when the operator resolves it (`sea-forge task complete <case_id> <item_id> [--note]`), which is authority-checked and evidenced like an approval.
+
+**AuthorityDecision** gains: `sandbox_class_granted` (the class the rule permits — execution on a weaker class than granted is a kernel bug and MUST panic in debug, refuse in release).
+
+**SettlementCriteria** gains: `require_approval` (bool) — when true, settlement cannot be `accepted` without a resolved approval.
+
+### 7.2 ApprovalRequest (new; persisted to `approvals.jsonl`)
+
+- `version`, `approval_id` (`apr_` + 4-digit seq global), `run_id`, `decision_id` (the escalated AuthorityDecision).
+- `requested_at`, `expires_at` (RFC 3339; TTL from policy, default 24h).
+- `status` (enum: `pending | approved | rejected | expired`).
+- `resolved_by` (actor_id or null), `resolved_at` (or null), `note` (string, OPTIONAL).
+
+Resolution appends a *new* line with the same `approval_id` (append-only log; latest line wins; a resolved/expired approval MUST NOT be re-resolved).
+
+### 7.3 CapabilityRecord (new; projection under `.sea-forge/capabilities/<name>.json`)
+
+- `version`, `capability_name` (= `attempted_capability`), `first_seen`, `last_seen`.
+- `counts`: `{accepted, rejected, escalated}` (u64 each).
+- `evidence_sample` (array of ≤ 10 `{run_id, settlement_status}` most recent).
+- `rebuilt_at` (RFC 3339).
+
+Invariant: derivable purely from `capabilities.jsonl`; `sea-forge capability rebuild` regenerates all records and MUST be byte-identical modulo `rebuilt_at`.
+
+### 7.4 SeaCell / bundle (new, M6)
+
+- `cell_id`: `cell_<8 hex>`, generated once, stored at `.sea-forge/cell.json`; stamped on all *new* records from M6 on (absent = local legacy, valid).
+- Export bundle: tar of selected run directories + a `manifest.json` (`bundle_id`, `cell_id`, run_ids, per-file sha256). Import verifies hashes, places runs under `.sea-forge/imported/<cell_id>/runs/`, and MUST NOT merge them into local `capabilities.jsonl` (imported evidence is inspectable, not claimable).
+
+### 7.5 MemoryItem / RecallRequest (new, E7/M4b)
+
+**MemoryItem** (persisted to `memory/items.jsonl`):
+
+- `version`, `memory_id` (`mem_` + 6 hex), `kind` (enum: `fact | decision | outcome | preference`).
+- `statement` (string, ≤ 1000 chars) — the durable content, e.g. `"capability generate_and_validate_sea_model settles accepted under policy default"`.
+- `attribution` (`entity_id`, `process_id`, `session_id`) — inherited from the source envelope; the scoping keys (Memori's model).
+- `provenance`: `{ run_ids: [..], evidence_refs: [..] }` — REQUIRED, non-empty; a MemoryItem without provenance is invalid by construction (memory is evidence-backed or it is not memory).
+- `dedup_key` (string) — normalized statement hash; re-extraction of the same fact updates `last_confirmed_at` and appends the new run to provenance rather than duplicating.
+- `created_at`, `last_confirmed_at` (RFC 3339).
+
+Extraction (M4b) is deterministic: a fixed rule set over envelopes and settlement bases (e.g., one `outcome` item per capability × result, one `decision` item per approval resolution). LLM-assisted extraction, if ever added, produces *proposals* validated like plans (§8.6) — never trusted writes.
+
+**RecallRequest** — a new Operation kind, `{ "kind": "recall_memory", "query": <string>, "scope": { "entity_id": .., "process_id": opt, "kinds": opt }, "limit": <u32 ≤ 50> }` — evaluated by authority like any operation (§8.2 scope rules). Recall results are recorded as an EvidenceRecord of new kind `recall` whose `metadata.memory_ids` lists what was returned, so the run's record shows exactly which memories informed it.
+
+### 7.6 PlanTemplate / EnvironmentSpec / Evaluator (new; E8/E9)
+
+**PlanTemplate** (YAML, `.sea-forge/templates/<name>@<version>.yaml`):
+
+- `name` (`[a-z0-9_-]+`), `version` (semver string), `description`.
+- `parameters`: map of `name → { type: string|int|bool|path, required: bool, default? }`. Substitution sites use `${param}` and are allowed only in operation payload values and criteria values — never in `kind`, `argv[0]`, IDs, or sentry structure (a template cannot smuggle in an unreviewable shape).
+- `plan`: a CasePlan body (items, stages, sentries, milestones, markers) with `${param}` placeholders.
+- Instantiation (`sea-forge run --template name@version --param k=v`): resolve params (typed, missing-required is an input error), substitute, then treat the result exactly like a plan proposal (§8.6) — full schema validation, path/charset rules, sentry satisfiability, per-operation authority. Same template + same params MUST yield an identical CasePlan (determinism gate). The instantiated plan records `template_ref: name@version` for provenance; the minimum slice's demo plan becomes built-in template `sea_model_demo@0.1.0`.
+
+**EnvironmentSpec** (YAML, `.sea-forge/environments/<name>@<version>.yaml`):
+
+- `name`, `version`, `description`.
+- `base`: sandbox template inputs (files/setup materialized into the workspace at prepare time).
+- `provides.commands`: list of argv0 basenames this environment supplies. Policy `execute_command` rules MAY match on `environment: name@version` instead of enumerating argv0s; the effective allow-list is then the intersection of the environment's `provides.commands` and the rule — the environment declares content, policy still decides permission, and sandbox class still decides isolation (three orthogonal axes).
+- `evaluators`: map of `name → Evaluator`.
+- A PlanItem MAY set `environment: name@version`; prepare fails closed (`environment_unavailable`) if the spec is missing or hash-changed since first use.
+
+**Evaluator** (declared inside an EnvironmentSpec, referenced from SettlementCriteria):
+
+- Declarative form: `{ kind: predicate, checks: [ <artifact_exists | stdout_contains | json_path_equals | regex_match ...> ] }` → pass/fail.
+- Command form: `{ kind: command, argv: [...], score_from: exit|stdout_float }` → runs *inside the same sandbox/episode* under the same authority as any command; its stdout/exit becomes a score in [0,1].
+- **SettlementCriteria** gains: `evaluator: <env>.<name>` (optional, combines AND with existing checks) and batch fields: `records: <workspace-relative jsonl path>`, `per_record_evaluator`, `min_pass_ratio: <0..1>`. Batch settlement: `accepted` iff pass-ratio ≥ threshold; failing records MUST be written to `quarantine/<plan_item_id>.jsonl` with `{record, score, evidence_ref}` — filtered, never silently dropped (DataFlow's discipline, review §7 D8/D9).
+
+### 7.7 Identifiers
+
+Minimum-spec grammar unchanged. New: `apr_NNNN`, `mem_XXXXXX`, `cell_XXXXXXXX`, `bundle_<UTC stamp>_<6 hex>`, `pipe_<UTC stamp>_<6 hex>`, `stage_<2 digits>`, `art_<6 hex>`, `tt_<UTC stamp>_<6 hex>`. `capability_name` doubles as a filename: MUST match `[a-z0-9_]+` (enforced at planner construction since it derives from `PlanItem.name`).
+
+### 7.8 SpecPipelineRun / SpecPipelineStage (new, E5/M5)
+
+**SpecPipelineRun** (persisted under `.sea-forge/spec-pipelines/<pipeline_id>/pipeline.json`):
+
+- `version`, `pipeline_id`, `case_id`, `run_id`, `context_id` (for `docs/specs/<ctx>`).
+- `route` (enum: `spec_authoring | generator_authoring | regeneration | last_mile | full_spec_to_runtime`).
+- `authority_refs`, `evidence_refs`, `settlement_ref` — the pipeline is governed work and links like any run.
+- `stages` (ordered array of SpecPipelineStage).
+- `proof_classification` (enum: `authority-only | generated-contract | focused-slice | live-dev-proof | release-gate-proof | enterprise-shippable`).
+
+**SpecPipelineStage**:
+
+- `stage_id`, `kind` (enum: `adr | prd | sds | sea | ast | ir | manifest | generated_contract | semantic_fixture | last_mile_adapter | runtime_wiring | acceptance_proof`).
+- `inputs` / `outputs` (arrays of `{path, sha256, generated: bool}`).
+- `command` (tokenized argv array or null for manual authoring stages).
+- `status` (enum: `pending | accepted | rejected | quarantined | skipped`).
+- `quarantine_ref` (path or null) — rejected records are retained with provenance, never silently dropped.
+- `settlement_basis` (array of strings).
+
+Invariants:
+
+- Direct edits to `src/gen`, AST, IR, manifest, and generated semantic fixture outputs are invalid operations. A generated diff must be caused by a spec or generator stage, then replayed.
+- `generated_contract` proves only generated contracts. The classification cannot exceed `generated-contract` until `last_mile_adapter`, `runtime_wiring`, and `acceptance_proof` stages are accepted.
+- Regeneration is deterministic: same inputs and generator version produce byte-identical generated outputs or the pipeline settles `rejected` with basis `nondeterministic_projection`.
+
+### 7.9 ArtifactCatalogRecord / TransitionToken (new, E10/M8)
+
+**ArtifactCatalogRecord** (append/update projection from run evidence, persisted as JSONL):
+
+- `artifact_id`, `current_stage` (`cognitive | intellectual | product | capital`).
+- `artifact_type`, `name`, `version`, `content_sha256`, `pre_mint_identity`.
+- `attested_identity` (`ifl:token:<ledger>:<seq>` or null).
+- `owner`, `license`, `review_status`.
+- `semantic_refs` (array; required before `capital`).
+- `source_evidence_refs`, `source_run_ids`, `transition_token_ids`.
+- `quality_score` (0..1 or null), `reuse_count` (u64), `updated_at`.
+
+**TransitionToken** (`transitions.jsonl`):
+
+- `transition_token_id`, `artifact_id`, `from_stage`, `to_stage`.
+- `actor_id`, `approver_id` (null except transitions whose policy requires approval).
+- `input_identity`, `output_identity` (usually same pre-mint identity unless content changed during transformation).
+- `evidence_refs`, `case_id`, `run_id`.
+- `stage_gate_results` (array of `{gate, status, basis}`).
+- `ifl_logged` (bool), `attestation_ref` (token URI or null).
+- `created_at`, `transition_hash` (hash of canonical token payload).
+
+No-teleportation invariant: every transition except initial cataloging MUST reference the immediately preceding stage for the same artifact. The only legal stage edges are `cognitive→intellectual`, `intellectual→product`, and `product→capital`. A content-changing transform creates a new artifact record linked by `derived_from`, not an in-place identity rewrite.
+
+## 8. Configuration and Input Contract — extensions
+
+### 8.1 Sources and precedence
+
+Minimum spec + server config file `.sea-forge/server.yaml` (only read by the server): `max_concurrent_runs` (default 4), `socket_path` (default `.sea-forge/server.sock`), `notify_command` (optional argv array; executed — never shelled — with a JSON event on stdin, AgentPet-hook style), `approval_ttl_hours` (default 24).
+
+### 8.2 Policy file additions (policy `version: "0.2"`, backward compatible: 0.1 policies load with defaults)
+
+- `identity_map` and `authority_hooks` sources are REQUIRED in governed environments. Missing identity for a protected actor escalates to onboarding; it never falls back to ambient OS/user identity.
+- `roles`, `permissions`, and `sod_rules` define RBAC and separation of duties. Implementations MUST ship the role names `R-DS`, `R-AG`, `R-LC`, `R-SO`, `R-RM`, `R-DEV`, and `R-AA`; additional roles are allowed when namespaced.
+- `policy_engines[]` declares candidate engines (`local`, `opa`, `governedspeed`, implementation-defined), endpoint/config refs, supported surfaces, and fail mode. Any engine used for action gating MUST declare `fail_mode: closed`; `pass` and `open` modes are schema errors for action gating even if they remain valid for advisory prompt filtering outside the authority path.
+- `surfaces.file`, `surfaces.external_api`, `surfaces.git_commit`, `surfaces.pr_merge`, `surfaces.prompt_risk`, `surfaces.shell_cmd`, `surfaces.extension_install`, `surfaces.projection_execute`, `surfaces.policy_mutation`, `surfaces.evidence_mutation`, `surfaces.secret_access`, and `surfaces.deployment` are first-class policy namespaces. Adding a future protected action requires adding a surface rule and mediator mapping, not a second authorization stack.
+- `rules[].sandbox_class` (default `local`) — the class granted; `execute_command` allow-rules for any argv0 *not* in the trusted-binary list (implementation-defined, at minimum the `sea-forge` binary itself) MUST specify `jail` or `microvm`; a 0.2 policy granting `local` to an untrusted argv0 is a `schema_error`.
+- `rules[].require_proven` (bool, default false) — deny unless the target capability's record shows ≥ 1 `accepted`.
+- `rules[].operation_kind: recall_memory` rules (M4b) with `memory_scope`: `own` (requester's `entity_id` only — the default when no rule matches is still deny, so absent rules mean no recall at all), `entity: <id>` (a named entity's memory), or `any`. Cross-entity recall MUST require an explicit rule; there is no implicit sharing.
+- `rules[].operation_kind: run_spec_pipeline` rules (M5) with optional `context_id`, `route`, and `max_proof_classification`. A rule may allow `regeneration` without allowing `last_mile` or release proof.
+- `rules[].operation_kind: install_extension | adopt_extension | run_projection` rules (M0/M5) with `extension_kind`, `trust_level`, `projection_kind`, and schema-hash constraints. Imported extensions default to disabled until an authority-checked adopt command accepts them.
+- `rules[].operation_kind: transition_artifact_stage` rules (M8) with required `from_stage`, `to_stage`, optional `requires_approval`, and optional `license_allowlist`. Capitalization rules MUST set `requires_approval: true`.
+- `rules[].operation_kind: attest_artifact_identity` rules (M8) with `ledger` and requester/approver role constraints. Absence of an attestation rule means artifacts remain pre-mint only.
+- `escalation.ttl_hours`, `escalation.on_expire` (fixed: `rejected`).
+
+### 8.3 Config error classes
+
+Minimum-spec classes, plus: `unsupported_sandbox_class_error` (class named in policy not compiled/available on this host — blocks all work, because silently degrading isolation is the one unacceptable fallback), `authority_engine_config_error` (action-gating engine is fail-open/pass, missing, or cannot be health-checked), `identity_config_error` (governed environment lacks identity map or required sponsor semantics), `server_config_error` (blocks server start; CLI unaffected).
+
+Blast radius table: policy errors block all new runs (server keeps in-flight runs); `server.yaml` errors block the server only; per-run input errors fail only that run.
+
+### 8.4 Dynamic reload
+
+REQUIRED for the server (M3): policy and `server.yaml` are re-read between run dispatches (defensive re-check, no inotify needed). New config applies to future dispatches only; in-flight runs keep their snapshot. Invalid reload ⇒ keep last-known-good + operator-visible `invalid_reload_error` event. One-shot CLI: not applicable (unchanged).
+
+### 8.5 Startup/preflight
+
+Server startup additionally verifies: socket path bindable, sandbox classes referenced by policy are available on this host (probe Landlock ABI / `sandbox-exec` presence once at startup), `notify_command` argv0 exists if configured.
+
+### 8.6 Plan-proposal input (M2)
+
+`sea-forge run --plan <file.json>` accepts an externally produced CasePlan (e.g., LLM-generated). It is untrusted input: it MUST pass full §7 schema validation, §7.5 path/charset rules, sentry satisfiability (§10.2), and then the normal per-operation authority gate. A proposal is never executed on trust; rejection reasons are typed (`plan_schema_error`, `plan_cycle_error`, plus ordinary authority denials).
+
+## 9. Operational Flow and State Model — extensions
+
+### 9.1 Flow (case engine + approvals)
+
+```text
+intent or plan-proposal → case created (or reopened) → plan validated → authority for the CURRENT plan
+  (every operation of every non-discretionary item, up front; discretionary additions re-run authority
+   for the added item before it can activate)
+  → any deny on a required item → item unavailable; if the case can never auto-complete, case terminates rejected
+  → any escalate → ApprovalRequest → item (and case) state awaiting_approval
+  → case loop (the engine):
+      evaluate sentries against the ledger after every event
+      → item entry criteria satisfied (or empty at stage activation)
+          → manual_activation ? enabled (operator must start it) : active
+      → active sandboxed_task → run created (one execution episode) → sandbox(class) → execute
+          → trace/evidence → item settlement → milestone events → sentries re-evaluated
+      → active human_task → operator work item → resolution → completed
+      → timer/user event listeners fire → sentries re-evaluated
+      → exit criterion satisfied on an item/stage/case → terminate that scope
+      → repetition items re-instantiate on re-satisfied entry criteria (≤ max_instances)
+  → case auto-complete: all required items completed, no active/enabled items, no pending approvals
+      → case completed; else it stays active (a waiting case is a normal state, not a failure)
+```
+
+### 9.2 New/changed states
+
+Case states: `active | awaiting_approval | completed | terminated` (+ reopen transition, authority-checked). PlanItem lifecycle (CMMN subset): `available → enabled (manual) | active → completed | terminated | failed`; `skipped` is expressed as `terminated` via exit criterion or unreachable entry criterion at case close. Run states: unchanged from the minimum spec — a run is one execution episode of one active sandboxed item.
+
+`awaiting_approval` is a **successful hold, not a failure** (nuance): one-shot mode exits 5 and a later `sea-forge resume <case_id>` re-enters the engine after resolution; server mode parks the case and resumes on the approval event or expiry timer. Likewise an `active` case with nothing currently executable is parked, not failed — that is what case management *is*.
+
+### 9.3 Transition triggers (additions)
+
+- Any appended trace/case event — re-evaluates sentries (the engine's single dispatch rule; this is why the typed ledger from the slice is the load-bearing asset).
+- `milestone_achieved` — satisfies dependent sentries; may complete the case.
+- Approval resolved / TTL fired — releases or terminates the awaiting item.
+- Human task resolved — completes the item, re-evaluates sentries.
+- Operator adds a discretionary item (`sea-forge case add-task`) — authority evaluates it, then it joins the sentry evaluation set; the addition itself is evidenced.
+- Timer event listener fired (server) / user event raised (CLI or socket) — re-evaluates sentries.
+- Reload tick (between dispatches) — swaps config snapshot.
+
+### 9.5 Important nuances
+
+- Authority is evaluated for the whole *current* plan before anything activates, and again for each discretionary addition before that item can activate — governed plan evolution, never incremental privilege discovery inside a running item.
+- A repetition instance is a new run (execution episode) under the same plan item; artifacts live under `runs/<run_id>/` per instance and the item's trace records `instance` numbers.
+- An `active` case with unsatisfied sentries and no runnable items is parked indefinitely — correct behavior, surfaced to the operator via E3, never auto-terminated except by an exit criterion or explicit operator termination (authority-checked).
+- Sentry evaluation is deterministic and replayable: it reads only the ledger, so replaying the ledger reproduces every activation decision.
+- Imported (federated) evidence never counts toward local capability records (§7.4).
+- Jail unavailability is a rejection, never a downgrade (§6.3).
+
+## 10. Core Behavior Requirements — extensions
+
+### 10.0 Authority fabric (M0, all milestones)
+
+- Every protected action enters through one mediator before the kernel, sandbox, runtime, generator, memory recall, artifact/IP command, shell adapter, server route, or external API/git adapter can execute. Direct calls to lower layers are bugs.
+- Protected action classes are at least: file write/delete, shell command, sandbox execution, outbound API call, git commit, PR merge, extension install/adopt/disable, projection execution, spec/projection mutation, generated-zone mutation, memory recall, approval resolution, human-task completion, case reopen/terminate, discretionary task add, evidence mutation, policy mutation, identity minting, secret access, deployment/rollback, artifact transition, and IFL attestation.
+- File authority is deny-by-default. Generated outputs, AST/IR/manifest files, generated semantic fixtures, `.git`, env/secret material, and governance policy paths are hard boundaries unless a more specific governed operation owns the mutation path.
+- API authority is deny-by-default by host/protocol. Internal, loopback, link-local, metadata, private-network, and unrecognized hosts deny or escalate by policy; no raw HTTP client gets a private bypass.
+- Git/PR authority is explicit: commits touching protected governance paths deny unless a human-controlled policy-change route is active; PR merges require validation evidence, branch checks, conflict state, and changed-path policy.
+- Prompt-risk and GovernedSpeed verdicts may contribute candidate verdicts, but they do not override action authority. The final decision is the policy-gateway/authority-service decision after precedence resolution.
+- When policy engines disagree, normalize to GovernanceVerdict and apply `deny > boundary > allow > degraded > escalate`. Missing required evidence fails closed as `deny`; all-escalate ambiguity creates or references an OpaqueConstraint and halts as `escalate`.
+- A denied or escalated decision is a successful governance outcome, not an internal error. It MUST produce authority evidence, audit records, settlement basis, and operator-visible next steps.
+- Future protected surfaces are added by extending the resource class enum, policy bundle schema, mediator mapping, and conformance tests. They MUST NOT introduce a parallel permission system.
+
+### 10.1 Sandbox hardening (E1, M1)
+
+- The jail backend MUST enforce: filesystem writes limited to the workspace (Landlock ruleset / Seatbelt profile computed from the workspace root), no network unless the rule grants `network: true` (default false; Landlock v4+ TCP restrictions where available, else document the gap on macOS).
+- A jail violation surfaces as the child's syscall failure; the run settles `rejected` with basis `jail_violation` when the violation is detectable, else via ordinary settlement criteria.
+- Backend selection: exactly the `sandbox_class_granted` of the decision — never weaker (§7.1).
+
+### 10.2 Case engine (E2, M2)
+
+- Sentry evaluation MUST be a pure function of the case ledger (trace + case events + milestone achievements + case-file predicates over evidence/artifacts); no hidden state.
+- `depends_on` in ingested plans MUST be compiled to entry sentries (`on: <item> milestone_achieved`) at validation time; sentry-reference cycles that can never fire are construction errors (static check: the "on" graph must be satisfiable).
+- Each activation of a sandboxed item MUST create a distinct run (episode) with the full slice pipeline — per-episode authority echo, trace, evidence, settlement.
+- Repetition MUST cap at `max_instances`; each instance gets a fresh workspace; the item fails when an instance fails and no repetition budget remains, unless an exit criterion says otherwise.
+- Failure of a `required` item that renders auto-complete unsatisfiable MUST terminate the case as `rejected` with the blocking item cited in the settlement basis; non-required item failure leaves the case `active`.
+- Discretionary items (`sea-forge case add-task <case_id> --item <json>`) MUST pass full schema validation and authority *before* joining the plan; the addition emits a `plan_mutated` trace event and an evidence record naming the operator.
+- Case reopen and operator termination are authority-checked operations (`case_reopened` / `case_terminated` events, evidenced).
+
+### 10.3 Operator loop (E3, M3)
+
+- `sea-forge approve|reject <run_id> <approval_id> [--note ..]` MUST append a resolution and emit an operator evidence record (kind `approval`) — approvals are evidence, not chat.
+- The server MUST push events (JSONL over the Unix socket; `sea-forge watch` tails them) and MUST invoke `notify_command` (if set) on: `awaiting_approval`, `run_finished`, `run_failed`. Notification failure is logged and ignored (never blocks the run).
+- Resolution by an actor whose role lacks an `approve` rule in policy MUST be refused (approving is itself an authority-checked operation).
+- Human tasks (E2) surface through the same channel: `sea-forge tasks` lists enabled/active human tasks and pending approvals across open cases; completing one is authority-checked and evidenced, and re-triggers sentry evaluation in that case.
+
+### 10.4 Capability memory (E4, M4) and projection (E5, M5)
+
+- `capability rebuild` MUST be a pure function of `capabilities.jsonl` (§7.3 invariant).
+- `require_proven` denial MUST cite the capability record consulted in the decision's `reason`.
+- `sea-forge project` is a governed projection-adapter invocation. It MUST be deterministic given the same input records and adapter descriptor version, MUST validate its own output before accepting, and MUST record the projection itself as a run (plan = project operation, settlement = output validates).
+- The built-in DomainForge projection adapter MUST support `.sea` first and MAY add CALM, RDF, SBVR, SHACL, and KG-event outputs under the same ProjectionRecord. It MUST preserve source refs and semantic refs, and rejected mappings MUST go to quarantine with provenance.
+- Additional projection targets are plugins. They may be installed later, but they MUST use `ExtensionDescriptor`, `ProjectionAdapter`, and `ProjectionRecord`; they MUST NOT write directly to generated zones, KG endpoints, or external systems without authority and evidence.
+- Projection adapters that call a remote service (for example a KG projection endpoint) MUST use retry + DLQ semantics and record degraded/failed delivery as evidence. A remote delivery failure may not invalidate a local deterministic projection unless policy marks delivery as required.
+
+### 10.5 Governed semantic memory (E7, M4b)
+
+- Extraction MUST run as the final pipeline step of every settled run (after the envelope append), be deterministic, deduplicate via `dedup_key`, and never fail the run (extraction errors are logged operator-visibly; the run's settlement stands).
+- `index.sqlite` MUST be a pure projection of `items.jsonl`: `sea-forge memory rebuild` regenerates it; queries fall back to a linear `items.jsonl` scan when the index is missing or stale (slower, never wrong).
+- Recall paths:
+  - `sea-forge recall` (slice command) upgrades to query the FTS index and gains `--kind`; its CLI contract from the minimum spec is preserved.
+  - **In-case recall**: a plan item MAY include `recall_memory` operations; they pass authority like everything else, execute when the item activates, expose results to the item's episode via a workspace file `recalled/<plan_item_id>.jsonl`, and emit `recall` evidence (§7.5).
+  - **Plan-time consultation** (`sea-forge-domain`): the planner MAY consult memory to parameterize a plan; when it does, it MUST inject the same `recall_memory` operation into the plan so the consultation is authority-checked and evidenced — the planner gets no private read channel.
+- Recall responses MUST be token/size-budgeted: `limit` capped at 50 items, each item's `statement` already capped at 1000 chars (Memori's lesson: small relevant slices beat full history).
+- Imported (federated) memory items are stored under `imported/` scoping and MUST NOT be returned by recall unless a policy rule grants `memory_scope: entity: <foreign>` explicitly (mirrors §7.4's capability isolation).
+
+### 10.6 Templates, environments, and generator pipelines (E5/E8/E9)
+
+- Template and environment files MUST be treated as immutable once referenced: the first use records their SHA-256; a hash mismatch on later use is `template_changed_error` / `environment_unavailable` (fail closed — bump the version instead).
+- Template instantiation MUST be deterministic and MUST NOT bypass any validation applied to plan proposals; `template_ref` provenance appears in the plan, the envelope, and capability records (so capability counts can be grouped by template).
+- Evaluators run under the same authority, sandbox, and evidence rules as any operation; an evaluator's score is recorded in the settlement `basis` (`evaluator_score:<env>.<name>=<value>`).
+- Generator pipelines (E5) MUST be expressed as ordinary case plans whose stages are generate/evaluate/filter/refine items — no separate pipeline engine. Quarantine files are evidence artifacts; a refine stage's entry sentry is typically `on: case_file_item_added if quarantine non-empty`.
+- `sea-forge template list|show` and `sea-forge env list|show` expose the local stores; import of templates/environments from federation bundles places them under `imported/` and requires an explicit `sea-forge template adopt` (authority-checked) before they are instantiable.
+
+### 10.7 Spec-to-code pipeline (E5, M5)
+
+- The canonical stage order is ADR → PRD → SDS → SEA → AST → IR → manifest → generated contracts → last-mile adapter/runtime → acceptance proof. A pipeline may start at a later stage only when all prior stage outputs already exist and validate by hash and schema.
+- Generated-zone outputs (`src/gen`, AST, IR, manifests, generated semantic fixtures) MUST be read-only to operators. A requested direct edit to those paths is a denied `run_spec_pipeline` operation with basis `generated_zone_direct_edit`.
+- Pipeline settlement MUST distinguish proof levels:
+  - `authority-only`: ADR/PRD/SDS/SEA authority changed but no regenerated output is claimed.
+  - `generated-contract`: regeneration and determinism passed, but no production runtime path consumed the generated contract.
+  - `focused-slice` or stronger: handwritten last-mile code outside generated zones imported the generated contract, a real runtime surface invoked it, and an acceptance command passed.
+- Last-mile gaps are not generator failures unless a generated contract is missing required governance fields. If identity, case linkage, authority, evidence, settlement, ownership, license, or review status is absent from the contract, the pipeline routes back to the spec/generator stage and settles `rejected` until fixed.
+- Every accepted stage writes evidence for its command, inputs, outputs, and digest chain. A stage whose output fails validation is quarantined with full provenance and does not feed downstream stages.
+
+### 10.8 Artifact-to-IP pipeline (E10, M8)
+
+- Initial cataloging reads `ArtifactDescriptor`s from run evidence and appends/updates `catalog.jsonl`; it MUST NOT invent artifacts from plain stdout/stderr evidence.
+- Stage transition commands (`sea-forge artifact synthesize|refine|capitalize`) are ordinary case operations. They require authority, evidence, settlement, and a TransitionToken.
+- Stage gates:
+  - `cognitive→intellectual`: content exists, source evidence resolves, and the output has structured/citable form.
+  - `intellectual→product`: documentation/consumer-facing completeness and quality threshold pass.
+  - `product→capital`: semantic anchoring, license/review approval, human approval, and reuse/value evidence pass.
+- No-teleportation is mandatory: a transition whose `from_stage` is not the artifact's current stage is rejected before any transform executes.
+- IFL attestation is optional per policy. If available and authorized, promotion from `ifl:hash` to `ifl:token` is evidence. If unavailable, the transition may still settle accepted only when the policy allows pre-mint operation; the degraded mode is explicit in the TransitionToken.
+- Capital records under `.sea-forge/ip/capital/` are rebuildable projections from catalog + transitions. They are not a second source of truth and do not claim external legal transfer.
+
+### 10.9 Completion rules
+
+A case completes (exit 0 in one-shot mode) only when its auto-complete condition holds (§9.1) and the closing settlement rollup is written. Exit codes: 0 case completed, 3 case terminated rejected, 4 escalated-and-rejected/expired, 5 awaiting approval or parked active (case open, nothing runnable now — resumable), 1 internal, 2 input.
+
+## 11. Execution / Integration Contract
+
+### 11.1 Server API (M3)
+
+Unix domain socket, newline-delimited JSON requests/responses (no HTTP until a remote client exists): `submit {intent|plan}`, `status <run_id>`, `approve/reject <approval_id>`, `subscribe` (stream). Auth: socket file permissions (0600). Timeout: per-request 10s except `subscribe`.
+
+### 11.2 Sandbox backend contract (the isolation seam)
+
+```rust
+pub trait ExecutionSandbox {
+    fn class(&self) -> SandboxClass;
+    fn prepare(&self, spec: &SandboxSpec) -> Result<SandboxHandle, SandboxError>;
+    fn execute(&self, h: &SandboxHandle, req: &ExecutionRequest) -> Result<ExecutionResult, SandboxError>;
+    fn collect_artifacts(&self, h: &SandboxHandle, paths: &[RelPath]) -> Result<Vec<ArtifactRef>, SandboxError>;
+    fn destroy(&self, h: SandboxHandle) -> Result<(), SandboxError>;
+}
+```
+
+Checkpoint/restore (CubeSandbox's snapshot pattern) is deliberately **not** in the trait yet — no consumer exists; add it with the microvm backend (Roadmap), as an extension trait.
+
+### 11.3 External side effects
+
+May change: everything under `.sea-forge/`; workspace contents; whatever an *allowed, jailed* command legitimately does inside its workspace. MUST NOT change: paths outside granted roots (now OS-enforced for jailed runs); network endpoints unless granted; imported bundles (read-only).
+
+## 12. Evidence, Proof, and Observability
+
+Minimum spec §12 holds per node. Additions: approval records are evidence; `sea-forge watch` output is a projection of `trace.jsonl` (never a separate truth); server logs carry `run_id` + `node_id` + component.
+
+Key proof commands (per milestone, abbreviated):
+
+```text
+M0: authority fabric gate before crate growth
+    - onboard/resolve identities for local human, service, and R-AA-with-sponsor; unresolved identity escalates.
+    - evaluate same CanonicalActionRequest twice against same policy bundle → identical decision fields and hashes.
+    - validate built-in ExtensionDescriptors and an empty extension registry; descriptor authority surfaces map to policy surfaces.
+    - generated-zone file write, unknown API host, private-network API host, protected governance git commit,
+      PR merge without required checks, dangerous shell command, and prompt-risk case all fail closed with evidence.
+    - OPA/GovernedSpeed unavailable during action gating → deny/escalate, never allow or pass.
+    - conflicting candidate verdicts resolve by `deny > boundary > allow > degraded > escalate`.
+    - all-escalate ambiguity writes/reuses an OpaqueConstraint; matching action halts before ordinary policy.
+    - `.sea-forge/authority/decisions.jsonl` and `audit.jsonl` reproduce the per-run authority records.
+M1: run an intent whose command attempts a write outside the workspace under jail class
+    → write fails at the OS, settlement rejected; the same test under `local` class MUST be
+      impossible to configure for an untrusted argv0 (schema_error).
+M2: case with items A (required), B (required, entry sentry: on A milestone_achieved, repetition max 2),
+    C (entry sentry: on B milestone_achieved), M (milestone on C); make B fail twice
+    → A completes, B two instances (two runs) then failed, C never activates, case terminates rejected
+      citing B; every activation decision reproducible by replaying the ledger.
+    Second copy: add C-equivalent as a discretionary item mid-case under a policy that allows it
+    → plan_mutated evidenced, item activates when its sentry fires; under a policy without the rule → denied, evidenced.
+M3: escalate rule → exit 5; `sea-forge approve` → `resume` → accepted. Second copy: let TTL expire → rejected.
+M4a: 5 mixed runs → `capability show` counts match; `rebuild` byte-identical; `require_proven` denies unproven capability.
+M4b: runs under two entities → extraction produces deduplicated, provenance-linked items; a plan with
+     `recall_memory` scoped `own` returns only the requester's items and leaves `recall` evidence naming them;
+     the same plan requesting the other entity's scope with no cross-entity rule → denied, run rejected,
+     denial evidenced; `memory rebuild` then delete index → identical recall results via fallback scan.
+M2 (templates): instantiate the same template twice with the same params → byte-identical CasePlans, both
+    carrying template_ref; a template whose ${param} lands in argv[0] or an operation kind → schema_error at
+    template load, never at run time.
+M5: run a full spec-to-code pipeline over a small context → ADR/PRD/SDS/SEA/AST/IR/manifest/generated
+    contracts hash-link in order; direct generated-zone edit request is denied; regeneration is
+    byte-identical; last-mile gap status prevents proof classification above `generated-contract`
+    until a real adapter/runtime/acceptance proof stage passes. Also run `project` over 2 cases through
+    the built-in DomainForge projection adapter → `.sea` output validates; CALM/RDF/SBVR/SHACL/KG-event
+    outputs, when enabled, share the same ProjectionRecord; failing records present in quarantine with
+    provenance, never silently dropped; the projection case itself has a full case record.
+M7: an item with `environment: demo_env@0.1.0` and `evaluator` criteria → evaluator score appears in the
+    settlement basis; batch criteria with min_pass_ratio 0.8 over a 10-record file with 2 planted failures
+    → accepted + 2 quarantined; with 3 failures → rejected; policy matching on `environment:` grants exactly
+    the intersection of provides.commands and the rule; tampered environment file → environment_unavailable,
+    nothing executes.
+M6: export 2 runs → import on a fresh root → hashes verify; local capability counts unchanged.
+M8: catalog the minimum demo `model.sea` artifact, synthesize/refine/capitalize it through governed
+    transitions → every edge has a TransitionToken, no-teleportation rejects skipped stages, capitalization
+    requires approval + semantic anchors, and the capital projection rebuilds byte-identically from
+    catalog/transitions. Repeat with IFL service unavailable under a policy that requires attestation →
+    rejected before capitalization; under a pre-mint-only policy → accepted with degraded-mode evidence.
+Always: minimum-spec P1–P4b unchanged.
+```
+
+## 13. Repeatability and Variation Requirements
+
+- Concurrency: 8 simultaneous `submit`s through the server → 8 complete, uncorrupted run dirs; `capabilities.jsonl` has 8 valid lines (the shared-file writer test; see §5 JSONL claim).
+- Kill the server mid-run → run dir is self-describing; `sea-forge resume` either resumes (awaiting_approval) or settles rejected with basis `interrupted`; restart lists the orphan via `sea-forge runs --unsettled`.
+- Jail probe on a host without Landlock → policy referencing `jail` fails preflight with `unsupported_sandbox_class_error`; nothing runs.
+- Approval race: approve and expire near-simultaneously → exactly one resolution wins (append-order); the loser is a no-op with an operator-visible message.
+
+## 14. Failure Model — additions
+
+1. `jail_setup_failure` — refuse to execute, settle rejected, basis `jail_unavailable`. Never downgrade.
+2. `approval_expiry` — settle rejected, basis `authority_escalate_expired`; notification emitted.
+3. `item_failure` — per §10.2: repetition budget consumed, then the item fails; required-item failure terminates the case as rejected with the item cited, non-required failure leaves the case active; all instance evidence retained.
+4. `server_crash` — in-flight runs leave valid partial records (kernel flush-per-record already guarantees this); recovery is operator-driven via `resume`/`runs --unsettled`; the server MUST NOT auto-resume executions on restart (a human decides — executions may have had side effects).
+5. `import_verification_failure` — reject the whole bundle atomically; no partial import.
+
+Phase separation per template: prepare-phase failures abort the node; execute-phase failures flow to settlement; collect/teardown failures are logged, the node settles on available evidence, and `destroy` failures never mask the settlement result.
+
+## 15. Security, Safety, and Trust Boundaries
+
+Extends minimum spec §15:
+
+- Untrusted: sandboxed payloads (now genuinely untrusted once jailed), plan proposals (§8.6), imported bundles, anything arriving on the server socket beyond the operator's own uid (socket is 0600 precisely so this set is empty).
+- Privileged: jail construction, approval resolution, policy editing (outside the system), bundle import.
+- The graduation rule (restated as the load-bearing invariant): **an argv0 outside the trusted-binary list MUST NOT be allow-listed on `local` class.** This single rule is what lets the slice ship soft and the full system harden without a flag day.
+- Secrets: if/when env injection lands, follow CubeSandbox's vault pattern — secrets resolved outside the sandbox, injected at the egress/proxy layer, never written to workspace, trace payloads, or evidence. Until such a layer exists, policies MUST NOT reference secrets at all.
+
+## 17. Test and Validation Matrix
+
+### 17.1 Core conformance per milestone
+
+| Milestone | Gate (all REQUIRED) |
+|---|---|
+| M0 authority fabric + extension ABI + crate graduation | workspace builds as the graduated kernel crates plus pipeline crates; minimum-spec suite green unchanged; authority fabric gate in §12 passes; extension registry/descriptors validate; no ingress bypasses the mediator; `sea-forge migrate` moves flat `runs/` under `cases/<case_id>/runs/` losslessly (hash-verified) |
+| M1 jail backend | §12 M1 proofs; jail-violation, no-downgrade, unavailable-class tests |
+| M2 case engine | §12 M2 proofs; unsatisfiable-sentry rejection; proposal schema/authority tests; repetition + required-item semantics; sentry-replay determinism; discretionary-item authority; parked-case-is-not-failure test; reopen is authority-checked |
+| M2 templates (E8) | §12 M2 template proofs; instantiation determinism; substitution-site restrictions enforced at load; missing-required-param is input error; template_ref provenance in plan + envelope |
+| M3 server + approvals | §12 M3 proofs; reload (valid + invalid) tests; notify-failure-ignored test; unauthorized-approver refused |
+| M4a capability memory | §12 M4a proofs; rebuild purity; require_proven deny-with-citation |
+| M4b governed recall (E7) | §12 M4b proofs; extraction determinism + dedup; scope enforcement (own/entity/any, default deny); recall-as-evidence linkage; index-fallback equivalence; extraction failure never fails the run |
+| M5 spec-to-code + generator pipelines + DomainForge projection adapter | §12 M5 proofs; generated-zone direct-edit denial; ADR/PRD/SDS/SEA/AST/IR/manifest/codegen hash-chain; regeneration determinism; generated-contract classification ceiling until last-mile proof; pipeline-as-ordinary-case-plan test; quarantine completeness; projection-as-governed-case test; ProjectionRecord rebuild hash stable |
+| M6 federation prep | §12 M6 proofs; import isolation (no capability leakage); hash-tamper rejection; imported templates/environments require explicit adopt |
+| M7 environments + evaluators (E9) | §12 M7 proofs; environment immutability (hash pin); three-axis independence test (content/permission/isolation each vary independently); evaluator-under-authority test; batch threshold + quarantine semantics |
+| M8 artifact-to-IP (E10) | §12 M8 proofs; catalog from work-product descriptors only; no-teleportation; TransitionToken hash chain; capitalization approval; semantic-anchor gate; IFL required/degraded policy behavior; capital projection rebuild purity |
+
+### 17.2 Variation and recovery
+
+The four cases of §13, each with expected result and evidence as stated there. Skipped platform tests (e.g., Seatbelt cases on Linux CI) MUST report as skipped, not passed.
+
+### 17.4 Real integration tests
+
+Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS runner), IFL attestation when a policy requires `ifl:token`, and — when/if built — the MicroVM backend on KVM-capable hardware (per CubeSandbox's own x86_64+KVM requirement).
+
+## 18. Implementation Checklist / Definition of Done
+
+- [ ] M0–M8 gates green in order; minimum-spec P1–P4b green after every milestone.
+- [ ] Authority M0 proves identity onboarding, deterministic hashes, file/API/git/PR/prompt/shell fail-closed behavior, engine-unavailable fail-closed behavior, conflict precedence, opaque constraints, and common audit mirroring before M1 sandbox hardening starts.
+- [ ] Extension ABI M0 proves descriptor validation, authority-surface mapping, projection-ref compatibility, and disabled-by-default imported extensions before optional plugins are allowed.
+- [ ] M8 artifact-to-IP gate green before any artifact is reported as reusable capital.
+- [ ] No policy can grant an untrusted argv0 the `local` class (schema-level test exists).
+- [ ] Kernel crates contain no Tokio dependency (enforced via `cargo tree` check in CI).
+- [ ] All records at version 0.2 remain readable by 0.1 readers where fields are additive; a version-skew test exists.
+- [ ] `capability rebuild` purity test green.
+- [ ] Spec-to-code pipeline can replay a small context deterministically and refuses proof upgrades until generated contracts reach real runtime acceptance.
+- [ ] Built-in DomainForge projection adapter validates `.sea` output and, when enabled, CALM/RDF/SBVR/SHACL/KG-event outputs under one ProjectionRecord.
+- [ ] Artifact catalog and capital projections rebuild from JSONL sources; no capital record exists without a complete transition chain.
+- [ ] Server crash-recovery drill (§13) executed and documented once against a real run.
+- [ ] Every §0 question answerable from this spec + the minimum spec.
+
+## Appendix A. Milestone order and rationale
+
+M0 authority fabric + extension ABI + graduation + case-directory migration → M1 jail (the security debt of the slice is retired after the authority gate is already non-bypassable) → M2 case engine (E2 — CMMN-subset semantics over the existing ledger; the biggest milestone, sequenced before the server because sentry evaluation must be correct single-threaded before it runs concurrently) → M3 server/approvals (unblocks `escalate` and human tasks — the operator half of the case model) → M4a capability records (first consumer of envelopes) → M4b governed semantic memory (E7 — the Memori delta: extraction, FTS index, authority-scoped recall; sequenced after M3 because recall scope rules and recall evidence reuse the approval-era policy machinery) → M5 spec-to-code + generator pipelines + DomainForge projection adapter (the ADR→PRD→SDS→SEA→AST→IR→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself) → M6 federation prep (cheap, additive; imported extensions remain disabled until adopted) → M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner) → M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection). E8 plan templates land inside M2 with the planner work. MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.
