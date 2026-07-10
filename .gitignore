@@ -15,6 +15,7 @@
 
 # SEA Forge runtime output (never commit runtime records)
 /.sea-forge/
+/.worktrees/
 
 # Local secret artifacts: only *.enc.env may be tracked under secrets/
 /secrets/*.env
