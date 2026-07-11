@@ -17,9 +17,9 @@ Prerequisite: **`spec-minimum.md` implemented and green.** This spec never redef
 1. What should be built? — The kernel workspace of the build report, populated by graduating the minimum slice's modules into crates, hardening the authority fabric into a policy-gateway-compatible runtime, and adding ten extension capabilities (E1–E10 below) in milestone order.
 2. What result should it produce? — The same governed run record as the slice, now for: long-lived cases with sentry-activated plan items, untrusted commands under OS-level jails, operator-approved escalations and discretionary planning, concurrent cases via a server, spec-to-code projections, artifact-to-IP transitions, and machine-consumable capability/projection outputs.
 3. How will we know the result is real? — Each milestone has its own conformance gate (§17); a milestone that cannot pass the *minimum* spec's proofs P1–P4b unchanged has broken the kernel and MUST be rejected.
-4. What capability should get stronger after repeated use? — Capability memory becomes queryable: operators and downstream generators can ask "what has this system demonstrated under which variation, recovery, and settlement reliability," and get an evidence-linked answer.
+4. What capability should get stronger after repeated use? — Capability memory becomes queryable: operators and downstream generators can ask "what has this system demonstrated under which variation, recovery, and settlement reliability," and get a tamper-evident, fork-detectable, externally verifiable evidence-linked answer. A local hash alone never justifies a tamper-proof claim (§7.0c).
 5. What evidence proves the capability claim? — `CapabilityRecord`s promote capability-attempt observations only from qualifying `SettlementDeclaration`s and record variation, recovery, orchestration burden, regressions, and reliability weight (§7.2.1/§7.3); spec-to-code and artifact-to-IP claims retain their hash-linked proof chains; all projections rebuild byte-identically from source records.
-6. What fails safely? — Everything in the minimum spec, plus: invalid or stale DomainForge models fail before planning or execution; identity resolution failures escalate; required DomainForge/policy-gateway/OPA/GovernedSpeed evaluators that are missing or unavailable deny or escalate, never allow; jail violations kill the run and settle `rejected`; unapproved escalations expire to `rejected`; a dead server leaves resumable, self-describing run directories.
+6. What fails safely? — Everything in the minimum spec, plus: invalid or stale DomainForge models fail before planning or execution; identity resolution failures escalate; a missing, malformed, forked, truncated, or unanchored-required integrity ledger halts affected work before side effects; required DomainForge/policy-gateway/OPA/GovernedSpeed evaluators that are missing or unavailable deny or escalate, never allow; jail violations kill the run and settle `rejected`; unapproved escalations expire to `rejected`; a dead server leaves resumable, self-describing run directories.
 7. What must repeat until reliable? — §13/§17.2 per milestone; especially jail-violation tests and approval-expiry tests.
 8. What changes when evidence disagrees with the design? — §5 claim table; notably, if Landlock proves impractical for the workload, the sandbox backend contract (§11.2) is the isolation seam and a MicroVM backend replaces it without kernel changes.
 
@@ -74,7 +74,7 @@ SEA Forge MUST distinguish what must be baked into the kernel from what can be i
 
 | Bucket | Must be present from the beginning | Rationale |
 |---|---|---|
-| Kernel invariants | record IDs/versions, canonical JSON hashing, trace/evidence/settlement/envelope records, capability append, authority fabric, artifact descriptors, extension descriptors, projection refs, projection purity rules, and compatibility/version-skew reading | These define the durable truth model. Retrofitting them later would re-key history or create bypass paths. |
+| Kernel invariants | versioned canonical record encoding, ULID record identity, append ordinals, per-stream hash chains, Merkle-Mountain-Range commitments, signed/witnessed checkpoints, trace/evidence/settlement/envelope records, capability append, authority fabric, artifact descriptors, extension descriptors, projection refs, projection purity rules, and compatibility/version-skew reading | These define the durable truth model. Retrofitting them later would re-key history or create bypass paths. |
 | Kernel extension ABI | `ExtensionDescriptor`, `ProjectionRef`, `ProjectionAdapter`, `RuntimeAdapter`, `EventSink`, `SandboxBackend`, `Evaluator`, `ArtifactAttestor`, and import/export descriptor shapes | Plugins can vary, but their contracts, authority surface, determinism requirements, and evidence outputs must be stable before plugins exist. |
 | First-party extensions | DomainForge semantic adapter, jail sandbox, case engine, server/approval loop, capability projection, governed semantic memory, spec-to-code and DomainForge projection pipeline, templates/environments/evaluators, SeaCell bundles, artifact-to-IP | These are SEA Forge capabilities that share kernel state and proof gates. They ship as milestones, not third-party plugins. |
 | Later plugins/adapters | UI clients, chat/Slack/GitHub adapters, alternate KG backends, additional projection targets, additional runtime adapters, notification channels, NATS/EventSink, MicroVM sandbox, egress proxy, vector-memory index, EnvHub importers, RL reward exporters, public marketplace bridges | They can be added without changing kernel records if they obey the extension ABI and authority fabric. |
@@ -130,6 +130,11 @@ creation.
 
 Everything in minimum spec §3.1, per execution episode — run directories move under their case (`.sea-forge/cases/<case_id>/runs/<run_id>/`, M0 migration §7.1), the case directory adds `case.json` + `case-events.jsonl`, and settlement/artifacts gain `plan_item_id` scoping — plus:
 
+From M0 onward, v0.2 JSON/JSONL files under run and case directories are
+compatibility/materialized views of verified ledger entries. They MAY be rebuilt
+from the ledger and are never authoritative to overwrite it. The legacy v0.1
+layout remains readable and is committed by migration genesis entries.
+
 - `.sea-forge/capabilities/` — rebuildable `CapabilityRecord` projection (E4).
 - `.sea-forge/capabilities/policies/<sha256>.json` — immutable promotion-policy snapshots referenced by capability projections (E4).
 - `.sea-forge/settlement/declarations.jsonl` — append-only `SettlementDeclaration` source records issued by configured settlement authorities (E4); local/weak declarations and qualifying/strong declarations share the same typed format.
@@ -139,6 +144,11 @@ Everything in minimum spec §3.1, per execution episode — run directories move
 - `.sea-forge/authority/decisions.jsonl` — append-only mirror of final authority decisions across all ingress paths.
 - `.sea-forge/authority/audit.jsonl` — common governance audit records normalized from DomainForge / policy gateway / OPA / GovernedSpeed / local engines.
 - `.sea-forge/authority/opaque-constraints.json` — bounded-undecidability constraints created when policy engines cannot resolve a conflict; matching actions halt/escalate before other rules run.
+- `.sea-forge/ledgers/<ledger_id>/entries.jsonl` — append-only ledger entries; the v0.2 source of truth for every persisted SEA Forge application source record and security-relevant artifact commitment (§7.0c).
+- `.sea-forge/ledgers/<ledger_id>/checkpoints.jsonl` — signed stream checkpoints with Merkle-Mountain-Range roots and consistency proof material (§7.0c).
+- `.sea-forge/ledgers/global-checkpoints.jsonl` — signed global checkpoints committing every active stream root in a deterministic order (§7.0c).
+- `.sea-forge/ledgers/witness-receipts.jsonl` — independently signed checkpoint-anchor receipts; a local checkpoint without the required receipts is not externally verifiable (§7.0c).
+- `.sea-forge/ledgers/quarantine/` — retained invalid tails, fork candidates, and failed verification inputs; repair never silently deletes or rewrites them (§7.0c).
 - `.sea-forge/extensions/registry.json` — installed/built-in extension descriptors, their versions, capabilities, schema hashes, authority surfaces, and trust level.
 - `.sea-forge/extensions/descriptors/<extension_id>@<version>.json` — immutable descriptor snapshots referenced by runs and projections.
 - `.sea-forge/spec-pipelines/<pipeline_id>/` — spec-to-code run records: stage manifests, input/output hash chains, generated-zone diffs, last-mile gap reports, acceptance proof references, and quarantine files for rejected projection records (E5).
@@ -189,6 +199,7 @@ Not proven by: envelope accumulation alone; one accepted run; repeated identical
 | Yjs-style collaborative state is needed | Rejected | — | Traycer needs it for co-editing UIs; SEA Forge has no co-editing surface | none — deliberate omission |
 | Approval-over-CLI is a sufficient operator surface | Partially proven | E3 tests + one human dry run | AgentPet shows notification-driven supervision works | run the dry run |
 | Unified authority can cover file/API/git/PR/prompt/tool/spec/artifact surfaces without a second gate | Evidence-backed (by repo authority model) | M0 authority gate: onboarding, deterministic decision hashes, file/API/git/PR/prompt/shell fixtures, fail-closed gateway/OPA behavior, common audit trail, conflict precedence, opaque constraints | SEA repo already has policy-gateway `/policy/authority/evaluate`, CAM-shaped requests, file/API/git/PR/prompt policy fixtures, GovernedSpeed verdict normalization, and fail-closed edge mediators | wire as the first kernel crate seam and forbid bypass surfaces |
+| A signed, witnessed append-only ledger detects alteration, deletion, reordering, truncation, and forks without claiming impossible local tamper-proofness | Assumption | M0 integrity-ledger gate: per-stream chain/MMR verification, signed global checkpoints, independent witness receipts, inclusion/consistency proofs, crash recovery, and adversarial tamper fixtures | Current v0.1 hashes individual artifacts and uses append-only JSONL, but does not chain, sign, or externally anchor the history | implement `sea-forge-ledger` before other full-spec state grows; treat missing required witness receipts as a governed halt |
 | DomainForge can supply canonical `.sea` semantics without owning SEA Forge side effects or final authority | Evidence-backed (by DomainForge public Rust API) | M0 gate: real SEA fixture parses and validates through `domainforge-core`, stable semantic refs are recorded, invalid semantics cause no side effects, and DomainForge authority results normalize fail-closed | DomainForge exposes parser → AST → Graph → validation, typed authority traces/decisions, and in-memory deterministic projection sinks | add the first-party library adapter at M0; keep projection execution at M5 |
 | Plugin/add-on features can be delayed without re-keying records | Assumption | M0 extension descriptor validation + M5 ProjectionRecord rebuild proof | DomainForge projection contracts already map DSL to CALM/RDF/SBVR/SHACL and existing KG writer uses projection-event + DLQ semantics | implement the registry/ABI before optional plugins; keep plugin state rebuildable or evidenced |
 | SQLite FTS recall is sufficient (no embeddings) | Evidence-backed (by reference) | E7 recall tests on realistic envelope volumes | Memori achieves 81.95% LoCoMo accuracy SQL-natively at ~5% of full-context tokens | validate on SEA Forge's own data shape |
@@ -216,6 +227,7 @@ The kernel crates from the report are populated by moving the minimum slice's mo
 | Crate | From slice module | Extension content (milestone) |
 |---|---|---|
 | `sea-forge-core` | ids/types/errors | `cell_id` field, bundle types (M6) |
+| `sea-forge-ledger` | — (new) | canonical encoding, monotonic ULID generation, stream append ordinals, chain/MMR construction, checkpoint signing, witness verification, proofs, migration, and recovery (M0) |
 | `sea-forge-domain` | domain.rs | intent vocabulary registry; plan-proposal validation (M2); recall consultation at plan time (M4b) |
 | `sea-forge-domainforge` | — (new) | first-party `domainforge-core` adapter: `.sea` parse/Graph/validation, semantic-model refs, DomainForge authority-verdict normalization (M0); concept-ref validation in plans (M2); in-memory projection dispatch (M5) |
 | `sea-forge-authority` | authority.rs | CAM request/decision model, identity onboarding, policy bundle snapshots, RBAC/SoD, file/API/git/PR/prompt/shell governance, policy-gateway client, GovernedSpeed/OPA verdict adapters, conflict precedence, opaque constraints, sandbox-class rules, `require_proven` rules, approval TTL policy (M0–M3) |
@@ -271,6 +283,9 @@ flowchart LR
 
 ### 6.3 External Dependencies (beyond minimum spec)
 
+- A reviewed ULID implementation or a small audited internal implementation — v0.2 persisted records use monotonic, CSPRNG-backed ULIDs. Failure to obtain secure randomness is a typed integrity failure; time order never substitutes for a stream append ordinal.
+- Ed25519 signing implementation and protected signer interface — signs stream and global checkpoints. Private keys MUST remain outside `.sea-forge/`, workspace artifacts, trace payloads, and ordinary process environments. Failure to sign a required checkpoint halts the affected ledger before side effects.
+- Independent witness/anchor adapter transport — obtains signed receipts over global checkpoint hashes. A production policy declares `min_witnesses >= 1`; no receipt means `integrity_pending` or `ledger_integrity_error`, never a stronger assurance label.
 - `domainforge-core` — first-party semantic library, with default features off
   and an exact reviewed version recorded in `Cargo.lock` (initial conformance
   target: `0.13.0`). Enable only required features; `signing` is REQUIRED when
@@ -458,6 +473,174 @@ DomainForge integration requirements:
   pinned DomainForge version and adapter descriptor. `.sea` owns semantic truth;
   SEA Forge's append-only case/run/authority/evidence/settlement records own
   governance truth.
+
+### 7.0c Integrity ledger and record identity (M0 prerequisite)
+
+#### Assurance claim and scope
+
+The integrity ledger makes SEA Forge history **tamper-evident,
+fork-detectable, and externally verifiable** when policy requires independent
+witness receipts. It does not claim that bytes controlled by a single attacker
+are absolutely tamper-proof. A local, unsigned, or unwitnessed root detects
+only changes relative to a previously retained trusted checkpoint; it MUST NOT
+be labeled externally verified or tamper-proof.
+
+Every v0.2 persisted SEA Forge application source record becomes exactly one
+ledger entry,
+including case events, plans, authority decisions/audits, trace events,
+evidence, settlements/declarations, envelopes/capability observations, memory
+items, approvals, extension descriptors, projection/pipeline records,
+artifact-catalog records, transition tokens, policy snapshots, configuration
+snapshots, migration records, and witness receipts. Artifacts themselves remain
+content-addressed files; the ledger commits their URI, content hash, declared
+role, and metadata hash. It MUST NOT place raw secrets, credentials, private
+keys, or sensitive payloads in a ledger merely to satisfy this scope. Ledger
+protocol objects are the terminal integrity layer rather than recursively ledgered
+application records: an entry is self-committing through `entry_hash`; stream
+and global checkpoints are chained and signed; and witness receipts are signed
+commitments to a global checkpoint. Their verifier treats each as a typed,
+canonical protocol object, so omitting a recursive wrapper cannot create an
+uncommitted mutable record.
+
+Legacy v0.1 run directories and JSONL files remain immutable compatibility
+evidence. M0 imports them losslessly through a migration genesis record; it
+does not rewrite their IDs, record bytes, or historical meaning.
+
+#### Canonical encoding and domain-separated hashes
+
+Ledger-source records use UTF-8 JSON Canonicalization Scheme (RFC 8785), with
+the following profile: NFC-normalized strings; integers only where JSON number
+semantics are required; fixed-scale decimal strings for non-integer quantities;
+sorted arrays whenever the semantic type is a set; and no NaN, infinity, or
+implementation-defined float representation. Each persisted record declares
+`canonicalization: jcs-nfc-v1` and `hash_algorithm: sha256-v1`. Future changes
+require a new named algorithm/profile and an explicit migration; they MUST NOT
+silently reinterpret existing bytes.
+
+Hashes are domain-separated SHA-256 values over canonical objects:
+
+```text
+payload_hash = SHA-256("sea-forge/payload/v1\0" || canonical_payload)
+entry_hash   = SHA-256("sea-forge/ledger-entry/v1\0" || canonical_entry_without_entry_hash)
+stream_root  = SHA-256("sea-forge/mmr-root/v1\0" || canonical_mmr_state)
+global_root  = SHA-256("sea-forge/global-root/v1\0" || canonical_sorted_stream_roots)
+```
+
+The canonical entry includes `payload_hash`, so a content hash cannot be reused
+as an authority decision, artifact commitment, or checkpoint by type confusion.
+
+#### ULIDs and ordering
+
+Every new v0.2 ledger entry has `entry_ulid`: a 26-character Crockford Base32
+ULID generated from a CSPRNG and monotonic within a process for equal or
+regressing wall-clock timestamps. Every new persisted record also carries that
+entry ULID as `record_ulid`. Existing typed IDs such as `run_*`, `case_*`,
+`plan_*`, and `apr_*` remain stable semantic references and are never re-keyed.
+ULIDs provide globally unique, time-local identity; they do **not** define
+consensus order or integrity.
+
+Each ledger stream assigns a gap-free `append_ordinal: u64` under a single
+stream writer. The ordinal, not a timestamp or ULID, is the authoritative order
+for chaining, inclusion, replay, and consistency proofs. Clock rollback,
+concurrent ULID generation, duplicate ULID detection, or secure-RNG failure
+fails closed as `ledger_integrity_error`.
+
+#### Ledger streams and entries
+
+A `ledger_id` identifies one append-only stream. At minimum, M0 provides one
+stream per case and dedicated global streams for authority/configuration,
+approvals, settlement declarations, capability/memory, extensions/projections,
+artifact/IP, and federation. A run's trace and evidence entries append to its
+case stream; their `run_id` and typed record IDs remain payload fields. No
+global total order is implied across streams.
+
+**LedgerEntry** (`ledgers/<ledger_id>/entries.jsonl`):
+
+- `version`, `ledger_id`, `entry_ulid`, `record_ulid`, `append_ordinal`,
+  `record_kind`, and typed `subject_refs`.
+- `canonicalization`, `hash_algorithm`, `payload_hash`, and the canonical
+  payload or a content-addressed payload reference.
+- `previous_entry_hash` (`null` only at genesis), `entry_hash`, and
+  `mmr_leaf_index`.
+- `committed_at`, `writer_identity_ref`, and `authority_refs` where the record
+  resulted from a protected action.
+
+The writer validates `previous_entry_hash`, ordinal continuity, and duplicate
+ULIDs before append. It serializes one record, writes it once, flushes and
+durably syncs the file, then durably syncs its parent directory before exposing
+the entry to readers or dependent streams. A process may buffer MMR nodes, but
+it MUST NOT report an entry committed until its source entry is durable.
+
+Each stream is both a previous-hash chain and an append-only Merkle Mountain
+Range (MMR). The chain makes deletion, reordering, and predecessor substitution
+immediately detectable; the MMR supplies logarithmic inclusion and consistency
+proofs without rebuilding a whole tree on every append. An MMR leaf commits the
+entry hash and append ordinal. Entries may never be inserted between committed
+ordinals.
+
+#### Checkpoints, signatures, and independent witnesses
+
+**LedgerCheckpoint** (`ledgers/<ledger_id>/checkpoints.jsonl`) records:
+
+- `checkpoint_ulid`, `ledger_id`, `first_ordinal`, `last_ordinal`,
+  `entry_count`, `mmr_root`, `previous_checkpoint_hash`, and `checkpoint_hash`.
+- `signing_algorithm: ed25519`, `signing_key_id`, `signature`, and
+  `created_at`.
+- optional `recovery_of`.
+
+Every checkpoint signs its canonical content excluding `signature`. A global
+checkpoint deterministically sorts `{ledger_id, last_ordinal, mmr_root,
+checkpoint_hash}` for every active stream, hashes that set, chains to the prior
+global checkpoint, signs it, and becomes the only object submitted to witnesses.
+Witnesses return typed, independently signed receipts over
+`global_checkpoint_hash`, signer identity, receipt time, and receipt hash.
+Their keys and standing are policy snapshots; receipts from the acting entity,
+the local signer, or an untrusted witness do not satisfy independence
+requirements. Receipts reference the checkpoint they witness; they cannot be
+included in that same checkpoint and are committed in the witness stream and a
+subsequent global checkpoint.
+
+Policy defines checkpoint cadence, required signer key classes, and
+`integrity_ledger.min_witnesses`. Development may use a signed local checkpoint
+with assurance `local_tamper_evident`. Production policy MUST require at least one
+independent witness for assurance `externally_verified`. If a required witness
+is unavailable, new affected side effects halt or remain `integrity_pending`;
+SEA Forge MUST NOT relabel a local root as externally verified.
+
+#### Verification, recovery, and privacy
+
+`sea-forge ledger verify` verifies canonical payload hashes, ULID uniqueness,
+ordinal continuity, predecessor links, MMR roots, checkpoint chains,
+signatures, witness standing, global-root coverage, and artifact commitments.
+`sea-forge ledger prove <entry_ulid>` emits an inclusion proof; `sea-forge
+ledger consistency <checkpoint_a> <checkpoint_b>` emits an append-only
+consistency proof. Both proofs verify without loading unrelated payloads.
+
+At startup, before privileged execution, SEA Forge verifies every stream from
+its most recent trusted global checkpoint. A malformed entry, missing ordinal,
+chain break, invalid signature, witness mismatch, rollback, or fork writes the
+observed bytes to ledger quarantine, emits `ledger_integrity_failed` evidence
+when possible, and halts the affected scope. It never silently repairs,
+rewrites, or truncates committed history. Recovery may discard only an
+uncheckpointed, incomplete final write after preserving it in quarantine and
+recording a signed recovery checkpoint that names the discarded bytes.
+
+Hashes do not conceal data. Sensitive values remain out of ledger payloads; the
+ledger commits approved ciphertext or redacted metadata where needed. Retention
+uses tombstone entries and, where authorized, crypto-shredding of separately
+stored encryption keys. It never rewrites a historical ledger entry to erase a
+value.
+
+#### Migration and compatibility
+
+`sea-forge migrate` creates one or more `legacy_import` genesis entries that
+commit the byte SHA-256, path, size, and legacy record version of every v0.1
+source file. It then creates and signs an initial global checkpoint. Imported
+records have assurance `legacy_digest_only`; they cannot be claimed as
+historically witnessed. New v0.2 views may reference legacy typed IDs, but all
+new writes use ledger entries and ULIDs. A byte-identical rebuild from verified
+entries reproduces every rebuildable view; no view is authority to overwrite
+the ledger.
 
 ### 7.1 Extended entities (E2 case engine)
 
@@ -695,7 +878,15 @@ Extraction (M4b) is deterministic: a fixed rule set over envelopes and settlemen
 
 ### 7.7 Identifiers
 
-Minimum-spec grammar unchanged. New: `apr_NNNN`, `sdec_XXXXXX`, `mem_XXXXXX`, `cell_XXXXXXXX`, `bundle_<UTC stamp>_<6 hex>`, `pipe_<UTC stamp>_<6 hex>`, `stage_<2 digits>`, `art_<6 hex>`, `tt_<UTC stamp>_<6 hex>`. `capability_name` doubles as a filename: MUST match `[a-z0-9_]+` (enforced at planner construction since it derives from `PlanItem.name`).
+Minimum-spec typed-ID grammar remains valid for legacy references. Every v0.2
+application source record has the `record_ulid` required by §7.0c; every ledger
+entry has the corresponding `entry_ulid`. New semantic IDs remain: `apr_NNNN`, `sdec_`
+plus 6 lowercase hex, `mem_` plus 6 lowercase hex, `cell_` plus 8 lowercase
+hex, `bundle_<UTC stamp>_<6 hex>`, `pipe_<UTC stamp>_<6 hex>`, `stage_<2
+digits>`, `art_` plus 6 lowercase hex, and `tt_<UTC stamp>_<6 hex>`. They name
+domain objects; ULIDs name immutable record versions. `capability_name` doubles
+as a filename and MUST match `[a-z0-9_]+` (enforced at planner construction
+since it derives from `PlanItem.name`).
 
 ### 7.8 SpecPipelineRun / SpecPipelineStage (new, E5/M5)
 
@@ -754,6 +945,31 @@ No-teleportation invariant: every transition except initial cataloging MUST refe
 
 Minimum spec + server config file `.sea-forge/server.yaml` (only read by the server): `max_concurrent_runs` (default 4), `socket_path` (default `.sea-forge/server.sock`), `notify_command` (optional argv array; executed — never shelled — with a JSON event on stdin, AgentPet-hook style), `approval_ttl_hours` (default 24).
 
+### 8.1a Integrity ledger policy (M0)
+
+The policy bundle gains `integrity_ledger`:
+
+```yaml
+integrity_ledger:
+  canonicalization: jcs-nfc-v1
+  hash_algorithm: sha256-v1
+  checkpoint_max_entries: 256
+  checkpoint_max_age_secs: 300
+  min_witnesses: 0                 # production policy MUST set >= 1
+  required_for_side_effects: false # production policy SHOULD set true
+  signer_key_refs: ["key://integrity/current"]
+  witness_refs: []
+  legacy_assurance: legacy_digest_only
+```
+
+The schema rejects unknown canonicalization/hash algorithms, zero or duplicate
+signer keys, a production `min_witnesses: 0`, any witness that is also the
+acting entity or local signer, and any policy that claims
+`externally_verified` while `min_witnesses` is zero. Checkpoint age and entry
+limits are hard maxima, not advisory timers. Key material is referenced by
+opaque key IDs only; the policy, ledger, trace, evidence, and environment never
+contain private key bytes.
+
 ### 8.2 Policy file additions (policy `version: "0.2"`, backward compatible: 0.1 policies load with defaults)
 
 - `identity_map` and `authority_hooks` sources are REQUIRED in governed environments. Missing identity for a protected actor escalates to onboarding; it never falls back to ambient OS/user identity.
@@ -785,10 +1001,23 @@ Minimum spec + server config file `.sea-forge/server.yaml` (only read by the ser
 - `rules[].operation_kind: transition_artifact_stage` rules (M8) with required `from_stage`, `to_stage`, optional `requires_approval`, and optional `license_allowlist`. Capitalization rules MUST set `requires_approval: true`.
 - `rules[].operation_kind: attest_artifact_identity` rules (M8) with `ledger` and requester/approver role constraints. Absence of an attestation rule means artifacts remain pre-mint only.
 - `escalation.ttl_hours`, `escalation.on_expire` (fixed: `rejected`).
+- `integrity_ledger.required_for_side_effects` applies to every operation that
+  can write a workspace or `.sea-forge/`, execute a command, call a network
+  service, mutate git/PR state, install an extension, or transition an artifact.
+  Before such an operation, the current global checkpoint and its required
+  witness receipts MUST verify. An ordinary read/inspect command may report
+  `integrity_pending`, but it MUST display the assurance level and never claim
+  a verified history.
+- Required ledger protocol appends, checkpoints, witness submissions, and
+  recovery/quarantine writes are not user-facing side effects for this setting:
+  they are the trusted writer's narrowly scoped means of establishing the
+  prerequisite. They remain subject to §7.0c durability, signing, and
+  verification rules and MUST NOT provide a bypass for any other filesystem or
+  network action.
 
 ### 8.3 Config error classes
 
-Minimum-spec classes, plus: `unsupported_sandbox_class_error` (class named in policy not compiled/available on this host — blocks all work, because silently degrading isolation is the one unacceptable fallback), `domain_model_error` (missing/incompatible DomainForge library or required feature, resource-limit breach, unresolved imports, source-hash drift, parse failure, semantic validation failure, or invalid concept ref; blocks the affected plan before side effects), `authority_engine_config_error` (action-gating engine is fail-open/pass, missing, cannot be health-checked, or requires cryptographic fact verification without DomainForge's `signing` feature), `settlement_authority_config_error` (a required strong authority is untrusted, missing, unhealthy, or configured with invalid standing/reliability rules), `settlement_integrity_error` (post-hoc criteria, invalid source hashes, self-declaration, missing reliability dimensions, or insufficient standing; preserves the minimum event but blocks qualifying promotion), `identity_config_error` (governed environment lacks identity map or required sponsor semantics), `server_config_error` (blocks server start; CLI unaffected).
+Minimum-spec classes, plus: `unsupported_sandbox_class_error` (class named in policy not compiled/available on this host — blocks all work, because silently degrading isolation is the one unacceptable fallback), `domain_model_error` (missing/incompatible DomainForge library or required feature, resource-limit breach, unresolved imports, source-hash drift, parse failure, semantic validation failure, or invalid concept ref; blocks the affected plan before side effects), `ledger_integrity_error` (invalid canonicalization, duplicate ULID, ordinal gap, chain/MMR/checkpoint/signature/witness failure, rollback, fork, required checkpoint/witness outage, or unsafe recovery; blocks affected side effects), `authority_engine_config_error` (action-gating engine is fail-open/pass, missing, cannot be health-checked, or requires cryptographic fact verification without DomainForge's `signing` feature), `settlement_authority_config_error` (a required strong authority is untrusted, missing, unhealthy, or configured with invalid standing/reliability rules), `settlement_integrity_error` (post-hoc criteria, invalid source hashes, self-declaration, missing reliability dimensions, or insufficient standing; preserves the minimum event but blocks qualifying promotion), `identity_config_error` (governed environment lacks identity map or required sponsor semantics), `server_config_error` (blocks server start; CLI unaffected).
 
 Blast radius table: policy errors block all new runs (server keeps in-flight runs); `server.yaml` errors block the server only; per-run input errors fail only that run.
 
@@ -798,7 +1027,7 @@ REQUIRED for the server (M3): policy and `server.yaml` are re-read between run d
 
 ### 8.5 Startup/preflight
 
-Server startup additionally verifies: socket path bindable, sandbox classes referenced by policy are available on this host (probe Landlock ABI / `sandbox-exec` presence once at startup), `notify_command` argv0 exists if configured, and the configured DomainForge adapter version matches every active descriptor and policy reference.
+Server startup additionally verifies: socket path bindable, sandbox classes referenced by policy are available on this host (probe Landlock ABI / `sandbox-exec` presence once at startup), `notify_command` argv0 exists if configured, configured integrity signer/witness references and the latest required checkpoint verify, and the configured DomainForge adapter version matches every active descriptor and policy reference.
 
 ### 8.6 Plan-proposal input (M2)
 
@@ -809,7 +1038,7 @@ Server startup additionally verifies: socket path bindable, sandbox classes refe
 ### 9.1 Flow (case engine + approvals)
 
 ```text
-intent or plan-proposal → resolve/validate referenced DomainForge model → case created (or reopened) → plan validated → authority for the CURRENT plan
+intent or plan-proposal → verify required global checkpoint/witness receipts → resolve/validate referenced DomainForge model → case created (or reopened) → plan validated → authority for the CURRENT plan
   (every operation of every non-discretionary item, up front; discretionary additions re-run authority
    for the added item before it can activate)
   → any deny on a required item → item unavailable; if the case can never auto-complete, case terminates rejected
@@ -819,13 +1048,14 @@ intent or plan-proposal → resolve/validate referenced DomainForge model → ca
       → item entry criteria satisfied (or empty at stage activation)
           → manual_activation ? enabled (operator must start it) : active
       → active sandboxed_task → run created (one execution episode) → sandbox(class) → execute
-          → trace/evidence → kernel-local SettlementEvent
+          → ledger-committed trace/evidence → kernel-local SettlementEvent
           → SettlementAuthority declaration → capability-attempt observation
           → milestone events → sentries re-evaluated
       → active human_task → operator work item → resolution → completed
       → timer/user event listeners fire → sentries re-evaluated
       → exit criterion satisfied on an item/stage/case → terminate that scope
       → repetition items re-instantiate on re-satisfied entry criteria (≤ max_instances)
+  → append/checkpoint/witness the case state and required global root
   → case auto-complete: all required items completed, no active/enabled items, no pending approvals
       → case completed; else it stays active (a waiting case is a normal state, not a failure)
 ```
@@ -851,6 +1081,9 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
   directory and emits case-level `settlement_declared` or
   `settlement_integrity_failed`. Minimum run traces still end at `case_closed`,
   and `capabilities.jsonl` remains their final commit write.
+- Ledger checkpoint due, global checkpoint due, or witness receipt received —
+  verifies and appends the corresponding integrity records before any policy
+  requires their assurance level. These are ledger events, never side logs.
 
 ### 9.5 Important nuances
 
@@ -868,6 +1101,9 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
   while its containing case remains active or parked. The case closes only after
   a qualifying declaration arrives. This adds a case-level gate without
   reopening or mutating the minimum run directory.
+- A v0.2 source record is visible to rebuilders only after its ledger entry is
+  durable. A side-effecting operation requiring integrity assurance is eligible
+  only after its prerequisite global checkpoint and witness receipts verify.
 
 ## 10. Core Behavior Requirements — extensions
 
@@ -886,6 +1122,42 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
   its `DomainModelRef` and the canonical concept refs affected by the action.
   Missing, stale, unresolved, or semantically invalid refs deny before any side
   effect. Free-text names MUST NOT substitute for canonical concept IDs.
+
+### 10.0a Integrity ledger (M0, all milestones)
+
+- Every application source record that would otherwise be persisted to a run directory,
+  JSONL file, policy snapshot, or full-spec store MUST first become a valid
+  `LedgerEntry`. Compatibility files and indexes are views; they are never a
+  second mutable source of truth.
+- Before an operation covered by `required_for_side_effects`, verify the latest
+  trusted global checkpoint, every active stream it commits, and the required
+  independent witness receipts. A local signature is not an independent witness.
+- For each such operation, append the intent/plan snapshot, identity binding,
+  policy snapshot, canonical action request, and final authority decision; then
+  force a stream and global checkpoint and obtain the required witness receipts
+  **before** the side effect begins. Execution evidence, settlement, and case
+  transition are committed afterward and cannot retroactively make an
+  unauthorized or unwitnessed action acceptable.
+- Every execution, authority decision, evidence capture, settlement, approval,
+  declaration, projection, artifact transition, policy/configuration change,
+  extension action, and ledger recovery MUST be committed to the appropriate
+  stream before a later record may cite it.
+- The ledger writer is the sole component allowed to allocate an append ordinal,
+  entry ULID, predecessor hash, MMR leaf index, or checkpoint. Other crates
+  submit typed records and receive immutable refs; they MUST NOT reconstruct
+  hashes independently.
+- Checkpoint signing and witness submission occur after the source entries are
+  durable. Witness receipts are appended as entries in the witness stream and
+  then covered by a later global checkpoint; a receipt never retroactively
+  changes the root it witnessed.
+- The system MUST surface an assurance value on every inspect, recall,
+  capability, export, and projection result: `legacy_digest_only`,
+  `local_tamper_evident`, `checkpoint_signed`, or `externally_verified`.
+  Higher labels require all lower guarantees plus their specified signer and
+  witness proofs.
+- `sea-forge ledger verify`, `sea-forge ledger prove`, and `sea-forge ledger
+  consistency` are read-only commands. They use argv-free local verification;
+  no verification command may repair, truncate, re-sign, or anchor history.
 
 ### 10.1 Sandbox hardening (E1, M1)
 
@@ -1042,6 +1314,29 @@ Key proof commands (per milestone, abbreviated):
 
 ```text
 M0: authority and DomainForge semantic gate before remaining crate growth
+    - migrate a v0.1 root → legacy_import genesis entries commit every legacy source file's bytes/path/size/hash;
+      old IDs remain resolvable; imported history reports legacy_digest_only rather than a stronger assurance.
+    - append 1,000 mixed records across two case streams and global streams → unique monotonic entry ULIDs,
+      gap-free append ordinals, valid predecessor links/MMR roots, byte-identical rebuild, and a valid inclusion
+      proof for first/middle/last entries plus a consistency proof between two checkpoints.
+    - alter one byte, delete/reorder/duplicate a middle entry, truncate after a signed checkpoint, substitute a
+      prior stream root, or present two valid successors to one checkpoint → ledger verify rejects with a typed
+      integrity reason; no side effect starts under required_for_side_effects.
+    - replace the complete local ledger and its local root with a self-consistent fork → independent witness
+      receipt mismatch detects the substitution. A valid local-only checkpoint reports local_tamper_evident,
+      never externally_verified.
+    - required_for_side_effects action → plan, identity, policy, request, and final authority decision are
+      included in a witnessed pre-action global checkpoint before command start; unavailable witness leaves
+      no command_started event or external side effect.
+    - kill the process during entry append, checkpoint write, and witness-receipt append → recovery retains any
+      incomplete tail in quarantine, resumes from the last trusted checkpoint, writes a signed recovery record,
+      and never creates a hidden ordinal gap or silently drops bytes.
+    - concurrent writers and a simulated wall-clock rollback → no duplicate ULIDs; stream order follows only
+      append ordinal. Secure-RNG failure or duplicate ULID halts before an entry is exposed.
+    - attempt to ledger a secret sentinel, a private key, and a low-entropy sensitive value → redaction/ciphertext
+      policy rejects plaintext and bare-hash forms; approved ciphertext commitment verifies without disclosure.
+    - rotate/revoke a signing key and a witness key → old checkpoints remain verifiable under their snapshotted
+      key refs; new checkpoints reject revoked/untrusted keys; signing material never appears in records or logs.
     - onboard/resolve identities for local human, service, and R-AA-with-sponsor; unresolved identity escalates.
     - evaluate same CanonicalActionRequest twice against same policy bundle → identical decision fields and hashes.
     - validate built-in ExtensionDescriptors and an empty extension registry; descriptor authority surfaces map to policy surfaces.
@@ -1113,6 +1408,13 @@ Always: minimum-spec P1–P4b unchanged.
 ## 13. Repeatability and Variation Requirements
 
 - Concurrency: 8 simultaneous `submit`s through the server → 8 complete, uncorrupted run dirs; `capabilities.jsonl` has 8 valid lines (the shared-file writer test; see §5 JSONL claim).
+- Ledger: verify inclusion proof for an entry without loading unrelated payloads;
+  verify a consistency proof across checkpoint rotation; replace every local
+  ledger file with a self-consistent older fork → independent witness receipt
+  rejects it before a required side effect.
+- Ledger retention: tombstone a permitted encrypted payload → historical root
+  remains valid, plaintext remains absent, and a verifier can distinguish a
+  valid retention action from rewritten history.
 - Kill the server mid-run → run dir is self-describing; `sea-forge resume` either resumes (awaiting_approval) or settles rejected with basis `interrupted`; restart lists the orphan via `sea-forge runs --unsettled`.
 - Jail probe on a host without Landlock → policy referencing `jail` fails preflight with `unsupported_sandbox_class_error`; nothing runs.
 - Approval race: approve and expire near-simultaneously → exactly one resolution wins (append-order); the loser is a no-op with an operator-visible message.
@@ -1132,8 +1434,17 @@ Always: minimum-spec P1–P4b unchanged.
    source-hash drift, unsupported DomainForge version, or invalid concept ref
    rejects the affected plan before authority grants execution; no workspace or
    projection output is written.
-6. `import_verification_failure` — reject the whole bundle atomically; no partial import.
-7. `settlement_authority_failure` — preserve the minimum event, emit
+6. `ledger_integrity_failure` — duplicate ULID, ordinal gap, predecessor-chain
+   break, invalid MMR root/proof, checkpoint/signature failure, missing required
+   witness receipt, rollback, or fork. Preserve observed bytes in ledger
+   quarantine, emit `ledger_integrity_failed` when possible, and halt affected
+   side effects. Never repair by deleting, rewriting, or re-signing history.
+7. `ledger_crash_recovery` — retain an incomplete uncheckpointed tail in
+   quarantine; resume only from the latest trusted checkpoint after a signed
+   recovery entry names the discarded bytes. A crash cannot create a hidden
+   ordinal gap or a silently accepted tail.
+8. `import_verification_failure` — reject the whole bundle atomically; no partial import.
+9. `settlement_authority_failure` — preserve the minimum event, emit
    `settlement_integrity_failed`, and contribute zero qualifying capability
    weight. A policy requiring strong settlement MUST report the item incomplete
    or rejected; it MUST NOT relabel a local declaration as strong.
@@ -1146,15 +1457,19 @@ Extends minimum spec §15:
 
 - Untrusted: sandboxed payloads (now genuinely untrusted once jailed), authored
   or synthesized `.sea` sources and namespace registries, plan proposals (§8.6),
-  imported bundles, and anything arriving on the server socket beyond the
+  imported bundles, witness receipts until their signer and standing verify, and anything arriving on the server socket beyond the
   operator's own uid (socket is 0600 precisely so this set is empty).
-- Privileged: jail construction, approval resolution, policy editing (outside the system), settlement-authority trust material and declaration signing, bundle import.
+- Privileged: jail construction, approval resolution, policy editing (outside the system), settlement-authority trust material and declaration signing, ledger checkpoint signing, witness standing/key rotation, ledger recovery authorization, and bundle import.
 - Manufactured settlement is a primary threat: the acting agent may influence
   outputs, tests, evaluator code, or evidence timing. Criteria hashes, immutable
   evidence manifests, independent declarer standing, and reliability weighting
   are separate controls; passing one never substitutes for another.
 - The graduation rule (restated as the load-bearing invariant): **an argv0 outside the trusted-binary list MUST NOT be allow-listed on `local` class.** This single rule is what lets the slice ship soft and the full system harden without a flag day.
 - Secrets: if/when env injection lands, follow CubeSandbox's vault pattern — secrets resolved outside the sandbox, injected at the egress/proxy layer, never written to workspace, trace payloads, or evidence. Until such a layer exists, policies MUST NOT reference secrets at all.
+- Ledger hashes are commitments, not encryption. Low-entropy sensitive values
+  MUST NOT appear as unhashed or merely hashed ledger payloads. The ledger may
+  commit approved ciphertext and redacted metadata; retention/deletion uses
+  tombstones and separately controlled crypto-shredding, never history rewrite.
 
 ## 17. Test and Validation Matrix
 
@@ -1162,7 +1477,7 @@ Extends minimum spec §15:
 
 | Milestone | Gate (all REQUIRED) |
 |---|---|
-| M0 authority fabric + DomainForge semantic adapter + extension ABI + crate graduation | workspace builds as the graduated kernel crates plus pipeline crates and `sea-forge-domainforge`; minimum-spec suite green unchanged; authority fabric and DomainForge M0 gates in §12 pass; real `.sea` parse/semantic validation and authority normalization fail closed; extension registry/descriptors validate; no ingress bypasses the mediator; `sea-forge migrate` moves flat `runs/` under `cases/<case_id>/runs/` losslessly (hash-verified) |
+| M0 integrity ledger + authority fabric + DomainForge semantic adapter + extension ABI + crate graduation | workspace builds as the graduated kernel crates plus pipeline crates, `sea-forge-ledger`, and `sea-forge-domainforge`; minimum-spec suite green unchanged; integrity, authority, and DomainForge M0 gates in §12 pass; every v0.2 application source record has a ULID/chained/MMR-committed ledger entry; signed global checkpoints and required witness receipts verify; real `.sea` parse/semantic validation and authority normalization fail closed; extension registry/descriptors validate; no ingress bypasses the mediator; `sea-forge migrate` imports flat legacy runs losslessly into genesis commitments without re-keying them |
 | M1 jail backend | §12 M1 proofs; jail-violation, no-downgrade, unavailable-class tests |
 | M2 case engine | §12 M2 proofs; unsatisfiable-sentry rejection; proposal schema/authority tests; DomainModelRef and concept-ref validation before activation; repetition + required-item semantics; sentry-replay determinism; discretionary-item authority; parked-case-is-not-failure test; reopen is authority-checked |
 | M2 templates (E8) | §12 M2 template proofs; instantiation determinism; substitution-site restrictions enforced at load; missing-required-param is input error; template_ref provenance in plan + envelope |
@@ -1182,11 +1497,16 @@ tests (e.g., Seatbelt cases on Linux CI) MUST report as skipped, not passed.
 
 ### 17.4 Real integration tests
 
-Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS runner), a real SWE_SEED declaration when policy requires the `swe_seed` authority, IFL attestation when a policy requires `ifl:token`, and — when/if built — the MicroVM backend on KVM-capable hardware (per CubeSandbox's own x86_64+KVM requirement).
+Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS runner), an independent witness service when policy requires `externally_verified` integrity, a real SWE_SEED declaration when policy requires the `swe_seed` authority, IFL attestation when a policy requires `ifl:token`, and — when/if built — the MicroVM backend on KVM-capable hardware (per CubeSandbox's own x86_64+KVM requirement).
 
 ## 18. Implementation Checklist / Definition of Done
 
 - [ ] M0–M8 gates green in order; minimum-spec P1–P4b green after every milestone.
+- [ ] Integrity-ledger M0 proves canonical encoding, ULID uniqueness, append
+  ordinal continuity, predecessor chains, MMR inclusion/consistency proofs,
+  signed global checkpoints, independent witness receipts, fork/rollback and
+  crash-tail detection, key rotation, redaction/ciphertext handling, and
+  lossless legacy genesis import before any later milestone writes source state.
 - [ ] Authority M0 proves identity onboarding, deterministic hashes, file/API/git/PR/prompt/shell fail-closed behavior, engine-unavailable fail-closed behavior, conflict precedence, opaque constraints, and common audit mirroring before M1 sandbox hardening starts.
 - [ ] DomainForge M0 proves real `.sea` parse and semantic validation, stable
   DomainModelRef construction, concept-ref resolution, fail-closed authority
@@ -1216,4 +1536,4 @@ Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS run
 
 ## Appendix A. Milestone order and rationale
 
-M0 authority fabric + DomainForge semantic adapter + extension ABI + graduation + case-directory migration → M1 jail (the security debt of the slice is retired after the authority and semantic-world gates are already non-bypassable) → M2 case engine (E2 — CMMN-subset semantics over the existing ledger, with DomainModelRef/concept validation before activation; the biggest milestone, sequenced before the server because sentry evaluation must be correct single-threaded before it runs concurrently) → M3 server/approvals (unblocks `escalate` and human tasks — the operator half of the case model) → M4a settlement declarations + capability promotion (the first consumer of envelopes; declaration integrity must exist before any projection can call an observation proven) → M4b governed semantic memory (E7 — the Memori delta: extraction, FTS index, authority-scoped recall; sequenced after M4a so memory can distinguish raw outcomes from qualifying capability) → M5 spec-to-code + generator pipelines + DomainForge projections (the ADR→PRD→SDS→authored/synthesized SEA→DomainForge AST/semantic graph→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself) → M6 federation prep (cheap, additive; imported extensions remain disabled until adopted) → M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner) → M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection). E8 plan templates land inside M2 with the planner work. MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.
+M0 integrity ledger + authority fabric + DomainForge semantic adapter + extension ABI + graduation + case-directory migration → M1 jail (the security debt of the slice is retired only after the integrity, authority, and semantic-world gates are non-bypassable) → M2 case engine (E2 — CMMN-subset semantics over verified ledger entries, with DomainModelRef/concept validation before activation; the biggest milestone, sequenced before the server because sentry evaluation must be correct single-threaded before it runs concurrently) → M3 server/approvals (unblocks `escalate` and human tasks — the operator half of the case model) → M4a settlement declarations + capability promotion (the first consumer of envelopes; declaration integrity must exist before any projection can call an observation proven) → M4b governed semantic memory (E7 — the Memori delta: extraction, FTS index, authority-scoped recall; sequenced after M4a so memory can distinguish raw outcomes from qualifying capability) → M5 spec-to-code + generator pipelines + DomainForge projections (the ADR→PRD→SDS→authored/synthesized SEA→DomainForge AST/semantic graph→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself) → M6 federation prep (cheap, additive; imported extensions remain disabled until adopted) → M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner) → M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection). E8 plan templates land inside M2 with the planner work. MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.

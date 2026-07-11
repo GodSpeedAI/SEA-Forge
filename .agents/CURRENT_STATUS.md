@@ -4,25 +4,21 @@ Updated: 2026-07-11
 
 ## Objective
 
-Correct the draft full-system architecture so SEA Forge governs a world defined
-by real DomainForge `.sea` semantics without changing the implemented v0.1
-minimum kernel.
+Define a non-naive, tamper-evident integrity-ledger model in the draft
+full-system architecture without changing the implemented v0.1 minimum kernel.
 
 ## Worktree State
 
 The minimum implementation is merged and pushed on `main`. Two local
 documentation commits contain the Genesis alignment; they have not been pushed.
-The DomainForge architecture correction is documentation-only and builds on
-those commits. Unrelated untracked
+The integrity-ledger specification is documentation-only and builds on those
+commits. Unrelated untracked
 `.agents/plans/upgraded-sea.code-workspace` and `.omc/` content remains
 untouched.
 
 ## Changed Files
 
 - `.agents/specs/spec-full.md`
-- `docs/decisions/ADR-001-domainforge-semantic-boundary.md`
-- `ARCHITECTURE.md`
-- `README.md`
 - `.agents/CURRENT_STATUS.md`
 
 ## Completed
@@ -86,6 +82,10 @@ untouched.
   `devbox run -- just context-check` passed on 2026-07-11. No Rust, manifest,
   persisted v0.1 schema, or executable behavior changed, so code gates were not
   rerun.
+- Integrity-ledger specification: `git diff --check` and
+  `devbox run -- just context-check` passed on 2026-07-11. No Rust, manifest,
+  persisted v0.1 schema, or executable behavior changed, so code gates were not
+  rerun.
 
 ## Remaining
 
@@ -116,3 +116,15 @@ None.
 - Integrate `domainforge-core` through a side-effect-free first-party adapter at
   M0; bind plans to its semantic model at M2; add governed synthesis and
   in-memory projections at M5. Do not add the dependency to v0.1 crates.
+- Defined M0's `sea-forge-ledger` contract: canonical `jcs-nfc-v1` records,
+  SHA-256 domain separation, CSPRNG monotonic ULIDs, authoritative per-stream
+  append ordinals, hash chains, MMR inclusion/consistency proofs, signed global
+  checkpoints, and independent witness receipts.
+- Scoped the assurance honestly: SEA Forge history is tamper-evident and
+  fork-detectable; it is externally verifiable only when policy requires valid
+  independent witness receipts. Hashes alone do not make locally controlled
+  storage tamper-proof.
+- Required durable pre-action ledger commitments for side effects when policy
+  requires integrity assurance, fail-closed verification/recovery, quarantine,
+  redaction/ciphertext handling, key rotation, and lossless `legacy_import`
+  genesis records. Added M0 proofs and conformance gates for those rules.
