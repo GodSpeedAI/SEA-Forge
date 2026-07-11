@@ -1,25 +1,24 @@
 # Current Status
 
-Updated: 2026-07-10
+Updated: 2026-07-11
 
 ## Objective
 
-Implement `.agents/specs/spec-minimum.md` as the synchronous two-crate governed
-kernel and keep the specification aligned with implementation-defined choices.
+Align the implemented minimum and draft full specifications with the Genesis
+definitions of settlement and durable capability without breaking v0.1.
 
 ## Worktree State
 
-Implementation is isolated at `.worktrees/feature-spec-minimum` on branch
-`feature/spec-minimum`. Four atomic implementation/conformance commits contain
-the completed slice. Nothing has been pushed.
+The minimum implementation is merged and pushed on `main`. Two local
+documentation commits contain the Genesis alignment; they have not been pushed.
 
 ## Changed Files
 
 - Core lifecycle: `crates/sea-forge-core/src/{ids,types,errors,trace,evidence,authority,domain,planner,sandbox,runtime,settlement,capability,pipeline}.rs`.
 - CLI: `crates/sea-forge-cli/src/main.rs`, `src/commands/`, and integration tests.
 - Dependencies: workspace and crate `Cargo.toml` files plus `Cargo.lock`.
-- Contract/docs: `.agents/specs/spec-minimum.md`, implementation plan,
-  `README.md`, `justfile`, and repository-local memory.
+- Contract/docs: `.agents/specs/spec-{minimum,full}.md`, Genesis alignment design
+  and implementation plans, and repository-local memory.
 
 ## Completed
 
@@ -40,6 +39,14 @@ the completed slice. Nothing has been pushed.
 - Updated `spec-minimum.md` for `AuthorityAction`, final-write ordering,
   in-place execution-evidence hashing, atomic case closure, and the fixed
   conformance harness.
+- Clarified that minimum `capabilities.jsonl` is capability-attempt memory and
+  that v0.1 settlement is kernel-local verification, not independently declared
+  strong settlement.
+- Added the full-spec `SettlementAuthority`/`SettlementDeclaration` boundary,
+  reliability weighting, declarer standing and independence, promotion and
+  contraction rules, manufactured-settlement threats, and M4a gates.
+- Audited `types.rs`, `settlement.rs`, `capability.rs`, and `pipeline.rs`; the
+  clarification matches current v0.1 behavior and requires no Rust/schema change.
 
 ## Verification
 
@@ -55,11 +62,14 @@ the completed slice. Nothing has been pushed.
 - `devbox run -- just test`: 35 passed, 0 failed, 0 ignored.
 - Final correctness, readability, architecture, security, and performance diff
   review: passed; no open findings.
+- Genesis alignment: `devbox run -- just context-check`, `git diff --check`, and
+  unchanged P1-P4b passed on 2026-07-11. No Rust changed, so the prior 35-test
+  implementation result remains the applicable runtime verification.
 
 ## Remaining
 
-None for the minimum slice. Branch integration is intentionally left to the
-user; no push, pull request, deployment, or publication was performed.
+None. The full v0.2 specification remains draft and unimplemented by design;
+its M0-M8 checklist is the remaining roadmap, not unfinished minimum work.
 
 ## Blockers
 
@@ -74,3 +84,7 @@ None.
   lifecycle commit write.
 - Stream stdout/stderr directly to their final artifact paths and hash in place;
   copy workspace work products into artifacts exactly once.
+- Preserve v0.1 records and proofs; strong settlement is an additive full-spec
+  declaration outside immutable run directories.
+- Treat raw accepted/rejected/escalated counts as observations. Only qualifying,
+  independently declared, reliability-weighted outcomes can promote capability.

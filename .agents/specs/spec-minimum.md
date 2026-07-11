@@ -17,8 +17,8 @@ A useful implementation spec MUST let a developer, agent, reviewer, or operator 
 1. What should be built? — A two-crate Rust workspace (`sea-forge-core`, `sea-forge-cli`) implementing one governed run pipeline.
 2. What result should it produce? — A case record plus a run directory under `.sea-forge/runs/<run_id>/` containing plan, authority decision, trace, evidence, settlement, and semantic envelope, all cross-linked by ID; work-product evidence carries a deterministic pre-mint identity and artifact governance descriptor.
 3. How will we know the result is real? — The proof commands in §12.2 pass; the conformance tests in §17 pass.
-4. What capability should get stronger after repeated use? — Every run appends a `SemanticEnvelope` to `.sea-forge/capabilities.jsonl`; that file is the system's capability memory v0.
-5. What evidence proves the capability claim? — `capabilities.jsonl` grows by exactly one valid, cross-linked record per run, including denied and failed runs; every captured work product can be re-identified from its canonical descriptor and file hash.
+4. What capability should get stronger after repeated use? — Every run appends a `SemanticEnvelope` to `.sea-forge/capabilities.jsonl`; despite its compatibility-preserved name, that file is capability-attempt memory v0, not proof of durable capability.
+5. What evidence proves the capability-attempt claim? — `capabilities.jsonl` grows by exactly one valid, cross-linked observation per run, including denied and failed runs; every captured work product can be re-identified from its canonical descriptor and file hash. Durable capability requires qualifying repetition under variation and recovery in the full spec.
 6. What fails safely? — Any unclassifiable operation is denied (fail closed); any denial or execution failure still produces trace, evidence, and settlement records.
 7. What must repeat until reliable? — The variation and recovery cases in §13/§17.2.
 8. What changes when evidence disagrees with the design? — See §5 claim table; any `Assumption` that fails downgrades the design per the stated gap.
@@ -80,6 +80,7 @@ Important boundary:
 - Semantic memory extraction, SQL/FTS-indexed memory store, authority-gated recall, LLM-conversation capture (full spec E7 — Memori delta D3–D5). The slice's recall is a plain scan of `capabilities.jsonl`.
 - The CMMN case engine (stages, sentries, milestones as first-class records, discretionary items, case reopening, multi-episode cases — full spec E2, review §6). The slice creates a *degenerate* case: one plan, one item with empty `entry_criteria`, one run, closed at settlement. The Case/CasePlan/PlanItem ontology ships now so no stored record ever needs re-keying.
 - Plan templates, environment contracts, and evaluator-based/batch settlement (full spec E8/E9, review §7 — Archon/AEnvironment/DataFlow deltas). The slice's hardcoded demo plan is conceptually the first built-in template; making templates user-definable artifacts is full-spec. These are additive (`template_ref`, `environment`, `evaluator` fields default to null/absent on old records), so deferring them re-keys nothing.
+- Strong settlement and capability promotion. The slice performs kernel-local verification against proof criteria declared before execution, but does not score feedback-channel reliability or persist an independent declaration by a component with settlement standing. The full spec adds those conditions without changing v0.1 records.
 
 ## 3. Outcome Contract
 
@@ -133,24 +134,29 @@ Handoff is complete when:
 
 If the outcome cannot be verified, the system MUST exit nonzero and the run directory MUST contain a `settlement.json` with status `rejected` or `escalated` and a machine-readable `basis`.
 
-## 4. Capability Claim
+## 4. Capability-Attempt Claim
 
-After repeated successful use, the SEA Forge system (and its operators) should be better able to answer "what capabilities have been attempted, under what authority, with what results" without reading logs — by querying `capabilities.jsonl`.
+After repeated use, the SEA Forge system (and its operators) should be better able to answer "what capabilities have been attempted, under what authority, with what results" without reading logs — by querying `capabilities.jsonl`.
 
-This capability claim is in scope because capability memory is the substrate later components (planner improvements, DomainForge projection, SeaCell federation) consume.
+The persisted filename and `capability_delta` field are compatibility names. Each envelope is an observation about an attempted capability. One accepted envelope, or any number of identical accepted envelopes, MUST NOT be represented as proof of durable capability. The full spec owns promotion from observations to demonstrated, proven, or metabolized capability.
 
-The capability claim is proven only if:
+This capability-attempt claim is in scope because the observation history is the substrate later components (planner improvements, DomainForge projection, SeaCell federation, and capability promotion) consume. It is proven only if:
 
 - After N runs (mixed allowed/denied/failed), `capabilities.jsonl` contains exactly N valid envelopes.
 - Each envelope's `capability_delta.result` correctly distinguishes accepted, rejected, escalated/denied outcomes.
 - `jq` over the file alone can reconstruct the outcome distribution (no other file needed).
 - `sea-forge recall <query>` returns exactly the envelopes whose capability name or intent summary matches, filtered correctly by `--entity`/`--process` (read side of the loop; Memori delta D1/D2).
 
-The capability claim is not proven by:
+The capability-attempt claim is not proven by:
 
 - The existence of the file.
 - Passing unit tests that never exercise denial or failure paths.
 - Human-readable CLI output.
+
+P1-P4b and the §17 suite prove the governed minimum kernel and the integrity of
+its attempt history. They do not prove durable capability as defined by
+repeated, independently settled performance under relevant variation,
+recovery, and reduced orchestration burden.
 
 ## 5. Evidence and Claim Discipline
 
@@ -742,6 +748,19 @@ Idempotency rule: re-running the same intent MUST create a new run directory and
   copied once into `artifacts/` before hashing.
 
 ### 10.4 Settlement Rules
+
+In v0.1, `SettlementEvent` is a kernel-local verification result. It binds
+durable evidence to `SettlementCriteria` declared in the plan before execution
+and prevents process exit or agent narration from establishing success alone.
+This satisfies the evidence and predeclared-verification conditions of the
+Genesis settlement model within the slice's trusted kernel boundary.
+
+It is not a strong settlement declaration: v0.1 does not score the feedback
+channel for delay, attribution confidence, gaming exposure, or hidden-debt
+blindness, and it does not persist the standing and independence of a separate
+declarer. Full-spec `SettlementDeclaration` records add those conditions.
+Nothing in this clarification changes the v0.1 `SettlementEvent`,
+`SemanticEnvelope`, `capabilities.jsonl`, exit codes, or P1-P4b proofs.
 
 The evaluator computes status from the claim:
 
