@@ -4,21 +4,26 @@ Updated: 2026-07-11
 
 ## Objective
 
-Align the implemented minimum and draft full specifications with the Genesis
-definitions of settlement and durable capability without breaking v0.1.
+Correct the draft full-system architecture so SEA Forge governs a world defined
+by real DomainForge `.sea` semantics without changing the implemented v0.1
+minimum kernel.
 
 ## Worktree State
 
 The minimum implementation is merged and pushed on `main`. Two local
 documentation commits contain the Genesis alignment; they have not been pushed.
+The DomainForge architecture correction is documentation-only and builds on
+those commits. Unrelated untracked
+`.agents/plans/upgraded-sea.code-workspace` and `.omc/` content remains
+untouched.
 
 ## Changed Files
 
-- Core lifecycle: `crates/sea-forge-core/src/{ids,types,errors,trace,evidence,authority,domain,planner,sandbox,runtime,settlement,capability,pipeline}.rs`.
-- CLI: `crates/sea-forge-cli/src/main.rs`, `src/commands/`, and integration tests.
-- Dependencies: workspace and crate `Cargo.toml` files plus `Cargo.lock`.
-- Contract/docs: `.agents/specs/spec-{minimum,full}.md`, Genesis alignment design
-  and implementation plans, and repository-local memory.
+- `.agents/specs/spec-full.md`
+- `docs/decisions/ADR-001-domainforge-semantic-boundary.md`
+- `ARCHITECTURE.md`
+- `README.md`
+- `.agents/CURRENT_STATUS.md`
 
 ## Completed
 
@@ -47,6 +52,18 @@ documentation commits contain the Genesis alignment; they have not been pushed.
   contraction rules, manufactured-settlement threats, and M4a gates.
 - Audited `types.rs`, `settlement.rs`, `capability.rs`, and `pipeline.rs`; the
   clarification matches current v0.1 behavior and requires no Rust/schema change.
+- Inspected the sibling DomainForge repository and confirmed that
+  `domainforge-core` is the canonical Rust library for SEA grammar, AST,
+  semantic Graph, validation, authority evaluation, and in-memory projections.
+- Corrected the full spec's direction from “DomainForge outputs `.sea`” to
+  “authored or governed-synthesized `.sea` → DomainForge semantic model →
+  validated projections.”
+- Added the `sea-forge-domainforge` M0/M2/M5 boundary, `DomainModelRef`,
+  fail-closed authority normalization, direct-library/no-direct-side-effect
+  rules, milestone gates, and proof requirements.
+- Added ADR-001 and aligned the architecture map and README. The v0.1 JSON
+  `model.sea` remains unchanged and is now clearly labeled as a lifecycle stub,
+  not a DomainForge model.
 
 ## Verification
 
@@ -65,11 +82,16 @@ documentation commits contain the Genesis alignment; they have not been pushed.
 - Genesis alignment: `devbox run -- just context-check`, `git diff --check`, and
   unchanged P1-P4b passed on 2026-07-11. No Rust changed, so the prior 35-test
   implementation result remains the applicable runtime verification.
+- DomainForge documentation correction: `git diff --check` and
+  `devbox run -- just context-check` passed on 2026-07-11. No Rust, manifest,
+  persisted v0.1 schema, or executable behavior changed, so code gates were not
+  rerun.
 
 ## Remaining
 
-None. The full v0.2 specification remains draft and unimplemented by design;
-its M0-M8 checklist is the remaining roadmap, not unfinished minimum work.
+None for this documentation correction. The full v0.2 specification remains
+draft and unimplemented by design; its M0–M8 checklist is the roadmap, not
+unfinished minimum work.
 
 ## Blockers
 
@@ -88,3 +110,9 @@ None.
   declaration outside immutable run directories.
 - Treat raw accepted/rejected/escalated counts as observations. Only qualifying,
   independently declared, reliability-weighted outcomes can promote capability.
+- DomainForge owns `.sea` syntax, semantic graph construction, concept identity,
+  validation, and deterministic projections. SEA Forge owns final authority,
+  isolation, side effects, evidence, and settlement.
+- Integrate `domainforge-core` through a side-effect-free first-party adapter at
+  M0; bind plans to its semantic model at M2; add governed synthesis and
+  in-memory projections at M5. Do not add the dependency to v0.1 crates.

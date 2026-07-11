@@ -18,7 +18,7 @@ run the governed lifecycle:
 ```sh
 cargo run -p sea-forge-cli -- run \
   --policy sea-forge-policy.yaml \
-  --intent "Generate and validate a simple DomainForge .sea model"
+  --intent "Generate a .sea model"
 cargo run -p sea-forge-cli -- recall generate
 ```
 
@@ -30,6 +30,29 @@ Known limitation: `LocalWorkspaceSandbox` is a process-level sandbox — a
 malicious child can write outside the workspace because there is no OS jail.
 The minimum kernel therefore only allow-lists its trusted self-validator. An OS
 jail is required before any untrusted command is allow-listed.
+
+The minimum demo's `model.sea` is a JSON stub checked by SEA Forge's trusted
+self-validator. It proves the governed lifecycle, artifact identity, and false-
+success handling; it is not DomainForge SEA syntax and does not claim
+DomainForge compatibility.
+
+## DomainForge boundary
+
+Full SEA Forge governs work in a world defined by `.sea`. DomainForge owns that
+world's syntax, semantic graph, concept identities, validation, policy
+evaluation, and deterministic projections. SEA Forge owns authorization,
+isolation, side effects, evidence, and settlement.
+
+The draft full-system roadmap introduces a first-party
+`sea-forge-domainforge` crate at M0. It will call the `domainforge-core` Rust
+library directly to load and validate `.sea` and to normalize DomainForge
+authority results as candidate verdicts. M2 binds plans to hash-pinned semantic
+models and canonical concept IDs. M5 adds governed `.sea` synthesis and
+in-memory DomainForge projections; SEA Forge remains the only component that
+materializes projection artifacts.
+
+See the [DomainForge semantic-boundary decision](docs/decisions/ADR-001-domainforge-semantic-boundary.md)
+and `.agents/specs/spec-full.md` §§7.0a and 10.4a.
 
 ## Prerequisites
 
@@ -55,9 +78,8 @@ just test             # cargo test --workspace --all-features --locked
 ```
 
 A fresh clone is foundation-ready when `just doctor`, `just check`, and
-`just test` all exit zero (Shell-SPEC §3.2). Once the minimum slice is
-implemented, `just proof` runs the conformance commands in
-`spec-minimum.md` §12.2.
+`just test` all exit zero (Shell-SPEC §3.2). `just proof` runs the implemented
+minimum kernel's conformance commands from `spec-minimum.md` §12.2.
 
 ## Commands
 
@@ -72,7 +94,7 @@ implemented, `just proof` runs the conformance commands in
 | `just build` | `cargo build --workspace` |
 | `just check` | fmt, clippy, `--locked` check, `cargo deny`, gitleaks |
 | `just test` | `cargo test --workspace --all-features --locked` |
-| `just proof` | Minimum-spec conformance (P1–P4b) once the slice exists |
+| `just proof` | Run the implemented minimum-spec conformance proofs (P1–P4b) |
 | `just clean` | Remove `target/` and bootstrap evidence |
 | `just secrets-init` | Create a local age key if absent, print its public key |
 | `just secrets-edit [profile]` | Edit an encrypted profile via SOPS |
@@ -141,7 +163,7 @@ RUST_LOG=debug cargo run -p sea-forge-cli
 
 Runtime diagnostics use stable event names and include `run_id`, `component`,
 and `error_class`. They are distinct from the governed lifecycle events that the
-minimum kernel will persist in `.sea-forge/runs/<run_id>/trace.jsonl`.
+minimum kernel persists in `.sea-forge/runs/<run_id>/trace.jsonl`.
 
 The one-shot minimum CLI intentionally has no aggregate metrics or external
 telemetry exporter. Metrics and cross-process tracing belong at the full spec's
@@ -152,6 +174,7 @@ an explicit monitoring consumer.
 
 ```text
 .agents/specs/       # normative specifications (Shell, minimum, full)
+docs/decisions/      # architecture decision records
 crates/
   sea-forge-core/    # kernel types and lifecycle (minimum spec)
   sea-forge-cli/     # one-shot CLI: run, validate, inspect, recall
@@ -170,5 +193,7 @@ conflated (Shell-SPEC §3.1).
 - `.agents/specs/Shell-SPEC.md` — development shell, toolchain, secrets, CI.
 - `.agents/specs/spec-minimum.md` — minimum governed kernel.
 - `.agents/specs/spec-full.md` — additive M0–M8 evolution.
+- `docs/decisions/ADR-001-domainforge-semantic-boundary.md` — DomainForge owns
+  `.sea` semantics; SEA Forge owns governed execution and final authority.
 
 See `ARCHITECTURE.md` for the system map and how the layers fit together.

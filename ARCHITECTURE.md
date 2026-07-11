@@ -23,11 +23,11 @@ implementation to meet a still-valid requirement, or update the spec and this
 document in the same change when evidence shows the design must change. Never
 edit this file to conceal drift.
 
-Current state: the `Shell-SPEC.md` development foundation is implemented —
-Devbox, pinned Rust toolchain, `just` command surface, SOPS/age secrets, CI,
-and the two-crate workspace skeleton build and test green. The minimum
-governed kernel (§2.2) and full-system milestones (§2.3) remain planned until
-their files and conformance evidence exist.
+Current state: the `Shell-SPEC.md` development foundation and v0.1 minimum
+governed kernel are implemented and green. The full-system M0–M8 milestones
+remain a draft roadmap. M0 introduces the real DomainForge semantic boundary;
+the v0.1 JSON `.sea` fixture is lifecycle conformance machinery, not a
+DomainForge model.
 
 ## 1. System at a Glance
 
@@ -48,6 +48,15 @@ flowchart TB
     CLI["sea-forge CLI"]
     SRV["server — M3"]
     EXT["tool/API adapters — governed extensions"]
+    SEA["authored or governed-synthesized .sea"]
+  end
+
+  subgraph semantics["DomainForge semantic boundary — M0"]
+    DF["domainforge-core parser + semantic graph"]
+    DFEVAL["validation + candidate authority verdict"]
+    DFPROJ["in-memory projections — M5"]
+    SEA --> DF
+    DF --> DFEVAL & DFPROJ
   end
 
   subgraph kernel["Synchronous governed kernel"]
@@ -68,10 +77,12 @@ flowchart TB
 
   CI --> CLI
   CLI --> DOMAIN
+  DFEVAL --> AUTH
   SRV --> AUTH
   EXT --> AUTH
   ENV --> CASES & CAP
   CASES & CAP --> PROJ
+  DFPROJ --> PROJ
 ```
 
 The CLI remains usable without the server. The server adds concurrency,
@@ -131,18 +142,17 @@ crate boundaries so graduation is mechanical rather than a rewrite.
 
 ### 2.3 Full-system evolution
 
-After the minimum proofs pass, the full spec graduates modules and adds
-capabilities in order:
+The full spec graduates modules and adds capabilities in order:
 
 | Milestone | Architectural change | Boundary preserved |
 | --- | --- | --- |
-| M0 | authority fabric, extension ABI, crate graduation | one authority mediator; minimum records remain readable |
+| M0 | authority fabric, DomainForge semantic adapter, extension ABI, crate graduation | one authority mediator; `.sea` loads through the canonical semantic engine; minimum records remain readable |
 | M1 | Landlock/Seatbelt jail backend | `ExecutionSandbox`; no silent class downgrade |
-| M2 | CMMN-subset case engine and templates | each activated item runs the same governed episode |
+| M2 | CMMN-subset case engine, DomainForge concept-bound plans, and templates | each activated item runs the same governed episode against a pinned semantic model |
 | M3 | Tokio server, approvals, subscriptions | async at server edge; kernel remains synchronous |
 | M4a | capability records and rebuild | JSONL remains truth; views are projections |
 | M4b | governed semantic memory and recall | recall is authority-scoped and evidenced |
-| M5 | spec-to-code pipelines and projections | pipelines are ordinary cases; generated zones protected |
+| M5 | `.sea` synthesis, spec-to-code pipelines, and DomainForge projections | synthesis and validation are separate; projections return in memory; generated zones protected |
 | M6 | federation bundles | imported capabilities stay isolated until adopted |
 | M7 | environment contracts and evaluators | evaluators use authority, sandbox, evidence, settlement |
 | M8 | artifact-to-IP transitions | no transition without evidence and a hash-linked token |
@@ -230,6 +240,7 @@ and approval-timer boundary; it does not spread through domain traits.
 | Seam | Owns | Must not own |
 | --- | --- | --- |
 | domain interpreter | intent vocabulary | shell execution or policy |
+| `sea-forge-domainforge` | `.sea` parsing, semantic graph/validation, concept refs, candidate verdicts, in-memory projections | final authority, filesystem writes, network, external-tool execution |
 | planner | typed case plans | hidden side effects |
 | authority fabric | identity, policies, deterministic decisions | execution |
 | `ExecutionSandbox` | isolation class, prepare/execute/collect/destroy | authority policy |
@@ -242,6 +253,12 @@ and approval-timer boundary; it does not spread through domain traits.
 New capabilities should extend these seams. If a change requires a second
 authority engine, private recall channel, mutable projection source, or weaker
 sandbox fallback, the design is wrong.
+
+DomainForge owns semantic truth: `.sea` syntax, graph meaning, and concept
+identity. SEA Forge owns governance truth: append-only case, authority, trace,
+evidence, settlement, and capability records. A `DomainModelRef` binds the two
+without making either store a duplicate source of truth. See
+[`ADR-001`](docs/decisions/ADR-001-domainforge-semantic-boundary.md).
 
 ## 6. Failure Model
 
@@ -318,6 +335,7 @@ rebuild test must compare byte-stable output with source records.
 | JSON/JSONL truth | inspectable, append-only, rebuildable | database-first persistence | measured scale or concurrency invalidates the model |
 | optional Unix-socket server | local concurrency and approvals without remote API | HTTP/microservices first | a remote client is an active requirement |
 | module-to-crate graduation | proves the lifecycle before crate proliferation | full crate graph on day one | never; graduation begins only after minimum proof |
+| DomainForge library behind a first-party adapter | one canonical `.sea` parser, graph, identity scheme, validator, and projection engine while SEA Forge retains side-effect and final-authority ownership | reimplement SEA; invoke the CLI as the built-in path; defer semantics until M5 | DomainForge removes or materially changes the required library/in-memory APIs |
 
 ## 10. Known Tensions and Review Triggers
 

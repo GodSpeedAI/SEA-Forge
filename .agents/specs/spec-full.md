@@ -4,9 +4,11 @@ Status: Draft v0.2
 
 Scope: Rust (stable, edition 2021), Linux primary / macOS secondary. Tokio async where stated. Multi-crate workspace.
 
-Purpose: Grow the minimum vertical slice (`spec-minimum.md`) into the full governed capability substrate: a unified authority fabric, pluggable sandboxes with OS-level enforcement, a CMMN-subset case engine (cases, stages, sentries, milestones, discretionary items), versioned plan templates, an operator approval loop, a long-running server, independently declared and reliability-weighted settlement, governed semantic memory, environment contracts with evaluator-based and batch verification, first-class spec-to-code pipelines, artifact-to-IP promotion, DomainForge/.sea projection, and SeaCell federation readiness.
+Purpose: Grow the minimum vertical slice (`spec-minimum.md`) into the full governed capability substrate: a unified authority fabric, pluggable sandboxes with OS-level enforcement, DomainForge-backed `.sea` semantic loading and validation, a CMMN-subset case engine (cases, stages, sentries, milestones, discretionary items), versioned plan templates, an operator approval loop, a long-running server, independently declared and reliability-weighted settlement, governed semantic memory, environment contracts with evaluator-based and batch verification, first-class spec-to-code and DomainForge projection pipelines, artifact-to-IP promotion, and SeaCell federation readiness.
 
 Owner: SEA Forge core team
+
+Architecture decision: `docs/decisions/ADR-001-domainforge-semantic-boundary.md`.
 
 Prerequisite: **`spec-minimum.md` implemented and green.** This spec never redefines the kernel types, lifecycle, ID grammar, record formats, authority hashes, audit record shape, or fail-closed rules — it extends them. Authority is not an extension capability; it is the invariant substrate for every extension. Where a section here is silent, the minimum spec governs. Corrections R1–R10 from `build-report-review.md` apply throughout.
 
@@ -17,7 +19,7 @@ Prerequisite: **`spec-minimum.md` implemented and green.** This spec never redef
 3. How will we know the result is real? — Each milestone has its own conformance gate (§17); a milestone that cannot pass the *minimum* spec's proofs P1–P4b unchanged has broken the kernel and MUST be rejected.
 4. What capability should get stronger after repeated use? — Capability memory becomes queryable: operators and downstream generators can ask "what has this system demonstrated under which variation, recovery, and settlement reliability," and get an evidence-linked answer.
 5. What evidence proves the capability claim? — `CapabilityRecord`s promote capability-attempt observations only from qualifying `SettlementDeclaration`s and record variation, recovery, orchestration burden, regressions, and reliability weight (§7.2.1/§7.3); spec-to-code and artifact-to-IP claims retain their hash-linked proof chains; all projections rebuild byte-identically from source records.
-6. What fails safely? — Everything in the minimum spec, plus: identity resolution failures escalate; policy-gateway or OPA/GovernedSpeed transport failures deny or escalate, never allow; jail violations kill the run and settle `rejected`; unapproved escalations expire to `rejected`; a dead server leaves resumable, self-describing run directories.
+6. What fails safely? — Everything in the minimum spec, plus: invalid or stale DomainForge models fail before planning or execution; identity resolution failures escalate; required DomainForge/policy-gateway/OPA/GovernedSpeed evaluators that are missing or unavailable deny or escalate, never allow; jail violations kill the run and settle `rejected`; unapproved escalations expire to `rejected`; a dead server leaves resumable, self-describing run directories.
 7. What must repeat until reliable? — §13/§17.2 per milestone; especially jail-violation tests and approval-expiry tests.
 8. What changes when evidence disagrees with the design? — §5 claim table; notably, if Landlock proves impractical for the workload, the sandbox backend contract (§11.2) is the isolation seam and a MicroVM backend replaces it without kernel changes.
 
@@ -43,6 +45,11 @@ Important boundary:
 
 - The full system is still a substrate — not an agent framework. Agents/LLMs are *callers* (they submit intents and plans) and *payloads* (they run inside sandboxes); they are never trusted components of the kernel.
 - Successful execution still means settlement acceptance, now potentially including a human approval as a settlement input.
+- DomainForge owns `.sea` syntax, semantic graph construction, concept identity,
+  semantic validation, and deterministic projections from a validated graph.
+  SEA Forge owns action authorization, isolation, side effects, evidence, and
+  settlement. A DomainForge result informs SEA Forge; it never bypasses or
+  replaces SEA Forge's final authority decision.
 
 ## 2. Goals and Non-Goals
 
@@ -55,7 +62,10 @@ Full SEA Forge MUST keep one authority fabric across CLI, server, shell, API, to
 - Policy bundles are hash-addressed and may be composed from file, command, API, git commit, PR merge, prompt-risk, memory-recall, spec-pipeline, artifact-transition, attestation, approval, deployment, secret, and policy-mutation surfaces.
 - Every protected ingress route calls the authority mediator before execution. Missing, unreachable, undecidable, or unsupported authority paths fail closed (`deny` or `escalate`) and still emit evidence.
 - The common governance verdict model normalizes candidate results using disposition precedence `deny > boundary > allow > degraded > escalate`; the most restrictive result wins when engines disagree.
-- OPA and GovernedSpeed are policy/risk evaluators, not owners of authority. The policy gateway / authority service owns the final decision and audit record; OPA "pass" or fail-open modes are invalid for action gating.
+- DomainForge, OPA, and GovernedSpeed are semantic, policy, or risk evaluators,
+  not owners of SEA Forge authority. The policy gateway / authority service owns
+  the final decision and audit record; evaluator "pass" or fail-open modes are
+  invalid for action gating.
 - Every decision emits the common audit shape `{engine, disposition, subject, reason, evidence_refs, recorded_at}` and is linkable from run evidence, case events, approvals, capability memory, spec pipeline records, and artifact transition tokens.
 
 ### 2.2 Core / first-party extension / plugin boundary
@@ -66,12 +76,21 @@ SEA Forge MUST distinguish what must be baked into the kernel from what can be i
 |---|---|---|
 | Kernel invariants | record IDs/versions, canonical JSON hashing, trace/evidence/settlement/envelope records, capability append, authority fabric, artifact descriptors, extension descriptors, projection refs, projection purity rules, and compatibility/version-skew reading | These define the durable truth model. Retrofitting them later would re-key history or create bypass paths. |
 | Kernel extension ABI | `ExtensionDescriptor`, `ProjectionRef`, `ProjectionAdapter`, `RuntimeAdapter`, `EventSink`, `SandboxBackend`, `Evaluator`, `ArtifactAttestor`, and import/export descriptor shapes | Plugins can vary, but their contracts, authority surface, determinism requirements, and evidence outputs must be stable before plugins exist. |
-| First-party extensions | jail sandbox, case engine, server/approval loop, capability projection, governed semantic memory, spec-to-code pipeline, DomainForge projection adapter, templates/environments/evaluators, SeaCell bundles, artifact-to-IP | These are SEA Forge capabilities that share kernel state and proof gates. They ship as milestones, not third-party plugins. |
+| First-party extensions | DomainForge semantic adapter, jail sandbox, case engine, server/approval loop, capability projection, governed semantic memory, spec-to-code and DomainForge projection pipeline, templates/environments/evaluators, SeaCell bundles, artifact-to-IP | These are SEA Forge capabilities that share kernel state and proof gates. They ship as milestones, not third-party plugins. |
 | Later plugins/adapters | UI clients, chat/Slack/GitHub adapters, alternate KG backends, additional projection targets, additional runtime adapters, notification channels, NATS/EventSink, MicroVM sandbox, egress proxy, vector-memory index, EnvHub importers, RL reward exporters, public marketplace bridges | They can be added without changing kernel records if they obey the extension ABI and authority fabric. |
 
 Plugins/add-ons MUST NOT own truth. They may read source records, request authority, produce evidence, emit projections, or call external systems through adapters. Any state they need to persist must be either rebuildable from source records plus descriptor versions, or captured as evidence/artifact records with settlement.
 
-DomainForge compatibility rule: `.sea` remains the semantic source/projection language; CALM, RDF, SBVR, SHACL, KG projection events, manifests, and generated contracts are projection targets. A DomainForge-compatible adapter MUST implement the projection ABI, declare input/output schemas, preserve concept IDs/semantic refs, write quarantine records for rejected mappings, and settle on validation, not on file creation.
+DomainForge compatibility rule: `.sea` is the semantic source language.
+DomainForge parses it into the canonical in-memory semantic graph and projects
+that graph to CALM, RDF, SBVR, SHACL, KG events, manifests, generated contracts,
+and other supported targets. SEA Forge MAY synthesize a `.sea` source artifact
+from governed records, but that synthesis is a separate operation; DomainForge
+MUST parse and validate the result before downstream projection. The first-party
+adapter MUST use the `domainforge-core` library, preserve concept IDs and
+semantic refs, declare input/output schemas, write quarantine records for
+rejected mappings, and settle on semantic and output validation rather than file
+creation.
 
 ### 2.3 Goals — the ten extension capabilities
 
@@ -79,7 +98,7 @@ DomainForge compatibility rule: `.sea` remains the semantic source/projection la
 - E2 **CMMN-subset case engine** (review §6): work is organized as long-lived Cases, not one-shot runs. A `CasePlanModel` contains Stages and PlanItems whose activation is driven by **sentries** — event-condition rules evaluated over the trace/case-file ledger SEA Forge already emits — rather than a prescribed sequence (`depends_on` survives only as sugar compiling to an entry criterion). Milestones are first-class, entry-criteria-gated achievements generalizing settlement; a case completes by its auto-complete condition (all `required` items completed, none active), not by reaching the end of a list. Discretionary items make runtime plan mutation a governed act: adding a task mid-case is an authority-checked operation with evidence. Adopted element subset and exclusions per review §6 (notation, DMN decision tasks, and CaseTask are out; CaseTask is roadmap). Knowledge work is case-shaped — activities partly known in advance, order unknowable at start — which is SEA Forge's actual workload.
 - E3 **Operator interface and escalation loop**: `sea-forge-server` (Tokio) + event subscription; `escalate` verdicts become pending approvals that a human resolves via CLI (`sea-forge approve|reject <run_id> <decision_id>`) within a TTL (AgentPet's hooks→daemon→notify pattern, minus the pet).
 - E4 **Settlement integrity and capability memory**: `SettlementAuthority` adapters issue reliability-weighted `SettlementDeclaration`s with explicit standing and independence; `CapabilityRecord` promotes attempt observations only after qualifying repetition, variation, and recovery. `sea-forge capability list|show` remains a rebuildable projection, never a second source of truth. SWE_SEED is the first external settlement-authority adapter.
-- E5 **Governed spec-to-code and generator pipelines**: SEA Forge owns the whole projection chain as governed work, not a side script: ADR → PRD → SDS → SEA → AST → IR → manifest → generated contracts → handwritten last-mile adapter/runtime → acceptance evidence. Each stage is a case plan item with authority, deterministic input/output digests, quarantine for invalid records, and settlement. Generated zones stay projections; runtime readiness requires the last-mile proof path. DomainForge/.sea projection (`sea-forge project <case_id..>`) is the first generator pipeline over envelopes and memory, but it is only one instance of this larger spec-to-code invariant.
+- E5 **Governed spec-to-code and generator pipelines**: SEA Forge owns the whole governed execution chain, not the semantic implementation: ADR → PRD → SDS → synthesized or authored SEA source → DomainForge AST/semantic graph → manifest → DomainForge-generated contracts → handwritten last-mile adapter/runtime → acceptance evidence. Each stage is a case plan item with authority, deterministic input/output digests, quarantine for invalid records, and settlement. Generated zones stay projections; runtime readiness requires the last-mile proof path. `sea-forge project <case_id..>` first synthesizes or selects `.sea`, validates it through the M0 DomainForge semantic adapter, then invokes DomainForge's in-memory projections. It is one instance of the larger spec-to-code invariant.
 - E6 **Federation readiness (SeaCell)**: every persisted record already carries `version` + IDs; this milestone adds a `cell_id` field, an export bundle format, and an `EventSink` trait with a JSONL implementation — NATS or another bus is a later adapter behind that trait, not a dependency.
 - E7 **Governed semantic memory** (Memori delta, review §5): capability memory becomes a read/write loop — typed `MemoryItem`s extracted from envelopes and traces, attribution-scoped (entity × process × session, Memori's model), indexed in a rebuildable SQLite FTS projection, and recalled under authority: recall is an `Operation`, scope rules gate who may read whose memory, and every recall emits evidence so a settled run shows which memories informed it. Memori proves the memory mechanics; the authority/evidence wrapping is SEA Forge's addition.
 - E8 **Plan templates** (Archon delta, review §7 D6): named, versioned, parameterized CasePlanModel definitions in YAML (`.sea-forge/templates/<name>@<version>.yaml`), instantiated per case via `sea-forge run --template <name>@<version> --param k=v`. The template is the durable process asset — "what Dockerfiles did for infrastructure" — and completes CMMN's design-time/run-time distinction: template = design time, case = run time. Instantiation output is an ordinary CasePlan that passes full schema validation and per-operation authority; templates confer zero privilege by themselves.
@@ -118,13 +137,16 @@ Everything in minimum spec §3.1, per execution episode — run directories move
 - `.sea-forge/approvals.jsonl` — approval requests and resolutions (E3).
 - `.sea-forge/authority/policy-bundles/<policy_bundle_hash>.json` — canonical validated authority bundle snapshots, including identity, role, SoD, file, API, git, PR, prompt, spec-pipeline, artifact-transition, attestation, deployment, secret, and policy-mutation surfaces.
 - `.sea-forge/authority/decisions.jsonl` — append-only mirror of final authority decisions across all ingress paths.
-- `.sea-forge/authority/audit.jsonl` — common governance audit records normalized from policy gateway / OPA / GovernedSpeed / local engines.
+- `.sea-forge/authority/audit.jsonl` — common governance audit records normalized from DomainForge / policy gateway / OPA / GovernedSpeed / local engines.
 - `.sea-forge/authority/opaque-constraints.json` — bounded-undecidability constraints created when policy engines cannot resolve a conflict; matching actions halt/escalate before other rules run.
 - `.sea-forge/extensions/registry.json` — installed/built-in extension descriptors, their versions, capabilities, schema hashes, authority surfaces, and trust level.
 - `.sea-forge/extensions/descriptors/<extension_id>@<version>.json` — immutable descriptor snapshots referenced by runs and projections.
 - `.sea-forge/spec-pipelines/<pipeline_id>/` — spec-to-code run records: stage manifests, input/output hash chains, generated-zone diffs, last-mile gap reports, acceptance proof references, and quarantine files for rejected projection records (E5).
 - `.sea-forge/projections/<projection_id>/projection.json` — projection record with adapter descriptor, inputs, outputs, validation result, quarantine refs, and settlement ref.
-- `.sea-forge/projections/<projection_id>/outputs/` — generated DomainForge/SEA, CALM, RDF, SBVR, SHACL, KG-event, manifest, or implementation-defined projection outputs (E5), plus `quarantine/<stage>.jsonl` for filtered-out records with provenance.
+- `.sea-forge/projections/<projection_id>/outputs/` — governed `.sea`
+  synthesis outputs and DomainForge-produced CALM, RDF, SBVR, SHACL, KG-event,
+  manifest, generated-contract, or implementation-defined outputs (E5), plus
+  `quarantine/<stage>.jsonl` for filtered-out records with provenance.
 - `.sea-forge/artifacts/catalog.jsonl` — content-addressed work-product descriptors from the minimum spec, extended with stage history (E10).
 - `.sea-forge/artifacts/transitions.jsonl` — append-only TransitionTokens for cognitive→intellectual→product→capital movement (E10).
 - `.sea-forge/ip/capital/<artifact_id>.json` — rebuildable intellectual-capital projection for artifacts that passed capitalization (E10).
@@ -167,6 +189,7 @@ Not proven by: envelope accumulation alone; one accepted run; repeated identical
 | Yjs-style collaborative state is needed | Rejected | — | Traycer needs it for co-editing UIs; SEA Forge has no co-editing surface | none — deliberate omission |
 | Approval-over-CLI is a sufficient operator surface | Partially proven | E3 tests + one human dry run | AgentPet shows notification-driven supervision works | run the dry run |
 | Unified authority can cover file/API/git/PR/prompt/tool/spec/artifact surfaces without a second gate | Evidence-backed (by repo authority model) | M0 authority gate: onboarding, deterministic decision hashes, file/API/git/PR/prompt/shell fixtures, fail-closed gateway/OPA behavior, common audit trail, conflict precedence, opaque constraints | SEA repo already has policy-gateway `/policy/authority/evaluate`, CAM-shaped requests, file/API/git/PR/prompt policy fixtures, GovernedSpeed verdict normalization, and fail-closed edge mediators | wire as the first kernel crate seam and forbid bypass surfaces |
+| DomainForge can supply canonical `.sea` semantics without owning SEA Forge side effects or final authority | Evidence-backed (by DomainForge public Rust API) | M0 gate: real SEA fixture parses and validates through `domainforge-core`, stable semantic refs are recorded, invalid semantics cause no side effects, and DomainForge authority results normalize fail-closed | DomainForge exposes parser → AST → Graph → validation, typed authority traces/decisions, and in-memory deterministic projection sinks | add the first-party library adapter at M0; keep projection execution at M5 |
 | Plugin/add-on features can be delayed without re-keying records | Assumption | M0 extension descriptor validation + M5 ProjectionRecord rebuild proof | DomainForge projection contracts already map DSL to CALM/RDF/SBVR/SHACL and existing KG writer uses projection-event + DLQ semantics | implement the registry/ABI before optional plugins; keep plugin state rebuildable or evidenced |
 | SQLite FTS recall is sufficient (no embeddings) | Evidence-backed (by reference) | E7 recall tests on realistic envelope volumes | Memori achieves 81.95% LoCoMo accuracy SQL-natively at ~5% of full-context tokens | validate on SEA Forge's own data shape |
 | Deterministic extraction yields useful MemoryItems without an LLM | Assumption | E7 extraction tests: items are deduplicated, provenance-linked, and recall-relevant | none | if too shallow: LLM-assisted extraction as untrusted proposals (§8.6 pattern), never in-kernel |
@@ -194,6 +217,7 @@ The kernel crates from the report are populated by moving the minimum slice's mo
 |---|---|---|
 | `sea-forge-core` | ids/types/errors | `cell_id` field, bundle types (M6) |
 | `sea-forge-domain` | domain.rs | intent vocabulary registry; plan-proposal validation (M2); recall consultation at plan time (M4b) |
+| `sea-forge-domainforge` | — (new) | first-party `domainforge-core` adapter: `.sea` parse/Graph/validation, semantic-model refs, DomainForge authority-verdict normalization (M0); concept-ref validation in plans (M2); in-memory projection dispatch (M5) |
 | `sea-forge-authority` | authority.rs | CAM request/decision model, identity onboarding, policy bundle snapshots, RBAC/SoD, file/API/git/PR/prompt/shell governance, policy-gateway client, GovernedSpeed/OPA verdict adapters, conflict precedence, opaque constraints, sandbox-class rules, `require_proven` rules, approval TTL policy (M0–M3) |
 | `sea-forge-planner` | planner.rs | case plans (stages/sentries/milestones/markers), `depends_on`→sentry compilation, plan-proposal ingestion, discretionary-item validation, plan templates (E8) (M2) |
 | `sea-forge-sandbox` | sandbox.rs | `SandboxBackend` enum + `jail` backend (M1); `EnvironmentSpec` contracts (E9, M7); `microvm` (roadmap) |
@@ -229,11 +253,17 @@ flowchart LR
   Records --> SettleAuth["settlement authority: local | SWE_SEED | adapter"]
   SettleAuth --> Decl["settlement declarations"]
   Decl --> Cap
-  Records --> SpecPipe["spec-to-code pipeline records"]
+  SEA[".sea semantic source"] --> DF["domainforge-core: parse → graph → validate"]
+  DF --> DomainEval["semantic / authority candidate verdict"]
+  DomainEval --> Auth
+  DF --> DFProj["in-memory DomainForge projections"]
+  Records --> SpecPipe["governed spec-to-code pipeline"]
   Ext["extension registry + descriptors"] --> Auth
   Ext --> Proj["projection adapters"]
   Records --> Proj
-  Proj --> DF["DomainForge outputs: .sea | CALM | RDF | SBVR | SHACL | KG event"]
+  Records --> SeaSynth["governed .sea synthesis"]
+  SeaSynth --> SEA
+  DFProj --> ProjOut["CALM | RDF | SBVR | SHACL | KG event | generated contracts"]
   Records --> IP["artifact/IP catalog + transitions"]
   Records --> Cell["export bundles"]
   Server --> Notif["notification hooks (exec: user command)"]
@@ -241,6 +271,16 @@ flowchart LR
 
 ### 6.3 External Dependencies (beyond minimum spec)
 
+- `domainforge-core` — first-party semantic library, with default features off
+  and an exact reviewed version recorded in `Cargo.lock` (initial conformance
+  target: `0.13.0`). Enable only required features; `signing` is REQUIRED when
+  a configured DomainForge authority path accepts facts whose trust contract
+  requires cryptographic signatures. The built-in adapter MUST call library
+  APIs for parsing, validation, authority evaluation, and in-memory projection;
+  it MUST NOT invoke the `domainforge` CLI as an untracked side-effect path.
+  Parse, validation, feature, or version incompatibility fails closed before
+  execution and is recorded as typed evidence. The minimum v0.1 crates remain
+  dependency-free from DomainForge until M0 implementation begins.
 - `tokio` — server runtime only. Failure: server won't start; CLI-only operation unaffected.
 - `landlock` crate (Linux) / `sandbox-exec` profile generation (macOS) — jail backend. Failure at jail setup: run refuses to execute (fail closed), settles `rejected` with basis `jail_unavailable` — it MUST NOT fall back to `local` silently.
 - `rusqlite` — memory FTS index (M4b) only. Failure: recall falls back to the `items.jsonl` linear scan (§10.5); never blocks a run.
@@ -262,23 +302,26 @@ All minimum-spec entities stand. New/extended (kept additive; every change bumps
 **AuthorityPolicyBundle**:
 
 - `bundle_id`, `policy_bundle_hash`, `policy_bundle_version`, `loaded_at`.
-- `sources`: array of `{surface, path, sha256}`. Required first-class surfaces: `authority_hooks`, `identity_map`, `file_access`, `api_allowlist`, `git_commit`, `pr_merge`, `prompt_risk`, `memory_recall`, `spec_pipeline`, `artifact_transition`, `attestation`, `approval`, `settlement_authority`, `capability_promotion`, `deployment`, `secret_access`, `policy_mutation`, `evidence_mutation`.
+- `sources`: array of `{surface, path, sha256}`. Required first-class surfaces: `authority_hooks`, `identity_map`, `domain_model`, `file_access`, `api_allowlist`, `git_commit`, `pr_merge`, `prompt_risk`, `memory_recall`, `spec_pipeline`, `artifact_transition`, `attestation`, `approval`, `settlement_authority`, `capability_promotion`, `deployment`, `secret_access`, `policy_mutation`, `evidence_mutation`.
 - `roles` and `permissions`: RBAC grants for the role names above.
 - `sod_rules`: separation-of-duty rules. Required rules: proposer != approver in production, semantic-debt requester != acceptor, break-glass requester != approver and approver has `R-SO`, key generator != key approver, capitalization requester != approver.
-- `policy_engine_refs`: candidate evaluators (`local`, `opa`, `governedspeed`, implementation-defined) and their fail modes. Action-gating evaluators MUST be fail-closed; fail-open/pass modes are schema errors.
+- `policy_engine_refs`: candidate evaluators (`local`, `domainforge`, `opa`,
+  `governedspeed`, implementation-defined) and their fail modes. Action-gating
+  evaluators MUST be fail-closed; fail-open/pass modes are schema errors.
 
 **CanonicalActionRequest** is the minimum spec `AuthorityRequest`, extended only by optional fields. It MUST be the one wire shape for file writes, shell commands, API calls, git commits, PR merges, recalls, spec pipeline stages, artifact transitions, approvals, settlement-authority trust changes and declarations, deployments, secret access, policy mutation, and evidence mutation.
 
 **AuthorityDecision** extends the minimum shape with:
 
-- `candidate_verdicts`: array of GovernanceVerdict records from local rules, policy gateway, OPA, GovernedSpeed, or other engines.
+- `candidate_verdicts`: array of GovernanceVerdict records from local rules,
+  DomainForge, policy gateway, OPA, GovernedSpeed, or other engines.
 - `winning_source` and `precedence_reason`.
 - `approval_request_id` when `outcome: escalate` created a human approval.
 - `opaque_constraint_id` when the decision halted inside a bounded-undecidability region.
 
 **GovernanceVerdict**:
 
-- `engine` (`local | policy-gateway | opa | governedspeed | implementation-defined`).
+- `engine` (`local | domainforge | policy-gateway | opa | governedspeed | implementation-defined`).
 - `disposition` (`deny | boundary | allow | degraded | escalate`).
 - `subject` (action/resource identity), `reason`, `evidence_refs`, `recorded_at`.
 - Resolver precedence is fixed: `deny > boundary > allow > degraded > escalate`. Missing required evidence resolves to `deny`; all-escalate conflicts create or reference an opaque constraint and halt as `escalate`.
@@ -289,6 +332,74 @@ All minimum-spec entities stand. New/extended (kept additive; every change bumps
 
 - `constraint_id`, `target` (`resource_type`, `resource_id` or namespace pattern), `created_by_decision_id`, `reason`, `created_at`, `expires_at` (optional).
 - Any matching action MUST halt before ordinary policy evaluation and return `escalate` with required step `resolve-governance-ambiguity`.
+
+### 7.0a DomainForge semantic boundary (M0 contract; M2/M5 use)
+
+`sea-forge-domainforge` is a first-party adapter around the canonical
+`domainforge-core` Rust library. It is not part of `sea-forge-core`, and the
+minimum kernel does not depend on it. Its public contract is synchronous and
+side-effect-free:
+
+```text
+load_validate(SeaSourceSet) -> DomainModel
+evaluate(DomainModel, CanonicalActionRequest, TrustedFacts) -> GovernanceVerdict
+project(DomainModel, ProjectionRequest) -> SortedMap<RelativePath, Bytes>
+```
+
+**SeaSourceSet** contains one entry `.sea` source and any namespace-registry or
+imported `.sea` files, each with workspace-relative URI and SHA-256. The adapter
+MUST use DomainForge's namespace-aware parser. Absolute paths, unresolved
+imports, source-hash changes, syntax errors, semantic validation errors, and
+unsupported DomainForge versions fail before plan execution. The adapter
+descriptor MUST declare finite limits for source count, aggregate bytes, import
+depth, AST nodes, and parser work; exceeding any limit is `domain_model_error`,
+not a reason to retry with weaker validation.
+
+**DomainModel** is an in-memory derived view, not a second persisted truth. Each
+governed consumer records a **DomainModelRef** containing:
+
+- `source_refs`: sorted non-empty array of `{uri, sha256}` covering the entry
+  source, namespace registry, and resolved imports.
+- `domainforge_version`, `adapter_descriptor_sha256`, and
+  `parse_options_sha256` (canonical hash of namespace/profile/parser options).
+- `semantic_model_sha256`: SHA-256 of canonical
+  `{domainforge_version, adapter_descriptor_sha256, parse_options_sha256,
+  source_refs}`. This identifies the exact validated semantic input without
+  depending on an unstable serialization of DomainForge's in-memory Graph.
+- `concept_refs`: sorted array of canonical DomainForge concept IDs actually
+  consulted by the plan, authority evaluation, or projection.
+- `validation_evidence_refs`: non-empty refs proving parse and semantic
+  validation results.
+
+The plan, DomainForge candidate verdict, projection record, and semantic
+envelope MUST reference the same `DomainModelRef` when they concern the same
+world model. A source or version change creates a new ref; no run silently
+rebinds to a different world.
+
+`CasePlan`, `CanonicalActionRequest`, and `SemanticEnvelope` each gain optional
+`domain_model_ref` and sorted `concept_refs` fields in v0.2. The fields are
+REQUIRED when the plan or action is scoped to a `.sea` world and absent for
+unbound legacy work. DomainForge `GovernanceVerdict` evidence resolves the same
+ref rather than embedding a second copy of the model.
+
+DomainForge authority normalization is fixed:
+
+| DomainForge result | SEA Forge candidate disposition |
+|---|---|
+| `Reject` or `Deny` | `deny` |
+| `Escalate` | `escalate` |
+| `Allow` | `allow` |
+| `NotApplicable` | no candidate; `deny` if policy requires DomainForge for the surface |
+
+The adapter MUST preserve the DomainForge trace as evidence and include the
+consulted `DomainModelRef`. SEA Forge then combines this candidate with hard
+boundaries and all other configured engines using §7.0 precedence. DomainForge
+never emits the final SEA Forge `AuthorityDecision`.
+
+Projection MUST use DomainForge's in-memory artifact sink or equivalent public
+library API. The adapter returns bytes and relative paths; only SEA Forge may
+authorize and materialize them. The built-in path MUST NOT let DomainForge write
+the workspace, invoke external tools, or access the network directly.
 
 ### 7.0b Extension and projection ABI (M0 contract, M5+ use)
 
@@ -319,21 +430,34 @@ The minimum spec defines `ExtensionDescriptor` and `ProjectionRef`. Full spec pe
 **ProjectionRecord** (`.sea-forge/projections/<projection_id>/projection.json`):
 
 - `projection_id`, `projection_kind` (`sea | calm | rdf | sbvr | shacl | kg_event | manifest | generated_contract | memory_index | capability_record | capital_record | implementation-defined`).
-- `adapter_ref` (`extension_id@version`), `case_id`, `run_id`.
+- `adapter_ref` (`extension_id@version`), `case_id`, `run_id`, and optional
+  `domain_model_ref` (REQUIRED for a DomainForge projection).
 - `source_refs` (non-empty), `input_hash`, `output_refs`, `quarantine_refs`.
 - `validation`: `{ status, validator_ref, basis }`.
 - `authority_refs`, `evidence_refs`, `settlement_ref`, `created_at`.
-- `rebuild_hash`: hash of canonical `{adapter_ref, source_refs, descriptor_sha256, input_hash, output_refs}`.
+- `rebuild_hash`: hash of canonical `{adapter_ref, domain_model_ref, source_refs, descriptor_sha256, input_hash, output_refs}`.
 
-DomainForge-compatible projection adapter requirements:
+DomainForge integration requirements:
 
-- `.sea` projection uses SEA DSL syntax and annotations, including CQRS annotations where flows are emitted and `@read_model` where a query projection is declared.
+- A `.sea` synthesis adapter converts governed SEA Forge records or authored
+  specifications into SEA DSL source. It is distinct from the DomainForge
+  adapter and MUST NOT label unvalidated output as a DomainForge model.
+- DomainForge MUST parse and semantically validate every synthesized or authored
+  `.sea` source before it becomes a `DomainModelRef` or feeds another
+  projection. The minimum v0.1 JSON stub is a conformance fixture, not valid
+  DomainForge SEA syntax and MUST NOT enter this path.
+- Domain-code projections preserve SEA DSL annotations, including CQRS
+  annotations where flows are emitted and `@read_model` where a query
+  projection is declared.
 - CALM projection maps entities/resources/flows/policies to architecture nodes, relationships, and controls.
 - RDF/KG projection preserves `conceptId`/semantic refs when present and produces stable IRIs from canonical IDs.
 - SBVR projection preserves policy modality and quantifiers.
 - SHACL projection validates graph integrity and carries failure messages into quarantine records.
 - KG event projection follows the existing projection-event pattern: event type, event ID/hash, payload with evidence/spec node IDs, relationship, timestamp, and source evidence.
-- Every projection output is a derived view. The source of truth remains the input spec/run/evidence/artifact records plus the adapter descriptor.
+- Every DomainForge output is a derived view of the `.sea` source set through a
+  pinned DomainForge version and adapter descriptor. `.sea` owns semantic truth;
+  SEA Forge's append-only case/run/authority/evidence/settlement records own
+  governance truth.
 
 ### 7.1 Extended entities (E2 case engine)
 
@@ -578,6 +702,8 @@ Minimum-spec grammar unchanged. New: `apr_NNNN`, `sdec_XXXXXX`, `mem_XXXXXX`, `c
 **SpecPipelineRun** (persisted under `.sea-forge/spec-pipelines/<pipeline_id>/pipeline.json`):
 
 - `version`, `pipeline_id`, `case_id`, `run_id`, `context_id` (for `docs/specs/<ctx>`).
+- `domain_model_ref` (required once the SEA stage is accepted; null only for
+  earlier authoring stages).
 - `route` (enum: `spec_authoring | generator_authoring | regeneration | last_mile | full_spec_to_runtime`).
 - `authority_refs`, `evidence_refs`, `settlement_ref` — the pipeline is governed work and links like any run.
 - `stages` (ordered array of SpecPipelineStage).
@@ -632,7 +758,13 @@ Minimum spec + server config file `.sea-forge/server.yaml` (only read by the ser
 
 - `identity_map` and `authority_hooks` sources are REQUIRED in governed environments. Missing identity for a protected actor escalates to onboarding; it never falls back to ambient OS/user identity.
 - `roles`, `permissions`, and `sod_rules` define RBAC and separation of duties. Implementations MUST ship the role names `R-DS`, `R-AG`, `R-LC`, `R-SO`, `R-RM`, `R-DEV`, and `R-AA`; additional roles are allowed when namespaced.
-- `policy_engines[]` declares candidate engines (`local`, `opa`, `governedspeed`, implementation-defined), endpoint/config refs, supported surfaces, and fail mode. Any engine used for action gating MUST declare `fail_mode: closed`; `pass` and `open` modes are schema errors for action gating even if they remain valid for advisory prompt filtering outside the authority path.
+- `policy_engines[]` declares candidate engines (`local`, `domainforge`, `opa`,
+  `governedspeed`, implementation-defined), endpoint/config refs, supported
+  surfaces, and fail mode. `domainforge` additionally declares the required
+  `DomainModelRef` or source-set selector. Any engine used for action gating MUST
+  declare `fail_mode: closed`; `pass` and `open` modes are schema errors for
+  action gating even if they remain valid for advisory evaluation outside the
+  authority path.
 - `surfaces.file`, `surfaces.external_api`, `surfaces.git_commit`, `surfaces.pr_merge`, `surfaces.prompt_risk`, `surfaces.shell_cmd`, `surfaces.extension_install`, `surfaces.projection_execute`, `surfaces.policy_mutation`, `surfaces.evidence_mutation`, `surfaces.secret_access`, and `surfaces.deployment` are first-class policy namespaces. Adding a future protected action requires adding a surface rule and mediator mapping, not a second authorization stack.
 - `rules[].sandbox_class` (default `local`) — the class granted; `execute_command` allow-rules for any argv0 *not* in the trusted-binary list (implementation-defined, at minimum the `sea-forge` binary itself) MUST specify `jail` or `microvm`; a 0.2 policy granting `local` to an untrusted argv0 is a `schema_error`.
 - `settlement_authorities[]` declares adapter descriptors, trust anchors,
@@ -656,7 +788,7 @@ Minimum spec + server config file `.sea-forge/server.yaml` (only read by the ser
 
 ### 8.3 Config error classes
 
-Minimum-spec classes, plus: `unsupported_sandbox_class_error` (class named in policy not compiled/available on this host — blocks all work, because silently degrading isolation is the one unacceptable fallback), `authority_engine_config_error` (action-gating engine is fail-open/pass, missing, or cannot be health-checked), `settlement_authority_config_error` (a required strong authority is untrusted, missing, unhealthy, or configured with invalid standing/reliability rules), `settlement_integrity_error` (post-hoc criteria, invalid source hashes, self-declaration, missing reliability dimensions, or insufficient standing; preserves the minimum event but blocks qualifying promotion), `identity_config_error` (governed environment lacks identity map or required sponsor semantics), `server_config_error` (blocks server start; CLI unaffected).
+Minimum-spec classes, plus: `unsupported_sandbox_class_error` (class named in policy not compiled/available on this host — blocks all work, because silently degrading isolation is the one unacceptable fallback), `domain_model_error` (missing/incompatible DomainForge library or required feature, resource-limit breach, unresolved imports, source-hash drift, parse failure, semantic validation failure, or invalid concept ref; blocks the affected plan before side effects), `authority_engine_config_error` (action-gating engine is fail-open/pass, missing, cannot be health-checked, or requires cryptographic fact verification without DomainForge's `signing` feature), `settlement_authority_config_error` (a required strong authority is untrusted, missing, unhealthy, or configured with invalid standing/reliability rules), `settlement_integrity_error` (post-hoc criteria, invalid source hashes, self-declaration, missing reliability dimensions, or insufficient standing; preserves the minimum event but blocks qualifying promotion), `identity_config_error` (governed environment lacks identity map or required sponsor semantics), `server_config_error` (blocks server start; CLI unaffected).
 
 Blast radius table: policy errors block all new runs (server keeps in-flight runs); `server.yaml` errors block the server only; per-run input errors fail only that run.
 
@@ -666,18 +798,18 @@ REQUIRED for the server (M3): policy and `server.yaml` are re-read between run d
 
 ### 8.5 Startup/preflight
 
-Server startup additionally verifies: socket path bindable, sandbox classes referenced by policy are available on this host (probe Landlock ABI / `sandbox-exec` presence once at startup), `notify_command` argv0 exists if configured.
+Server startup additionally verifies: socket path bindable, sandbox classes referenced by policy are available on this host (probe Landlock ABI / `sandbox-exec` presence once at startup), `notify_command` argv0 exists if configured, and the configured DomainForge adapter version matches every active descriptor and policy reference.
 
 ### 8.6 Plan-proposal input (M2)
 
-`sea-forge run --plan <file.json>` accepts an externally produced CasePlan (e.g., LLM-generated). It is untrusted input: it MUST pass full §7 schema validation, §7.5 path/charset rules, sentry satisfiability (§10.2), and then the normal per-operation authority gate. A proposal is never executed on trust; rejection reasons are typed (`plan_schema_error`, `plan_cycle_error`, plus ordinary authority denials).
+`sea-forge run --plan <file.json>` accepts an externally produced CasePlan (e.g., LLM-generated). It is untrusted input: it MUST pass full §7 schema validation, §7.5 path/charset rules, sentry satisfiability (§10.2), and then the normal per-operation authority gate. If the proposal carries a `DomainModelRef` or DomainForge concept refs, SEA Forge MUST reload the hash-pinned source set, validate it through `sea-forge-domainforge`, and resolve every referenced concept before authority evaluation. A proposal is never executed on trust; rejection reasons are typed (`plan_schema_error`, `plan_cycle_error`, `domain_model_error`, plus ordinary authority denials).
 
 ## 9. Operational Flow and State Model — extensions
 
 ### 9.1 Flow (case engine + approvals)
 
 ```text
-intent or plan-proposal → case created (or reopened) → plan validated → authority for the CURRENT plan
+intent or plan-proposal → resolve/validate referenced DomainForge model → case created (or reopened) → plan validated → authority for the CURRENT plan
   (every operation of every non-discretionary item, up front; discretionary additions re-run authority
    for the added item before it can activate)
   → any deny on a required item → item unavailable; if the case can never auto-complete, case terminates rejected
@@ -750,6 +882,10 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
 - When policy engines disagree, normalize to GovernanceVerdict and apply `deny > boundary > allow > degraded > escalate`. Missing required evidence fails closed as `deny`; all-escalate ambiguity creates or references an OpaqueConstraint and halts as `escalate`.
 - A denied or escalated decision is a successful governance outcome, not an internal error. It MUST produce authority evidence, audit records, settlement basis, and operator-visible next steps.
 - Future protected surfaces are added by extending the resource class enum, policy bundle schema, mediator mapping, and conformance tests. They MUST NOT introduce a parallel permission system.
+- When an action is scoped to a `.sea` world, the authority request MUST carry
+  its `DomainModelRef` and the canonical concept refs affected by the action.
+  Missing, stale, unresolved, or semantically invalid refs deny before any side
+  effect. Free-text names MUST NOT substitute for canonical concept IDs.
 
 ### 10.1 Sandbox hardening (E1, M1)
 
@@ -766,6 +902,11 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
 - Failure of a `required` item that renders auto-complete unsatisfiable MUST terminate the case as `rejected` with the blocking item cited in the settlement basis; non-required item failure leaves the case `active`.
 - Discretionary items (`sea-forge case add-task <case_id> --item <json>`) MUST pass full schema validation and authority *before* joining the plan; the addition emits a `plan_mutated` trace event and an evidence record naming the operator.
 - Case reopen and operator termination are authority-checked operations (`case_reopened` / `case_terminated` events, evidenced).
+- Plans bound to a DomainForge world MUST resolve every entity, resource, flow,
+  policy, metric, or projection reference against the validated `DomainModel`
+  before sentry evaluation or authority. The plan snapshot records the exact
+  `DomainModelRef`; a changed `.sea` source requires a new plan or an
+  authority-checked replan operation.
 
 ### 10.3 Operator loop (E3, M3)
 
@@ -774,7 +915,7 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
 - Resolution by an actor whose role lacks an `approve` rule in policy MUST be refused (approving is itself an authority-checked operation).
 - Human tasks (E2) surface through the same channel: `sea-forge tasks` lists enabled/active human tasks and pending approvals across open cases; completing one is authority-checked and evidenced, and re-triggers sentry evaluation in that case.
 
-### 10.4 Settlement integrity and capability memory (E4, M4) and projection (E5, M5)
+### 10.4 Settlement integrity and capability memory (E4, M4)
 
 - After each minimum `SettlementEvent`, SEA Forge MUST construct the declaration
   request from persisted, hash-verified records. The acting process supplies no
@@ -789,9 +930,33 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
   declaration hashes. Wall-clock order may select a policy snapshot but MUST NOT
   enter confidence arithmetic.
 - `require_proven` denial MUST cite the capability record consulted in the decision's `reason`.
-- `sea-forge project` is a governed projection-adapter invocation. It MUST be deterministic given the same input records and adapter descriptor version, MUST validate its own output before accepting, and MUST record the projection itself as a run (plan = project operation, settlement = output validates).
-- The built-in DomainForge projection adapter MUST support `.sea` first and MAY add CALM, RDF, SBVR, SHACL, and KG-event outputs under the same ProjectionRecord. It MUST preserve source refs and semantic refs, and rejected mappings MUST go to quarantine with provenance.
-- Additional projection targets are plugins. They may be installed later, but they MUST use `ExtensionDescriptor`, `ProjectionAdapter`, and `ProjectionRecord`; they MUST NOT write directly to generated zones, KG endpoints, or external systems without authority and evidence.
+
+### 10.4a DomainForge semantic integration and projection (M0/M2/M5)
+
+- M0 loads and validates real `.sea` through `domainforge-core` and records the
+  resulting `DomainModelRef`; the v0.1 JSON stub never enters this path.
+- M2 validates all plan concept refs against the pinned model before authority
+  or case activation. DomainForge semantic or authority evaluation produces a
+  candidate `GovernanceVerdict`; SEA Forge remains the final decision owner.
+- `sea-forge project` is a governed projection-adapter invocation. It MUST be deterministic given the same `DomainModelRef`, input records, DomainForge version, and adapter descriptor version, MUST validate its output before accepting, and MUST record the projection itself as a run (plan = project operation, settlement = output validates).
+- A governed `.sea` synthesis stage MUST complete before DomainForge loading
+  when no authored `.sea` source exists. Successful file creation is not
+  semantic acceptance: DomainForge parse plus graph validation are mandatory.
+- The built-in DomainForge adapter MUST project the validated graph through
+  in-memory library APIs. CALM and RDF are REQUIRED M5 targets; SBVR, SHACL,
+  KG-event, CMMN, domain-code, and other DomainForge targets MAY be enabled when
+  their validators and proof gates are configured. Enabled outputs from one
+  source model share the same `DomainModelRef` but have distinct
+  `ProjectionRecord`s when their validation or settlement can differ.
+- SEA Forge authorizes and writes every returned artifact. DomainForge CLI
+  execution, direct filesystem writes, external-tool invocation, and network
+  delivery are outside the built-in adapter and require separately governed
+  operations.
+- Rejected mappings or invalid outputs go to quarantine with source and concept
+  provenance. Additional projection targets are plugins, but they MUST use
+  `ExtensionDescriptor`, `ProjectionAdapter`, and `ProjectionRecord`; they MUST
+  NOT write directly to generated zones, KG endpoints, or external systems
+  without authority and evidence.
 - Projection adapters that call a remote service (for example a KG projection endpoint) MUST use retry + DLQ semantics and record degraded/failed delivery as evidence. A remote delivery failure may not invalidate a local deterministic projection unless policy marks delivery as required.
 
 ### 10.5 Governed semantic memory (E7, M4b)
@@ -815,7 +980,12 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
 
 ### 10.7 Spec-to-code pipeline (E5, M5)
 
-- The canonical stage order is ADR → PRD → SDS → SEA → AST → IR → manifest → generated contracts → last-mile adapter/runtime → acceptance proof. A pipeline may start at a later stage only when all prior stage outputs already exist and validate by hash and schema.
+- The canonical stage order is ADR → PRD → SDS → authored or synthesized SEA
+  source → DomainForge AST → DomainForge semantic graph/IR → manifest →
+  DomainForge-generated contracts → last-mile adapter/runtime → acceptance
+  proof. A pipeline may start at a later stage only when all prior stage outputs
+  already exist and validate by hash, schema, `DomainModelRef`, and pinned
+  DomainForge version.
 - Generated-zone outputs (`src/gen`, AST, IR, manifests, generated semantic fixtures) MUST be read-only to operators. A requested direct edit to those paths is a denied `run_spec_pipeline` operation with basis `generated_zone_direct_edit`.
 - Pipeline settlement MUST distinguish proof levels:
   - `authority-only`: ADR/PRD/SDS/SEA authority changed but no regenerated output is claimed.
@@ -871,13 +1041,18 @@ Minimum spec §12 holds per node. Additions: approval and settlement-declaration
 Key proof commands (per milestone, abbreviated):
 
 ```text
-M0: authority fabric gate before crate growth
+M0: authority and DomainForge semantic gate before remaining crate growth
     - onboard/resolve identities for local human, service, and R-AA-with-sponsor; unresolved identity escalates.
     - evaluate same CanonicalActionRequest twice against same policy bundle → identical decision fields and hashes.
     - validate built-in ExtensionDescriptors and an empty extension registry; descriptor authority surfaces map to policy surfaces.
     - generated-zone file write, unknown API host, private-network API host, protected governance git commit,
       PR merge without required checks, dangerous shell command, and prompt-risk case all fail closed with evidence.
-    - OPA/GovernedSpeed unavailable during action gating → deny/escalate, never allow or pass.
+    - parse and validate a real multi-file DomainForge `.sea` fixture through `domainforge-core` → stable
+      DomainModelRef and concept refs; invalid syntax, unresolved import, semantic error, source-hash drift,
+      or unsupported DomainForge version → domain_model_error before side effects.
+    - evaluate fixed DomainForge Allow/Deny/Escalate/Reject/NotApplicable fixtures → normalized candidate
+      verdicts and evidence refs match §7.0a; a required NotApplicable result denies.
+    - DomainForge/OPA/GovernedSpeed unavailable during action gating → deny/escalate, never allow or pass.
     - conflicting candidate verdicts resolve by `deny > boundary > allow > degraded > escalate`.
     - all-escalate ambiguity writes/reuses an OpaqueConstraint; matching action halts before ordinary policy.
     - `.sea-forge/authority/decisions.jsonl` and `audit.jsonl` reproduce the per-run authority records.
@@ -890,6 +1065,8 @@ M2: case with items A (required), B (required, entry sentry: on A milestone_achi
       citing B; every activation decision reproducible by replaying the ledger.
     Second copy: add C-equivalent as a discretionary item mid-case under a policy that allows it
     → plan_mutated evidenced, item activates when its sentry fires; under a policy without the rule → denied, evidenced.
+    Bind a plan to the M0 DomainModelRef → every concept ref resolves before authority; change the `.sea`
+    source or use an unknown concept ID → plan rejected with domain_model_error and nothing activates.
 M3: escalate rule → exit 5; `sea-forge approve` → `resume` → accepted. Second copy: let TTL expire → rejected.
 M4a: 5 mixed runs → raw `capability show` counts match. Then submit:
     - accepted local declaration → observed but zero qualifying weight;
@@ -909,13 +1086,16 @@ M4b: runs under two entities → extraction produces deduplicated, provenance-li
 M2 (templates): instantiate the same template twice with the same params → byte-identical CasePlans, both
     carrying template_ref; a template whose ${param} lands in argv[0] or an operation kind → schema_error at
     template load, never at run time.
-M5: run a full spec-to-code pipeline over a small context → ADR/PRD/SDS/SEA/AST/IR/manifest/generated
-    contracts hash-link in order; direct generated-zone edit request is denied; regeneration is
+M5: run a full spec-to-code pipeline over a small context → ADR/PRD/SDS/synthesized SEA/DomainForge AST/
+    semantic graph/manifest/generated contracts hash-link in order; DomainForge parses and validates the
+    synthesized `.sea`; direct generated-zone edit request is denied; regeneration is
     byte-identical; last-mile gap status prevents proof classification above `generated-contract`
     until a real adapter/runtime/acceptance proof stage passes. Also run `project` over 2 cases through
-    the built-in DomainForge projection adapter → `.sea` output validates; CALM/RDF/SBVR/SHACL/KG-event
-    outputs, when enabled, share the same ProjectionRecord; failing records present in quarantine with
-    provenance, never silently dropped; the projection case itself has a full case record.
+    the built-in `sea-forge-domainforge` adapter → CALM and RDF outputs derive from the same DomainModelRef,
+    validate, and rebuild byte-identically. Every additional enabled DomainForge target has its own validated
+    ProjectionRecord; failing records appear in quarantine with provenance, never silently disappear; the
+    projection case itself has a full case record. Prove the built-in path performs no DomainForge-owned
+    filesystem write, network call, CLI invocation, or external-tool execution.
 M7: an item with `environment: demo_env@0.1.0` and `evaluator` criteria → evaluator score appears in the
     settlement basis; batch criteria with min_pass_ratio 0.8 over a 10-record file with 2 planted failures
     → accepted + 2 quarantined; with 3 failures → rejected; policy matching on `environment:` grants exactly
@@ -948,8 +1128,12 @@ Always: minimum-spec P1–P4b unchanged.
 2. `approval_expiry` — settle rejected, basis `authority_escalate_expired`; notification emitted.
 3. `item_failure` — per §10.2: repetition budget consumed, then the item fails; required-item failure terminates the case as rejected with the item cited, non-required failure leaves the case active; all instance evidence retained.
 4. `server_crash` — in-flight runs leave valid partial records (kernel flush-per-record already guarantees this); recovery is operator-driven via `resume`/`runs --unsettled`; the server MUST NOT auto-resume executions on restart (a human decides — executions may have had side effects).
-5. `import_verification_failure` — reject the whole bundle atomically; no partial import.
-6. `settlement_authority_failure` — preserve the minimum event, emit
+5. `domain_model_failure` — invalid syntax/semantics, unresolved import,
+   source-hash drift, unsupported DomainForge version, or invalid concept ref
+   rejects the affected plan before authority grants execution; no workspace or
+   projection output is written.
+6. `import_verification_failure` — reject the whole bundle atomically; no partial import.
+7. `settlement_authority_failure` — preserve the minimum event, emit
    `settlement_integrity_failed`, and contribute zero qualifying capability
    weight. A policy requiring strong settlement MUST report the item incomplete
    or rejected; it MUST NOT relabel a local declaration as strong.
@@ -960,7 +1144,10 @@ Phase separation per template: prepare-phase failures abort the node; execute-ph
 
 Extends minimum spec §15:
 
-- Untrusted: sandboxed payloads (now genuinely untrusted once jailed), plan proposals (§8.6), imported bundles, anything arriving on the server socket beyond the operator's own uid (socket is 0600 precisely so this set is empty).
+- Untrusted: sandboxed payloads (now genuinely untrusted once jailed), authored
+  or synthesized `.sea` sources and namespace registries, plan proposals (§8.6),
+  imported bundles, and anything arriving on the server socket beyond the
+  operator's own uid (socket is 0600 precisely so this set is empty).
 - Privileged: jail construction, approval resolution, policy editing (outside the system), settlement-authority trust material and declaration signing, bundle import.
 - Manufactured settlement is a primary threat: the acting agent may influence
   outputs, tests, evaluator code, or evidence timing. Criteria hashes, immutable
@@ -975,14 +1162,14 @@ Extends minimum spec §15:
 
 | Milestone | Gate (all REQUIRED) |
 |---|---|
-| M0 authority fabric + extension ABI + crate graduation | workspace builds as the graduated kernel crates plus pipeline crates; minimum-spec suite green unchanged; authority fabric gate in §12 passes; extension registry/descriptors validate; no ingress bypasses the mediator; `sea-forge migrate` moves flat `runs/` under `cases/<case_id>/runs/` losslessly (hash-verified) |
+| M0 authority fabric + DomainForge semantic adapter + extension ABI + crate graduation | workspace builds as the graduated kernel crates plus pipeline crates and `sea-forge-domainforge`; minimum-spec suite green unchanged; authority fabric and DomainForge M0 gates in §12 pass; real `.sea` parse/semantic validation and authority normalization fail closed; extension registry/descriptors validate; no ingress bypasses the mediator; `sea-forge migrate` moves flat `runs/` under `cases/<case_id>/runs/` losslessly (hash-verified) |
 | M1 jail backend | §12 M1 proofs; jail-violation, no-downgrade, unavailable-class tests |
-| M2 case engine | §12 M2 proofs; unsatisfiable-sentry rejection; proposal schema/authority tests; repetition + required-item semantics; sentry-replay determinism; discretionary-item authority; parked-case-is-not-failure test; reopen is authority-checked |
+| M2 case engine | §12 M2 proofs; unsatisfiable-sentry rejection; proposal schema/authority tests; DomainModelRef and concept-ref validation before activation; repetition + required-item semantics; sentry-replay determinism; discretionary-item authority; parked-case-is-not-failure test; reopen is authority-checked |
 | M2 templates (E8) | §12 M2 template proofs; instantiation determinism; substitution-site restrictions enforced at load; missing-required-param is input error; template_ref provenance in plan + envelope |
 | M3 server + approvals | §12 M3 proofs; reload (valid + invalid) tests; notify-failure-ignored test; unauthorized-approver refused |
 | M4a settlement integrity + capability memory | §12 M4a proofs; post-hoc criteria and self-declaration rejected; standing/independence/reliability enforced; identical repetition gives no variation credit; recovery contributes only with evidence; promotion and contraction deterministic; rebuild purity; require_proven deny-with-citation |
 | M4b governed recall (E7) | §12 M4b proofs; extraction determinism + dedup; scope enforcement (own/entity/any, default deny); recall-as-evidence linkage; index-fallback equivalence; extraction failure never fails the run |
-| M5 spec-to-code + generator pipelines + DomainForge projection adapter | §12 M5 proofs; generated-zone direct-edit denial; ADR/PRD/SDS/SEA/AST/IR/manifest/codegen hash-chain; regeneration determinism; generated-contract classification ceiling until last-mile proof; pipeline-as-ordinary-case-plan test; quarantine completeness; projection-as-governed-case test; ProjectionRecord rebuild hash stable |
+| M5 spec-to-code + generator pipelines + DomainForge projections | §12 M5 proofs; separate `.sea` synthesis and DomainForge validation; generated-zone direct-edit denial; ADR/PRD/SDS/SEA/DomainForge-AST/semantic-graph/manifest/codegen hash-chain; regeneration determinism; generated-contract classification ceiling until last-mile proof; pipeline-as-ordinary-case-plan test; in-memory adapter/no-direct-side-effect proof; quarantine completeness; projection-as-governed-case test; ProjectionRecord rebuild hash stable |
 | M6 federation prep | §12 M6 proofs; import isolation (no capability leakage); hash-tamper rejection; imported templates/environments require explicit adopt |
 | M7 environments + evaluators (E9) | §12 M7 proofs; environment immutability (hash pin); three-axis independence test (content/permission/isolation each vary independently); evaluator-under-authority test; batch threshold + quarantine semantics |
 | M8 artifact-to-IP (E10) | §12 M8 proofs; catalog from work-product descriptors only; no-teleportation; TransitionToken hash chain; capitalization approval; semantic-anchor gate; IFL required/degraded policy behavior; capital projection rebuild purity |
@@ -1001,6 +1188,9 @@ Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS run
 
 - [ ] M0–M8 gates green in order; minimum-spec P1–P4b green after every milestone.
 - [ ] Authority M0 proves identity onboarding, deterministic hashes, file/API/git/PR/prompt/shell fail-closed behavior, engine-unavailable fail-closed behavior, conflict precedence, opaque constraints, and common audit mirroring before M1 sandbox hardening starts.
+- [ ] DomainForge M0 proves real `.sea` parse and semantic validation, stable
+  DomainModelRef construction, concept-ref resolution, fail-closed authority
+  normalization, and zero side effects on invalid models before M1 starts.
 - [ ] Extension ABI M0 proves descriptor validation, authority-surface mapping, projection-ref compatibility, and disabled-by-default imported extensions before optional plugins are allowed.
 - [ ] M8 artifact-to-IP gate green before any artifact is reported as reusable capital.
 - [ ] No policy can grant an untrusted argv0 the `local` class (schema-level test exists).
@@ -1016,11 +1206,14 @@ Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS run
   and reduced orchestration burden; regression, revoked standing, invalidated
   evidence, or policy change contracts status with an evidence-linked reason.
 - [ ] Spec-to-code pipeline can replay a small context deterministically and refuses proof upgrades until generated contracts reach real runtime acceptance.
-- [ ] Built-in DomainForge projection adapter validates `.sea` output and, when enabled, CALM/RDF/SBVR/SHACL/KG-event outputs under one ProjectionRecord.
+- [ ] M5 keeps `.sea` synthesis separate from DomainForge consumption; every
+  synthesized source validates through the pinned `domainforge-core`, CALM and
+  RDF projections pass, each enabled target has a validated ProjectionRecord,
+  and only SEA Forge materializes returned in-memory artifacts.
 - [ ] Artifact catalog and capital projections rebuild from JSONL sources; no capital record exists without a complete transition chain.
 - [ ] Server crash-recovery drill (§13) executed and documented once against a real run.
 - [ ] Every §0 question answerable from this spec + the minimum spec.
 
 ## Appendix A. Milestone order and rationale
 
-M0 authority fabric + extension ABI + graduation + case-directory migration → M1 jail (the security debt of the slice is retired after the authority gate is already non-bypassable) → M2 case engine (E2 — CMMN-subset semantics over the existing ledger; the biggest milestone, sequenced before the server because sentry evaluation must be correct single-threaded before it runs concurrently) → M3 server/approvals (unblocks `escalate` and human tasks — the operator half of the case model) → M4a settlement declarations + capability promotion (the first consumer of envelopes; declaration integrity must exist before any projection can call an observation proven) → M4b governed semantic memory (E7 — the Memori delta: extraction, FTS index, authority-scoped recall; sequenced after M4a so memory can distinguish raw outcomes from qualifying capability) → M5 spec-to-code + generator pipelines + DomainForge projection adapter (the ADR→PRD→SDS→SEA→AST→IR→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself) → M6 federation prep (cheap, additive; imported extensions remain disabled until adopted) → M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner) → M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection). E8 plan templates land inside M2 with the planner work. MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.
+M0 authority fabric + DomainForge semantic adapter + extension ABI + graduation + case-directory migration → M1 jail (the security debt of the slice is retired after the authority and semantic-world gates are already non-bypassable) → M2 case engine (E2 — CMMN-subset semantics over the existing ledger, with DomainModelRef/concept validation before activation; the biggest milestone, sequenced before the server because sentry evaluation must be correct single-threaded before it runs concurrently) → M3 server/approvals (unblocks `escalate` and human tasks — the operator half of the case model) → M4a settlement declarations + capability promotion (the first consumer of envelopes; declaration integrity must exist before any projection can call an observation proven) → M4b governed semantic memory (E7 — the Memori delta: extraction, FTS index, authority-scoped recall; sequenced after M4a so memory can distinguish raw outcomes from qualifying capability) → M5 spec-to-code + generator pipelines + DomainForge projections (the ADR→PRD→SDS→authored/synthesized SEA→DomainForge AST/semantic graph→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself) → M6 federation prep (cheap, additive; imported extensions remain disabled until adopted) → M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner) → M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection). E8 plan templates land inside M2 with the planner work. MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.
