@@ -1,0 +1,32 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../domainforge"
+		},
+		{
+			"path": "../../../cep"
+		},
+		{
+			"path": "../../../Context_Kernel_Service_MCP"
+		},
+		{
+			"path": "../../../SWE_SEED"
+		},
+		{
+			"path": "../../../godspeed_agent"
+		},
+		{
+			"path": "../../../godspeed-growth"
+		},
+		{
+			"path": "../../../hassos-addon-agent-memory-ledger"
+		},
+		{
+			"path": "../../../Strategist"
+		}
+	],
+	"settings": {}
+}

@@ -26,7 +26,7 @@ A **mission control center for governed cognition** — not a dashboard. The cen
 
 The Settlement Design System is purpose-built for:
 
-- **The GodSpeed workbench** — Mission Control, Case Detail, Settlement Queue, Settlement Detail, Evidence, Policies, Agents, Capabilities, Traces, Domain Models
+- **The SEA Forge workbench (GodSpeed)** — Mission Control, Case Detail, Settlement Queue, Settlement Detail, Approvals & Human Tasks, Evidence, Policies, Capabilities, Traces, Domain Models, Spec Pipelines, Artifacts & IP, Templates & Environments, Memory, Ledger Integrity (view↔record mapping: `DESIGN-spec-mapping.md`)
 - **Decision-support surfaces** — choice architecture with payment, risk, and confidence shown for every option
 - **Governed-agent monitoring** — agent state as capability status (Research, Architecture, Implementation, Verification), never vendor personas
 - **Any surface projected from the semantic state bus** — GUI, TUI, CLI themes, and docs share the same token source
@@ -66,6 +66,29 @@ The core rule: **tokens are named by cognitive function, never appearance.** `re
 | `--color-risk-low` | `#16A34A` | Low-risk affordance |
 | `--color-risk-medium` | `#F59E0B` | Medium-risk affordance |
 | `--color-risk-high` | `#DC2626` | High-risk affordance |
+
+### Extended Semantic States (SEA Forge records)
+
+Aliases onto the same hues — new cognitive functions, no new pigments.
+
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `--color-approval-pending` | `#F59E0B` | ApprovalRequest awaiting a human; shows TTL countdown |
+| `--color-approval-expired` | `#DC2626` | TTL expired → rejected |
+| `--color-case-parked` | `#64748B` | `awaiting_approval` / no runnable item — a calm hold, never styled as failure |
+| `--color-settlement-strong` | `#16A34A` | Independent qualifying declaration (`strength: strong`) |
+| `--color-settlement-local` | `#64748B` | Kernel-local declaration only; never counts toward capability |
+| `--color-capability-attempted` | `#64748B` | Raw observations only |
+| `--color-capability-demonstrated` | `#2563EB` | One qualifying declaration |
+| `--color-capability-proven` | `#16A34A` | Promotion policy thresholds met |
+| `--color-capability-contracted` | `#F59E0B` | Status contracted; reason must be shown |
+| `--color-assurance-verified` | `#16A34A` | `externally_verified` (witnessed) |
+| `--color-assurance-partial` | `#64748B` | `checkpoint_signed` / `local_tamper_evident` / `legacy_digest_only` — label the exact level |
+| `--color-assurance-pending` | `#F59E0B` | `integrity_pending` — never claim a verified history |
+| `--color-assurance-failed` | `#DC2626` | `ledger_integrity_error` — halts affected work |
+| `--color-artifact-stage` | `#94A3B8` | `cognitive → intellectual → product → capital` progress; capitalization requires human approval |
+
+Every inspect surface MUST display the assurance level (spec-full §10.0a) — it is a spec MUST, not decoration. Sandbox class (`local | jail | microvm`) renders as metadata on every run row.
 
 ### Text Palette
 
@@ -225,6 +248,8 @@ Mission → Case → Situation → Settlement Queue → Current Settlement
           → Evidence / Policy / Action / Trace / Capability Update
 ```
 
+Record grounding (spec-full.md): **Mission** = workspace/cell (`cell_id`); **Case** = the CMMN case (stages, plan items, milestones); **Situation** = the case-state projection — active/enabled items, satisfied/unsatisfied sentries, pending approvals; **Settlement Queue** = pending approvals + enabled human tasks + unsettled runs; **Current Settlement** = the SettlementEvent and its declarations. Case Detail must answer the sentry question: *why is this item not active yet?*
+
 Chat, board, graph, terminal, and docs are never separate modes — each is a projection of the same semantic model. No mode switches.
 
 ## 6. Components
@@ -298,6 +323,10 @@ The primary focus organism. Semantic object: `Settlement`. User question: *Can I
 ### Affordance Option (choice architecture)
 
 Every decision offers exactly three options — Recommended, Safe, Experimental — each showing payment, risk, confidence. Never twenty equal buttons.
+
+**Data-source boundary (spec-full §2.4):** SEA Forge never prices or ranks affordances — payment/valuation comes from CognitiveOS and routing from GodSpeed-Agent, both external feeds. SEA Forge supplies risk (policy verdicts), confidence (capability records), and observed `orchestration_burden`. With no external feed, the payment pill shows observed burden or hides, and the option set degrades to the spec-native queue: pending approvals + enabled items, ordered, top item recommended.
+
+**Decisions are approvals, not settlements.** Settlement status is computed from criteria declared *before* execution (manufactured settlement is the spec's primary threat). The decision bar acts on `ApprovalRequest`s and human tasks (`sea-forge approve|reject`, `task complete`) — there is no "accept settlement" button.
 
 ```css
 .affordance-option {
@@ -458,7 +487,7 @@ Lucide icons, 1.5px stroke, 16px default. Every icon communicates a semantic sta
 ### Tone
 
 - **Cybernetic, not dopamine**: never "Congratulations!" — instead "Evidence quality increased." "Settlement reliability improved." "Risk reduced."
-- **Corrective**: every error teaches the next affordable move ("Required evidence missing: proof_command_result. Next move: run `godspeed proof run <id>`.")
+- **Corrective**: every error teaches the next affordable move ("Settlement blocked: approval apr_0007 pending. Next move: run `sea-forge approve <run_id> apr_0007`.") — the CLI is `sea-forge`, and every panel's command snippet uses real spec commands (`run`, `resume`, `approve|reject`, `tasks`, `watch`, `capability show`, `ledger verify`)
 - **Semantic**: notifications name state changes ("Settlement ready", "Authority required", "Evidence missing", "Capability promoted"), never mechanics ("Agent finished")
 - **Recognition over recall**: the UI always shows the recommended next settlement; it never asks the user what to do
 

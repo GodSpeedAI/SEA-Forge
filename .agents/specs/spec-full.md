@@ -10,7 +10,7 @@ Owner: SEA Forge core team
 
 Architecture decision: `docs/decisions/ADR-001-domainforge-semantic-boundary.md`.
 
-Prerequisite: **`spec-minimum.md` implemented and green.** This spec never redefines the kernel types, lifecycle, ID grammar, record formats, authority hashes, audit record shape, or fail-closed rules — it extends them. Authority is not an extension capability; it is the invariant substrate for every extension. Where a section here is silent, the minimum spec governs. Corrections R1–R10 from `build-report-review.md` apply throughout.
+Prerequisite: **`spec-minimum.md` implemented and green.** This spec never redefines the kernel types, lifecycle, ID grammar, record formats, authority hashes, audit record shape, or fail-closed rules — it extends them. Authority is not an extension capability; it is the invariant substrate for every extension. Where a section here is silent, the minimum spec governs. Corrections R1–R10 from the historical `build-report-review.md` are already folded into this text (e.g., R1 in §6.2, R2 in §6.1); that document is not in this repository and is not required to implement this spec — all `review §N` citations are rationale provenance only, never additional requirements.
 
 ## 0. Spec Frame
 
@@ -1391,12 +1391,12 @@ M5: run a full spec-to-code pipeline over a small context → ADR/PRD/SDS/synthe
     ProjectionRecord; failing records appear in quarantine with provenance, never silently disappear; the
     projection case itself has a full case record. Prove the built-in path performs no DomainForge-owned
     filesystem write, network call, CLI invocation, or external-tool execution.
+M6: export 2 runs → import on a fresh root → hashes verify; local capability counts unchanged.
 M7: an item with `environment: demo_env@0.1.0` and `evaluator` criteria → evaluator score appears in the
     settlement basis; batch criteria with min_pass_ratio 0.8 over a 10-record file with 2 planted failures
     → accepted + 2 quarantined; with 3 failures → rejected; policy matching on `environment:` grants exactly
     the intersection of provides.commands and the rule; tampered environment file → environment_unavailable,
     nothing executes.
-M6: export 2 runs → import on a fresh root → hashes verify; local capability counts unchanged.
 M8: catalog the minimum demo `model.sea` artifact, synthesize/refine/capitalize it through governed
     transitions → every edge has a TransitionToken, no-teleportation rejects skipped stages, capitalization
     requires approval + semantic anchors, and the capital projection rebuilds byte-identically from
