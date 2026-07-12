@@ -13,6 +13,7 @@ members = [
     "crates/sea-forge-settlement",
     "crates/sea-forge-capability",
     "crates/sea-forge-extension",
+    "crates/sea-forge-ledger",
 ]
 
 [workspace.package]
@@ -31,6 +32,7 @@ all = { level = "warn", priority = -1 }
 [workspace.dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 clap = { version = "4", features = ["derive"] }
+ed25519-dalek = { version = "2", default-features = false, features = ["std", "serde", "rand_core"] }
 getrandom = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
