@@ -44,11 +44,16 @@ behavior changes were made during the split.
 - Noted and fixed one test-path issue: `runtime::tests::timeout_child_helper` became
   `tests::timeout_child_helper` after the move; this is a path reference update,
   not a logic change.
-- Task 2 checkpoint — M0b sea-forge-ledger foundation: crate created with ULID
-  generation (monotonic, clock-regression-safe), jcs-nfc-v1 canonical JSON profile,
+- Task 2 checkpoint — M0b sea-forge-ledger: crate created with ULID generation
+  (monotonic, clock-regression-safe), jcs-nfc-v1 canonical JSON profile,
   domain-separated SHA-256 hashes, `LedgerEntry` chain/MMR, `LedgerStream::append`
-  and `verify`, and unit tests for tamper/duplicate-ordinal detection. Ed25519
-  dependency added for signing/checkpoints next.
+  and `verify`, Ed25519 signing module, signed checkpoints with chain verification,
+  MMR inclusion proofs (`prove_entry`/`verify_proof`), and conformance tests
+  covering: 1000-record multi-stream append+verify, one-byte alteration detection,
+  truncate/reorder/duplicate detection, signed checkpoint creation+verification,
+  checkpoint chain linking, wrong-key rejection, corrupted-hash detection,
+  and MMR root recomputation. Remaining for M0 gate: witness receipts, global
+  checkpoints, CLI commands, crash recovery, redaction, key rotation fixtures.
 
 ## Remaining
 
@@ -61,7 +66,7 @@ behavior changes were made during the split.
 
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
-- `cargo test --workspace --all-features --locked`: 40 tests passed (35 existing + 5 new ledger), 0 failed.
+- `cargo test --workspace --all-features --locked`: 49 tests passed (35 existing + 14 ledger), 0 failed.
 - `just proof`: P1–P4b passed.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.

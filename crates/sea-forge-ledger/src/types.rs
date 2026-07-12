@@ -1,3 +1,4 @@
+use crate::signing::{sign_bytes, verify_signature, SigningKey, VerifyingKey};
 use sea_forge_core::errors::ForgeError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -234,6 +235,85 @@ pub struct LedgerCheckpoint {
     pub created_at: String,
 }
 
+/// Minimal MMR inclusion proof for a single leaf.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MerkleProof {
+    pub leaf_index: u64,
+    pub proof_hashes: Vec<String>,
+}
+
+/// Hash two MMR child hashes under the `sea-forge/mmr-node/v1` domain.
+/// The left hash is always the earlier/left child.
+fn hash_mmr_node(left: &str, right: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"sea-forge/mmr-node/v1\0");
+    hasher.update(left.as_bytes());
+    hasher.update(right.as_bytes());
+    format!("sha256:{:x}", hasher.finalize())
+}
+
+/// Verify a Merkle inclusion proof against a single root hash.
+/// The proof's `leaf_index` determines whether the leaf is the left or right
+/// child at each level; `proof_hashes` are the sibling hashes along the path.
+pub fn verify_proof(entry_hash: &str, root: &str, proof: &MerkleProof) -> bool {
+    let mut current = entry_hash.to_string();
+    let mut index = proof.leaf_index;
+    for sibling in &proof.proof_hashes {
+        current = if index.is_multiple_of(2) {
+            hash_mmr_node(&current, sibling)
+        } else {
+            hash_mmr_node(sibling, &current)
+        };
+        index /= 2;
+    }
+    current == root
+}
+
+/// Return the peak sizes (complete binary tree leaf counts) in the MMR state,
+/// ordered from largest to smallest.
+fn peak_sizes(leaf_count: u64) -> Vec<u64> {
+    if leaf_count == 0 {
+        return Vec::new();
+    }
+    let mut sizes = Vec::new();
+    let mut remaining = leaf_count;
+    let mut size = 1u64 << (63 - remaining.leading_zeros());
+    while remaining > 0 {
+        if size <= remaining {
+            sizes.push(size);
+            remaining -= size;
+        }
+        size >>= 1;
+    }
+    sizes
+}
+
+/// Build the levels of a perfect binary tree from `leaves`.
+/// `levels[0]` is the leaf layer; the last level has one element, the root.
+fn build_tree(leaves: &[String]) -> Vec<Vec<String>> {
+    let mut levels = vec![leaves.to_vec()];
+    while levels.last().unwrap().len() > 1 {
+        let level = levels.last().unwrap();
+        let mut next = Vec::with_capacity(level.len() / 2);
+        for pair in level.chunks(2) {
+            next.push(hash_mmr_node(&pair[0], &pair[1]));
+        }
+        levels.push(next);
+    }
+    levels
+}
+
+/// Canonical bytes of a checkpoint excluding `signature` and `checkpoint_hash`.
+fn checkpoint_canonical_bytes(checkpoint: &LedgerCheckpoint) -> Result<Vec<u8>, ForgeError> {
+    let mut value =
+        serde_json::to_value(checkpoint).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+    if let Value::Object(ref mut map) = value {
+        map.remove("signature");
+        map.remove("checkpoint_hash");
+    }
+    canonical_json(&value)
+}
+
 pub struct LedgerStream {
     ledger_id: String,
     root: PathBuf,
@@ -262,7 +342,7 @@ impl LedgerStream {
         &self.ledger_id
     }
 
-    fn entries_path(&self) -> PathBuf {
+    pub fn entries_path(&self) -> PathBuf {
         self.root
             .join("ledgers")
             .join(&self.ledger_id)
@@ -276,15 +356,14 @@ impl LedgerStream {
             .join("mmr.json")
     }
 
-    #[allow(dead_code)]
-    fn checkpoints_path(&self) -> PathBuf {
+    pub fn checkpoints_path(&self) -> PathBuf {
         self.root
             .join("ledgers")
             .join(&self.ledger_id)
             .join("checkpoints.jsonl")
     }
 
-    fn load_mmr(&self) -> Result<MmrState, ForgeError> {
+    pub fn load_mmr(&self) -> Result<MmrState, ForgeError> {
         let path = self.mmr_path();
         if !path.exists() {
             return Ok(MmrState::empty());
@@ -322,6 +401,201 @@ impl LedgerStream {
             last = Some(entry);
         }
         Ok(last)
+    }
+
+    /// Read all entries from the stream.
+    pub fn read_entries(&self) -> Result<Vec<LedgerEntry>, ForgeError> {
+        let path = self.entries_path();
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
+        let file = File::open(&path).map_err(|e| ForgeError::io("open entries", e))?;
+        let mut entries = Vec::new();
+        for line in BufReader::new(file).lines() {
+            let line = line.map_err(|e| ForgeError::io("read entries", e))?;
+            if line.trim().is_empty() {
+                continue;
+            }
+            let entry: LedgerEntry = serde_json::from_str(&line)
+                .map_err(|e| ForgeError::Serialization(format!("parse entry: {e}")))?;
+            entries.push(entry);
+        }
+        Ok(entries)
+    }
+
+    /// Read all checkpoints from the stream.
+    fn read_checkpoints(&self) -> Result<Vec<LedgerCheckpoint>, ForgeError> {
+        let path = self.checkpoints_path();
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
+        let file = File::open(&path).map_err(|e| ForgeError::io("open checkpoints", e))?;
+        let mut checkpoints = Vec::new();
+        for line in BufReader::new(file).lines() {
+            let line = line.map_err(|e| ForgeError::io("read checkpoints", e))?;
+            if line.trim().is_empty() {
+                continue;
+            }
+            let cp: LedgerCheckpoint = serde_json::from_str(&line)
+                .map_err(|e| ForgeError::Serialization(format!("parse checkpoint: {e}")))?;
+            checkpoints.push(cp);
+        }
+        Ok(checkpoints)
+    }
+
+    /// Read the last checkpoint from the stream.
+    pub fn read_last_checkpoint(&self) -> Result<Option<LedgerCheckpoint>, ForgeError> {
+        let checkpoints = self.read_checkpoints()?;
+        Ok(checkpoints.into_iter().last())
+    }
+
+    /// Append a checkpoint to `checkpoints.jsonl` with durable fsync.
+    pub fn write_checkpoint(&self, checkpoint: &LedgerCheckpoint) -> Result<(), ForgeError> {
+        let path = self.checkpoints_path();
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| ForgeError::io("open checkpoints", e))?;
+        let mut bytes =
+            serde_json::to_vec(checkpoint).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+        bytes.push(b'\n');
+        file.write_all(&bytes)
+            .and_then(|_| file.flush())
+            .and_then(|_| file.sync_all())
+            .map_err(|e| ForgeError::io("write checkpoint", e))?;
+        drop(file);
+        if let Some(parent) = path.parent() {
+            let _ = fs::File::open(parent).and_then(|f| f.sync_all());
+        }
+        Ok(())
+    }
+
+    /// Create a signed checkpoint covering the current stream state.
+    pub fn create_checkpoint(
+        &self,
+        signing_key: &SigningKey,
+        signing_key_id: impl Into<String>,
+    ) -> Result<LedgerCheckpoint, ForgeError> {
+        let last = self.read_last_entry()?;
+        let last_checkpoint = self.read_last_checkpoint()?;
+        let mmr = self.load_mmr()?;
+        let mmr_root = mmr.root()?;
+
+        let first_ordinal = last_checkpoint
+            .as_ref()
+            .map(|cp| cp.last_ordinal + 1)
+            .unwrap_or(0);
+        let last_ordinal = last.as_ref().map(|e| e.append_ordinal).unwrap_or(0);
+        let entry_count = if last.is_some() {
+            last_ordinal - first_ordinal + 1
+        } else {
+            0
+        };
+
+        let mut checkpoint = LedgerCheckpoint {
+            version: "0.2".into(),
+            checkpoint_ulid: ulid()?,
+            ledger_id: self.ledger_id.clone(),
+            first_ordinal,
+            last_ordinal,
+            entry_count,
+            mmr_root,
+            previous_checkpoint_hash: last_checkpoint
+                .as_ref()
+                .map(|cp| cp.checkpoint_hash.clone()),
+            checkpoint_hash: String::new(),
+            signing_algorithm: "ed25519".into(),
+            signing_key_id: signing_key_id.into(),
+            signature: String::new(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+        let canonical_bytes = checkpoint_canonical_bytes(&checkpoint)?;
+        checkpoint.checkpoint_hash = sha256_domain("sea-forge/checkpoint/v1", &canonical_bytes);
+        checkpoint.signature = sign_bytes(signing_key, &canonical_bytes);
+        self.write_checkpoint(&checkpoint)?;
+        Ok(checkpoint)
+    }
+
+    /// Verify all checkpoint signatures and the checkpoint hash chain.
+    pub fn verify_checkpoints(&self, verifying_key: &VerifyingKey) -> Result<(), ForgeError> {
+        let checkpoints = self.read_checkpoints()?;
+        let mut previous_hash: Option<String> = None;
+        for checkpoint in &checkpoints {
+            let canonical_bytes = checkpoint_canonical_bytes(checkpoint)?;
+            if sha256_domain("sea-forge/checkpoint/v1", &canonical_bytes)
+                != checkpoint.checkpoint_hash
+            {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: checkpoint hash mismatch".into(),
+                ));
+            }
+            verify_signature(verifying_key, &canonical_bytes, &checkpoint.signature)?;
+            if checkpoint.previous_checkpoint_hash.as_ref() != previous_hash.as_ref() {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: checkpoint chain break".into(),
+                ));
+            }
+            previous_hash = Some(checkpoint.checkpoint_hash.clone());
+        }
+        Ok(())
+    }
+
+    /// Generate an MMR inclusion proof for the entry with `entry_ulid`.
+    pub fn prove_entry(&self, entry_ulid: &str) -> Result<MerkleProof, ForgeError> {
+        let entries = self.read_entries()?;
+        let mmr = self.load_mmr()?;
+        if mmr.leaf_count == 0 {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: cannot prove entry in empty MMR".into(),
+            ));
+        }
+        let leaf_index = entries
+            .iter()
+            .position(|e| e.entry_ulid == entry_ulid)
+            .ok_or_else(|| ForgeError::Internal("entry not found".into()))?
+            as u64;
+        if leaf_index >= mmr.leaf_count {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: leaf index out of range".into(),
+            ));
+        }
+
+        let sizes = peak_sizes(mmr.leaf_count);
+        let mut start = 0u64;
+        let mut containing_peak_size = 0u64;
+        for size in &sizes {
+            if leaf_index >= start && leaf_index < start + size {
+                containing_peak_size = *size;
+                break;
+            }
+            start += size;
+        }
+        if containing_peak_size == 0 {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: leaf index not in any peak".into(),
+            ));
+        }
+
+        let start_usize = start as usize;
+        let size_usize = containing_peak_size as usize;
+        let leaves: Vec<String> = entries[start_usize..start_usize + size_usize]
+            .iter()
+            .map(|e| e.entry_hash.clone())
+            .collect();
+        let levels = build_tree(&leaves);
+        let local_index = leaf_index - start;
+        let mut index = local_index as usize;
+        let mut proof_hashes = Vec::with_capacity(levels.len() - 1);
+        for entries in levels.iter().take(levels.len() - 1) {
+            let sibling = index ^ 1;
+            proof_hashes.push(entries[sibling].clone());
+            index >>= 1;
+        }
+        Ok(MerkleProof {
+            leaf_index,
+            proof_hashes,
+        })
     }
 
     /// Append a payload to the stream and return the committed entry.
@@ -370,12 +644,11 @@ impl LedgerStream {
 
     fn write_entry(&self, entry: &LedgerEntry) -> Result<(), ForgeError> {
         let path = self.entries_path();
-        let tmp = path.with_extension("tmp");
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(&tmp)
-            .map_err(|e| ForgeError::io("open entry tmp", e))?;
+            .open(&path)
+            .map_err(|e| ForgeError::io("open entries", e))?;
         let mut bytes =
             serde_json::to_vec(entry).map_err(|e| ForgeError::Serialization(e.to_string()))?;
         bytes.push(b'\n');
@@ -384,8 +657,6 @@ impl LedgerStream {
             .and_then(|_| file.sync_all())
             .map_err(|e| ForgeError::io("write entry", e))?;
         drop(file);
-        fs::rename(&tmp, &path).map_err(|e| ForgeError::io("rename entry", e))?;
-        // Sync parent directory.
         if let Some(parent) = path.parent() {
             let _ = fs::File::open(parent).and_then(|f| f.sync_all());
         }
