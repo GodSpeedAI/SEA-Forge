@@ -94,7 +94,7 @@ just check-fast       # what the pre-commit hook runs
 git add ...
 git commit            # pre-commit hook runs `just pre-commit`
 
-just pre-push         # what the pre-push hook runs (≈7s warm; longer cold)
+just pre-push         # what the pre-push hook runs (~20s warm, measured; longer cold)
 git push -u origin HEAD
 
 just pr               # verify + push + open a PR via gh; refuses from main

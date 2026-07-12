@@ -77,6 +77,10 @@ state of the `ci-cd` branch.
   git-dir resolution, and bail-on-diff-failure. CI permissions doc corrected
   (lint job is `contents: read`; release-please uses `RELEASE_PLEASE_TOKEN`,
   not the default `GITHUB_TOKEN`).
+- CodeRabbit review replay (21 ci-cd findings) re-verified against current
+  code: 20 of 21 were already addressed by the committed ci-cd work; the one
+  still-valid item (README `just pre-push` warm-runtime estimate) was corrected
+  to the measured ~20s (`just ci` under devbox, all gates green).
 
 ## Verification
 
