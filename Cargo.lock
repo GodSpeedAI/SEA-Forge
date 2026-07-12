@@ -672,6 +672,7 @@ dependencies = [
  "sea-forge-core",
  "sea-forge-domain",
  "sea-forge-evidence",
+ "sea-forge-ledger",
  "sea-forge-planner",
  "sea-forge-runtime",
  "sea-forge-sandbox",

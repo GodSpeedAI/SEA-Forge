@@ -57,6 +57,23 @@ enum Command {
         #[arg(long, default_value = ".sea-forge")]
         root: PathBuf,
     },
+    Ledger {
+        #[command(subcommand)]
+        action: LedgerAction,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+enum LedgerAction {
+    Verify {
+        ledger_id: String,
+    },
+    Prove {
+        ledger_id: String,
+        entry_ulid: String,
+    },
 }
 #[derive(Clone, ValueEnum)]
 enum ResultArg {
@@ -128,6 +145,9 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
         .map_err(|e| (1, e)),
         Command::Inspect { run_id, root } => {
             commands::inspect::execute(&root, &run_id).map_err(|e| (1, e))
+        }
+        Command::Ledger { action, root } => {
+            commands::ledger::execute(action, &root).map_err(|e| (1, e))
         }
     }
 }

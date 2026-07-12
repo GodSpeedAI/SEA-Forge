@@ -48,12 +48,13 @@ behavior changes were made during the split.
   (monotonic, clock-regression-safe), jcs-nfc-v1 canonical JSON profile,
   domain-separated SHA-256 hashes, `LedgerEntry` chain/MMR, `LedgerStream::append`
   and `verify`, Ed25519 signing module, signed checkpoints with chain verification,
-  MMR inclusion proofs (`prove_entry`/`verify_proof`), and conformance tests
+  MMR inclusion proofs (`prove_entry`/`verify_proof`), conformance tests
   covering: 1000-record multi-stream append+verify, one-byte alteration detection,
   truncate/reorder/duplicate detection, signed checkpoint creation+verification,
   checkpoint chain linking, wrong-key rejection, corrupted-hash detection,
-  and MMR root recomputation. Remaining for M0 gate: witness receipts, global
-  checkpoints, CLI commands, crash recovery, redaction, key rotation fixtures.
+  and MMR root recomputation. CLI `ledger verify|prove` added. Remaining for
+  M0 gate: witness receipts, global checkpoints, crash recovery, redaction,
+  key rotation fixtures.
 
 ## Remaining
 
