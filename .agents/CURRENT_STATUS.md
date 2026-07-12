@@ -28,7 +28,10 @@ behavior changes were made during the split.
 - `crates/sea-forge-cli/Cargo.toml` — added kernel crate dependencies.
 - New crates: `sea-forge-domain`, `sea-forge-authority`, `sea-forge-planner`,
   `sea-forge-sandbox`, `sea-forge-runtime`, `sea-forge-trace`, `sea-forge-evidence`,
-  `sea-forge-settlement`, `sea-forge-capability`, `sea-forge-extension`.
+  `sea-forge-settlement`, `sea-forge-capability`, `sea-forge-extension`,
+  `sea-forge-ledger` (foundation).
+- `Cargo.toml` / `Cargo.lock` — added 11 new kernel crate members, added
+  `ed25519-dalek` to workspace dependencies.
 
 ## Completed
 
@@ -41,6 +44,11 @@ behavior changes were made during the split.
 - Noted and fixed one test-path issue: `runtime::tests::timeout_child_helper` became
   `tests::timeout_child_helper` after the move; this is a path reference update,
   not a logic change.
+- Task 2 checkpoint — M0b sea-forge-ledger foundation: crate created with ULID
+  generation (monotonic, clock-regression-safe), jcs-nfc-v1 canonical JSON profile,
+  domain-separated SHA-256 hashes, `LedgerEntry` chain/MMR, `LedgerStream::append`
+  and `verify`, and unit tests for tamper/duplicate-ordinal detection. Ed25519
+  dependency added for signing/checkpoints next.
 
 ## Remaining
 
@@ -53,7 +61,7 @@ behavior changes were made during the split.
 
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
-- `cargo test --workspace --all-features --locked`: 35 tests passed, 0 failed.
+- `cargo test --workspace --all-features --locked`: 40 tests passed (35 existing + 5 new ledger), 0 failed.
 - `just proof`: P1–P4b passed.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.
