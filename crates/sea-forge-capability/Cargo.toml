@@ -1,0 +1,15 @@
+[package]
+name = "sea-forge-capability"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SEA Forge capability memory and extension validation."
+
+[dependencies]
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

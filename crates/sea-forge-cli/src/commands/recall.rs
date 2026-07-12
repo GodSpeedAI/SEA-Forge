@@ -1,8 +1,5 @@
-use sea_forge_core::{
-    capability::{self, RecallQuery},
-    errors::ForgeError,
-    types::SettlementStatus,
-};
+use sea_forge_capability::{self as capability, RecallQuery};
+use sea_forge_core::{errors::ForgeError, types::SettlementStatus};
 use std::path::Path;
 pub fn execute(
     root: &Path,

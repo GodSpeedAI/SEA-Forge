@@ -1,8 +1,5 @@
-use sea_forge_core::{
-    run_intent,
-    types::{SettlementStatus, Verdict},
-    RunOptions,
-};
+use crate::pipeline::{run_intent, RunOptions};
+use sea_forge_core::types::{SettlementStatus, Verdict};
 use std::path::PathBuf;
 pub fn execute(
     intent: String,

@@ -1,4 +1,4 @@
-use crate::{
+use sea_forge_core::{
     errors::ForgeError,
     types::{ExtensionDescriptor, ExtensionKind, SemanticEnvelope, SettlementStatus},
 };
@@ -104,7 +104,7 @@ pub fn recall(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::ContractRef;
+    use sea_forge_core::types::ContractRef;
     #[test]
     fn projection_extension_contract_requires_known_surface_and_hashes() {
         let descriptor = ExtensionDescriptor {

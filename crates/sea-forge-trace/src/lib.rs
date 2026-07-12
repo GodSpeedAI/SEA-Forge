@@ -1,10 +1,10 @@
-use crate::{
+use chrono::Utc;
+use sea_forge_core::{
     errors::ForgeError,
     ids::seq_id,
     types::{TraceEvent, TraceKind},
     RECORD_VERSION,
 };
-use chrono::Utc;
 use serde_json::Value;
 use std::{
     fs::{File, OpenOptions},

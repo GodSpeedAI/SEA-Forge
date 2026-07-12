@@ -1,9 +1,5 @@
-use crate::{
-    domain::{self, IntentPattern},
-    errors::ForgeError,
-    types::*,
-    RECORD_VERSION,
-};
+use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
+use sea_forge_domain::{self as domain, IntentPattern};
 
 pub const DEMO_MODEL: &str = r#"{"domain": "demo", "entities": [{"name": "Sample"}]}"#;
 

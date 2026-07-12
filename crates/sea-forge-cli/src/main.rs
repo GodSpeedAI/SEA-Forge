@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod commands;
+mod pipeline;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use sea_forge_core::types::SettlementStatus;

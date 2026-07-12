@@ -2,7 +2,8 @@ use std::{fs::File, io::Read, path::Path};
 
 use chrono::Utc;
 
-use crate::{errors::ForgeError, types::*, RECORD_VERSION};
+use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
+use sea_forge_sandbox::safe_existing;
 
 pub fn settle(
     claim: &SettlementClaim,
@@ -37,7 +38,7 @@ pub fn settle(
                         accepted &= zero;
                     }
                     for path in &claim.criteria.required_artifacts {
-                        let present = crate::sandbox::safe_existing(workspace, path)
+                        let present = safe_existing(workspace, path)
                             .is_ok_and(|candidate| candidate.is_file());
                         basis.push(format!(
                             "required_artifact_{}:{path}",
@@ -46,8 +47,7 @@ pub fn settle(
                         accepted &= present;
                     }
                     if let Some(needle) = &claim.criteria.stdout_must_contain {
-                        let stdout =
-                            crate::sandbox::safe_existing(run_dir, &execution.stdout_path)?;
+                        let stdout = safe_existing(run_dir, &execution.stdout_path)?;
                         let matches = file_contains(&stdout, needle)?;
                         basis.push(
                             if matches {

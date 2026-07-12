@@ -3,6 +3,16 @@ resolver = "2"
 members = [
     "crates/sea-forge-core",
     "crates/sea-forge-cli",
+    "crates/sea-forge-domain",
+    "crates/sea-forge-authority",
+    "crates/sea-forge-planner",
+    "crates/sea-forge-sandbox",
+    "crates/sea-forge-runtime",
+    "crates/sea-forge-trace",
+    "crates/sea-forge-evidence",
+    "crates/sea-forge-settlement",
+    "crates/sea-forge-capability",
+    "crates/sea-forge-extension",
 ]
 
 [workspace.package]

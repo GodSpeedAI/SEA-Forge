@@ -1,7 +1,6 @@
-use crate::{
-    errors::ForgeError, evidence::hash_canonical, ids::random_id, types::*, RECORD_VERSION,
-};
 use chrono::Utc;
+use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
+use sea_forge_evidence::hash_canonical;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashSet, fs, path::Path};
@@ -291,7 +290,7 @@ impl PolicyAuthorityEngine {
                 "write_file",
                 "file",
                 path.clone(),
-                json!({"path":path,"content_sha256":crate::evidence::sha256_bytes(content_hint.as_bytes())}),
+                json!({"path":path,"content_sha256":sea_forge_evidence::sha256_bytes(content_hint.as_bytes())}),
             ),
             AuthorityAction::ExecuteCommand { argv, cwd } => (
                 "execute_command",
@@ -521,7 +520,7 @@ fn redacted_action(action: &AuthorityAction) -> AuthorityAction {
             path: path.clone(),
             content_hint: format!(
                 "sha256:{}",
-                crate::evidence::sha256_bytes(content_hint.as_bytes())
+                sea_forge_evidence::sha256_bytes(content_hint.as_bytes())
             ),
         },
         other => other.clone(),
@@ -582,10 +581,10 @@ fn hard_denied(action: &AuthorityAction, patterns: &[String]) -> bool {
 fn malformed_action(action: &AuthorityAction) -> bool {
     match action {
         AuthorityAction::WriteFile { path, .. } => {
-            crate::sandbox::validate_relative_path(path).is_err()
+            sea_forge_sandbox::validate_relative_path(path).is_err()
         }
         AuthorityAction::ExecuteCommand { argv, cwd } => {
-            argv.is_empty() || crate::sandbox::validate_relative_path(cwd).is_err()
+            argv.is_empty() || sea_forge_sandbox::validate_relative_path(cwd).is_err()
         }
         AuthorityAction::ExternalApi { host } => host.is_empty(),
         AuthorityAction::GitCommit { paths } => paths.is_empty(),
