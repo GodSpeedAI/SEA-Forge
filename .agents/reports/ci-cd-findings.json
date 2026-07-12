@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-12",
+  "findings": [
+    {"id": "F-001", "severity": "blocker", "location": "scripts/check-agent-context.sh:47", "status": "closed", "summary": "context-check regex anchored at $, never matches .logs/foo or target/foo", "fix": "anchor changed to ^...($|/)"},
+    {"id": "F-002", "severity": "blocker", "location": "GitHub repo rulesets API", "status": "manual-action-required", "summary": "private repo on plan without rulesets; branch protection cannot be configured without manual action"},
+    {"id": "F-003", "severity": "blocker", "location": ".github/workflows/ci.yml", "status": "closed", "summary": "no gate job; fragile required-check name", "fix": "rewrote ci.yml with stable gate job"},
+    {"id": "F-004", "severity": "high", "location": ".github/workflows/ci.yml:42-63", "status": "closed", "summary": "macos job duplicated ubuntu job content", "fix": "macos now runs full just ci in parallel; feeds same gate"},
+    {"id": "F-005", "severity": "high", "location": ".github/workflows/*.yml", "status": "partial", "summary": "actions pinned to floating tags, not SHAs; sha_pinning_required=false", "fix": "workflow SHA pinning complete and verified; sha_pinning_required=false remains residual (not settable via per-repo API on this plan)"},
+    {"id": "F-006", "severity": "high", "location": "repo merge settings", "status": "manual-action-required", "summary": "default merge method is MERGE; merge-commit and rebase enabled", "fix": "exact gh api command in docs/skills/release-management.md §9"},
+    {"id": "F-007", "severity": "medium", "location": "Cargo.toml:13", "status": "closed", "summary": "workspace repository URL is wrong", "fix": "corrected to https://github.com/GodSpeedAI/SEA-rs"},
+    {"id": "F-008", "severity": "high", "location": "release pipeline", "status": "closed", "summary": "no release-please config or publish workflow", "fix": "added release-please.yml + config.json + manifest.json"},
+    {"id": "F-009", "severity": "blocker", "location": "release-please credential strategy", "status": "manual-action-required", "summary": "GITHUB_TOKEN cannot trigger CI on the bot's own release PR", "fix": "workflow uses RELEASE_PLEASE_TOKEN; maintainer must create the PAT secret"},
+    {"id": "F-010", "severity": "high", "location": "crates.io bootstrap", "status": "manual-action-required", "summary": "crates unpublished (404); OIDC trusted publishing requires manual bootstrap + linkage first", "fix": "just publish-bootstrap + runbook in docs/skills/release-management.md §6"},
+    {"id": "F-011", "severity": "high", "location": "hook layer", "status": "closed", "summary": "no git hook manager; no .githooks", "fix": "added .githooks + just hooks-install using core.hooksPath"},
+    {"id": "F-012", "severity": "medium", "location": "justfile", "status": "closed", "summary": "missing Phase-4 recipes", "fix": "added fmt/fmt-check/lint/typecheck/ci/check-fast/fix/security/sync/pre-commit/pre-push/pr-check/pr/hooks-install/release-check/publish-bootstrap"},
+    {"id": "F-013", "severity": "medium", "location": "PR standards", "status": "closed", "summary": "no PR template; no PR-title policy workflow", "fix": "added pr-title.yml + pull_request_template.md"},
+    {"id": "F-014", "severity": "medium", "location": "security automation", "status": "closed", "summary": "no dependabot, no dependency-review, no CodeQL", "fix": "added dependabot.yml + security.yml (dep-review + weekly cargo-deny advisories); CodeQL skipped and documented"},
+    {"id": "F-015", "severity": "medium", "location": "docs/ci-cd-architecture.md", "status": "closed", "summary": "no architecture document", "fix": "written with Mermaid causal chain"},
+    {"id": "F-016", "severity": "medium", "location": "CONTRIBUTING.md", "status": "closed", "summary": "no contributor doc", "fix": "written"},
+    {"id": "F-017", "severity": "low", "location": "deny.toml:21-22", "status": "deferred", "summary": "unmatched license allowlist entries (cosmetic)"},
+    {"id": "F-018", "severity": "low", "location": ".agents/CURRENT_STATUS.md", "status": "closed", "summary": "stale test count (35 vs 20)", "fix": "refreshed test count; final tally 20 across CURRENT_STATUS.md and final report"},
+    {"id": "F-019", "severity": "informational", "location": "devbox.json", "status": "no-action", "summary": "minor-level pins; devbox.lock provides true reproducibility"},
+    {"id": "F-020", "severity": "informational", "location": "repo secrets", "status": "no-action", "summary": "clean slate; only RELEASE_PLEASE_TOKEN to add (manual action)"}
+  ]
+}

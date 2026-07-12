@@ -44,7 +44,7 @@ project_changes=$(
     git diff --cached --name-only
     git ls-files --others --exclude-standard
     printf '%s\n' "$base_changes"
-  } | sort -u | grep -Ev '^(\.agents/CURRENT_STATUS\.md|target/|\.logs/)$' || true
+  } | sort -u | grep -Ev '^(\.agents/CURRENT_STATUS\.md|target|\.logs)(/|$)' || true
 )
 
 status_changed=$(git status --porcelain -- "$STATUS_FILE")

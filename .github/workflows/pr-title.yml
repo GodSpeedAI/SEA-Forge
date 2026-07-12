@@ -1,0 +1,48 @@
+name: PR title
+
+# Enforces Conventional Commit-style PR titles so Release Please can derive
+# releases from the squash-commit title. GitHub-only check: there is no local
+# equivalent because the title does not exist until the PR is opened.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  conventional-commit:
+    name: conventional-commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
+        with:
+          # Allowed types match the directive's Phase 9 list. scopes are free
+          # text but must be a single parenthesised token.
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            test
+            build
+            ci
+            chore
+            style
+          requireScope: false
+          # `!` after type/scope marks a breaking change (Conventional Commits 1.0).
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The PR title's subject must be lowercase and must not end with a period.
+            Example: "feat(cli): add recall subcommand"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

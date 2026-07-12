@@ -1,63 +1,161 @@
 name: CI
 
+# Required gate for every pull request into main, every push to main, and
+# manual runs. Path filters are intentionally NOT used: a path filter can
+# leave a required check permanently pending, which would silently block or
+# silently pass a PR. Every PR runs the full sweep.
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
-  pull_request:
+  workflow_dispatch:
 
+# Read-only by default. The lint job elevates to actions: write so it can
+# upload doctor evidence; nothing in this workflow needs contents: write.
 permissions:
   contents: read
 
+# Cancel obsolete runs on the same PR. Push-to-main runs are never cancelled
+# (a separate group) so a post-merge verification never gets dropped.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  foundation:
-    name: Shell-SPEC gates (ubuntu)
+  # Fast feedback: context + fmt + clippy + check + deny + gitleaks.
+  lint:
+    name: lint (ubuntu)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read  # upload-artifact works with the default token; no actions: write needed
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Devbox
-        uses: jetify-com/devbox-install-action@v0.13.0
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
         with:
           enable-cache: true
 
-      - name: Setup
+      - name: Setup pinned toolchain
         run: devbox run -- just setup
 
-      - name: Doctor
+      - name: Doctor (environment check)
         run: devbox run -- just doctor
 
-      - name: Check
-        run: devbox run -- just check
+      - name: Context check
+        run: devbox run -- just context-check
 
-      - name: Test
-        run: devbox run -- just test
+      - name: fmt-check
+        run: devbox run -- just fmt-check
+
+      - name: clippy
+        run: devbox run -- just lint
+
+      - name: typecheck
+        run: devbox run -- just typecheck
+
+      - name: security (deny + gitleaks)
+        run: devbox run -- just security
 
       - name: Upload doctor evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: bootstrap-evidence
+          name: doctor-evidence
           path: target/bootstrap-evidence/
+          if-no-files-found: warn
+          retention-days: 14
 
-  macos:
-    name: Shell-SPEC gates (macos)
-    runs-on: macos-latest
+  # Slower feedback: tests + build. Runs in parallel with lint.
+  test:
+    name: test (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Devbox
-        uses: jetify-com/devbox-install-action@v0.13.0
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
         with:
           enable-cache: true
 
-      - name: Setup
+      - name: Setup pinned toolchain
         run: devbox run -- just setup
 
-      - name: Doctor
-        run: devbox run -- just doctor
-
-      - name: Check
-        run: devbox run -- just check
-
-      - name: Test
+      - name: test
         run: devbox run -- just test
+
+      - name: build
+        run: devbox run -- just build
+
+  # Cross-platform sweep. The proof recipe has a sha256sum/shasum fallback,
+  # so macOS is a real (not decorative) second target.
+  macos:
+    name: verify (macos)
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Canonical CI sweep
+        run: devbox run -- just ci
+
+  # Stable gate. Branch protection requires exactly this check name. Local
+  # `just ci` is equivalent to the union of lint + test + macos.
+  gate:
+    name: gate
+    needs: [lint, test, macos]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate required jobs
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          MACOS_RESULT: ${{ needs.macos.result }}
+        run: |
+          set -uo pipefail
+          # `needs.<job>.result` is one of: success, failure, cancelled, skipped.
+          # This workflow has NO path-filter skip logic. Any result other than
+          # success is therefore either a real failure or an unexplained skip;
+          # the latter is treated as failure per the CI/CD directive.
+          #
+          # GitHub Actions resolves `${{ ... }}` at job-setup time, so a dynamic
+          # `needs.${name}.result` shell loop is impossible. Instead each result
+          # is statically interpolated into an env var above, and the loop reads
+          # those vars by name.
+          echo "lint:  $LINT_RESULT"
+          echo "test:  $TEST_RESULT"
+          echo "macos: $MACOS_RESULT"
+          fail=0
+          for entry in "lint:$LINT_RESULT" "test:$TEST_RESULT" "macos:$MACOS_RESULT"; do
+            name="${entry%%:*}"
+            r="${entry#*:}"
+            case "$r" in
+              success) ;;
+              skipped)
+                echo "gate: $name was skipped without a documented change-detection rule — treating as failure"
+                fail=1
+                ;;
+              *)
+                echo "gate: $name returned '$r' — refusing to pass"
+                fail=1
+                ;;
+            esac
+          done
+          if [ "$fail" = "1" ]; then exit 1; fi
+          echo "gate: all required jobs passed"

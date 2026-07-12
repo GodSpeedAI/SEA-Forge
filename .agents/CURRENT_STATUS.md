@@ -1,130 +1,146 @@
 # Current Status
 
-Updated: 2026-07-11
+Updated: 2026-07-12
 
 ## Objective
 
-Define a non-naive, tamper-evident integrity-ledger model in the draft
-full-system architecture without changing the implemented v0.1 minimum kernel.
+Professionalize CI/CD for `GodSpeedAI/SEA-rs`: extend the `just` command
+boundary, add strategic Git hooks, rebuild GitHub Actions as thin orchestration
+with a stable gate, add Release Please + crates.io OIDC publishing, add
+Dependabot and security automation, document everything for a solo maintainer,
+and validate the whole pipeline end to end. Reports live under
+`.agents/reports/`.
 
 ## Worktree State
 
-The minimum implementation is merged and pushed on `main`. Two local
-documentation commits contain the Genesis alignment; they have not been pushed.
-The integrity-ledger specification is documentation-only and builds on those
-commits. Unrelated untracked
-`.agents/plans/upgraded-sea.code-workspace` and `.omc/` content remains
-untouched.
+On branch `ci-cd` (created from `main`). Not yet pushed or opened as a PR —
+that step is gated on Phase 7 (workflows must exist so the bootstrap PR can
+observe the real `CI / gate` check name before activating protection). All
+work is additive; no existing Rust code or v0.1 schema is touched except the
+`Cargo.toml` repository URL (F-007) and `scripts/check-agent-context.sh`
+prefix matching (F-001).
 
 ## Changed Files
 
-- `.agents/specs/spec-full.md`
-- `.agents/CURRENT_STATUS.md`
+All phases below are implemented (not pending). This list reflects the final
+state of the `ci-cd` branch.
+
+- `.agents/reports/ci-cd-audit.md` (findings register — Phase 2)
+- `.agents/reports/ci-cd-findings.json` (machine-readable register)
+- `.agents/reports/ci-cd-final-report.md` (closing report)
+- `.agents/CURRENT_STATUS.md` (this file)
+- `scripts/check-agent-context.sh` (F-001 fix + nested-path exclusion fix)
+- `Cargo.toml` (F-007 fix; corrected repository URL)
+- `justfile` (Phase 4 recipe surface)
+- `.githooks/{pre-commit,pre-push,post-checkout}` (Phase 6)
+- `.github/workflows/{ci,pr-title,release-please,security}.yml` (Phases 7, 10, 11)
+- `.github/{dependabot.yml,release-please-config.json,release-please-manifest.json}` (Phases 10, 11)
+- `.github/pull_request_template.md` (Phase 9)
+- `docs/ci-cd-architecture.md`, `docs/skills/release-management.md`, `CONTRIBUTING.md` (Phases 9, 13, 15)
+- `README.md` (Phase 13 happy path + recipe table)
 
 ## Completed
 
-- Implemented plan → decide-all authority → workspace/runtime → trace/evidence
-  → settlement → case close → semantic envelope/capability append.
-- Added fail-closed canonical `AuthorityAction` coverage for executable,
-  reserved, and unclassified surfaces while keeping planner operations closed.
-- Added deterministic policy/request/identity hashing, hard boundary precedence,
-  minimal child environments, argv-only execution, timeout termination, safe
-  path joins, artifact hashing, and stable pre-mint identity.
-- Added `run`, hidden `validate`, `recall`, and `inspect` CLI commands with the
-  specified exit semantics.
-- Replaced the placeholder proof recipe with executable P1–P4b checks.
-- Added conformance tests covering accepted/denied/escalated outcomes, false
-  success, nonzero exit, timeout, kill-9 JSONL durability, config/input failures,
-  deterministic authority, reserved surfaces, symlink escape, minimal env,
-  case state, recall, validator, inspection, and repeated artifact identity.
-- Updated `spec-minimum.md` for `AuthorityAction`, final-write ordering,
-  in-place execution-evidence hashing, atomic case closure, and the fixed
-  conformance harness.
-- Clarified that minimum `capabilities.jsonl` is capability-attempt memory and
-  that v0.1 settlement is kernel-local verification, not independently declared
-  strong settlement.
-- Added the full-spec `SettlementAuthority`/`SettlementDeclaration` boundary,
-  reliability weighting, declarer standing and independence, promotion and
-  contraction rules, manufactured-settlement threats, and M4a gates.
-- Audited `types.rs`, `settlement.rs`, `capability.rs`, and `pipeline.rs`; the
-  clarification matches current v0.1 behavior and requires no Rust/schema change.
-- Inspected the sibling DomainForge repository and confirmed that
-  `domainforge-core` is the canonical Rust library for SEA grammar, AST,
-  semantic Graph, validation, authority evaluation, and in-memory projections.
-- Corrected the full spec's direction from “DomainForge outputs `.sea`” to
-  “authored or governed-synthesized `.sea` → DomainForge semantic model →
-  validated projections.”
-- Added the `sea-forge-domainforge` M0/M2/M5 boundary, `DomainModelRef`,
-  fail-closed authority normalization, direct-library/no-direct-side-effect
-  rules, milestone gates, and proof requirements.
-- Added ADR-001 and aligned the architecture map and README. The v0.1 JSON
-  `model.sea` remains unchanged and is now clearly labeled as a lifecycle stub,
-  not a DomainForge model.
+- Phase 1 inspection: repo substrate, manifests, hooks, workflows, GitHub
+  settings, registry state, ruleset availability, secrets, environments.
+- Phase 2 baseline: ran fmt, cargo check, clippy, test, deny locally;
+  captured before-numbers; wrote the findings register and machine-readable
+  companion.
+- Verified key facts against the source: `release-please-action@v4.4.1`
+  (SHA `5c625bfb5d1ff62eadeeb3772007f7f66fdcf071`) documents runtime output
+  `release_created` for root-component releases; `crates.io` returns 404 for
+  both crates (unpublished); GitHub rulesets API returns 403 on this private
+  repo's plan; `can_approve_pull_request_reviews=false` confirms the
+  GITHUB_TOKEN-cannot-trigger-its-own-CI constraint (F-009).
+- Phases 4–15: **all implemented.** Phase 4 justfile recipe surface; Phase 5
+  environment pinning documented; Phase 6 `.githooks/`; Phase 7 rewritten
+  `ci.yml` with stable gate + `pr-title.yml` + `security.yml`; Phase 9 PR
+  template + `CONTRIBUTING.md`; Phase 10 `release-please.yml` + config +
+  publish job + partial-failure recovery; Phase 11 Dependabot +
+  dependency-review; Phase 13 architecture doc + README happy path;
+  Phase 14 local validation (green); Phase 15 release skill. The final
+  report at `.agents/reports/ci-cd-final-report.md` closes the directive.
+
+> The per-phase "pending" list that previously occupied this section was a
+> pre-implementation snapshot and is superseded by the final report. All
+> repository-side implementation is complete; only the manual/remote actions
+> under **Remaining** below are outstanding.
 
 ## Verification
 
-- `cargo fmt --all -- --check`: passed.
-- `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
-- `cargo build --workspace --all-features --locked`: passed.
-- `cargo test --workspace --all-features --locked`: 35 passed, 0 failed,
-  0 ignored.
-- `just proof`: P1–P4b passed.
-- `devbox run -- just context-check`: passed.
-- `devbox run -- just check`: passed (Cargo Deny reported only unmatched
-  allowlist warnings; advisories, bans, licenses, sources, and gitleaks passed).
-- `devbox run -- just test`: 35 passed, 0 failed, 0 ignored.
-- Final correctness, readability, architecture, security, and performance diff
-  review: passed; no open findings.
-- Genesis alignment: `devbox run -- just context-check`, `git diff --check`, and
-  unchanged P1-P4b passed on 2026-07-11. No Rust changed, so the prior 35-test
-  implementation result remains the applicable runtime verification.
-- DomainForge documentation correction: `git diff --check` and
-  `devbox run -- just context-check` passed on 2026-07-11. No Rust, manifest,
-  persisted v0.1 schema, or executable behavior changed, so code gates were not
-  rerun.
-- Integrity-ledger specification: `git diff --check` and
-  `devbox run -- just context-check` passed on 2026-07-11. No Rust, manifest,
-  persisted v0.1 schema, or executable behavior changed, so code gates were not
-  rerun.
+- Baseline `cargo fmt --all -- --check`: passed.
+- Baseline `cargo check --workspace --all-targets --locked`: passed (10.85s).
+- Baseline `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed (5.09s).
+- Baseline `cargo test --workspace --all-features --locked`: 20 passed, 0 failed.
+- Baseline `cargo deny check licenses bans sources`: passed (cosmetic unmatched-allowlist warnings, F-017).
+- `gh api` probes for repo settings, rulesets, secrets, environments,
+  releases, tags, registry state: completed; results recorded in
+  `.agents/reports/ci-cd-audit.md`.
+- Phase 14 local validation: complete and green (see final report §7).
+  `just doctor/fmt-check/typecheck/lint/test/security/build/release-check/ci`
+  all pass; hook behavior verified (pre-commit rejects malformed Rust; all
+  green changes commit normally). Outstanding: `sea-forge-cli` `cargo publish
+  --dry-run` fails because `sea-forge-core` is not yet on the registry
+  (F-010 bootstrap state, expected — not a defect).
 
 ## Remaining
 
-None for this documentation correction. The full v0.2 specification remains
-draft and unimplemented by design; its M0–M8 checklist is the roadmap, not
-unfinished minimum work.
+All repository-side work is complete. Only **manual / remote** actions remain
+(cannot be completed from this session); see final report §9 for exact
+commands:
+
+1. Set the merge mode (works on the current plan): squash-only.
+2. Create the `RELEASE_PLEASE_TOKEN` fine-grained PAT repo secret
+   (`contents: write`, `pull-requests: write`, this repo only).
+3. Create the `crates-io` GitHub environment.
+4. One-time crates.io bootstrap publish + trusted-publisher linkage for both
+   crates (F-010); both return 404 today.
+5. Activate branch protection — blocked on the current private-repo plan;
+   requires making the repo public or upgrading, then run the ruleset command
+   in `docs/skills/release-management.md` §9.
+6. Merge this `ci-cd` PR once `CI / gate` is green on it.
 
 ## Blockers
 
-None.
+- F-002: branch protection cannot be enabled from this authenticated session
+  because the repository is private on a plan that does not expose rulesets
+  or classic branch protection (HTTP 403). Resolution requires a one-time
+  maintainer action (make the repo public, OR upgrade the plan). The exact
+  `gh api` commands are produced in the architecture doc and final report so
+  the maintainer can complete the step without re-deriving it.
 
 ## Decisions
 
-- Separate non-executable `AuthorityAction` from planner/runtime `Operation` so
-  reserved and malformed surfaces can fail closed without becoming executable.
-- Write `semantic-envelope.json` before `run_finished`; atomically close the case
-  before `case_closed`; append the envelope to `capabilities.jsonl` as the final
-  lifecycle commit write.
-- Stream stdout/stderr directly to their final artifact paths and hash in place;
-  copy workspace work products into artifacts exactly once.
-- Preserve v0.1 records and proofs; strong settlement is an additive full-spec
-  declaration outside immutable run directories.
-- Treat raw accepted/rejected/escalated counts as observations. Only qualifying,
-  independently declared, reliability-weighted outcomes can promote capability.
-- DomainForge owns `.sea` syntax, semantic graph construction, concept identity,
-  validation, and deterministic projections. SEA Forge owns final authority,
-  isolation, side effects, evidence, and settlement.
-- Integrate `domainforge-core` through a side-effect-free first-party adapter at
-  M0; bind plans to its semantic model at M2; add governed synthesis and
-  in-memory projections at M5. Do not add the dependency to v0.1 crates.
-- Defined M0's `sea-forge-ledger` contract: canonical `jcs-nfc-v1` records,
-  SHA-256 domain separation, CSPRNG monotonic ULIDs, authoritative per-stream
-  append ordinals, hash chains, MMR inclusion/consistency proofs, signed global
-  checkpoints, and independent witness receipts.
-- Scoped the assurance honestly: SEA Forge history is tamper-evident and
-  fork-detectable; it is externally verifiable only when policy requires valid
-  independent witness receipts. Hashes alone do not make locally controlled
-  storage tamper-proof.
-- Required durable pre-action ledger commitments for side effects when policy
-  requires integrity assurance, fail-closed verification/recovery, quarantine,
-  redaction/ciphertext handling, key rotation, and lossless `legacy_import`
-  genesis records. Added M0 proofs and conformance gates for those rules.
+- Hook manager: native `core.hooksPath` pointing at a checked-in `.githooks/`
+  directory, installed by `just hooks-install`. Rationale: zero new
+  dependencies (no Node/Lefthook), devbox already pins `git` and `just`, and
+  every hook simply invokes a `just` recipe. Satisfies "Do not add a second
+  Git-hook manager" (no first one exists) and "Hooks must call `just` recipes."
+- Release Please: simple/root mode. Both crates inherit
+  `version.workspace = true`, so one root-level release unit bumps both. A
+  single registry (crates.io) means cross-registry version sync (Phase 10.3)
+  is automatically satisfied; `just release-check` still verifies the
+  workspace version matches the tag.
+- Release-please credential: fine-grained PAT stored as `RELEASE_PLEASE_TOKEN`
+  (repo secret). Rationale: no GitHub App exists in this org; GITHUB_TOKEN
+  cannot trigger CI on its own release PR (F-009). Scope: `contents: write`
+  and `pull-requests: write` on this repo only; rotation plan documented.
+- crates.io publishing: OIDC trusted publishing is the target end state, but
+  both crates are unpublished (F-010). Provide `just publish-bootstrap` for
+  the one-time classic-token publish and document the manual crates.io side.
+  The automated `release-please.yml` publish job uses OIDC and will work
+  after the bootstrap completes.
+- `cargo publish` partial failure: split into two ordered steps
+  (`-p sea-forge-core` then `-p sea-forge-cli` because cli depends on core).
+  This is **intended recovery behavior**, not a verified guarantee: each step
+  is designed to detect cargo's "already published" wording and treat it as
+  success, so a re-run after a partial publish completes only the missing
+  crate. That "already published" handling remains **unverified** until a real
+  partial-publish retry confirms the regex matches the current cargo's output
+  (the regex and its caveats are in final report §10/§11). The job fails
+  loudly and names which crate did not publish.
+- macOS CI matrix: kept (the project already commits to it and the proof
+  recipe has sha256sum/shasum fallback). Feeds the same `gate` job.
+- CodeQL: enabled for Rust as **advisory** (non-blocking) per Phase 7.
+- Dependabot: weekly, grouped compatible updates, Conventional Commit
+  titles mapped to `chore(deps)` (security updates map to `fix(deps)`).

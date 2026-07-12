@@ -1,0 +1,140 @@
+name: Release
+
+# Tag/release/publish causal chain (Phase 10.1):
+#
+#   ordinary PR ──merge──▶ main ──▶ release-please UPDATES the standing release PR
+#                                                       (no tag, no release)
+#   maintainer merges release PR ──▶ main ──▶ release-please CUTS the tag,
+#                                                       creates the GitHub Release,
+#                                                       sets release_created=true,
+#                                                       sets tag_name=vX.Y.Z
+#                                  └─▶ cargo-publish (same workflow) fires,
+#                                                       checks out the tag,
+#                                                       verifies version sync,
+#                                                       exchanges an OIDC token,
+#                                                       publishes core then cli.
+#
+# Nothing triggers a merge by way of a tag. The tag is an EFFECT of the
+# maintainer merging the standing release PR.
+#
+# This workflow uses pattern 1 (same-workflow follow-up jobs) per Phase 10.1,
+# because there is no need for a separate manual-approval environment.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Release and publish runs are NEVER cancelled — cancelling mid-publish could
+# leave the registry half-published. A new push to main updates the standing
+# release PR instead, which does not interrupt an in-flight release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write       # tag + release + commit version bump
+      pull-requests: write  # open/update the release PR
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        with:
+          # PAT so the release PR's push triggers CI. The default GITHUB_TOKEN
+          # cannot trigger a downstream workflow run, which would leave the
+          # release PR without the required CI / gate check.
+          # Scope: contents:write + pull-requests:write on this repo only.
+          # Rotation: docs/skills/release-management.md §Token rotation.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: .github/release-please-config.json
+          manifest-file: .github/release-please-manifest.json
+
+  cargo-publish:
+    name: publish (crates.io, OIDC)
+    needs: [release-please]
+    # Fires only when release-please created a release in THIS run. Output
+    # verified at action SHA 5c625bfb (v4.4.1) README "Root component outputs".
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write   # OIDC token exchange with crates.io
+    steps:
+      - name: Checkout the released tag
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: release-check (manifest versions vs tag)
+        # Re-verify at publish time, not just at merge time. The tag here is
+        # the tag_name output (e.g. "v0.1.0"); release-check strips the "v".
+        run: devbox run -- just release-check "${{ needs.release-please.outputs.tag_name }}"
+
+      - name: Exchange OIDC token for crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        # The action's post step revokes the token when the job ends.
+
+      - name: Publish sea-forge-core (idempotent)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set +e
+          out=$(devbox run -- cargo publish --locked -p sea-forge-core --color never 2>&1)
+          rc=$?
+          printf '%s\n' "$out"
+          if [ "$rc" = "0" ]; then exit 0; fi
+          # Idempotency: cargo publish refuses to republish an existing version.
+          # Treat that specific case as success so a re-run after a partial
+          # failure completes only the missing crate.
+          if printf '%s' "$out" | grep -qiE 'already (exists|uploaded|published)|destination already exists'; then
+            echo "::notice::sea-forge-core ${{ needs.release-please.outputs.version }} already published — skipping"
+            exit 0
+          fi
+          echo "::error::sea-forge-core failed to publish (rc=$rc). See docs/skills/release-management.md for recovery."
+          exit "$rc"
+
+      - name: Publish sea-forge-cli (depends on core, idempotent)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set +e
+          out=$(devbox run -- cargo publish --locked -p sea-forge-cli --color never 2>&1)
+          rc=$?
+          printf '%s\n' "$out"
+          if [ "$rc" = "0" ]; then exit 0; fi
+          if printf '%s' "$out" | grep -qiE 'already (exists|uploaded|published)|destination already exists'; then
+            echo "::notice::sea-forge-cli ${{ needs.release-please.outputs.version }} already published — skipping"
+            exit 0
+          fi
+          echo "::error::sea-forge-cli failed to publish (rc=$rc). Recovery: rerun this workflow from the Actions UI against tag ${{ needs.release-please.outputs.tag_name }}; the idempotent steps above will skip the crate that already published."
+          exit "$rc"
+
+      - name: Partial-publish failure report
+        if: failure()
+        run: |
+          echo "::error::Publication incomplete for tag ${{ needs.release-please.outputs.tag_name }}."
+          echo "Recovery procedure: docs/skills/release-management.md §Partial-publish recovery."
+          echo "Do NOT re-tag or re-release the same version. Re-running this workflow is safe; both steps above are idempotent."

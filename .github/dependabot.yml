@@ -1,0 +1,49 @@
+# Dependabot configuration. Maps cleanly to the Conventional Commit PR-title
+# policy required by Release Please.
+# - cargo: weekly, grouped compatible updates, mapped to `chore(deps)`.
+# - Security updates (any time) map to `fix(deps)` and surface promptly.
+# - github-actions: keeps the SHAs above from going stale; mapped to
+#   `chore(deps)` so Dependabot bumps to a newer minor's SHA and the
+#   maintainer copies the new SHA into the workflow.
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:17"
+      timezone: "America/Los_Angeles"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps)"
+    groups:
+      compatible-minor:
+        update-types:
+          - "minor"
+          - "patch"
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    rebase-strategy: "disabled"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:17"
+      timezone: "America/Los_Angeles"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    rebase-strategy: "disabled"

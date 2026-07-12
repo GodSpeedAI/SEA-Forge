@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Pre-commit hook. Delegates the actual checks to `just pre-commit` so the
+# contract between local and CI is the recipe, not the hook. Keep this script
+# dependency-free POSIX shell plus bash; the recipes own the real work.
+#
+# Bypass: `git commit --no-verify`. Note this only skips local checks; the
+# GitHub Actions required checks still gate the pull request regardless.
+set -euo pipefail
+
+# Only run when there are staged changes worth checking.
+if [ -z "$(git diff --cached --name-only)" ]; then
+    exit 0
+fi
+
+# Prefer devbox-pinned just; fall back to plain just if devbox is unavailable
+# (e.g. a contributor who has not yet installed devbox). The fallback is
+# intentionally a degraded path, not the canonical one.
+if command -v devbox >/dev/null 2>&1; then
+    devbox run -- just pre-commit
+else
+    if ! command -v just >/dev/null 2>&1; then
+        echo "pre-commit: neither devbox nor just found on PATH; install devbox and run 'just setup'" >&2
+        exit 1
+    fi
+    just pre-commit
+fi

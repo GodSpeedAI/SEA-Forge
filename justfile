@@ -38,23 +38,64 @@ doctor:
 build:
     cargo build --workspace --all-targets --locked
 
-# Run all quality gates (Shell-SPEC §10.3).
+# Apply rustfmt to every crate.
+[group('quality')]
+fmt:
+    cargo fmt --all
+
+# Verify rustfmt without modifying files.
+[group('quality')]
+fmt-check:
+    cargo fmt --all -- --check
+
+# Run clippy with `-D warnings` across all targets and features.
+[group('quality')]
+lint:
+    cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+# Type-check every crate (`cargo check --locked`).
+[group('quality')]
+typecheck:
+    cargo check --workspace --all-targets --locked
+
+# Supply-chain + secret scan: cargo-deny then gitleaks.
+# `cargo deny check advisories` fetches the RustSec database; the other
+# categories are offline. gitleaks scans staged + committed history.
+[group('quality')]
+security:
+    #!/usr/bin/env bash
+    {{set}}
+    cargo deny check
+    gitleaks detect --no-banner --redact
+
+# Apply only safe automatic fixes (rustfmt). Clippy fixes are intentionally
+# excluded: `-A clippy::all --fix` mutates behavior and should be reviewed.
+[group('quality')]
+fix:
+    cargo fmt --all
+
+# Quick high-signal local verification (context + fmt + typecheck).
+# Target runtime well under 10s — this is what pre-commit runs.
+[group('quality')]
+check-fast:
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/check-agent-context.sh
+    cargo fmt --all -- --check
+    cargo check --workspace --all-targets --locked
+
+# Developer quality sweep (Shell-SPEC §10.3): context + fmt + clippy + check
+# + deny + gitleaks. Delegates to granular recipes so local and CI share one
+# implementation per category.
 [group('quality')]
 check:
     #!/usr/bin/env bash
     {{set}}
-    echo "[check] agent context"
-    scripts/check-agent-context.sh
-    echo "[check] cargo fmt"
-    cargo fmt --all -- --check
-    echo "[check] cargo clippy"
-    cargo clippy --workspace --all-targets --all-features -- -D warnings
-    echo "[check] cargo check --locked"
-    cargo check --workspace --all-targets --locked
-    echo "[check] cargo deny"
-    cargo deny check
-    echo "[check] gitleaks"
-    gitleaks detect --no-banner --redact
+    just context-check
+    just fmt-check
+    just lint
+    just typecheck
+    just security
     echo "[check] all gates green"
 
 # Validate agent handoff structure and freshness without vendor-specific tooling.
@@ -66,6 +107,63 @@ context-check:
 [group('quality')]
 test:
     cargo test --workspace --all-features --locked
+
+# Canonical clean, deterministic, noninteractive CI verification.
+# GitHub Actions invokes this (or its documented constituent recipes when
+# parallelized). Local `just ci` is equivalent to the union of required jobs.
+[group('quality')]
+ci:
+    #!/usr/bin/env bash
+    {{set}}
+    just context-check
+    just fmt-check
+    just lint
+    just typecheck
+    just security
+    just test
+    just build
+    echo "[ci] all gates green"
+
+# Re-converge after a pull that touched Cargo.toml/Cargo.lock/rust-toolchain.
+[group('setup')]
+sync:
+    #!/usr/bin/env bash
+    {{set}}
+    rustup toolchain install "$(sed -n 's/^channel *= *"\(.*\)".*/\1/p' rust-toolchain.toml)" --profile minimal --component rustfmt,clippy --no-self-update
+    cargo fetch --locked
+    echo "[sync] toolchain + deps current"
+
+# Verify every published manifest reports the same version, and that the tag
+# (if passed as $1 or read from GITHUB_REF_NAME) matches. Phase 10.3 contract.
+# Fails loudly with all values printed on any mismatch.
+[group('quality')]
+release-check tag='':
+    #!/usr/bin/env bash
+    {{set}}
+    tag="{{tag}}"
+    if [ -z "$tag" ] && [ -n "${GITHUB_REF_NAME:-}" ]; then
+        tag="${GITHUB_REF_NAME#v}"
+    fi
+    # Strip a leading "v" from whatever source supplied the tag (CLI arg,
+    # GITHUB_REF_NAME, or release-please's tag_name output).
+    tag="${tag#v}"
+    ws_version=$(awk '/^\[workspace\.package\]/{f=1} f&&/^version/{gsub(/[ "=]/,"",$0); print substr($0,8); exit}' Cargo.toml)
+    meta=$(cargo metadata --no-deps --format-version 1)
+    core_version=$(printf '%s' "$meta" | jq -r '.packages[] | select(.name=="sea-forge-core") | .version')
+    cli_version=$(printf '%s' "$meta" | jq -r '.packages[] | select(.name=="sea-forge-cli") | .version')
+    echo "workspace.package.version = $ws_version"
+    echo "sea-forge-core            = $core_version"
+    echo "sea-forge-cli             = $cli_version"
+    [ -n "$tag" ] && echo "tag (stripped)            = $tag"
+    if [ "$ws_version" != "$core_version" ] || [ "$ws_version" != "$cli_version" ]; then
+        echo "fail: workspace, core, and cli versions disagree" >&2
+        exit 1
+    fi
+    if [ -n "$tag" ] && [ "$ws_version" != "$tag" ]; then
+        echo "fail: workspace version $ws_version != tag $tag" >&2
+        exit 1
+    fi
+    echo "ok: versions synchronized"
 
 # Minimum-spec proof commands (spec-minimum §12.2). Requires the slice.
 [group('quality')]
@@ -216,3 +314,89 @@ integration name:
     echo "fail: no integrations declared yet (Shell-SPEC §2.2)"
     echo "next move: declare a SecretRequirement in .agents/specs/Shell-SPEC.md §7.2, then implement its validation"
     exit 1
+
+# --- hooks (Phase 6) ----------------------------------------------------
+
+# Install the checked-in hooks at .githooks via `core.hooksPath`.
+# Idempotent: safe to rerun after pulling hook changes.
+[group('hooks')]
+hooks-install:
+    git config core.hooksPath .githooks
+    chmod +x .githooks/pre-commit .githooks/pre-push .githooks/post-checkout
+    echo "[hooks] core.hooksPath = .githooks (run 'git config --unset core.hooksPath' to disable)"
+
+# Fast staged check invoked by .githooks/pre-commit. Kept to checks that are
+# reliably under ~10s and require no network: context, fmt, typecheck.
+[group('hooks')]
+pre-commit:
+    #!/usr/bin/env bash
+    {{set}}
+    just check-fast
+
+# Broad local verification invoked by .githooks/pre-push. Adds clippy,
+# supply-chain, secret scan, tests, and a debug build on top of pre-commit.
+[group('hooks')]
+pre-push:
+    #!/usr/bin/env bash
+    {{set}}
+    just ci
+
+# Same recipe the PR-title workflow + gate rely on; alias of `just ci` so a
+# maintainer can ask "what does CI see?" with one command.
+[group('hooks')]
+pr-check:
+    just ci
+
+# --- pull-request helper (Phase 9) -------------------------------------
+
+# Verify, push the current branch, and open a PR via gh. Refuses to operate
+# from main, requires a clean tree, and never merges automatically.
+[group('hooks')]
+pr:
+    #!/usr/bin/env bash
+    {{set}}
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "$branch" = "main" ]; then
+        echo "fail: refusing to open a PR from main — switch to a feature branch" >&2
+        echo "next move: git switch -c feat/short-description" >&2
+        exit 1
+    fi
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "fail: working tree has uncommitted changes — commit or stash first" >&2
+        exit 1
+    fi
+    git fetch origin main --quiet
+    if ! git merge-base --is-ancestor origin/main HEAD; then
+        echo "fail: branch is behind main — rebase first" >&2
+        echo "next move: git fetch origin && git rebase origin/main" >&2
+        exit 1
+    fi
+    just pr-check
+    git push -u origin HEAD
+    gh pr create --base main --fill
+    echo "[pr] opened; review at the URL above. Merging is a manual step."
+
+# --- publication (Phase 10) --------------------------------------------
+
+# One-time manual crates.io bootstrap publish. OIDC trusted publishing for
+# crates.io requires (a) at least one classic-token publish of each crate and
+# (b) linking the repository on https://crates.io/settings before the
+# automated publish job can use trusted publishing. Run this once per crate
+# with a short-lived classic token in CARGO_REGISTRY_TOKEN, then revoke the
+# token. After this, release-please.yml handles subsequent publishes via OIDC.
+[group('release')]
+publish-bootstrap crate:
+    #!/usr/bin/env bash
+    {{set}}
+    if [ -z "${CARGO_REGISTRY_TOKEN:-}" ]; then
+        echo "fail: CARGO_REGISTRY_TOKEN is not set" >&2
+        echo "next move: create a one-time classic token at https://crates.io/settings/tokens (scope: publish-new), export CARGO_REGISTRY_TOKEN=<token>, then rerun" >&2
+        exit 1
+    fi
+    case "{{crate}}" in
+        sea-forge-core|sea-forge-cli) ;;
+        *) echo "fail: unknown crate '{{crate}}' (expected sea-forge-core or sea-forge-cli)" >&2; exit 1 ;;
+    esac
+    just release-check
+    cargo publish --locked -p {{crate}}
+    echo "[publish-bootstrap] {{crate}} published; now link the repo on https://crates.io/crates/{{crate}}/settings"

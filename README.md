@@ -72,6 +72,7 @@ git clone <repo> sea-rs && cd sea-rs
 devbox shell          # enter the pinned environment
 direnv allow          # activate direnv (loads encrypted secrets if present)
 just setup            # converge on the toolchain + dependencies
+just hooks-install    # install the checked-in git hooks (.githooks/)
 just doctor           # machine-readable environment check
 just check            # fmt + clippy + check --locked + cargo deny + gitleaks
 just test             # cargo test --workspace --all-features --locked
@@ -81,19 +82,55 @@ A fresh clone is foundation-ready when `just doctor`, `just check`, and
 `just test` all exit zero (Shell-SPEC §3.2). `just proof` runs the implemented
 minimum kernel's conformance commands from `spec-minimum.md` §12.2.
 
+## Contributor happy path
+
+```sh
+git switch main
+git pull --ff-only
+git switch -c feat/short-description
+
+# make changes; update .agents/CURRENT_STATUS.md if you touched tracked files
+just check-fast       # what the pre-commit hook runs
+git add ...
+git commit            # pre-commit hook runs `just pre-commit`
+
+just pre-push         # what the pre-push hook runs (≈7s warm; longer cold)
+git push -u origin HEAD
+
+just pr               # verify + push + open a PR via gh; refuses from main
+```
+
+The PR title must be Conventional Commit-shaped (`feat(scope): ...`,
+`fix(scope): ...`, etc.) so Release Please can derive the next release from
+the squash-commit title. The full happy path, common failures, and recovery
+procedures are in [`CONTRIBUTING.md`](CONTRIBUTING.md); the CI/CD architecture
+is in [`docs/ci-cd-architecture.md`](docs/ci-cd-architecture.md); the release
+runbook is in [`docs/skills/release-management.md`](docs/skills/release-management.md).
+
 ## Commands
 
-`just` with no arguments prints the grouped recipe list. Required recipes
-(Shell-SPEC §10.2):
+`just` with no arguments prints the grouped recipe list. The full command
+surface is documented in `CONTRIBUTING.md` and `docs/ci-cd-architecture.md`
+§2. Required recipes (Shell-SPEC §10.2):
 
 | Recipe | Purpose |
 | --- | --- |
 | `just setup` | Converge on the pinned toolchain and dependencies |
+| `just sync` | Re-converge after a pull that touched Cargo.toml / rust-toolchain.toml |
 | `just doctor` | Machine-readable environment check → `target/bootstrap-evidence/doctor.jsonl` |
-| `just context-check` | Validate agent handoff structure and freshness |
-| `just build` | `cargo build --workspace` |
-| `just check` | fmt, clippy, `--locked` check, `cargo deny`, gitleaks |
+| `just hooks-install` | Set `core.hooksPath=.githooks` (pre-commit, pre-push, post-checkout) |
+| `just check-fast` | Context + fmt + typecheck — what the pre-commit hook runs |
+| `just fmt` / `just fmt-check` | Apply / verify rustfmt |
+| `just lint` | clippy with `-D warnings` |
+| `just typecheck` | `cargo check --workspace --all-targets --locked` |
+| `just security` | `cargo deny check` + `gitleaks detect` |
 | `just test` | `cargo test --workspace --all-features --locked` |
+| `just build` | `cargo build --workspace --all-targets --locked` |
+| `just check` | context + fmt + clippy + typecheck + cargo deny + gitleaks |
+| `just ci` | Canonical CI verification (union of all required CI jobs) |
+| `just pr` | Verify + push + open a PR via `gh`; refuses from `main` |
+| `just release-check [tag]` | Verify workspace/core/cli versions agree (and match `tag` if given) |
+| `just publish-bootstrap <crate>` | One-time manual crates.io publish (trusted-publishing bootstrap) |
 | `just proof` | Run the implemented minimum-spec conformance proofs (P1–P4b) |
 | `just clean` | Remove `target/` and bootstrap evidence |
 | `just secrets-init` | Create a local age key if absent, print its public key |
@@ -102,7 +139,11 @@ minimum kernel's conformance commands from `spec-minimum.md` §12.2.
 | `just secrets-rekey` | Update encrypted files after recipient changes |
 | `just integration <name>` | Validate and run a declared API/MCP integration |
 
-CI invokes the same recipes via `devbox run -- just ...` (`.github/workflows/ci.yml`).
+CI invokes the same recipes via `devbox run -- just ...`. The required check
+name on a pull request is `CI / gate`; the PR-title check is
+`PR title / conventional-commit`. See
+[`docs/ci-cd-architecture.md`](docs/ci-cd-architecture.md) for the full
+local-to-remote flow and the release causal chain.
 
 ## Agent context and handoff
 

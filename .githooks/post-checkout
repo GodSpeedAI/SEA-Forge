@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Post-checkout / post-merge hook. Advisory only — never mutates the tree.
+# Warns when dependency or toolchain state may have drifted, and points at the
+# explicit `just sync` recipe rather than running it automatically.
+set -euo pipefail
+
+# git passes: $1 = previous HEAD, $2 = new (checked-out) HEAD, $3 = branch flag.
+prev_ref="$1"   # HEAD before checkout (post-checkout) or HEAD (post-merge)
+new_ref="$2"    # newly checked-out HEAD
+is_branch="$3"  # 1 for branch checkout, 0 for file checkout
+
+# Skip the file-checkout case (e.g. `git checkout -- path`).
+[ "$is_branch" = "1" ] || exit 0
+
+changed=$(git diff --name-only "$prev_ref" "$new_ref" -- 2>/dev/null || true)
+# post-merge passes HEAD twice; detect via ORIG_HEAD fallback.
+if [ -z "$changed" ]; then
+    # post-merge: $1 == $2 == HEAD; ORIG_HEAD is the previous HEAD.
+    changed=$(git diff --name-only ORIG_HEAD HEAD -- 2>/dev/null || true)
+fi
+
+drift_hint=0
+for f in Cargo.toml Cargo.lock rust-toolchain.toml devbox.json devbox.lock .githooks .gitignore; do
+    if printf '%s\n' "$changed" | grep -qxF "$f"; then
+        drift_hint=1
+        break
+    fi
+done
+
+if [ "$drift_hint" = "1" ]; then
+    cat >&2 <<'EOF'
+post-checkout: dependency/toolchain files changed since your last HEAD.
+
+  next move: just sync    # re-pins the Rust toolchain and refetches deps
+
+This hook never runs sync for you; review the diff and converge explicitly.
+EOF
+fi
+
+if ! git config core.hooksPath >/dev/null 2>&1 || [ "$(git config core.hooksPath)" != ".githooks" ]; then
+    echo "post-checkout: core.hooksPath is not set to .githooks — run 'just hooks-install'" >&2
+fi
+
+exit 0
