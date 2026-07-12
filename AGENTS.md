@@ -61,10 +61,30 @@ request; do not silently turn them into implementation debt.
 - `.agents/OPEN_QUESTIONS.md`: unresolved decisions that require user judgment.
 - `crates/`: Rust workspace; preserve the boundaries in the applicable spec.
 - `.sea-forge/`: runtime output only; never use it as checked-in source code.
+- `.ua/`: Understand-Anything knowledge graph of the repo; rebuildable projection.
+  See "Codebase Knowledge Graph" below.
 
 As the full system graduates modules into crates, preserve the crate boundaries
 in full spec §6.2. Kernel crates remain synchronous. Tokio belongs only in
 `sea-forge-server` or an explicitly isolated runtime adapter.
+
+## Codebase Knowledge Graph
+
+`.ua/knowledge-graph.json` is an Understand-Anything graph of this repo: every
+file, function, class, and dependency as a queryable node/edge graph, grouped
+into architectural layers with a guided tour. It is a rebuildable projection, not
+source of truth — never hand-edit it; regenerate via the `understand` skill.
+
+Prefer the graph over reading code blind when orienting. Load the `understand`,
+`understand-chat`, `understand-explain`, `understand-diff`, or
+`understand-dashboard` skills to ask about structure, trace a call path, scope a
+change's blast radius, or open the visual dashboard. It does not replace reading
+the specs or the actual code before a change.
+
+The graph stays current via `.githooks/post-commit`: non-source commits refresh
+`.ua/meta.json` at zero token cost; source commits emit a trigger the in-session
+agent acts on to run the incremental update. `.ua/intermediate/` and `.ua/tmp/`
+are scratch; `.ua/config.json` carries `autoUpdate` and output language.
 
 ## Architecture Invariants
 

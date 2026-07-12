@@ -11,8 +11,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Read-only by default. The lint job elevates to actions: write so it can
-# upload doctor evidence; nothing in this workflow needs contents: write.
+# Read-only by default. The lint job stays at contents: read; upload-artifact
+# works with the default GITHUB_TOKEN. Nothing in this workflow needs
+# contents: write.
 permissions:
   contents: read
 

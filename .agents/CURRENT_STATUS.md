@@ -38,6 +38,9 @@ state of the `ci-cd` branch.
 - `.github/pull_request_template.md` (Phase 9)
 - `docs/ci-cd-architecture.md`, `docs/skills/release-management.md`, `CONTRIBUTING.md` (Phases 9, 13, 15)
 - `README.md` (Phase 13 happy path + recipe table)
+- `AGENTS.md`, `.gitignore`, `.githooks/post-commit` (Understand-Anything knowledge-graph support + auto-update hook)
+- `docs/explanations-and-references/ci-cd-architecture.md` (relocated from `docs/`; permissions section corrected)
+- `.github/workflows/ci.yml` (stale `actions: write` comment removed)
 
 ## Completed
 
@@ -65,6 +68,15 @@ state of the `ci-cd` branch.
 > pre-implementation snapshot and is superseded by the final report. All
 > repository-side implementation is complete; only the manual/remote actions
 > under **Remaining** below are outstanding.
+
+- Understand-Anything knowledge graph integrated: the `.ua/` projection is
+  documented in `AGENTS.md` and gitignored as rebuildable, kept fresh by a new
+  `.githooks/post-commit` hook (zero-token meta bump on non-source commits;
+  in-session trigger on source commits). The hook was hardened under a review
+  pass: JSON config parse, `META` read via argv, atomic write, explicit
+  git-dir resolution, and bail-on-diff-failure. CI permissions doc corrected
+  (lint job is `contents: read`; release-please uses `RELEASE_PLEASE_TOKEN`,
+  not the default `GITHUB_TOKEN`).
 
 ## Verification
 

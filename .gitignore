@@ -17,6 +17,9 @@
 /.sea-forge/
 /.worktrees/
 
+# Understand-Anything knowledge graph (rebuildable projection; regenerate via the understand skill)
+/.ua/
+
 # Local secret artifacts: only *.enc.env may be tracked under secrets/
 /secrets/*.env
 !/secrets/*.enc.env

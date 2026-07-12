@@ -142,10 +142,13 @@ cannot leave a permanently pending or silently-passing required check.
 ### Permissions (least privilege)
 
 - Every workflow defaults to `contents: read`.
-- `ci.yml` `lint` job elevates to `actions: write` so it can upload doctor
-  evidence (scoped, not workflow-wide).
+- `ci.yml` `lint` job stays at `contents: read`; `actions/upload-artifact` works
+  with the default `GITHUB_TOKEN` and needs no `actions: write`.
 - `release-please.yml` `release-please` job has `contents: write` and
-  `pull-requests: write` (it tags, releases, and opens the release PR).
+  `pull-requests: write` (it tags, releases, and opens the release PR). It uses
+  the `RELEASE_PLEASE_TOKEN` secret (a fine-grained PAT), not the default
+  `GITHUB_TOKEN`, so CI can run on the bot's own release PR (F-009; see
+  `docs/skills/release-management.md` §7).
 - `release-please.yml` `cargo-publish` job has `id-token: write` only, plus
   `contents: read`. It exchanges an OIDC token via
   `rust-lang/crates-io-auth-action@v1.0.5`; the token is auto-revoked in the
