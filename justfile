@@ -108,6 +108,20 @@ context-check:
 test:
     cargo test --workspace --all-features --locked
 
+# Verify no kernel crate depends on tokio (spec-full §6.1). Async belongs only
+# in sea-forge-server and isolated runtime adapters.
+[group('quality')]
+no-async-kernel:
+    #!/usr/bin/env bash
+    {{set}}
+    for crate in sea-forge-core sea-forge-domain sea-forge-authority sea-forge-planner sea-forge-sandbox sea-forge-runtime sea-forge-trace sea-forge-evidence sea-forge-settlement sea-forge-capability sea-forge-extension; do
+        if output=$(cargo tree -i tokio -p "$crate" --locked 2>&1) && echo "$output" | grep -q '^tokio '; then
+            echo "fail: $crate depends on tokio" >&2
+            exit 1
+        fi
+    done
+    echo "ok: no tokio in kernel crates"
+
 # Canonical clean, deterministic, noninteractive CI verification.
 # GitHub Actions invokes this (or its documented constituent recipes when
 # parallelized). Local `just ci` is equivalent to the union of required jobs.
@@ -121,6 +135,7 @@ ci:
     just typecheck
     just security
     just test
+    just no-async-kernel
     just build
     echo "[ci] all gates green"
 

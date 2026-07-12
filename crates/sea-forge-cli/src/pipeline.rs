@@ -1,14 +1,14 @@
-use crate::{
-    authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine},
-    capability,
-    errors::ForgeError,
-    evidence::{capture_file, JsonlEvidenceWriter},
-    ids, planner, runtime, sandbox, settlement,
-    trace::JsonlTraceRecorder,
-    types::*,
-    RECORD_VERSION,
-};
 use chrono::Utc;
+use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+use sea_forge_capability as capability;
+use sea_forge_core::ids;
+use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
+use sea_forge_evidence::{capture_file, JsonlEvidenceWriter};
+use sea_forge_planner as planner;
+use sea_forge_runtime as runtime;
+use sea_forge_sandbox as sandbox;
+use sea_forge_settlement as settlement;
+use sea_forge_trace::JsonlTraceRecorder;
 use serde::Serialize;
 use serde_json::json;
 use std::{
@@ -30,6 +30,7 @@ pub struct RunOptions {
 #[derive(Clone, Debug)]
 pub struct RunOutcome {
     pub run_id: String,
+    #[allow(dead_code)]
     pub case_id: String,
     pub run_dir: PathBuf,
     pub decisions: Vec<AuthorityDecision>,
@@ -71,7 +72,7 @@ fn validate_attribution(value: &str, name: &str) -> Result<(), ForgeError> {
 }
 pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
     let bundle = AuthorityPolicyBundle::load(&options.policy)?;
-    crate::domain::interpret(&options.intent)?;
+    sea_forge_domain::interpret(&options.intent)?;
     validate_attribution(&options.entity, "entity")?;
     validate_attribution(&options.process, "process")?;
     fs::create_dir_all(&options.root).map_err(|e| ForgeError::io("preflight root", e))?;
@@ -347,7 +348,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
     })();
     result.map_err(|error| {
         let error = ForgeError::run(run_id.clone(), error);
-        crate::trace::append_internal_error(
+        sea_forge_trace::append_internal_error(
             &run_dir.join("trace.jsonl"),
             &run_id,
             &actor_for_error,

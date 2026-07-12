@@ -1,4 +1,4 @@
-use crate::errors::ForgeError;
+use sea_forge_core::errors::ForgeError;
 pub enum IntentPattern {
     Demo,
     GeneratedZone,

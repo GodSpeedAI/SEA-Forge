@@ -1,10 +1,10 @@
-use crate::{
+use sea_forge_core::{
     errors::ForgeError,
     ids::{random_id, seq_id},
-    sandbox::safe_join,
     types::*,
     RECORD_VERSION,
 };
+use sea_forge_sandbox::safe_join;
 use serde::Serialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};

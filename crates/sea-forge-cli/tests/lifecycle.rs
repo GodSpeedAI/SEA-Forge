@@ -159,7 +159,7 @@ fn intent_to_settlement_produces_complete_accepted_run() {
             "artifact" => {
                 let uri = record["uri"].as_str().unwrap();
                 assert_eq!(
-                    sea_forge_core::evidence::sha256_file(&run.join(uri)).unwrap(),
+                    sea_forge_evidence::sha256_file(&run.join(uri)).unwrap(),
                     record["sha256"].as_str().unwrap()
                 );
             }
@@ -484,8 +484,8 @@ fn repeated_runs_have_stable_artifact_identity_and_recall_is_read_only() {
         let identity_input = serde_json::json!({"artifact_type":artifact["artifact_type"],"stage":artifact["stage"],"owner":artifact["owner"],"license":artifact["license"],"review_status":artifact["review_status"],"content_sha256":artifact["content_sha256"],"source_refs":artifact["source_refs"]});
         let expected_identity = format!(
             "ifl:hash:{}",
-            sea_forge_core::evidence::sha256_bytes(
-                &sea_forge_core::evidence::canonical_json(&identity_input).unwrap()
+            sea_forge_evidence::sha256_bytes(
+                &sea_forge_evidence::canonical_json(&identity_input).unwrap()
             )
         );
         assert_eq!(artifact["pre_mint_identity"], expected_identity);

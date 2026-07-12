@@ -1,0 +1,19 @@
+[package]
+name = "sea-forge-evidence"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+description = "SEA Forge evidence and artifact capture."
+
+[dependencies]
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+unicode-normalization.workspace = true
+
+[lints]
+workspace = true

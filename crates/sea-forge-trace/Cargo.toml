@@ -1,0 +1,16 @@
+[package]
+name = "sea-forge-trace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+description = "SEA Forge trace event recording."
+
+[dependencies]
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+chrono.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -450,11 +450,43 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
+name = "sea-forge-authority"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-core",
+ "sea-forge-evidence",
+ "sea-forge-sandbox",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
+name = "sea-forge-capability"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+ "serde_json",
+]
+
+[[package]]
 name = "sea-forge-cli"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
+ "sea-forge-authority",
+ "sea-forge-capability",
  "sea-forge-core",
+ "sea-forge-domain",
+ "sea-forge-evidence",
+ "sea-forge-planner",
+ "sea-forge-runtime",
+ "sea-forge-sandbox",
+ "sea-forge-settlement",
+ "sea-forge-trace",
+ "serde",
  "serde_json",
  "tracing",
  "tracing-subscriber",
@@ -472,6 +504,75 @@ dependencies = [
  "sha2",
  "unicode-normalization",
  "wait-timeout",
+]
+
+[[package]]
+name = "sea-forge-domain"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+]
+
+[[package]]
+name = "sea-forge-evidence"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+ "sea-forge-sandbox",
+ "serde",
+ "serde_json",
+ "sha2",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "sea-forge-extension"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+]
+
+[[package]]
+name = "sea-forge-planner"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+ "sea-forge-domain",
+]
+
+[[package]]
+name = "sea-forge-runtime"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-core",
+ "sea-forge-sandbox",
+ "wait-timeout",
+]
+
+[[package]]
+name = "sea-forge-sandbox"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+]
+
+[[package]]
+name = "sea-forge-settlement"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-core",
+ "sea-forge-sandbox",
+]
+
+[[package]]
+name = "sea-forge-trace"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-core",
+ "serde_json",
 ]
 
 [[package]]

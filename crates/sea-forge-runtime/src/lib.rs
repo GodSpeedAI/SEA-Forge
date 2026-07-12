@@ -1,5 +1,6 @@
-use crate::{errors::ForgeError, sandbox::safe_join, types::*};
 use chrono::Utc;
+use sea_forge_core::{errors::ForgeError, types::*};
+use sea_forge_sandbox::safe_join;
 use std::os::unix::process::CommandExt;
 use std::{
     fs::{self, File},
@@ -182,7 +183,7 @@ mod tests {
                     .to_string_lossy()
                     .into_owned(),
                 "--exact".into(),
-                "runtime::tests::timeout_child_helper".into(),
+                "tests::timeout_child_helper".into(),
             ],
             1,
         );

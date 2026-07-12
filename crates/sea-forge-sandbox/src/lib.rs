@@ -1,4 +1,4 @@
-use crate::errors::ForgeError;
+use sea_forge_core::errors::ForgeError;
 use std::{
     fs,
     path::{Component, Path, PathBuf},
@@ -112,8 +112,11 @@ fn checked_parent(
     }
     Ok(safe_parent)
 }
-pub fn materialize(root: &Path, operation: &crate::types::Operation) -> Result<(), ForgeError> {
-    if let crate::types::Operation::WriteFile { path, content_hint } = operation {
+pub fn materialize(
+    root: &Path,
+    operation: &sea_forge_core::types::Operation,
+) -> Result<(), ForgeError> {
+    if let sea_forge_core::types::Operation::WriteFile { path, content_hint } = operation {
         let destination = safe_join(root, path)?;
         fs::write(destination, content_hint)
             .map_err(|e| ForgeError::io("write planned file", e))?;

@@ -1,0 +1,14 @@
+[package]
+name = "sea-forge-sandbox"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+description = "SEA Forge sandbox backends and workspace path safety."
+
+[dependencies]
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+
+[lints]
+workspace = true
