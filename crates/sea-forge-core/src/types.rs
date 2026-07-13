@@ -39,13 +39,73 @@ pub struct CasePlan {
     pub intent_id: String,
     pub items: Vec<PlanItem>,
 }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ItemKind {
+    #[default]
+    SandboxedTask,
+    HumanTask,
+    Milestone,
+    Stage,
+    TimerListener,
+    UserEventListener,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct ItemMarkers {
+    #[serde(default)]
+    pub required: bool,
+    #[serde(default)]
+    pub repetition: bool,
+    #[serde(default)]
+    pub manual_activation: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SentryTrigger {
+    pub source: String,
+    pub event: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SentryPredicate {
+    ArtifactExists { path: String },
+    SettlementStatus { status: String },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Sentry {
+    pub on: SentryTrigger,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub if_predicate: Option<SentryPredicate>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PlanItem {
     pub plan_item_id: String,
     pub name: String,
+    #[serde(default)]
     pub operations: Vec<Operation>,
-    pub entry_criteria: Vec<String>,
+    #[serde(default)]
+    pub entry_criteria: Vec<Sentry>,
+    #[serde(default)]
+    pub exit_criteria: Vec<Sentry>,
     pub settlement_criteria: SettlementCriteria,
+    #[serde(default)]
+    pub item_kind: ItemKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox_class: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_stage: Option<String>,
+    #[serde(default)]
+    pub markers: ItemMarkers,
+    #[serde(default = "default_max_instances")]
+    pub max_instances: u32,
+}
+
+fn default_max_instances() -> u32 {
+    1
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -314,6 +374,9 @@ pub enum TraceKind {
     RunFinished,
     CaseClosed,
     InternalError,
+    MilestoneAchieved,
+    PlanMutated,
+    CaseFileItemAdded,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct TraceEvent {
@@ -396,6 +459,8 @@ pub struct SettlementCriteria {
     pub require_exit_zero: bool,
     pub required_artifacts: Vec<String>,
     pub stdout_must_contain: Option<String>,
+    #[serde(default)]
+    pub require_approval: bool,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct SettlementClaim {

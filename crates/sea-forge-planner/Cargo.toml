@@ -11,5 +11,8 @@ description = "SEA Forge case plan construction."
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 sea-forge-domain = { path = "../sea-forge-domain", version = "0.1.0" }
 
+[dev-dependencies]
+serde_json.workspace = true
+
 [lints]
 workspace = true
