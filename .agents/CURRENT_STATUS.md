@@ -11,10 +11,10 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–7 are implemented at their package gates; M0
-is complete and M1 jail sandbox is conformance-green. The minimum kernel
-tests and P1–P4b remain the unchanged compatibility floor. Task 8 (M2a case
-engine) is next.
+On branch `full-spec`. Tasks 1–8 are implemented at their package gates; M0
+is complete, M1 jail sandbox and M2a case engine are conformance-green. The
+minimum kernel tests and P1–P4b remain the unchanged compatibility floor.
+Task 9 (M2b plan templates) is next.
 
 ## Changed Files
 

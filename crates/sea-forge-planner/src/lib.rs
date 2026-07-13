@@ -1,6 +1,8 @@
 use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
 use sea_forge_domain::{self as domain, IntentPattern};
 
+pub mod case_engine;
+
 pub const DEMO_MODEL: &str = r#"{"domain": "demo", "entities": [{"name": "Sample"}]}"#;
 
 pub fn plan(
@@ -34,6 +36,7 @@ pub fn plan(
                 require_exit_zero: true,
                 required_artifacts: vec![],
                 stdout_must_contain: None,
+                require_approval: false,
             },
         ),
     };
@@ -48,7 +51,13 @@ pub fn plan(
             name: "generate_and_validate_sea_model".into(),
             operations,
             entry_criteria: vec![],
+            exit_criteria: vec![],
             settlement_criteria,
+            item_kind: Default::default(),
+            sandbox_class: None,
+            parent_stage: None,
+            markers: Default::default(),
+            max_instances: 1,
         }],
     })
 }
@@ -86,6 +95,7 @@ fn file_plan(
             require_exit_zero: true,
             required_artifacts: vec!["model.sea".into()],
             stdout_must_contain: Some("sea-forge: model valid".into()),
+            require_approval: false,
         },
     )
 }
