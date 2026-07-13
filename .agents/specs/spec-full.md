@@ -61,7 +61,7 @@ Full SEA Forge MUST keep one authority fabric across CLI, server, shell, API, to
 - Identity onboarding resolves the actor before any protected action. Automated agents (`R-AA`) require a human or service sponsor for privileged actions.
 - Policy bundles are hash-addressed and may be composed from file, command, API, git commit, PR merge, prompt-risk, memory-recall, spec-pipeline, artifact-transition, attestation, approval, deployment, secret, and policy-mutation surfaces.
 - Every protected ingress route calls the authority mediator before execution. Missing, unreachable, undecidable, or unsupported authority paths fail closed (`deny` or `escalate`) and still emit evidence.
-- The common governance verdict model normalizes candidate results using disposition precedence `deny > boundary > allow > degraded > escalate`; the most restrictive result wins when engines disagree.
+- The common governance verdict model resolves candidates deterministically and independently of evaluator iteration order. Resolution is typed: any `deny` blocks; otherwise any unresolved `escalate` blocks while retaining all boundaries; otherwise boundaries are intersected; otherwise explicitly permitted `degraded` requirements accumulate; otherwise the result is `allow`.
 - DomainForge, OPA, and GovernedSpeed are semantic, policy, or risk evaluators,
   not owners of SEA Forge authority. The policy gateway / authority service owns
   the final decision and audit record; evaluator "pass" or fail-open modes are
@@ -339,7 +339,17 @@ All minimum-spec entities stand. New/extended (kept additive; every change bumps
 - `engine` (`local | domainforge | policy-gateway | opa | governedspeed | implementation-defined`).
 - `disposition` (`deny | boundary | allow | degraded | escalate`).
 - `subject` (action/resource identity), `reason`, `evidence_refs`, `recorded_at`.
-- Resolver precedence is fixed: `deny > boundary > allow > degraded > escalate`. Missing required evidence resolves to `deny`; all-escalate conflicts create or reference an opaque constraint and halt as `escalate`.
+- Resolution is deterministic and independent of evaluator iteration order.
+  `allow` is the identity candidate and never erases another candidate's
+  unresolved requirement. Any `deny` blocks. Otherwise, any unresolved
+  `escalate` blocks pending authorized resolution while preserving all candidate
+  boundaries. Otherwise, all boundaries are intersected and execution is
+  constrained to that intersection. Otherwise, `degraded` executes only when
+  explicit policy permits degraded operation and names compensating controls;
+  all such controls accumulate. Only the absence of stricter requirements
+  resolves to `allow`. Missing required evidence resolves to `deny`;
+  all-escalate conflicts create or reference an opaque constraint and halt as
+  `escalate`.
 
 **AuthorityAuditRecord** is the common audit shape from `GovernanceVerdict` plus `decision_id`, `case_id`, `run_id`, `policy_bundle_hash`, `action_request_hash`, and `identity_binding_hash`.
 
@@ -1110,12 +1120,27 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
 ### 10.0 Authority fabric (M0, all milestones)
 
 - Every protected action enters through one mediator before the kernel, sandbox, runtime, generator, memory recall, artifact/IP command, shell adapter, server route, or external API/git adapter can execute. Direct calls to lower layers are bugs.
+- A normal public path to a consequential operation MUST present an authority
+  result bound to the exact canonical action request and active execution
+  context. The binding also carries its validity interval, granted sandbox
+  class, required approval resolution, and any degraded-operation compensating
+  controls. It MUST fail on request-hash or context mismatch, expiry, replay
+  outside its permitted scope, sandbox downgrade, missing approval, or missing
+  compensating controls.
+- The implementation MAY use an opaque capability, private constructor, sealed
+  trait, typestate, or mediator-owned handle. The name `AuthorizedAction` is not
+  normative. The authority proof MUST NOT be publicly constructible,
+  deserializable into an authorized state, or detachable from the request and
+  context it authorizes.
 - Protected action classes are at least: file write/delete, shell command, sandbox execution, outbound API call, git commit, PR merge, extension install/adopt/disable, projection execution, spec/projection mutation, generated-zone mutation, memory recall, approval resolution, settlement-authority trust mutation, settlement declaration, human-task completion, case reopen/terminate, discretionary task add, evidence mutation, policy mutation, identity minting, secret access, deployment/rollback, artifact transition, and IFL attestation.
 - File authority is deny-by-default. Generated outputs, AST/IR/manifest files, generated semantic fixtures, `.git`, env/secret material, and governance policy paths are hard boundaries unless a more specific governed operation owns the mutation path.
 - API authority is deny-by-default by host/protocol. Internal, loopback, link-local, metadata, private-network, and unrecognized hosts deny or escalate by policy; no raw HTTP client gets a private bypass.
 - Git/PR authority is explicit: commits touching protected governance paths deny unless a human-controlled policy-change route is active; PR merges require validation evidence, branch checks, conflict state, and changed-path policy.
 - Prompt-risk and GovernedSpeed verdicts may contribute candidate verdicts, but they do not override action authority. The final decision is the policy-gateway/authority-service decision after precedence resolution.
-- When policy engines disagree, normalize to GovernanceVerdict and apply `deny > boundary > allow > degraded > escalate`. Missing required evidence fails closed as `deny`; all-escalate ambiguity creates or references an OpaqueConstraint and halts as `escalate`.
+- When policy engines disagree, normalize to GovernanceVerdict and apply the
+  deterministic §7.0 resolver. Missing required evidence fails closed as
+  `deny`; all-escalate ambiguity creates or references an OpaqueConstraint and
+  halts as `escalate`.
 - A denied or escalated decision is a successful governance outcome, not an internal error. It MUST produce authority evidence, audit records, settlement basis, and operator-visible next steps.
 - Future protected surfaces are added by extending the resource class enum, policy bundle schema, mediator mapping, and conformance tests. They MUST NOT introduce a parallel permission system.
 - When an action is scoped to a `.sea` world, the authority request MUST carry
@@ -1129,6 +1154,17 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
   JSONL file, policy snapshot, or full-spec store MUST first become a valid
   `LedgerEntry`. Compatibility files and indexes are views; they are never a
   second mutable source of truth.
+- The canonical commit sequence is: validate the typed record; canonicalize and
+  hash it; append it to the authoritative ledger and make the append durable;
+  return an immutable committed reference; then materialize compatibility views
+  or indexes and record their freshness or failure. Equivalent transactional
+  implementations are permitted only when they preserve these observable
+  semantics.
+- Failure before authoritative commit exposes neither a committed record nor a
+  compatibility view. Failure after authoritative commit does not roll back or
+  conceal ledger truth: the failed or stale view remains detectable and can be
+  rebuilt byte-for-byte from committed records. Domain crates MUST submit typed
+  records through this path and MUST NOT create another authoritative store.
 - Before an operation covered by `required_for_side_effects`, verify the latest
   trusted global checkpoint, every active stream it commits, and the required
   independent witness receipts. A local signature is not an independent witness.
@@ -1348,7 +1384,14 @@ M0: authority and DomainForge semantic gate before remaining crate growth
     - evaluate fixed DomainForge Allow/Deny/Escalate/Reject/NotApplicable fixtures → normalized candidate
       verdicts and evidence refs match §7.0a; a required NotApplicable result denies.
     - DomainForge/OPA/GovernedSpeed unavailable during action gating → deny/escalate, never allow or pass.
-    - conflicting candidate verdicts resolve by `deny > boundary > allow > degraded > escalate`.
+    - conflicting candidate verdicts satisfy the complete pairwise typed
+      resolver matrix and resolve independently of evaluator order; deny blocks,
+      unresolved escalation blocks while retaining boundaries, boundaries
+      intersect, degraded controls accumulate only under explicit permission,
+      and allow is the identity candidate.
+      Commutativity, associativity, and idempotence are required where candidates
+      are folded without context. Boundary parameters and degraded compensating
+      controls remain enforced after disposition resolution.
     - all-escalate ambiguity writes/reuses an OpaqueConstraint; matching action halts before ordinary policy.
     - `.sea-forge/authority/decisions.jsonl` and `audit.jsonl` reproduce the per-run authority records.
 M1: run an intent whose command attempts a write outside the workspace under jail class
@@ -1473,6 +1516,26 @@ Extends minimum spec §15:
 
 ## 17. Test and Validation Matrix
 
+### 17.0 M0 internal settlement gates
+
+M0 uses internal evidence-classification gates. They do not rename commits or
+permit partial M0 release claims:
+
+| Gate | Scope | Completion evidence |
+|---|---|---|
+| `M0-G1` | crate graduation and record contracts | graduated workspace builds; minimum proofs remain unchanged; versioned record contracts needed by later gates are fixed |
+| `M0-G2` | ledger core and migration | ledger conformance, canonical commit/view failure semantics, and lossless legacy migration pass |
+| `M0-G3` | authority fabric | deterministic resolver, non-forgeable action/context binding, all-ingress mediation, pre-action integrity sequence, and no-bypass proofs pass |
+| `M0-G4` | DomainForge semantic boundary | stable validated model refs and fail-closed candidate normalization pass without adapter side effects |
+| `M0-G5` | extension ABI and registry | descriptors, compatibility, inert import, governed adoption seam, and projection contracts validate |
+| `M0-G6` | composed M0 proof | G1–G5, migration, aggregate M0 tests, and minimum P1–P4b pass together |
+
+Task order and gate order need not map one-to-one. In the current plan, Task 1
+provides G1; Tasks 2 and 6 jointly close G2; Task 5 closes G3; Task 3 provides
+G4; Task 4 provides G5; and the M0 closeout after Task 6 closes G6. A package
+test passing is evidence for its gate, not evidence that a dependent or composed
+gate is satisfied.
+
 ### 17.1 Core conformance per milestone
 
 | Milestone | Gate (all REQUIRED) |
@@ -1489,13 +1552,42 @@ Extends minimum spec §15:
 | M7 environments + evaluators (E9) | §12 M7 proofs; environment immutability (hash pin); three-axis independence test (content/permission/isolation each vary independently); evaluator-under-authority test; batch threshold + quarantine semantics |
 | M8 artifact-to-IP (E10) | §12 M8 proofs; catalog from work-product descriptors only; no-teleportation; TransitionToken hash chain; capitalization approval; semantic-anchor gate; IFL required/degraded policy behavior; capital projection rebuild purity |
 
-### 17.2 Variation and recovery
+### 17.2 Completion-claim levels
+
+Claims use the strongest level whose evidence is complete:
+
+1. `implementation complete` — the scoped code exists and its focused checks pass.
+2. `conformance green` — every normative conformance proof for the scope passes.
+3. `integration proven` — composed boundaries and failure paths pass against real adjacent components.
+4. `pilot shippable` — the declared pilot boundary, recovery drill, operator path, and rollback evidence pass.
+5. `production ready` — production policy, supported-platform, security, operations, and release gates pass.
+
+Higher levels imply all lower levels. Milestone or package completion MUST NOT be
+described as integration-proven, pilot-shippable, or production-ready without
+the corresponding evidence.
+
+### 17.3 Release boundaries
+
+The cumulative release boundaries are:
+
+- **governed-execution alpha:** M0–M3;
+- **capability-evidence beta:** M0–M4a;
+- **governed-memory beta:** M0–M4b;
+- **full syntelligent-substrate conformance:** M0–M8.
+
+The first pilot additionally proves, in one composed environment: one agent,
+one repository or workspace, one protected surface, one allowed action, one
+denied action, one escalated action, one human resolution, one verifiable
+evidence chain, and one recovery drill. These labels define release evidence;
+they do not claim that the current repository has reached any boundary.
+
+### 17.4 Variation and recovery
 
 The four operational cases of §13 plus the M4a settlement-integrity variations
 in §12, each with expected result and evidence as stated there. Skipped platform
 tests (e.g., Seatbelt cases on Linux CI) MUST report as skipped, not passed.
 
-### 17.4 Real integration tests
+### 17.5 Real integration tests
 
 Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS runner), an independent witness service when policy requires `externally_verified` integrity, a real SWE_SEED declaration when policy requires the `swe_seed` authority, IFL attestation when a policy requires `ifl:token`, and — when/if built — the MicroVM backend on KVM-capable hardware (per CubeSandbox's own x86_64+KVM requirement).
 
