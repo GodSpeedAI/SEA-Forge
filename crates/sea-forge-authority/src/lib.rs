@@ -3,7 +3,88 @@ use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSIO
 use sea_forge_evidence::hash_canonical;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{collections::HashSet, fs, path::Path};
+use std::{
+    collections::{BTreeSet, HashSet},
+    fs,
+    path::Path,
+};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
+pub enum GovernanceDisposition {
+    Allow,
+    Deny,
+    Escalate,
+    Boundary,
+    Degraded,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GovernanceVerdict {
+    pub engine: String,
+    pub disposition: GovernanceDisposition,
+    #[serde(default)]
+    pub boundaries: BTreeSet<String>,
+    #[serde(default)]
+    pub compensating_controls: BTreeSet<String>,
+    pub reason: String,
+    pub evidence_refs: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ResolutionPolicy {
+    pub allow_degraded: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResolvedGovernance {
+    pub disposition: GovernanceDisposition,
+    pub boundaries: BTreeSet<String>,
+    pub compensating_controls: BTreeSet<String>,
+}
+
+pub fn resolve_candidates(
+    candidates: &[GovernanceVerdict],
+    policy: &ResolutionPolicy,
+) -> ResolvedGovernance {
+    let boundaries = candidates
+        .iter()
+        .flat_map(|candidate| candidate.boundaries.iter().cloned())
+        .collect();
+    let compensating_controls: BTreeSet<String> = candidates
+        .iter()
+        .flat_map(|candidate| candidate.compensating_controls.iter().cloned())
+        .collect();
+    let missing_evidence = candidates
+        .iter()
+        .any(|candidate| candidate.evidence_refs.is_empty());
+    let has = |disposition| {
+        candidates
+            .iter()
+            .any(|candidate| candidate.disposition == disposition)
+    };
+    let disposition =
+        if candidates.is_empty() || missing_evidence || has(GovernanceDisposition::Deny) {
+            GovernanceDisposition::Deny
+        } else if has(GovernanceDisposition::Escalate) {
+            GovernanceDisposition::Escalate
+        } else if has(GovernanceDisposition::Boundary) {
+            GovernanceDisposition::Boundary
+        } else if has(GovernanceDisposition::Degraded) {
+            if policy.allow_degraded && !compensating_controls.is_empty() {
+                GovernanceDisposition::Degraded
+            } else {
+                GovernanceDisposition::Deny
+            }
+        } else {
+            GovernanceDisposition::Allow
+        };
+    ResolvedGovernance {
+        disposition,
+        boundaries,
+        compensating_controls,
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
@@ -877,5 +958,95 @@ mod tests {
             assert_eq!(decision.verdict, Verdict::Deny);
             assert_eq!(decision.reason_codes, ["unclassified"]);
         }
+    }
+}
+
+#[cfg(test)]
+mod resolver_tests {
+    use super::*;
+
+    fn verdict(disposition: GovernanceDisposition) -> GovernanceVerdict {
+        GovernanceVerdict {
+            engine: "test".into(),
+            disposition,
+            boundaries: BTreeSet::new(),
+            compensating_controls: BTreeSet::new(),
+            reason: "fixture".into(),
+            evidence_refs: vec!["ev_1".into()],
+        }
+    }
+
+    #[test]
+    fn allow_is_identity_and_candidate_order_is_irrelevant() {
+        let boundary = GovernanceVerdict {
+            boundaries: BTreeSet::from(["workspace:/safe".into()]),
+            ..verdict(GovernanceDisposition::Boundary)
+        };
+        let left = resolve_candidates(
+            &[verdict(GovernanceDisposition::Allow), boundary.clone()],
+            &ResolutionPolicy::default(),
+        );
+        let right = resolve_candidates(
+            &[boundary, verdict(GovernanceDisposition::Allow)],
+            &ResolutionPolicy::default(),
+        );
+        assert_eq!(left, right);
+        assert_eq!(left.disposition, GovernanceDisposition::Boundary);
+    }
+
+    #[test]
+    fn escalation_blocks_while_retaining_boundaries() {
+        let boundary = GovernanceVerdict {
+            boundaries: BTreeSet::from(["workspace:/safe".into()]),
+            ..verdict(GovernanceDisposition::Boundary)
+        };
+        let resolved = resolve_candidates(
+            &[boundary, verdict(GovernanceDisposition::Escalate)],
+            &ResolutionPolicy::default(),
+        );
+        assert_eq!(resolved.disposition, GovernanceDisposition::Escalate);
+        assert_eq!(
+            resolved.boundaries,
+            BTreeSet::from(["workspace:/safe".into()])
+        );
+    }
+
+    #[test]
+    fn deny_blocks_every_other_candidate() {
+        let resolved = resolve_candidates(
+            &[
+                verdict(GovernanceDisposition::Allow),
+                verdict(GovernanceDisposition::Deny),
+                verdict(GovernanceDisposition::Escalate),
+            ],
+            &ResolutionPolicy::default(),
+        );
+        assert_eq!(resolved.disposition, GovernanceDisposition::Deny);
+    }
+
+    #[test]
+    fn degraded_requires_permission_and_accumulates_controls() {
+        let degraded = GovernanceVerdict {
+            compensating_controls: BTreeSet::from(["audit".into(), "read_only".into()]),
+            ..verdict(GovernanceDisposition::Degraded)
+        };
+        let denied = resolve_candidates(&[degraded.clone()], &ResolutionPolicy::default());
+        assert_eq!(denied.disposition, GovernanceDisposition::Deny);
+        let permitted = resolve_candidates(
+            &[degraded],
+            &ResolutionPolicy {
+                allow_degraded: true,
+            },
+        );
+        assert_eq!(permitted.disposition, GovernanceDisposition::Degraded);
+        assert_eq!(permitted.compensating_controls.len(), 2);
+    }
+
+    #[test]
+    fn missing_required_evidence_denies() {
+        let mut candidate = verdict(GovernanceDisposition::Allow);
+        candidate.evidence_refs.clear();
+        let resolved = resolve_candidates(&[candidate], &ResolutionPolicy::default());
+        assert_eq!(resolved.disposition, GovernanceDisposition::Deny);
     }
 }
