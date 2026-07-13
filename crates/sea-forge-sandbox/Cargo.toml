@@ -10,6 +10,16 @@ description = "SEA Forge sandbox backends and workspace path safety."
 [dependencies]
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
+chrono.workspace = true
+wait-timeout.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = "0.3"
+
+[dev-dependencies]
+sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
+sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.1.0" }
+serde_json.workspace = true
 
 [lints]
 workspace = true

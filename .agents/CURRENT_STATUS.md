@@ -11,12 +11,23 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–6 are implemented at their package gates; M0 is
-complete. The minimum kernel tests and P1–P4b remain the unchanged compatibility
-floor. Task 7 (M1 jail sandbox) is next.
+On branch `full-spec`. Tasks 1–7 are implemented at their package gates; M0
+is complete and M1 jail sandbox is conformance-green. The minimum kernel
+tests and P1–P4b remain the unchanged compatibility floor. Task 8 (M2a case
+engine) is next.
 
 ## Changed Files
 
+- `crates/sea-forge-sandbox/src/lib.rs` — SandboxClass, ExecutionSandbox trait,
+  select_sandbox, SandboxSpec/Handle/Error/RelPath types.
+- `crates/sea-forge-sandbox/src/local.rs` — LocalSandbox backend (existing behavior).
+- `crates/sea-forge-sandbox/src/jail.rs` — JailSandbox backend (Linux Landlock).
+- `crates/sea-forge-sandbox/tests/conformance_m1.rs` — M1 conformance tests.
+- `crates/sea-forge-runtime/src/lib.rs` — uses sandbox backend from grant's class.
+- `crates/sea-forge-core/src/types.rs` — added ExecutionStatus::SandboxViolation.
+- `crates/sea-forge-settlement/src/lib.rs` — settlement basis `jail_violation`.
+- `crates/sea-forge-authority/src/lib.rs` — ActionGrant exposes sandbox_class(),
+  relaxed hardcoded local-only check to allow any granted class.
 - `crates/sea-forge-cli/src/commands/migrate.rs` — new `sea-forge migrate` command.
 - `crates/sea-forge-cli/src/commands/inspect.rs` — finds run dirs in both v0.1 flat
   and v0.2 case-nested layouts.
@@ -82,7 +93,7 @@ floor. Task 7 (M1 jail sandbox) is next.
 
 ## Remaining
 
-- Tasks 7–17 from the implementation plan (M1 jail through M8 + DoD sweep).
+- Tasks 8–17 from the implementation plan (M2a case engine through M8 + DoD sweep).
 - Continue milestone-ordered implementation, committing after each task.
 - Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
   once the log-file reset is no longer a safety-net concern.
@@ -99,6 +110,19 @@ floor. Task 7 (M1 jail sandbox) is next.
 - `cargo test -p sea-forge-cli conformance_m0_migrate --locked`: passed.
 - Task 6 migration gate: lossless genesis import, idempotence guard, ledger
   verify corruption detection, and `legacy_digest_only` inspect assurance pass.
+- Task 7 — M1 jail sandbox backend: `SandboxClass` enum (`local|jail|microvm`),
+  `ExecutionSandbox` trait (§11.2), `LocalSandbox` (existing behavior), and
+  `JailSandbox` (Linux Landlock via the `landlock` crate). Landlock ruleset
+  allows read-write to workspace+artifacts, read-only to `/`, denies all other
+  writes. Thread-based restriction (no `unsafe`/`pre_exec`) keeps the main
+  thread unrestricted. Runtime selects backend from `grant.sandbox_class()`;
+  unavailable class returns `unsupported_sandbox_class_error`. Settlement adds
+  `jail_violation` basis when `ExecutionStatus::SandboxViolation` is detected.
+  Conformance tests: jail blocks write outside workspace, schema_error for
+  untrusted argv0 on local, class identity, unavailable-platform refusal.
+- `cargo test --workspace --all-features --locked`: 80 tests passed, 0 failed.
+- `just proof`: P1–P4b passed.
+- `just no-async-kernel`: passed.
 - Task 5 resolver slice: 12 `sea-forge-authority` tests passed, including typed
   deny/escalate/boundary/degraded/allow resolution and order independence.
 - Task 5 execution-boundary slice: authority no longer depends on sandbox;

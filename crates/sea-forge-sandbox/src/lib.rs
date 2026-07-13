@@ -1,8 +1,120 @@
-use sea_forge_core::errors::ForgeError;
+use sea_forge_core::{errors::ForgeError, types::*};
 use std::{
-    fs,
+    fmt, fs,
     path::{Component, Path, PathBuf},
 };
+
+pub mod jail;
+pub mod local;
+
+pub use jail::JailSandbox;
+pub use local::LocalSandbox;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SandboxClass {
+    Local,
+    Jail,
+    Microvm,
+}
+
+impl fmt::Display for SandboxClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SandboxClass::Local => write!(f, "local"),
+            SandboxClass::Jail => write!(f, "jail"),
+            SandboxClass::Microvm => write!(f, "microvm"),
+        }
+    }
+}
+
+impl std::str::FromStr for SandboxClass {
+    type Err = ForgeError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "local" => Ok(SandboxClass::Local),
+            "jail" => Ok(SandboxClass::Jail),
+            "microvm" => Ok(SandboxClass::Microvm),
+            other => Err(ForgeError::Input(format!("unknown sandbox class: {other}"))),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SandboxSpec {
+    pub workspace_root: PathBuf,
+    pub artifacts_root: PathBuf,
+}
+
+#[derive(Clone, Debug)]
+pub struct SandboxHandle {
+    pub class: SandboxClass,
+    pub spec: SandboxSpec,
+}
+
+#[derive(Clone, Debug)]
+pub struct RelPath(pub String);
+
+#[derive(Debug)]
+pub struct SandboxError {
+    pub class: &'static str,
+    pub message: String,
+}
+
+impl SandboxError {
+    pub fn new(class: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            class,
+            message: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for SandboxError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.class, self.message)
+    }
+}
+
+impl std::error::Error for SandboxError {}
+
+impl From<SandboxError> for ForgeError {
+    fn from(e: SandboxError) -> Self {
+        ForgeError::Config {
+            class: e.class,
+            path: PathBuf::new(),
+            message: e.message,
+        }
+    }
+}
+
+pub trait ExecutionSandbox {
+    fn class(&self) -> SandboxClass;
+    fn prepare(&self, spec: &SandboxSpec) -> Result<SandboxHandle, SandboxError>;
+    fn execute(
+        &self,
+        h: &SandboxHandle,
+        req: &ExecutionRequest,
+    ) -> Result<ExecutionResult, SandboxError>;
+    fn collect_artifacts(
+        &self,
+        h: &SandboxHandle,
+        paths: &[RelPath],
+    ) -> Result<Vec<ArtifactRef>, SandboxError>;
+    fn destroy(&self, h: SandboxHandle) -> Result<(), SandboxError>;
+}
+
+/// Select a sandbox backend for the given class.
+/// Returns an error if the class is unavailable on this host.
+pub fn select_sandbox(class: SandboxClass) -> Result<Box<dyn ExecutionSandbox>, SandboxError> {
+    match class {
+        SandboxClass::Local => Ok(Box::new(LocalSandbox)),
+        SandboxClass::Jail => Ok(Box::new(JailSandbox::new()?)),
+        SandboxClass::Microvm => Err(SandboxError::new(
+            "unsupported_sandbox_class_error",
+            "microvm backend is not available",
+        )),
+    }
+}
 
 pub fn validate_relative_path(path: &str) -> Result<(), ForgeError> {
     let value = Path::new(path);

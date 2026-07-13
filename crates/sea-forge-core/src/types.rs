@@ -286,6 +286,7 @@ pub enum ExecutionStatus {
     Completed,
     SpawnFailed,
     TimedOut,
+    SandboxViolation,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ExecutionResult {
