@@ -11,10 +11,10 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–4 are implemented at their package gates. The
-Tasks 1–4 specification reconciliation is in progress; Task 5 implementation
-has not started. The minimum kernel tests (35 tests) and P1–P4b remain the
-unchanged compatibility floor.
+On branch `full-spec`. Tasks 1–4 are implemented at their package gates and the
+specification reconciliation is committed. Task 5 implementation has started
+with the typed governance resolver. The minimum kernel tests (35 tests) and
+P1–P4b remain the unchanged compatibility floor.
 
 ## Changed Files
 
@@ -97,6 +97,8 @@ unchanged compatibility floor.
 - `just proof`: P1–P4b passed.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.
+- Task 5 resolver slice: 12 `sea-forge-authority` tests passed, including typed
+  deny/escalate/boundary/degraded/allow resolution and order independence.
 
 ## Tasks 1–4 Specification Reconciliation
 
