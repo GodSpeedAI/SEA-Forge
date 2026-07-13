@@ -11,17 +11,25 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–5 are implemented at their package gates;
-M0-G3 is conformance-green after independent review. The minimum kernel tests
-and P1–P4b remain the unchanged compatibility floor. Task 6 is next.
+On branch `full-spec`. Tasks 1–6 are implemented at their package gates; M0 is
+complete. The minimum kernel tests and P1–P4b remain the unchanged compatibility
+floor. Task 7 (M1 jail sandbox) is next.
 
 ## Changed Files
 
+- `crates/sea-forge-cli/src/commands/migrate.rs` — new `sea-forge migrate` command.
+- `crates/sea-forge-cli/src/commands/inspect.rs` — finds run dirs in both v0.1 flat
+  and v0.2 case-nested layouts.
+- `crates/sea-forge-cli/src/commands/mediated.rs` — migrated roots report
+  `legacy_digest_only` assurance without requiring a signer.
+- `crates/sea-forge-ledger/src/types.rs` — `LedgerStream::verify` checks
+  `legacy_import` files against recorded sha256/size.
+- `crates/sea-forge-cli/tests/conformance_m0_migrate.rs` — M0 migration gate tests.
 - `Cargo.toml` — added 10 new kernel crate members to workspace.
 - `justfile` — added `no-async-kernel` recipe; wired into `ci`.
 - `Cargo.lock` — refreshed by the workspace expansion.
 - `crates/sea-forge-core/src/lib.rs` — reduced to ids/types/errors + `RECORD_VERSION`.
-- `crates/sea-forge-cli/src/main.rs` — added `mod pipeline`.
+- `crates/sea-forge-cli/src/main.rs` — added `mod pipeline` and `Migrate` command.
 - `crates/sea-forge-cli/src/pipeline.rs` — moved from `sea-forge-core`.
 - `crates/sea-forge-cli/src/commands/{run,recall}.rs` — updated imports.
 - `crates/sea-forge-cli/src/tests/lifecycle.rs` — updated evidence imports.
@@ -74,8 +82,7 @@ and P1–P4b remain the unchanged compatibility floor. Task 6 is next.
 
 ## Remaining
 
-- Complete reconciliation proof and commit, then stop before Task 5.
-- Tasks 5–17 from the implementation plan (M0e through M8 + DoD sweep).
+- Tasks 7–17 from the implementation plan (M1 jail through M8 + DoD sweep).
 - Continue milestone-ordered implementation, committing after each task.
 - Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
   once the log-file reset is no longer a safety-net concern.
@@ -84,18 +91,14 @@ and P1–P4b remain the unchanged compatibility floor. Task 6 is next.
 
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
-- Task 4 — M0d extension ABI and registry: `crates/sea-forge-extension`
-  implements `ExtensionRegistry` (load/save/register/import/adopt), `RegistryEntry`
-  with `TrustLevel` and `ExtensionStatus`, `ExtensionInstallRecord` with
-  `Compatibility`, `ProjectionAdapter` trait, `ProjectionRecord`, descriptor
-  validation, and 8 unit tests covering descriptor validation, empty-registry,
-  built-in registration, import-starts-disabled, adopt-makes-active, and
-  authority-surface→policy-surface mapping.
-
-- `cargo test --workspace --all-features --locked`: 71 tests passed (35 existing + 23 ledger + 5 domainforge + 8 extension), 0 failed.
+- `cargo test --workspace --all-features --locked`: 73 tests passed (35 existing +
+  23 ledger + 5 domainforge + 8 extension + 2 migration), 0 failed.
 - `just proof`: P1–P4b passed.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.
+- `cargo test -p sea-forge-cli conformance_m0_migrate --locked`: passed.
+- Task 6 migration gate: lossless genesis import, idempotence guard, ledger
+  verify corruption detection, and `legacy_digest_only` inspect assurance pass.
 - Task 5 resolver slice: 12 `sea-forge-authority` tests passed, including typed
   deny/escalate/boundary/degraded/allow resolution and order independence.
 - Task 5 execution-boundary slice: authority no longer depends on sandbox;
@@ -139,6 +142,20 @@ and P1–P4b remain the unchanged compatibility floor. Task 6 is next.
   the exact signed/witnessed checkpoint; authority audit records preserve the
   resolved disposition, canonical resource subject, and case linkage.
 - Independent final review: approved with no findings.
+- Task 6 — M0f `sea-forge migrate`: lossless v0.1 → v0.2 case layout migration.
+  `sea-forge migrate` enumerates legacy source files (excluding views/append-only
+  `authority/` and `capabilities.jsonl`), emits `legacy_import` genesis ledger
+  entries with byte sha256/path/size/legacy record version, signs an initial
+  global checkpoint, and relocates run directories under
+  `.sea-forge/cases/<case_id>/runs/<run_id>/` and case files to
+  `.sea-forge/cases/<case_id>/case.json` without rewriting record bytes. Migration
+  is idempotence-guarded by `.sea-forge/migration.json`. `LedgerStream::verify`
+  verifies each `legacy_import` file against its recorded hash and size, so a
+  corrupted legacy file fails `ledger verify`. `inspect` finds runs in both v0.1
+  flat and v0.2 nested layouts and reports `legacy_digest_only` for migrated
+  records. Conformance tests verify byte hashes committed, IDs resolvable, ledger
+  verify green, re-migration refused, corruption detected, and inspect assurance
+  labeling.
 
 ## Tasks 1–4 Specification Reconciliation
 

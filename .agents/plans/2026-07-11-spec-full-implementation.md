@@ -506,7 +506,7 @@ cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-featu
 - [ ] Real `.sea` validates via `domainforge-core` 0.13.0; invalid inputs fail closed, zero side effects *(Task 3)*
 - [ ] Extension registry/descriptors validate; imported extensions inert until adopted *(Task 4)*
 - [x] M0 authority gate green: determinism, fail-closed engines, precedence, opaque constraints, no ingress bypass *(Task 5)*
-- [ ] `sea-forge migrate` lossless; imports report `legacy_digest_only` *(Task 6)*
+- [x] `sea-forge migrate` lossless; imports report `legacy_digest_only` *(Task 6)*
 - [ ] Jail escape blocked at OS; untrusted-argv0-on-local is schema_error; unavailability refuses *(Task 7)*
 - [ ] §12 M2 scenario passes; sentry replay deterministic from ledger alone *(Task 8)*
 - [ ] Template instantiation byte-deterministic; forbidden substitution rejected at load *(Task 9)*
