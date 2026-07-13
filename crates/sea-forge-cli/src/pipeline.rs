@@ -73,6 +73,8 @@ fn validate_attribution(value: &str, name: &str) -> Result<(), ForgeError> {
 }
 pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
     let bundle = AuthorityPolicyBundle::load(&options.policy)?;
+    let identity_source = bundle.identity.source.clone();
+    let policy_snapshot = bundle.clone();
     sea_forge_domain::interpret(&options.intent)?;
     validate_attribution(&options.entity, "entity")?;
     validate_attribution(&options.process, "process")?;
@@ -101,6 +103,17 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             process_id: options.process.clone(),
             created_at: now.clone(),
         };
+        let actor = Actor {
+            actor_id: intent.actor_id.clone(),
+            role: ActorRole::Operator,
+        };
+        let binding = IdentityBinding {
+            principal: actor.actor_id.clone(),
+            actor_type: ActorType::Human,
+            binding_resolution: BindingResolution::LocalDefault,
+            identity_binding_source: identity_source,
+            sponsor: None,
+        };
         let executable =
             env::current_exe().map_err(|e| ForgeError::io("resolve current executable", e))?;
         let executable = executable.to_string_lossy().into_owned();
@@ -109,6 +122,27 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             .items
             .first()
             .ok_or_else(|| ForgeError::Internal("planner returned an empty plan".into()))?;
+        let authority_stream =
+            LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
+        authority_stream.commit_typed("intent", vec![run_id.clone()], &intent, vec![])?;
+        authority_stream.commit_typed("case_plan", vec![run_id.clone()], &plan, vec![])?;
+        authority_stream.commit_typed(
+            "identity_binding",
+            vec![run_id.clone()],
+            &binding,
+            vec![],
+        )?;
+        let committed_policy = authority_stream.commit_typed(
+            "authority_policy",
+            vec![run_id.clone()],
+            &policy_snapshot,
+            vec![],
+        )?;
+        authority_stream.materialize_view(
+            &committed_policy,
+            &root.join("authority/active-policy.json"),
+            &serde_json::to_vec_pretty(&policy_snapshot)?,
+        )?;
         let mut case = Case {
             version: RECORD_VERSION.into(),
             case_id: case_id.clone(),
@@ -133,25 +167,21 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             json!({"plan_id":plan.plan_id}),
         )?;
         let mut evidence = JsonlEvidenceWriter::create(&run_dir.join("evidence.jsonl"), &run_id)?;
-        let identity_source = bundle.identity.source.clone();
         let engine = PolicyAuthorityEngine::new(bundle)?;
-        let actor = Actor {
-            actor_id: intent.actor_id.clone(),
-            role: ActorRole::Operator,
-        };
-        let binding = IdentityBinding {
-            principal: actor.actor_id.clone(),
-            actor_type: ActorType::Human,
-            binding_resolution: BindingResolution::LocalDefault,
-            identity_binding_source: identity_source,
-            sponsor: None,
-        };
-        let authority_stream =
-            LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
         let mut decisions = Vec::new();
         for (index, operation) in item.operations.iter().enumerate() {
             let action = AuthorityAction::from(operation);
-            let mut decision = engine.evaluate(AuthorityEvaluation {
+            let env_keys = if matches!(operation, Operation::ExecuteCommand { .. }) {
+                ["PATH", "HOME"]
+                    .into_iter()
+                    .filter(|key| env::var(key).is_ok())
+                    .map(str::to_owned)
+                    .collect()
+            } else {
+                Default::default()
+            };
+            let evidence_id = format!("evi_{:04}", index + 1);
+            let decision = engine.evaluate(AuthorityEvaluation {
                 actor: &actor,
                 binding: binding.clone(),
                 run_id: &run_id,
@@ -159,6 +189,12 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 sequence: index + 1,
                 action: &action,
                 workspace_root: &workspace,
+                evidence_refs: vec![evidence_id.clone()],
+                artifacts_root: matches!(operation, Operation::ExecuteCommand { .. })
+                    .then_some(artifacts.as_path()),
+                timeout_secs: matches!(operation, Operation::ExecuteCommand { .. })
+                    .then_some(options.timeout_secs),
+                env_keys,
             })?;
             let event = trace.append(
                 TraceKind::AuthorityEvaluated,
@@ -172,26 +208,33 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 event,
                 BTreeMap::new(),
             )?;
+            if evidence_record.evidence_id != evidence_id {
+                return Err(ForgeError::Internal(
+                    "authority evidence sequence diverged from decision".into(),
+                ));
+            }
             authority_stream.commit_typed(
                 "authority_evidence",
                 vec![run_id.clone(), decision.decision_id.clone()],
                 &evidence_record,
                 vec![],
             )?;
-            decision
-                .audit_record
-                .evidence_refs
-                .push(evidence_record.evidence_id);
             decisions.push(decision)
         }
         let committed_decisions = decisions
             .iter()
             .map(|decision| {
+                let request = authority_stream.commit_typed(
+                    "authority_request",
+                    vec![run_id.clone(), item.plan_item_id.clone()],
+                    &decision.action_request,
+                    vec![],
+                )?;
                 authority_stream.commit_typed(
                     "authority_decision",
                     vec![run_id.clone(), item.plan_item_id.clone()],
                     decision,
-                    vec![],
+                    vec![request.entry_ulid().into()],
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -220,7 +263,6 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                         &decisions[index],
                         &committed_decisions[index],
                         &AuthorityAction::from(operation),
-                        &workspace,
                     )?;
                     sandbox::materialize(
                         grant,
@@ -253,7 +295,6 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                     &decisions[index],
                     &committed_decisions[index],
                     &AuthorityAction::from(operation),
-                    &workspace,
                 )?;
                 let result = runtime::execute(
                     grant,

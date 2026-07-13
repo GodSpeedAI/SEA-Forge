@@ -36,7 +36,13 @@ enum Command {
         process: String,
     },
     #[command(hide = true)]
-    Validate { file: PathBuf },
+    Validate {
+        file: PathBuf,
+        #[arg(long)]
+        root: Option<PathBuf>,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+    },
     #[command(hide = true)]
     InternalTestSleep { seconds: u64 },
     Recall {
@@ -51,11 +57,17 @@ enum Command {
         result: Option<ResultArg>,
         #[arg(long, default_value_t = 10)]
         limit: usize,
+        #[arg(long)]
+        policy: Option<PathBuf>,
     },
     Inspect {
         run_id: String,
         #[arg(long, default_value = ".sea-forge")]
         root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        entity: String,
     },
     Ledger {
         #[command(subcommand)]
@@ -104,7 +116,15 @@ fn main() -> ExitCode {
 }
 fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
     match cli.command {
-        Command::Validate { file } => Ok(commands::validate::execute(&file)),
+        Command::Validate { file, root, policy } => {
+            let authority_root = root.unwrap_or_else(|| {
+                file.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .join(".sea-forge")
+            });
+            commands::validate::execute(&file, &authority_root, policy.as_deref())
+                .map_err(|error| (1, error))
+        }
         Command::InternalTestSleep { seconds } => {
             std::thread::sleep(std::time::Duration::from_secs(seconds));
             Ok(0)
@@ -134,8 +154,10 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             process,
             result,
             limit,
+            policy,
         } => commands::recall::execute(
             &root,
+            policy.as_deref(),
             &query,
             entity.as_deref(),
             process.as_deref(),
@@ -143,9 +165,13 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             limit,
         )
         .map_err(|e| (1, e)),
-        Command::Inspect { run_id, root } => {
-            commands::inspect::execute(&root, &run_id).map_err(|e| (1, e))
-        }
+        Command::Inspect {
+            run_id,
+            root,
+            policy,
+            entity,
+        } => commands::inspect::execute(&root, policy.as_deref(), &entity, &run_id)
+            .map_err(|e| (1, e)),
         Command::Ledger { action, root } => {
             commands::ledger::execute(action, &root).map_err(|e| (1, e))
         }

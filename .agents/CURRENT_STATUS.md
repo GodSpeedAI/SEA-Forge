@@ -118,6 +118,11 @@ P1–P4b remain the unchanged compatibility floor.
   materialization preserves verifiable ledger truth. Extension registry saves
   are ledger-first, and imported adoption consumes an exact-action grant plus a
   committed authority reference.
+- Task 5 ingress slice: run commits intent, plan, identity, policy, request,
+  evidence, and decision before effects; validate, recall, and inspect now pass
+  through the same authority engine and ledger-backed exact-action check before
+  reading protected data. Minimum v0.1 read behavior remains compatible; v0.2
+  policies require explicit read rules.
 
 ## Tasks 1–4 Specification Reconciliation
 

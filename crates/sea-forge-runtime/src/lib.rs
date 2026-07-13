@@ -16,11 +16,14 @@ pub fn execute(
     workspace: &Path,
     artifacts: &Path,
 ) -> Result<ExecutionResult, ForgeError> {
-    grant.authorize(
+    grant.authorize_execution(
         &sea_forge_core::types::AuthorityAction::from(&request.operation),
         run_id,
         &request.plan_item_id,
         workspace,
+        artifacts,
+        request.timeout_secs,
+        request.env.keys().cloned().collect(),
     )?;
     execute_authorized(request, workspace, artifacts)
 }
