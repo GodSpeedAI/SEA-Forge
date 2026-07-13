@@ -242,6 +242,43 @@ pub struct MerkleProof {
     pub proof_hashes: Vec<String>,
 }
 
+/// An independently signed receipt over a global checkpoint hash.
+/// Witnesses MUST be independent from the acting entity and the local signer.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct WitnessReceipt {
+    pub version: String,
+    pub receipt_ulid: String,
+    pub global_checkpoint_hash: String,
+    pub witness_signer_id: String,
+    pub witness_signing_algorithm: String,
+    pub witness_signature: String,
+    pub receipt_hash: String,
+    pub signed_at: String,
+}
+
+/// A global checkpoint committing all active stream roots.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct GlobalCheckpoint {
+    pub version: String,
+    pub checkpoint_ulid: String,
+    pub stream_roots: Vec<(String, String)>,
+    pub global_root: String,
+    pub previous_global_checkpoint_hash: Option<String>,
+    pub global_checkpoint_hash: String,
+    pub signing_algorithm: String,
+    pub signing_key_id: String,
+    pub signature: String,
+    pub created_at: String,
+}
+
+/// Assurance level reported by verification.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum AssuranceLevel {
+    LocalTamperEvident,
+    ExternallyVerified,
+    LegacyDigestOnly,
+}
+
 /// Hash two MMR child hashes under the `sea-forge/mmr-node/v1` domain.
 /// The left hash is always the earlier/left child.
 fn hash_mmr_node(left: &str, right: &str) -> String {
@@ -312,6 +349,60 @@ fn checkpoint_canonical_bytes(checkpoint: &LedgerCheckpoint) -> Result<Vec<u8>, 
         map.remove("checkpoint_hash");
     }
     canonical_json(&value)
+}
+
+/// Canonical bytes of a global checkpoint excluding `signature` and `global_checkpoint_hash`.
+fn global_checkpoint_canonical_bytes(cp: &GlobalCheckpoint) -> Result<Vec<u8>, ForgeError> {
+    let mut value =
+        serde_json::to_value(cp).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+    if let Value::Object(ref mut map) = value {
+        map.remove("signature");
+        map.remove("global_checkpoint_hash");
+    }
+    canonical_json(&value)
+}
+
+/// Canonical bytes of a witness receipt excluding `receipt_hash` and `witness_signature`.
+fn witness_receipt_canonical_bytes(receipt: &WitnessReceipt) -> Result<Vec<u8>, ForgeError> {
+    let mut value =
+        serde_json::to_value(receipt).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+    if let Value::Object(ref mut map) = value {
+        map.remove("receipt_hash");
+        map.remove("witness_signature");
+    }
+    canonical_json(&value)
+}
+
+const SECRET_SENTINELS: &[&str] = &[
+    "-----begin private key-----",
+    "-----begin rsa private key-----",
+    "-----begin ec private key-----",
+    "-----begin openssh private key-----",
+    "aws_secret_access_key",
+    "api_key",
+    "password",
+    "secret_key",
+    "client_secret",
+];
+
+/// Redaction policy: reject payloads containing plaintext secrets.
+/// Approved ciphertext commitments (payload has `redacted_commitment` field) pass.
+pub fn check_redaction(payload: &Value) -> Result<(), ForgeError> {
+    // Approved ciphertext commitment: payload explicitly declares it is redacted.
+    if let Some(obj) = payload.as_object() {
+        if obj.contains_key("redacted_commitment") {
+            return Ok(());
+        }
+    }
+    let text = payload.to_string().to_lowercase();
+    for sentinel in SECRET_SENTINELS {
+        if text.contains(sentinel) {
+            return Err(ForgeError::Internal(format!(
+                "ledger_integrity_error: secret sentinel in payload ({sentinel})"
+            )));
+        }
+    }
+    Ok(())
 }
 
 pub struct LedgerStream {
@@ -599,6 +690,7 @@ impl LedgerStream {
     }
 
     /// Append a payload to the stream and return the committed entry.
+    /// Rejects payloads containing plaintext secret sentinels (§7.0c redaction).
     pub fn append(
         &self,
         record_kind: impl Into<String>,
@@ -606,6 +698,7 @@ impl LedgerStream {
         payload: Value,
         authority_refs: Vec<String>,
     ) -> Result<LedgerEntry, ForgeError> {
+        check_redaction(&payload)?;
         let last = self.read_last_entry()?;
         let append_ordinal = last.as_ref().map(|e| e.append_ordinal + 1).unwrap_or(0);
         let previous_entry_hash = last.as_ref().map(hash_entry);
@@ -725,10 +818,409 @@ impl LedgerStream {
         }
         Ok(())
     }
+
+    // ---- Witness receipts ----
+
+    fn witness_receipts_path(&self) -> PathBuf {
+        self.root.join("ledgers").join("witness-receipts.jsonl")
+    }
+
+    /// Read all witness receipts from the global witness log.
+    pub fn read_witness_receipts(&self) -> Result<Vec<WitnessReceipt>, ForgeError> {
+        let path = self.witness_receipts_path();
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
+        let file = File::open(&path).map_err(|e| ForgeError::io("open witness receipts", e))?;
+        let mut receipts = Vec::new();
+        for line in BufReader::new(file).lines() {
+            let line = line.map_err(|e| ForgeError::io("read witness receipts", e))?;
+            if line.trim().is_empty() {
+                continue;
+            }
+            let receipt: WitnessReceipt = serde_json::from_str(&line)
+                .map_err(|e| ForgeError::Serialization(format!("parse receipt: {e}")))?;
+            receipts.push(receipt);
+        }
+        Ok(receipts)
+    }
+
+    /// Append a witness receipt for a global checkpoint hash.
+    /// The witness signs with its own key (independent from the checkpoint signer).
+    pub fn append_witness_receipt(
+        &self,
+        global_checkpoint_hash: &str,
+        witness_signer_id: impl Into<String>,
+        witness_signing_key: &SigningKey,
+    ) -> Result<WitnessReceipt, ForgeError> {
+        let receipt_ulid = ulid()?;
+        let signed_at = chrono::Utc::now().to_rfc3339();
+        let mut receipt = WitnessReceipt {
+            version: RECORD_VERSION.into(),
+            receipt_ulid,
+            global_checkpoint_hash: global_checkpoint_hash.into(),
+            witness_signer_id: witness_signer_id.into(),
+            witness_signing_algorithm: "ed25519".into(),
+            witness_signature: String::new(),
+            receipt_hash: String::new(),
+            signed_at,
+        };
+        let canonical_bytes = witness_receipt_canonical_bytes(&receipt)?;
+        receipt.receipt_hash = sha256_domain("sea-forge/witness-receipt/v1", &canonical_bytes);
+        receipt.witness_signature = sign_bytes(witness_signing_key, &canonical_bytes);
+
+        let path = self.witness_receipts_path();
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| ForgeError::io("open witness receipts", e))?;
+        let mut bytes =
+            serde_json::to_vec(&receipt).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+        bytes.push(b'\n');
+        file.write_all(&bytes)
+            .and_then(|_| file.flush())
+            .and_then(|_| file.sync_all())
+            .map_err(|e| ForgeError::io("write witness receipt", e))?;
+        Ok(receipt)
+    }
+
+    /// Verify witness receipts for a given global checkpoint hash.
+    /// `min_witnesses` receipts from independent witnesses are required.
+    /// A witness == acting_entity is rejected (not independent).
+    pub fn verify_witness_receipts(
+        &self,
+        global_checkpoint_hash: &str,
+        witness_verifying_keys: &[(String, VerifyingKey)],
+        acting_entity_id: &str,
+        min_witnesses: usize,
+    ) -> Result<AssuranceLevel, ForgeError> {
+        let receipts = self.read_witness_receipts()?;
+        let matching: Vec<&WitnessReceipt> = receipts
+            .iter()
+            .filter(|r| r.global_checkpoint_hash == global_checkpoint_hash)
+            .collect();
+        let mut verified = 0;
+        let mut verified_witness_ids = std::collections::HashSet::new();
+        for receipt in &matching {
+            // Independence: witness must not be the acting entity.
+            if receipt.witness_signer_id == acting_entity_id {
+                continue;
+            }
+            // Find the verifying key for this witness.
+            let key_entry = witness_verifying_keys
+                .iter()
+                .find(|(id, _)| id == &receipt.witness_signer_id);
+            let Some((_, vk)) = key_entry else {
+                continue;
+            };
+            // Verify receipt hash.
+            let canonical_bytes = witness_receipt_canonical_bytes(receipt)?;
+            let expected_hash = sha256_domain("sea-forge/witness-receipt/v1", &canonical_bytes);
+            if expected_hash != receipt.receipt_hash {
+                continue;
+            }
+            // Verify signature.
+            if verify_signature(vk, &canonical_bytes, &receipt.witness_signature).is_err() {
+                continue;
+            }
+            if verified_witness_ids.insert(receipt.witness_signer_id.clone()) {
+                verified += 1;
+            }
+        }
+        if verified >= min_witnesses && min_witnesses > 0 {
+            Ok(AssuranceLevel::ExternallyVerified)
+        } else {
+            Ok(AssuranceLevel::LocalTamperEvident)
+        }
+    }
+
+    // ---- Crash recovery ----
+
+    /// Move an incomplete uncheckpointed tail to quarantine.
+    /// Returns the number of quarantined lines.
+    pub fn quarantine_incomplete_tail(&self) -> Result<usize, ForgeError> {
+        let path = self.entries_path();
+        if !path.exists() {
+            return Ok(0);
+        }
+        let content = fs::read_to_string(&path)
+            .map_err(|e| ForgeError::io("read entries for quarantine", e))?;
+        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+        let mut last_valid = 0usize;
+        for (i, line) in lines.iter().enumerate() {
+            if serde_json::from_str::<LedgerEntry>(line).is_err() {
+                break;
+            }
+            last_valid = i + 1;
+        }
+        if last_valid >= lines.len() {
+            return Ok(0); // No incomplete tail.
+        }
+        let quarantined_lines = &lines[last_valid..];
+        let q_path = self.root.join("ledgers").join("quarantine").join(format!(
+            "{}-{}.jsonl",
+            self.ledger_id,
+            ulid()?
+        ));
+        let q_content = quarantined_lines.join("\n");
+        fs::write(&q_path, q_content.as_bytes())
+            .map_err(|e| ForgeError::io("write quarantine", e))?;
+        // Truncate entries file to valid lines only.
+        let valid_content = lines[..last_valid].join("\n");
+        if valid_content.is_empty() {
+            fs::write(&path, b"").map_err(|e| ForgeError::io("truncate entries", e))?;
+        } else {
+            fs::write(&path, format!("{valid_content}\n").as_bytes())
+                .map_err(|e| ForgeError::io("truncate entries", e))?;
+        }
+        Ok(quarantined_lines.len())
+    }
+
+    // ---- Key rotation ----
+
+    /// Verify checkpoints using a map of key_id → VerifyingKey.
+    /// Old checkpoints verify under their snapshotted key refs;
+    /// new checkpoints reject keys not in the map.
+    pub fn verify_checkpoints_with_keys(
+        &self,
+        keys: &[(String, VerifyingKey)],
+    ) -> Result<(), ForgeError> {
+        let checkpoints = self.read_checkpoints()?;
+        let mut previous_hash: Option<String> = None;
+        for checkpoint in &checkpoints {
+            let canonical_bytes = checkpoint_canonical_bytes(checkpoint)?;
+            if sha256_domain("sea-forge/checkpoint/v1", &canonical_bytes)
+                != checkpoint.checkpoint_hash
+            {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: checkpoint hash mismatch".into(),
+                ));
+            }
+            let vk = keys
+                .iter()
+                .find(|(id, _)| id == &checkpoint.signing_key_id)
+                .map(|(_, k)| k)
+                .ok_or_else(|| {
+                    ForgeError::Internal(format!(
+                        "ledger_integrity_error: signing key {} not in key set",
+                        checkpoint.signing_key_id
+                    ))
+                })?;
+            verify_signature(vk, &canonical_bytes, &checkpoint.signature)?;
+            if checkpoint.previous_checkpoint_hash.as_ref() != previous_hash.as_ref() {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: checkpoint chain break".into(),
+                ));
+            }
+            previous_hash = Some(checkpoint.checkpoint_hash.clone());
+        }
+        Ok(())
+    }
 }
 
 fn hash_entry(entry: &LedgerEntry) -> String {
     entry.entry_hash.clone()
+}
+
+/// Manages multiple ledger streams and creates/verifies global checkpoints.
+pub struct LedgerManager {
+    root: PathBuf,
+}
+
+impl LedgerManager {
+    pub fn new(root: impl Into<PathBuf>) -> Result<Self, ForgeError> {
+        let root = root.into();
+        fs::create_dir_all(root.join("ledgers"))
+            .map_err(|e| ForgeError::io("create ledgers root", e))?;
+        Ok(Self { root })
+    }
+
+    pub fn open_stream(
+        &self,
+        ledger_id: impl Into<String>,
+        writer_identity_ref: impl Into<String>,
+    ) -> Result<LedgerStream, ForgeError> {
+        LedgerStream::open(&self.root, ledger_id, writer_identity_ref)
+    }
+
+    fn global_checkpoints_path(&self) -> PathBuf {
+        self.root.join("ledgers").join("global-checkpoints.jsonl")
+    }
+
+    /// Enumerate all stream directories under ledgers/.
+    fn list_stream_ids(&self) -> Result<Vec<String>, ForgeError> {
+        let ledgers_dir = self.root.join("ledgers");
+        if !ledgers_dir.exists() {
+            return Ok(Vec::new());
+        }
+        let mut ids = Vec::new();
+        for entry in
+            fs::read_dir(&ledgers_dir).map_err(|e| ForgeError::io("read ledgers dir", e))?
+        {
+            let entry = entry.map_err(|e| ForgeError::io("read dir entry", e))?;
+            if entry
+                .file_type()
+                .map_err(|e| ForgeError::io("file type", e))?
+                .is_dir()
+            {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if name != "quarantine" {
+                    ids.push(name);
+                }
+            }
+        }
+        ids.sort();
+        Ok(ids)
+    }
+
+    /// Create a signed global checkpoint committing all active stream roots.
+    pub fn create_global_checkpoint(
+        &self,
+        signing_key: &SigningKey,
+        signing_key_id: impl Into<String>,
+    ) -> Result<GlobalCheckpoint, ForgeError> {
+        let stream_ids = self.list_stream_ids()?;
+        let mut stream_roots = Vec::new();
+        for id in &stream_ids {
+            let stream = self.open_stream(id, "global_cp")?;
+            let mmr = stream.load_mmr()?;
+            let root = mmr.root()?;
+            stream_roots.push((id.clone(), root));
+        }
+        let global_root = global_root(&stream_roots)?;
+
+        // Read previous global checkpoint hash.
+        let previous = self.read_last_global_checkpoint()?;
+        let previous_hash = previous
+            .as_ref()
+            .map(|cp| cp.global_checkpoint_hash.clone());
+
+        let mut cp = GlobalCheckpoint {
+            version: RECORD_VERSION.into(),
+            checkpoint_ulid: ulid()?,
+            stream_roots,
+            global_root,
+            previous_global_checkpoint_hash: previous_hash,
+            global_checkpoint_hash: String::new(),
+            signing_algorithm: "ed25519".into(),
+            signing_key_id: signing_key_id.into(),
+            signature: String::new(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+        let canonical_bytes = global_checkpoint_canonical_bytes(&cp)?;
+        cp.global_checkpoint_hash =
+            sha256_domain("sea-forge/global-checkpoint/v1", &canonical_bytes);
+        cp.signature = sign_bytes(signing_key, &canonical_bytes);
+
+        // Persist.
+        let path = self.global_checkpoints_path();
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| ForgeError::io("open global checkpoints", e))?;
+        let mut bytes =
+            serde_json::to_vec(&cp).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+        bytes.push(b'\n');
+        file.write_all(&bytes)
+            .and_then(|_| file.flush())
+            .and_then(|_| file.sync_all())
+            .map_err(|e| ForgeError::io("write global checkpoint", e))?;
+        Ok(cp)
+    }
+
+    /// Read all global checkpoints.
+    pub fn read_global_checkpoints(&self) -> Result<Vec<GlobalCheckpoint>, ForgeError> {
+        let path = self.global_checkpoints_path();
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
+        let file = File::open(&path).map_err(|e| ForgeError::io("open global checkpoints", e))?;
+        let mut checkpoints = Vec::new();
+        for line in BufReader::new(file).lines() {
+            let line = line.map_err(|e| ForgeError::io("read global checkpoints", e))?;
+            if line.trim().is_empty() {
+                continue;
+            }
+            let cp: GlobalCheckpoint = serde_json::from_str(&line)
+                .map_err(|e| ForgeError::Serialization(format!("parse global cp: {e}")))?;
+            checkpoints.push(cp);
+        }
+        Ok(checkpoints)
+    }
+
+    /// Read the last global checkpoint.
+    pub fn read_last_global_checkpoint(&self) -> Result<Option<GlobalCheckpoint>, ForgeError> {
+        let cps = self.read_global_checkpoints()?;
+        Ok(cps.into_iter().last())
+    }
+
+    /// Verify the global checkpoint chain, signatures, and stream root coverage.
+    pub fn verify_global_checkpoints(
+        &self,
+        verifying_key: &VerifyingKey,
+    ) -> Result<(), ForgeError> {
+        let checkpoints = self.read_global_checkpoints()?;
+        let mut previous_hash: Option<String> = None;
+        for cp in &checkpoints {
+            let canonical_bytes = global_checkpoint_canonical_bytes(cp)?;
+            if sha256_domain("sea-forge/global-checkpoint/v1", &canonical_bytes)
+                != cp.global_checkpoint_hash
+            {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: global checkpoint hash mismatch".into(),
+                ));
+            }
+            verify_signature(verifying_key, &canonical_bytes, &cp.signature)?;
+            // Verify global_root recomputes from stream_roots.
+            let recomputed = global_root(&cp.stream_roots)?;
+            if recomputed != cp.global_root {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: global root mismatch".into(),
+                ));
+            }
+            if cp.previous_global_checkpoint_hash.as_ref() != previous_hash.as_ref() {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: global checkpoint chain break".into(),
+                ));
+            }
+            previous_hash = Some(cp.global_checkpoint_hash.clone());
+        }
+        Ok(())
+    }
+
+    /// Witness a global checkpoint: create a receipt signed by an independent witness.
+    pub fn witness_global_checkpoint(
+        &self,
+        global_checkpoint: &GlobalCheckpoint,
+        witness_signer_id: impl Into<String>,
+        witness_signing_key: &SigningKey,
+    ) -> Result<WitnessReceipt, ForgeError> {
+        let stream = self.open_stream("witness", "witness_stream")?;
+        stream.append_witness_receipt(
+            &global_checkpoint.global_checkpoint_hash,
+            witness_signer_id,
+            witness_signing_key,
+        )
+    }
+
+    /// Verify witness receipts for a global checkpoint hash.
+    pub fn verify_witness_receipts(
+        &self,
+        global_checkpoint_hash: &str,
+        witness_verifying_keys: &[(String, VerifyingKey)],
+        acting_entity_id: &str,
+        min_witnesses: usize,
+    ) -> Result<AssuranceLevel, ForgeError> {
+        let stream = self.open_stream("witness", "verify_witness")?;
+        stream.verify_witness_receipts(
+            global_checkpoint_hash,
+            witness_verifying_keys,
+            acting_entity_id,
+            min_witnesses,
+        )
+    }
 }
 
 #[cfg(test)]

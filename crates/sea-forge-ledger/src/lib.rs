@@ -5,4 +5,7 @@
 pub mod signing;
 pub mod types;
 
-pub use types::*;
+pub use types::{
+    global_root, AssuranceLevel, GlobalCheckpoint, LedgerCheckpoint, LedgerEntry, LedgerManager,
+    LedgerStream, MerkleProof, WitnessReceipt,
+};
