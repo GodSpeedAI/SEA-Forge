@@ -59,6 +59,8 @@ enum Command {
         limit: usize,
         #[arg(long)]
         policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
     },
     Inspect {
         run_id: String,
@@ -155,15 +157,17 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             result,
             limit,
             policy,
-        } => commands::recall::execute(
-            &root,
-            policy.as_deref(),
-            &query,
-            entity.as_deref(),
-            process.as_deref(),
-            result.map(Into::into),
+            actor,
+        } => commands::recall::execute(commands::recall::RecallOptions {
+            root: &root,
+            policy: policy.as_deref(),
+            actor_id: &actor,
+            query: &query,
+            entity: entity.as_deref(),
+            process: process.as_deref(),
+            result: result.map(Into::into),
             limit,
-        )
+        })
         .map_err(|e| (1, e)),
         Command::Inspect {
             run_id,

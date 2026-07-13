@@ -20,6 +20,8 @@ pub fn execute(
             parameters: serde_json::json!({}),
         },
     )?;
+    let _verified_ledger = super::mediated::assurance(root, &policy, actor_id)?;
+    println!("== assurance ==\nlegacy_digest_only");
     let run = root.join("runs").join(run_id);
     for name in [
         "plan.json",

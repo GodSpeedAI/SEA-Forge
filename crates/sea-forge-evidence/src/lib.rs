@@ -80,17 +80,39 @@ impl JsonlEvidenceWriter {
         source_event_id: String,
         metadata: BTreeMap<String, Value>,
     ) -> Result<EvidenceRecord, ForgeError> {
-        self.sequence += 1;
-        let record = EvidenceRecord {
+        let record = self.prepare(kind, uri, sha256, source_event_id, metadata);
+        self.append_prepared(record)
+    }
+    pub fn prepare(
+        &self,
+        kind: EvidenceKind,
+        uri: String,
+        sha256: Option<String>,
+        source_event_id: String,
+        metadata: BTreeMap<String, Value>,
+    ) -> EvidenceRecord {
+        EvidenceRecord {
             version: RECORD_VERSION.into(),
-            evidence_id: seq_id("evi", 4, self.sequence),
+            evidence_id: seq_id("evi", 4, self.sequence + 1),
             run_id: self.run_id.clone(),
             kind,
             uri,
             sha256,
             source_event_id,
             metadata,
-        };
+        }
+    }
+    pub fn append_prepared(
+        &mut self,
+        record: EvidenceRecord,
+    ) -> Result<EvidenceRecord, ForgeError> {
+        let expected = seq_id("evi", 4, self.sequence + 1);
+        if record.run_id != self.run_id || record.evidence_id != expected {
+            return Err(ForgeError::Input(
+                "prepared evidence does not match writer sequence".into(),
+            ));
+        }
+        self.sequence += 1;
         serde_json::to_writer(&mut self.writer, &record)?;
         self.writer
             .write_all(b"\n")

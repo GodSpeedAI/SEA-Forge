@@ -200,3 +200,43 @@ pub fn normalize_authority(raw_decision: &str) -> CandidateDisposition {
         _ => CandidateDisposition::Deny, // NotApplicable or unknown → deny-if-required
     }
 }
+
+pub fn evaluate_authority(
+    model: &DomainModel,
+    operation_kind: &str,
+    resource_id: &str,
+    evidence_refs: Vec<String>,
+) -> Result<DomainForgeTrace, ForgeError> {
+    if evidence_refs.is_empty() || model.model_ref.validation_evidence_refs.is_empty() {
+        return Err(ForgeError::Input(
+            "DomainForge authority evaluation requires validation evidence".into(),
+        ));
+    }
+    let semantic_target = std::path::Path::new(resource_id)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(|target| {
+            model
+                .graph
+                .all_entities()
+                .iter()
+                .any(|entity| entity.name().eq_ignore_ascii_case(target))
+                || model
+                    .graph
+                    .all_resources()
+                    .iter()
+                    .any(|resource| resource.name().eq_ignore_ascii_case(target))
+        });
+    let raw_decision = match (operation_kind, semantic_target) {
+        ("write_file", true) => "Allow",
+        ("write_file", false) => "Reject",
+        ("execute_command", _) => "NotApplicable",
+        _ => "NotApplicable",
+    };
+    Ok(DomainForgeTrace {
+        raw_decision: raw_decision.into(),
+        normalized_disposition: normalize_authority(raw_decision),
+        reason: "DomainForge evaluated validated model against canonical action".into(),
+        evidence_refs,
+    })
+}

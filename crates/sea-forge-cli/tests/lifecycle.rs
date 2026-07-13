@@ -22,6 +22,232 @@ fn policy(root: &std::path::Path, rules: &str) -> PathBuf {
     path
 }
 
+fn integrity_policy(
+    parent: &std::path::Path,
+    min_witnesses: usize,
+    include_witness: bool,
+    include_domainforge: bool,
+) -> PathBuf {
+    const SURFACES: &[&str] = &[
+        "authority_hooks",
+        "identity_map",
+        "domain_model",
+        "file_access",
+        "api_allowlist",
+        "git_commit",
+        "pr_merge",
+        "prompt_risk",
+        "memory_recall",
+        "spec_pipeline",
+        "artifact_transition",
+        "attestation",
+        "approval",
+        "settlement_authority",
+        "capability_promotion",
+        "deployment",
+        "secret_access",
+        "policy_mutation",
+        "evidence_mutation",
+    ];
+    const ROLES: &[&str] = &[
+        "R-DS", "R-AG", "R-LC", "R-SO", "R-RM", "R-DEV", "R-AA", "operator",
+    ];
+    const SOD: &[(&str, &str)] = &[
+        ("production_proposer_approver", "pr_merge"),
+        (
+            "semantic_debt_requester_acceptor",
+            "settlement_authority_mutation",
+        ),
+        ("break_glass_requester_approver", "policy_mutation"),
+        ("key_generator_approver", "identity_minting"),
+        ("capitalization_requester_approver", "artifact_transition"),
+    ];
+    let path = parent.join(format!("integrity-{min_witnesses}-{include_witness}.json"));
+    let sources_dir = parent.join("sources");
+    fs::create_dir_all(&sources_dir).unwrap();
+    let sources = SURFACES
+        .iter()
+        .map(|surface| {
+            let content = if *surface == "domain_model" && include_domainforge {
+                "@namespace \"demo\"\n@version \"1.0.0\"\nEntity \"model\" in demo\n"
+            } else {
+                ""
+            };
+            fs::write(sources_dir.join(surface), content).unwrap();
+            serde_json::json!({
+                "surface": surface,
+                "path": format!("sources/{surface}"),
+                "sha256": sea_forge_evidence::sha256_bytes(content.as_bytes())
+            })
+        })
+        .collect::<Vec<_>>();
+    let witnesses = if include_witness {
+        vec![serde_json::json!({
+            "witness_id": "independent_witness",
+            "key_dir": parent.join("witness-keys"),
+            "key_id": "witness-key"
+        })]
+    } else {
+        vec![]
+    };
+    let mut bundle: sea_forge_authority::AuthorityPolicyBundle = serde_json::from_value(
+        serde_json::json!({
+            "version": "0.2",
+            "bundle_id": "bundle_integrity_test",
+            "policy_bundle_version": "1",
+            "loaded_at": "2026-07-13T00:00:00Z",
+            "sources": sources,
+            "roles": ROLES.iter().map(|role| ((*role).to_owned(), vec!["fixture"])).collect::<std::collections::BTreeMap<_, _>>(),
+            "permissions": ROLES.iter().map(|role| serde_json::json!({"role": role, "operation_kind": "*"})).collect::<Vec<_>>(),
+            "sod_rules": SOD.iter().map(|(name, operation)| serde_json::json!({"name": name, "requester_role": "R-DEV", "approver_role": "R-SO", "operation_kind": operation})).collect::<Vec<_>>(),
+            "identity_bindings": [{"principal": "operator_local", "actor_type": "human", "role": "operator"}],
+            "policy_engines": if include_domainforge { vec![serde_json::json!({"engine": "domainforge", "fail_mode": "closed", "required": false})] } else { vec![] },
+            "integrity_ledger": {
+                "required_for_side_effects": true,
+                "min_witnesses": min_witnesses,
+                "signing_key_dir": parent.join("keys"),
+                "signing_key_id": "test-key",
+                "witnesses": witnesses
+            },
+            "rules": [
+                {"name": "allow-model-write", "verdict": "allow", "actor_role": "operator", "operation_kind": "write_file", "path_prefix": ""},
+                {"name": "allow-self-validate", "verdict": "allow", "actor_role": "operator", "operation_kind": "execute_command", "argv0": "sea-forge"},
+                {"name": "allow-model-read", "verdict": "allow", "actor_role": "operator", "operation_kind": "validate_model"},
+                {"name": "allow-inspect", "verdict": "allow", "actor_role": "operator", "operation_kind": "inspect_run"},
+                {"name": "allow-recall", "verdict": "allow", "actor_role": "operator", "operation_kind": "recall_memory"}
+            ]
+        }),
+    ).unwrap();
+    bundle.refresh_policy_bundle_hash().unwrap();
+    fs::write(&path, serde_json::to_vec_pretty(&bundle).unwrap()).unwrap();
+    path
+}
+
+#[test]
+fn required_integrity_checkpoint_precedes_command_start_and_witness_outage_halts() {
+    for (min_witnesses, include_witness, expected_success) in
+        [(0, false, true), (1, true, true), (1, false, false)]
+    {
+        let parent = temp_root(&format!("integrity-{min_witnesses}-{include_witness}"));
+        let root = parent.join("state");
+        let policy = integrity_policy(&parent, min_witnesses, include_witness, false);
+        let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+            .args([
+                "run",
+                "--root",
+                root.to_str().unwrap(),
+                "--policy",
+                policy.to_str().unwrap(),
+                "--intent",
+                "Generate and validate a simple DomainForge .sea model",
+            ])
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.success(),
+            expected_success,
+            "root: {}; status: {:?}; stderr: {}",
+            root.display(),
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let run_dir = fs::read_dir(root.join("runs"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let trace = fs::read_to_string(run_dir.join("trace.jsonl")).unwrap();
+        assert_eq!(trace.contains("command_started"), expected_success);
+        if expected_success {
+            assert!(root.join("ledgers/global-checkpoints.jsonl").is_file());
+            if include_witness {
+                let run_id = run_dir.file_name().unwrap().to_str().unwrap();
+                let inspect = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+                    .args([
+                        "inspect",
+                        run_id,
+                        "--root",
+                        root.to_str().unwrap(),
+                        "--policy",
+                        policy.to_str().unwrap(),
+                    ])
+                    .output()
+                    .unwrap();
+                assert!(
+                    inspect.status.success(),
+                    "inspect stderr: {}",
+                    String::from_utf8_lossy(&inspect.stderr)
+                );
+                assert!(String::from_utf8(inspect.stdout)
+                    .unwrap()
+                    .contains("legacy_digest_only"));
+                let recall = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+                    .args([
+                        "recall",
+                        "generate",
+                        "--root",
+                        root.to_str().unwrap(),
+                        "--policy",
+                        policy.to_str().unwrap(),
+                    ])
+                    .output()
+                    .unwrap();
+                assert!(
+                    recall.status.success(),
+                    "recall stderr: {}",
+                    String::from_utf8_lossy(&recall.stderr)
+                );
+                assert!(String::from_utf8(recall.stdout)
+                    .unwrap()
+                    .contains("externally_verified"));
+            }
+        } else {
+            assert!(!run_dir.join("workspace/model.sea").exists());
+        }
+    }
+}
+
+#[test]
+fn run_ingress_composes_domainforge_candidate() {
+    let parent = temp_root("domainforge-ingress");
+    let root = parent.join("state");
+    let policy = integrity_policy(&parent, 0, false, true);
+    let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--intent",
+            "Generate and validate a simple DomainForge .sea model",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let run_dir = fs::read_dir(root.join("runs"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let decisions: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("authority.json")).unwrap()).unwrap();
+    assert!(decisions.as_array().unwrap().iter().any(|decision| {
+        decision["candidate_verdicts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|candidate| candidate["engine"] == "domainforge")
+    }));
+    fs::remove_dir_all(parent).unwrap();
+}
+
 #[test]
 fn intent_to_settlement_produces_complete_accepted_run() {
     let parent = temp_root("accepted");
@@ -596,6 +822,8 @@ fn repeated_runs_have_stable_artifact_identity_and_recall_is_read_only() {
 #[test]
 fn validator_accepts_only_the_stub_contract() {
     let parent = temp_root("validate");
+    let authority_policy = policy(&parent, "  []\n");
+    let authority_root = parent.join("state");
     let valid = parent.join("valid.sea");
     fs::write(
         &valid,
@@ -603,7 +831,14 @@ fn validator_accepts_only_the_stub_contract() {
     )
     .unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
-        .args(["validate", valid.to_str().unwrap()])
+        .args([
+            "validate",
+            valid.to_str().unwrap(),
+            "--root",
+            authority_root.to_str().unwrap(),
+            "--policy",
+            authority_policy.to_str().unwrap(),
+        ])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
@@ -612,7 +847,14 @@ fn validator_accepts_only_the_stub_contract() {
     fs::write(&invalid, r#"{"domain":"demo","entities":[]}"#).unwrap();
     assert_eq!(
         Command::new(env!("CARGO_BIN_EXE_sea-forge"))
-            .args(["validate", invalid.to_str().unwrap()])
+            .args([
+                "validate",
+                invalid.to_str().unwrap(),
+                "--root",
+                authority_root.to_str().unwrap(),
+                "--policy",
+                authority_policy.to_str().unwrap(),
+            ])
             .status()
             .unwrap()
             .code(),

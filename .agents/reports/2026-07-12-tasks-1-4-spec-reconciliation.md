@@ -71,7 +71,7 @@ introduced during reconciliation.
 |---|---|---|---|---|
 | M0-G1 | satisfied | `Cargo.toml`, graduated `crates/sea-forge-*` | workspace tests; `just no-async-kernel`; P1–P4b | v0.2 record use is composed in later gates |
 | M0-G2 | partial | `crates/sea-forge-ledger` | ledger unit/conformance tests | migration, canonical application commit/view proof, composed wiring |
-| M0-G3 | not_started | minimum engine at `crates/sea-forge-authority` is substrate only | minimum authority/lifecycle tests | Task 5 full fabric, resolver, opaque grant, no-bypass, ledger integration |
+| M0-G3 | conformance_green | `sea-forge-authority` typed resolver, exact-action grants, v0.2 RBAC/SoD/identity policy, DomainForge composition, opaque constraints, ledger-first authority views, pre-action checkpoints/witnesses | `conformance_m0_authority`, authority unit tests, CLI lifecycle ingress/integrity tests, ledger checkpoint coverage tests, P1–P4b | none; Task 6 remains the next milestone task |
 | M0-G4 | satisfied | `crates/sea-forge-domainforge` | `conformance_m0_domainforge.rs` | composed candidate use belongs to G3/G6 |
 | M0-G5 | satisfied | `crates/sea-forge-extension` | 8 crate tests | authority-mediated adoption belongs to G3/G6 |
 | M0-G6 | not_started | none | none | Tasks 5–6 and aggregate M0 proofs |

@@ -36,6 +36,15 @@ pub fn load_verifying_key(key_dir: &Path, key_id: &str) -> Result<VerifyingKey, 
     Ok(signing_key.verifying_key())
 }
 
+pub fn read_verifying_key(key_dir: &Path, key_id: &str) -> Result<VerifyingKey, ForgeError> {
+    let path = key_dir.join(format!("{key_id}.key"));
+    let bytes = fs::read(&path).map_err(|e| ForgeError::io("read signing key", e))?;
+    let key_bytes: [u8; 32] = bytes
+        .try_into()
+        .map_err(|_| ForgeError::Internal(format!("signing key {key_id} is not 32 bytes")))?;
+    Ok(SigningKey::from_bytes(&key_bytes).verifying_key())
+}
+
 pub fn sign_bytes(signing_key: &SigningKey, bytes: &[u8]) -> String {
     let signature = signing_key.sign(bytes);
     format!("ed25519:{}", base64_encode(&signature.to_bytes()))

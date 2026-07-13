@@ -1,4 +1,6 @@
-use crate::signing::{sign_bytes, verify_signature, SigningKey, VerifyingKey};
+use crate::signing::{
+    load_or_create_signing_key, sign_bytes, verify_signature, SigningKey, VerifyingKey,
+};
 use sea_forge_core::errors::ForgeError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -421,6 +423,21 @@ pub struct CommittedRecordRef {
     payload_hash: String,
 }
 
+pub struct PreActionAssurance {
+    global_checkpoint_hash: String,
+    covered_entries: std::collections::BTreeSet<String>,
+}
+
+impl PreActionAssurance {
+    pub fn global_checkpoint_hash(&self) -> &str {
+        &self.global_checkpoint_hash
+    }
+
+    pub fn covers(&self, committed: &CommittedRecordRef) -> bool {
+        self.covered_entries.contains(committed.entry_ulid())
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ViewStatus {
@@ -431,6 +448,8 @@ pub enum ViewStatus {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CompatibilityViewState {
     pub source_entry_ulid: String,
+    #[serde(default)]
+    pub source_entry_ulids: Vec<String>,
     pub source_payload_hash: String,
     pub view_path: String,
     pub view_sha256: String,
@@ -495,6 +514,16 @@ impl LedgerStream {
         path: &Path,
         bytes: &[u8],
     ) -> Result<CompatibilityViewState, ForgeError> {
+        self.materialize_aggregate_view(committed, vec![committed.entry_ulid.clone()], path, bytes)
+    }
+
+    pub fn materialize_aggregate_view(
+        &self,
+        committed: &CommittedRecordRef,
+        source_entry_ulids: Vec<String>,
+        path: &Path,
+        bytes: &[u8],
+    ) -> Result<CompatibilityViewState, ForgeError> {
         let write_result = (|| -> Result<(), ForgeError> {
             let parent = path
                 .parent()
@@ -508,6 +537,7 @@ impl LedgerStream {
         })();
         let state = CompatibilityViewState {
             source_entry_ulid: committed.entry_ulid.clone(),
+            source_entry_ulids,
             source_payload_hash: committed.payload_hash.clone(),
             view_path: path.to_string_lossy().into_owned(),
             view_sha256: format!("sha256:{:x}", Sha256::digest(bytes)),
@@ -534,6 +564,24 @@ impl LedgerStream {
         )
         .map_err(|error| ForgeError::io("write view state", error))?;
         write_result.map(|_| state)
+    }
+
+    pub fn rebuild_record_view(
+        &self,
+        committed: &CommittedRecordRef,
+        path: &Path,
+    ) -> Result<CompatibilityViewState, ForgeError> {
+        let entry = self
+            .read_entries()?
+            .into_iter()
+            .find(|entry| entry.entry_ulid == committed.entry_ulid)
+            .ok_or_else(|| ForgeError::Input("committed record not found in ledger".into()))?;
+        if entry.payload_hash != committed.payload_hash {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: committed reference payload mismatch".into(),
+            ));
+        }
+        self.materialize_view(committed, path, &serde_json::to_vec_pretty(&entry.payload)?)
     }
 
     pub fn entries_path(&self) -> PathBuf {
@@ -1139,6 +1187,112 @@ impl LedgerManager {
         Ok(Self { root })
     }
 
+    pub fn create_pre_action_assurance(
+        &self,
+        key_dir: &Path,
+        key_id: &str,
+        acting_entity_id: &str,
+        witnesses: &[(String, PathBuf, String)],
+        min_witnesses: usize,
+        required_refs: &[&CommittedRecordRef],
+    ) -> Result<PreActionAssurance, ForgeError> {
+        if witnesses.len() < min_witnesses {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: independent witness adapter unavailable".into(),
+            ));
+        }
+        let witness_ids = witnesses
+            .iter()
+            .map(|(witness_id, _, _)| witness_id)
+            .collect::<std::collections::BTreeSet<_>>();
+        if witness_ids.len() != witnesses.len() {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: duplicate witness identity".into(),
+            ));
+        }
+        if !key_dir.is_absolute() || key_dir.starts_with(&self.root) {
+            return Err(ForgeError::Input(
+                "signing key directory must be absolute and outside ledger root".into(),
+            ));
+        }
+        let key = load_or_create_signing_key(key_dir, key_id)?;
+        if self.global_checkpoints_path().exists() {
+            self.verify_global_checkpoints(&key.verifying_key())?;
+        }
+        for stream_id in self.list_stream_ids()? {
+            let stream = self.open_stream(&stream_id, "pre_action")?;
+            stream.verify()?;
+            stream.verify_checkpoints(&key.verifying_key())?;
+            let last_entry = stream.read_last_entry()?;
+            let last_checkpoint = stream.read_last_checkpoint()?;
+            if last_entry.as_ref().is_some_and(|entry| {
+                last_checkpoint
+                    .as_ref()
+                    .is_none_or(|checkpoint| checkpoint.last_ordinal < entry.append_ordinal)
+            }) {
+                stream.create_checkpoint(&key, key_id)?;
+            }
+        }
+        let checkpoint = self.create_global_checkpoint(&key, key_id)?;
+        self.verify_global_checkpoints(&key.verifying_key())?;
+        let mut witness_keys = Vec::new();
+        for (witness_id, witness_key_dir, witness_key_id) in witnesses {
+            if witness_id == acting_entity_id {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: witness must be independent".into(),
+                ));
+            }
+            let witness_key = load_or_create_signing_key(witness_key_dir, witness_key_id)?;
+            let receipt = self.witness_global_checkpoint(&checkpoint, witness_id, &witness_key)?;
+            self.open_stream("witness", "witness_stream")?
+                .commit_typed(
+                    "witness_receipt",
+                    vec![checkpoint.global_checkpoint_hash.clone()],
+                    &receipt,
+                    vec![],
+                )?;
+            witness_keys.push((witness_id.clone(), witness_key.verifying_key()));
+        }
+        let witness_assurance = self.verify_witness_receipts(
+            &checkpoint.global_checkpoint_hash,
+            &witness_keys,
+            acting_entity_id,
+            min_witnesses,
+        )?;
+        if min_witnesses > 0 && witness_assurance != AssuranceLevel::ExternallyVerified {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: insufficient independent witnesses".into(),
+            ));
+        }
+        let final_checkpoint = if witnesses.is_empty() {
+            checkpoint.clone()
+        } else {
+            self.open_stream("witness", "witness_stream")?
+                .create_checkpoint(&key, key_id)?;
+            self.create_global_checkpoint(&key, key_id)?
+        };
+        self.verify_global_checkpoints(&key.verifying_key())?;
+        for required in required_refs {
+            let stream = self.open_stream(&required.ledger_id, "assurance-check")?;
+            if !stream
+                .read_entries()?
+                .iter()
+                .any(|entry| entry.entry_ulid == required.entry_ulid)
+            {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: required record is not checkpointed".into(),
+                ));
+            }
+        }
+        Ok(PreActionAssurance {
+            global_checkpoint_hash: final_checkpoint.global_checkpoint_hash,
+            covered_entries: required_refs
+                .iter()
+                .map(|reference| reference.entry_ulid.clone())
+                .collect(),
+        })
+    }
+
     pub fn open_stream(
         &self,
         ledger_id: impl Into<String>,
@@ -1152,7 +1306,7 @@ impl LedgerManager {
     }
 
     /// Enumerate all stream directories under ledgers/.
-    fn list_stream_ids(&self) -> Result<Vec<String>, ForgeError> {
+    pub fn list_stream_ids(&self) -> Result<Vec<String>, ForgeError> {
         let ledgers_dir = self.root.join("ledgers");
         if !ledgers_dir.exists() {
             return Ok(Vec::new());
@@ -1291,6 +1445,39 @@ impl LedgerManager {
             previous_hash = Some(cp.global_checkpoint_hash.clone());
         }
         Ok(())
+    }
+
+    pub fn global_checkpoint_covers_record<T: Serialize>(
+        &self,
+        global_checkpoint_hash: &str,
+        record_kind: &str,
+        record: &T,
+    ) -> Result<bool, ForgeError> {
+        let expected_payload = serde_json::to_value(record)?;
+        let checkpoint = self
+            .read_global_checkpoints()?
+            .into_iter()
+            .find(|checkpoint| checkpoint.global_checkpoint_hash == global_checkpoint_hash)
+            .ok_or_else(|| ForgeError::Input("global checkpoint not found".into()))?;
+        for (stream_id, expected_root) in checkpoint.stream_roots {
+            let stream = self.open_stream(&stream_id, "checkpoint-coverage")?;
+            stream.verify()?;
+            let mut state = MmrState::empty();
+            let mut target_ordinal = None;
+            for entry in stream.read_entries()? {
+                state = state.append(&entry.entry_hash)?;
+                if entry.record_kind == record_kind && entry.payload == expected_payload {
+                    target_ordinal = Some(entry.append_ordinal);
+                }
+                if state.root()? == expected_root {
+                    if target_ordinal.is_some_and(|ordinal| ordinal <= entry.append_ordinal) {
+                        return Ok(true);
+                    }
+                    break;
+                }
+            }
+        }
+        Ok(false)
     }
 
     /// Witness a global checkpoint: create a receipt signed by an independent witness.
@@ -1434,5 +1621,111 @@ mod tests {
             serde_json::from_slice(&fs::read(state_path).unwrap()).unwrap();
         assert_eq!(state.status, ViewStatus::Failed);
         assert_eq!(state.source_entry_ulid, committed.entry_ulid());
+    }
+
+    #[test]
+    fn rebuild_record_view_is_byte_identical() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(tmp.path(), "case_demo", "writer_01").unwrap();
+        let record = serde_json::json!({"alpha": 1, "beta": [2, 3]});
+        let committed = stream
+            .commit_typed("demo", vec![], &record, vec![])
+            .unwrap();
+        let path = tmp.path().join("view.json");
+        stream.rebuild_record_view(&committed, &path).unwrap();
+        assert_eq!(
+            fs::read(&path).unwrap(),
+            serde_json::to_vec_pretty(&record).unwrap()
+        );
+    }
+
+    #[test]
+    fn pre_action_assurance_rejects_duplicate_witnesses() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("state");
+        let manager = LedgerManager::new(&root).unwrap();
+        let duplicate = (
+            "witness_one".into(),
+            tmp.path().join("witness-key"),
+            "key".into(),
+        );
+        assert!(manager
+            .create_pre_action_assurance(
+                &tmp.path().join("signing-key"),
+                "signer",
+                "actor",
+                &[duplicate.clone(), duplicate],
+                2,
+                &[],
+            )
+            .is_err());
+    }
+
+    #[test]
+    fn witnessed_assurance_commits_receipt_before_final_checkpoint() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("state");
+        let manager = LedgerManager::new(&root).unwrap();
+        let stream = manager.open_stream("case_demo", "actor").unwrap();
+        let committed = stream
+            .commit_typed(
+                "authority_decision",
+                vec![],
+                &serde_json::json!({"ok": true}),
+                vec![],
+            )
+            .unwrap();
+        let assurance = manager
+            .create_pre_action_assurance(
+                &tmp.path().join("signing-key"),
+                "signer",
+                "actor",
+                &[(
+                    "witness_one".into(),
+                    tmp.path().join("witness-key"),
+                    "key".into(),
+                )],
+                1,
+                &[&committed],
+            )
+            .unwrap();
+        assert!(assurance.covers(&committed));
+        assert!(manager
+            .open_stream("witness", "verify")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .iter()
+            .any(|entry| entry.record_kind == "witness_receipt"));
+        assert_eq!(manager.read_global_checkpoints().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn checkpoint_coverage_rejects_post_checkpoint_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("state");
+        let manager = LedgerManager::new(&root).unwrap();
+        let stream = manager.open_stream("case_demo", "actor").unwrap();
+        stream
+            .commit_typed(
+                "capability_envelope",
+                vec![],
+                &serde_json::json!({"id": 1}),
+                vec![],
+            )
+            .unwrap();
+        let key = load_or_create_signing_key(&tmp.path().join("keys"), "signer").unwrap();
+        let checkpoint = manager.create_global_checkpoint(&key, "signer").unwrap();
+        let later = serde_json::json!({"id": 2});
+        stream
+            .commit_typed("capability_envelope", vec![], &later, vec![])
+            .unwrap();
+        assert!(!manager
+            .global_checkpoint_covers_record(
+                &checkpoint.global_checkpoint_hash,
+                "capability_envelope",
+                &later,
+            )
+            .unwrap());
     }
 }

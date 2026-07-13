@@ -118,12 +118,14 @@ pub fn materialize(
     run_id: &str,
     plan_item_id: &str,
     operation: &sea_forge_core::types::Operation,
+    compensating_controls: &[String],
 ) -> Result<(), ForgeError> {
-    grant.authorize(
+    grant.authorize_with_controls(
         &sea_forge_core::types::AuthorityAction::from(operation),
         run_id,
         plan_item_id,
         root,
+        compensating_controls,
     )?;
     if let sea_forge_core::types::Operation::WriteFile { path, content_hint } = operation {
         let destination = safe_join(root, path)?;

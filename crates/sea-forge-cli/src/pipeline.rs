@@ -4,7 +4,7 @@ use sea_forge_capability as capability;
 use sea_forge_core::ids;
 use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
 use sea_forge_evidence::{capture_file, JsonlEvidenceWriter};
-use sea_forge_ledger::LedgerStream;
+use sea_forge_ledger::{LedgerManager, LedgerStream};
 use sea_forge_planner as planner;
 use sea_forge_runtime as runtime;
 use sea_forge_sandbox as sandbox;
@@ -59,6 +59,126 @@ fn replace_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> 
     fs::rename(&temporary, path)
         .map_err(|error| ForgeError::io(format!("replace {}", path.display()), error))
 }
+
+pub(crate) fn rebuild_authority_mirrors(
+    root: &Path,
+    materializer: &LedgerStream,
+    committed: &sea_forge_ledger::CommittedRecordRef,
+) -> Result<(), ForgeError> {
+    let manager = LedgerManager::new(root)?;
+    let mut decisions = Vec::new();
+    for stream_id in manager.list_stream_ids()? {
+        let stream = manager.open_stream(&stream_id, "authority-rebuild")?;
+        stream.verify()?;
+        for entry in stream.read_entries()? {
+            if entry.record_kind == "authority_decision" {
+                decisions.push(entry);
+            }
+        }
+    }
+    decisions.sort_by(|left, right| {
+        (&left.committed_at, &left.ledger_id, left.append_ordinal).cmp(&(
+            &right.committed_at,
+            &right.ledger_id,
+            right.append_ordinal,
+        ))
+    });
+    let mut decision_bytes = Vec::new();
+    let mut audit_bytes = Vec::new();
+    let mut opaque_constraints = Vec::new();
+    let source_entry_ulids = decisions
+        .iter()
+        .map(|entry| entry.entry_ulid.clone())
+        .collect::<Vec<_>>();
+    for entry in decisions {
+        serde_json::to_writer(&mut decision_bytes, &entry.payload)?;
+        decision_bytes.push(b'\n');
+        if let Some(audit) = entry.payload.get("audit_record") {
+            serde_json::to_writer(&mut audit_bytes, audit)?;
+            audit_bytes.push(b'\n');
+        }
+        if let Some(constraint_id) = entry
+            .payload
+            .get("opaque_constraint_id")
+            .and_then(serde_json::Value::as_str)
+        {
+            opaque_constraints.push(json!({
+                "constraint_id": constraint_id,
+                "created_by_decision_id": entry.payload["decision_id"],
+                "target": {
+                    "resource_type": entry.payload["action_request"]["action"]["resource_type"],
+                    "resource_id": entry.payload["action_request"]["action"]["resource_id"]
+                },
+                "reason": "all configured evaluators escalated",
+                "created_at": entry.payload["decided_at"],
+                "expires_at": serde_json::Value::Null
+            }));
+        }
+    }
+    materializer.materialize_aggregate_view(
+        committed,
+        source_entry_ulids.clone(),
+        &root.join("authority/decisions.jsonl"),
+        &decision_bytes,
+    )?;
+    materializer.materialize_aggregate_view(
+        committed,
+        source_entry_ulids.clone(),
+        &root.join("authority/opaque-constraints.json"),
+        &serde_json::to_vec_pretty(&opaque_constraints)?,
+    )?;
+    materializer.materialize_aggregate_view(
+        committed,
+        source_entry_ulids,
+        &root.join("authority/audit.jsonl"),
+        &audit_bytes,
+    )?;
+    Ok(())
+}
+pub(crate) fn load_opaque_constraints(
+    root: &Path,
+) -> Result<Vec<sea_forge_authority::OpaqueConstraint>, ForgeError> {
+    let manager = LedgerManager::new(root)?;
+    let mut constraints = BTreeMap::new();
+    for stream_id in manager.list_stream_ids()? {
+        let stream = manager.open_stream(&stream_id, "opaque-constraint-load")?;
+        stream.verify()?;
+        for entry in stream.read_entries()? {
+            let Some(constraint_id) = entry
+                .payload
+                .get("opaque_constraint_id")
+                .and_then(serde_json::Value::as_str)
+            else {
+                continue;
+            };
+            let action = &entry.payload["action_request"]["action"];
+            let resource_type = action["resource_type"].as_str().unwrap_or_default();
+            let resource_id = action["resource_id"].as_str().unwrap_or_default();
+            if resource_type.is_empty() || resource_id.is_empty() {
+                continue;
+            }
+            constraints.insert(
+                format!("{resource_type}:{resource_id}"),
+                sea_forge_authority::OpaqueConstraint {
+                    constraint_id: constraint_id.into(),
+                    resource_type: resource_type.into(),
+                    resource_id: resource_id.into(),
+                    created_by_decision_id: entry.payload["decision_id"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .into(),
+                    reason: "all configured evaluators escalated".into(),
+                    created_at: entry.payload["decided_at"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .into(),
+                    expires_at: None,
+                },
+            );
+        }
+    }
+    Ok(constraints.into_values().collect())
+}
 fn validate_attribution(value: &str, name: &str) -> Result<(), ForgeError> {
     if value.is_empty()
         || value.len() > 64
@@ -73,7 +193,6 @@ fn validate_attribution(value: &str, name: &str) -> Result<(), ForgeError> {
 }
 pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
     let bundle = AuthorityPolicyBundle::load(&options.policy)?;
-    let identity_source = bundle.identity.source.clone();
     let policy_snapshot = bundle.clone();
     sea_forge_domain::interpret(&options.intent)?;
     validate_attribution(&options.entity, "entity")?;
@@ -107,17 +226,11 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             actor_id: intent.actor_id.clone(),
             role: ActorRole::Operator,
         };
-        let binding = IdentityBinding {
-            principal: actor.actor_id.clone(),
-            actor_type: ActorType::Human,
-            binding_resolution: BindingResolution::LocalDefault,
-            identity_binding_source: identity_source,
-            sponsor: None,
-        };
+        let binding = bundle.resolve_identity(&actor.actor_id, actor.role.clone());
         let executable =
             env::current_exe().map_err(|e| ForgeError::io("resolve current executable", e))?;
         let executable = executable.to_string_lossy().into_owned();
-        let plan = planner::plan(&intent, &case_id, &run_id, &executable)?;
+        let plan = planner::plan(&intent, &case_id, &run_id, &executable, &root)?;
         let item = plan
             .items
             .first()
@@ -141,6 +254,18 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         authority_stream.materialize_view(
             &committed_policy,
             &root.join("authority/active-policy.json"),
+            &serde_json::to_vec_pretty(&policy_snapshot)?,
+        )?;
+        let policy_hash = policy_snapshot
+            .policy_bundle_hash
+            .as_deref()
+            .unwrap_or(committed_policy.payload_hash());
+        authority_stream.materialize_view(
+            &committed_policy,
+            &root.join("authority/policy-bundles").join(format!(
+                "{}.json",
+                policy_hash.strip_prefix("sha256:").unwrap_or(policy_hash)
+            )),
             &serde_json::to_vec_pretty(&policy_snapshot)?,
         )?;
         let mut case = Case {
@@ -167,7 +292,9 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             json!({"plan_id":plan.plan_id}),
         )?;
         let mut evidence = JsonlEvidenceWriter::create(&run_dir.join("evidence.jsonl"), &run_id)?;
+        let domainforge_model = policy_snapshot.load_domainforge_model()?;
         let engine = PolicyAuthorityEngine::new(bundle)?;
+        engine.load_opaque_constraints(load_opaque_constraints(&root)?)?;
         let mut decisions = Vec::new();
         for (index, operation) in item.operations.iter().enumerate() {
             let action = AuthorityAction::from(operation);
@@ -181,10 +308,24 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 Default::default()
             };
             let evidence_id = format!("evi_{:04}", index + 1);
+            let domainforge_candidate = domainforge_model
+                .as_ref()
+                .map(|model| {
+                    sea_forge_authority::DomainForgeCandidate::evaluate(
+                        model,
+                        &action,
+                        vec![format!(
+                            "domain-model:{}",
+                            model.model_ref.semantic_model_sha256
+                        )],
+                    )
+                })
+                .transpose()?;
             let decision = engine.evaluate(AuthorityEvaluation {
                 actor: &actor,
                 binding: binding.clone(),
                 run_id: &run_id,
+                case_id: &case_id,
                 plan_item_id: &item.plan_item_id,
                 sequence: index + 1,
                 action: &action,
@@ -195,19 +336,20 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 timeout_secs: matches!(operation, Operation::ExecuteCommand { .. })
                     .then_some(options.timeout_secs),
                 env_keys,
+                domainforge_candidate: domainforge_candidate.as_ref(),
             })?;
             let event = trace.append(
                 TraceKind::AuthorityEvaluated,
                 Some(item.plan_item_id.clone()),
                 json!({"decision_id":decision.decision_id,"verdict":decision.verdict}),
             )?;
-            let evidence_record = evidence.append(
+            let evidence_record = evidence.prepare(
                 EvidenceKind::AuthorityDecision,
                 decision.decision_id.clone(),
                 None,
                 event,
                 BTreeMap::new(),
-            )?;
+            );
             if evidence_record.evidence_id != evidence_id {
                 return Err(ForgeError::Internal(
                     "authority evidence sequence diverged from decision".into(),
@@ -219,6 +361,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 &evidence_record,
                 vec![],
             )?;
+            evidence.append_prepared(evidence_record)?;
             decisions.push(decision)
         }
         let committed_decisions = decisions
@@ -238,6 +381,40 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
+        let pre_action_assurance = if policy_snapshot.integrity_ledger.required_for_side_effects {
+            let key_dir = policy_snapshot
+                .integrity_ledger
+                .signing_key_dir
+                .as_deref()
+                .ok_or_else(|| {
+                    ForgeError::Internal(
+                        "ledger_integrity_error: signing_key_dir is required".into(),
+                    )
+                })?;
+            Some(
+                LedgerManager::new(&root)?.create_pre_action_assurance(
+                    key_dir,
+                    &policy_snapshot.integrity_ledger.signing_key_id,
+                    &intent.actor_id,
+                    &policy_snapshot
+                        .integrity_ledger
+                        .witnesses
+                        .iter()
+                        .map(|witness| {
+                            (
+                                witness.witness_id.clone(),
+                                witness.key_dir.clone(),
+                                witness.key_id.clone(),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                    policy_snapshot.integrity_ledger.min_witnesses,
+                    &committed_decisions.iter().collect::<Vec<_>>(),
+                )?,
+            )
+        } else {
+            None
+        };
         let authority_bytes = serde_json::to_vec_pretty(&decisions)?;
         authority_stream.materialize_view(
             committed_decisions
@@ -245,6 +422,13 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 .ok_or_else(|| ForgeError::Internal("no authority decisions committed".into()))?,
             &run_dir.join("authority.json"),
             &authority_bytes,
+        )?;
+        rebuild_authority_mirrors(
+            &root,
+            &authority_stream,
+            committed_decisions
+                .last()
+                .ok_or_else(|| ForgeError::Internal("no authority decisions committed".into()))?,
         )?;
         let all_allow = decisions.iter().all(|d| d.verdict == Verdict::Allow);
         let mut execution = None;
@@ -263,6 +447,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                         &decisions[index],
                         &committed_decisions[index],
                         &AuthorityAction::from(operation),
+                        pre_action_assurance.as_ref(),
                     )?;
                     sandbox::materialize(
                         grant,
@@ -270,6 +455,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                         &run_id,
                         &item.plan_item_id,
                         operation,
+                        &decisions[index].compensating_controls,
                     )?;
                 }
             }
@@ -279,11 +465,6 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 .enumerate()
                 .find(|(_, operation)| matches!(operation, Operation::ExecuteCommand { .. }))
             {
-                let start = trace.append(
-                    TraceKind::CommandStarted,
-                    Some(item.plan_item_id.clone()),
-                    json!({}),
-                )?;
                 let mut envs = BTreeMap::new();
                 if let Ok(path) = env::var("PATH") {
                     envs.insert("PATH".into(), path);
@@ -295,6 +476,12 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                     &decisions[index],
                     &committed_decisions[index],
                     &AuthorityAction::from(operation),
+                    pre_action_assurance.as_ref(),
+                )?;
+                let start = trace.append(
+                    TraceKind::CommandStarted,
+                    Some(item.plan_item_id.clone()),
+                    json!({}),
                 )?;
                 let result = runtime::execute(
                     grant,
@@ -303,6 +490,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                         operation: operation.clone(),
                         timeout_secs: options.timeout_secs,
                         env: envs,
+                        compensating_controls: decisions[index].compensating_controls.clone(),
                     },
                     &run_id,
                     &workspace,
@@ -400,7 +588,17 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             extension_refs: vec![],
             projection_refs: vec![],
         };
-        write_json(&run_dir.join("semantic-envelope.json"), &envelope)?;
+        let committed_envelope = authority_stream.commit_typed(
+            "capability_envelope",
+            vec![run_id.clone(), settled.settlement_id.clone()],
+            &envelope,
+            vec![],
+        )?;
+        authority_stream.materialize_view(
+            &committed_envelope,
+            &run_dir.join("semantic-envelope.json"),
+            &serde_json::to_vec_pretty(&envelope)?,
+        )?;
         trace.append(
             TraceKind::RunFinished,
             None,
@@ -463,5 +661,37 @@ fn ensure_state_directory(root: &Path, name: &str) -> Result<PathBuf, ForgeError
             format!("inspect state directory {name}"),
             error,
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn authority_mirrors_rebuild_byte_identically() {
+        let root =
+            std::env::temp_dir().join(format!("sea-forge-authority-mirror-{}", std::process::id()));
+        let stream = LedgerStream::open(&root, "case_test", "test").unwrap();
+        let committed = stream
+            .commit_typed(
+                "authority_decision",
+                vec![],
+                &json!({
+                    "decision_id": "auth_01",
+                    "decided_at": "2026-07-13T00:00:00Z",
+                    "opaque_constraint_id": null,
+                    "audit_record": {"outcome": "allow"}
+                }),
+                vec![],
+            )
+            .unwrap();
+        rebuild_authority_mirrors(&root, &stream, &committed).unwrap();
+        let path = root.join("authority/decisions.jsonl");
+        let first = fs::read(&path).unwrap();
+        fs::remove_file(&path).unwrap();
+        rebuild_authority_mirrors(&root, &stream, &committed).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), first);
+        fs::remove_dir_all(root).unwrap();
     }
 }
