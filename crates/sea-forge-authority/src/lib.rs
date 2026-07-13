@@ -1,5 +1,6 @@
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
+use sea_forge_ledger::{types::payload_hash, CommittedRecordRef};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -413,6 +414,7 @@ impl PolicyAuthorityEngine {
     pub fn grant(
         &self,
         decision: &AuthorityDecision,
+        committed: &CommittedRecordRef,
         action: &AuthorityAction,
         workspace_root: &Path,
     ) -> Result<ActionGrant, ForgeError> {
@@ -425,6 +427,11 @@ impl PolicyAuthorityEngine {
         if decision.verdict != Verdict::Allow || bound_hash != Some(action_hash.as_str()) {
             return Err(ForgeError::Input(
                 "authority decision does not grant this action".into(),
+            ));
+        }
+        if committed.payload_hash() != payload_hash(&serde_json::to_value(decision)?)? {
+            return Err(ForgeError::Input(
+                "authority decision is not bound to its committed record".into(),
             ));
         }
         if decision.determinism.policy_bundle_hash != self.bundle_hash {
@@ -830,6 +837,7 @@ fn wildcard_match(pattern: &[u8], value: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sea_forge_ledger::LedgerStream;
 
     fn engine() -> PolicyAuthorityEngine {
         let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
@@ -869,6 +877,15 @@ mod tests {
                 "2026-07-10T12:00:00Z".into(),
             )
             .unwrap()
+    }
+
+    fn commit(decision: &AuthorityDecision) -> (tempfile::TempDir, CommittedRecordRef) {
+        let root = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(root.path(), "authority-test", "test-writer").unwrap();
+        let committed = stream
+            .commit_typed("authority_decision", vec![], decision, vec![])
+            .unwrap();
+        (root, committed)
     }
 
     #[test]
@@ -1068,8 +1085,9 @@ mod tests {
             content_hint: "fixed".into(),
         };
         let decision = evaluate(&action);
+        let (_root, committed) = commit(&decision);
         let grant = engine
-            .grant(&decision, &action, Path::new("/tmp/workspace"))
+            .grant(&decision, &committed, &action, Path::new("/tmp/workspace"))
             .unwrap();
         assert!(grant
             .authorize(
@@ -1093,15 +1111,27 @@ mod tests {
             content_hint: "fixed".into(),
         };
         let decision = evaluate(&allowed);
+        let (_root, committed) = commit(&decision);
         assert!(engine
-            .grant(&decision, &substitute, Path::new("/tmp/workspace"))
+            .grant(
+                &decision,
+                &committed,
+                &substitute,
+                Path::new("/tmp/workspace"),
+            )
             .is_err());
         let denied = evaluate(&AuthorityAction::WriteFile {
             path: ".env".into(),
             content_hint: "fixed".into(),
         });
+        let (_root, committed) = commit(&denied);
         assert!(engine
-            .grant(&denied, &denied.operation, Path::new("/tmp/workspace"))
+            .grant(
+                &denied,
+                &committed,
+                &denied.operation,
+                Path::new("/tmp/workspace"),
+            )
             .is_err());
     }
 }

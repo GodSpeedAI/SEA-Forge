@@ -411,6 +411,26 @@ pub struct LedgerStream {
     writer_identity_ref: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CommittedRecordRef {
+    ledger_id: String,
+    entry_ulid: String,
+    record_ulid: String,
+    append_ordinal: u64,
+    entry_hash: String,
+    payload_hash: String,
+}
+
+impl CommittedRecordRef {
+    pub fn entry_ulid(&self) -> &str {
+        &self.entry_ulid
+    }
+
+    pub fn payload_hash(&self) -> &str {
+        &self.payload_hash
+    }
+}
+
 impl LedgerStream {
     pub fn open(
         root: &Path,
@@ -431,6 +451,25 @@ impl LedgerStream {
 
     pub fn ledger_id(&self) -> &str {
         &self.ledger_id
+    }
+
+    pub fn commit_typed<T: Serialize>(
+        &self,
+        record_kind: impl Into<String>,
+        subject_refs: Vec<String>,
+        record: &T,
+        authority_refs: Vec<String>,
+    ) -> Result<CommittedRecordRef, ForgeError> {
+        let payload = serde_json::to_value(record)?;
+        let entry = self.append(record_kind, subject_refs, payload, authority_refs)?;
+        Ok(CommittedRecordRef {
+            ledger_id: entry.ledger_id,
+            entry_ulid: entry.entry_ulid,
+            record_ulid: entry.record_ulid,
+            append_ordinal: entry.append_ordinal,
+            entry_hash: entry.entry_hash,
+            payload_hash: entry.payload_hash,
+        })
     }
 
     pub fn entries_path(&self) -> PathBuf {
