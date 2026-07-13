@@ -507,7 +507,7 @@ cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-featu
 - [ ] Extension registry/descriptors validate; imported extensions inert until adopted *(Task 4)*
 - [x] M0 authority gate green: determinism, fail-closed engines, precedence, opaque constraints, no ingress bypass *(Task 5)*
 - [x] `sea-forge migrate` lossless; imports report `legacy_digest_only` *(Task 6)*
-- [ ] Jail escape blocked at OS; untrusted-argv0-on-local is schema_error; unavailability refuses *(Task 7)*
+- [x] Jail escape blocked at OS; untrusted-argv0-on-local is schema_error; unavailability refuses *(Task 7)*
 - [ ] §12 M2 scenario passes; sentry replay deterministic from ledger alone *(Task 8)*
 - [ ] Template instantiation byte-deterministic; forbidden substitution rejected at load *(Task 9)*
 - [ ] Escalate→approve→resume and TTL-expiry flows pass; 8-way concurrency uncorrupted *(Task 10)*

@@ -95,6 +95,10 @@ pub struct ActionGrant {
 }
 
 impl ActionGrant {
+    pub fn sandbox_class(&self) -> &str {
+        &self.sandbox_class
+    }
+
     pub fn authorize(
         self,
         action: &AuthorityAction,
@@ -125,9 +129,9 @@ impl ActionGrant {
                 "authority grant does not match action context".into(),
             ));
         }
-        if self.sandbox_class != "local" || self.compensating_controls != compensating_controls {
+        if self.compensating_controls != compensating_controls {
             return Err(ForgeError::Input(
-                "authority grant requires unsupported sandbox or compensating controls".into(),
+                "authority grant compensating controls mismatch".into(),
             ));
         }
         if let Some(allowed) = self.boundaries.get("workspace") {

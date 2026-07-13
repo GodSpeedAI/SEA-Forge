@@ -30,6 +30,10 @@ pub fn settle(
                     basis.push("timed_out".into());
                     (SettlementStatus::Rejected, false)
                 }
+                ExecutionStatus::SandboxViolation => {
+                    basis.push("jail_violation".into());
+                    (SettlementStatus::Rejected, false)
+                }
                 ExecutionStatus::Completed => {
                     let mut accepted = true;
                     if claim.criteria.require_exit_zero {

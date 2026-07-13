@@ -62,5 +62,6 @@ fn execution_label(status: &sea_forge_core::types::ExecutionStatus) -> &'static 
         ExecutionStatus::Completed => "completed",
         ExecutionStatus::SpawnFailed => "spawn_failed",
         ExecutionStatus::TimedOut => "timed_out",
+        ExecutionStatus::SandboxViolation => "sandbox_violation",
     }
 }
