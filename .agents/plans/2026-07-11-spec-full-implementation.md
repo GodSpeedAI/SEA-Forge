@@ -44,7 +44,7 @@ devbox run -- just check        # deny/licenses/gitleaks/context-check bundle
 | Semantic boundary decision (DomainForge owns `.sea` semantics; SEA Forge owns authority/side effects) | `docs/decisions/ADR-001-domainforge-semantic-boundary.md` |
 | Ledger contract: jcs-nfc-v1, domain-separated SHA-256, CSPRNG monotonic ULIDs, append ordinals authoritative, chain+MMR, signed checkpoints, witness receipts | spec-full §7.0c |
 | Exit codes incl. new `5 = awaiting_approval/parked` | spec-full §3.3, §10.9 |
-| Disposition precedence `deny > boundary > allow > degraded > escalate` | spec-full §7.0 GovernanceVerdict |
+| Typed deterministic resolution: deny blocks; unresolved escalation blocks while retaining boundaries; boundaries intersect; permitted degraded controls accumulate; allow is identity | spec-full §7.0 GovernanceVerdict |
 | The one graduation security rule: untrusted argv0 never allow-listed on `local` class (schema_error) | spec-full §8.2, §15 |
 | Confidence arithmetic is fixed, fixed-point 6-decimal, no binary floats in rebuild | spec-full §7.3 |
 | Kernel stays synchronous; Tokio only in `sea-forge-server` (spawn_blocking seam) | spec-full §6.1 |
@@ -179,12 +179,18 @@ cargo test -p sea-forge-extension --locked
 ### Steps
 
 1. Extend `crates/sea-forge-authority`: `IdentityBinding` (roles incl. `R-AA`+sponsor rule), `AuthorityPolicyBundle` (all §7.0 required surfaces + `sod_rules`), `CanonicalActionRequest` (minimum `AuthorityRequest` + optional fields only), `AuthorityDecision` with `candidate_verdicts`/`winning_source`/`sandbox_class_granted`, `GovernanceVerdict`, `AuthorityAuditRecord`, `OpaqueConstraint` — shapes verbatim from §7.0.
-2. Precedence resolver: `deny > boundary > allow > degraded > escalate`; missing required evidence ⇒ deny; all-escalate ⇒ create/reference OpaqueConstraint and halt as escalate (§7.0).
+2. Resolver: implement the complete pairwise typed matrix and deterministic
+   fold: deny blocks; unresolved escalation blocks while retaining boundaries;
+   boundaries intersect; explicitly permitted degraded controls accumulate; and
+   allow is identity. Prove
+   evaluator-order independence and the applicable commutative, associative,
+   and idempotent properties. Missing required evidence ⇒ deny; all-escalate ⇒
+   create/reference OpaqueConstraint and halt as escalate (§7.0).
 3. Policy v0.2 schema §8.2: engines must declare `fail_mode: closed` for action gating (else `authority_engine_config_error`); the untrusted-argv0-on-`local` rule is a `schema_error`; all new `rules[].operation_kind` variants parse now (even where their executors land later) so one schema owns the file.
-4. Wire the mediator as the single entry for every current ingress (CLI run/validate/recall/inspect); persist `.sea-forge/authority/{policy-bundles/<hash>.json, decisions.jsonl, audit.jsonl, opaque-constraints.json}` through the ledger (Task 2).
+4. Wire the mediator as the single entry for every current ingress (CLI run/validate/recall/inspect). Define the opaque grant in `sea-forge-authority`; remove its dependency on `sea-forge-sandbox` by keeping lexical request validation in authority/core, then make runtime and sandbox depend on authority and require that grant at their public side-effect entry points. Bind the grant to the exact request, execution context, validity interval, sandbox class, approval, and compensating controls; reject mismatch, expiry, replay, or downgrade. Persist `.sea-forge/authority/{policy-bundles/<hash>.json, decisions.jsonl, audit.jsonl, opaque-constraints.json}` and the Task 4 extension registry/descriptors through the ledger before materializing compatibility views, with detectable failed/stale view state and byte-identical rebuild proof (Task 2).
 5. Pre-action integrity sequencing per §10.0a: under `required_for_side_effects`, append intent/identity/policy/request/decision, force checkpoint + witness receipts BEFORE the side effect.
 6. Engine adapters: `local` rules engine now; `domainforge` candidate via Task 3; `opa`/`governedspeed` as config-declared stubs whose *unavailability* paths are real (deny/escalate, never pass) — real transports are later plugins.
-7. Tests `tests/conformance_m0_authority.rs` covering the §12 M0 authority bullets: onboarding fixtures (human/service/R-AA+sponsor; unresolved ⇒ escalate), same-request-twice determinism, generated-zone write / unknown host / private-network host / protected git commit / PR-merge-without-checks / dangerous shell / prompt-risk all fail closed with evidence, engine-unavailable fail-closed, precedence conflicts, opaque-constraint halt, decisions/audit mirror reproduction.
+7. Tests `tests/conformance_m0_authority.rs` covering the §12 M0 authority bullets: onboarding fixtures (human/service/R-AA+sponsor; unresolved ⇒ escalate), same-request-twice determinism, generated-zone write / unknown host / private-network host / protected git commit / PR-merge-without-checks / dangerous shell / prompt-risk all fail closed with evidence, engine-unavailable fail-closed, complete resolver properties, opaque-constraint halt, unauthorized/forged/mismatched/expired/replayed/downgraded authority rejection, approval and degraded-control enforcement, and ledger-before-view failure/rebuild semantics for decisions/audit mirrors.
 
 ### Gate
 

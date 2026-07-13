@@ -11,9 +11,10 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. The mechanical crate graduation (Task 1 / M0a) is complete
-and green. The minimum kernel tests (35 tests) and P1–P4b pass unchanged. No
-behavior changes were made during the split.
+On branch `full-spec`. Tasks 1–4 are implemented at their package gates. The
+Tasks 1–4 specification reconciliation is in progress; Task 5 implementation
+has not started. The minimum kernel tests (35 tests) and P1–P4b remain the
+unchanged compatibility floor.
 
 ## Changed Files
 
@@ -74,7 +75,8 @@ behavior changes were made during the split.
 
 ## Remaining
 
-- Tasks 2–17 from the implementation plan (M0b through M8 + DoD sweep).
+- Complete reconciliation proof and commit, then stop before Task 5.
+- Tasks 5–17 from the implementation plan (M0e through M8 + DoD sweep).
 - Continue milestone-ordered implementation, committing after each task.
 - Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
   once the log-file reset is no longer a safety-net concern.
@@ -96,9 +98,32 @@ behavior changes were made during the split.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.
 
+## Tasks 1–4 Specification Reconciliation
+
+- Substrate map, reconciliation matrix, M0 gate evidence, and deferrals:
+  `.agents/reports/2026-07-12-tasks-1-4-spec-reconciliation.md`.
+- The standalone proposed patch, complete patched specification, and patch guide
+  were not found in the repository or nearby project tree, so no `git apply` or
+  `git apply --check` was possible. The proposals in the user request were
+  evaluated manually against the code.
+- `spec-full.md` now defines deterministic verdict resolution with `allow` as
+  least restrictive, an opaque exact-action/context authorization boundary,
+  canonical ledger-before-view failure semantics, M0-G1–G6, completion-claim
+  levels, and cumulative release boundaries.
+- The implementation plan assigns those implementation and proof obligations to
+  Task 5 without prescribing an `AuthorizedAction` type or a parallel authority
+  or persistence system.
+- Current raw `runtime::execute` and `sandbox::materialize` APIs remain minimum
+  substrate. Their non-bypassable authority binding is deliberately Task 5 and
+  is not claimed as implemented by this reconciliation.
+
 ## Blockers
 
-- None.
+- `devbox run -- just check` reaches `cargo deny` and fails because
+  `domainforge-core 0.13.0` depends on `xxhash-rust 0.8.16` under `BSL-1.0`,
+  which `deny.toml` does not allow. Tests, formatting, clippy, context-check,
+  P1–P4b, and no-async-kernel pass. Changing the license allowlist requires
+  explicit approval and is not folded into Task 5.
 
 ## Decisions
 
