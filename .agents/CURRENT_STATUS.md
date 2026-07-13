@@ -83,7 +83,15 @@ behavior changes were made during the split.
 
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
-- `cargo test --workspace --all-features --locked`: 63 tests passed (35 existing + 23 ledger + 5 domainforge), 0 failed.
+- Task 4 — M0d extension ABI and registry: `crates/sea-forge-extension`
+  implements `ExtensionRegistry` (load/save/register/import/adopt), `RegistryEntry`
+  with `TrustLevel` and `ExtensionStatus`, `ExtensionInstallRecord` with
+  `Compatibility`, `ProjectionAdapter` trait, `ProjectionRecord`, descriptor
+  validation, and 8 unit tests covering descriptor validation, empty-registry,
+  built-in registration, import-starts-disabled, adopt-makes-active, and
+  authority-surface→policy-surface mapping.
+
+- `cargo test --workspace --all-features --locked`: 71 tests passed (35 existing + 23 ledger + 5 domainforge + 8 extension), 0 failed.
 - `just proof`: P1–P4b passed.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.
