@@ -1054,11 +1054,11 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "sea-forge-core",
- "sea-forge-evidence",
- "sea-forge-sandbox",
  "serde",
  "serde_json",
  "serde_yaml",
+ "sha2",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -1177,6 +1177,7 @@ name = "sea-forge-runtime"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-sandbox",
  "wait-timeout",
@@ -1186,6 +1187,7 @@ dependencies = [
 name = "sea-forge-sandbox"
 version = "0.1.0"
 dependencies = [
+ "sea-forge-authority",
  "sea-forge-core",
 ]
 

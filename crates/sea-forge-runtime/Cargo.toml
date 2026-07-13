@@ -10,6 +10,7 @@ description = "SEA Forge command execution runtime."
 [dependencies]
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
+sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
 chrono.workspace = true
 wait-timeout.workspace = true
 

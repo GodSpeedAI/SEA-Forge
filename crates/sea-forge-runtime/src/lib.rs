@@ -10,6 +10,22 @@ use std::{
 };
 use wait_timeout::ChildExt;
 pub fn execute(
+    grant: sea_forge_authority::ActionGrant,
+    request: &ExecutionRequest,
+    run_id: &str,
+    workspace: &Path,
+    artifacts: &Path,
+) -> Result<ExecutionResult, ForgeError> {
+    grant.authorize(
+        &sea_forge_core::types::AuthorityAction::from(&request.operation),
+        run_id,
+        &request.plan_item_id,
+        workspace,
+    )?;
+    execute_authorized(request, workspace, artifacts)
+}
+
+fn execute_authorized(
     request: &ExecutionRequest,
     workspace: &Path,
     artifacts: &Path,
@@ -131,7 +147,8 @@ mod tests {
     #[test]
     fn child_environment_is_minimal() {
         let (parent, workspace, artifacts) = directories("env");
-        let result = execute(&request(vec!["env".into()], 5), &workspace, &artifacts).unwrap();
+        let result =
+            execute_authorized(&request(vec!["env".into()], 5), &workspace, &artifacts).unwrap();
         assert_eq!(result.status, ExecutionStatus::Completed);
         let output = fs::read_to_string(artifacts.join("stdout.txt")).unwrap();
         let mut names: Vec<_> = output
@@ -147,7 +164,7 @@ mod tests {
     fn timeout_kills_and_reaps_child() {
         let (parent, workspace, artifacts) = directories("timeout");
         let started = Instant::now();
-        let result = execute(
+        let result = execute_authorized(
             &request(vec!["sleep".into(), "30".into()], 0),
             &workspace,
             &artifacts,
@@ -161,7 +178,7 @@ mod tests {
     #[test]
     fn spawn_failure_is_an_execution_result() {
         let (parent, workspace, artifacts) = directories("spawn");
-        let result = execute(
+        let result = execute_authorized(
             &request(vec!["sea-forge-command-does-not-exist".into()], 1),
             &workspace,
             &artifacts,
@@ -194,7 +211,7 @@ mod tests {
             "SEA_FORGE_TIMEOUT_PID_FILE".into(),
             pid_file.to_string_lossy().into_owned(),
         );
-        let result = execute(&request, &workspace, &artifacts).unwrap();
+        let result = execute_authorized(&request, &workspace, &artifacts).unwrap();
         assert_eq!(result.status, ExecutionStatus::TimedOut);
         let pids = fs::read_to_string(&pid_file).unwrap();
         for pid in pids.split_whitespace() {

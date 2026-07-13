@@ -187,15 +187,27 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             )?;
         } else {
             trace.append(TraceKind::WorkspaceCreated, None, json!({}))?;
-            for operation in &item.operations {
+            for (index, operation) in item.operations.iter().enumerate() {
                 if matches!(operation, Operation::WriteFile { .. }) {
-                    sandbox::materialize(&workspace, operation)?;
+                    let grant = engine.grant(
+                        &decisions[index],
+                        &AuthorityAction::from(operation),
+                        &workspace,
+                    )?;
+                    sandbox::materialize(
+                        grant,
+                        &workspace,
+                        &run_id,
+                        &item.plan_item_id,
+                        operation,
+                    )?;
                 }
             }
-            if let Some(operation) = item
+            if let Some((index, operation)) = item
                 .operations
                 .iter()
-                .find(|o| matches!(o, Operation::ExecuteCommand { .. }))
+                .enumerate()
+                .find(|(_, operation)| matches!(operation, Operation::ExecuteCommand { .. }))
             {
                 let start = trace.append(
                     TraceKind::CommandStarted,
@@ -209,13 +221,20 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 if let Ok(home) = env::var("HOME") {
                     envs.insert("HOME".into(), home);
                 }
+                let grant = engine.grant(
+                    &decisions[index],
+                    &AuthorityAction::from(operation),
+                    &workspace,
+                )?;
                 let result = runtime::execute(
+                    grant,
                     &ExecutionRequest {
                         plan_item_id: item.plan_item_id.clone(),
                         operation: operation.clone(),
                         timeout_secs: options.timeout_secs,
                         env: envs,
                     },
+                    &run_id,
                     &workspace,
                     &artifacts,
                 )?;

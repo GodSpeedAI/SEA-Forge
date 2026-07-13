@@ -113,9 +113,18 @@ fn checked_parent(
     Ok(safe_parent)
 }
 pub fn materialize(
+    grant: sea_forge_authority::ActionGrant,
     root: &Path,
+    run_id: &str,
+    plan_item_id: &str,
     operation: &sea_forge_core::types::Operation,
 ) -> Result<(), ForgeError> {
+    grant.authorize(
+        &sea_forge_core::types::AuthorityAction::from(operation),
+        run_id,
+        plan_item_id,
+        root,
+    )?;
     if let sea_forge_core::types::Operation::WriteFile { path, content_hint } = operation {
         let destination = safe_join(root, path)?;
         fs::write(destination, content_hint)
