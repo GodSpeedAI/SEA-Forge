@@ -54,6 +54,23 @@ behavior changes were made during the split.
   and API keys while accepting approved ciphertext commitments; key rotation
   with old checkpoints verifying under snapshotted key refs; crash recovery
   quarantining incomplete tails. CLI `ledger verify|prove` subcommands added.
+- Task 3 — M0c DomainForge semantic adapter: `crates/sea-forge-domainforge`
+  created with `domainforge-core = "=0.13.0"`, default features off. Implements
+  `load_validate(SeaSourceSet) -> DomainModel` using DomainForge's parser → graph →
+  validation pipeline; `DomainModelRef` with `semantic_model_sha256` over canonical
+  4-tuple; authority normalization table (Reject/Deny→deny, Escalate→escalate,
+  Allow→allow, NotApplicable→deny-if-required); real `.sea` fixture; conformance
+  tests covering valid parse → stable ref, invalid syntax → domain_model_error,
+  source-hash drift rejection, no-side-effects-on-invalid-input, and normalization.
+  pass: 1000-record multi-stream append with ULID/ordinal/chain/MMR verification;
+  one-byte alteration / truncate / reorder / duplicate detection with typed
+  `ledger_integrity_error`; Ed25519 signed checkpoints with chain verification;
+  MMR inclusion proofs; global checkpoints committing all stream roots;
+  independent witness receipts detecting fork substitution (and rejecting
+  self-witnessing); secret sentinel redaction rejecting plaintext private keys
+  and API keys while accepting approved ciphertext commitments; key rotation
+  with old checkpoints verifying under snapshotted key refs; crash recovery
+  quarantining incomplete tails. CLI `ledger verify|prove` subcommands added.
 
 ## Remaining
 
@@ -66,7 +83,7 @@ behavior changes were made during the split.
 
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
-- `cargo test --workspace --all-features --locked`: 58 tests passed (35 existing + 23 ledger), 0 failed.
+- `cargo test --workspace --all-features --locked`: 63 tests passed (35 existing + 23 ledger + 5 domainforge), 0 failed.
 - `just proof`: P1–P4b passed.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.
