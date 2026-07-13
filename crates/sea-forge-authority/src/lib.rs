@@ -1,13 +1,38 @@
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
-use sea_forge_evidence::hash_canonical;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeSet, HashSet},
     fs,
-    path::Path,
+    path::{Component, Path, PathBuf},
 };
+use unicode_normalization::UnicodeNormalization;
+
+fn sha256_bytes(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+fn hash_canonical<T: Serialize>(value: &T) -> Result<String, ForgeError> {
+    fn sorted(value: Value) -> Value {
+        match value {
+            Value::Object(map) => Value::Object(
+                map.into_iter()
+                    .map(|(key, value)| (key, sorted(value)))
+                    .collect(),
+            ),
+            Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
+            Value::String(value) => Value::String(value.nfc().collect()),
+            other => other,
+        }
+    }
+    let value = sorted(serde_json::to_value(value)?);
+    Ok(format!(
+        "sha256:{}",
+        sha256_bytes(&serde_json::to_vec(&value)?)
+    ))
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
@@ -41,6 +66,40 @@ pub struct ResolvedGovernance {
     pub disposition: GovernanceDisposition,
     pub boundaries: BTreeSet<String>,
     pub compensating_controls: BTreeSet<String>,
+}
+
+/// Move-only proof that one exact action may execute in one exact context.
+/// It is intentionally not serializable or cloneable.
+pub struct ActionGrant {
+    action: AuthorityAction,
+    run_id: String,
+    plan_item_id: String,
+    workspace_root: PathBuf,
+    expires_at: chrono::DateTime<Utc>,
+}
+
+impl ActionGrant {
+    pub fn authorize(
+        self,
+        action: &AuthorityAction,
+        run_id: &str,
+        plan_item_id: &str,
+        workspace_root: &Path,
+    ) -> Result<(), ForgeError> {
+        if Utc::now() > self.expires_at {
+            return Err(ForgeError::Input("authority grant expired".into()));
+        }
+        if &self.action != action
+            || self.run_id != run_id
+            || self.plan_item_id != plan_item_id
+            || self.workspace_root != workspace_root
+        {
+            return Err(ForgeError::Input(
+                "authority grant does not match action context".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 pub fn resolve_candidates(
@@ -351,6 +410,37 @@ impl PolicyAuthorityEngine {
         self.evaluate_at(input, random_id("act")?, Utc::now().to_rfc3339())
     }
 
+    pub fn grant(
+        &self,
+        decision: &AuthorityDecision,
+        action: &AuthorityAction,
+        workspace_root: &Path,
+    ) -> Result<ActionGrant, ForgeError> {
+        let action_hash = hash_canonical(action)?;
+        let bound_hash = decision
+            .action_request
+            .evidence
+            .get("payload_hash")
+            .and_then(Value::as_str);
+        if decision.verdict != Verdict::Allow || bound_hash != Some(action_hash.as_str()) {
+            return Err(ForgeError::Input(
+                "authority decision does not grant this action".into(),
+            ));
+        }
+        if decision.determinism.policy_bundle_hash != self.bundle_hash {
+            return Err(ForgeError::Input(
+                "authority decision belongs to another policy context".into(),
+            ));
+        }
+        Ok(ActionGrant {
+            action: action.clone(),
+            run_id: decision.run_id.clone(),
+            plan_item_id: decision.plan_item_id.clone(),
+            workspace_root: workspace_root.to_path_buf(),
+            expires_at: Utc::now() + chrono::Duration::minutes(5),
+        })
+    }
+
     pub fn evaluate_at(
         &self,
         input: AuthorityEvaluation<'_>,
@@ -371,7 +461,7 @@ impl PolicyAuthorityEngine {
                 "write_file",
                 "file",
                 path.clone(),
-                json!({"path":path,"content_sha256":sea_forge_evidence::sha256_bytes(content_hint.as_bytes())}),
+                json!({"path":path,"content_sha256":sha256_bytes(content_hint.as_bytes())}),
             ),
             AuthorityAction::ExecuteCommand { argv, cwd } => (
                 "execute_command",
@@ -599,10 +689,7 @@ fn redacted_action(action: &AuthorityAction) -> AuthorityAction {
     match action {
         AuthorityAction::WriteFile { path, content_hint } => AuthorityAction::WriteFile {
             path: path.clone(),
-            content_hint: format!(
-                "sha256:{}",
-                sea_forge_evidence::sha256_bytes(content_hint.as_bytes())
-            ),
+            content_hint: format!("sha256:{}", sha256_bytes(content_hint.as_bytes())),
         },
         other => other.clone(),
     }
@@ -661,11 +748,9 @@ fn hard_denied(action: &AuthorityAction, patterns: &[String]) -> bool {
 }
 fn malformed_action(action: &AuthorityAction) -> bool {
     match action {
-        AuthorityAction::WriteFile { path, .. } => {
-            sea_forge_sandbox::validate_relative_path(path).is_err()
-        }
+        AuthorityAction::WriteFile { path, .. } => invalid_relative_path(path),
         AuthorityAction::ExecuteCommand { argv, cwd } => {
-            argv.is_empty() || sea_forge_sandbox::validate_relative_path(cwd).is_err()
+            argv.is_empty() || invalid_relative_path(cwd)
         }
         AuthorityAction::ExternalApi { host } => host.is_empty(),
         AuthorityAction::GitCommit { paths } => paths.is_empty(),
@@ -693,6 +778,21 @@ fn malformed_action(action: &AuthorityAction) -> bool {
         }
         _ => false,
     }
+}
+
+fn invalid_relative_path(path: &str) -> bool {
+    let value = Path::new(path);
+    value.is_absolute()
+        || path.is_empty()
+        || !path
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "._/-".contains(c))
+        || value.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
 }
 fn protected_git_commit(action: &AuthorityAction, configured: &[String]) -> bool {
     const BUILT_INS: &[&str] = &["config/governance/**", ".github/workflows/**"];
@@ -959,6 +1059,51 @@ mod tests {
             assert_eq!(decision.reason_codes, ["unclassified"]);
         }
     }
+
+    #[test]
+    fn grant_is_bound_to_exact_action_and_context() {
+        let engine = engine();
+        let action = AuthorityAction::WriteFile {
+            path: "model.sea".into(),
+            content_hint: "fixed".into(),
+        };
+        let decision = evaluate(&action);
+        let grant = engine
+            .grant(&decision, &action, Path::new("/tmp/workspace"))
+            .unwrap();
+        assert!(grant
+            .authorize(
+                &action,
+                "run_20260710T120000Z_abcdef",
+                "item_01",
+                Path::new("/tmp/other")
+            )
+            .is_err());
+    }
+
+    #[test]
+    fn denied_or_substituted_action_cannot_receive_grant() {
+        let engine = engine();
+        let allowed = AuthorityAction::WriteFile {
+            path: "model.sea".into(),
+            content_hint: "fixed".into(),
+        };
+        let substitute = AuthorityAction::WriteFile {
+            path: "other.sea".into(),
+            content_hint: "fixed".into(),
+        };
+        let decision = evaluate(&allowed);
+        assert!(engine
+            .grant(&decision, &substitute, Path::new("/tmp/workspace"))
+            .is_err());
+        let denied = evaluate(&AuthorityAction::WriteFile {
+            path: ".env".into(),
+            content_hint: "fixed".into(),
+        });
+        assert!(engine
+            .grant(&denied, &denied.operation, Path::new("/tmp/workspace"))
+            .is_err());
+    }
 }
 
 #[cfg(test)]
@@ -1030,7 +1175,10 @@ mod resolver_tests {
             compensating_controls: BTreeSet::from(["audit".into(), "read_only".into()]),
             ..verdict(GovernanceDisposition::Degraded)
         };
-        let denied = resolve_candidates(&[degraded.clone()], &ResolutionPolicy::default());
+        let denied = resolve_candidates(
+            std::slice::from_ref(&degraded),
+            &ResolutionPolicy::default(),
+        );
         assert_eq!(denied.disposition, GovernanceDisposition::Deny);
         let permitted = resolve_candidates(
             &[degraded],

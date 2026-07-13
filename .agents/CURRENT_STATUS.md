@@ -99,6 +99,9 @@ P1–P4b remain the unchanged compatibility floor.
 - `cargo build --workspace --all-targets --locked`: passed.
 - Task 5 resolver slice: 12 `sea-forge-authority` tests passed, including typed
   deny/escalate/boundary/degraded/allow resolution and order independence.
+- Task 5 execution-boundary slice: authority no longer depends on sandbox;
+  move-only, non-serializable grants bind the exact action/run/item/workspace;
+  public sandbox materialization and runtime execution consume a matching grant.
 
 ## Tasks 1–4 Specification Reconciliation
 
