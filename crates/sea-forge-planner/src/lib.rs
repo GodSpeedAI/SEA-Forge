@@ -8,14 +8,23 @@ pub fn plan(
     case_id: &str,
     run_id: &str,
     executable: &str,
+    state_root: &std::path::Path,
 ) -> Result<CasePlan, ForgeError> {
     let (operations, settlement_criteria) = match domain::interpret(&intent.summary)? {
-        IntentPattern::Demo => file_plan(executable, "model.sea", DEMO_MODEL, "model.sea"),
-        IntentPattern::GeneratedZone => {
-            file_plan(executable, "src/gen/model.sea", DEMO_MODEL, "model.sea")
+        IntentPattern::Demo => {
+            file_plan(executable, state_root, "model.sea", DEMO_MODEL, "model.sea")
         }
-        IntentPattern::FalseSuccess => file_plan(executable, "other.sea", DEMO_MODEL, "other.sea"),
-        IntentPattern::Nonzero => file_plan(executable, "model.sea", "{}", "model.sea"),
+        IntentPattern::GeneratedZone => file_plan(
+            executable,
+            state_root,
+            "src/gen/model.sea",
+            DEMO_MODEL,
+            "model.sea",
+        ),
+        IntentPattern::FalseSuccess => {
+            file_plan(executable, state_root, "other.sea", DEMO_MODEL, "other.sea")
+        }
+        IntentPattern::Nonzero => file_plan(executable, state_root, "model.sea", "{}", "model.sea"),
         IntentPattern::Timeout => (
             vec![Operation::ExecuteCommand {
                 argv: vec![executable.into(), "internal-test-sleep".into(), "5".into()],
@@ -46,6 +55,7 @@ pub fn plan(
 
 fn file_plan(
     executable: &str,
+    state_root: &std::path::Path,
     path: &str,
     content: &str,
     validate_path: &str,
@@ -57,7 +67,18 @@ fn file_plan(
                 content_hint: content.into(),
             },
             Operation::ExecuteCommand {
-                argv: vec![executable.into(), "validate".into(), validate_path.into()],
+                argv: vec![
+                    executable.into(),
+                    "validate".into(),
+                    validate_path.into(),
+                    "--root".into(),
+                    state_root.to_string_lossy().into_owned(),
+                    "--policy".into(),
+                    state_root
+                        .join("authority/active-policy.json")
+                        .to_string_lossy()
+                        .into_owned(),
+                ],
                 cwd: ".".into(),
             },
         ],

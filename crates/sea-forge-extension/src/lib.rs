@@ -54,7 +54,7 @@ pub enum ExtensionStatus {
     Superseded,
 }
 
-pub struct AdoptionAuthorization<'a> {
+pub struct ExtensionAuthorization<'a> {
     pub grant: sea_forge_authority::ActionGrant,
     pub run_id: &'a str,
     pub plan_item_id: &'a str,
@@ -83,7 +83,7 @@ impl ExtensionRegistry {
         &self,
         root: &Path,
         stream: &LedgerStream,
-        authority_refs: Vec<String>,
+        authority_ref: &CommittedRecordRef,
     ) -> Result<CommittedRecordRef, ForgeError> {
         let path = Self::path(root);
         let bytes = serde_json::to_vec_pretty(self)
@@ -95,7 +95,7 @@ impl ExtensionRegistry {
                 .map(|entry| format!("{}@{}", entry.extension_id, entry.version))
                 .collect(),
             self,
-            authority_refs,
+            vec![authority_ref.entry_ulid().into()],
         )?;
         stream.materialize_view(&committed, &path, &bytes)?;
         Ok(committed)
@@ -133,7 +133,7 @@ impl ExtensionRegistry {
     }
 
     /// Import an extension descriptor. Imported extensions start `disabled`.
-    pub fn import(
+    fn import(
         &mut self,
         descriptor: &ExtensionDescriptor,
         trust_level: TrustLevel,
@@ -152,13 +152,38 @@ impl ExtensionRegistry {
         Ok(())
     }
 
+    pub fn import_authorized(
+        &mut self,
+        descriptor: &ExtensionDescriptor,
+        trust_level: TrustLevel,
+        authorization: ExtensionAuthorization<'_>,
+    ) -> Result<(), ForgeError> {
+        authorization.grant.authorize(
+            &sea_forge_core::types::AuthorityAction::Reserved {
+                resource_type: "install_extension".into(),
+                resource_id: format!("{}@{}", descriptor.extension_id, descriptor.version),
+                parameters: serde_json::json!({}),
+            },
+            authorization.run_id,
+            authorization.plan_item_id,
+            authorization.workspace_root,
+        )?;
+        self.import(descriptor, trust_level)?;
+        let entry = self
+            .extensions
+            .last_mut()
+            .ok_or_else(|| ForgeError::Internal("import did not create registry entry".into()))?;
+        entry.authority_ref = Some(authorization.authority_ref.entry_ulid().into());
+        Ok(())
+    }
+
     /// Adopt an imported extension (status: disabled → active).
     /// This is the authority-checked operation that makes an imported extension usable.
     pub fn adopt(
         &mut self,
         extension_id: &str,
         version: &str,
-        authorization: AdoptionAuthorization<'_>,
+        authorization: ExtensionAuthorization<'_>,
     ) -> Result<(), ForgeError> {
         authorization.grant.authorize(
             &sea_forge_core::types::AuthorityAction::Reserved {
@@ -359,9 +384,7 @@ fn chrono_now() -> String {
 mod tests {
     use super::*;
     use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
-    use sea_forge_core::types::{
-        Actor, ActorRole, ActorType, AuthorityAction, BindingResolution, IdentityBinding,
-    };
+    use sea_forge_core::types::{Actor, ActorRole, AuthorityAction};
     use sea_forge_core::types::{ContractRef, ExtensionKind};
 
     fn valid_descriptor() -> ExtensionDescriptor {
@@ -439,13 +462,12 @@ mod tests {
     fn adopt_makes_imported_active() {
         let tmp = tempfile::tempdir().unwrap();
         let stream = LedgerStream::open(tmp.path(), "extensions", "test").unwrap();
-        let engine = PolicyAuthorityEngine::new(
-            serde_yaml::from_str::<AuthorityPolicyBundle>(
-                "version: \"0.2\"\nrules:\n  - name: adopt\n    verdict: allow\n    actor_role: operator\n    operation_kind: adopt_extension\n",
+        let bundle = serde_yaml::from_str::<AuthorityPolicyBundle>(
+                "version: \"0.1\"\nrules:\n  - name: adopt\n    verdict: allow\n    actor_role: operator\n    operation_kind: adopt_extension\n",
             )
-            .unwrap(),
-        )
-        .unwrap();
+            .unwrap();
+        let binding = bundle.resolve_identity("operator", ActorRole::Operator);
+        let engine = PolicyAuthorityEngine::new(bundle).unwrap();
         let actor = Actor {
             actor_id: "operator".into(),
             role: ActorRole::Operator,
@@ -458,14 +480,9 @@ mod tests {
         let decision = engine
             .evaluate(AuthorityEvaluation {
                 actor: &actor,
-                binding: IdentityBinding {
-                    principal: "operator".into(),
-                    actor_type: ActorType::Human,
-                    binding_resolution: BindingResolution::Exact,
-                    identity_binding_source: "test".into(),
-                    sponsor: None,
-                },
+                binding,
                 run_id: "run_test",
+                case_id: "case_test",
                 plan_item_id: "item_test",
                 sequence: 1,
                 action: &action,
@@ -474,12 +491,15 @@ mod tests {
                 artifacts_root: None,
                 timeout_secs: None,
                 env_keys: Default::default(),
+                domainforge_candidate: None,
             })
             .unwrap();
         let authority_ref = stream
             .commit_typed("authority_decision", vec![], &decision, vec![])
             .unwrap();
-        let grant = engine.grant(&decision, &authority_ref, &action).unwrap();
+        let grant = engine
+            .grant(&decision, &authority_ref, &action, None)
+            .unwrap();
         let mut reg = ExtensionRegistry {
             version: "0.2".into(),
             updated_at: "now".into(),
@@ -491,7 +511,7 @@ mod tests {
         reg.adopt(
             "ext_demo",
             "0.1",
-            AdoptionAuthorization {
+            ExtensionAuthorization {
                 grant,
                 run_id: "run_test",
                 plan_item_id: "item_test",

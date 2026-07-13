@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-07-17
+Updated: 2026-07-13
 
 ## Objective
 
@@ -11,10 +11,9 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–4 are implemented at their package gates and the
-specification reconciliation is committed. Task 5 implementation has started
-with the typed governance resolver. The minimum kernel tests (35 tests) and
-P1–P4b remain the unchanged compatibility floor.
+On branch `full-spec`. Tasks 1–5 are implemented at their package gates;
+M0-G3 is conformance-green after independent review. The minimum kernel tests
+and P1–P4b remain the unchanged compatibility floor. Task 6 is next.
 
 ## Changed Files
 
@@ -123,6 +122,23 @@ P1–P4b remain the unchanged compatibility floor.
   through the same authority engine and ledger-backed exact-action check before
   reading protected data. Minimum v0.1 read behavior remains compatible; v0.2
   policies require explicit read rules.
+- Task 5 hardening: v0.2 identity maps fail unresolved identities closed and
+  require sponsors for automated agents; complete protected operation names and
+  fail-closed engine declarations parse in one schema; DomainForge candidates
+  compose through the typed resolver; grants bind timeout, environment keys,
+  workspace, artifacts, sandbox class, boundaries, controls, and expiry.
+- Required-integrity policies now produce signed stream/global checkpoints and
+  independently signed witness receipts before any command-start event. Missing
+  or duplicate witnesses fail closed before workspace effects. Authority decision,
+  audit, and opaque-constraint mirrors rebuild from ledger records; inspect and
+  recall surface ledger assurance.
+- Task 5 / M0-G3 complete: v0.2 policy snapshots require all authority surfaces,
+  RBAC permissions, SoD rules, source hashes, and canonical bundle hashes;
+  configured DomainForge evaluation runs through real CLI ingresses; opaque
+  constraints preempt matching work; per-record assurance proves inclusion in
+  the exact signed/witnessed checkpoint; authority audit records preserve the
+  resolved disposition, canonical resource subject, and case linkage.
+- Independent final review: approved with no findings.
 
 ## Tasks 1–4 Specification Reconciliation
 
@@ -139,9 +155,8 @@ P1–P4b remain the unchanged compatibility floor.
 - The implementation plan assigns those implementation and proof obligations to
   Task 5 without prescribing an `AuthorizedAction` type or a parallel authority
   or persistence system.
-- Current raw `runtime::execute` and `sandbox::materialize` APIs remain minimum
-  substrate. Their non-bypassable authority binding is deliberately Task 5 and
-  is not claimed as implemented by this reconciliation.
+- Public runtime execution and sandbox materialization now consume opaque,
+  one-use, context-bound authority grants; direct ungranted effects do not compile.
 
 ## Blockers
 

@@ -1054,6 +1054,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "sea-forge-core",
+ "sea-forge-domainforge",
  "sea-forge-ledger",
  "serde",
  "serde_json",
@@ -1090,7 +1091,6 @@ dependencies = [
  "sea-forge-trace",
  "serde",
  "serde_json",
- "serde_yaml",
  "tracing",
  "tracing-subscriber",
 ]

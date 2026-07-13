@@ -7,6 +7,6 @@ pub mod types;
 
 pub use types::{
     global_root, AssuranceLevel, CommittedRecordRef, CompatibilityViewState, GlobalCheckpoint,
-    LedgerCheckpoint, LedgerEntry, LedgerManager, LedgerStream, MerkleProof, ViewStatus,
-    WitnessReceipt,
+    LedgerCheckpoint, LedgerEntry, LedgerManager, LedgerStream, MerkleProof, PreActionAssurance,
+    ViewStatus, WitnessReceipt,
 };

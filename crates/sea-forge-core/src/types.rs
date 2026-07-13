@@ -106,7 +106,22 @@ impl From<&Operation> for AuthorityAction {
 pub enum ActorRole {
     Operator,
     Agent,
+    Service,
     System,
+    #[serde(rename = "R-DS")]
+    DataSteward,
+    #[serde(rename = "R-AG")]
+    AgentGovernor,
+    #[serde(rename = "R-LC")]
+    LifecycleCustodian,
+    #[serde(rename = "R-SO")]
+    SecurityOfficer,
+    #[serde(rename = "R-RM")]
+    RiskManager,
+    #[serde(rename = "R-DEV")]
+    Developer,
+    #[serde(rename = "R-AA")]
+    AutomatedAgent,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Actor {
@@ -130,11 +145,23 @@ pub enum BindingResolution {
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IdentityBinding {
+    #[serde(default)]
+    pub identity_id: Option<String>,
     pub principal: String,
+    #[serde(default)]
+    pub roles: Vec<ActorRole>,
     pub actor_type: ActorType,
     pub binding_resolution: BindingResolution,
     pub identity_binding_source: String,
+    #[serde(default)]
+    pub source: Option<String>,
     pub sponsor: Option<String>,
+    #[serde(default)]
+    pub issued_at: Option<String>,
+    #[serde(default)]
+    pub expires_at: Option<String>,
+    #[serde(default)]
+    pub identity_binding_hash: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -178,6 +205,18 @@ pub struct AuditRecord {
     pub reason: String,
     pub evidence_refs: Vec<String>,
     pub recorded_at: String,
+    #[serde(default)]
+    pub decision_id: Option<String>,
+    #[serde(default)]
+    pub case_id: Option<String>,
+    #[serde(default)]
+    pub run_id: Option<String>,
+    #[serde(default)]
+    pub policy_bundle_hash: Option<String>,
+    #[serde(default)]
+    pub action_request_hash: Option<String>,
+    #[serde(default)]
+    pub identity_binding_hash: Option<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct GovernanceVerdictRecord {
@@ -238,6 +277,8 @@ pub struct ExecutionRequest {
     pub operation: Operation,
     pub timeout_secs: u64,
     pub env: BTreeMap<String, String>,
+    #[serde(default)]
+    pub compensating_controls: Vec<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

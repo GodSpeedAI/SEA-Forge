@@ -18,12 +18,15 @@ pub fn execute(
 ) -> Result<ExecutionResult, ForgeError> {
     grant.authorize_execution(
         &sea_forge_core::types::AuthorityAction::from(&request.operation),
-        run_id,
-        &request.plan_item_id,
-        workspace,
-        artifacts,
-        request.timeout_secs,
-        request.env.keys().cloned().collect(),
+        sea_forge_authority::ExecutionGrantContext {
+            run_id,
+            plan_item_id: &request.plan_item_id,
+            workspace_root: workspace,
+            artifacts_root: artifacts,
+            timeout_secs: request.timeout_secs,
+            env_keys: request.env.keys().cloned().collect(),
+            compensating_controls: &request.compensating_controls,
+        },
     )?;
     execute_authorized(request, workspace, artifacts)
 }
@@ -144,6 +147,7 @@ mod tests {
             },
             timeout_secs,
             env,
+            compensating_controls: vec![],
         }
     }
 
