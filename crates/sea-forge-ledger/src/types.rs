@@ -421,6 +421,23 @@ pub struct CommittedRecordRef {
     payload_hash: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ViewStatus {
+    Current,
+    Failed,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CompatibilityViewState {
+    pub source_entry_ulid: String,
+    pub source_payload_hash: String,
+    pub view_path: String,
+    pub view_sha256: String,
+    pub status: ViewStatus,
+    pub failure_class: Option<String>,
+}
+
 impl CommittedRecordRef {
     pub fn entry_ulid(&self) -> &str {
         &self.entry_ulid
@@ -470,6 +487,53 @@ impl LedgerStream {
             entry_hash: entry.entry_hash,
             payload_hash: entry.payload_hash,
         })
+    }
+
+    pub fn materialize_view(
+        &self,
+        committed: &CommittedRecordRef,
+        path: &Path,
+        bytes: &[u8],
+    ) -> Result<CompatibilityViewState, ForgeError> {
+        let write_result = (|| -> Result<(), ForgeError> {
+            let parent = path
+                .parent()
+                .ok_or_else(|| ForgeError::Input("view path has no parent".into()))?;
+            fs::create_dir_all(parent)
+                .map_err(|error| ForgeError::io("create view parent", error))?;
+            let temporary = path.with_extension("tmp");
+            fs::write(&temporary, bytes).map_err(|error| ForgeError::io("write view", error))?;
+            fs::rename(&temporary, path).map_err(|error| ForgeError::io("replace view", error))?;
+            Ok(())
+        })();
+        let state = CompatibilityViewState {
+            source_entry_ulid: committed.entry_ulid.clone(),
+            source_payload_hash: committed.payload_hash.clone(),
+            view_path: path.to_string_lossy().into_owned(),
+            view_sha256: format!("sha256:{:x}", Sha256::digest(bytes)),
+            status: if write_result.is_ok() {
+                ViewStatus::Current
+            } else {
+                ViewStatus::Failed
+            },
+            failure_class: write_result
+                .as_ref()
+                .err()
+                .map(|error| error.class().into()),
+        };
+        let state_dir = self
+            .root
+            .join("ledgers")
+            .join(&self.ledger_id)
+            .join("views");
+        fs::create_dir_all(&state_dir)
+            .map_err(|error| ForgeError::io("create view state", error))?;
+        fs::write(
+            state_dir.join(format!("{}.json", committed.entry_ulid)),
+            serde_json::to_vec_pretty(&state)?,
+        )
+        .map_err(|error| ForgeError::io("write view state", error))?;
+        write_result.map(|_| state)
     }
 
     pub fn entries_path(&self) -> PathBuf {
@@ -1347,5 +1411,28 @@ mod tests {
         drop(file);
         let result = stream.verify();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn committed_truth_survives_failed_view_materialization() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(tmp.path(), "case_demo", "writer_01").unwrap();
+        let committed = stream
+            .commit_typed("demo", vec![], &serde_json::json!({"value": 1}), vec![])
+            .unwrap();
+        let blocked_parent = tmp.path().join("blocked");
+        fs::write(&blocked_parent, b"not a directory").unwrap();
+        assert!(stream
+            .materialize_view(&committed, &blocked_parent.join("view.json"), b"view")
+            .is_err());
+        stream.verify().unwrap();
+        let state_path = tmp
+            .path()
+            .join("ledgers/case_demo/views")
+            .join(format!("{}.json", committed.entry_ulid()));
+        let state: CompatibilityViewState =
+            serde_json::from_slice(&fs::read(state_path).unwrap()).unwrap();
+        assert_eq!(state.status, ViewStatus::Failed);
+        assert_eq!(state.source_entry_ulid, committed.entry_ulid());
     }
 }
