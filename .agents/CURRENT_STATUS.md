@@ -102,6 +102,9 @@ P1–P4b remain the unchanged compatibility floor.
 - Task 5 execution-boundary slice: authority no longer depends on sandbox;
   move-only, non-serializable grants bind the exact action/run/item/workspace;
   public sandbox materialization and runtime execution consume a matching grant.
+- Task 5 canonical-decision slice: `LedgerStream::commit_typed` returns an
+  opaque committed-record reference; the CLI commits every authority decision
+  before writing `authority.json` or issuing its exact-action grant.
 
 ## Tasks 1–4 Specification Reconciliation
 

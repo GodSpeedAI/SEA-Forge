@@ -4,6 +4,7 @@ use sea_forge_capability as capability;
 use sea_forge_core::ids;
 use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
 use sea_forge_evidence::{capture_file, JsonlEvidenceWriter};
+use sea_forge_ledger::LedgerStream;
 use sea_forge_planner as planner;
 use sea_forge_runtime as runtime;
 use sea_forge_sandbox as sandbox;
@@ -175,6 +176,19 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 .push(evidence_record.evidence_id);
             decisions.push(decision)
         }
+        let authority_stream =
+            LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
+        let committed_decisions = decisions
+            .iter()
+            .map(|decision| {
+                authority_stream.commit_typed(
+                    "authority_decision",
+                    vec![run_id.clone(), item.plan_item_id.clone()],
+                    decision,
+                    vec![],
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         write_json(&run_dir.join("authority.json"), &decisions)?;
         let all_allow = decisions.iter().all(|d| d.verdict == Verdict::Allow);
         let mut execution = None;
@@ -191,6 +205,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 if matches!(operation, Operation::WriteFile { .. }) {
                     let grant = engine.grant(
                         &decisions[index],
+                        &committed_decisions[index],
                         &AuthorityAction::from(operation),
                         &workspace,
                     )?;
@@ -223,6 +238,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 }
                 let grant = engine.grant(
                     &decisions[index],
+                    &committed_decisions[index],
                     &AuthorityAction::from(operation),
                     &workspace,
                 )?;
