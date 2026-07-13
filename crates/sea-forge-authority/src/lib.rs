@@ -179,6 +179,19 @@ pub struct AuthorityPolicyBundle {
     #[serde(default)]
     pub policy_surfaces: PolicySurfaces,
     pub rules: Vec<PolicyRule>,
+    #[serde(default)]
+    pub policy_engines: Vec<PolicyEngineConfig>,
+    #[serde(default)]
+    pub allow_degraded: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct PolicyEngineConfig {
+    pub engine: String,
+    pub fail_mode: String,
+    #[serde(default)]
+    pub required: bool,
 }
 fn default_deny() -> String {
     "deny".into()
@@ -363,8 +376,8 @@ impl AuthorityPolicyBundle {
             path: path.into(),
             message,
         };
-        if self.version != RECORD_VERSION {
-            return Err(schema("version must equal 0.1".into()));
+        if self.version != RECORD_VERSION && self.version != "0.2" {
+            return Err(schema("version must equal 0.1 or 0.2".into()));
         }
         if self.identity.source.is_empty() || self.identity.allow_unresolved {
             return Err(schema("invalid identity policy".into()));
@@ -378,13 +391,44 @@ impl AuthorityPolicyBundle {
             return Err(schema("invalid policy surface mode/default".into()));
         }
         let mut names = HashSet::new();
+        if self.policy_engines.iter().any(|engine| {
+            engine.engine.is_empty()
+                || engine.fail_mode != "closed"
+                || !matches!(
+                    engine.engine.as_str(),
+                    "local" | "domainforge" | "opa" | "governedspeed" | "policy-gateway"
+                )
+        }) {
+            return Err(ForgeError::Config {
+                class: "authority_engine_config_error",
+                path: path.into(),
+                message: "action-gating engines must be known and fail_mode closed".into(),
+            });
+        }
         for rule in &self.rules {
             if rule.name.is_empty() || !names.insert(&rule.name) {
                 return Err(schema("rule names must be non-empty and unique".into()));
             }
             if !matches!(
                 rule.operation_kind.as_str(),
-                "write_file" | "execute_command"
+                "write_file"
+                    | "execute_command"
+                    | "external_api"
+                    | "git_commit"
+                    | "github_pr"
+                    | "recall_memory"
+                    | "inspect_run"
+                    | "validate_model"
+                    | "install_extension"
+                    | "adopt_extension"
+                    | "disable_extension"
+                    | "projection_execution"
+                    | "approval_resolution"
+                    | "policy_mutation"
+                    | "evidence_mutation"
+                    | "secret_access"
+                    | "deployment"
+                    | "rollback"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",
@@ -563,7 +607,7 @@ impl PolicyAuthorityEngine {
         };
         let identity_valid = binding.principal == actor.actor_id
             && binding.actor_type == actor_type_for_role(&actor.role);
-        let (verdict, matched, reasons, refs, next) =
+        let (mut verdict, matched, mut reasons, refs, mut next) =
             if binding.binding_resolution == BindingResolution::Unresolved || !identity_valid {
                 (
                     Verdict::Escalate,
@@ -679,6 +723,60 @@ impl PolicyAuthorityEngine {
                     vec![],
                 )
             };
+        let mut candidates = vec![GovernanceVerdict {
+            engine: "local".into(),
+            disposition: match verdict {
+                Verdict::Allow => GovernanceDisposition::Allow,
+                Verdict::Deny => GovernanceDisposition::Deny,
+                Verdict::Escalate => GovernanceDisposition::Escalate,
+            },
+            boundaries: BTreeMap::new(),
+            compensating_controls: BTreeSet::new(),
+            reason: reasons.join(","),
+            evidence_refs: if refs.is_empty() {
+                vec!["local-policy:default".into()]
+            } else {
+                refs.clone()
+            },
+        }];
+        for configured in self
+            .bundle
+            .policy_engines
+            .iter()
+            .filter(|engine| engine.engine != "local")
+        {
+            candidates.push(GovernanceVerdict {
+                engine: configured.engine.clone(),
+                disposition: if configured.required {
+                    GovernanceDisposition::Deny
+                } else {
+                    GovernanceDisposition::Escalate
+                },
+                boundaries: BTreeMap::new(),
+                compensating_controls: BTreeSet::new(),
+                reason: "configured authority engine unavailable".into(),
+                evidence_refs: vec![format!("engine:{}:unavailable", configured.engine)],
+            });
+        }
+        let resolved = resolve_candidates(
+            &candidates,
+            &ResolutionPolicy {
+                allow_degraded: self.bundle.allow_degraded,
+            },
+        );
+        verdict = match resolved.disposition {
+            GovernanceDisposition::Allow => Verdict::Allow,
+            GovernanceDisposition::Escalate => {
+                next.push("resolve-authority-engine".into());
+                Verdict::Escalate
+            }
+            GovernanceDisposition::Deny
+            | GovernanceDisposition::Boundary
+            | GovernanceDisposition::Degraded => Verdict::Deny,
+        };
+        if candidates.len() > 1 {
+            reasons.push("candidate_resolution".into());
+        }
         let disposition = match verdict {
             Verdict::Allow => NormalizedDisposition::Allow,
             Verdict::Deny => NormalizedDisposition::Deny,
@@ -695,11 +793,11 @@ impl PolicyAuthorityEngine {
             operation: redacted_action(action),
             outcome: verdict.clone(),
             verdict: verdict.clone(),
-            normalized_disposition: disposition,
+            normalized_disposition: disposition.clone(),
             matched_rule: matched,
             reason_codes: reasons,
             reason: reason.clone(),
-            policy_refs: refs,
+            policy_refs: refs.clone(),
             required_next_steps: next,
             identity_binding: binding.clone(),
             determinism: Determinism {
@@ -712,11 +810,52 @@ impl PolicyAuthorityEngine {
                 engine: "sea-forge-authority".into(),
                 disposition: format!("{verdict:?}").to_lowercase(),
                 subject: actor.actor_id.clone(),
-                reason,
+                reason: reason.clone(),
                 evidence_refs: vec![],
                 recorded_at: timestamp.clone(),
             },
-            decided_at: timestamp,
+            decided_at: timestamp.clone(),
+            candidate_verdicts: candidates
+                .iter()
+                .map(|candidate| GovernanceVerdictRecord {
+                    engine: candidate.engine.clone(),
+                    disposition: match candidate.disposition {
+                        GovernanceDisposition::Allow => NormalizedDisposition::Allow,
+                        GovernanceDisposition::Deny => NormalizedDisposition::Deny,
+                        GovernanceDisposition::Escalate => NormalizedDisposition::Escalate,
+                        GovernanceDisposition::Boundary => NormalizedDisposition::Boundary,
+                        GovernanceDisposition::Degraded => NormalizedDisposition::Degraded,
+                    },
+                    subject: resource_id.clone(),
+                    reason: candidate.reason.clone(),
+                    evidence_refs: candidate.evidence_refs.clone(),
+                    recorded_at: timestamp.clone(),
+                    boundary_constraints: candidate
+                        .boundaries
+                        .iter()
+                        .map(|(key, values)| (key.clone(), values.iter().cloned().collect()))
+                        .collect(),
+                    compensating_controls: candidate
+                        .compensating_controls
+                        .iter()
+                        .cloned()
+                        .collect(),
+                })
+                .collect(),
+            winning_source: candidates
+                .iter()
+                .find(|candidate| candidate.disposition == resolved.disposition)
+                .map(|candidate| candidate.engine.clone()),
+            precedence_reason: Some("typed deterministic candidate resolution".into()),
+            sandbox_class_granted: (verdict == Verdict::Allow).then(|| "local".into()),
+            approval_request_id: None,
+            opaque_constraint_id: None,
+            boundary_constraints: resolved
+                .boundaries
+                .iter()
+                .map(|(key, values)| (key.clone(), values.iter().cloned().collect()))
+                .collect(),
+            compensating_controls: resolved.compensating_controls.into_iter().collect(),
         };
         self.issued_decisions
             .lock()
@@ -1027,6 +1166,28 @@ mod tests {
     fn engine_constructor_rejects_unvalidated_allow_any_command_bundle() {
         let bundle: AuthorityPolicyBundle = serde_yaml::from_str("version: \"0.1\"\nrules:\n  - name: unsafe\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n").unwrap();
         assert!(PolicyAuthorityEngine::new(bundle).is_err());
+    }
+
+    #[test]
+    fn configured_engine_must_fail_closed_and_unavailability_blocks() {
+        let fail_open: AuthorityPolicyBundle = serde_yaml::from_str(
+            "version: \"0.2\"\npolicy_engines:\n  - engine: opa\n    fail_mode: pass\n    required: true\nrules: []\n",
+        )
+        .unwrap();
+        assert!(PolicyAuthorityEngine::new(fail_open).is_err());
+
+        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+            "version: \"0.2\"\npolicy_engines:\n  - engine: opa\n    fail_mode: closed\n    required: true\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
+        )
+        .unwrap();
+        let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+        let action = AuthorityAction::WriteFile {
+            path: "model.sea".into(),
+            content_hint: "fixed".into(),
+        };
+        let decision = evaluate_with(&engine, &action);
+        assert_eq!(decision.verdict, Verdict::Deny);
+        assert_eq!(decision.candidate_verdicts.len(), 2);
     }
 
     #[test]

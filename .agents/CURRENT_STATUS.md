@@ -109,6 +109,10 @@ P1–P4b remain the unchanged compatibility floor.
   boundaries deny; grants require a one-use decision issued by the same engine
   plus a non-deserializable committed ref; authority evidence commits before
   the decision that cites it.
+- Task 5 candidate slice: authority decisions now persist candidate verdicts,
+  winning source, resolution reason, sandbox grant, boundaries, and controls;
+  v0.2 engine declarations reject fail-open modes and unavailable required
+  engines deny through the typed resolver.
 
 ## Tasks 1–4 Specification Reconciliation
 
