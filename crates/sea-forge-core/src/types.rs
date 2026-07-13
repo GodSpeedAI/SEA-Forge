@@ -179,6 +179,19 @@ pub struct AuditRecord {
     pub evidence_refs: Vec<String>,
     pub recorded_at: String,
 }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct GovernanceVerdictRecord {
+    pub engine: String,
+    pub disposition: NormalizedDisposition,
+    pub subject: String,
+    pub reason: String,
+    pub evidence_refs: Vec<String>,
+    pub recorded_at: String,
+    #[serde(default)]
+    pub boundary_constraints: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    pub compensating_controls: Vec<String>,
+}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthorityDecision {
     pub version: String,
@@ -201,6 +214,22 @@ pub struct AuthorityDecision {
     pub action_request: AuthorityRequest,
     pub audit_record: AuditRecord,
     pub decided_at: String,
+    #[serde(default)]
+    pub candidate_verdicts: Vec<GovernanceVerdictRecord>,
+    #[serde(default)]
+    pub winning_source: Option<String>,
+    #[serde(default)]
+    pub precedence_reason: Option<String>,
+    #[serde(default)]
+    pub sandbox_class_granted: Option<String>,
+    #[serde(default)]
+    pub approval_request_id: Option<String>,
+    #[serde(default)]
+    pub opaque_constraint_id: Option<String>,
+    #[serde(default)]
+    pub boundary_constraints: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    pub compensating_controls: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
