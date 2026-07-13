@@ -1142,6 +1142,10 @@ name = "sea-forge-extension"
 version = "0.1.0"
 dependencies = [
  "sea-forge-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
 ]
 
 [[package]]
