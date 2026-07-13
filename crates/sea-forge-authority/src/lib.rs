@@ -36,13 +36,8 @@ fn hash_canonical<T: Serialize>(value: &T) -> Result<String, ForgeError> {
     ))
 }
 
-fn issued_decision_key(decision: &AuthorityDecision) -> String {
-    format!(
-        "{}:{}:{}",
-        decision.decision_id,
-        decision.determinism.policy_bundle_hash,
-        decision.determinism.action_request_hash
-    )
+fn issued_decision_key(decision: &AuthorityDecision) -> Result<String, ForgeError> {
+    hash_canonical(decision)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -86,6 +81,9 @@ pub struct ActionGrant {
     run_id: String,
     plan_item_id: String,
     workspace_root: PathBuf,
+    artifacts_root: Option<PathBuf>,
+    timeout_secs: Option<u64>,
+    env_keys: BTreeSet<String>,
     expires_at: chrono::DateTime<Utc>,
 }
 
@@ -110,6 +108,27 @@ impl ActionGrant {
             ));
         }
         Ok(())
+    }
+
+    pub fn authorize_execution(
+        self,
+        action: &AuthorityAction,
+        run_id: &str,
+        plan_item_id: &str,
+        workspace_root: &Path,
+        artifacts_root: &Path,
+        timeout_secs: u64,
+        env_keys: BTreeSet<String>,
+    ) -> Result<(), ForgeError> {
+        if self.artifacts_root.as_deref() != Some(artifacts_root)
+            || self.timeout_secs != Some(timeout_secs)
+            || self.env_keys != env_keys
+        {
+            return Err(ForgeError::Input(
+                "authority grant does not match execution context".into(),
+            ));
+        }
+        self.authorize(action, run_id, plan_item_id, workspace_root)
     }
 }
 
@@ -461,6 +480,10 @@ pub struct AuthorityEvaluation<'a> {
     pub sequence: usize,
     pub action: &'a AuthorityAction,
     pub workspace_root: &'a Path,
+    pub evidence_refs: Vec<String>,
+    pub artifacts_root: Option<&'a Path>,
+    pub timeout_secs: Option<u64>,
+    pub env_keys: BTreeSet<String>,
 }
 impl PolicyAuthorityEngine {
     pub fn new(bundle: AuthorityPolicyBundle) -> Result<Self, ForgeError> {
@@ -484,7 +507,6 @@ impl PolicyAuthorityEngine {
         decision: &AuthorityDecision,
         committed: &CommittedRecordRef,
         action: &AuthorityAction,
-        workspace_root: &Path,
     ) -> Result<ActionGrant, ForgeError> {
         let action_hash = hash_canonical(action)?;
         let bound_hash = decision
@@ -507,7 +529,39 @@ impl PolicyAuthorityEngine {
                 "authority decision belongs to another policy context".into(),
             ));
         }
-        let decision_hash = issued_decision_key(decision);
+        let context = decision
+            .action_request
+            .context
+            .as_object()
+            .ok_or_else(|| ForgeError::Input("authority context is malformed".into()))?;
+        let context_string = |key: &str| {
+            context
+                .get(key)
+                .and_then(Value::as_str)
+                .ok_or_else(|| ForgeError::Input(format!("authority context missing {key}")))
+        };
+        let context_run_id = context_string("run_id")?;
+        let context_plan_item_id = context_string("plan_item_id")?;
+        if decision.run_id != context_run_id || decision.plan_item_id != context_plan_item_id {
+            return Err(ForgeError::Input(
+                "authority decision is detached from its context".into(),
+            ));
+        }
+        let workspace_root = PathBuf::from(context_string("workspace_root")?);
+        let artifacts_root = context
+            .get("artifacts_root")
+            .and_then(Value::as_str)
+            .map(PathBuf::from);
+        let timeout_secs = context.get("timeout_secs").and_then(Value::as_u64);
+        let env_keys = context
+            .get("env_keys")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(str::to_owned)
+            .collect();
+        let decision_hash = issued_decision_key(decision)?;
         if !self
             .issued_decisions
             .lock()
@@ -522,7 +576,10 @@ impl PolicyAuthorityEngine {
             action: action.clone(),
             run_id: decision.run_id.clone(),
             plan_item_id: decision.plan_item_id.clone(),
-            workspace_root: workspace_root.to_path_buf(),
+            workspace_root,
+            artifacts_root,
+            timeout_secs,
+            env_keys,
             expires_at: Utc::now() + chrono::Duration::minutes(5),
         })
     }
@@ -541,6 +598,10 @@ impl PolicyAuthorityEngine {
             sequence,
             action,
             workspace_root,
+            evidence_refs,
+            artifacts_root,
+            timeout_secs,
+            env_keys,
         } = input;
         let (kind, resource_type, resource_id, parameters) = match action {
             AuthorityAction::WriteFile { path, content_hint } => (
@@ -602,7 +663,7 @@ impl PolicyAuthorityEngine {
             timestamp_utc: timestamp.clone(),
             actor: json!({"actor_id":actor.actor_id,"actor_type":binding.actor_type,"principal":binding.principal}),
             action: json!({"tool_name":"sea-forge-cli","operation":kind,"resource_type":resource_type,"resource_id":resource_id,"parameters":parameters}),
-            context: json!({"repo":null,"branch":null,"environment":"local-slice","workspace_root":workspace_root,"source_platform":"cli","channel":"cli"}),
+            context: json!({"repo":null,"branch":null,"environment":"local-slice","run_id":run_id,"plan_item_id":plan_item_id,"workspace_root":workspace_root,"artifacts_root":artifacts_root,"timeout_secs":timeout_secs,"env_keys":env_keys,"source_platform":"cli","channel":"cli"}),
             evidence: json!({"identity_binding_source":binding.identity_binding_source,"tool_trace_ref":null,"payload_hash":hash_canonical(action)?}),
         };
         let identity_valid = binding.principal == actor.actor_id
@@ -675,6 +736,20 @@ impl PolicyAuthorityEngine {
                     Some("policy_surfaces.git_commit.protected_paths".into()),
                     vec!["protected_governance_path".into()],
                     vec!["git-commit-policy:deny".into()],
+                    vec![],
+                )
+            } else if self.bundle.version == "0.1"
+                && matches!(
+                    action,
+                    AuthorityAction::Reserved { resource_type, .. }
+                        if matches!(resource_type.as_str(), "recall_memory" | "inspect_run")
+                )
+            {
+                (
+                    Verdict::Allow,
+                    Some("legacy-read-compatibility".into()),
+                    vec!["legacy_read_allow".into()],
+                    vec!["minimum-spec:read-compatibility".into()],
                     vec![],
                 )
             } else if matches!(
@@ -809,7 +884,7 @@ impl PolicyAuthorityEngine {
                 disposition: format!("{verdict:?}").to_lowercase(),
                 subject: actor.actor_id.clone(),
                 reason: reason.clone(),
-                evidence_refs: vec![],
+                evidence_refs,
                 recorded_at: timestamp.clone(),
             },
             decided_at: timestamp.clone(),
@@ -858,7 +933,7 @@ impl PolicyAuthorityEngine {
         self.issued_decisions
             .lock()
             .map_err(|_| ForgeError::Internal("authority issuer state poisoned".into()))?
-            .insert(issued_decision_key(&decision));
+            .insert(issued_decision_key(&decision)?);
         Ok(decision)
     }
 }
@@ -1057,6 +1132,10 @@ mod tests {
                     sequence: 1,
                     action,
                     workspace_root: Path::new("/tmp/workspace"),
+                    evidence_refs: vec![],
+                    artifacts_root: None,
+                    timeout_secs: None,
+                    env_keys: Default::default(),
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -1078,6 +1157,10 @@ mod tests {
                     sequence: 1,
                     action,
                     workspace_root: Path::new("/tmp/workspace"),
+                    evidence_refs: vec![],
+                    artifacts_root: None,
+                    timeout_secs: None,
+                    env_keys: Default::default(),
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -1159,6 +1242,10 @@ mod tests {
                     sequence: 1,
                     action: &action,
                     workspace_root: Path::new("/tmp/workspace"),
+                    evidence_refs: vec![],
+                    artifacts_root: None,
+                    timeout_secs: None,
+                    env_keys: Default::default(),
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -1221,6 +1308,10 @@ mod tests {
                     sequence: 1,
                     action: &action,
                     workspace_root: Path::new("/tmp/workspace"),
+                    evidence_refs: vec![],
+                    artifacts_root: None,
+                    timeout_secs: None,
+                    env_keys: Default::default(),
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -1244,6 +1335,10 @@ mod tests {
                     sequence: 1,
                     action: &substitute,
                     workspace_root: Path::new("/tmp/workspace"),
+                    evidence_refs: vec![],
+                    artifacts_root: None,
+                    timeout_secs: None,
+                    env_keys: Default::default(),
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -1314,9 +1409,7 @@ mod tests {
         };
         let decision = evaluate_with(&engine, &action);
         let (_root, committed) = commit(&decision);
-        let grant = engine
-            .grant(&decision, &committed, &action, Path::new("/tmp/workspace"))
-            .unwrap();
+        let grant = engine.grant(&decision, &committed, &action).unwrap();
         assert!(grant
             .authorize(
                 &action,
@@ -1340,15 +1433,8 @@ mod tests {
         };
         let decision = evaluate_with(&engine, &allowed);
         let (_root, committed) = commit(&decision);
-        assert!(engine
-            .grant(
-                &decision,
-                &committed,
-                &substitute,
-                Path::new("/tmp/workspace"),
-            )
-            .is_err());
-        let denied = evaluate_with(
+        assert!(engine.grant(&decision, &committed, &substitute).is_err());
+        let mut denied = evaluate_with(
             &engine,
             &AuthorityAction::WriteFile {
                 path: ".env".into(),
@@ -1357,12 +1443,13 @@ mod tests {
         );
         let (_root, committed) = commit(&denied);
         assert!(engine
-            .grant(
-                &denied,
-                &committed,
-                &denied.operation,
-                Path::new("/tmp/workspace"),
-            )
+            .grant(&denied, &committed, &denied.operation)
+            .is_err());
+        denied.verdict = Verdict::Allow;
+        denied.outcome = Verdict::Allow;
+        let (_root, forged_commit) = commit(&denied);
+        assert!(engine
+            .grant(&denied, &forged_commit, &denied.operation)
             .is_err());
     }
 }

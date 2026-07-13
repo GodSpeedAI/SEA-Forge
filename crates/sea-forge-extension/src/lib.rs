@@ -470,14 +470,16 @@ mod tests {
                 sequence: 1,
                 action: &action,
                 workspace_root: tmp.path(),
+                evidence_refs: vec![],
+                artifacts_root: None,
+                timeout_secs: None,
+                env_keys: Default::default(),
             })
             .unwrap();
         let authority_ref = stream
             .commit_typed("authority_decision", vec![], &decision, vec![])
             .unwrap();
-        let grant = engine
-            .grant(&decision, &authority_ref, &action, tmp.path())
-            .unwrap();
+        let grant = engine.grant(&decision, &authority_ref, &action).unwrap();
         let mut reg = ExtensionRegistry {
             version: "0.2".into(),
             updated_at: "now".into(),

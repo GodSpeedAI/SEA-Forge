@@ -1090,6 +1090,7 @@ dependencies = [
  "sea-forge-trace",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tracing",
  "tracing-subscriber",
 ]
