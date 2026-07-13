@@ -71,6 +71,16 @@ enum Command {
         #[arg(long, default_value = "operator_local")]
         entity: String,
     },
+    Migrate {
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long)]
+        key_dir: Option<PathBuf>,
+        #[arg(long, default_value = "migration")]
+        key_id: String,
+    },
     Ledger {
         #[command(subcommand)]
         action: LedgerAction,
@@ -176,6 +186,18 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             entity,
         } => commands::inspect::execute(&root, policy.as_deref(), &entity, &run_id)
             .map_err(|e| (1, e)),
+        Command::Migrate {
+            root,
+            policy,
+            key_dir,
+            key_id,
+        } => commands::migrate::execute(commands::migrate::MigrateOptions {
+            root: &root,
+            policy: policy.as_deref(),
+            key_dir: key_dir.as_deref(),
+            key_id: &key_id,
+        })
+        .map_err(|e| (1, e)),
         Command::Ledger { action, root } => {
             commands::ledger::execute(action, &root).map_err(|e| (1, e))
         }

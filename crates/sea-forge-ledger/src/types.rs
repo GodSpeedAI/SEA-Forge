@@ -967,6 +967,68 @@ impl LedgerStream {
                 "ledger_integrity_error: mmr root mismatch".into(),
             ));
         }
+        self.verify_legacy_files()?;
+        Ok(())
+    }
+
+    fn verify_legacy_files(&self) -> Result<(), ForgeError> {
+        let entries = self.read_entries()?;
+        for entry in entries {
+            if entry.record_kind != "legacy_import" {
+                continue;
+            }
+            let path = entry
+                .payload
+                .get("path")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| {
+                    ForgeError::Internal(
+                        "ledger_integrity_error: legacy_import missing path".into(),
+                    )
+                })?;
+            let expected_sha256 = entry
+                .payload
+                .get("sha256")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| {
+                    ForgeError::Internal(
+                        "ledger_integrity_error: legacy_import missing sha256".into(),
+                    )
+                })?;
+            let expected_size = entry
+                .payload
+                .get("size_bytes")
+                .and_then(|v| v.as_u64())
+                .ok_or_else(|| {
+                    ForgeError::Internal(
+                        "ledger_integrity_error: legacy_import missing size_bytes".into(),
+                    )
+                })?;
+            let file_path = self.root.join(path);
+            let metadata = fs::metadata(&file_path).map_err(|e| {
+                ForgeError::io(
+                    format!("legacy_import missing file {}", file_path.display()),
+                    e,
+                )
+            })?;
+            if metadata.len() != expected_size {
+                return Err(ForgeError::Internal(format!(
+                    "ledger_integrity_error: legacy_import size mismatch for {path}"
+                )));
+            }
+            let bytes = fs::read(&file_path).map_err(|e| {
+                ForgeError::io(
+                    format!("read legacy_import file {}", file_path.display()),
+                    e,
+                )
+            })?;
+            let actual_sha256 = format!("sha256:{:x}", Sha256::digest(&bytes));
+            if actual_sha256 != expected_sha256 {
+                return Err(ForgeError::Internal(format!(
+                    "ledger_integrity_error: legacy_import sha256 mismatch for {path}"
+                )));
+            }
+        }
         Ok(())
     }
 

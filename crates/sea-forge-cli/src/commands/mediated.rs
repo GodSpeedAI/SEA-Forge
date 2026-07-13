@@ -114,6 +114,10 @@ fn verified_assurance(
     if !root.join("ledgers/global-checkpoints.jsonl").is_file() {
         return Ok(("local_tamper_evident".into(), None));
     }
+    // Migrated roots are historical snapshots; their assurance level is fixed at legacy.
+    if root.join("migration.json").is_file() {
+        return Ok(("legacy_digest_only".into(), None));
+    }
     let policy = AuthorityPolicyBundle::load(policy_path)?;
     let key_dir = policy
         .integrity_ledger
