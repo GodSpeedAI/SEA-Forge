@@ -146,6 +146,8 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             identity_binding_source: identity_source,
             sponsor: None,
         };
+        let authority_stream =
+            LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
         let mut decisions = Vec::new();
         for (index, operation) in item.operations.iter().enumerate() {
             let action = AuthorityAction::from(operation);
@@ -170,14 +172,18 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 event,
                 BTreeMap::new(),
             )?;
+            authority_stream.commit_typed(
+                "authority_evidence",
+                vec![run_id.clone(), decision.decision_id.clone()],
+                &evidence_record,
+                vec![],
+            )?;
             decision
                 .audit_record
                 .evidence_refs
                 .push(evidence_record.evidence_id);
             decisions.push(decision)
         }
-        let authority_stream =
-            LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
         let committed_decisions = decisions
             .iter()
             .map(|decision| {

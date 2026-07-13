@@ -105,6 +105,10 @@ P1–P4b remain the unchanged compatibility floor.
 - Task 5 canonical-decision slice: `LedgerStream::commit_typed` returns an
   opaque committed-record reference; the CLI commits every authority decision
   before writing `authority.json` or issuing its exact-action grant.
+- Task 5 review fixes: boundary dimensions now intersect and incompatible
+  boundaries deny; grants require a one-use decision issued by the same engine
+  plus a non-deserializable committed ref; authority evidence commits before
+  the decision that cites it.
 
 ## Tasks 1–4 Specification Reconciliation
 

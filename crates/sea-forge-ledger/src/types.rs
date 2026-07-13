@@ -411,7 +411,7 @@ pub struct LedgerStream {
     writer_identity_ref: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct CommittedRecordRef {
     ledger_id: String,
     entry_ulid: String,

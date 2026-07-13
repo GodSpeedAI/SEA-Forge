@@ -5,9 +5,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeSet, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
     fs,
     path::{Component, Path, PathBuf},
+    sync::Mutex,
 };
 use unicode_normalization::UnicodeNormalization;
 
@@ -35,6 +36,15 @@ fn hash_canonical<T: Serialize>(value: &T) -> Result<String, ForgeError> {
     ))
 }
 
+fn issued_decision_key(decision: &AuthorityDecision) -> String {
+    format!(
+        "{}:{}:{}",
+        decision.decision_id,
+        decision.determinism.policy_bundle_hash,
+        decision.determinism.action_request_hash
+    )
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum GovernanceDisposition {
@@ -50,7 +60,7 @@ pub struct GovernanceVerdict {
     pub engine: String,
     pub disposition: GovernanceDisposition,
     #[serde(default)]
-    pub boundaries: BTreeSet<String>,
+    pub boundaries: BTreeMap<String, BTreeSet<String>>,
     #[serde(default)]
     pub compensating_controls: BTreeSet<String>,
     pub reason: String,
@@ -65,7 +75,7 @@ pub struct ResolutionPolicy {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ResolvedGovernance {
     pub disposition: GovernanceDisposition,
-    pub boundaries: BTreeSet<String>,
+    pub boundaries: BTreeMap<String, BTreeSet<String>>,
     pub compensating_controls: BTreeSet<String>,
 }
 
@@ -107,10 +117,19 @@ pub fn resolve_candidates(
     candidates: &[GovernanceVerdict],
     policy: &ResolutionPolicy,
 ) -> ResolvedGovernance {
-    let boundaries = candidates
-        .iter()
-        .flat_map(|candidate| candidate.boundaries.iter().cloned())
-        .collect();
+    let mut boundaries = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut empty_boundary = false;
+    for candidate in candidates {
+        for (dimension, allowed) in &candidate.boundaries {
+            boundaries
+                .entry(dimension.clone())
+                .and_modify(|current| {
+                    current.retain(|value| allowed.contains(value));
+                    empty_boundary |= current.is_empty();
+                })
+                .or_insert_with(|| allowed.clone());
+        }
+    }
     let compensating_controls: BTreeSet<String> = candidates
         .iter()
         .flat_map(|candidate| candidate.compensating_controls.iter().cloned())
@@ -123,22 +142,25 @@ pub fn resolve_candidates(
             .iter()
             .any(|candidate| candidate.disposition == disposition)
     };
-    let disposition =
-        if candidates.is_empty() || missing_evidence || has(GovernanceDisposition::Deny) {
-            GovernanceDisposition::Deny
-        } else if has(GovernanceDisposition::Escalate) {
-            GovernanceDisposition::Escalate
-        } else if has(GovernanceDisposition::Boundary) {
-            GovernanceDisposition::Boundary
-        } else if has(GovernanceDisposition::Degraded) {
-            if policy.allow_degraded && !compensating_controls.is_empty() {
-                GovernanceDisposition::Degraded
-            } else {
-                GovernanceDisposition::Deny
-            }
+    let disposition = if candidates.is_empty()
+        || missing_evidence
+        || empty_boundary
+        || has(GovernanceDisposition::Deny)
+    {
+        GovernanceDisposition::Deny
+    } else if has(GovernanceDisposition::Escalate) {
+        GovernanceDisposition::Escalate
+    } else if has(GovernanceDisposition::Boundary) {
+        GovernanceDisposition::Boundary
+    } else if has(GovernanceDisposition::Degraded) {
+        if policy.allow_degraded && !compensating_controls.is_empty() {
+            GovernanceDisposition::Degraded
         } else {
-            GovernanceDisposition::Allow
-        };
+            GovernanceDisposition::Deny
+        }
+    } else {
+        GovernanceDisposition::Allow
+    };
     ResolvedGovernance {
         disposition,
         boundaries,
@@ -384,6 +406,7 @@ impl AuthorityPolicyBundle {
 pub struct PolicyAuthorityEngine {
     bundle: AuthorityPolicyBundle,
     bundle_hash: String,
+    issued_decisions: Mutex<HashSet<String>>,
 }
 
 pub struct AuthorityEvaluation<'a> {
@@ -402,6 +425,7 @@ impl PolicyAuthorityEngine {
         Ok(Self {
             bundle,
             bundle_hash,
+            issued_decisions: Mutex::new(HashSet::new()),
         })
     }
     pub fn evaluate(
@@ -437,6 +461,17 @@ impl PolicyAuthorityEngine {
         if decision.determinism.policy_bundle_hash != self.bundle_hash {
             return Err(ForgeError::Input(
                 "authority decision belongs to another policy context".into(),
+            ));
+        }
+        let decision_hash = issued_decision_key(decision);
+        if !self
+            .issued_decisions
+            .lock()
+            .map_err(|_| ForgeError::Internal("authority issuer state poisoned".into()))?
+            .remove(&decision_hash)
+        {
+            return Err(ForgeError::Input(
+                "authority decision was not issued by this mediator or was replayed".into(),
             ));
         }
         Ok(ActionGrant {
@@ -650,7 +685,7 @@ impl PolicyAuthorityEngine {
             Verdict::Escalate => NormalizedDisposition::Escalate,
         };
         let reason = reasons.join(",");
-        Ok(AuthorityDecision {
+        let decision = AuthorityDecision {
             version: RECORD_VERSION.into(),
             decision_id: format!("auth_{sequence:02}"),
             run_id: run_id.into(),
@@ -682,7 +717,12 @@ impl PolicyAuthorityEngine {
                 recorded_at: timestamp.clone(),
             },
             decided_at: timestamp,
-        })
+        };
+        self.issued_decisions
+            .lock()
+            .map_err(|_| ForgeError::Internal("authority issuer state poisoned".into()))?
+            .insert(issued_decision_key(&decision));
+        Ok(decision)
     }
 }
 fn actor_type_for_role(role: &ActorRole) -> ActorType {
@@ -863,6 +903,27 @@ mod tests {
     fn evaluate(action: &AuthorityAction) -> AuthorityDecision {
         let actor = actor();
         engine()
+            .evaluate_at(
+                AuthorityEvaluation {
+                    actor: &actor,
+                    binding: binding(),
+                    run_id: "run_20260710T120000Z_abcdef",
+                    plan_item_id: "item_01",
+                    sequence: 1,
+                    action,
+                    workspace_root: Path::new("/tmp/workspace"),
+                },
+                "act_abcdef".into(),
+                "2026-07-10T12:00:00Z".into(),
+            )
+            .unwrap()
+    }
+    fn evaluate_with(
+        engine: &PolicyAuthorityEngine,
+        action: &AuthorityAction,
+    ) -> AuthorityDecision {
+        let actor = actor();
+        engine
             .evaluate_at(
                 AuthorityEvaluation {
                     actor: &actor,
@@ -1084,7 +1145,7 @@ mod tests {
             path: "model.sea".into(),
             content_hint: "fixed".into(),
         };
-        let decision = evaluate(&action);
+        let decision = evaluate_with(&engine, &action);
         let (_root, committed) = commit(&decision);
         let grant = engine
             .grant(&decision, &committed, &action, Path::new("/tmp/workspace"))
@@ -1110,7 +1171,7 @@ mod tests {
             path: "other.sea".into(),
             content_hint: "fixed".into(),
         };
-        let decision = evaluate(&allowed);
+        let decision = evaluate_with(&engine, &allowed);
         let (_root, committed) = commit(&decision);
         assert!(engine
             .grant(
@@ -1120,10 +1181,13 @@ mod tests {
                 Path::new("/tmp/workspace"),
             )
             .is_err());
-        let denied = evaluate(&AuthorityAction::WriteFile {
-            path: ".env".into(),
-            content_hint: "fixed".into(),
-        });
+        let denied = evaluate_with(
+            &engine,
+            &AuthorityAction::WriteFile {
+                path: ".env".into(),
+                content_hint: "fixed".into(),
+            },
+        );
         let (_root, committed) = commit(&denied);
         assert!(engine
             .grant(
@@ -1144,7 +1208,7 @@ mod resolver_tests {
         GovernanceVerdict {
             engine: "test".into(),
             disposition,
-            boundaries: BTreeSet::new(),
+            boundaries: BTreeMap::new(),
             compensating_controls: BTreeSet::new(),
             reason: "fixture".into(),
             evidence_refs: vec!["ev_1".into()],
@@ -1154,7 +1218,7 @@ mod resolver_tests {
     #[test]
     fn allow_is_identity_and_candidate_order_is_irrelevant() {
         let boundary = GovernanceVerdict {
-            boundaries: BTreeSet::from(["workspace:/safe".into()]),
+            boundaries: BTreeMap::from([("workspace".into(), BTreeSet::from(["/safe".into()]))]),
             ..verdict(GovernanceDisposition::Boundary)
         };
         let left = resolve_candidates(
@@ -1172,7 +1236,7 @@ mod resolver_tests {
     #[test]
     fn escalation_blocks_while_retaining_boundaries() {
         let boundary = GovernanceVerdict {
-            boundaries: BTreeSet::from(["workspace:/safe".into()]),
+            boundaries: BTreeMap::from([("workspace".into(), BTreeSet::from(["/safe".into()]))]),
             ..verdict(GovernanceDisposition::Boundary)
         };
         let resolved = resolve_candidates(
@@ -1182,7 +1246,23 @@ mod resolver_tests {
         assert_eq!(resolved.disposition, GovernanceDisposition::Escalate);
         assert_eq!(
             resolved.boundaries,
-            BTreeSet::from(["workspace:/safe".into()])
+            BTreeMap::from([("workspace".into(), BTreeSet::from(["/safe".into()]))])
+        );
+    }
+
+    #[test]
+    fn incompatible_boundaries_deny() {
+        let first = GovernanceVerdict {
+            boundaries: BTreeMap::from([("workspace".into(), BTreeSet::from(["/one".into()]))]),
+            ..verdict(GovernanceDisposition::Boundary)
+        };
+        let second = GovernanceVerdict {
+            boundaries: BTreeMap::from([("workspace".into(), BTreeSet::from(["/two".into()]))]),
+            ..verdict(GovernanceDisposition::Boundary)
+        };
+        assert_eq!(
+            resolve_candidates(&[first, second], &ResolutionPolicy::default()).disposition,
+            GovernanceDisposition::Deny
         );
     }
 
