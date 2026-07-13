@@ -1,5 +1,6 @@
 use sea_forge_ledger::signing::{load_or_create_signing_key, SigningKey};
 use sea_forge_ledger::types::{verify_proof, LedgerStream, MerkleProof, MmrState};
+use sea_forge_ledger::{AssuranceLevel, LedgerManager};
 use sha2::Digest;
 use std::collections::HashSet;
 use std::fs;
@@ -334,4 +335,264 @@ fn m0_mmr_root_matches_recomputed_root() {
     let stored = stream.load_mmr().unwrap();
     assert_eq!(stored, mmr);
     assert_eq!(stored.root().unwrap(), mmr.root().unwrap());
+}
+
+// ---- Witness receipts ----
+
+#[test]
+fn m0_witness_receipt_detects_fork_substitution() {
+    let tmp = tempdir().unwrap();
+    let key_dir = tmp.path().join("keys");
+
+    // Create a ledger with entries and a global checkpoint.
+    let mgr = LedgerManager::new(tmp.path()).unwrap();
+    let stream = mgr.open_stream("case_a", "operator_01").unwrap();
+    append_mixed_records(&stream, 10);
+
+    let signing_key = load_or_create_signing_key(&key_dir, "integrity_01").unwrap();
+    let gcp = mgr
+        .create_global_checkpoint(&signing_key, "integrity_01")
+        .unwrap();
+
+    // An independent witness signs the global checkpoint.
+    let witness_key = load_or_create_signing_key(&key_dir, "witness_alpha").unwrap();
+    let _receipt = mgr
+        .witness_global_checkpoint(&gcp, "witness_alpha", &witness_key)
+        .unwrap();
+
+    // Verify: one independent witness → externally_verified.
+    let assurance = mgr
+        .verify_witness_receipts(
+            &gcp.global_checkpoint_hash,
+            &[("witness_alpha".into(), witness_key.verifying_key())],
+            "operator_01",
+            1,
+        )
+        .unwrap();
+    assert_eq!(assurance, AssuranceLevel::ExternallyVerified);
+
+    // Fork substitution: create a completely new root with different entries.
+    let tmp2 = tempdir().unwrap();
+    let mgr2 = LedgerManager::new(tmp2.path()).unwrap();
+    let stream2 = mgr2.open_stream("case_a", "operator_01").unwrap();
+    append_mixed_records(&stream2, 5); // fewer entries → different root
+
+    // The witness receipt from the original does not match the fork's hash.
+    let fork_gcp = mgr2
+        .create_global_checkpoint(&signing_key, "integrity_01")
+        .unwrap();
+    let fork_assurance = mgr
+        .verify_witness_receipts(
+            &fork_gcp.global_checkpoint_hash,
+            &[("witness_alpha".into(), witness_key.verifying_key())],
+            "operator_01",
+            1,
+        )
+        .unwrap();
+    assert_eq!(fork_assurance, AssuranceLevel::LocalTamperEvident);
+}
+
+#[test]
+fn m0_witness_must_be_independent_from_acting_entity() {
+    let tmp = tempdir().unwrap();
+    let key_dir = tmp.path().join("keys");
+    let mgr = LedgerManager::new(tmp.path()).unwrap();
+    let stream = mgr.open_stream("case_b", "operator_01").unwrap();
+    append_mixed_records(&stream, 5);
+
+    let signing_key = load_or_create_signing_key(&key_dir, "integrity_01").unwrap();
+    let gcp = mgr
+        .create_global_checkpoint(&signing_key, "integrity_01")
+        .unwrap();
+
+    // The acting entity witnesses its own checkpoint — not independent.
+    mgr.witness_global_checkpoint(&gcp, "operator_01", &signing_key)
+        .unwrap();
+
+    let assurance = mgr
+        .verify_witness_receipts(
+            &gcp.global_checkpoint_hash,
+            &[("operator_01".into(), signing_key.verifying_key())],
+            "operator_01",
+            1,
+        )
+        .unwrap();
+    assert_eq!(
+        assurance,
+        AssuranceLevel::LocalTamperEvident,
+        "self-witnessing must not be externally verified"
+    );
+}
+
+// ---- Global checkpoints ----
+
+#[test]
+fn m0_global_checkpoint_covers_all_streams() {
+    let tmp = tempdir().unwrap();
+    let key_dir = tmp.path().join("keys");
+    let mgr = LedgerManager::new(tmp.path()).unwrap();
+
+    let s1 = mgr.open_stream("case_a", "w1").unwrap();
+    let s2 = mgr.open_stream("case_b", "w2").unwrap();
+    let s3 = mgr.open_stream("global", "w3").unwrap();
+    append_mixed_records(&s1, 10);
+    append_mixed_records(&s2, 20);
+    append_mixed_records(&s3, 5);
+
+    let signing_key = load_or_create_signing_key(&key_dir, "integrity_01").unwrap();
+    let gcp = mgr
+        .create_global_checkpoint(&signing_key, "integrity_01")
+        .unwrap();
+
+    assert!(gcp.stream_roots.len() >= 3);
+    assert!(gcp.global_root.starts_with("sha256:"));
+    assert!(gcp.global_checkpoint_hash.starts_with("sha256:"));
+
+    mgr.verify_global_checkpoints(&signing_key.verifying_key())
+        .unwrap();
+}
+
+#[test]
+fn m0_global_checkpoint_chain() {
+    let tmp = tempdir().unwrap();
+    let key_dir = tmp.path().join("keys");
+    let mgr = LedgerManager::new(tmp.path()).unwrap();
+    let stream = mgr.open_stream("global", "w1").unwrap();
+
+    append_mixed_records(&stream, 10);
+    let signing_key = load_or_create_signing_key(&key_dir, "integrity_01").unwrap();
+    let gcp1 = mgr
+        .create_global_checkpoint(&signing_key, "integrity_01")
+        .unwrap();
+
+    append_mixed_records(&stream, 10);
+    let gcp2 = mgr
+        .create_global_checkpoint(&signing_key, "integrity_01")
+        .unwrap();
+
+    assert_eq!(
+        gcp2.previous_global_checkpoint_hash,
+        Some(gcp1.global_checkpoint_hash.clone())
+    );
+    mgr.verify_global_checkpoints(&signing_key.verifying_key())
+        .unwrap();
+}
+
+// ---- Redaction ----
+
+#[test]
+fn m0_secret_sentinel_rejected_in_payload() {
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "case_redact", "w1").unwrap();
+    let result = stream.append(
+        "secret_attempt",
+        vec![],
+        serde_json::json!({"api_key": "sk-1234567890abcdef"}),
+        vec![],
+    );
+    assert!(result.is_err(), "secret sentinel must be rejected");
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("ledger_integrity_error"));
+}
+
+#[test]
+fn m0_private_key_block_rejected() {
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "case_key", "w1").unwrap();
+    let result = stream.append(
+        "key_attempt",
+        vec![],
+        serde_json::json!({
+            "data": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANB\n-----END PRIVATE KEY-----"
+        }),
+        vec![],
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn m0_approved_ciphertext_commitment_accepted() {
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "case_cipher", "w1").unwrap();
+    let result = stream.append(
+        "ciphertext",
+        vec![],
+        serde_json::json!({
+            "redacted_commitment": "sha256:abcdef1234567890",
+            "ciphertext": "base64-encoded-encrypted-data"
+        }),
+        vec![],
+    );
+    assert!(result.is_ok(), "approved ciphertext commitment should pass");
+}
+
+// ---- Key rotation ----
+
+#[test]
+fn m0_key_rotation_old_checkpoints_verify_under_old_key() {
+    let tmp = tempdir().unwrap();
+    let key_dir = tmp.path().join("keys");
+    let stream = LedgerStream::open(tmp.path(), "case_rotate", "w1").unwrap();
+    append_mixed_records(&stream, 10);
+
+    // Checkpoint under key_01.
+    let key_01 = load_or_create_signing_key(&key_dir, "key_01").unwrap();
+    let cp1 = stream.create_checkpoint(&key_01, "key_01").unwrap();
+
+    append_mixed_records(&stream, 10);
+    // Rotate to key_02.
+    let key_02 = load_or_create_signing_key(&key_dir, "key_02").unwrap();
+    let cp2 = stream.create_checkpoint(&key_02, "key_02").unwrap();
+
+    assert_eq!(cp1.signing_key_id, "key_01");
+    assert_eq!(cp2.signing_key_id, "key_02");
+
+    // Verify with both keys present.
+    stream
+        .verify_checkpoints_with_keys(&[
+            ("key_01".into(), key_01.verifying_key()),
+            ("key_02".into(), key_02.verifying_key()),
+        ])
+        .unwrap();
+
+    // Verify with only the new key → old checkpoint fails.
+    let result = stream.verify_checkpoints_with_keys(&[("key_02".into(), key_02.verifying_key())]);
+    assert!(
+        result.is_err(),
+        "old checkpoint must not verify when its key is removed"
+    );
+}
+
+// ---- Crash recovery ----
+
+#[test]
+fn m0_crash_recovery_quarantines_incomplete_tail() {
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "case_crash", "w1").unwrap();
+    append_mixed_records(&stream, 5);
+
+    // Simulate crash: append a truncated line to the entries file.
+    let path = stream.entries_path();
+    let mut file = fs::OpenOptions::new().append(true).open(&path).unwrap();
+    file.write_all(b"{\"version\":\"0.2\",\"incomplete\":\n")
+        .unwrap();
+    drop(file);
+
+    // Before recovery, verify fails.
+    assert!(stream.verify().is_err());
+
+    // Quarantine the incomplete tail.
+    let quarantined = stream.quarantine_incomplete_tail().unwrap();
+    assert_eq!(quarantined, 1, "one incomplete line should be quarantined");
+
+    // After recovery, verify passes.
+    stream.verify().unwrap();
+
+    // Quarantine file exists.
+    let q_dir = tmp.path().join("ledgers").join("quarantine");
+    let q_files: Vec<_> = fs::read_dir(&q_dir)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .collect();
+    assert!(!q_files.is_empty(), "quarantine file should exist");
 }
