@@ -679,9 +679,7 @@ impl PolicyAuthorityEngine {
                 )
             } else if matches!(
                 action,
-                AuthorityAction::GitCommit { .. }
-                    | AuthorityAction::GithubPr { .. }
-                    | AuthorityAction::Reserved { .. }
+                AuthorityAction::GitCommit { .. } | AuthorityAction::GithubPr { .. }
             ) {
                 (
                     Verdict::Escalate,
@@ -910,6 +908,7 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                         == Some(expected)
                 })
         }
+        AuthorityAction::Reserved { resource_type, .. } => rule.operation_kind == *resource_type,
         _ => false,
     }
 }
@@ -957,6 +956,13 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "spec_projection",
                 "artifact_transition",
                 "identity_binding",
+                "install_extension",
+                "adopt_extension",
+                "disable_extension",
+                "projection_execution",
+                "recall_memory",
+                "inspect_run",
+                "validate_model",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()

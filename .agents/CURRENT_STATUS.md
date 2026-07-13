@@ -113,6 +113,11 @@ P1–P4b remain the unchanged compatibility floor.
   winning source, resolution reason, sandbox grant, boundaries, and controls;
   v0.2 engine declarations reject fail-open modes and unavailable required
   engines deny through the typed resolver.
+- Task 5 view/extension slice: authority compatibility output materializes only
+  after its committed decision and records current/failed freshness; failed
+  materialization preserves verifiable ledger truth. Extension registry saves
+  are ledger-first, and imported adoption consumes an exact-action grant plus a
+  committed authority reference.
 
 ## Tasks 1–4 Specification Reconciliation
 

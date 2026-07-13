@@ -4,6 +4,7 @@
 
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::{ExtensionDescriptor, ExtensionKind};
+use sea_forge_ledger::{CommittedRecordRef, LedgerStream};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::{
@@ -30,6 +31,8 @@ pub struct RegistryEntry {
     pub descriptor_sha256: String,
     pub trust_level: TrustLevel,
     pub status: ExtensionStatus,
+    #[serde(default)]
+    pub authority_ref: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -51,6 +54,14 @@ pub enum ExtensionStatus {
     Superseded,
 }
 
+pub struct AdoptionAuthorization<'a> {
+    pub grant: sea_forge_authority::ActionGrant,
+    pub run_id: &'a str,
+    pub plan_item_id: &'a str,
+    pub workspace_root: &'a Path,
+    pub authority_ref: &'a CommittedRecordRef,
+}
+
 impl ExtensionRegistry {
     /// Load from `.sea-forge/extensions/registry.json`, or return an empty registry.
     pub fn load(root: &Path) -> Result<Self, ForgeError> {
@@ -68,16 +79,26 @@ impl ExtensionRegistry {
     }
 
     /// Save to `.sea-forge/extensions/registry.json`.
-    pub fn save(&self, root: &Path) -> Result<(), ForgeError> {
+    pub fn save(
+        &self,
+        root: &Path,
+        stream: &LedgerStream,
+        authority_refs: Vec<String>,
+    ) -> Result<CommittedRecordRef, ForgeError> {
         let path = Self::path(root);
-        let dir = path.parent().unwrap();
-        fs::create_dir_all(dir).map_err(|e| ForgeError::io("create extensions dir", e))?;
         let bytes = serde_json::to_vec_pretty(self)
             .map_err(|e| ForgeError::Serialization(e.to_string()))?;
-        let tmp = path.with_extension("tmp");
-        fs::write(&tmp, &bytes).map_err(|e| ForgeError::io("write registry", e))?;
-        fs::rename(&tmp, &path).map_err(|e| ForgeError::io("rename registry", e))?;
-        Ok(())
+        let committed = stream.commit_typed(
+            "extension_registry",
+            self.extensions
+                .iter()
+                .map(|entry| format!("{}@{}", entry.extension_id, entry.version))
+                .collect(),
+            self,
+            authority_refs,
+        )?;
+        stream.materialize_view(&committed, &path, &bytes)?;
+        Ok(committed)
     }
 
     fn path(root: &Path) -> PathBuf {
@@ -105,6 +126,7 @@ impl ExtensionRegistry {
             descriptor_sha256: descriptor_hash,
             trust_level: TrustLevel::BuiltIn,
             status: ExtensionStatus::Active,
+            authority_ref: None,
         });
         self.updated_at = chrono_now();
         Ok(())
@@ -124,6 +146,7 @@ impl ExtensionRegistry {
             descriptor_sha256: descriptor_hash,
             trust_level,
             status: ExtensionStatus::Disabled,
+            authority_ref: None,
         });
         self.updated_at = chrono_now();
         Ok(())
@@ -131,7 +154,22 @@ impl ExtensionRegistry {
 
     /// Adopt an imported extension (status: disabled → active).
     /// This is the authority-checked operation that makes an imported extension usable.
-    pub fn adopt(&mut self, extension_id: &str, version: &str) -> Result<(), ForgeError> {
+    pub fn adopt(
+        &mut self,
+        extension_id: &str,
+        version: &str,
+        authorization: AdoptionAuthorization<'_>,
+    ) -> Result<(), ForgeError> {
+        authorization.grant.authorize(
+            &sea_forge_core::types::AuthorityAction::Reserved {
+                resource_type: "adopt_extension".into(),
+                resource_id: format!("{extension_id}@{version}"),
+                parameters: serde_json::json!({}),
+            },
+            authorization.run_id,
+            authorization.plan_item_id,
+            authorization.workspace_root,
+        )?;
         let entry = self
             .extensions
             .iter_mut()
@@ -144,6 +182,7 @@ impl ExtensionRegistry {
             )));
         }
         entry.status = ExtensionStatus::Active;
+        entry.authority_ref = Some(authorization.authority_ref.entry_ulid().into());
         self.updated_at = chrono_now();
         Ok(())
     }
@@ -319,6 +358,10 @@ fn chrono_now() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+    use sea_forge_core::types::{
+        Actor, ActorRole, ActorType, AuthorityAction, BindingResolution, IdentityBinding,
+    };
     use sea_forge_core::types::{ContractRef, ExtensionKind};
 
     fn valid_descriptor() -> ExtensionDescriptor {
@@ -394,6 +437,47 @@ mod tests {
 
     #[test]
     fn adopt_makes_imported_active() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(tmp.path(), "extensions", "test").unwrap();
+        let engine = PolicyAuthorityEngine::new(
+            serde_yaml::from_str::<AuthorityPolicyBundle>(
+                "version: \"0.2\"\nrules:\n  - name: adopt\n    verdict: allow\n    actor_role: operator\n    operation_kind: adopt_extension\n",
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let actor = Actor {
+            actor_id: "operator".into(),
+            role: ActorRole::Operator,
+        };
+        let action = AuthorityAction::Reserved {
+            resource_type: "adopt_extension".into(),
+            resource_id: "ext_demo@0.1".into(),
+            parameters: serde_json::json!({}),
+        };
+        let decision = engine
+            .evaluate(AuthorityEvaluation {
+                actor: &actor,
+                binding: IdentityBinding {
+                    principal: "operator".into(),
+                    actor_type: ActorType::Human,
+                    binding_resolution: BindingResolution::Exact,
+                    identity_binding_source: "test".into(),
+                    sponsor: None,
+                },
+                run_id: "run_test",
+                plan_item_id: "item_test",
+                sequence: 1,
+                action: &action,
+                workspace_root: tmp.path(),
+            })
+            .unwrap();
+        let authority_ref = stream
+            .commit_typed("authority_decision", vec![], &decision, vec![])
+            .unwrap();
+        let grant = engine
+            .grant(&decision, &authority_ref, &action, tmp.path())
+            .unwrap();
         let mut reg = ExtensionRegistry {
             version: "0.2".into(),
             updated_at: "now".into(),
@@ -402,8 +486,23 @@ mod tests {
         reg.import(&valid_descriptor(), TrustLevel::Imported)
             .unwrap();
         assert!(!reg.is_active("ext_demo", "0.1"));
-        reg.adopt("ext_demo", "0.1").unwrap();
+        reg.adopt(
+            "ext_demo",
+            "0.1",
+            AdoptionAuthorization {
+                grant,
+                run_id: "run_test",
+                plan_item_id: "item_test",
+                workspace_root: tmp.path(),
+                authority_ref: &authority_ref,
+            },
+        )
+        .unwrap();
         assert!(reg.is_active("ext_demo", "0.1"));
+        assert_eq!(
+            reg.extensions[0].authority_ref.as_deref(),
+            Some(authority_ref.entry_ulid())
+        );
     }
 
     #[test]

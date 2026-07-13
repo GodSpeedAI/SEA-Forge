@@ -195,7 +195,14 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
-        write_json(&run_dir.join("authority.json"), &decisions)?;
+        let authority_bytes = serde_json::to_vec_pretty(&decisions)?;
+        authority_stream.materialize_view(
+            committed_decisions
+                .last()
+                .ok_or_else(|| ForgeError::Internal("no authority decisions committed".into()))?,
+            &run_dir.join("authority.json"),
+            &authority_bytes,
+        )?;
         let all_allow = decisions.iter().all(|d| d.verdict == Verdict::Allow);
         let mut execution = None;
         let mut artifact_refs = Vec::new();
