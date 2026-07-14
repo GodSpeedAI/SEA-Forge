@@ -641,6 +641,208 @@ pub struct ApprovalRequest {
     pub note: Option<String>,
 }
 
+// === M4a: Settlement Declarations ===
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SettlementStrength {
+    Local,
+    Strong,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DeclarationStatus {
+    Accepted,
+    Rejected,
+    Escalated,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Declarer {
+    pub actor_id: String,
+    pub authority_ref: String,
+    pub role: String,
+    pub standing_basis: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DeclarationIndependence {
+    pub acting_entity_id: String,
+    pub independent: bool,
+    pub basis: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DeclarationReliability {
+    pub feedback_delay_ms: u64,
+    pub attribution_confidence: String,
+    pub gaming_exposure: String,
+    pub hidden_debt_blindness: String,
+    pub weight: String,
+    pub basis: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SettlementDeclarationRequest {
+    pub settlement_ref: String,
+    pub run_id: String,
+    pub case_id: String,
+    pub plan_item_id: String,
+    pub claim_manifest_sha256: String,
+    pub criteria_ref: String,
+    pub criteria_sha256: String,
+    pub criteria_record_hash: String,
+    pub criteria_declared_at: String,
+    pub execution_started_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
+    pub origin_refs: Vec<OriginRef>,
+    pub verifier_ref: String,
+    pub verifier_sha256: String,
+    pub acting_entity_id: String,
+    pub requested_strength: SettlementStrength,
+    pub declarer: Declarer,
+    pub variation_tags: BTreeMap<String, String>,
+    pub disruption_tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_burden: Option<String>,
+    pub source_evidence_refs: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SettlementDeclaration {
+    pub version: String,
+    pub declaration_id: String,
+    pub settlement_ref: String,
+    pub run_id: String,
+    pub case_id: String,
+    pub plan_item_id: String,
+    pub claim_manifest_sha256: String,
+    pub status: DeclarationStatus,
+    pub strength: SettlementStrength,
+    pub qualifies_for_capability: bool,
+    pub criteria_ref: String,
+    pub criteria_sha256: String,
+    pub criteria_record_hash: String,
+    pub criteria_declared_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
+    pub origin_refs: Vec<OriginRef>,
+    pub verifier_ref: String,
+    pub verifier_sha256: String,
+    pub verification_evidence_refs: Vec<String>,
+    pub declarer: Declarer,
+    pub independence: DeclarationIndependence,
+    pub reliability: DeclarationReliability,
+    pub variation_tags: BTreeMap<String, String>,
+    pub disruption_tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_burden: Option<String>,
+    pub issued_at: String,
+    pub source_evidence_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter_attestation_ref: Option<String>,
+    pub declaration_hash: String,
+}
+
+// === M4a: Capability Records ===
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CapabilityStatus {
+    Attempted,
+    Demonstrated,
+    Proven,
+    Metabolized,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct CapabilityCounts {
+    #[serde(default)]
+    pub accepted: u64,
+    #[serde(default)]
+    pub rejected: u64,
+    #[serde(default)]
+    pub escalated: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityQualifying {
+    pub declaration_count: u64,
+    pub total_weight: String,
+    pub accepted_weight: String,
+    pub regression_weight: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityVariation {
+    pub required_dimensions: Vec<String>,
+    pub covered_values: BTreeMap<String, Vec<String>>,
+    pub coverage_ratio: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityRecovery {
+    pub required_disruptions: Vec<String>,
+    pub recovered_disruptions: Vec<String>,
+    pub recovery_ratio: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityOrchestration {
+    pub baseline_burden: Option<String>,
+    pub current_burden: Option<String>,
+    pub reduction: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityEvidenceSampleItem {
+    pub run_id: String,
+    pub settlement_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub declaration_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityPromotionPolicy {
+    pub version: String,
+    pub name: String,
+    pub capability_pattern: String,
+    pub policy_sha256: String,
+    pub min_declarations: u64,
+    pub min_total_weight: String,
+    pub min_reliability_weight: String,
+    pub max_regression_weight: String,
+    pub required_variation_dimensions: Vec<String>,
+    pub min_distinct_values_per_dimension: u64,
+    pub required_disruptions: Vec<String>,
+    pub require_burden_reduction: bool,
+    pub min_confidence: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityRecord {
+    pub version: String,
+    pub capability_name: String,
+    pub first_seen: String,
+    pub last_seen: String,
+    pub counts: CapabilityCounts,
+    pub status: CapabilityStatus,
+    pub promotion_policy_ref: String,
+    pub promotion_policy_sha256: String,
+    pub qualifying: CapabilityQualifying,
+    pub variation: CapabilityVariation,
+    pub recovery: CapabilityRecovery,
+    pub orchestration: CapabilityOrchestration,
+    pub confidence: String,
+    pub contraction_reasons: Vec<String>,
+    pub evidence_sample: Vec<CapabilityEvidenceSampleItem>,
+    pub rebuilt_at: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CapabilityDelta {
     pub attempted_capability: String,

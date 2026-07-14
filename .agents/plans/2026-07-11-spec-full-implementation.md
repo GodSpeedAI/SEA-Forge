@@ -732,7 +732,7 @@ cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-featu
   Intent/template/ledger substrate; no redundant JobContract, criteria store,
   or crate was introduced *(Task 9.5)*
 - [x] Escalate→approve→resume and TTL-expiry flows pass; 8-way concurrency uncorrupted; approvals bind to and revalidate the exact criteria record *(Task 10)*
-- [ ] Promotion requires qualifying independent declarations; rebuild byte-pure; require_proven cites record+policy; unresolved, mismatched, or legacy-unattributed criteria cannot qualify *(Task 11)*
+- [x] Promotion requires qualifying independent declarations; rebuild byte-pure; require_proven cites record+policy; unresolved, mismatched, or legacy-unattributed criteria cannot qualify *(Task 11)*
 - [ ] Scoped recall with evidence; FTS index pure + fallback-equivalent *(Task 12)*
 - [ ] Pipeline hash-chain + determinism + classification ceiling; CALM/RDF projections rebuild byte-identically *(Task 13)*
 - [ ] Bundles export/import with atomic rejection; no capability leakage *(Task 14)*

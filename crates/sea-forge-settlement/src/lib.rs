@@ -5,6 +5,13 @@ use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
 use sea_forge_sandbox::safe_existing;
 
+pub mod declaration;
+
+pub use declaration::{
+    append_declaration, compute_declaration_hash, load_declarations, LocalSettlementAuthority,
+    SettlementAuthority, SweSeedResponse, SweSeedSettlementAuthority, SweSeedTransport,
+};
+
 pub fn settle(
     claim: &SettlementClaim,
     workspace: &Path,

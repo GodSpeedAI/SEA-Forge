@@ -3,6 +3,14 @@ use sea_forge_core::{
     types::{ExtensionDescriptor, ExtensionKind, SemanticEnvelope, SettlementStatus},
 };
 
+pub mod promotion;
+
+pub use promotion::{
+    append_capability_record, build_capability_record, compute_policy_hash, default_v02_policy,
+    format_fixed, load_declarations, load_envelopes, parse_fixed, rebuild_capability,
+    require_proven, save_policy,
+};
+
 pub fn validate_extension_descriptor(descriptor: &ExtensionDescriptor) -> Result<(), ForgeError> {
     const SURFACES: &[&str] = &[
         "file",
