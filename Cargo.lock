@@ -1110,8 +1110,12 @@ dependencies = [
 name = "sea-forge-capability"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "sea-forge-core",
+ "sea-forge-ledger",
+ "sea-forge-settlement",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
@@ -1269,8 +1273,10 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "sea-forge-core",
+ "sea-forge-ledger",
  "sea-forge-sandbox",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
