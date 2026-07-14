@@ -11,10 +11,7 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–8 are implemented at their package gates; M0
-is complete, M1 jail sandbox and M2a case engine are conformance-green. The
-minimum kernel tests and P1–P4b remain the unchanged compatibility floor.
-Task 9 (M2b plan templates) is next.
+On branch `full-spec`. Tasks 1–9 are committed through `4a215ab`; Task 9.5 is implemented, conformance-green, and uncommitted. Task 10 (M3 server/approvals/operator loop) has not started.
 
 ## Changed Files
 
@@ -51,6 +48,34 @@ Task 9 (M2b plan templates) is next.
   `sea-forge-ledger` (foundation).
 - `Cargo.toml` / `Cargo.lock` — added 11 new kernel crate members, added
   `ed25519-dalek` to workspace dependencies.
+- Task 9.5 additions:
+  - `crates/sea-forge-core/src/types.rs` — added `OriginRef`, `OriginRefKind`,
+    `OriginRole`, `CriteriaDerivation`, `DerivationMethod`, `JobContract`,
+    `DirectionKind`, `SettlementCriteriaRecord`, `PlanItem.settlement_criteria_ref`,
+    `CasePlan.job_contract_ref`, `SettlementClaim.criteria_ref`,
+    `SettlementEvent.criteria_ref`.
+  - `crates/sea-forge-planner/src/criteria.rs` — derivation, hashing, and
+    verification of settlement-criteria records.
+  - `crates/sea-forge-planner/src/lib.rs` — re-exports criteria helpers.
+  - `crates/sea-forge-planner/src/templates.rs` — `PlanTemplate` gains
+    `origin_refs` and `job_contract`.
+  - `crates/sea-forge-planner/tests/criteria_provenance.rs` — M2c planner
+    conformance tests.
+  - `crates/sea-forge-planner/tests/conformance_m2.rs` and
+    `crates/sea-forge-planner/tests/template_conformance.rs` — updated struct
+    literals for new fields.
+  - `crates/sea-forge-settlement/src/lib.rs` — emits `legacy_unattributed_criteria`
+    basis and records `criteria_ref` on settlement events.
+  - `crates/sea-forge-settlement/tests/criteria_provenance.rs` — M2c settlement
+    conformance tests.
+  - `crates/sea-forge-cli/src/pipeline.rs` — derives/commits criteria records
+    from intent before authority for built-in `run`.
+  - `crates/sea-forge-cli/src/plan_pipeline.rs` — derives/commits criteria
+    records for `run --plan` proposals.
+  - `crates/sea-forge-cli/tests/conformance_m2.rs` — added committed criteria
+    record verification.
+  - `Cargo.toml` — added `tempfile` to workspace dependencies; planner and
+    settlement crates gained required test dependencies.
 
 ## Completed
 
@@ -91,19 +116,12 @@ Task 9 (M2b plan templates) is next.
   with old checkpoints verifying under snapshotted key refs; crash recovery
   quarantining incomplete tails. CLI `ledger verify|prove` subcommands added.
 
-## Remaining
-
-- Tasks 8–17 from the implementation plan (M2a case engine through M8 + DoD sweep).
-- Continue milestone-ordered implementation, committing after each task.
-- Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
-  once the log-file reset is no longer a safety-net concern.
-
 ## Verification
+
 
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
-- `cargo test --workspace --all-features --locked`: 73 tests passed (35 existing +
-  23 ledger + 5 domainforge + 8 extension + 2 migration), 0 failed.
+- `cargo test --workspace --all-features --locked`: passed on the current Task 9 worktree.
 - `just proof`: P1–P4b passed.
 - `just no-async-kernel`: passed.
 - `cargo build --workspace --all-targets --locked`: passed.
@@ -120,9 +138,9 @@ Task 9 (M2b plan templates) is next.
   `jail_violation` basis when `ExecutionStatus::SandboxViolation` is detected.
   Conformance tests: jail blocks write outside workspace, schema_error for
   untrusted argv0 on local, class identity, unavailable-platform refusal.
-- `cargo test --workspace --all-features --locked`: 80 tests passed, 0 failed.
-- `just proof`: P1–P4b passed.
-- `just no-async-kernel`: passed.
+- `cargo test -p sea-forge-planner --test conformance_m2 --test template_conformance`: 13 passed, 0 failed.
+- `cargo test -p sea-forge-cli --test conformance_m2`: 3 passed, 0 failed.
+- `devbox run -- just check`: passed on the current worktree; cargo-deny emitted only non-fatal duplicate/unmatched-allowance warnings.
 - Task 5 resolver slice: 12 `sea-forge-authority` tests passed, including typed
   deny/escalate/boundary/degraded/allow resolution and order independence.
 - Task 5 execution-boundary slice: authority no longer depends on sandbox;
@@ -180,6 +198,65 @@ Task 9 (M2b plan templates) is next.
   records. Conformance tests verify byte hashes committed, IDs resolvable, ledger
   verify green, re-migration refused, corruption detected, and inspect assurance
   labeling.
+- Task 7 — M1 jail sandbox backend: `SandboxClass` enum (`local|jail|microvm`),
+  `ExecutionSandbox` trait (§11.2), `LocalSandbox` (existing behavior), and
+  `JailSandbox` (Linux Landlock via the `landlock` crate). Landlock ruleset
+  allows read-write to workspace+artifacts, read-only to `/`, denies all other
+  writes. Thread-based restriction (no `unsafe`/`pre_exec`) keeps the main
+  thread unrestricted. Runtime selects backend from `grant.sandbox_class()`;
+  unavailable class returns `unsupported_sandbox_class_error`. Settlement adds
+  `jail_violation` basis when `ExecutionStatus::SandboxViolation` is detected.
+  Conformance tests: jail blocks write outside workspace, schema_error for
+  untrusted argv0 on local, class identity, unavailable-platform refusal.
+- Task 8 — M2a CMMN-subset case engine: persisted `PlanItem`/`Sentry`/`Case`/
+  `TraceKind`/`SettlementCriteria` types; sentry evaluator as a pure function of
+  trace events and workspace file set; static `plan_cycle_error` satisfiability
+  check on the entry-criteria dependency graph; `validate_proposal` normalization
+  (safe IDs, relative paths, no empty plans); deterministic case reducer with
+  enable/activate/complete/park/terminate actions; required-item failure
+  terminates the case with `terminated rejected`; `parked` is a normal state, not
+  a failure; `sea-forge run --plan` plan-proposal driver; `sea-forge case` and
+  `sea-forge task` subcommands (reopen, add-task, complete). Conformance tests:
+  A/B(rep×2)/C/M scenario replay reproduces activation order; empty entry
+  criteria activate immediately; unsatisfiable sentries rejected; required-item
+  failure terminates the case; reducer retries then terminates required items;
+  parked case is not failure; proposal validation rejects bad paths and cycles.
+- Task 9 — M2b plan templates: `PlanTemplate`/`ParameterDef` types with typed
+  parameters (`string`, `int`, `bool`, `path`) stored at
+  `.sea-forge/templates/<name>@<version>.yaml`; load-time forbidden-substitution
+  checks (`kind`, `plan_item_id`, `name`, `sandbox_class`, `argv[0]`);
+  deterministic instantiation yielding byte-identical `CasePlan` for same template
+  + params; `template_ref` provenance recorded in `CasePlan` and semantic envelope;
+  `load_pinned` with per-version SHA-256 pin that rejects content changes without
+  a version bump; built-in `sea_model_demo@0.1.0` template. Conformance tests:
+  instantiation byte-identity; forbidden `argv[0]` substitution rejected at load;
+  missing required parameter is input error; path parameter rejects
+  parent/absolute/prefix escape; pin rejects same-version byte change.
+
+- Task 9.5 — M2c settlement-criteria origin and provenance: `OriginRef`,
+  `SettlementCriteriaRecord`, `JobContract`, and `CriteriaDerivation` types in
+  `sea-forge-core`; `PlanItem.settlement_criteria_ref` and `CasePlan.job_contract_ref`;
+  `sea-forge-planner/src/criteria.rs` with `derive_from_intent`,
+  `derive_from_template`, deterministic `criteria_sha256`/`criteria_record_hash`, and
+  `verify_item_criteria`/`verify_plan_criteria`; `settlement_criteria` records
+  committed to the ledger before authority in both `run_intent` and `run --plan`
+  pipelines; embedded criteria snapshot/hash agreement enforced; legacy claims
+  without `criteria_ref` marked `legacy_unattributed_criteria` in settlement basis;
+  no new crate, database, or independent criteria store added; JobContract not
+  synthesized for current paths because existing Intent and PlanTemplate substrate
+  already satisfies §7.1a. Conformance tests: every new PlanItem resolves to one
+  committed criteria record; origin refs resolve and hash-verify; missing ref and
+  hash-mismatch fail with `criteria_provenance_error`; same template+params yields
+  identical criteria content, origin refs, and criteria_sha256; changing criteria
+  changes the hash; legacy items are skipped by verification; built-in demo does
+  not create a JobContract.
+
+## Remaining
+
+- Tasks 10–17 from the implementation plan (M3 server/approvals/operator loop
+  through M8 artifact-to-IP and the §18 DoD sweep).
+- Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
+  once the log-file reset is no longer a safety-net concern.
 
 ## Tasks 1–4 Specification Reconciliation
 
@@ -199,13 +276,20 @@ Task 9 (M2b plan templates) is next.
 - Public runtime execution and sandbox materialization now consume opaque,
   one-use, context-bound authority grants; direct ungranted effects do not compile.
 
+- `cargo test -p sea-forge-planner --test criteria_provenance --locked`: 13 passed, 0 failed.
+- `cargo test -p sea-forge-settlement --test criteria_provenance --locked`: 4 passed, 0 failed.
+- `cargo test -p sea-forge-cli --test conformance_m2 --locked`: 4 passed, 0 failed.
+- `cargo test --workspace --all-features --locked`: passed; no regressions in P1–P4b or earlier milestones.
+- `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
+- `cargo fmt --all -- --check`: passed.
+- `just proof`: P1–P4b passed.
+- `just no-async-kernel`: passed.
+- `just context-check`: passed.
+- `devbox run -- just check`: all gates green.
+
 ## Blockers
 
-- `devbox run -- just check` reaches `cargo deny` and fails because
-  `domainforge-core 0.13.0` depends on `xxhash-rust 0.8.16` under `BSL-1.0`,
-  which `deny.toml` does not allow. Tests, formatting, clippy, context-check,
-  P1–P4b, and no-async-kernel pass. Changing the license allowlist requires
-  explicit approval and is not folded into Task 5.
+- None. Task 10 is the next required gate.
 
 ## Decisions
 

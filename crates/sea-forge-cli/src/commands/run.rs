@@ -2,13 +2,29 @@ use crate::pipeline::{run_intent, RunOptions};
 use sea_forge_core::types::{SettlementStatus, Verdict};
 use std::path::PathBuf;
 pub fn execute(
-    intent: String,
+    intent: Option<String>,
+    plan: Option<PathBuf>,
     policy: PathBuf,
     root: PathBuf,
     timeout_secs: u64,
     entity: String,
     process: String,
 ) -> Result<u8, sea_forge_core::ForgeError> {
+    if let Some(plan) = plan {
+        let outcome = crate::plan_pipeline::run_plan(crate::plan_pipeline::PlanRunOptions {
+            plan,
+            policy,
+            root,
+            timeout_secs,
+            entity,
+            process,
+        })?;
+        println!("case_id={}", outcome.case_id);
+        println!("case_state={}", outcome.state);
+        return Ok(outcome.exit_code);
+    }
+    let intent = intent
+        .ok_or_else(|| sea_forge_core::ForgeError::Input("intent or plan is required".into()))?;
     let outcome = run_intent(RunOptions {
         intent,
         policy,

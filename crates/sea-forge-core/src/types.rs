@@ -15,6 +15,7 @@ pub struct Intent {
 #[serde(rename_all = "snake_case")]
 pub enum CaseState {
     Active,
+    AwaitingApproval,
     Completed,
     Terminated,
 }
@@ -26,6 +27,8 @@ pub struct Case {
     pub state: CaseState,
     pub plan_ref: String,
     pub run_ids: Vec<String>,
+    #[serde(default)]
+    pub stages: Vec<String>,
     pub close_reason: Option<String>,
     pub created_at: String,
     pub closed_at: Option<String>,
@@ -38,6 +41,10 @@ pub struct CasePlan {
     pub run_id: String,
     pub intent_id: String,
     pub items: Vec<PlanItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_ref: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -77,7 +84,7 @@ pub enum SentryPredicate {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Sentry {
     pub on: SentryTrigger,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "if", default, skip_serializing_if = "Option::is_none")]
     pub if_predicate: Option<SentryPredicate>,
 }
 
@@ -92,6 +99,8 @@ pub struct PlanItem {
     #[serde(default)]
     pub exit_criteria: Vec<Sentry>,
     pub settlement_criteria: SettlementCriteria,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement_criteria_ref: Option<String>,
     #[serde(default)]
     pub item_kind: ItemKind,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -102,6 +111,8 @@ pub struct PlanItem {
     pub markers: ItemMarkers,
     #[serde(default = "default_max_instances")]
     pub max_instances: u32,
+    #[serde(default)]
+    pub depends_on: Vec<String>,
 }
 
 fn default_max_instances() -> u32 {
@@ -377,6 +388,14 @@ pub enum TraceKind {
     MilestoneAchieved,
     PlanMutated,
     CaseFileItemAdded,
+    ItemEnabled,
+    ItemActivated,
+    ItemCompleted,
+    ItemFailed,
+    ItemTerminated,
+    HumanTaskCompleted,
+    CaseReopened,
+    CaseTerminated,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct TraceEvent {
@@ -462,10 +481,106 @@ pub struct SettlementCriteria {
     #[serde(default)]
     pub require_approval: bool,
 }
+
+/// Origin reference for a job or settlement criterion.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct OriginRef {
+    pub kind: OriginRefKind,
+    pub reference: String,
+    pub sha256: String,
+    pub role: OriginRole,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence_refs: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OriginRefKind {
+    Intent,
+    PlanTemplate,
+    SpecPipelineStage,
+    PolicyRequirement,
+    Issue,
+    ExternalRequirement,
+    JobContract,
+    ImplementationDefined,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OriginRole {
+    DesiredResult,
+    Constraint,
+    AcceptanceSource,
+    DerivationInput,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CriteriaDerivation {
+    pub method: DerivationMethod,
+    pub actor_ref: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub producer_ref: Option<String>,
+    pub rationale: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DerivationMethod {
+    Manual,
+    DeterministicPlanner,
+    PlanTemplate,
+    SpecPipeline,
+    Imported,
+    ImplementationDefined,
+}
+
+/// Dedicated job contract, used only when no existing canonical record expresses
+/// the requirement with sufficient provenance.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct JobContract {
+    pub version: String,
+    pub job_contract_id: String,
+    pub direction_kind: DirectionKind,
+    pub statement: String,
+    pub origin_refs: Vec<OriginRef>,
+    pub declared_by: String,
+    pub declared_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approved_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supersedes_ref: Option<String>,
+    pub job_contract_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DirectionKind {
+    Jtbd,
+    Requirement,
+    Goal,
+    Problem,
+    Constraint,
+    ImplementationDefined,
+}
+
+/// Ledgered settlement-criteria record with attributable origin and derivation.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SettlementCriteriaRecord {
+    pub version: String,
+    pub criteria_id: String,
+    pub criteria: SettlementCriteria,
+    pub origin_refs: Vec<OriginRef>,
+    pub derivation: CriteriaDerivation,
+    pub declared_at: String,
+    pub criteria_sha256: String,
+    pub criteria_record_hash: String,
+}
 #[derive(Clone, Debug, PartialEq)]
 pub struct SettlementClaim {
     pub run_id: String,
     pub plan_item_id: String,
+    pub criteria_ref: Option<String>,
     pub criteria: SettlementCriteria,
     pub execution: Option<ExecutionResult>,
     pub authority_verdicts: Vec<Verdict>,
@@ -486,6 +601,8 @@ pub struct SettlementEvent {
     pub basis: Vec<String>,
     pub review_required: bool,
     pub settled_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_ref: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -512,6 +629,8 @@ pub struct SemanticEnvelope {
     pub case_ref: String,
     pub intent: Intent,
     pub plan_ref: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_ref: Option<String>,
     pub authority_decisions: Vec<String>,
     pub evidence_refs: Vec<String>,
     pub settlement_ref: String,

@@ -3,6 +3,7 @@ name = "sea-forge-planner"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 license-file.workspace = true
 repository.workspace = true
 description = "SEA Forge case plan construction."
@@ -10,9 +11,15 @@ description = "SEA Forge case plan construction."
 [dependencies]
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 sea-forge-domain = { path = "../sea-forge-domain", version = "0.1.0" }
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

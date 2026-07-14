@@ -1,8 +1,11 @@
 use sea_forge_core::{
     errors::ForgeError,
-    types::{PlanItem, Sentry, SentryPredicate, TraceEvent, TraceKind},
+    types::{
+        CasePlan, ItemKind, PlanItem, Sentry, SentryPredicate, SentryTrigger, TraceEvent, TraceKind,
+    },
 };
 use std::collections::{HashMap, HashSet};
+use std::path::{Component, Path};
 
 /// Check whether a sentry's `on` trigger has fired in the given events.
 /// Returns the matching event if found.
@@ -93,7 +96,7 @@ pub fn evaluate_sentries(
 }
 
 /// Track per-item instance state for the case engine.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ItemState {
     pub item_id: String,
     pub status: ItemStatus,
@@ -109,6 +112,24 @@ pub enum ItemStatus {
     Completed,
     Failed,
     Terminated,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CaseAction {
+    Enable(String),
+    Activate(String),
+    AchieveMilestone(String),
+    ParkHumanTask(String),
+    CompleteCase,
+    TerminateCase { blocking_item: String },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CaseProjection {
+    pub items: Vec<ItemState>,
+    pub activation_sequence: Vec<String>,
+    pub completed: bool,
+    pub terminated_by: Option<String>,
 }
 
 impl ItemState {
@@ -142,12 +163,144 @@ pub fn check_satisfiability(items: &[PlanItem]) -> Result<(), ForgeError> {
     let mut stack = HashSet::new();
     for node in graph.keys() {
         if has_cycle(node, &graph, &mut visited, &mut stack) {
-            return Err(ForgeError::Internal(
-                "plan_cycle_error: sentry dependency cycle detected".into(),
-            ));
+            return Err(ForgeError::Plan {
+                class: "plan_cycle_error",
+                message: "sentry dependency cycle detected".into(),
+            });
         }
     }
     Ok(())
+}
+
+fn valid_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 128
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-'))
+}
+
+fn valid_relative_path(value: &str) -> bool {
+    let path = Path::new(value);
+    !value.is_empty()
+        && !path.is_absolute()
+        && !path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+}
+
+/// Validate and normalize a plan proposal before any case state is created.
+pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
+    if plan.items.is_empty() {
+        return Err(ForgeError::Plan {
+            class: "plan_schema_error",
+            message: "plan must contain at least one item".into(),
+        });
+    }
+    let ids = plan
+        .items
+        .iter()
+        .map(|item| item.plan_item_id.clone())
+        .collect::<HashSet<_>>();
+    if ids.len() != plan.items.len() || ids.iter().any(|id| !valid_id(id)) {
+        return Err(ForgeError::Plan {
+            class: "plan_schema_error",
+            message: "plan item IDs must be unique and canonical".into(),
+        });
+    }
+    let stages = plan
+        .items
+        .iter()
+        .filter(|item| item.item_kind == ItemKind::Stage)
+        .map(|item| item.plan_item_id.clone())
+        .collect::<HashSet<_>>();
+    for item in &mut plan.items {
+        if item.max_instances == 0
+            || (item.markers.repetition && item.max_instances <= 1)
+            || (!item.markers.repetition && item.max_instances != 1)
+        {
+            return Err(ForgeError::Plan {
+                class: "plan_schema_error",
+                message: format!("invalid repetition settings for {}", item.plan_item_id),
+            });
+        }
+        if item.item_kind == ItemKind::SandboxedTask && item.sandbox_class.is_none() {
+            item.sandbox_class = Some("local".into());
+        }
+        if item.item_kind != ItemKind::SandboxedTask && !item.operations.is_empty() {
+            return Err(ForgeError::Plan {
+                class: "plan_schema_error",
+                message: format!(
+                    "non-sandboxed item {} cannot have operations",
+                    item.plan_item_id
+                ),
+            });
+        }
+        if item.item_kind == ItemKind::Milestone && item.markers.repetition {
+            return Err(ForgeError::Plan {
+                class: "plan_schema_error",
+                message: "milestones cannot repeat".into(),
+            });
+        }
+        if item
+            .parent_stage
+            .as_ref()
+            .is_some_and(|parent| !stages.contains(parent))
+        {
+            return Err(ForgeError::Plan {
+                class: "plan_schema_error",
+                message: format!("unknown parent stage for {}", item.plan_item_id),
+            });
+        }
+        for dependency in std::mem::take(&mut item.depends_on) {
+            if !ids.contains(&dependency) {
+                return Err(ForgeError::Plan {
+                    class: "plan_schema_error",
+                    message: format!("unknown dependency {dependency}"),
+                });
+            }
+            item.entry_criteria.push(Sentry {
+                on: SentryTrigger {
+                    source: dependency,
+                    event: "milestone_achieved".into(),
+                },
+                if_predicate: None,
+            });
+        }
+        for sentry in item.entry_criteria.iter().chain(&item.exit_criteria) {
+            if sentry.on.source != "case" && !ids.contains(&sentry.on.source) {
+                return Err(ForgeError::Plan {
+                    class: "plan_schema_error",
+                    message: format!("unknown sentry source {}", sentry.on.source),
+                });
+            }
+        }
+        for operation in &item.operations {
+            match operation {
+                sea_forge_core::types::Operation::WriteFile { path, .. }
+                | sea_forge_core::types::Operation::ExecuteCommand { cwd: path, .. } => {
+                    if !valid_relative_path(path) {
+                        return Err(ForgeError::Plan {
+                            class: "plan_schema_error",
+                            message: format!("unsafe operation path {path}"),
+                        });
+                    }
+                }
+            }
+            if let sea_forge_core::types::Operation::ExecuteCommand { argv, .. } = operation {
+                if argv.is_empty() || argv.iter().any(|arg| arg.contains('\0')) {
+                    return Err(ForgeError::Plan {
+                        class: "plan_schema_error",
+                        message: "execute_command requires safe non-empty argv".into(),
+                    });
+                }
+            }
+        }
+    }
+    check_satisfiability(&plan.items)
 }
 
 fn has_cycle(
@@ -206,6 +359,120 @@ pub fn required_item_failed(item_states: &[ItemState], items: &[PlanItem]) -> Op
         }
     }
     None
+}
+
+fn derived_workspace_files(events: &[TraceEvent]) -> HashSet<String> {
+    events
+        .iter()
+        .filter(|event| event.kind == TraceKind::ArtifactCaptured)
+        .filter_map(|event| event.payload.get("artifact")?.as_str().map(str::to_owned))
+        .collect()
+}
+
+/// Rebuild the complete case projection from ordered case events.
+pub fn replay_case(items: &[PlanItem], events: &[TraceEvent]) -> CaseProjection {
+    let mut states = items
+        .iter()
+        .map(|item| ItemState::new(item.plan_item_id.clone()))
+        .collect::<Vec<_>>();
+    let item_map = items
+        .iter()
+        .map(|item| (item.plan_item_id.as_str(), item))
+        .collect::<HashMap<_, _>>();
+    let mut activation_sequence = Vec::new();
+    let mut completed = false;
+    let mut terminated_by = None;
+    for event in events {
+        let Some(item_id) = event.plan_item_id.as_deref() else {
+            match event.kind {
+                TraceKind::CaseClosed => completed = true,
+                TraceKind::CaseTerminated => {
+                    terminated_by = event
+                        .payload
+                        .get("blocking_item")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_owned)
+                }
+                _ => {}
+            }
+            continue;
+        };
+        let Some(state) = states.iter_mut().find(|state| state.item_id == item_id) else {
+            continue;
+        };
+        match event.kind {
+            TraceKind::ItemEnabled => state.status = ItemStatus::Enabled,
+            TraceKind::ItemActivated => {
+                state.status = ItemStatus::Active;
+                state.instances += 1;
+                activation_sequence.push(item_id.to_owned());
+            }
+            TraceKind::ItemCompleted | TraceKind::HumanTaskCompleted => {
+                state.status = ItemStatus::Completed
+            }
+            TraceKind::ItemFailed => {
+                state.failed_instances += 1;
+                let repeats = item_map.get(item_id).is_some_and(|item| {
+                    item.markers.repetition && state.instances < item.max_instances
+                });
+                state.status = if repeats {
+                    ItemStatus::Available
+                } else {
+                    ItemStatus::Failed
+                };
+            }
+            TraceKind::ItemTerminated => state.status = ItemStatus::Terminated,
+            TraceKind::MilestoneAchieved => state.status = ItemStatus::Completed,
+            _ => {}
+        }
+    }
+    CaseProjection {
+        items: states,
+        activation_sequence,
+        completed,
+        terminated_by,
+    }
+}
+
+/// Determine the next deterministic case actions from persisted events alone.
+pub fn next_case_actions(items: &[PlanItem], events: &[TraceEvent]) -> Vec<CaseAction> {
+    let projection = replay_case(items, events);
+    if projection.completed || projection.terminated_by.is_some() {
+        return vec![];
+    }
+    if let Some(blocking_item) = required_item_failed(&projection.items, items) {
+        return vec![CaseAction::TerminateCase { blocking_item }];
+    }
+    if can_auto_complete(&projection.items, items) {
+        return vec![CaseAction::CompleteCase];
+    }
+    let workspace_files = derived_workspace_files(events);
+    let mut actions = Vec::new();
+    for item in items {
+        let Some(state) = projection
+            .items
+            .iter()
+            .find(|state| state.item_id == item.plan_item_id)
+        else {
+            continue;
+        };
+        if state.status != ItemStatus::Available
+            || state.instances >= item.max_instances
+            || !entry_criteria_satisfied(item, events, &workspace_files)
+        {
+            continue;
+        }
+        actions.push(if item.markers.manual_activation {
+            CaseAction::Enable(item.plan_item_id.clone())
+        } else {
+            match item.item_kind {
+                ItemKind::Milestone => CaseAction::AchieveMilestone(item.plan_item_id.clone()),
+                ItemKind::HumanTask => CaseAction::ParkHumanTask(item.plan_item_id.clone()),
+                _ => CaseAction::Activate(item.plan_item_id.clone()),
+            }
+        });
+    }
+    actions
 }
 
 /// Replay sentries over a sequence of trace events and reproduce the

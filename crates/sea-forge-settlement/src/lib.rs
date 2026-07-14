@@ -75,6 +75,9 @@ pub fn settle(
             },
         }
     };
+    if claim.criteria_ref.is_none() {
+        basis.push("legacy_unattributed_criteria".into());
+    }
     Ok(SettlementEvent {
         version: RECORD_VERSION.into(),
         settlement_id: "set_01".into(),
@@ -83,6 +86,7 @@ pub fn settle(
         basis,
         review_required,
         settled_at: Utc::now().to_rfc3339(),
+        criteria_ref: claim.criteria_ref.clone(),
     })
 }
 
@@ -125,6 +129,7 @@ mod tests {
         let claim = SettlementClaim {
             run_id: "run".into(),
             plan_item_id: "item_01".into(),
+            criteria_ref: None,
             criteria: SettlementCriteria {
                 require_exit_zero: true,
                 required_artifacts: vec![],
@@ -162,6 +167,7 @@ mod tests {
         let claim = SettlementClaim {
             run_id: "run".into(),
             plan_item_id: "item_01".into(),
+            criteria_ref: None,
             criteria: SettlementCriteria {
                 require_exit_zero: true,
                 required_artifacts: vec!["model.sea".into()],

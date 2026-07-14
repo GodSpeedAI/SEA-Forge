@@ -3,6 +3,7 @@ name = "sea-forge-settlement"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 license-file.workspace = true
 repository.workspace = true
 description = "SEA Forge settlement evaluation."
@@ -11,6 +12,9 @@ description = "SEA Forge settlement evaluation."
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
 chrono.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

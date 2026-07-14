@@ -3,18 +3,47 @@
 **Created:** 2026-07-11
 **Source of truth:** `.agents/specs/spec-full.md` (Draft v0.2) — quote it, don't paraphrase from memory. Where it is silent, `.agents/specs/spec-minimum.md` governs (spec-full §0 line 13).
 **Originating context:** The v0.1 minimum vertical slice is merged, green on `main` (35 tests, P1–P4b pass — `.agents/CURRENT_STATUS.md`). This plan executes the draft v0.2 full spec: ten extension capabilities E1–E10 across milestones M0–M8.
-**Status of the work today:** Only `crates/sea-forge-core` and `crates/sea-forge-cli` exist. Nothing from v0.2 is implemented. `spec-full.md` was gap-audited on 2026-07-11: the dangling `build-report-review.md` reference was neutralized (corrections are folded into the spec text) and the §12 M6/M7 proof-block order was fixed to match Appendix A. No other blocking gaps; `OBSERVED_DEBT.md` and `OPEN_QUESTIONS.md` are empty.
+**Status of the work today:** Tasks 1–9 are implemented on `full-spec`; M0, M1, the M2 case engine, and M2 templates are conformance-green. Task 9.5 is the next mandatory gate and closes the criteria-provenance contract before M3. `CURRENT_STATUS.md` carries the current proof results and blockers.
 
 ---
 
 ## 0. How to use this plan (agent operating instructions)
 
-- Execute tasks in the order given. Dependencies: Tasks 1→17 are milestone-ordered per spec-full Appendix A and MUST land in that order at gate level. Within M0, Tasks 3 (DomainForge adapter) and 4 (extension ABI) are independent of Task 2 (ledger) and of each other, but Task 5 (authority fabric) consumes Task 3's verdict normalization and Task 2's pre-action checkpointing, and Task 6 (migrate) needs Task 2. When in doubt, go sequential.
+- Execute tasks in the order given. Dependencies: Tasks 1→9 remain
+  milestone-ordered. After Task 9 is green, execute Task 9.5 before beginning
+  Task 10. Tasks 10→17 then continue in order. Within M0, Tasks 3 and 4 remain
+  independent of Task 2, Task 5 consumes Tasks 2 and 3, and Task 6 consumes
+  Task 2. When in doubt, follow the dependency gates rather than task-number
+  appearance.
 - **Every task ends with a verification gate.** Do not mark a task done until its gate command exits 0.
 - **Core principle (spec-full §0.3, §17): the minimum kernel is the invariant substrate. P1–P4b must pass unchanged after every task. "A milestone that cannot pass the minimum spec's proofs P1–P4b unchanged has broken the kernel and MUST be rejected."** Never patch the proofs to make a milestone fit — fix the milestone.
 - **Fail closed, always** (spec-full §0.6): a missing/unavailable/undecidable evaluator, ledger, jail, identity, or settlement authority denies, escalates, or halts — it never allows, never silently downgrades, never falls back to a weaker class.
+- **Verify the substrate before designing against it.** At the beginning of
+  every task, inspect the current code, tests, persisted record shapes, crate
+  boundaries, and completed milestone behavior. Do not implement from the plan
+  as though the repository were empty. Reuse an existing type, ledger record,
+  hash path, store, validator, or authority surface when it already satisfies
+  the required contract.
+- **Do not add structure for naming symmetry.** A spec term does not
+  automatically require a new crate, database, JSONL file, trait, or wrapper.
+  Add a new structure only after the current substrate has been inspected and a
+  concrete missing invariant has been identified. Prefer additive fields,
+  existing ledger record kinds, existing writers, and existing validation
+  paths over parallel implementations.
+- For each task, the agent's completion report MUST include a short
+  `Substrate reconciliation` section stating:
+  1. what existing implementation was inspected;
+  2. what was reused unchanged;
+  3. what was extended;
+  4. what genuinely had to be added;
+  5. what tempting duplicate structure was deliberately not added.
 - Match surrounding code style; the idioms to mirror live in `crates/sea-forge-core/src/` (typed errors in `errors.rs`, deterministic hashing in `authority.rs`, append-only JSONL discipline in `capability.rs`/`trace.rs`, lifecycle ordering in `pipeline.rs`).
 - Source-of-truth rule: spec-full §7 record shapes and §12/§17.1 proof text are the spec — conformance tests assert those shapes and behaviors verbatim. Change a fixture only together with the spec change that justifies it, in the same commit.
+- When the repository already implements an equivalent contract under a
+  different internal name, preserve the working substrate and map the spec term
+  onto it. Do not rename or rewrite working code merely to make terminology
+  visually match the document. Add an alias, adapter, additive field, or
+  documented mapping when that is sufficient.
 - New crates go under `crates/`, are added to `Cargo.toml` workspace `members` (currently lines 3–6), and inherit `workspace.package` / `workspace.lints` (`unsafe_code = "deny"`).
 - Milestone gates become tests named `tests/conformance_m<N>*.rs` in the owning crate (or `sea-forge-cli` for end-to-end flows), so `cargo test --workspace` runs every gate forever after.
 
@@ -48,6 +77,9 @@ devbox run -- just check        # deny/licenses/gitleaks/context-check bundle
 | The one graduation security rule: untrusted argv0 never allow-listed on `local` class (schema_error) | spec-full §8.2, §15 |
 | Confidence arithmetic is fixed, fixed-point 6-decimal, no binary floats in rebuild | spec-full §7.3 |
 | Kernel stays synchronous; Tokio only in `sea-forge-server` (spawn_blocking seam) | spec-full §6.1 |
+| Criteria provenance gap | Before §7.1a was added, spec-full §7.2.1 consumed `criteria_ref`, `criteria_sha256`, and `criteria_declared_at` without defining their canonical record; Task 9.5 implements the new contract before M3 |
+| Substrate-first correction | Task 9.5 MUST inspect the implemented Intent, CasePlan, PlanItem, SettlementCriteria, template, ledger, migration, and settlement code before adding records; reuse existing contracts and add no new crate |
+| Dedicated JobContract rule | A JobContract is conditional, not automatic: reuse a ledgered Intent, template, spec stage, policy requirement, issue, or external requirement when it already expresses the job with sufficient provenance |
 
 ## External ecosystem map (workspace siblings — reference only, none are build dependencies)
 
@@ -302,6 +334,154 @@ cargo test -p sea-forge-planner template --locked && just proof
 
 ---
 
+## Task 9.5 — M2c: Settlement-criteria origin and provenance
+(M2 closeout · blocks M3)
+
+**Goal:** Close the missing derivation path between the requested job or
+requirement and the SettlementCriteria used to judge work, while reusing the
+implemented M0–M2 substrate and avoiding a parallel requirements or provenance
+system.
+
+**Why this shape:** The full spec already expects `criteria_ref`,
+`criteria_sha256`, and `criteria_declared_at` in the M4a declaration protocol,
+but no canonical criteria record currently defines those values. Task 10 would
+otherwise spread that unresolved identity into ApprovalRequest and server
+state. This task defines the smallest missing contract before those consumers
+exist.
+
+### Substrate inspection — mandatory first step
+
+Before editing code, inspect and report the actual implementation of:
+
+- `Case`, `CasePlan`, `PlanItem`, `Intent`, and `SettlementCriteria`;
+- template loading, hash pinning, and deterministic instantiation from Task 9;
+- ledger typed-record submission and immutable committed refs;
+- current plan persistence/materialized views;
+- current ID and canonical-hash helpers;
+- migration behavior for v0.1 plans;
+- any existing criteria IDs, origin refs, source refs, authorship fields,
+  record hashes, declaration placeholders, or provenance types;
+- authority validation before PlanItem activation.
+
+Produce a `Substrate reconciliation` section in the task report.
+
+The report MUST answer:
+
+1. Can the existing Intent serve as the origin for the built-in demo?
+2. Can the existing template record serve as an origin for template-created
+   criteria?
+3. Can existing ledger record refs and canonical hashing be reused directly?
+4. Does the current code already have a generic source/provenance reference that
+   should be extended instead of replaced?
+5. Is a dedicated JobContract actually needed for any current path?
+6. Can the criteria record live in existing core/settlement types and the
+   existing ledger writer without a new crate or independent store?
+
+Do not begin structural implementation until these questions are answered from
+the repository.
+
+### Steps
+
+1. Reconcile the new spec §7.1a with the actual code:
+   - reuse existing provenance/source-ref types when equivalent;
+   - reuse existing canonical hashing;
+   - reuse the ledger's typed-record commit path;
+   - reuse existing planner and proposal validation;
+   - do not add a new crate;
+   - do not add a separate database;
+   - do not add a second authoritative plan or criteria store.
+
+2. Implement only the missing canonical contract:
+   - a ledgered SettlementCriteriaRecord or an existing equivalent extended to
+     satisfy the spec;
+   - `PlanItem.settlement_criteria_ref`;
+   - embedded-criteria/hash agreement;
+   - non-empty attributable OriginRefs;
+   - pre-execution declaration timing;
+   - `criteria_provenance_error`.
+
+3. Add a dedicated JobContract only for a path where inspection proves that no
+   existing Intent, PlanTemplate, SpecPipelineStage, policy requirement, issue,
+   or external requirement can satisfy the origin contract.
+   - The built-in demo SHOULD normally reuse its Intent and built-in template.
+   - A template-created plan SHOULD reuse the immutable template version and
+     originating Intent.
+   - Do not generate ceremonial JobContract records that restate existing text.
+
+4. Integrate Task 9 templates:
+   - same template version + typed params must yield identical criteria content,
+     origin refs, criteria hash, and criteria-record content hash;
+   - template substitution must not alter provenance structure or declared
+     author identity;
+   - template_ref remains the existing provenance link and is reused rather
+     than copied into a competing model.
+
+5. Integrate plan proposal and activation validation:
+   - resolve criteria and origins before authority;
+   - reject missing, stale, hash-mismatched, or post-execution criteria;
+   - discretionary items pass the same validation;
+   - no hidden planner state may substitute for persisted provenance.
+
+6. Preserve legacy behavior:
+   - read v0.1 embedded-only criteria as `legacy_unattributed_criteria`;
+   - do not synthesize fake authorship, rationale, timestamps, or origin refs;
+   - permit local legacy evaluation only when policy allows;
+   - refuse strong settlement qualification for unattributed legacy criteria.
+
+7. Add focused tests in the existing owning crates. Prefer extending
+   `sea-forge-planner`, `sea-forge-settlement`, `sea-forge-core`, and
+   `sea-forge-ledger` tests rather than creating a new crate:
+   - every new settling PlanItem resolves to one committed criteria record;
+   - embedded snapshot matches `criteria_sha256`;
+   - every OriginRef resolves and hash-verifies;
+   - same template+params produces identical criteria/origin hashes;
+   - changing criteria or an origin changes the applicable hash;
+   - missing origin fails before authority or side effects;
+   - embedded-record mismatch fails before authority or side effects;
+   - post-execution declaration fails;
+   - legacy plan remains readable but cannot qualify strong;
+   - a test asserts the built-in demo reused Intent/template origins and did not
+     create a redundant JobContract.
+
+8. Update the M2 conformance gate and documentation only after tests pass.
+   Record the actual reused substrate in `.agents/CURRENT_STATUS.md`.
+   Use `.agents/OBSERVED_DEBT.md` only for a real remaining mismatch.
+
+### Gate
+
+```bash
+cargo test -p sea-forge-planner criteria_provenance --locked
+cargo test -p sea-forge-settlement criteria_provenance --locked
+cargo test --workspace --all-features --locked
+just proof
+devbox run -- just check
+```
+
+If the repository places the focused tests under different existing crates,
+adjust the first two commands to those actual owners and record why in the task
+report. Do not create a crate merely to preserve these example command names.
+
+**Done when:** every new settling PlanItem resolves to an attributable,
+pre-execution, hash-verified criteria record; the built-in and template paths
+reuse existing Intent/template/ledger substrate; legacy records remain readable
+without fabricated provenance; and deliberately removing an origin or
+mismatching the embedded criteria causes failure before authority or side
+effects.
+
+**Teeth check:** modify one embedded criterion after the criteria record is
+committed. The conformance test must fail with `criteria_provenance_error`
+before any `authority_evaluated`, `command_started`, or workspace mutation
+event.
+
+**Redesign trigger:** inspection proves the existing ledgered CasePlan or another
+existing canonical record already provides criteria identity, timing,
+authorship, origin linkage, and immutable hash verification. In that case,
+extend that record and add the missing reference/checks only. Do not introduce
+SettlementCriteriaRecord or JobContract as duplicate storage merely to mirror
+the specification's logical names.
+
+---
+
 ## Task 10 — M3: Server, approvals, operator loop  (E3)
 
 **Goal:** `sea-forge-server` runs concurrent cases, `escalate` becomes a TTL-bound ApprovalRequest resolvable via `sea-forge approve|reject`, and the §12 M3 + §13 concurrency/race/crash drills pass.
@@ -310,12 +490,24 @@ cargo test -p sea-forge-planner template --locked && just proof
 
 ### Steps
 
-1. `ApprovalRequest` per §7.2 in `crates/sea-forge-settlement` or `sea-forge-evidence` (append-only, latest-line-wins resolution, no re-resolution); `SettlementCriteria.require_approval`; evidence kind `approval` (§10.3).
+1. First verify Task 9.5's implemented criteria contract and reuse its exact
+   refs and validators. Implement `ApprovalRequest` per §7.2 in the existing
+   settlement/evidence ownership boundary:
+   - append-only, latest-line-wins resolution, no re-resolution;
+   - bind `plan_item_id`, `criteria_ref`, `criteria_sha256`, and
+     `criteria_record_hash`;
+   - include nullable `job_contract_ref` only when the plan actually uses one;
+   - revalidate the criteria record before approval or rejection;
+   - stale or mismatched criteria refuse resolution with
+     `criteria_provenance_error`;
+   - add `SettlementCriteria.require_approval`;
+   - emit evidence kind `approval`.
+   Do not copy the criteria body into a second approval-owned source of truth.
 2. New crates `crates/sea-forge-interface` (subscribe/notify/approve-reject plumbing) and `crates/sea-forge-server` (Tokio): run queue, `max_concurrent_runs`, Unix socket 0600 with the §11.1 NDJSON verbs (`submit`, `status`, `approve/reject`, `subscribe`), 10s per-request timeout, `notify_command` exec'd argv-style with JSON on stdin — failure logged and ignored (§10.3).
 3. `server.yaml` config §8.1; dynamic reload between dispatches with last-known-good on invalid reload (§8.4); startup preflight §8.5 (socket, sandbox probe, notify argv0, integrity checkpoint, DomainForge version match).
 4. CLI: `watch` (tails event stream), `resume <case_id>`, `runs --unsettled`, `tasks`, `approve|reject <run_id> <approval_id> [--note]` (unauthorized approver refused — approving is itself authority-checked); one-shot exit 5 for `awaiting_approval` (§9.2).
 5. TTL expiry ⇒ `rejected` basis `authority_escalate_expired` (§14.2); approval/expiry race resolved by append order, loser is a visible no-op (§13); server crash leaves resumable self-describing run dirs, no auto-resume (§14.4).
-6. Tests `conformance_m3.rs`: escalate→exit 5→approve→resume→accepted; TTL-expire copy; 8 concurrent submits ⇒ 8 uncorrupted run dirs + 8 valid `capabilities.jsonl` lines (§13 R-jsonl); reload valid/invalid; notify-failure-ignored; unauthorized approver.
+6. Tests `conformance_m3.rs`: escalate→exit 5→approve→resume→accepted; TTL-expire copy; 8 concurrent submits ⇒ 8 uncorrupted run dirs + 8 valid `capabilities.jsonl` lines (§13 R-jsonl); reload valid/invalid; notify-failure-ignored; unauthorized approver; approval of the original criteria succeeds; mutating or superseding the criteria before resolution does not silently rebind the ApprovalRequest; a stale/mismatched criteria reference is refused and evidenced; the built-in approval flow does not create a redundant JobContract.
 
 ### Gate
 
@@ -323,7 +515,7 @@ cargo test -p sea-forge-planner template --locked && just proof
 cargo test -p sea-forge-server --locked && cargo test -p sea-forge-cli conformance_m3 --locked && just proof
 ```
 
-**Done when:** §17.1 M3 row green including the concurrency test; the no-Tokio-in-kernel check from Task 1 still exits 0 (teeth: adding `tokio` to `sea-forge-planner`'s Cargo.toml makes that check fail).
+**Done when:** §17.1 M3 row green including the concurrency test; the no-Tokio-in-kernel check from Task 1 still exits 0 (teeth: adding `tokio` to `sea-forge-planner`'s Cargo.toml makes that check fail). Every approval is bound to the exact immutable criteria record that caused the escalation.
 
 **Redesign trigger:** the R-jsonl test fails at 8 concurrent runs — §5 already prescribes the fix: move the two shared files (`capabilities.jsonl`, `approvals.jsonl`) behind a single writer task. Do not switch to a database.
 
@@ -337,11 +529,30 @@ cargo test -p sea-forge-server --locked && cargo test -p sea-forge-cli conforman
 
 ### Steps
 
-1. `crates/sea-forge-settlement`: `SettlementDeclarationRequest`/`SettlementDeclaration` shapes verbatim §7.2.1 (fixed-scale decimal strings for reliability fields; `declaration_hash` excludes only itself); `declare()` trait; `local` adapter (strength `local` always); `swe_seed` adapter contract with a test-double transport (real service = §17.4 integration test, behind a feature/env flag). Role clarity from the ecosystem map: SWE_SEED's *proof gating* is what it contributes as a declaration authority (independent verification of the claim's proof commands); godspeed_agent is NOT a settlement authority here — it stays a GovernedSpeed candidate-verdict engine (Task 5) and a downstream consumer of capability status. Keep §7.3's `attempted < demonstrated < proven < metabolized` vocabulary — `metabolized` intentionally aligns with godspeed_agent's capability lifecycle.
-2. Qualification predicate exactly per §7.2.1 (all nine conditions); rejected-strong increments `regression_weight` only; escalated contributes nothing until resolved.
+1. Inspect and reuse Task 9.5's actual criteria/origin record implementation.
+   Do not define a second declaration-only criteria model.
+   `SettlementDeclarationRequest` and `SettlementDeclaration` must carry and
+   verify the existing `criteria_ref`, `criteria_sha256`,
+   `criteria_record_hash`, declaration time, and resolved origin chain. Then
+   implement the remaining §7.2.1 shapes (fixed-scale decimal strings for
+   reliability fields; `declaration_hash` excludes only itself); `declare()`
+   trait; `local` adapter (strength `local` always); and `swe_seed` adapter
+   contract with a test-double transport (real service = §17.4 integration
+   test, behind a feature/env flag). SWE_SEED's proof gating supplies independent
+   verification; godspeed_agent remains a GovernedSpeed candidate-verdict engine
+   and downstream capability-status consumer. Preserve §7.3's
+   `attempted < demonstrated < proven < metabolized` vocabulary.
+2. Qualification predicate exactly per §7.2.1: a declaration contributes
+   qualifying weight only when the criteria record resolves and hash-verifies;
+   its embedded PlanItem snapshot agrees; every OriginRef resolves; derivation
+   authorship is attributable; criteria predate execution; and the criteria are
+   not `legacy_unattributed_criteria`. Rejected-strong increments
+   `regression_weight` only; escalated contributes nothing until resolved. A
+   missing origin chain preserves the minimum event but contributes zero
+   qualifying weight.
 3. `crates/sea-forge-capability`: `CapabilityPromotionPolicy` snapshots (`policies/<sha256>.json`), `CapabilityRecord` per §7.3 with the FIXED confidence arithmetic (fixed-point, 6 decimals, clamp, zero-denominator rule); default v0.2 policy thresholds from §7.3; contraction with recorded reason; `capability list|show|rebuild` — rebuild pure over `capabilities.jsonl` + `declarations.jsonl` + policy snapshots, byte-identical modulo `rebuilt_at`.
 4. Policy: `settlement_authorities[]`, `settlement.required_strength/min_reliability_weight/promotion_policy_ref`, `rules[].require_proven` (§8.2); config error classes `settlement_authority_config_error`/`settlement_integrity_error` (§8.3); strong-outage behavior per §13/§14.9 (event inspectable, zero weight, strong-required case can't complete; resume appends exactly one declaration).
-5. Tests `conformance_m4a.rs`: every §12 M4a bullet — raw counts, local-declaration-zero-weight, post-hoc criteria, self-declaration, gameable/low-attribution weight, three-qualifying-declarations promotion, identical-variation-no-coverage, regression/revocation/policy-change contraction (separate copies), rebuild byte-identity, require_proven denial citing record + policy hash.
+5. Tests `conformance_m4a.rs`: every §12 M4a bullet — raw counts, local-declaration-zero-weight, post-hoc criteria, self-declaration, gameable/low-attribution weight, three-qualifying-declarations promotion, identical-variation-no-coverage, regression/revocation/policy-change contraction (separate copies), rebuild byte-identity, require_proven denial citing record + policy hash; strong declaration with unresolved criteria origin is non-qualifying; strong declaration with criteria-record hash mismatch is non-qualifying; strong declaration over `legacy_unattributed_criteria` is non-qualifying; valid declaration traverses criteria → origin → Intent/template/spec source; declaration implementation reuses the Task 9.5 record rather than persisting a duplicate criteria body as authority.
 
 ### Gate
 
@@ -385,12 +596,18 @@ cargo test -p sea-forge-capability memory --locked && just proof
 ### Steps
 
 1. New crate `crates/sea-forge-spec-pipeline`: `SpecPipelineRun`/`SpecPipelineStage` per §7.8; stage-order + start-later-only-if-priors-validate rule (§10.7); proof-classification ceiling (`generated-contract` until last-mile+runtime+acceptance accepted); quarantine with provenance; `nondeterministic_projection` rejection.
+   - Accepted ADR/PRD/SDS/SEA or other requirement-bearing stages MAY serve
+     directly as OriginRefs for SettlementCriteriaRecord derivation.
+   - Reuse the existing stage record and digest. Do not create a parallel
+     JobContract merely to restate an accepted specification stage.
+   - When a dedicated JobContract is necessary, it references the accepted stage
+     rather than copying it without provenance.
 2. Generated-zone guard: direct edits to `src/gen`/AST/IR/manifest/fixtures are denied `run_spec_pipeline` operations, basis `generated_zone_direct_edit` (§10.7) — enforce via Task 5's file-surface rules.
 3. `.sea` synthesis adapter (distinct from the DomainForge adapter; output MUST be re-parsed/validated by Task 3 before becoming a `DomainModelRef` — §7.0b).
 4. `sea-forge project <case_id..>`: governed projection run (plan = project op, settlement = output validates); in-memory DomainForge projections, CALM + RDF required, per-target `ProjectionRecord`s sharing one `DomainModelRef`; prove no DomainForge-owned filesystem/network/CLI side effect (§10.4a); remote-delivery adapters get retry+DLQ semantics (later plugins).
 5. Declarative Evaluator form only (`kind: predicate` — §7.6; command form is Task 15 per Appendix A) wired into `SettlementCriteria.evaluator`.
 6. Policy `rules[].operation_kind: run_spec_pipeline|run_projection` enforcement (schema from Task 5).
-7. Tests `conformance_m5.rs`: full small-context pipeline hash-chain; direct-edit denial; regeneration byte-identity; classification ceiling; two-case `project` ⇒ CALM/RDF validate + rebuild byte-identically; quarantine completeness; projection-is-a-full-case; no-side-effect proof.
+7. Tests `conformance_m5.rs`: full small-context pipeline hash-chain; direct-edit denial; regeneration byte-identity; classification ceiling; two-case `project` ⇒ CALM/RDF validate + rebuild byte-identically; quarantine completeness; projection-is-a-full-case; no-side-effect proof; criteria derived from an accepted spec stage resolve directly to that stage's hash-linked record; changing the source stage invalidates or supersedes the dependent criteria; no duplicate requirement store is introduced by the spec pipeline.
 
 ### Gate
 
@@ -501,17 +718,21 @@ cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-featu
 
 ## Final acceptance checklist (whole plan)
 
-- [ ] Workspace builds as graduated crates; pre-existing 35 tests + P1–P4b unchanged *(Task 1)*
-- [ ] All §12 M0 ledger fixtures pass; every tamper class detected with typed reason *(Task 2)*
-- [ ] Real `.sea` validates via `domainforge-core` 0.13.0; invalid inputs fail closed, zero side effects *(Task 3)*
-- [ ] Extension registry/descriptors validate; imported extensions inert until adopted *(Task 4)*
+- [x] Workspace builds as graduated crates; pre-existing 35 tests + P1–P4b unchanged *(Task 1)*
+- [x] All §12 M0 ledger fixtures pass; every tamper class detected with typed reason *(Task 2)*
+- [x] Real `.sea` validates via `domainforge-core` 0.13.0; invalid inputs fail closed, zero side effects *(Task 3)*
+- [x] Extension registry/descriptors validate; imported extensions inert until adopted *(Task 4)*
 - [x] M0 authority gate green: determinism, fail-closed engines, precedence, opaque constraints, no ingress bypass *(Task 5)*
 - [x] `sea-forge migrate` lossless; imports report `legacy_digest_only` *(Task 6)*
 - [x] Jail escape blocked at OS; untrusted-argv0-on-local is schema_error; unavailability refuses *(Task 7)*
 - [x] §12 M2 scenario passes; sentry replay deterministic from ledger alone *(Task 8)*
-- [ ] Template instantiation byte-deterministic; forbidden substitution rejected at load *(Task 9)*
-- [ ] Escalate→approve→resume and TTL-expiry flows pass; 8-way concurrency uncorrupted *(Task 10)*
-- [ ] Promotion requires qualifying independent declarations; rebuild byte-pure; require_proven cites record+policy *(Task 11)*
+- [x] Template instantiation byte-deterministic; forbidden substitution rejected at load *(Task 9)*
+- [x] Every new settling PlanItem resolves to an attributable, pre-execution,
+  hash-verified criteria record; built-in/template paths reuse the existing
+  Intent/template/ledger substrate; no redundant JobContract, criteria store,
+  or crate was introduced *(Task 9.5)*
+- [ ] Escalate→approve→resume and TTL-expiry flows pass; 8-way concurrency uncorrupted; approvals bind to and revalidate the exact criteria record *(Task 10)*
+- [ ] Promotion requires qualifying independent declarations; rebuild byte-pure; require_proven cites record+policy; unresolved, mismatched, or legacy-unattributed criteria cannot qualify *(Task 11)*
 - [ ] Scoped recall with evidence; FTS index pure + fallback-equivalent *(Task 12)*
 - [ ] Pipeline hash-chain + determinism + classification ceiling; CALM/RDF projections rebuild byte-identically *(Task 13)*
 - [ ] Bundles export/import with atomic rejection; no capability leakage *(Task 14)*
@@ -530,5 +751,17 @@ cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-featu
 - **Plugins/projections never own truth** (§2.2): anything they persist must be rebuildable from source records + descriptor versions or captured as evidenced artifacts.
 - **Do not build the non-goals** (§2.4): no UI, no DMN/CaseTask, no vector DB, no NATS dependency, no EnvHub, no marketplace, no MicroVM (roadmap seams only).
 - **No sibling-repo dependencies:** the ecosystem map is contract intelligence, not a build graph. Never add a path/git dependency on SWE_SEED, godspeed_agent, agent-memory-ledger, or Context_Kernel; interaction is via the `SettlementAuthority`, `Evaluator`/policy-engine, `EventSink`, and federation-bundle seams, with copied-in schema fixtures where a contract needs testing.
+- **Substrate before structure:** inspect the current implementation before
+  adding a type, crate, trait, file, store, or adapter. The plan describes
+  required contracts, not permission to duplicate working substrate.
+- **No ceremonial JobContracts:** a dedicated JobContract exists only when
+  existing Intent/template/spec/policy/issue records cannot express the job with
+  sufficient identity, attribution, immutability, and upstream linkage.
+- **One criteria truth:** approval, settlement, declaration, capability, and
+  memory consumers all resolve the same canonical criteria record. None may
+  persist an independently mutable criteria copy.
+- **No rewrite for terminology:** when existing code satisfies the contract
+  under another name, document the mapping and extend minimally rather than
+  renaming or replacing it.
 - Scope deviations, missing-API blockers, and debt discovered mid-task go to `.agents/OPEN_QUESTIONS.md` / `.agents/OBSERVED_DEBT.md` in the discovering commit — not silently absorbed.
 - Commit hygiene: one milestone-task per commit series; the mechanical Task 1 graduation stays in its own commit(s) with zero behavior change.

@@ -74,7 +74,7 @@ SEA Forge MUST distinguish what must be baked into the kernel from what can be i
 
 | Bucket | Must be present from the beginning | Rationale |
 |---|---|---|
-| Kernel invariants | versioned canonical record encoding, ULID record identity, append ordinals, per-stream hash chains, Merkle-Mountain-Range commitments, signed/witnessed checkpoints, trace/evidence/settlement/envelope records, capability append, authority fabric, artifact descriptors, extension descriptors, projection refs, projection purity rules, and compatibility/version-skew reading | These define the durable truth model. Retrofitting them later would re-key history or create bypass paths. |
+| Kernel invariants | versioned canonical record encoding, ULID record identity, append ordinals, per-stream hash chains, Merkle-Mountain-Range commitments, signed/witnessed checkpoints, trace/evidence/settlement/envelope records, attributable job/requirement-origin references, first-class settlement-criteria records, capability append, authority fabric, artifact descriptors, extension descriptors, projection refs, projection purity rules, and compatibility/version-skew reading | These define the durable truth model. Retrofitting them later would re-key history, erase why settlement criteria were selected, or create bypass paths between intended outcomes and accepted evidence. |
 | Kernel extension ABI | `ExtensionDescriptor`, `ProjectionRef`, `ProjectionAdapter`, `RuntimeAdapter`, `EventSink`, `SandboxBackend`, `Evaluator`, `ArtifactAttestor`, and import/export descriptor shapes | Plugins can vary, but their contracts, authority surface, determinism requirements, and evidence outputs must be stable before plugins exist. |
 | First-party extensions | DomainForge semantic adapter, jail sandbox, case engine, server/approval loop, capability projection, governed semantic memory, spec-to-code and DomainForge projection pipeline, templates/environments/evaluators, SeaCell bundles, artifact-to-IP | These are SEA Forge capabilities that share kernel state and proof gates. They ship as milestones, not third-party plugins. |
 | Later plugins/adapters | UI clients, chat/Slack/GitHub adapters, alternate KG backends, additional projection targets, additional runtime adapters, notification channels, NATS/EventSink, MicroVM sandbox, egress proxy, vector-memory index, EnvHub importers, RL reward exporters, public marketplace bridges | They can be added without changing kernel records if they obey the extension ABI and authority fabric. |
@@ -138,6 +138,8 @@ layout remains readable and is committed by migration genesis entries.
 - `.sea-forge/capabilities/` — rebuildable `CapabilityRecord` projection (E4).
 - `.sea-forge/capabilities/policies/<sha256>.json` — immutable promotion-policy snapshots referenced by capability projections (E4).
 - `.sea-forge/settlement/declarations.jsonl` — append-only `SettlementDeclaration` source records issued by configured settlement authorities (E4); local/weak declarations and qualifying/strong declarations share the same typed format.
+- `.sea-forge/settlement/criteria.jsonl` — append-only compatibility view of ledgered `SettlementCriteriaRecord`s. The ledger remains authoritative; this file is rebuildable and MUST NOT become a second mutable source of truth.
+- `.sea-forge/jobs/contracts.jsonl` — append-only compatibility view of ledgered `JobContract`s when a dedicated job contract is required. SEA Forge MUST reuse an existing ledgered Intent, PlanTemplate, SpecPipelineStage, policy requirement, issue, or external requirement instead of creating a redundant JobContract when that existing record already satisfies §7.1a.
 - `.sea-forge/memory/items.jsonl` — extracted `MemoryItem`s (source of truth) and `.sea-forge/memory/index.sqlite` — FTS index, rebuildable from `items.jsonl` (E7).
 - `.sea-forge/approvals.jsonl` — approval requests and resolutions (E3).
 - `.sea-forge/authority/policy-bundles/<policy_bundle_hash>.json` — canonical validated authority bundle snapshots, including identity, role, SoD, file, API, git, PR, prompt, spec-pipeline, artifact-transition, attestation, deployment, secret, and policy-mutation surfaces.
@@ -668,14 +670,156 @@ the ledger.
 
 **SettlementCriteria** gains: `require_approval` (bool) — when true, settlement cannot be `accepted` without a resolved approval.
 
+### 7.1a Job/requirement origin and settlement-criteria provenance
+(M2 closeout; prerequisite to M3)
+
+SEA Forge MUST preserve the derivation path from the desired result or
+requirement to the criteria used to judge settlement.
+
+This requirement does not authorize a second requirements-management system.
+
+Before introducing a new record kind or persistence surface, the implementation
+MUST inspect the existing canonical substrate and reuse an existing ledgered
+record when that record already provides:
+
+1. stable identity;
+2. attributable authorship or submission;
+3. immutable or hash-addressed content;
+4. a resolvable upstream source;
+5. sufficient semantic content to explain why the criteria were selected.
+
+The implementation MUST NOT create a parallel job, requirement, criteria, or
+provenance store merely because this specification names a logical role. It
+MUST extend or reference the existing canonical record when the contract is
+already satisfied.
+
+#### OriginRef
+
+`OriginRef` is a typed reference to the source that motivated a job or
+settlement criterion:
+
+- `kind`:
+  `intent | plan_template | spec_pipeline_stage | policy_requirement |
+  issue | external_requirement | job_contract | implementation_defined`.
+- `ref`: canonical typed ID or stable URI.
+- `sha256`: hash of the referenced source record or approved external content.
+- `role`:
+  `desired_result | constraint | acceptance_source | derivation_input`.
+- `evidence_refs`: sorted array, MAY be empty only when the referenced ledger
+  record itself supplies complete provenance.
+
+Every non-legacy `SettlementCriteriaRecord` MUST contain at least one
+`OriginRef`.
+
+#### JobContract
+
+A `JobContract` is REQUIRED only when no existing canonical source record
+expresses the intended job or requirement with enough specificity to justify
+criteria derivation.
+
+When required, `JobContract` contains:
+
+- `version`.
+- `job_contract_id` (`jcon_` plus 6 lowercase hex).
+- `direction_kind`:
+  `jtbd | requirement | goal | problem | constraint | implementation_defined`.
+- `statement`: non-empty string describing the desired consequence or
+  requirement.
+- `origin_refs`: non-empty sorted array of `OriginRef`.
+- `declared_by`: identity reference.
+- `declared_at`: RFC 3339 timestamp.
+- `approved_by`: identity reference or null.
+- `supersedes_ref`: prior `job_contract_id` or null.
+- `job_contract_hash`: SHA-256 of canonical JobContract content excluding only
+  `job_contract_hash`.
+
+A `JobContract` MUST NOT be generated merely to duplicate an `Intent`,
+PlanTemplate, accepted SpecPipelineStage, policy requirement, issue, or external
+requirement that already satisfies this contract.
+
+#### SettlementCriteriaRecord
+
+Every new v0.2 PlanItem that may settle MUST resolve its criteria through a
+ledgered `SettlementCriteriaRecord`.
+
+`SettlementCriteriaRecord` contains:
+
+- `version`.
+- `criteria_id` (`crit_` plus 6 lowercase hex).
+- `criteria`: the full `SettlementCriteria` value, including later additive
+  fields such as `require_approval`, `evaluator`, and batch criteria.
+- `origin_refs`: non-empty sorted array of `OriginRef`.
+- `derivation`:
+  - `method`:
+    `manual | deterministic_planner | plan_template | spec_pipeline |
+    imported | implementation_defined`;
+  - `actor_ref`: identity responsible for the derivation;
+  - `producer_ref`: planner, template, pipeline stage, tool, or null;
+  - `rationale`: non-empty concise explanation of how the criteria operationalize
+    the cited origin.
+- `declared_at`: RFC 3339 timestamp that MUST precede execution.
+- `criteria_sha256`: SHA-256 of canonical `criteria` only.
+- `criteria_record_hash`: SHA-256 of canonical record content excluding only
+  `criteria_record_hash`.
+
+`PlanItem` gains:
+
+- `settlement_criteria_ref`: `criteria_id`.
+- The existing embedded `settlement_criteria` remains as a compatibility and
+  execution snapshot.
+
+For every new v0.2 PlanItem:
+
+- `settlement_criteria_ref` MUST resolve to exactly one committed
+  `SettlementCriteriaRecord`;
+- the embedded `settlement_criteria` MUST hash to the referenced
+  `criteria_sha256`;
+- every `OriginRef` MUST resolve and hash-verify;
+- the criteria record MUST be committed before the PlanItem becomes eligible
+  for activation;
+- a mismatch or unresolved reference is `criteria_provenance_error` and MUST
+  fail before authority grants execution.
+
+`CasePlan` gains optional `job_contract_ref`. It MUST be present when the plan
+uses a dedicated JobContract and absent when existing origin records are used
+directly.
+
+#### Legacy compatibility
+
+Migrated v0.1 plans with only embedded SettlementCriteria remain readable and
+retain their historical meaning. They are classified as
+`legacy_unattributed_criteria`.
+
+SEA Forge MUST NOT fabricate retrospective authorship, rationale, origin refs,
+or declaration time for legacy criteria.
+
+A kernel-local SettlementEvent MAY still evaluate a legacy plan under a policy
+that permits legacy execution. Legacy-unattributed criteria MUST NOT qualify
+for strong settlement or capability promotion until an authority-checked
+adoption operation creates a current SettlementCriteriaRecord with real
+attribution and source references.
+
 ### 7.2 ApprovalRequest (new; persisted to `approvals.jsonl`)
 
-- `version`, `approval_id` (`apr_` + 4-digit seq global), `run_id`, `decision_id` (the escalated AuthorityDecision).
+- `version`, `approval_id` (`apr_` + 4-digit seq global), `run_id`,
+  `decision_id` (the escalated AuthorityDecision).
+- `plan_item_id`, `criteria_ref`, `criteria_sha256`, and
+  `criteria_record_hash`.
+- `job_contract_ref` (nullable; present only when the criteria chain uses a
+  dedicated JobContract).
 - `requested_at`, `expires_at` (RFC 3339; TTL from policy, default 24h).
 - `status` (enum: `pending | approved | rejected | expired`).
-- `resolved_by` (actor_id or null), `resolved_at` (or null), `note` (string, OPTIONAL).
+- `resolved_by` (actor_id or null), `resolved_at` (or null), `note`
+  (string, OPTIONAL).
 
 Resolution appends a *new* line with the same `approval_id` (append-only log; latest line wins; a resolved/expired approval MUST NOT be re-resolved).
+
+An ApprovalRequest approves or rejects the exact criteria-bound decision, not a
+free-floating run. Before resolution, SEA Forge MUST verify that
+`criteria_ref`, `criteria_sha256`, and `criteria_record_hash` still resolve to
+the same committed record. A stale, missing, or mismatched criteria record
+refuses resolution with `criteria_provenance_error`; approval MUST NOT silently
+rebind to changed criteria.
 
 ### 7.2.1 SettlementAuthority / SettlementDeclaration (new; E4/M4a)
 
@@ -708,11 +852,14 @@ Built-in adapters:
 **SettlementDeclarationRequest**:
 
 - `settlement_ref`, `run_id`, `case_id`, `plan_item_id`.
-- `claim_manifest_sha256`: canonical hash of the minimum `SettlementEvent`, its
-  `SettlementCriteria`, authority decisions, and evidence manifest.
-- `criteria_ref`, `criteria_sha256`, `criteria_declared_at`, `execution_started_at`
-  — `criteria_declared_at` MUST precede execution; otherwise no qualifying
-  declaration can be issued.
+- `claim_manifest_sha256`: canonical hash of the minimum `SettlementEvent`, the
+  referenced `SettlementCriteriaRecord`, resolved origin records, authority
+  decisions, verifier inputs, and evidence manifest.
+- `criteria_ref`, `criteria_sha256`, `criteria_record_hash`,
+  `criteria_declared_at`, and `execution_started_at`.
+- `job_contract_ref` (nullable) and the sorted resolved `origin_refs`.
+- `criteria_declared_at` MUST precede execution; every origin and criteria hash
+  MUST resolve; otherwise no qualifying declaration can be issued.
 - `verifier_ref` (`extension_id@version` or built-in descriptor),
   `verifier_sha256`, and verifier evidence refs.
 - `acting_entity_id` and requested settlement strength (`local | strong`).
@@ -726,7 +873,9 @@ Built-in adapters:
   minimum event unless the authority downgrades `accepted` to `rejected` for an
   integrity failure; declarations never upgrade an event.
 - `strength` (`local | strong`) and `qualifies_for_capability` (bool).
-- `criteria_ref`, `criteria_sha256`, `criteria_declared_at`.
+- `criteria_ref`, `criteria_sha256`, `criteria_record_hash`,
+  `criteria_declared_at`, `job_contract_ref` (nullable), and
+  `origin_refs`.
 - `verifier_ref`, `verifier_sha256`, `verification_evidence_refs`.
 - `declarer`: `{ actor_id, authority_ref, role, standing_basis }`.
 - `independence`: `{ acting_entity_id, independent: bool, basis }`.
@@ -744,11 +893,14 @@ Built-in adapters:
   excluding only `declaration_hash`.
 
 A declaration qualifies for capability promotion iff all are true: referenced
-records and hashes validate; criteria predate execution; status is `accepted`;
-strength is `strong`; declarer standing is trusted by the snapshotted policy;
-`independent` is true; required reliability dimensions are present; weight meets
-the policy minimum; and every variation/disruption/burden tag cites source
-evidence. Missing or malformed integrity inputs fail closed to
+records and hashes validate; criteria predate execution; the
+SettlementCriteriaRecord and every OriginRef resolve and hash-verify; the
+criteria derivation has attributable authorship; the criteria are not classified
+as `legacy_unattributed_criteria`; status is `accepted`; strength is `strong`;
+declarer standing is trusted by the snapshotted policy; `independent` is true;
+required reliability dimensions are present; weight meets the policy minimum;
+and every variation/disruption/burden tag cites source evidence. Missing or
+malformed integrity inputs fail closed to
 `qualifies_for_capability: false` and emit evidence. They do not erase the
 minimum event.
 
@@ -870,7 +1022,16 @@ Extraction (M4b) is deterministic: a fixed rule set over envelopes and settlemen
 - `name` (`[a-z0-9_-]+`), `version` (semver string), `description`.
 - `parameters`: map of `name → { type: string|int|bool|path, required: bool, default? }`. Substitution sites use `${param}` and are allowed only in operation payload values and criteria values — never in `kind`, `argv[0]`, IDs, or sentry structure (a template cannot smuggle in an unreviewable shape).
 - `plan`: a CasePlan body (items, stages, sentries, milestones, markers) with `${param}` placeholders.
-- Instantiation (`sea-forge run --template name@version --param k=v`): resolve params (typed, missing-required is an input error), substitute, then treat the result exactly like a plan proposal (§8.6) — full schema validation, path/charset rules, sentry satisfiability, per-operation authority. Same template + same params MUST yield an identical CasePlan (determinism gate). The instantiated plan records `template_ref: name@version` for provenance; the minimum slice's demo plan becomes built-in template `sea_model_demo@0.1.0`.
+- `origin_refs`: non-empty array of template-level OriginRefs, unless each
+  PlanItem supplies its own complete origin set.
+- `job_contract`: optional JobContract body or `job_contract_ref`. A new
+  JobContract MUST NOT be synthesized when an existing origin record already
+  satisfies §7.1a.
+- Each settling PlanItem's criteria MUST instantiate into or resolve a
+  SettlementCriteriaRecord. Template substitution MAY affect allowed criteria
+  values, but MUST NOT alter provenance structure, origin-ref kinds, hash
+  algorithms, declared actor identity, or derivation method.
+- Instantiation (`sea-forge run --template name@version --param k=v`): resolve params (typed, missing-required is an input error), substitute, then treat the result exactly like a plan proposal (§8.6) — full schema validation, path/charset rules, sentry satisfiability, per-operation authority. Same template + same params MUST yield an identical CasePlan (determinism gate). The instantiated plan records `template_ref: name@version` for provenance; the minimum slice's demo plan becomes built-in template `sea_model_demo@0.1.0`. The same template version and typed parameter set MUST produce byte-identical criteria content, origin refs, criteria hashes, and JobContract content hashes, apart from ledger-assigned record identity and commit timestamps where those are outside the canonical content hash.
 
 **EnvironmentSpec** (YAML, `.sea-forge/environments/<name>@<version>.yaml`):
 
@@ -897,6 +1058,9 @@ digits>`, `art_` plus 6 lowercase hex, and `tt_<UTC stamp>_<6 hex>`. They name
 domain objects; ULIDs name immutable record versions. `capability_name` doubles
 as a filename and MUST match `[a-z0-9_]+` (enforced at planner construction
 since it derives from `PlanItem.name`).
+
+`jcon_` plus 6 lowercase hex names a dedicated JobContract.
+`crit_` plus 6 lowercase hex names a SettlementCriteriaRecord.
 
 ### 7.8 SpecPipelineRun / SpecPipelineStage (new, E5/M5)
 
@@ -1027,7 +1191,7 @@ contain private key bytes.
 
 ### 8.3 Config error classes
 
-Minimum-spec classes, plus: `unsupported_sandbox_class_error` (class named in policy not compiled/available on this host — blocks all work, because silently degrading isolation is the one unacceptable fallback), `domain_model_error` (missing/incompatible DomainForge library or required feature, resource-limit breach, unresolved imports, source-hash drift, parse failure, semantic validation failure, or invalid concept ref; blocks the affected plan before side effects), `ledger_integrity_error` (invalid canonicalization, duplicate ULID, ordinal gap, chain/MMR/checkpoint/signature/witness failure, rollback, fork, required checkpoint/witness outage, or unsafe recovery; blocks affected side effects), `authority_engine_config_error` (action-gating engine is fail-open/pass, missing, cannot be health-checked, or requires cryptographic fact verification without DomainForge's `signing` feature), `settlement_authority_config_error` (a required strong authority is untrusted, missing, unhealthy, or configured with invalid standing/reliability rules), `settlement_integrity_error` (post-hoc criteria, invalid source hashes, self-declaration, missing reliability dimensions, or insufficient standing; preserves the minimum event but blocks qualifying promotion), `identity_config_error` (governed environment lacks identity map or required sponsor semantics), `server_config_error` (blocks server start; CLI unaffected).
+Minimum-spec classes, plus: `unsupported_sandbox_class_error` (class named in policy not compiled/available on this host — blocks all work, because silently degrading isolation is the one unacceptable fallback), `domain_model_error` (missing/incompatible DomainForge library or required feature, resource-limit breach, unresolved imports, source-hash drift, parse failure, semantic validation failure, or invalid concept ref; blocks the affected plan before side effects), `ledger_integrity_error` (invalid canonicalization, duplicate ULID, ordinal gap, chain/MMR/checkpoint/signature/witness failure, rollback, fork, required checkpoint/witness outage, or unsafe recovery; blocks affected side effects), `authority_engine_config_error` (action-gating engine is fail-open/pass, missing, cannot be health-checked, or requires cryptographic fact verification without DomainForge's `signing` feature), `settlement_authority_config_error` (a required strong authority is untrusted, missing, unhealthy, or configured with invalid standing/reliability rules), `settlement_integrity_error` (post-hoc criteria, invalid source hashes, self-declaration, missing reliability dimensions, or insufficient standing; preserves the minimum event but blocks qualifying promotion), `criteria_provenance_error` (missing, unresolved, hash-mismatched, stale, post-execution, unattributed-required, or internally inconsistent criteria or origin records; blocks the affected PlanItem before execution, refuses stale approval resolution, and prevents strong settlement qualification without rewriting a historical minimum SettlementEvent), `identity_config_error` (governed environment lacks identity map or required sponsor semantics), `server_config_error` (blocks server start; CLI unaffected).
 
 Blast radius table: policy errors block all new runs (server keeps in-flight runs); `server.yaml` errors block the server only; per-run input errors fail only that run.
 
@@ -1043,12 +1207,28 @@ Server startup additionally verifies: socket path bindable, sandbox classes refe
 
 `sea-forge run --plan <file.json>` accepts an externally produced CasePlan (e.g., LLM-generated). It is untrusted input: it MUST pass full §7 schema validation, §7.5 path/charset rules, sentry satisfiability (§10.2), and then the normal per-operation authority gate. If the proposal carries a `DomainModelRef` or DomainForge concept refs, SEA Forge MUST reload the hash-pinned source set, validate it through `sea-forge-domainforge`, and resolve every referenced concept before authority evaluation. A proposal is never executed on trust; rejection reasons are typed (`plan_schema_error`, `plan_cycle_error`, `domain_model_error`, plus ordinary authority denials).
 
+A proposed PlanItem that may settle MUST include either:
+
+1. a resolvable `settlement_criteria_ref`; or
+2. sufficient attributed criteria and OriginRef input for SEA Forge to create a
+   SettlementCriteriaRecord before activation.
+
+The proposal validator MUST reuse existing canonical Intent, template,
+spec-pipeline, policy, issue, or external-requirement records when they satisfy
+§7.1a. It MUST NOT manufacture a redundant JobContract.
+
+Unknown, missing, stale, or hash-mismatched criteria/origin refs are
+`criteria_provenance_error`. No authority decision or side effect may follow.
+
 ## 9. Operational Flow and State Model — extensions
 
 ### 9.1 Flow (case engine + approvals)
 
 ```text
-intent or plan-proposal → verify required global checkpoint/witness receipts → resolve/validate referenced DomainForge model → case created (or reopened) → plan validated → authority for the CURRENT plan
+intent or plan-proposal → verify required global checkpoint/witness receipts → resolve/validate referenced DomainForge model → case created (or reopened) → plan validated
+  → every settling PlanItem's criteria record and origin chain resolve,
+    hash-verify, and predate execution
+  → authority for the CURRENT plan
   (every operation of every non-discretionary item, up front; discretionary additions re-run authority
    for the added item before it can activate)
   → any deny on a required item → item unavailable; if the case can never auto-complete, case terminates rejected
@@ -1215,6 +1395,18 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
   before sentry evaluation or authority. The plan snapshot records the exact
   `DomainModelRef`; a changed `.sea` source requires a new plan or an
   authority-checked replan operation.
+- Before a PlanItem may become `enabled` or `active`, its
+  `settlement_criteria_ref` MUST resolve, its embedded criteria snapshot MUST
+  hash-match, and its complete OriginRef chain MUST verify.
+- Criteria provenance validation is a pure pre-activation check over committed
+  records. It MUST NOT depend on hidden planner state, an agent narrative, or a
+  mutable template file.
+- Discretionary items MUST establish the same criteria provenance before joining
+  the active plan.
+- The planner MUST reuse existing canonical origin records. Creating a
+  JobContract when an Intent, accepted template, spec stage, policy requirement,
+  issue, or external requirement already satisfies §7.1a is a conformance
+  failure, not harmless duplication.
 
 ### 10.3 Operator loop (E3, M3)
 
@@ -1225,6 +1417,15 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
 
 ### 10.4 Settlement integrity and capability memory (E4, M4)
 
+- Kernel-local settlement evaluates the exact criteria snapshot whose hash
+  matches the referenced SettlementCriteriaRecord.
+- The declaration request MUST be assembled from the committed criteria record
+  and resolved origin chain; the acting process supplies no replacement
+  rationale, origin, criteria body, or mutable narrative input.
+- A missing or invalid origin chain preserves any already-written minimum event
+  but contributes zero qualifying capability weight.
+- A legacy-unattributed criteria record may support legacy local evaluation only
+  when policy permits it; it never qualifies as strong.
 - After each minimum `SettlementEvent`, SEA Forge MUST construct the declaration
   request from persisted, hash-verified records. The acting process supplies no
   mutable narrative input to this step.
@@ -1424,6 +1625,25 @@ M4b: runs under two entities → extraction produces deduplicated, provenance-li
 M2 (templates): instantiate the same template twice with the same params → byte-identical CasePlans, both
     carrying template_ref; a template whose ${param} lands in argv[0] or an operation kind → schema_error at
     template load, never at run time.
+M2 criteria provenance:
+    - inspect the implemented CasePlan, PlanItem, SettlementCriteria, template,
+      ledger, and migration contracts and reuse existing canonical records where
+      they satisfy §7.1a; no parallel job/criteria store or new crate is accepted
+      without a demonstrated missing contract.
+    - create a new PlanItem → its settlement_criteria_ref resolves to one
+      ledgered SettlementCriteriaRecord; the embedded snapshot hashes to
+      criteria_sha256; every OriginRef resolves.
+    - instantiate the same template twice with the same params → criteria
+      content, OriginRefs, criteria_sha256, criteria_record_hash, and any
+      JobContract content hash are identical.
+    - change one criterion, origin source, or derivation input → the applicable
+      hash changes and the old approval/declaration cannot silently rebind.
+    - remove an origin record, change its bytes, mismatch the embedded criteria
+      snapshot, or declare criteria after execution starts → plan fails with
+      criteria_provenance_error before authority or side effects.
+    - load a migrated v0.1 plan with embedded-only criteria → it remains
+      inspectable as legacy_unattributed_criteria; local evaluation follows
+      policy, but a strong declaration and capability promotion are refused.
 M5: run a full spec-to-code pipeline over a small context → ADR/PRD/SDS/synthesized SEA/DomainForge AST/
     semantic graph/manifest/generated contracts hash-link in order; DomainForge parses and validates the
     synthesized `.sea`; direct generated-zone edit request is denied; regeneration is
@@ -1544,8 +1764,9 @@ gate is satisfied.
 | M1 jail backend | §12 M1 proofs; jail-violation, no-downgrade, unavailable-class tests |
 | M2 case engine | §12 M2 proofs; unsatisfiable-sentry rejection; proposal schema/authority tests; DomainModelRef and concept-ref validation before activation; repetition + required-item semantics; sentry-replay determinism; discretionary-item authority; parked-case-is-not-failure test; reopen is authority-checked |
 | M2 templates (E8) | §12 M2 template proofs; instantiation determinism; substitution-site restrictions enforced at load; missing-required-param is input error; template_ref provenance in plan + envelope |
-| M3 server + approvals | §12 M3 proofs; reload (valid + invalid) tests; notify-failure-ignored test; unauthorized-approver refused |
-| M4a settlement integrity + capability memory | §12 M4a proofs; post-hoc criteria and self-declaration rejected; standing/independence/reliability enforced; identical repetition gives no variation credit; recovery contributes only with evidence; promotion and contraction deterministic; rebuild purity; require_proven deny-with-citation |
+| M2 criteria provenance | §12 M2 criteria-provenance proofs; implementation reuses existing canonical substrate before adding records; every new settling PlanItem resolves to a pre-execution SettlementCriteriaRecord and attributable origin chain; embedded snapshot/hash agreement; deterministic template-derived hashes; missing/stale/mismatched origin failure before authority; legacy readability without fabricated provenance; legacy-unattributed criteria cannot qualify for strong settlement |
+| M3 server + approvals | §12 M3 proofs; reload (valid + invalid) tests; notify-failure-ignored test; unauthorized-approver refused; approvals bind to and revalidate the exact criteria_ref and criteria_record_hash |
+| M4a settlement integrity + capability memory | §12 M4a proofs; post-hoc criteria and self-declaration rejected; standing/independence/reliability enforced; criteria and origin-chain resolution required for qualifying declarations; identical repetition gives no variation credit; recovery contributes only with evidence; promotion and contraction deterministic; rebuild purity; require_proven deny-with-citation |
 | M4b governed recall (E7) | §12 M4b proofs; extraction determinism + dedup; scope enforcement (own/entity/any, default deny); recall-as-evidence linkage; index-fallback equivalence; extraction failure never fails the run |
 | M5 spec-to-code + generator pipelines + DomainForge projections | §12 M5 proofs; separate `.sea` synthesis and DomainForge validation; generated-zone direct-edit denial; ADR/PRD/SDS/SEA/DomainForge-AST/semantic-graph/manifest/codegen hash-chain; regeneration determinism; generated-contract classification ceiling until last-mile proof; pipeline-as-ordinary-case-plan test; in-memory adapter/no-direct-side-effect proof; quarantine completeness; projection-as-governed-case test; ProjectionRecord rebuild hash stable |
 | M6 federation prep | §12 M6 proofs; import isolation (no capability leakage); hash-tamper rejection; imported templates/environments require explicit adopt |
@@ -1608,6 +1829,14 @@ Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS run
 - [ ] No policy can grant an untrusted argv0 the `local` class (schema-level test exists).
 - [ ] Kernel crates contain no Tokio dependency (enforced via `cargo tree` check in CI).
 - [ ] All records at version 0.2 remain readable by 0.1 readers where fields are additive; a version-skew test exists.
+- [ ] Every new settling PlanItem resolves to a ledgered SettlementCriteriaRecord
+  with a verified attributable origin chain; no redundant JobContract,
+  criteria store, or provenance subsystem was added where existing substrate
+  already satisfied the contract.
+- [ ] ApprovalRequest and SettlementDeclaration bind to the same immutable
+  criteria record; stale or mismatched criteria cannot be approved or promoted.
+- [ ] Legacy embedded-only criteria remain readable without fabricated
+  provenance and cannot qualify for strong settlement.
 - [ ] M4a proves criteria predate execution, declarer standing and independence,
   complete reliability weighting, and immutable claim/evidence hashes before any
   declaration qualifies for capability promotion.
@@ -1628,4 +1857,19 @@ Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS run
 
 ## Appendix A. Milestone order and rationale
 
-M0 integrity ledger + authority fabric + DomainForge semantic adapter + extension ABI + graduation + case-directory migration → M1 jail (the security debt of the slice is retired only after the integrity, authority, and semantic-world gates are non-bypassable) → M2 case engine (E2 — CMMN-subset semantics over verified ledger entries, with DomainModelRef/concept validation before activation; the biggest milestone, sequenced before the server because sentry evaluation must be correct single-threaded before it runs concurrently) → M3 server/approvals (unblocks `escalate` and human tasks — the operator half of the case model) → M4a settlement declarations + capability promotion (the first consumer of envelopes; declaration integrity must exist before any projection can call an observation proven) → M4b governed semantic memory (E7 — the Memori delta: extraction, FTS index, authority-scoped recall; sequenced after M4a so memory can distinguish raw outcomes from qualifying capability) → M5 spec-to-code + generator pipelines + DomainForge projections (the ADR→PRD→SDS→authored/synthesized SEA→DomainForge AST/semantic graph→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself) → M6 federation prep (cheap, additive; imported extensions remain disabled until adopted) → M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner) → M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection). E8 plan templates land inside M2 with the planner work. MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.
+M0 integrity ledger + authority fabric + DomainForge semantic adapter + extension ABI + graduation + case-directory migration
+→ M1 jail (the security debt of the slice is retired only after the integrity, authority, and semantic-world gates are non-bypassable)
+→ M2 case engine and templates
+→ M2 criteria-provenance closeout
+  (reuse the implemented Intent/plan/template/ledger substrate; define only the
+  missing canonical criteria/origin contract; prove it before approvals create
+  additional consumers)
+→ M3 server/approvals (unblocks `escalate` and human tasks — the operator half of the case model)
+→ M4a settlement declarations + capability promotion (the first consumer of envelopes; declaration integrity must exist before any projection can call an observation proven)
+→ M4b governed semantic memory (E7 — extraction, FTS index, authority-scoped recall; sequenced after M4a so memory can distinguish raw outcomes from qualifying capability)
+→ M5 spec-to-code + generator pipelines + DomainForge projections (the ADR→PRD→SDS→authored/synthesized SEA→DomainForge AST/semantic graph→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself)
+→ M6 federation prep (cheap, additive; imported extensions remain disabled until adopted)
+→ M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner)
+→ M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection).
+
+MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.
