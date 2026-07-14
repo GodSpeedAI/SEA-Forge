@@ -3,6 +3,7 @@ pub mod case;
 pub mod inspect;
 pub mod ledger;
 pub mod mediated;
+pub mod memory;
 pub mod migrate;
 pub mod recall;
 pub mod resume;

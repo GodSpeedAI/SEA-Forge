@@ -3,6 +3,7 @@ use sea_forge_core::{
     types::{ExtensionDescriptor, ExtensionKind, SemanticEnvelope, SettlementStatus},
 };
 
+pub mod memory;
 pub mod promotion;
 
 pub use promotion::{

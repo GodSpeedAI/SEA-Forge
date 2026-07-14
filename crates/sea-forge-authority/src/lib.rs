@@ -586,6 +586,8 @@ pub struct PolicyRule {
     pub sandbox_class: Option<String>,
     #[serde(default)]
     pub requires_approval: bool,
+    #[serde(default)]
+    pub memory_scope: Option<String>,
 }
 
 impl AuthorityPolicyBundle {
