@@ -2,6 +2,7 @@
 
 mod commands;
 mod pipeline;
+mod plan_pipeline;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use sea_forge_core::types::SettlementStatus;
@@ -22,8 +23,10 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     Run {
-        #[arg(long)]
-        intent: String,
+        #[arg(long, required_unless_present = "plan", conflicts_with = "plan")]
+        intent: Option<String>,
+        #[arg(long, required_unless_present = "intent", conflicts_with = "intent")]
+        plan: Option<PathBuf>,
         #[arg(long, default_value = "sea-forge-policy.yaml")]
         policy: PathBuf,
         #[arg(long, default_value = ".sea-forge")]
@@ -81,6 +84,26 @@ enum Command {
         #[arg(long, default_value = "migration")]
         key_id: String,
     },
+    Case {
+        #[command(subcommand)]
+        action: CaseCommand,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+    },
+    Task {
+        #[command(subcommand)]
+        action: TaskCommand,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+    },
     Ledger {
         #[command(subcommand)]
         action: LedgerAction,
@@ -97,6 +120,28 @@ enum LedgerAction {
     Prove {
         ledger_id: String,
         entry_ulid: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CaseCommand {
+    Reopen {
+        case_id: String,
+    },
+    AddTask {
+        case_id: String,
+        #[arg(long)]
+        item: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+enum TaskCommand {
+    Complete {
+        case_id: String,
+        item_id: String,
+        #[arg(long)]
+        note: Option<String>,
     },
 }
 #[derive(Clone, ValueEnum)]
@@ -143,22 +188,27 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
         }
         Command::Run {
             intent,
+            plan,
             policy,
             root,
             timeout,
             entity,
             process,
-        } => commands::run::execute(intent, policy, root, timeout, entity, process).map_err(|e| {
-            let code = if matches!(
-                e,
-                sea_forge_core::ForgeError::Input(_) | sea_forge_core::ForgeError::UnknownIntent(_)
-            ) {
-                2
-            } else {
-                1
-            };
-            (code, e)
-        }),
+        } => commands::run::execute(intent, plan, policy, root, timeout, entity, process).map_err(
+            |e| {
+                let code = if matches!(
+                    e,
+                    sea_forge_core::ForgeError::Input(_)
+                        | sea_forge_core::ForgeError::UnknownIntent(_)
+                        | sea_forge_core::ForgeError::Plan { .. }
+                ) {
+                    2
+                } else {
+                    1
+                };
+                (code, e)
+            },
+        ),
         Command::Recall {
             query,
             root,
@@ -198,6 +248,46 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             key_id: &key_id,
         })
         .map_err(|e| (1, e)),
+        Command::Case {
+            action,
+            root,
+            policy,
+            actor,
+        } => {
+            let policy = commands::mediated::policy_path(&root, policy.as_deref());
+            match action {
+                CaseCommand::Reopen { case_id } => {
+                    commands::case::reopen(&root, &policy, &actor, &case_id)
+                }
+                CaseCommand::AddTask { case_id, item } => {
+                    commands::case::add_task(&root, &policy, &actor, &case_id, &item)
+                }
+            }
+            .map_err(|error| (1, error))
+        }
+        Command::Task {
+            action,
+            root,
+            policy,
+            actor,
+        } => {
+            let policy = commands::mediated::policy_path(&root, policy.as_deref());
+            match action {
+                TaskCommand::Complete {
+                    case_id,
+                    item_id,
+                    note,
+                } => commands::task::complete(
+                    &root,
+                    &policy,
+                    &actor,
+                    &case_id,
+                    &item_id,
+                    note.as_deref(),
+                ),
+            }
+            .map_err(|error| (1, error))
+        }
         Command::Ledger { action, root } => {
             commands::ledger::execute(action, &root).map_err(|e| (1, e))
         }

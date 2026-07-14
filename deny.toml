@@ -1,7 +1,10 @@
 # cargo-deny configuration (Shell-SPEC §10.3).
-# Denies unmaintained/unmaintained-3 crates, rejected licenses, and known
-# advisories. Rust advisories database is fetched at run time; `cargo deny
-# check advisories` requires network. `bans`/`licenses`/`sources` are offline.
+# Denies rejected licenses, yanked crates, known advisories, wildcard
+# dependencies, and dependencies from unapproved sources.
+#
+# The RustSec advisory database is fetched at runtime; therefore
+# `cargo deny check advisories` requires network access.
+# The bans, licenses, and sources checks can run offline.
 
 [graph]
 all-features = true
@@ -23,7 +26,23 @@ allow = [
     "Unicode-3.0",
     "Zlib",
 ]
+
 confidence-threshold = 0.8
+
+# Explicitly approved, exact-version exception.
+#
+# Dependency path:
+# domainforge-core 0.13.0 -> xxhash-rust 0.8.16
+#
+# BSL-1.0 is the Boost Software License 1.0. This exception applies only
+# to xxhash-rust 0.8.16; upgrading the crate requires another review.
+exceptions = [
+    {
+        name = "xxhash-rust",
+        version = "=0.8.16",
+        allow = ["BSL-1.0"],
+    },
+]
 
 [bans]
 multiple-versions = "warn"

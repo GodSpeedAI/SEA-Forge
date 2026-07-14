@@ -231,12 +231,30 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             env::current_exe().map_err(|e| ForgeError::io("resolve current executable", e))?;
         let executable = executable.to_string_lossy().into_owned();
         let plan = planner::plan(&intent, &case_id, &run_id, &executable, &root)?;
+        let authority_stream =
+            LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
+        let mut criteria_map: BTreeMap<String, SettlementCriteriaRecord> = BTreeMap::new();
+        let declared_at = Utc::now().to_rfc3339();
+        let mut plan = plan;
+        for item in &mut plan.items {
+            let record =
+                planner::derive_from_intent(&intent, item, &intent.actor_id, &declared_at)?;
+            let committed = authority_stream.commit_typed(
+                "settlement_criteria",
+                vec![run_id.clone(), record.criteria_id.clone()],
+                &record,
+                vec![],
+            )?;
+            let _ = committed;
+            item.settlement_criteria_ref = Some(record.criteria_id.clone());
+            criteria_map.insert(record.criteria_id.clone(), record);
+        }
+        planner::verify_plan_criteria(&plan, &criteria_map)?;
+        write_json(&run_dir.join("plan.json"), &plan)?;
         let item = plan
             .items
             .first()
             .ok_or_else(|| ForgeError::Internal("planner returned an empty plan".into()))?;
-        let authority_stream =
-            LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
         authority_stream.commit_typed("intent", vec![run_id.clone()], &intent, vec![])?;
         authority_stream.commit_typed("case_plan", vec![run_id.clone()], &plan, vec![])?;
         authority_stream.commit_typed(
@@ -275,6 +293,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             state: CaseState::Active,
             plan_ref: plan.plan_id.clone(),
             run_ids: vec![run_id.clone()],
+            stages: vec![],
             close_reason: None,
             created_at: now,
             closed_at: None,
@@ -555,6 +574,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         let claim = SettlementClaim {
             run_id: run_id.clone(),
             plan_item_id: item.plan_item_id.clone(),
+            criteria_ref: item.settlement_criteria_ref.clone(),
             criteria: item.settlement_criteria.clone(),
             execution: execution.clone(),
             authority_verdicts: decisions.iter().map(|d| d.verdict.clone()).collect(),
@@ -572,6 +592,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             case_ref: case_id.clone(),
             intent: intent.clone(),
             plan_ref: plan.plan_id.clone(),
+            template_ref: plan.template_ref.clone(),
             authority_decisions: decisions.iter().map(|d| d.decision_id.clone()).collect(),
             evidence_refs: evidence.refs(),
             settlement_ref: settled.settlement_id.clone(),

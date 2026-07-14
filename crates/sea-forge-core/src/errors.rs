@@ -15,6 +15,10 @@ pub enum ForgeError {
         source: io::Error,
     },
     Serialization(String),
+    Plan {
+        class: &'static str,
+        message: String,
+    },
     Internal(String),
     Run {
         run_id: String,
@@ -37,6 +41,7 @@ impl ForgeError {
             Self::UnsafePath(_) => "unsafe_path_error",
             Self::Io { .. } => "io_error",
             Self::Serialization(_) => "serialization_error",
+            Self::Plan { class, .. } => class,
             Self::Internal(_) => "internal_error",
             Self::Run { .. } => "internal_error",
         }
@@ -65,6 +70,7 @@ impl fmt::Display for ForgeError {
             | Self::UnsafePath(message)
             | Self::Serialization(message)
             | Self::Internal(message) => f.write_str(message),
+            Self::Plan { class, message } => write!(f, "{class}: {message}"),
             Self::Config {
                 class,
                 path,

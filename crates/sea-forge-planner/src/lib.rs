@@ -2,6 +2,16 @@ use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
 use sea_forge_domain::{self as domain, IntentPattern};
 
 pub mod case_engine;
+pub mod criteria;
+pub mod templates;
+
+pub use criteria::{
+    compute_criteria_sha256, compute_record_hash, derive_from_intent, derive_from_template,
+    verify_item_criteria, verify_plan_criteria, CriteriaLookup,
+};
+pub use templates::{
+    instantiate, load, load_pinned, sea_model_demo_template, store_builtin, PlanTemplate,
+};
 
 pub const DEMO_MODEL: &str = r#"{"domain": "demo", "entities": [{"name": "Sample"}]}"#;
 
@@ -53,12 +63,16 @@ pub fn plan(
             entry_criteria: vec![],
             exit_criteria: vec![],
             settlement_criteria,
+            settlement_criteria_ref: None,
             item_kind: Default::default(),
             sandbox_class: None,
             parent_stage: None,
             markers: Default::default(),
             max_instances: 1,
+            depends_on: vec![],
         }],
+        template_ref: None,
+        job_contract_ref: None,
     })
 }
 

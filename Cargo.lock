@@ -1207,7 +1207,12 @@ version = "0.1.0"
 dependencies = [
  "sea-forge-core",
  "sea-forge-domain",
+ "sea-forge-ledger",
+ "serde",
  "serde_json",
+ "serde_yaml",
+ "sha2",
+ "tempfile",
 ]
 
 [[package]]
@@ -1241,6 +1246,7 @@ dependencies = [
  "chrono",
  "sea-forge-core",
  "sea-forge-sandbox",
+ "serde_json",
 ]
 
 [[package]]

@@ -25,6 +25,7 @@ fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
             stdout_must_contain: None,
             require_approval: false,
         },
+        settlement_criteria_ref: None,
         item_kind: ItemKind::Milestone,
         sandbox_class: None,
         parent_stage: None,
@@ -34,6 +35,7 @@ fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
             manual_activation: false,
         },
         max_instances: 1,
+        depends_on: vec![],
     }
 }
 
@@ -50,6 +52,7 @@ fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -
             stdout_must_contain: None,
             require_approval: false,
         },
+        settlement_criteria_ref: None,
         item_kind: ItemKind::SandboxedTask,
         sandbox_class: Some("local".into()),
         parent_stage: None,
@@ -59,6 +62,7 @@ fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -
             manual_activation: false,
         },
         max_instances,
+        depends_on: vec![],
     }
 }
 
@@ -277,4 +281,97 @@ fn conformance_m2_empty_entry_criteria_activates_immediately() {
 
     let activated = evaluate_sentries(&items, &events, &workspace_files);
     assert!(activated.contains(&"A".to_string()));
+}
+
+#[test]
+fn conformance_m2_reducer_retries_then_terminates_required_item() {
+    let items = vec![
+        task_item("A", true, vec![], 1),
+        task_item("B", true, vec![sentry("A", "milestone_achieved")], 2),
+    ];
+    let mut events = vec![];
+    assert_eq!(
+        next_case_actions(&items, &events),
+        [CaseAction::Activate("A".into())]
+    );
+    events.extend([
+        trace_event(TraceKind::ItemActivated, Some("A"), serde_json::json!({})),
+        trace_event(TraceKind::ItemCompleted, Some("A"), serde_json::json!({})),
+        trace_event(
+            TraceKind::MilestoneAchieved,
+            Some("A"),
+            serde_json::json!({}),
+        ),
+    ]);
+    assert_eq!(
+        next_case_actions(&items, &events),
+        [CaseAction::Activate("B".into())]
+    );
+    events.extend([
+        trace_event(
+            TraceKind::ItemActivated,
+            Some("B"),
+            serde_json::json!({"instance": 1}),
+        ),
+        trace_event(
+            TraceKind::ItemFailed,
+            Some("B"),
+            serde_json::json!({"instance": 1}),
+        ),
+    ]);
+    assert_eq!(
+        next_case_actions(&items, &events),
+        [CaseAction::Activate("B".into())]
+    );
+    events.extend([
+        trace_event(
+            TraceKind::ItemActivated,
+            Some("B"),
+            serde_json::json!({"instance": 2}),
+        ),
+        trace_event(
+            TraceKind::ItemFailed,
+            Some("B"),
+            serde_json::json!({"instance": 2}),
+        ),
+    ]);
+    assert_eq!(
+        next_case_actions(&items, &events),
+        [CaseAction::TerminateCase {
+            blocking_item: "B".into()
+        }]
+    );
+    assert_eq!(
+        replay_case(&items, &events).activation_sequence,
+        ["A", "B", "B"]
+    );
+}
+
+#[test]
+fn conformance_m2_proposal_validation_compiles_depends_on_and_rejects_bad_paths() {
+    let mut plan = CasePlan {
+        version: "0.2".into(),
+        plan_id: "plan_01".into(),
+        case_id: "case_01".into(),
+        run_id: "run_01".into(),
+        intent_id: "int_01".into(),
+        items: vec![task_item("A", true, vec![], 1), {
+            let mut item = task_item("B", true, vec![], 1);
+            item.depends_on = vec!["A".into()];
+            item
+        }],
+        template_ref: None,
+        job_contract_ref: None,
+    };
+    validate_proposal(&mut plan).unwrap();
+    assert!(plan.items[1].depends_on.is_empty());
+    assert_eq!(plan.items[1].entry_criteria[0].on.source, "A");
+
+    let mut bad = plan.clone();
+    bad.items[0].operations = vec![Operation::WriteFile {
+        path: "../outside".into(),
+        content_hint: "bad".into(),
+    }];
+    let error = validate_proposal(&mut bad).unwrap_err();
+    assert_eq!(error.class(), "plan_schema_error");
 }
