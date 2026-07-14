@@ -606,6 +606,42 @@ pub struct SettlementEvent {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ApprovalStatus {
+    Pending,
+    Approved,
+    Rejected,
+    Expired,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ApprovalRequest {
+    pub version: String,
+    pub approval_id: String,
+    pub run_id: String,
+    pub case_id: String,
+    pub decision_id: String,
+    pub plan_item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_ref: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_record_hash: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
+    pub requested_at: String,
+    pub expires_at: String,
+    pub status: ApprovalStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CapabilityDelta {
     pub attempted_capability: String,
     pub result: SettlementStatus,

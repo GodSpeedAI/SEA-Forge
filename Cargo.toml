@@ -15,6 +15,7 @@ members = [
     "crates/sea-forge-extension",
     "crates/sea-forge-ledger",
     "crates/sea-forge-domainforge",
+    "crates/sea-forge-server",
 ]
 
 [workspace.package]

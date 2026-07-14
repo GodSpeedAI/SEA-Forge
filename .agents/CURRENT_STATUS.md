@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-07-13
+Updated: 2026-07-14
 
 ## Objective
 
@@ -11,7 +11,7 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–9 are committed through `4a215ab`; Task 9.5 is implemented, conformance-green, and uncommitted. Task 10 (M3 server/approvals/operator loop) has not started.
+On branch `full-spec`. Tasks 1–9.5 are committed through `6ff7c3b`; Task 10 (M3 server/approvals/operator loop) is implemented, conformance-green, and uncommitted. Task 11 has not started.
 
 ## Changed Files
 
@@ -251,10 +251,11 @@ On branch `full-spec`. Tasks 1–9 are committed through `4a215ab`; Task 9.5 is 
   changes the hash; legacy items are skipped by verification; built-in demo does
   not create a JobContract.
 
+- Task 10 — M3 server, approvals, operator loop: `ApprovalRequest`/`ApprovalStatus` types; `approvals.jsonl` append-only store with latest-line-wins resolution; escalate→ApprovalRequest→exit 5 in plan_pipeline; `sea-forge approve|reject` CLI with TTL expiry check and no-re-resolution; `sea-forge resume` re-enters the case loop after approval resolution; `sea-forge-server` crate with Tokio runtime, Unix socket NDJSON protocol (submit/status/approve/reject), `spawn_blocking` dispatch via subprocess, `max_concurrent_runs` semaphore, dynamic config reload (last-known-good on invalid), `notify_command` execution (failure logged and ignored). Conformance tests: escalate→exit 5→approve→resume→completed; double-approve refused; reject→resume→terminated (exit 4); expired approval refuses resolution.
+
 ## Remaining
 
-- Tasks 10–17 from the implementation plan (M3 server/approvals/operator loop
-  through M8 artifact-to-IP and the §18 DoD sweep).
+- Tasks 11–17 from the implementation plan (M4a settlement declarations through M8 artifact-to-IP and the §18 DoD sweep).
 - Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
   once the log-file reset is no longer a safety-net concern.
 

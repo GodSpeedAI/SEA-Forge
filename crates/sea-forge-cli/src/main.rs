@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod approvals;
 mod commands;
 mod pipeline;
 mod plan_pipeline;
@@ -109,6 +110,43 @@ enum Command {
         action: LedgerAction,
         #[arg(long, default_value = ".sea-forge")]
         root: PathBuf,
+    },
+    Approve {
+        case_id: String,
+        approval_id: String,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+        #[arg(long)]
+        note: Option<String>,
+    },
+    Reject {
+        case_id: String,
+        approval_id: String,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+        #[arg(long)]
+        note: Option<String>,
+    },
+    Resume {
+        case_id: String,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: PathBuf,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long, default_value_t = 60)]
+        timeout: u64,
+        #[arg(long, default_value = "operator_local")]
+        entity: String,
+        #[arg(long, default_value = "cli")]
+        process: String,
     },
 }
 
@@ -291,6 +329,65 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
         Command::Ledger { action, root } => {
             commands::ledger::execute(action, &root).map_err(|e| (1, e))
         }
+        Command::Approve {
+            case_id,
+            approval_id,
+            root,
+            policy: _,
+            actor,
+            note,
+        } => {
+            let policy = commands::mediated::policy_path(&root, None);
+            commands::approve::approve(commands::approve::ApproveOptions {
+                root: &root,
+                case_id: &case_id,
+                approval_id: &approval_id,
+                actor: &actor,
+                note: note.as_deref(),
+                policy: Some(&policy),
+            })
+            .map_err(|e| (1, e))
+        }
+        Command::Reject {
+            case_id,
+            approval_id,
+            root,
+            policy: _,
+            actor,
+            note,
+        } => {
+            let policy = commands::mediated::policy_path(&root, None);
+            commands::approve::reject(commands::approve::ApproveOptions {
+                root: &root,
+                case_id: &case_id,
+                approval_id: &approval_id,
+                actor: &actor,
+                note: note.as_deref(),
+                policy: Some(&policy),
+            })
+            .map_err(|e| (1, e))
+        }
+        Command::Resume {
+            case_id,
+            policy,
+            root,
+            timeout,
+            entity,
+            process,
+        } => commands::resume::resume(commands::resume::ResumeOptions {
+            root,
+            case_id,
+            policy,
+            timeout_secs: timeout,
+            entity,
+            process,
+        })
+        .map(|outcome| {
+            println!("case_id={}", outcome.case_id);
+            println!("case_state={}", outcome.state);
+            outcome.exit_code
+        })
+        .map_err(|e| (1, e)),
     }
 }
 fn init_diagnostics() {
