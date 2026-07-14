@@ -459,6 +459,7 @@ pub enum EvidenceKind {
     Artifact,
     AuthorityDecision,
     ExecutionResult,
+    Recall,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct EvidenceRecord {
@@ -877,6 +878,34 @@ pub struct SemanticEnvelope {
     pub artifact_refs: Vec<ArtifactRef>,
     pub extension_refs: Vec<String>,
     pub projection_refs: Vec<ProjectionRef>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryKind {
+    Fact,
+    Decision,
+    Outcome,
+    Preference,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct MemoryItemProvenance {
+    pub run_ids: Vec<String>,
+    pub evidence_refs: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MemoryItem {
+    pub version: String,
+    pub memory_id: String,
+    pub kind: MemoryKind,
+    pub statement: String,
+    pub attribution: Attribution,
+    pub provenance: MemoryItemProvenance,
+    pub dedup_key: String,
+    pub created_at: String,
+    pub last_confirmed_at: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

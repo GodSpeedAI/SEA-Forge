@@ -59,6 +59,10 @@ enum Command {
         process: Option<String>,
         #[arg(long)]
         result: Option<ResultArg>,
+        /// When set, search memory/items.jsonl (MemoryItem) instead of
+        /// capabilities.jsonl (SemanticEnvelope). §10.5 M4b upgrade.
+        #[arg(long)]
+        kind: Option<MemoryKindArg>,
         #[arg(long, default_value_t = 10)]
         limit: usize,
         #[arg(long)]
@@ -148,6 +152,12 @@ enum Command {
         #[arg(long, default_value = "cli")]
         process: String,
     },
+    Memory {
+        #[command(subcommand)]
+        action: MemoryCommand,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -182,6 +192,32 @@ enum TaskCommand {
         note: Option<String>,
     },
 }
+
+#[derive(Subcommand)]
+enum MemoryCommand {
+    /// Rebuild the memory FTS index from items.jsonl (§10.5).
+    Rebuild,
+}
+
+#[derive(Clone, ValueEnum)]
+enum MemoryKindArg {
+    Fact,
+    Decision,
+    Outcome,
+    Preference,
+}
+
+impl From<MemoryKindArg> for sea_forge_core::types::MemoryKind {
+    fn from(v: MemoryKindArg) -> Self {
+        match v {
+            MemoryKindArg::Fact => Self::Fact,
+            MemoryKindArg::Decision => Self::Decision,
+            MemoryKindArg::Outcome => Self::Outcome,
+            MemoryKindArg::Preference => Self::Preference,
+        }
+    }
+}
+
 #[derive(Clone, ValueEnum)]
 enum ResultArg {
     Accepted,
@@ -253,6 +289,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             entity,
             process,
             result,
+            kind,
             limit,
             policy,
             actor,
@@ -264,6 +301,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             entity: entity.as_deref(),
             process: process.as_deref(),
             result: result.map(Into::into),
+            kind: kind.map(Into::into),
             limit,
         })
         .map_err(|e| (1, e)),
@@ -388,6 +426,11 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             outcome.exit_code
         })
         .map_err(|e| (1, e)),
+        Command::Memory { action, root } => match action {
+            MemoryCommand::Rebuild => commands::memory::rebuild(&root)
+                .map(|_| 0)
+                .map_err(|e| (1, e)),
+        },
     }
 }
 fn init_diagnostics() {

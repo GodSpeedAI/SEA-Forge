@@ -1114,7 +1114,9 @@ dependencies = [
  "sea-forge-core",
  "sea-forge-ledger",
  "sea-forge-settlement",
+ "serde",
  "serde_json",
+ "sha2",
  "tempfile",
 ]
 

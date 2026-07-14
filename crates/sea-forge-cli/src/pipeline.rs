@@ -645,6 +645,19 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         )?;
         let capability_path = sandbox::safe_join(&root, "capabilities.jsonl")?;
         capability::append(&capability_path, &envelope)?;
+        // Deterministic memory extraction — final pipeline step (§10.5).
+        // Never fails the run; errors are logged operator-visibly.
+        let memory_path = sandbox::safe_join(&root, "memory/items.jsonl")?;
+        let now = Utc::now().to_rfc3339();
+        let memory_items = capability::memory::extract_from_envelope(&envelope, &now);
+        if let Err(error) = capability::memory::append_memory_items(&memory_path, &memory_items) {
+            tracing::warn!(
+                event = "memory_extraction_error",
+                run_id = %run_id,
+                error_class = error.class(),
+                "memory extraction failed; run settlement stands"
+            );
+        }
         Ok(RunOutcome {
             run_id: run_id.clone(),
             case_id: case_id.clone(),
