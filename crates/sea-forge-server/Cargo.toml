@@ -1,0 +1,22 @@
+[package]
+name = "sea-forge-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SEA Forge concurrent case server (M3)."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "process", "sync", "time", "fs", "macros"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

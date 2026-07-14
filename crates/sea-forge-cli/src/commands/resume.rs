@@ -1,141 +1,161 @@
 use chrono::Utc;
-use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
-use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};
-use sea_forge_ledger::{CommittedRecordRef, LedgerStream};
-use sea_forge_planner::case_engine::{next_case_actions, validate_proposal, CaseAction};
-use serde::Serialize;
+use sea_forge_core::{errors::ForgeError, ids, types::*};
+use sea_forge_ledger::LedgerStream;
 use serde_json::json;
 use std::collections::{BTreeMap, HashMap};
-use std::fs::{self, OpenOptions};
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::PathBuf;
 
-pub struct PlanRunOptions {
-    pub plan: PathBuf,
-    pub policy: PathBuf,
+use crate::approvals;
+use crate::plan_pipeline::{append_event, write_json};
+
+struct AuthorizedOperation {
+    decision: AuthorityDecision,
+    committed: sea_forge_ledger::CommittedRecordRef,
+}
+
+pub struct ResumeOptions {
     pub root: PathBuf,
+    pub case_id: String,
+    pub policy: PathBuf,
     pub timeout_secs: u64,
     pub entity: String,
+    #[allow(dead_code)]
     pub process: String,
 }
 
-pub struct PlanRunOutcome {
+pub struct ResumeOutcome {
     pub case_id: String,
     pub state: &'static str,
     pub exit_code: u8,
 }
 
-struct AuthorizedOperation {
-    decision: AuthorityDecision,
-    committed: CommittedRecordRef,
-}
-
-pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| ForgeError::io("create JSON parent", error))?;
-    }
-    fs::write(path, serde_json::to_vec_pretty(value)?)
-        .map_err(|error| ForgeError::io("write JSON", error))
-}
-
-pub fn append_event(
-    path: &Path,
-    stream: &LedgerStream,
-    events: &mut Vec<TraceEvent>,
-    kind: TraceKind,
-    item_id: Option<&str>,
-    payload: serde_json::Value,
-) -> Result<(), ForgeError> {
-    let event = TraceEvent {
-        version: RECORD_VERSION.into(),
-        event_id: ids::seq_id("cev", 6, events.len() + 1),
-        run_id: "case".into(),
-        plan_item_id: item_id.map(str::to_owned),
-        kind,
-        actor_id: "case_engine".into(),
-        timestamp: Utc::now().to_rfc3339(),
-        payload,
-    };
-    stream.commit_typed("case_event", vec![], &event, vec![])?;
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .map_err(|error| ForgeError::io("open case events", error))?;
-    serde_json::to_writer(&mut file, &event)?;
-    file.write_all(b"\n")
-        .and_then(|_| file.flush())
-        .map_err(|error| ForgeError::io("append case event", error))?;
-    events.push(event);
-    Ok(())
-}
-
-fn load_plan(path: &Path) -> Result<CasePlan, ForgeError> {
-    let bytes = fs::read(path).map_err(|error| ForgeError::io("read plan proposal", error))?;
-    serde_json::from_slice(&bytes).map_err(|error| ForgeError::Plan {
-        class: "plan_schema_error",
-        message: error.to_string(),
-    })
-}
-
-pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
-    // Proposal and policy validation precede state creation.
-    let mut plan = load_plan(&options.plan)?;
-    validate_proposal(&mut plan)?;
-    let bundle = AuthorityPolicyBundle::load(&options.policy)?;
-    let engine = PolicyAuthorityEngine::new(bundle.clone())?;
-
-    fs::create_dir_all(&options.root)
-        .map_err(|error| ForgeError::io("create state root", error))?;
+pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
     let root = options
         .root
         .canonicalize()
-        .map_err(|error| ForgeError::io("canonicalize state root", error))?;
-    let case_id = ids::case_id()?;
-    plan.case_id.clone_from(&case_id);
-    let case_dir = root.join("cases").join(&case_id);
-    let runs_dir = case_dir.join("runs");
-    fs::create_dir_all(&runs_dir).map_err(|error| ForgeError::io("create case runs", error))?;
-    let case_events = case_dir.join("case-events.jsonl");
-    let stream = LedgerStream::open(&root, format!("case-{case_id}"), &options.entity)?;
-    stream.commit_typed("case_plan", vec![case_id.clone()], &plan, vec![])?;
+        .map_err(|e| ForgeError::io("canonicalize root", e))?;
+    let case_dir = root.join("cases").join(&options.case_id);
+    if !case_dir.exists() {
+        return Err(ForgeError::Input(format!(
+            "case {} not found",
+            options.case_id
+        )));
+    }
 
-    let intent = Intent {
-        intent_id: ids::random_id("int")?,
-        summary: format!("Execute plan {}", options.plan.display()),
-        actor_id: options.entity.clone(),
-        process_id: options.process.clone(),
-        created_at: Utc::now().to_rfc3339(),
-    };
+    // Load case state.
+    let case: Case = serde_json::from_slice(
+        &fs::read(case_dir.join("case.json")).map_err(|e| ForgeError::io("read case.json", e))?,
+    )
+    .map_err(|e| ForgeError::Serialization(format!("parse case.json: {e}")))?;
+
+    if case.state != CaseState::AwaitingApproval {
+        return Err(ForgeError::Input(format!(
+            "case {} is {} — only awaiting_approval can resume",
+            options.case_id,
+            serde_json::to_string(&case.state)
+                .unwrap_or_default()
+                .trim_matches('"')
+        )));
+    }
+
+    // Load plan.
+    let plan: CasePlan = serde_json::from_slice(
+        &fs::read(case_dir.join("plan.json")).map_err(|e| ForgeError::io("read plan.json", e))?,
+    )
+    .map_err(|e| ForgeError::Serialization(format!("parse plan.json: {e}")))?;
+
+    // Load events.
+    let case_events = case_dir.join("case-events.jsonl");
+    let mut events: Vec<TraceEvent> = Vec::new();
+    if case_events.exists() {
+        for line in fs::read_to_string(&case_events)
+            .map_err(|e| ForgeError::io("read case-events.jsonl", e))?
+            .lines()
+        {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let event: TraceEvent = serde_json::from_str(line)
+                .map_err(|e| ForgeError::Serialization(format!("parse event: {e}")))?;
+            events.push(event);
+        }
+    }
+
+    // Check approval status.
+    let pending = approvals::pending_for_case(&root, &options.case_id)?;
+    if !pending.is_empty() {
+        return Err(ForgeError::Input(format!(
+            "case {} still has {} pending approval(s)",
+            options.case_id,
+            pending.len()
+        )));
+    }
+
+    // Determine the approval outcome for this case.
+    let all_approvals = approvals::load_all(&root)?;
+    let case_approvals: Vec<_> = all_approvals
+        .iter()
+        .filter(|a| a.case_id == options.case_id)
+        .collect();
+    let has_approved = case_approvals
+        .iter()
+        .any(|a| a.status == ApprovalStatus::Approved);
+    let _has_expired = case_approvals
+        .iter()
+        .any(|a| a.status == ApprovalStatus::Expired || a.status == ApprovalStatus::Rejected);
+
+    if !has_approved {
+        // If rejected or expired, terminate the case.
+        let mut case = case;
+        case.state = CaseState::Terminated;
+        case.close_reason = Some("authority_escalate_expired".into());
+        case.closed_at = Some(Utc::now().to_rfc3339());
+        write_json(&case_dir.join("case.json"), &case)?;
+        let stream =
+            LedgerStream::open(&root, format!("case-{}", options.case_id), &options.entity)?;
+        append_event(
+            &case_events,
+            &stream,
+            &mut events,
+            TraceKind::CaseTerminated,
+            None,
+            json!({"basis": "authority_escalate_expired"}),
+        )?;
+        return Ok(ResumeOutcome {
+            case_id: options.case_id,
+            state: "terminated",
+            exit_code: 4,
+        });
+    }
+
+    // Approved: re-enter the case loop.
+    let stream = LedgerStream::open(&root, format!("case-{}", options.case_id), &options.entity)?;
+    let bundle = sea_forge_authority::AuthorityPolicyBundle::load(&options.policy)?;
+    let engine = sea_forge_authority::PolicyAuthorityEngine::new(bundle.clone())?;
     let actor = Actor {
         actor_id: options.entity.clone(),
         role: ActorRole::Operator,
     };
     let binding = bundle.resolve_identity(&actor.actor_id, actor.role.clone());
+    let runs_dir = case_dir.join("runs");
 
-    // Derive and commit settlement criteria records for every settling item.
-    let mut criteria_map: BTreeMap<String, SettlementCriteriaRecord> = BTreeMap::new();
-    let declared_at = Utc::now().to_rfc3339();
-    for item in &mut plan.items {
-        let record =
-            sea_forge_planner::derive_from_intent(&intent, item, &options.entity, &declared_at)?;
-        let committed = stream.commit_typed(
-            "settlement_criteria",
-            vec![case_id.clone(), record.criteria_id.clone()],
-            &record,
-            vec![],
-        )?;
-        let _ = committed;
-        item.settlement_criteria_ref = Some(record.criteria_id.clone());
-        criteria_map.insert(record.criteria_id.clone(), record);
-    }
-    sea_forge_planner::verify_plan_criteria(&plan, &criteria_map)?;
-
-    // Allocate every potential episode and decide every operation before activation.
+    // Reconstruct authority for items that need to execute.
+    // ponytail: on resume, re-evaluate authority for items that haven't completed.
     let mut run_ids = HashMap::<(String, u32), String>::new();
     let mut auth = HashMap::<(String, u32), Vec<AuthorizedOperation>>::new();
     for item in &plan.items {
         if item.item_kind != ItemKind::SandboxedTask {
+            continue;
+        }
+        let projection = sea_forge_planner::case_engine::replay_case(&plan.items, &events);
+        let existing = projection
+            .items
+            .iter()
+            .find(|s| s.item_id == item.plan_item_id);
+        let completed = existing
+            .is_some_and(|s| s.status == sea_forge_planner::case_engine::ItemStatus::Completed);
+        if completed {
             continue;
         }
         for instance in 1..=item.max_instances {
@@ -145,27 +165,21 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
             let mut operations = Vec::new();
             for (sequence, operation) in item.operations.iter().enumerate() {
                 let action = AuthorityAction::from(operation);
-                let evidence = stream.commit_typed(
-                    "authority_evidence",
-                    vec![run_id.clone(), item.plan_item_id.clone()],
-                    &json!({"kind": "plan_operation", "action": action}),
-                    vec![],
-                )?;
                 let env_keys = if matches!(operation, Operation::ExecuteCommand { .. }) {
                     ["PATH", "HOME"].into_iter().map(str::to_owned).collect()
                 } else {
                     Default::default()
                 };
-                let decision = engine.evaluate(AuthorityEvaluation {
+                let decision = engine.evaluate(sea_forge_authority::AuthorityEvaluation {
                     actor: &actor,
                     binding: binding.clone(),
                     run_id: &run_id,
-                    case_id: &case_id,
+                    case_id: &options.case_id,
                     plan_item_id: &item.plan_item_id,
                     sequence: sequence + 1,
                     action: &action,
                     workspace_root: &workspace,
-                    evidence_refs: vec![evidence.entry_ulid().into()],
+                    evidence_refs: vec![],
                     artifacts_root: matches!(operation, Operation::ExecuteCommand { .. })
                         .then_some(artifacts.as_path()),
                     timeout_secs: matches!(operation, Operation::ExecuteCommand { .. })
@@ -175,13 +189,13 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                 })?;
                 let request = stream.commit_typed(
                     "authority_request",
-                    vec![run_id.clone(), item.plan_item_id.clone()],
+                    vec![options.case_id.clone(), item.plan_item_id.clone()],
                     &decision.action_request,
                     vec![],
                 )?;
                 let committed = stream.commit_typed(
                     "authority_decision",
-                    vec![run_id.clone(), item.plan_item_id.clone()],
+                    vec![options.case_id.clone(), item.plan_item_id.clone()],
                     &decision,
                     vec![request.entry_ulid().into()],
                 )?;
@@ -195,111 +209,33 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
         }
     }
 
-    // Check for escalated items and create approval requests.
-    let now = Utc::now();
-    let now_rfc = now.to_rfc3339();
-    // ponytail: TTL from policy or default 24h; policy parsing added when server lands
-    let expires_at = (now + chrono::Duration::hours(24)).to_rfc3339();
-    let mut escalated: Option<(&str, &str)> = None;
-    'outer: for ((item_id, _instance), ops) in &auth {
-        for op in ops {
-            if op.decision.verdict == Verdict::Escalate {
-                escalated = Some((item_id, &op.decision.decision_id));
-                break 'outer;
-            }
-        }
-    }
-
-    let mut case = Case {
-        version: RECORD_VERSION.into(),
-        case_id: case_id.clone(),
-        intent,
-        state: CaseState::Active,
-        plan_ref: plan.plan_id.clone(),
-        run_ids: vec![],
-        stages: plan
-            .items
-            .iter()
-            .filter(|item| item.item_kind == ItemKind::Stage)
-            .map(|item| item.plan_item_id.clone())
-            .collect(),
-        close_reason: None,
-        created_at: Utc::now().to_rfc3339(),
-        closed_at: None,
-    };
+    // Continue the case loop.
+    let mut case = case;
+    case.state = CaseState::Active;
     write_json(&case_dir.join("case.json"), &case)?;
-    write_json(&case_dir.join("plan.json"), &plan)?;
-    let mut events = vec![];
-    append_event(
-        &case_events,
-        &stream,
-        &mut events,
-        TraceKind::CaseCreated,
-        None,
-        json!({"case_id": case_id}),
-    )?;
-
-    // If any item escalated, create an approval request and park the case.
-    if let Some((item_id, decision_id)) = escalated {
-        let run_id = run_ids
-            .get(&(item_id.to_string(), 1))
-            .cloned()
-            .unwrap_or_default();
-        let approval = ApprovalRequest {
-            version: RECORD_VERSION.into(),
-            approval_id: ids::seq_id("apr", 4, 1),
-            run_id: run_id.clone(),
-            case_id: case_id.clone(),
-            decision_id: decision_id.into(),
-            plan_item_id: item_id.into(),
-            criteria_ref: None,
-            criteria_sha256: None,
-            criteria_record_hash: None,
-            job_contract_ref: None,
-            requested_at: now_rfc.clone(),
-            expires_at: expires_at.clone(),
-            status: ApprovalStatus::Pending,
-            resolved_by: None,
-            resolved_at: None,
-            note: None,
-        };
-        stream.commit_typed(
-            "approval_request",
-            vec![case_id.clone(), approval.approval_id.clone()],
-            &approval,
-            vec![],
-        )?;
-        crate::approvals::append(&root, &approval)?;
-        case.state = CaseState::AwaitingApproval;
-        write_json(&case_dir.join("case.json"), &case)?;
-        return Ok(PlanRunOutcome {
-            case_id,
-            state: "awaiting_approval",
-            exit_code: 5,
-        });
-    }
-
     loop {
-        let actions = next_case_actions(&plan.items, &events);
+        let actions = sea_forge_planner::case_engine::next_case_actions(&plan.items, &events);
         if actions.is_empty() {
             write_json(&case_dir.join("case.json"), &case)?;
-            return Ok(PlanRunOutcome {
-                case_id,
+            return Ok(ResumeOutcome {
+                case_id: options.case_id,
                 state: "active",
                 exit_code: 5,
             });
         }
         for action in actions {
             match action {
-                CaseAction::Enable(item_id) => append_event(
-                    &case_events,
-                    &stream,
-                    &mut events,
-                    TraceKind::ItemEnabled,
-                    Some(&item_id),
-                    json!({}),
-                )?,
-                CaseAction::ParkHumanTask(item_id) => {
+                sea_forge_planner::case_engine::CaseAction::Enable(item_id) => {
+                    append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::ItemEnabled,
+                        Some(&item_id),
+                        json!({}),
+                    )?;
+                }
+                sea_forge_planner::case_engine::CaseAction::ParkHumanTask(item_id) => {
                     append_event(
                         &case_events,
                         &stream,
@@ -309,21 +245,23 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                         json!({"human_task": true}),
                     )?;
                     write_json(&case_dir.join("case.json"), &case)?;
-                    return Ok(PlanRunOutcome {
-                        case_id,
+                    return Ok(ResumeOutcome {
+                        case_id: options.case_id,
                         state: "active",
                         exit_code: 5,
                     });
                 }
-                CaseAction::AchieveMilestone(item_id) => append_event(
-                    &case_events,
-                    &stream,
-                    &mut events,
-                    TraceKind::MilestoneAchieved,
-                    Some(&item_id),
-                    json!({}),
-                )?,
-                CaseAction::Activate(item_id) => {
+                sea_forge_planner::case_engine::CaseAction::AchieveMilestone(item_id) => {
+                    append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::MilestoneAchieved,
+                        Some(&item_id),
+                        json!({}),
+                    )?;
+                }
+                sea_forge_planner::case_engine::CaseAction::Activate(item_id) => {
                     let projection =
                         sea_forge_planner::case_engine::replay_case(&plan.items, &events);
                     let instance = projection
@@ -445,7 +383,7 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                             .collect::<Vec<_>>(),
                     )?;
                     write_json(&run_dir.join("settlement.json"), &settlement)?;
-                    case.run_ids.push(run_id);
+                    case.run_ids.push(run_id.clone());
                     let accepted = settlement.status == SettlementStatus::Accepted;
                     append_event(
                         &case_events,
@@ -471,7 +409,7 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                     }
                     write_json(&case_dir.join("case.json"), &case)?;
                 }
-                CaseAction::CompleteCase => {
+                sea_forge_planner::case_engine::CaseAction::CompleteCase => {
                     case.state = CaseState::Completed;
                     case.closed_at = Some(Utc::now().to_rfc3339());
                     append_event(
@@ -483,13 +421,13 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                         json!({}),
                     )?;
                     write_json(&case_dir.join("case.json"), &case)?;
-                    return Ok(PlanRunOutcome {
-                        case_id,
+                    return Ok(ResumeOutcome {
+                        case_id: options.case_id,
                         state: "completed",
                         exit_code: 0,
                     });
                 }
-                CaseAction::TerminateCase { blocking_item } => {
+                sea_forge_planner::case_engine::CaseAction::TerminateCase { blocking_item } => {
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
                     case.closed_at = Some(Utc::now().to_rfc3339());
@@ -502,8 +440,8 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                         json!({"blocking_item": blocking_item}),
                     )?;
                     write_json(&case_dir.join("case.json"), &case)?;
-                    return Ok(PlanRunOutcome {
-                        case_id,
+                    return Ok(ResumeOutcome {
+                        case_id: options.case_id,
                         state: "terminated",
                         exit_code: 3,
                     });
