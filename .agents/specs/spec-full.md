@@ -103,7 +103,7 @@ creation.
 - E7 **Governed semantic memory** (Memori delta, review §5): capability memory becomes a read/write loop — typed `MemoryItem`s extracted from envelopes and traces, attribution-scoped (entity × process × session, Memori's model), indexed in a rebuildable SQLite FTS projection, and recalled under authority: recall is an `Operation`, scope rules gate who may read whose memory, and every recall emits evidence so a settled run shows which memories informed it. Memori proves the memory mechanics; the authority/evidence wrapping is SEA Forge's addition.
 - E8 **Plan templates** (Archon delta, review §7 D6): named, versioned, parameterized CasePlanModel definitions in YAML (`.sea-forge/templates/<name>@<version>.yaml`), instantiated per case via `sea-forge run --template <name>@<version> --param k=v`. The template is the durable process asset — "what Dockerfiles did for infrastructure" — and completes CMMN's design-time/run-time distinction: template = design time, case = run time. Instantiation output is an ordinary CasePlan that passes full schema validation and per-operation authority; templates confer zero privilege by themselves.
 - E9 **Environment contracts and evaluators** (AEnvironment delta, review §7 D7/D8): an `EnvironmentSpec` (`name@version`) declares a sandbox's *content* — the commands/tools it provides and the `Evaluator`s it ships — orthogonal to its isolation class. Settlement criteria can reference `evaluator: <env>.<name>` instead of only exit-code/artifact checks, and batch criteria score record collections. Evaluators produce verification inputs; they do not acquire standing to declare settlement. Environments are local artifacts first; a shareable hub and reward export for RL training are roadmap seams, not scope.
-- E10 **Artifact-to-IP pipeline**: every work product starts as a content-addressed artifact and may progress only by governed transitions: `cognitive` → `intellectual` → `product` → `capital`. Each transition emits a TransitionToken, validates stage gates, binds ownership/license/review status, records semantic anchors where required, and optionally promotes `ifl:hash` to an attested `ifl:token`. Capitalization requires human approval and evidence of reuse or quality; no artifact may teleport across stages.
+- E10 **Artifact-to-IP pipeline**: every work product starts as a content-addressed artifact whose type, recognized maturity stage, lifecycle status, and identity/attestation status are independent dimensions (§7.9). Recognized maturity progresses only by governed transitions — `cognitive` → `intellectual` → `product` → `capital` via `synthesize`/`productize`/`capitalize` — each emitting a TransitionToken in `derive` (content-changing, new artifact version) or `promote` (content-preserving) mode, validating versioned stage-gate profiles, and recording semantic anchors where required. IFL attestation raises identity assurance (`ifl:hash` → `ifl:token`) without changing maturity. Capitalization is always content-preserving and requires separation-of-duty human approval plus qualifying reuse/value evidence beyond the originating case — quality alone is insufficient. No artifact may teleport across stages.
 
 ### 2.4 Non-Goals
 
@@ -159,9 +159,9 @@ layout remains readable and is committed by migration genesis entries.
   synthesis outputs and DomainForge-produced CALM, RDF, SBVR, SHACL, KG-event,
   manifest, generated-contract, or implementation-defined outputs (E5), plus
   `quarantine/<stage>.jsonl` for filtered-out records with provenance.
-- `.sea-forge/artifacts/catalog.jsonl` — content-addressed work-product descriptors from the minimum spec, extended with stage history (E10).
-- `.sea-forge/artifacts/transitions.jsonl` — append-only TransitionTokens for cognitive→intellectual→product→capital movement (E10).
-- `.sea-forge/ip/capital/<artifact_id>.json` — rebuildable intellectual-capital projection for artifacts that passed capitalization (E10).
+- `.sea-forge/artifacts/catalog.jsonl` — rebuildable projection of ledgered ArtifactRegistrationRecords + accepted TransitionTokens (recognized stage, lifecycle, derived reuse counts); never a source of truth (E10, §7.9).
+- `.sea-forge/artifacts/transitions.jsonl` — append-only TransitionTokens (`synthesize`/`productize`/`capitalize`, derive/promote modes) for cognitive→intellectual→product→capital movement (E10).
+- `.sea-forge/ip/capital/<artifact_id>.json` — rebuildable intellectual-capital projection for artifacts that passed capitalization; fails closed on incomplete/forked/tampered chains (E10, §10.8).
 - `.sea-forge/templates/<name>@<version>.yaml` — plan templates (E8); immutable once referenced by a case (new content = new version).
 - `.sea-forge/environments/<name>@<version>.yaml` — environment contracts (E9); same immutability rule.
 - `.sea-forge/export/<bundle_id>.tar` — federation bundles (E6); MAY include templates and environments.
@@ -212,7 +212,7 @@ Not proven by: envelope accumulation alone; one accepted run; repeated identical
 | Independent, reliability-weighted settlement reduces manufactured capability | Assumption grounded in the Genesis threat model | M4a tests reject post-hoc criteria and self-declaration, discount gameable/low-attribution feedback, and prevent non-qualifying declarations from promotion | minimum v0.1 proves only kernel-local verification | ship the declaration protocol before capability promotion; compare regressions under local versus external declarations |
 | Repetition under declared variation and recovery is sufficient for `proven` promotion | Assumption | M4a promotion/contraction tests plus at least one real varied workload | minimum variation tests prove kernel behavior, not durable capability | keep thresholds policy-versioned and expose evidence rather than claiming universal calibration |
 | Spec-to-code can be governed as ordinary case work rather than a separate control plane | Evidence-backed (by repo invariant) | M5 gate: ADR/PRD/SDS/SEA/AST/IR/manifest/codegen/last-mile chain hash-linked and deterministically replayed | SEA repo already uses spec-first generator-first and last-mile routes | wire as case-plan items; keep generated zones read-only |
-| Artifact-to-IP progression prevents provenance loss | Partially proven | M8 gate: no-teleportation, TransitionToken hash chain, stage gate validation, capitalization approval | ProjectCase artifact pipeline defines cognitive→intellectual→product→capital and TransitionTokens | implement catalog/projection and IFL attestation adapter |
+| Artifact-to-IP progression prevents provenance loss | Partially proven | M8 gate: no-teleportation, derive/promote distinction, TransitionToken lineage DAG, stage-gate profiles, SoD capitalization approval + value evidence, rebuild purity | ProjectCase artifact pipeline defines cognitive→intellectual→product→capital and TransitionTokens | implement registration/token/projection over existing M0–M7 substrate; IFL attestation adapter changes identity status only |
 
 ## 6. System Overview
 
@@ -243,7 +243,7 @@ The kernel crates from the report are populated by moving the minimum slice's mo
 | `sea-forge-extension` | slice descriptor types | extension registry, descriptor validation, projection adapter ABI, install/adopt records, compatibility checks (M0, M5+) |
 | `sea-forge-interface` | — (new) | operator event subscription, notification hooks, approve/reject commands (M3) |
 | `sea-forge-spec-pipeline` | — (new) | ADR/PRD/SDS/SEA/AST/IR/manifest/codegen/last-mile stage records, deterministic replay, generated-zone guard, gap/proof classification (M5) |
-| `sea-forge-artifact-ip` | — (new) | artifact catalog, TransitionTokens, no-teleportation validation, pre-mint/attested identity binding, capital projection (M8) |
+| `sea-forge-artifact-ip` | — (new) | artifact registration validation, additive identity/lineage types (§7.8a), stage/lifecycle/attestation dimension types, legal-edge + derive/promote validation, ArtifactGateProfile binding, TransitionToken construction/verification, lineage DAG validation, artifact-state and capital projection rebuild (M8) — reuses M0–M7 ledger/authority/criteria/settlement/evaluator/semantic substrate, adds no engine of its own |
 | `sea-forge-cell` | — (new) | bundle export/import, `cell_id` management (M6) |
 | `sea-forge-cli` | cli crate | new subcommands per milestone |
 | `sea-forge-server` | — (new) | Tokio daemon: run queue, concurrency limit, Unix-socket API (M3) |
@@ -671,6 +671,7 @@ the ledger.
 **SettlementCriteria** gains: `require_approval` (bool) — when true, settlement cannot be `accepted` without a resolved approval.
 
 ### 7.1a Job/requirement origin and settlement-criteria provenance
+
 (M2 closeout; prerequisite to M3)
 
 SEA Forge MUST preserve the derivation path from the desired result or
@@ -1089,29 +1090,82 @@ Invariants:
 - `generated_contract` proves only generated contracts. The classification cannot exceed `generated-contract` until `last_mile_adapter`, `runtime_wiring`, and `acceptance_proof` stages are accepted.
 - Regeneration is deterministic: same inputs and generator version produce byte-identical generated outputs or the pipeline settles `rejected` with basis `nondeterministic_projection`.
 
-### 7.9 ArtifactCatalogRecord / TransitionToken (new, E10/M8)
+### 7.8a Artifact identity compatibility (v0.1 → v0.2, E10/M8)
 
-**ArtifactCatalogRecord** (append/update projection from run evidence, persisted as JSONL):
+The minimum spec's `ArtifactDescriptor` (spec-minimum §7.3.8) already carries `artifact_id`, `content_sha256`, and `pre_mint_identity`. M8 extends this additively; it never re-keys, rewrites, or migrates existing records.
 
-- `artifact_id`, `current_stage` (`cognitive | intellectual | product | capital`).
-- `artifact_type`, `name`, `version`, `content_sha256`, `pre_mint_identity`.
-- `attested_identity` (`ifl:token:<ledger>:<seq>` or null).
-- `owner`, `license`, `review_status`.
-- `semantic_refs` (array; required before `capital`).
-- `source_evidence_refs`, `source_run_ids`, `transition_token_ids`.
-- `quality_score` (0..1 or null), `reuse_count` (u64), `updated_at`.
+- `artifact_id` — retained as the identity of **one immutable artifact version** (the existing instance). It is the join key everywhere in M8.
+- `lineage_id` — new, additive: a stable logical lineage identifier shared by all versions derived from a common root. Assigned at registration (first version: derived from that version's `content_identity`); derivations inherit it unless policy explicitly adopts a different lineage.
+- `content_identity` — new, additive: deterministic hash over the immutable content bytes plus the artifact-type discriminator only (`sha256` over canonical `{artifact_type, content_sha256}`, jcs-nfc-v1). Stage, owner, license, review status, lifecycle state, semantic refs, and attestation state MUST NOT enter it. A byte change ⇒ a new artifact version and a new `content_identity`.
+- `descriptor_hash` — new, additive: hash of the complete descriptor snapshot as captured in evidence (governance metadata included). It changes when governance metadata changes; `content_identity` does not.
+- `identity_scheme` — new, additive: identifies the identity calculation version (`artifact-identity-v2` for the above; absent = v0.1 legacy).
+- `legacy_pre_mint_identity` — the v0.1 `pre_mint_identity` value, preserved verbatim as compatibility metadata. Because the v0.1 formula mixes mutable governance fields (stage, owner, license, review status), it MUST NOT be used as the v0.2 stable content identity. Existing records keep it; lookups by legacy identity remain resolvable.
+- `declared_stage` — the historical producer claim from the v0.1 descriptor `stage` field. It is provenance metadata only and never confers recognized maturity (§10.8).
+- `recognized_stage` — never stored authoritatively: it is reconstructed from the registration record plus the accepted TransitionToken chain (§7.9).
 
-**TransitionToken** (`transitions.jsonl`):
+Every ledgered M8 record uses the repository's normal ledger record identity (M0 entry ULIDs, hash chain); no parallel record-ID scheme is introduced.
 
-- `transition_token_id`, `artifact_id`, `from_stage`, `to_stage`.
-- `actor_id`, `approver_id` (null except transitions whose policy requires approval).
-- `input_identity`, `output_identity` (usually same pre-mint identity unless content changed during transformation).
-- `evidence_refs`, `case_id`, `run_id`.
-- `stage_gate_results` (array of `{gate, status, basis}`).
-- `ifl_logged` (bool), `attestation_ref` (token URI or null).
-- `created_at`, `transition_hash` (hash of canonical token payload).
+### 7.9 Artifact registration, state, and TransitionToken (new, E10/M8)
 
-No-teleportation invariant: every transition except initial cataloging MUST reference the immediately preceding stage for the same artifact. The only legal stage edges are `cognitive→intellectual`, `intellectual→product`, and `product→capital`. A content-changing transform creates a new artifact record linked by `derived_from`, not an in-place identity rewrite.
+**Independent dimensions.** An artifact has four independent dimensions that MUST NOT be conflated:
+
+1. **Artifact type/profile** — what kind of work product it is (`note`, `report`, `policy`, `sea_model`, `dataset`, `generated_contract`, `software_package`, `runbook`, `evidence_package`, implementation-defined others). Type-specific fitness lives in versioned ArtifactGateProfiles (§10.8) evaluated through M7 Evaluators, not in the stage ladder.
+2. **Recognized maturity stage** — `cognitive → intellectual → product → capital`, reconstructed exclusively from registration + accepted TransitionTokens.
+3. **Lifecycle status** — `active | superseded | retired | quarantined`. Lifecycle is not maturity: a retired capital artifact is still historically capital.
+4. **Identity/attestation status** — `pre_mint | attested`. IFL attestation raises identity assurance only; it never changes maturity.
+
+**Stage definitions (normative).**
+
+- **cognitive** — an externalized representation used to think, notice, remember, question, explore, hypothesize, compare, or orient. May be incomplete, provisional, personal, unstructured, or uncertain. Has verified content identity and provenance but claims no transferable completeness or fitness for another actor's declared job.
+- **intellectual** — a structured, attributable knowledge representation with explicit subject, purpose, and scope; meaningful units stably addressable; claims, assumptions, sources, and evidence distinguishable where applicable. A competent other actor can inspect, cite, interpret, compare, or reason from it. Not yet claimed fit for a declared consumer job or operating context.
+- **product** — a versioned, packaged artifact prepared for repeatable consumption or operation in a declared context. Identifies intended consumer/actor, job-to-be-done, usage/interface contract, operating context, compatibility constraints, required documentation, predeclared acceptance criteria, accepted fitness evidence, and applicable maintenance/safety/recovery/support obligations. "Product" does not imply sale; informational and operational products both qualify.
+- **capital** — a product artifact recognized as durable organizational leverage. Requires complete non-forked provenance, semantic placement, approved rights/review state, separation-of-duty human approval, qualifying strong settlement where policy requires it, and evidence of reuse, adoption, risk reduction, time/cost reduction, commercial use, licensing, defensibility, or another policy-declared value **beyond the originating case**. Quality is required but insufficient: a high-quality one-off product is a product, not capital. Capital records are internal governance projections; they assert no market valuation, legal title transfer, royalty entitlement, or legal ownership beyond recorded claims.
+
+**ArtifactRegistrationRecord** (append-only, ledgered; the materialized `catalog.jsonl` is a rebuildable projection of these records plus tokens — never a truth):
+
+- `artifact_id`, `lineage_id`, `content_identity`, `descriptor_hash`, `identity_scheme` (§7.8a).
+- `artifact_type`, `name`, `version`, `content_sha256`.
+- `declared_stage` (historical producer claim), `legacy_pre_mint_identity`.
+- `owner`, `license`, `review_status` (governance metadata; mutable only via new governed records, never in place).
+- `source_evidence_refs`, `source_run_ids`, `case_id`.
+- `derived_from` (array of source `artifact_id`s; empty for original registration).
+- `created_at`.
+
+Registration MAY originate only from durable work-product `ArtifactDescriptor`s in verified run evidence. Plain stdout/stderr, uncommitted files, narrative completion claims, and arbitrary paths cannot create catalog artifacts. Duplicate bytes MAY be content-deduplicated by `content_identity`, but distinct provenance instances remain distinguishable unless policy explicitly adopts an existing lineage.
+
+**Derivation vs promotion (normative).**
+
+- A **derivation** (`mode: derive`) creates a new immutable artifact version whenever content bytes change, packaging changes the governed bytes, several sources are composed, or a source is transformed into a materially different representation. The result receives a new `artifact_id` and `content_identity`, records `derived_from` lineage and source artifact IDs (separately from supporting evidence), and leaves every source record unchanged.
+- A **promotion** (`mode: promote`) recognizes a higher maturity stage without changing bytes: `artifact_id` and `content_identity` are preserved, the applicable gate passes, a new TransitionToken is produced, and all prior tokens/records remain immutable.
+
+**TransitionToken** (`transitions.jsonl`, append-only, ledgered):
+
+- `transition_token_id`, `transition_kind` (`synthesize | productize | capitalize`), `mode` (`derive | promote`).
+- `from_stage`, `to_stage` (only legal edges: `cognitive→intellectual`, `intellectual→product`, `product→capital`).
+- `source_artifact_ids` (promotion source(s); exactly one for `promote`), `result_artifact_id`, `derived_from` (when `mode: derive`).
+- `parent_transition_token_ids` (the accepted tokens establishing each source's `from_stage`; empty only for a `cognitive→intellectual` edge from registration).
+- `input_content_identities`, `output_content_identity` (`promote` ⇒ output equals the single input; `derive` ⇒ output differs when bytes differ).
+- `gate_profile_ref` + `gate_profile_hash` (immutable ArtifactGateProfile snapshot reference, §10.8), `stage_gate_results` (array of `{gate, status, basis}`).
+- `actor_id` (requester), `approver_id` (required and ≠ `actor_id` for capitalization; null when policy does not require approval), `authority_decision_refs`.
+- `criteria_ref` (SettlementCriteriaRecord + OriginRefs, reused from M2/M9.5 substrate), `evidence_refs`, `settlement_ref`, `strong_declaration_refs` (required where policy requires strong settlement).
+- `value_evidence_refs` (capitalization: immutable references to reuse/adoption/value evidence originating **outside the originating case**; never a manually entered count).
+- `rights_profile_ref` (immutable snapshot or resolvable immutable reference), `semantic_refs` (DomainModelRef/concept refs, reused from M0/M5 substrate).
+- `identity_status_before`, `identity_status_after` (`pre_mint | attested`), `attestation_ref` (`ifl:token:<ledger>:<seq>` or null), `degraded_controls` (explicit compensating controls when policy permits pre-mint degraded operation; absent otherwise).
+- `case_id`, `run_id`, `created_at`, `transition_hash` (hash of canonical token payload, jcs-nfc-v1/sha256-v1).
+
+The token does not embed criteria, approval, evaluator, settlement, authority, or DomainModel record bodies where an immutable reference suffices. A token is committed only after its governed transition case settles `accepted`.
+
+**Invariants (normative, testable):**
+
+1. Legal maturity edges are exactly `cognitive→intellectual`, `intellectual→product`, `product→capital`.
+2. Each source's recognized stage (reconstructed from its token chain) MUST equal the token's `from_stage`.
+3. No-teleportation validation runs **before** any transformation side effect, workspace mutation, result registration, or token commit.
+4. `derive` requires a new result artifact whenever output bytes differ; `promote` requires identical input and output `content_identity`.
+5. Capitalization is always `mode: promote`; a content-changing capitalization attempt is rejected and must return to productization as a new product version.
+6. Missing parents, cycles, conflicting parentage, illegal forks, and incomplete chains prevent capital reconstruction (fail closed, typed reason).
+7. A superseded, retired, or quarantined artifact remains in immutable history; lifecycle changes are new records, not edits.
+8. A materialized catalog, state file, derived reuse count, or capital JSON never overrides ledgered registration and transition records.
+9. Attestation alone cannot satisfy a maturity gate; human approval cannot manufacture missing reuse/value evidence; quality cannot manufacture capital status.
 
 ## 8. Configuration and Input Contract — extensions
 
@@ -1172,8 +1226,8 @@ contain private key bytes.
 - `rules[].operation_kind: recall_memory` rules (M4b) with `memory_scope`: `own` (requester's `entity_id` only — the default when no rule matches is still deny, so absent rules mean no recall at all), `entity: <id>` (a named entity's memory), or `any`. Cross-entity recall MUST require an explicit rule; there is no implicit sharing.
 - `rules[].operation_kind: run_spec_pipeline` rules (M5) with optional `context_id`, `route`, and `max_proof_classification`. A rule may allow `regeneration` without allowing `last_mile` or release proof.
 - `rules[].operation_kind: install_extension | adopt_extension | run_projection` rules (M0/M5) with `extension_kind`, `trust_level`, `projection_kind`, and schema-hash constraints. Imported extensions default to disabled until an authority-checked adopt command accepts them.
-- `rules[].operation_kind: transition_artifact_stage` rules (M8) with required `from_stage`, `to_stage`, optional `requires_approval`, and optional `license_allowlist`. Capitalization rules MUST set `requires_approval: true`.
-- `rules[].operation_kind: attest_artifact_identity` rules (M8) with `ledger` and requester/approver role constraints. Absence of an attestation rule means artifacts remain pre-mint only.
+- `rules[].operation_kind: transition_artifact_stage` rules (M8) with required `transition_kind` (`synthesize | productize | capitalize`), `from_stage`, `to_stage`, allowed `mode` (`derive | promote`), `gate_profile_ref`, optional `requires_approval`, `required_settlement_strength`, `qualifying_value_evidence_kinds`, and optional `license_allowlist`. Capitalization rules MUST set `requires_approval: true`, MUST restrict `mode` to `promote`, and MUST declare at least one qualifying value-evidence kind. Only the three legal edges are expressible; any other `from_stage`/`to_stage` pair is a `schema_error`.
+- `rules[].operation_kind: attest_artifact_identity` rules (M8) with `ledger`, requester/approver role constraints, and `degraded_mode` (`forbidden | pre_mint_only`). Absence of an attestation rule means artifacts remain pre-mint only. Attestation rules grant identity-status change only; they confer no maturity transition.
 - `escalation.ttl_hours`, `escalation.on_expire` (fixed: `rejected`).
 - `integrity_ledger.required_for_side_effects` applies to every operation that
   can write a workspace or `.sea-forge/`, execute a command, call a network
@@ -1505,15 +1559,33 @@ Case states: `active | awaiting_approval | completed | terminated` (+ reopen tra
 
 ### 10.8 Artifact-to-IP pipeline (E10, M8)
 
-- Initial cataloging reads `ArtifactDescriptor`s from run evidence and appends/updates `catalog.jsonl`; it MUST NOT invent artifacts from plain stdout/stderr evidence.
-- Stage transition commands (`sea-forge artifact synthesize|refine|capitalize`) are ordinary case operations. They require authority, evidence, settlement, and a TransitionToken.
-- Stage gates:
-  - `cognitive→intellectual`: content exists, source evidence resolves, and the output has structured/citable form.
-  - `intellectual→product`: documentation/consumer-facing completeness and quality threshold pass.
-  - `product→capital`: semantic anchoring, license/review approval, human approval, and reuse/value evidence pass.
-- No-teleportation is mandatory: a transition whose `from_stage` is not the artifact's current stage is rejected before any transform executes.
-- IFL attestation is optional per policy. If available and authorized, promotion from `ifl:hash` to `ifl:token` is evidence. If unavailable, the transition may still settle accepted only when the policy allows pre-mint operation; the degraded mode is explicit in the TransitionToken.
-- Capital records under `.sea-forge/ip/capital/` are rebuildable projections from catalog + transitions. They are not a second source of truth and do not claim external legal transfer.
+**Registration and legacy recognition (additive overlay — no M0 re-migration, no record rewrite).**
+
+- Registration reads durable work-product `ArtifactDescriptor`s from verified run evidence only; it MUST NOT invent artifacts from plain stdout/stderr, uncommitted files, narrative completion claims, or arbitrary paths.
+- Existing v0.1 records are not rewritten. The historical descriptor `stage` is retained as `declared_stage`; `pre_mint_identity` is retained as `legacy_pre_mint_identity` (§7.8a).
+- An artifact without a verified M8 transition chain has recognized stage `cognitive` regardless of `declared_stage`. A higher recognized stage exists only when a complete accepted TransitionToken chain proves it. Registering an existing artifact MUST NOT fabricate historical TransitionTokens. (The demo `model.sea` thus keeps its historical declared stage `intellectual` while entering M8 recognition at `cognitive`; this is a recognition rule, not a rewrite of minimum-spec history.)
+
+**Commands.** Stage transition commands are ordinary case operations requiring authority, criteria, evidence, settlement, and a TransitionToken:
+
+- `sea-forge artifact synthesize` — `cognitive→intellectual`, `mode: derive` (composing/transforming sources into a new intellectual artifact) or `mode: promote` (existing bytes already satisfy the intellectual gate).
+- `sea-forge artifact productize` — `intellectual→product`, `mode: derive` (packaging changes governed bytes ⇒ new product version) or `mode: promote` (bytes already contain the full product contract).
+- `sea-forge artifact capitalize` — `product→capital`, always `mode: promote`; byte-identical by invariant §7.9(5).
+
+There is no `refine` transition verb: refinement occurs within any stage and is ordinary derivation, not a stage transition. The command surface is not yet public, so no deprecated alias is retained.
+
+**ArtifactGateProfiles (versioned; no second evaluator engine).** Generic invariants (§7.9) are enforced in M8 Rust domain validation; artifact-type-specific fitness reuses M7 `EnvironmentSpec`/`Evaluator` contracts. A gate profile declares or resolves: covered artifact types/profiles; transition kind; required metadata; evaluator references and thresholds; required semantic-reference classes; required rights/review status; required settlement strength; qualifying value-evidence kinds; required approval mode; attestation mode; compatibility/version info; and an immutable profile hash referenced from every token.
+
+**Generic stage gates:**
+
+- `cognitive→intellectual`: verified identity, content, and provenance; explicit subject, purpose, and scope; stable structure with addressable elements; claims/assumptions/sources/evidence distinguished where applicable; citable references, semantic references, or explicit original-synthesis basis; profile evaluator pass; accepted settlement.
+- `intellectual→product`: continuing validity of the intellectual gates; declared consumer/actor; job-to-be-done; use/operating context; usage or interface contract; version and compatibility contract; required documentation; predeclared acceptance criteria; accepted fitness evaluation; sufficient rights/review state; profile-specific maintenance, safety, recovery, authority, or evidence obligations.
+- `product→capital`: byte-identical product content; complete non-forked chain from cognitive registration; canonical semantic anchors (DomainModelRef/concept refs); approved rights and review state; separation-of-duty human approval (requester ≠ approver); qualifying value evidence beyond the originating case; required strong SettlementDeclarations meeting the reliability threshold; required attestation, or explicit policy-authorized pre-mint degraded operation with compensating controls recorded in the token.
+
+Reuse/value MUST be evidenced through immutable source references, never a manually entered authoritative `reuse_count`; a projection MAY display a derived reuse count.
+
+- No-teleportation is mandatory: a transition whose `from_stage` is not the source's recognized stage is rejected **before** any transform executes, any workspace mutates, any result registers, or any token commits.
+- IFL attestation changes identity status (`pre_mint→attested`) only; it never satisfies a maturity gate or changes recognized stage. If attestation is required by policy and the IFL service is unavailable, the transition is rejected; under an explicit pre-mint-only policy it may settle accepted with the degraded mode and compensating controls explicit in the TransitionToken.
+- Capital records under `.sea-forge/ip/capital/<artifact_id>.json` are rebuildable projections. Reconstruction inputs: verified registration records, accepted TransitionTokens, gate-profile snapshots, authority decisions, SettlementCriteriaRecord references, evidence, settlements, qualifying strong declarations, approvals, rights/review records, semantic anchors, attestation state, and reuse/value evidence. Reconstruction fails closed when the chain is incomplete, forked, cyclic, hash-invalid, unsupported, or missing a required source. The projection contains no independent mutable fact and does not claim external legal transfer.
 
 ### 10.9 Completion rules
 
@@ -1660,11 +1732,31 @@ M7: an item with `environment: demo_env@0.1.0` and `evaluator` criteria → eval
     → accepted + 2 quarantined; with 3 failures → rejected; policy matching on `environment:` grants exactly
     the intersection of provides.commands and the rule; tampered environment file → environment_unavailable,
     nothing executes.
-M8: catalog the minimum demo `model.sea` artifact, synthesize/refine/capitalize it through governed
-    transitions → every edge has a TransitionToken, no-teleportation rejects skipped stages, capitalization
-    requires approval + semantic anchors, and the capital projection rebuilds byte-identically from
-    catalog/transitions. Repeat with IFL service unavailable under a policy that requires attestation →
-    rejected before capitalization; under a pre-mint-only policy → accepted with degraded-mode evidence.
+M8: registration/compatibility — register the minimum demo `model.sea` from its verified work-product
+    ArtifactDescriptor: original descriptor, declared_stage `intellectual`, and legacy pre-mint identity
+    unchanged; recognized stage begins `cognitive` with zero fabricated historical tokens; stdout/stderr
+    evidence cannot register; P1–P4b unchanged.
+    Content-preserving promotion — `synthesize --mode promote` on `model.sea` passes the intellectual gate
+    with bytes unchanged → same artifact_id and content_identity, one new accepted TransitionToken.
+    Genuine synthesis — a separate fixture composes cognitive source(s) into a new intellectual artifact →
+    new artifact_id and content_identity, correct derived_from and parent-token lineage, sources unchanged.
+    Productize — requires consumer, job-to-be-done, operating context, usage/interface contract, version,
+    documentation, predeclared criteria, and accepted evaluator evidence; content-changing packaging yields
+    a new derived product version; promote mode allowed only when existing bytes already carry the full
+    product contract.
+    Capitalize — byte-identical promote; requester ≠ approver, authority-checked; semantic anchors resolve
+    via DomainModelRef/concept refs; rights/review gates pass; required strong settlement passes; qualifying
+    reuse/value evidence originates outside the originating case; quality-only and approval-only attempts
+    are rejected; capital projection rebuilds byte-identically.
+    No-teleportation/lineage — cognitive→product, intellectual→capital, and stale from_stage reject before
+    any transform side effect, workspace mutation, result registration, or token commit; removing a middle
+    token, tampering a parent token, missing parents, cycles, and conflicting forks all fail capital
+    reconstruction with typed reasons; editing a materialized current_stage, reuse count, state file, or
+    capital file does not alter rebuilt truth.
+    Identity/attestation — content-changing promote and content-changing capitalize reject; IFL unavailable
+    under a required-attestation policy → rejected before capitalization; under a pre-mint-only policy →
+    accepted only with explicit degraded-mode compensating controls in the token; attestation flips identity
+    status without changing maturity — an attested cognitive artifact remains cognitive until its gate passes.
 Always: minimum-spec P1–P4b unchanged.
 ```
 
@@ -1771,7 +1863,7 @@ gate is satisfied.
 | M5 spec-to-code + generator pipelines + DomainForge projections | §12 M5 proofs; separate `.sea` synthesis and DomainForge validation; generated-zone direct-edit denial; ADR/PRD/SDS/SEA/DomainForge-AST/semantic-graph/manifest/codegen hash-chain; regeneration determinism; generated-contract classification ceiling until last-mile proof; pipeline-as-ordinary-case-plan test; in-memory adapter/no-direct-side-effect proof; quarantine completeness; projection-as-governed-case test; ProjectionRecord rebuild hash stable |
 | M6 federation prep | §12 M6 proofs; import isolation (no capability leakage); hash-tamper rejection; imported templates/environments require explicit adopt |
 | M7 environments + evaluators (E9) | §12 M7 proofs; environment immutability (hash pin); three-axis independence test (content/permission/isolation each vary independently); evaluator-under-authority test; batch threshold + quarantine semantics |
-| M8 artifact-to-IP (E10) | §12 M8 proofs; catalog from work-product descriptors only; no-teleportation; TransitionToken hash chain; capitalization approval; semantic-anchor gate; IFL required/degraded policy behavior; capital projection rebuild purity |
+| M8 artifact-to-IP (E10) | §12 M8 proofs in full; registration from verified work-product descriptors only; legacy recognition starts cognitive without fabricated tokens; derive vs promote enforced (byte-identical promote, new identity on derive); no-teleportation before side effects; lineage DAG integrity (missing/tampered/cyclic/forked chains fail typed); SoD capitalization approval + qualifying out-of-case value evidence (quality-only and approval-only rejected); semantic-anchor, rights/review, and strong-settlement gates; IFL required/degraded policy behavior with attestation never changing maturity; artifact-state and capital projection rebuild purity against materialized-view tampering |
 
 ### 17.2 Completion-claim levels
 
@@ -1870,6 +1962,6 @@ M0 integrity ledger + authority fabric + DomainForge semantic adapter + extensio
 → M5 spec-to-code + generator pipelines + DomainForge projections (the ADR→PRD→SDS→authored/synthesized SEA→DomainForge AST/semantic graph→manifest→codegen→last-mile chain and DataFlow's generate→evaluate→filter→refine shape as ordinary case plans; MAY consume MemoryItems once M4b lands; uses the *declarative* Evaluator form, which ships with M5 itself)
 → M6 federation prep (cheap, additive; imported extensions remain disabled until adopted)
 → M7 environment contracts (E9 — EnvironmentSpec packaging, command-form evaluators, batch policy matching; sequenced after M5 because M5 only needs declarative evaluators, but M7 MAY be pulled forward if a workload needs environment-scoped allow-listing sooner)
-→ M8 artifact-to-IP (E10 — catalog, TransitionTokens, IFL attestation adapter, capitalization projection).
+→ M8 artifact-to-IP (E10 — registration overlay, derive/promote TransitionTokens with gate profiles, IFL attestation adapter (identity status only), capital projection).
 
 MicroVM backend, NATS transport, in-sandbox LLM-conversation capture (Memori delta D5, via the egress proxy), alternate DomainForge/KG backends, additional projection targets, an EnvHub-style registry, RL reward export, public IP marketplace, and chat/Slack/GitHub adapters remain plugins behind their respective seams (`ExecutionSandbox`, `EventSink`, the proxy layer, `ProjectionAdapter`, federation bundles, scored settlements, capital projections, the server socket) — build them when a workload demands them, not before.
