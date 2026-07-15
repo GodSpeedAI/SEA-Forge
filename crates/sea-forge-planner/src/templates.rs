@@ -22,7 +22,7 @@ pub struct ParameterDef {
 }
 
 /// A plan template.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PlanTemplate {
     pub name: String,
     pub version: String,
@@ -39,12 +39,12 @@ pub struct PlanTemplate {
 
 /// The plan body inside a template, with `${param}` placeholders in
 /// operation payload values and criteria values.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TemplatePlan {
     pub items: Vec<TemplateItem>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TemplateItem {
     pub plan_item_id: String,
     pub name: String,
@@ -59,6 +59,9 @@ pub struct TemplateItem {
     pub markers: sea_forge_core::types::ItemMarkers,
     #[serde(default = "default_max_instances")]
     pub max_instances: u32,
+    /// Optional environment reference (§7.6) — projected to PlanItem.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<String>,
 }
 
 fn default_max_instances() -> u32 {
@@ -248,6 +251,7 @@ pub fn instantiate(
                         .as_deref()
                         .map(|value| substitute(value, &resolved)),
                     require_approval: ti.settlement_criteria.require_approval,
+                    ..ti.settlement_criteria.clone()
                 },
                 settlement_criteria_ref: None,
                 item_kind: ti.item_kind.clone(),
@@ -256,6 +260,7 @@ pub fn instantiate(
                 markers: ti.markers.clone(),
                 max_instances: ti.max_instances,
                 depends_on: vec![],
+                environment: ti.environment.clone(),
             })
         })
         .collect::<Result<Vec<_>, ForgeError>>()?;
@@ -405,12 +410,13 @@ pub fn sea_model_demo_template() -> PlanTemplate {
                     require_exit_zero: true,
                     required_artifacts: vec!["model.sea".into()],
                     stdout_must_contain: Some("sea-forge: model valid".into()),
-                    require_approval: false,
+                    ..Default::default()
                 },
                 item_kind: ItemKind::SandboxedTask,
                 sandbox_class: None,
                 markers: Default::default(),
                 max_instances: 1,
+                environment: None,
             }],
         },
     }

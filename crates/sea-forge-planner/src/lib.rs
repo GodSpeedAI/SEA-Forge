@@ -44,9 +44,7 @@ pub fn plan(
             }],
             SettlementCriteria {
                 require_exit_zero: true,
-                required_artifacts: vec![],
-                stdout_must_contain: None,
-                require_approval: false,
+                ..Default::default()
             },
         ),
     };
@@ -70,6 +68,7 @@ pub fn plan(
             markers: Default::default(),
             max_instances: 1,
             depends_on: vec![],
+            environment: None,
         }],
         template_ref: None,
         job_contract_ref: None,
@@ -109,7 +108,7 @@ fn file_plan(
             require_exit_zero: true,
             required_artifacts: vec!["model.sea".into()],
             stdout_must_contain: Some("sea-forge: model valid".into()),
-            require_approval: false,
+            ..Default::default()
         },
     )
 }

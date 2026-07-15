@@ -33,7 +33,7 @@ pub struct Case {
     pub created_at: String,
     pub closed_at: Option<String>,
 }
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CasePlan {
     pub version: String,
     pub plan_id: String,
@@ -88,7 +88,7 @@ pub struct Sentry {
     pub if_predicate: Option<SentryPredicate>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PlanItem {
     pub plan_item_id: String,
     pub name: String,
@@ -113,6 +113,9 @@ pub struct PlanItem {
     pub max_instances: u32,
     #[serde(default)]
     pub depends_on: Vec<String>,
+    /// Optional environment reference `name@version` (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<String>,
 }
 
 fn default_max_instances() -> u32 {
@@ -480,13 +483,28 @@ pub struct EvidenceRecord {
     pub cell_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 pub struct SettlementCriteria {
+    #[serde(default)]
     pub require_exit_zero: bool,
+    #[serde(default)]
     pub required_artifacts: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stdout_must_contain: Option<String>,
     #[serde(default)]
     pub require_approval: bool,
+    /// `<env>.<name>` — combines AND with existing checks (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evaluator: Option<String>,
+    /// Workspace-relative JSONL path for batch settlement (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub records: Option<String>,
+    /// `<env>.<name>` applied per-record in batch mode (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub per_record_evaluator: Option<String>,
+    /// Pass ratio in `0.0..=1.0` for batch acceptance (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_pass_ratio: Option<f64>,
 }
 
 /// Origin reference for a job or settlement criterion.
@@ -572,7 +590,7 @@ pub enum DirectionKind {
 }
 
 /// Ledgered settlement-criteria record with attributable origin and derivation.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SettlementCriteriaRecord {
     pub version: String,
     pub criteria_id: String,
@@ -591,6 +609,29 @@ pub struct SettlementClaim {
     pub criteria: SettlementCriteria,
     pub execution: Option<ExecutionResult>,
     pub authority_verdicts: Vec<Verdict>,
+    /// Evaluator scores keyed by `<env>.<name>`; recorded in the settlement
+    /// basis as evidence (§10.6) — never standing.
+    pub evaluator_scores: BTreeMap<String, f64>,
+    /// Pre-computed batch evaluation result (if batch criteria set).
+    pub batch: Option<BatchEvaluationResult>,
+}
+
+/// Result of batch evaluation over a JSONL records file (§7.6).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BatchEvaluationResult {
+    pub total: usize,
+    pub passed: usize,
+    pub pass_ratio: f64,
+    pub min_pass_ratio: f64,
+    pub failures: Vec<BatchFailure>,
+}
+
+/// A failing record in batch evaluation, written to quarantine (§7.6).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BatchFailure {
+    pub record: Value,
+    pub score: f64,
+    pub evidence_ref: String,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

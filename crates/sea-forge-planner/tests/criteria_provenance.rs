@@ -30,7 +30,7 @@ fn demo_item() -> PlanItem {
             require_exit_zero: true,
             required_artifacts: vec!["model.sea".into()],
             stdout_must_contain: Some("valid".into()),
-            require_approval: false,
+            ..Default::default()
         },
         settlement_criteria_ref: None,
         item_kind: ItemKind::SandboxedTask,
@@ -39,6 +39,7 @@ fn demo_item() -> PlanItem {
         markers: Default::default(),
         max_instances: 1,
         depends_on: vec![],
+        environment: None,
     }
 }
 
@@ -133,12 +134,13 @@ fn template_instantiation_criteria_is_deterministic_ignoring_id() {
                     require_exit_zero: true,
                     required_artifacts: vec!["model.sea".into()],
                     stdout_must_contain: None,
-                    require_approval: false,
+                    ..Default::default()
                 },
                 item_kind: ItemKind::SandboxedTask,
                 sandbox_class: None,
                 markers: Default::default(),
                 max_instances: 1,
+                environment: None,
             }],
         },
     };
@@ -206,12 +208,13 @@ fn template_origin_reuses_intent_and_template() {
                     require_exit_zero: true,
                     required_artifacts: vec!["model.sea".into()],
                     stdout_must_contain: None,
-                    require_approval: false,
+                    ..Default::default()
                 },
                 item_kind: ItemKind::SandboxedTask,
                 sandbox_class: None,
                 markers: Default::default(),
                 max_instances: 1,
+                environment: None,
             }],
         },
     };

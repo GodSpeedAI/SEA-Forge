@@ -23,7 +23,7 @@ fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
             require_exit_zero: false,
             required_artifacts: vec![],
             stdout_must_contain: None,
-            require_approval: false,
+            ..Default::default()
         },
         settlement_criteria_ref: None,
         item_kind: ItemKind::Milestone,
@@ -36,6 +36,7 @@ fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
         },
         max_instances: 1,
         depends_on: vec![],
+        environment: None,
     }
 }
 
@@ -50,7 +51,7 @@ fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -
             require_exit_zero: true,
             required_artifacts: vec![],
             stdout_must_contain: None,
-            require_approval: false,
+            ..Default::default()
         },
         settlement_criteria_ref: None,
         item_kind: ItemKind::SandboxedTask,
@@ -63,6 +64,7 @@ fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -
         },
         max_instances,
         depends_on: vec![],
+        environment: None,
     }
 }
 

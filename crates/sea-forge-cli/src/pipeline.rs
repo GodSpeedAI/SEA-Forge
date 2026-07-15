@@ -314,8 +314,118 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         let domainforge_model = policy_snapshot.load_domainforge_model()?;
         let engine = PolicyAuthorityEngine::new(bundle)?;
         engine.load_opaque_constraints(load_opaque_constraints(&root)?)?;
+        // Load environment spec if the item declares one (§7.6).
+        let env_spec = item
+            .environment
+            .as_deref()
+            .map(|r| sandbox::environment::load_pinned_environment(&root, r))
+            .transpose()?;
+        if let Some(ref spec) = env_spec {
+            sandbox::environment::materialize_base(spec, &workspace)?;
+        }
+        let env_ctx: Option<(&str, &[String])> = env_spec.as_ref().map(|spec| {
+            let r = item.environment.as_deref().unwrap_or("");
+            (r, spec.provides.commands.as_slice())
+        });
+        let evaluator = item
+            .settlement_criteria
+            .evaluator
+            .as_deref()
+            .map(|reference| {
+                let (env_ref, evaluator_name) = reference.rsplit_once('.').ok_or_else(|| {
+                    ForgeError::Input(format!("invalid evaluator reference {reference}"))
+                })?;
+                if item.environment.as_deref() != Some(env_ref) {
+                    return Err(ForgeError::Config {
+                        class: "environment_unavailable",
+                        path: std::path::PathBuf::new(),
+                        message: format!("evaluator {reference} is outside item environment"),
+                    });
+                }
+                let spec = env_spec.as_ref().ok_or_else(|| ForgeError::Config {
+                    class: "environment_unavailable",
+                    path: std::path::PathBuf::new(),
+                    message: format!("environment {env_ref} was not loaded"),
+                })?;
+                let evaluator = spec
+                    .evaluators
+                    .get(evaluator_name)
+                    .cloned()
+                    .ok_or_else(|| ForgeError::Config {
+                        class: "environment_unavailable",
+                        path: std::path::PathBuf::new(),
+                        message: format!("evaluator {reference} not declared"),
+                    })?;
+                Ok((reference.to_owned(), evaluator))
+            })
+            .transpose()?;
+        let mut operations = item.operations.clone();
+        let evaluator_index = evaluator.as_ref().map(|(_, evaluator)| {
+            let sandbox::environment::Evaluator::Command { argv, .. } = evaluator;
+            operations.push(Operation::ExecuteCommand {
+                argv: argv.clone(),
+                cwd: ".".into(),
+            });
+            operations.len() - 1
+        });
+        let mut batch_records = Vec::new();
+        let mut batch_evaluators = BTreeMap::new();
+        if let Some(records_path) = item.settlement_criteria.records.as_deref() {
+            let evaluator_ref = item
+                .settlement_criteria
+                .per_record_evaluator
+                .as_deref()
+                .ok_or_else(|| ForgeError::Input("records requires per_record_evaluator".into()))?;
+            let (env_ref, evaluator_name) = evaluator_ref.rsplit_once('.').ok_or_else(|| {
+                ForgeError::Input(format!("invalid evaluator reference {evaluator_ref}"))
+            })?;
+            if item.environment.as_deref() != Some(env_ref) {
+                return Err(ForgeError::Config {
+                    class: "environment_unavailable",
+                    path: std::path::PathBuf::new(),
+                    message: format!("evaluator {evaluator_ref} is outside item environment"),
+                });
+            }
+            let spec = env_spec.as_ref().ok_or_else(|| ForgeError::Config {
+                class: "environment_unavailable",
+                path: std::path::PathBuf::new(),
+                message: format!("environment {env_ref} was not loaded"),
+            })?;
+            let evaluator = spec
+                .evaluators
+                .get(evaluator_name)
+                .cloned()
+                .ok_or_else(|| ForgeError::Config {
+                    class: "environment_unavailable",
+                    path: std::path::PathBuf::new(),
+                    message: format!("evaluator {evaluator_ref} not declared"),
+                })?;
+            let records_file = sandbox::safe_existing(&workspace, records_path)?;
+            let contents = std::fs::read_to_string(&records_file)
+                .map_err(|e| ForgeError::io("read batch records", e))?;
+            for (line_number, line) in contents.lines().filter(|line| !line.is_empty()).enumerate()
+            {
+                let record = serde_json::from_str::<serde_json::Value>(line).map_err(|e| {
+                    ForgeError::Input(format!("invalid batch record {}: {e}", line_number + 1))
+                })?;
+                // The evaluator sees one authority-approved record at a stable workspace path.
+                operations.push(Operation::WriteFile {
+                    path: "record.json".into(),
+                    content_hint: serde_json::to_string(&record)?,
+                });
+                let sandbox::environment::Evaluator::Command { argv, score_from } = &evaluator;
+                operations.push(Operation::ExecuteCommand {
+                    argv: argv.clone(),
+                    cwd: ".".into(),
+                });
+                batch_evaluators.insert(operations.len() - 1, score_from.clone());
+                batch_records.push(record);
+            }
+        }
+        let mut evaluator_scores = BTreeMap::new();
+        let mut batch_scores = Vec::new();
         let mut decisions = Vec::new();
-        for (index, operation) in item.operations.iter().enumerate() {
+        for (index, operation) in operations.iter().enumerate() {
             let action = AuthorityAction::from(operation);
             let env_keys = if matches!(operation, Operation::ExecuteCommand { .. }) {
                 ["PATH", "HOME"]
@@ -356,6 +466,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                     .then_some(options.timeout_secs),
                 env_keys,
                 domainforge_candidate: domainforge_candidate.as_ref(),
+                environment: env_ctx,
             })?;
             let event = trace.append(
                 TraceKind::AuthorityEvaluated,
@@ -460,7 +571,8 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             )?;
         } else {
             trace.append(TraceKind::WorkspaceCreated, None, json!({}))?;
-            for (index, operation) in item.operations.iter().enumerate() {
+            let mut evaluator_execution = None;
+            for (index, operation) in operations.iter().enumerate() {
                 if matches!(operation, Operation::WriteFile { .. }) {
                     let grant = engine.grant(
                         &decisions[index],
@@ -476,14 +588,8 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                         operation,
                         &decisions[index].compensating_controls,
                     )?;
+                    continue;
                 }
-            }
-            if let Some((index, operation)) = item
-                .operations
-                .iter()
-                .enumerate()
-                .find(|(_, operation)| matches!(operation, Operation::ExecuteCommand { .. }))
-            {
                 let mut envs = BTreeMap::new();
                 if let Ok(path) = env::var("PATH") {
                     envs.insert("PATH".into(), path);
@@ -568,9 +674,29 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                         pre_mint_identity: d.pre_mint_identity,
                     });
                 }
-                execution = Some(result);
+                if Some(index) == evaluator_index {
+                    evaluator_execution = Some(result);
+                } else if let Some(score_from) = batch_evaluators.get(&index) {
+                    let score =
+                        sandbox::environment::parse_evaluator_score(score_from, &result, &run_dir)?;
+                    batch_scores.push(score);
+                } else {
+                    execution = Some(result);
+                }
+            }
+            if let (Some((reference, evaluator)), Some(result)) =
+                (evaluator.as_ref(), evaluator_execution.as_ref())
+            {
+                let sandbox::environment::Evaluator::Command { score_from, .. } = evaluator;
+                let score =
+                    sandbox::environment::parse_evaluator_score(score_from, result, &run_dir)?;
+                evaluator_scores.insert(reference.clone(), score);
             }
         }
+        let batch_result = item
+            .settlement_criteria
+            .min_pass_ratio
+            .map(|threshold| settlement::evaluate_batch(&batch_records, &batch_scores, threshold));
         let claim = SettlementClaim {
             run_id: run_id.clone(),
             plan_item_id: item.plan_item_id.clone(),
@@ -578,6 +704,8 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             criteria: item.settlement_criteria.clone(),
             execution: execution.clone(),
             authority_verdicts: decisions.iter().map(|d| d.verdict.clone()).collect(),
+            evaluator_scores,
+            batch: batch_result,
         };
         let settled = settlement::settle(&claim, &workspace, &run_dir)?;
         write_json(&run_dir.join("settlement.json"), &settled)?;

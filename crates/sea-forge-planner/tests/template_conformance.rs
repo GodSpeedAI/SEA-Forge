@@ -55,12 +55,13 @@ fn template() -> PlanTemplate {
                     require_exit_zero: false,
                     required_artifacts: vec!["${output}".into()],
                     stdout_must_contain: Some("${message}".into()),
-                    require_approval: false,
+                    ..Default::default()
                 },
                 item_kind: ItemKind::SandboxedTask,
                 sandbox_class: Some("local".into()),
                 markers: ItemMarkers::default(),
                 max_instances: 1,
+                environment: None,
             }],
         },
     }

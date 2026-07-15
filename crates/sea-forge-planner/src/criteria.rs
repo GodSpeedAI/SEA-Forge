@@ -241,7 +241,7 @@ mod tests {
                 require_exit_zero: true,
                 required_artifacts: vec!["model.sea".into()],
                 stdout_must_contain: Some("valid".into()),
-                require_approval: false,
+                ..Default::default()
             },
             settlement_criteria_ref: None,
             item_kind: ItemKind::SandboxedTask,
@@ -250,6 +250,7 @@ mod tests {
             markers: Default::default(),
             max_instances: 1,
             depends_on: vec![],
+            environment: None,
         }
     }
 
