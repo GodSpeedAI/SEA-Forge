@@ -407,6 +407,9 @@ pub struct TraceEvent {
     pub actor_id: String,
     pub timestamp: String,
     pub payload: Value,
+    /// Federation origin (spec-full §7.4). Absent = local legacy, valid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -472,6 +475,9 @@ pub struct EvidenceRecord {
     pub source_event_id: String,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub metadata: BTreeMap<String, Value>,
+    /// Federation origin (spec-full §7.4). Absent = local legacy, valid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -878,6 +884,9 @@ pub struct SemanticEnvelope {
     pub artifact_refs: Vec<ArtifactRef>,
     pub extension_refs: Vec<String>,
     pub projection_refs: Vec<ProjectionRef>,
+    /// Federation origin (spec-full §7.4). Absent = local legacy, valid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1126,4 +1135,28 @@ pub struct ProjectionValidation {
     pub validator_ref: String,
     #[serde(default)]
     pub basis: Vec<String>,
+}
+
+// ── M6: SeaCell federation bundles (§7.4) ──
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BundleFile {
+    /// Path relative to bundle root (e.g. `runs/<run_id>/plan.json`).
+    pub path: String,
+    pub sha256: String,
+    pub size: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BundleManifest {
+    pub schema_version: String,
+    pub bundle_id: String,
+    /// Exporter cell id (`cell_<8 hex>`).
+    pub cell_id: String,
+    pub created_at: String,
+    pub run_ids: Vec<String>,
+    /// Template references carried by the bundle (e.g. `name@version`).
+    #[serde(default)]
+    pub templates: Vec<String>,
+    pub files: Vec<BundleFile>,
 }

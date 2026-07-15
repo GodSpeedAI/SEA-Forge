@@ -100,6 +100,7 @@ impl JsonlEvidenceWriter {
             sha256,
             source_event_id,
             metadata,
+            cell_id: None,
         }
     }
     pub fn append_prepared(

@@ -886,6 +886,9 @@ impl AuthorityPolicyBundle {
                     | "attestation"
                     | "run_spec_pipeline"
                     | "run_projection"
+                    | "import_bundle"
+                    | "export_bundle"
+                    | "adopt_template"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",

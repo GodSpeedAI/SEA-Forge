@@ -9,6 +9,23 @@ fn random_hex() -> Result<String, ForgeError> {
     Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
 }
 
+/// 4 random bytes as 8 lowercase hex chars.
+fn random_hex_4() -> Result<String, ForgeError> {
+    let mut bytes = [0_u8; 4];
+    fill(&mut bytes).map_err(|error| ForgeError::Internal(format!("OS RNG failed: {error}")))?;
+    Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
+/// `cell_<8 hex>` — generated once per `.sea-forge/cell.json` (spec-full §7.4).
+pub fn cell_id() -> Result<String, ForgeError> {
+    Ok(format!("cell_{}", random_hex_4()?))
+}
+
+/// `bundle_<8 hex>` — federation bundle identifier.
+pub fn bundle_id() -> Result<String, ForgeError> {
+    Ok(format!("bundle_{}", random_hex_4()?))
+}
+
 pub fn run_id() -> Result<String, ForgeError> {
     timestamped("run")
 }

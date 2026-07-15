@@ -80,6 +80,7 @@ fn trace_event(
         actor_id: "test".into(),
         timestamp: "2026-07-13T00:00:00Z".into(),
         payload,
+        cell_id: None,
     }
 }
 

@@ -55,6 +55,7 @@ pub fn append_event(
         actor_id: "case_engine".into(),
         timestamp: Utc::now().to_rfc3339(),
         payload,
+        cell_id: None,
     };
     stream.commit_typed("case_event", vec![], &event, vec![])?;
     let mut file = OpenOptions::new()

@@ -1,5 +1,6 @@
 pub mod approve;
 pub mod case;
+pub mod federation;
 pub mod inspect;
 pub mod ledger;
 pub mod mediated;

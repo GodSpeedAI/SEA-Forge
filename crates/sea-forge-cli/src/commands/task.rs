@@ -47,6 +47,7 @@ pub fn complete(
         actor_id: actor.into(),
         timestamp: chrono::Utc::now().to_rfc3339(),
         payload: json!({"note": note}),
+        cell_id: None,
     });
     loop {
         match next_case_actions(&plan.items, &events).as_slice() {
@@ -68,6 +69,7 @@ pub fn complete(
                     actor_id: actor.into(),
                     timestamp: chrono::Utc::now().to_rfc3339(),
                     payload: json!({}),
+                    cell_id: None,
                 });
             }
             [CaseAction::CompleteCase] => {

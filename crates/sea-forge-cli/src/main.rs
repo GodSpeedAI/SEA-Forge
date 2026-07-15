@@ -158,6 +158,42 @@ enum Command {
         #[arg(long, default_value = ".sea-forge")]
         root: PathBuf,
     },
+    /// Export selected runs (and optionally templates) to a federation bundle.
+    Export {
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: PathBuf,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+        #[arg(long, num_args = 1.., required = true)]
+        run_ids: Vec<String>,
+        #[arg(long, num_args = 0..)]
+        templates: Vec<String>,
+        #[arg(long)]
+        out: PathBuf,
+    },
+    /// Import a federation bundle.
+    Import {
+        bundle: PathBuf,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: PathBuf,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+    },
+    /// Adopt an imported template (§10.6).
+    Adopt {
+        cell_id: String,
+        reference: String,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: PathBuf,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -431,6 +467,48 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 .map(|_| 0)
                 .map_err(|e| (1, e)),
         },
+        Command::Export {
+            root,
+            policy,
+            actor,
+            run_ids,
+            templates,
+            out,
+        } => commands::federation::export(commands::federation::ExportOptions {
+            root: &root,
+            policy: Some(&policy),
+            actor: &actor,
+            run_ids: &run_ids,
+            templates: &templates,
+            out: &out,
+        })
+        .map_err(|e| (1, e)),
+        Command::Import {
+            bundle,
+            root,
+            policy,
+            actor,
+        } => commands::federation::import(commands::federation::ImportOptions {
+            root: &root,
+            policy: Some(&policy),
+            actor: &actor,
+            bundle: &bundle,
+        })
+        .map_err(|e| (1, e)),
+        Command::Adopt {
+            cell_id,
+            reference,
+            root,
+            policy,
+            actor,
+        } => commands::federation::adopt(commands::federation::AdoptOptions {
+            root: &root,
+            policy: Some(&policy),
+            actor: &actor,
+            cell_id: &cell_id,
+            reference: &reference,
+        })
+        .map_err(|e| (1, e)),
     }
 }
 fn init_diagnostics() {
