@@ -884,6 +884,8 @@ impl AuthorityPolicyBundle {
                     | "identity_minting"
                     | "artifact_transition"
                     | "attestation"
+                    | "run_spec_pipeline"
+                    | "run_projection"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",

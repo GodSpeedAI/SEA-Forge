@@ -1282,6 +1282,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sea-forge-spec-pipeline"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-core",
+ "sea-forge-domainforge",
+ "sea-forge-ledger",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+]
+
+[[package]]
 name = "sea-forge-trace"
 version = "0.1.0"
 dependencies = [

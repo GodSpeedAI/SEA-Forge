@@ -16,6 +16,7 @@ members = [
     "crates/sea-forge-ledger",
     "crates/sea-forge-domainforge",
     "crates/sea-forge-server",
+    "crates/sea-forge-spec-pipeline",
 ]
 
 [workspace.package]
