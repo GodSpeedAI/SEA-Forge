@@ -335,6 +335,7 @@ cargo test -p sea-forge-planner template --locked && just proof
 ---
 
 ## Task 9.5 — M2c: Settlement-criteria origin and provenance
+
 (M2 closeout · blocks M3)
 
 **Goal:** Close the missing derivation path between the requested job or
@@ -670,15 +671,35 @@ cargo test -p sea-forge-sandbox environment --locked && just proof
 
 ## Task 16 — M8: Artifact-to-IP pipeline  (E10)
 
-**Goal:** Artifacts progress cognitive→intellectual→product→capital only via governed TransitionTokens with stage gates, no teleportation, human-approved capitalization, and a rebuildable capital projection — §12 M8 passes.
+**Goal:** Artifacts carry four independent dimensions — type/profile, recognized maturity stage, lifecycle status, identity/attestation status (§7.9) — and recognized maturity moves only along `cognitive→intellectual→product→capital` via governed `synthesize`/`productize`/`capitalize` TransitionTokens in explicit `derive` (content-changing, new artifact version) or `promote` (byte-identical) mode, with versioned gate profiles, no teleportation, separation-of-duty capitalization backed by out-of-case value evidence, and fail-closed rebuildable projections — §12 M8 and §17.1 M8 pass. Source of truth for all semantics: spec-full §2.3 E10, §7.8a, §7.9, §8.2 (`transition_artifact_stage`/`attest_artifact_identity`), §10.8, §12 M8, §17.1 M8. Do NOT invent ontology; if the spec and this task disagree, stop and file `.agents/OPEN_QUESTIONS.md`.
+
+**Why this shape:** M8 is a recognition overlay on completed M0–M7 substrate, not a new engine. Everything it needs — ledger identity/append, authority mediation, criteria, approvals + SoD, settlement strength, evaluators, DomainModelRef semantic refs, projection rebuild conventions, case/PlanItem execution — already exists and is conformance-green. The crate adds only artifact-specific validation and token/projection logic.
+
+### Mandatory substrate inspection (report before coding)
+
+Before writing any code, locate and record (paths + type names) in the task's substrate-reconciliation note: `ArtifactDescriptor`/`artifact_id`/`pre_mint_identity` (sea-forge-core `types.rs`, evidence crate); canonical encoding/hashing (jcs-nfc-v1/sha256-v1, ledger crate); ledger record identity + append path; authority mediator / `AuthorizedAction` and existing `transition_artifact_stage`/`attest_artifact_identity` operation kinds; `SettlementCriteriaRecord` + OriginRefs; approval records + SoD checks; `SettlementDeclaration` strength/reliability; `EnvironmentSpec`/`Evaluator` (sea-forge-sandbox); `DomainModelRef`/concept refs (domainforge crate); projection rebuild conventions (capability/domainforge crates); CasePlan/PlanItem + CLI command registration; typed error conventions. Reuse each unchanged; where an equivalent exists under another name, document the mapping — never rename or duplicate.
 
 ### Steps
 
-1. New crate `crates/sea-forge-artifact-ip`: `ArtifactCatalogRecord`/`TransitionToken` per §7.9; catalog built only from run-evidence `ArtifactDescriptor`s, never plain stdout/stderr (§10.8).
-2. `sea-forge artifact synthesize|refine|capitalize` as ordinary case operations; stage gates per §10.8; no-teleportation check before any transform; content-changing transforms create `derived_from`-linked new records (§7.9).
-3. Policy `transition_artifact_stage` (capitalization `requires_approval: true` mandatory) and `attest_artifact_identity` rules (§8.2); IFL attestation adapter with required vs pre-mint-only degraded mode explicit in the token (§10.8).
-4. Capital projection `.sea-forge/ip/capital/<artifact_id>.json` rebuildable from catalog + transitions.
-5. Tests `conformance_m8.rs`: the §12 M8 scenario on the demo `model.sea` artifact — full chain, skipped-stage rejection, approval + semantic-anchor gates, byte-identical rebuild, IFL-unavailable under both policies.
+1. New crate `crates/sea-forge-artifact-ip` containing ONLY missing M8 logic: additive identity types (`lineage_id`, `content_identity`, `descriptor_hash`, `identity_scheme`, `legacy_pre_mint_identity`, `declared_stage` per §7.8a); `ArtifactRegistrationRecord` and `TransitionToken` per §7.9; recognized-stage reconstruction; legal-edge + derive/promote validation; lineage DAG validation; `ArtifactGateProfile` binding (generic invariants in Rust; type-specific fitness delegated to M7 Evaluators — no second evaluator engine); artifact-state and capital projection rebuild. No new authority system, approval record, criteria store, settlement protocol, semantic identity system, ledger, mutable artifact DB, migration, or extra artifact ID.
+2. Identity compatibility (§7.8a): existing `artifact_id` stays the identity of one immutable artifact version; `pre_mint_identity` is preserved verbatim as `legacy_pre_mint_identity` and never used as v0.2 content identity; `content_identity` hashes only `{artifact_type, content_sha256}`; stage/owner/license/review/lifecycle/semantic/attestation state never enter it; a byte change ⇒ new artifact version + new content identity. No historical record is re-keyed or rewritten; no migration.
+3. Registration overlay (§10.8): registration only from durable work-product `ArtifactDescriptor`s in verified run evidence — never stdout/stderr, uncommitted files, narrative claims, or arbitrary paths. Historical descriptor `stage` retained as `declared_stage`; recognized stage starts `cognitive` absent a verified token chain; no fabricated historical tokens; content-dedup by `content_identity` allowed while distinct provenance instances stay distinguishable.
+4. Commands `sea-forge artifact synthesize|productize|capitalize` as ordinary case operations (existing CasePlan/PlanItem + CLI registration). `synthesize` = cognitive→intellectual, `productize` = intellectual→product (each derive or promote per whether bytes change), `capitalize` = product→capital, always promote (byte-identical). There is NO `refine` verb and no alias for it. No-teleportation + all §7.9 invariant validation runs before any transform side effect, workspace mutation, result registration, or token commit. Derivation: new artifact_id/content_identity, `derived_from` + source IDs separate from supporting evidence, sources untouched. Promotion: artifact_id + content_identity preserved.
+5. Policy + gates: extend `transition_artifact_stage` rules per §8.2 (transition_kind, mode restriction, gate_profile_ref, required settlement strength, qualifying value-evidence kinds; capitalization `requires_approval: true`, promote-only, ≥1 value-evidence kind) and `attest_artifact_identity` (identity status only, `degraded_mode`). Gate profiles per §10.8 reference M7 evaluators, DomainModelRef semantic anchors, rights/review state, and strong-settlement requirements through immutable refs — reuse the one criteria truth, the one mediator, the existing approval + SoD records. Reuse/value evidence is immutable source references from outside the originating case; never an authoritative manual `reuse_count` or mutable `current_stage` field (projections may display derived values).
+6. IFL attestation adapter: flips identity status `pre_mint→attested` only; never satisfies a maturity gate. Required-attestation policy + outage ⇒ reject before capitalization; pre-mint-only policy ⇒ accept with explicit `degraded_controls` in the token.
+7. Projections: `.sea-forge/artifacts/catalog.jsonl` (artifact state) and `.sea-forge/ip/capital/<artifact_id>.json` rebuild byte-identically from ledgered registration records + accepted tokens + referenced gate/authority/criteria/settlement/approval/rights/semantic/attestation/value-evidence sources, per existing projection rebuild conventions; fail closed on incomplete, forked, cyclic, hash-invalid, or missing-source chains; contain no independent mutable fact.
+
+### Focused tests
+
+`crates/sea-forge-artifact-ip/tests/conformance_m8.rs` implementing the §12 M8 scenario in full (naming per existing `conformance_m*.rs` files, reusing existing fixtures/helpers):
+
+- Registration/compatibility: work-product descriptor registers; stdout/stderr cannot; demo `model.sea` keeps original descriptor, `declared_stage: intellectual`, and legacy pre-mint identity; recognized stage starts cognitive; P1–P4b unchanged.
+- Content-preserving promotion: `model.sea` cognitive→intellectual via promote; artifact_id + content_identity unchanged; one new accepted token.
+- Genuine synthesis: separate fixture composes cognitive source(s) → new intellectual artifact with new identities, correct `derived_from`/parent-token lineage, sources unchanged.
+- Productization: full product-contract metadata + accepted evaluator evidence required; content-changing packaging ⇒ new derived product version; promote allowed only when bytes already carry the full contract.
+- Capitalization: byte-identical; requester ≠ approver, authority-checked; semantic anchors via DomainModelRef; rights/review + strong settlement pass; value evidence from outside the originating case; quality-only rejected; approval-only rejected; capital rebuild byte-identical.
+- No-teleportation/lineage: cognitive→product, intellectual→capital, stale `from_stage` all reject **before** side effects (assert no transform execution, no workspace mutation, no result registration, no token commit); removed middle token, tampered parent token, missing parent, cycle, conflicting fork ⇒ typed failures; edited materialized stage/reuse-count/state/capital files do not alter rebuilt truth.
+- Identity/attestation: content-changing promote and content-changing capitalize rejected; IFL outage under required policy rejects; pre-mint-only policy succeeds only with explicit compensating controls in the token; attested cognitive artifact remains cognitive.
 
 ### Gate
 
@@ -686,9 +707,13 @@ cargo test -p sea-forge-sandbox environment --locked && just proof
 cargo test -p sea-forge-artifact-ip --locked && just proof
 ```
 
-**Done when:** §17.1 M8 row green; teeth: removing one middle TransitionToken from the fixture makes the capital rebuild fail the complete-chain invariant.
+**Done when:** §17.1 M8 row green; P1–P4b and all M0–M7 gates unchanged and green.
 
-**Redesign trigger:** none plausible.
+**Teeth:** (a) deleting one middle TransitionToken from the fixture makes capital reconstruction fail the complete-chain invariant; (b) quality-only capitalization rejected; (c) approval-only capitalization rejected; (d) content-changing capitalization rejected; (e) hand-editing the materialized capital/state file does not survive rebuild; (f) attestation without a passed maturity gate leaves recognized stage unchanged.
+
+**Redesign trigger:** an existing M0–M7 type cannot express a required reference (e.g., no immutable rights-profile snapshot exists) — file `.agents/OPEN_QUESTIONS.md` and extend additively; never fork a parallel record.
+
+**Substrate reconciliation:** commit the inspection report (paths, reused types, name mappings, deliberately rejected duplicates) with the milestone; no status claim ahead of a passing test.
 
 ---
 
