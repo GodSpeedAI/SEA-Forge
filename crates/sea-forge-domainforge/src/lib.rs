@@ -10,9 +10,11 @@
 use domainforge_core::parser::{parse_to_graph_with_options, ParseOptions};
 use domainforge_core::policy::Severity;
 use sea_forge_core::errors::ForgeError;
+use sea_forge_core::types::ProjectionKind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 
 /// A source file in a `SeaSourceSet`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -239,4 +241,53 @@ pub fn evaluate_authority(
         reason: "DomainForge evaluated validated model against canonical action".into(),
         evidence_refs,
     })
+}
+
+/// In-memory projection of a DomainModel into CALM or RDF.
+///
+/// Pure: no filesystem writes, no network calls, no CLI invocations.
+/// Returns a sorted map of relative_path → content (§7.0a, §10.4a).
+pub fn project(
+    model: &DomainModel,
+    kind: &ProjectionKind,
+) -> Result<BTreeMap<String, String>, ForgeError> {
+    match kind {
+        ProjectionKind::Calm => {
+            let mut calm_value = domainforge_core::calm::export(&model.graph).map_err(|e| {
+                ForgeError::Internal(format!("domain_model_error: CALM projection failed: {e}"))
+            })?;
+            // Strip non-deterministic timestamp for byte-identical regeneration (§10.7).
+            // domainforge-core adds sea:timestamp to metadata; remove it so the same
+            // graph produces identical bytes across calls.
+            if let Some(metadata) = calm_value
+                .get_mut("metadata")
+                .and_then(|m| m.as_object_mut())
+            {
+                metadata.remove("sea:timestamp");
+            }
+            let mut map = BTreeMap::new();
+            let encoded = serde_json::to_vec_pretty(&calm_value)
+                .map_err(|e| ForgeError::Serialization(e.to_string()))?;
+            map.insert(
+                "calm.json".into(),
+                String::from_utf8_lossy(&encoded).into_owned(),
+            );
+            Ok(map)
+        }
+        ProjectionKind::Rdf => {
+            let kg =
+                domainforge_core::kg::KnowledgeGraph::from_graph(&model.graph).map_err(|e| {
+                    ForgeError::Internal(format!("domain_model_error: KG build failed: {e}"))
+                })?;
+            let turtle = kg.to_turtle();
+            let rdf_xml = kg.to_rdf_xml();
+            let mut map = BTreeMap::new();
+            map.insert("model.ttl".into(), turtle);
+            map.insert("model.rdf".into(), rdf_xml);
+            Ok(map)
+        }
+        _ => Err(ForgeError::Input(format!(
+            "unsupported projection kind for DomainForge adapter: {kind:?}"
+        ))),
+    }
 }

@@ -941,7 +941,7 @@ pub struct ExtensionDescriptor {
     pub deterministic: bool,
     pub installed_at: Option<String>,
 }
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectionKind {
     Sea,
@@ -997,4 +997,133 @@ mod tests {
             SettlementStatus::Escalated
         );
     }
+}
+
+// ── M5: Spec-to-code pipeline + DomainForge projections (§7.8, §7.0b) ──
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PipelineRoute {
+    SpecAuthoring,
+    GeneratorAuthoring,
+    Regeneration,
+    LastMile,
+    FullSpecToRuntime,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ProofClassification {
+    AuthorityOnly,
+    GeneratedContract,
+    FocusedSlice,
+    LiveDevProof,
+    ReleaseGateProof,
+    EnterpriseShippable,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StageKind {
+    Adr,
+    Prd,
+    Sds,
+    Sea,
+    Ast,
+    Ir,
+    Manifest,
+    GeneratedContract,
+    SemanticFixture,
+    LastMileAdapter,
+    RuntimeWiring,
+    AcceptanceProof,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StageStatus {
+    Pending,
+    Accepted,
+    Rejected,
+    Quarantined,
+    Skipped,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct StageFile {
+    pub path: String,
+    pub sha256: String,
+    #[serde(default)]
+    pub generated: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SpecPipelineStage {
+    pub stage_id: String,
+    pub kind: StageKind,
+    #[serde(default)]
+    pub inputs: Vec<StageFile>,
+    #[serde(default)]
+    pub outputs: Vec<StageFile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<Vec<String>>,
+    pub status: StageStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quarantine_ref: Option<String>,
+    #[serde(default)]
+    pub settlement_basis: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SpecPipelineRun {
+    pub version: String,
+    pub pipeline_id: String,
+    pub case_id: String,
+    pub run_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<crate::types::Value>,
+    pub route: PipelineRoute,
+    #[serde(default)]
+    pub authority_refs: Vec<String>,
+    #[serde(default)]
+    pub evidence_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement_ref: Option<String>,
+    pub stages: Vec<SpecPipelineStage>,
+    pub proof_classification: ProofClassification,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ProjectionRecord {
+    pub projection_id: String,
+    pub projection_kind: ProjectionKind,
+    pub adapter_ref: String,
+    pub case_id: String,
+    pub run_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<Value>,
+    pub source_refs: Vec<String>,
+    pub input_hash: String,
+    pub output_refs: Vec<StageFile>,
+    #[serde(default)]
+    pub quarantine_refs: Vec<String>,
+    pub validation: ProjectionValidation,
+    #[serde(default)]
+    pub authority_refs: Vec<String>,
+    #[serde(default)]
+    pub evidence_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement_ref: Option<String>,
+    pub created_at: String,
+    pub rebuild_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ProjectionValidation {
+    pub status: ProjectionStatus,
+    pub validator_ref: String,
+    #[serde(default)]
+    pub basis: Vec<String>,
 }
