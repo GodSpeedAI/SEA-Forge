@@ -158,6 +158,13 @@ enum Command {
         #[arg(long, default_value = ".sea-forge")]
         root: PathBuf,
     },
+    /// List or show EnvironmentSpecs (§7.6).
+    Env {
+        #[command(subcommand)]
+        action: EnvCommand,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+    },
     /// Export selected runs (and optionally templates) to a federation bundle.
     Export {
         #[arg(long, default_value = ".sea-forge")]
@@ -233,6 +240,14 @@ enum TaskCommand {
 enum MemoryCommand {
     /// Rebuild the memory FTS index from items.jsonl (§10.5).
     Rebuild,
+}
+
+#[derive(Subcommand)]
+enum EnvCommand {
+    /// List available EnvironmentSpecs.
+    List,
+    /// Show a specific EnvironmentSpec.
+    Show { reference: String },
 }
 
 #[derive(Clone, ValueEnum)]
@@ -466,6 +481,12 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             MemoryCommand::Rebuild => commands::memory::rebuild(&root)
                 .map(|_| 0)
                 .map_err(|e| (1, e)),
+        },
+        Command::Env { action, root } => match action {
+            EnvCommand::List => commands::env::list(&root).map_err(|e| (1, e)),
+            EnvCommand::Show { reference } => {
+                commands::env::show(&root, &reference).map_err(|e| (1, e))
+            }
         },
         Command::Export {
             root,

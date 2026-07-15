@@ -492,6 +492,7 @@ mod tests {
                 timeout_secs: None,
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                environment: None,
             })
             .unwrap();
         let authority_ref = stream

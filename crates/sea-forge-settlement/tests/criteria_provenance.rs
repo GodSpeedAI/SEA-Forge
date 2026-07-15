@@ -1,6 +1,6 @@
 use sea_forge_core::{types::*, RECORD_VERSION};
 use sea_forge_settlement::settle;
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 fn legacy_claim() -> SettlementClaim {
     SettlementClaim {
@@ -9,12 +9,12 @@ fn legacy_claim() -> SettlementClaim {
         criteria_ref: None,
         criteria: SettlementCriteria {
             require_exit_zero: true,
-            required_artifacts: vec![],
-            stdout_must_contain: None,
-            require_approval: false,
+            ..Default::default()
         },
         execution: None,
         authority_verdicts: vec![Verdict::Allow],
+        evaluator_scores: BTreeMap::new(),
+        batch: None,
     }
 }
 
@@ -25,12 +25,12 @@ fn modern_claim() -> SettlementClaim {
         criteria_ref: Some("crit_abcdef".into()),
         criteria: SettlementCriteria {
             require_exit_zero: true,
-            required_artifacts: vec![],
-            stdout_must_contain: None,
-            require_approval: false,
+            ..Default::default()
         },
         execution: None,
         authority_verdicts: vec![Verdict::Allow],
+        evaluator_scores: BTreeMap::new(),
+        batch: None,
     }
 }
 

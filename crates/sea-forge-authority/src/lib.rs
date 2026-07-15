@@ -588,6 +588,10 @@ pub struct PolicyRule {
     pub requires_approval: bool,
     #[serde(default)]
     pub memory_scope: Option<String>,
+    /// Environment reference `name@version` — when set, ExecuteCommand rules
+    /// match the intersection of provides.commands and the rule's argv0 (§7.6).
+    #[serde(default)]
+    pub environment: Option<String>,
 }
 
 impl AuthorityPolicyBundle {
@@ -992,6 +996,10 @@ pub struct AuthorityEvaluation<'a> {
     pub timeout_secs: Option<u64>,
     pub env_keys: BTreeSet<String>,
     pub domainforge_candidate: Option<&'a DomainForgeCandidate>,
+    /// `(item_env_ref, provides_commands)` — when the PlanItem declares an
+    /// environment, pass its reference and the spec's `provides.commands` list
+    /// so policy rules with `environment:` can enforce intersection (§7.6).
+    pub environment: Option<(&'a str, &'a [String])>,
 }
 impl PolicyAuthorityEngine {
     pub fn new(bundle: AuthorityPolicyBundle) -> Result<Self, ForgeError> {
@@ -1174,6 +1182,7 @@ impl PolicyAuthorityEngine {
             timeout_secs,
             env_keys,
             domainforge_candidate,
+            environment,
         } = input;
         let (kind, resource_type, resource_id, parameters) = match action {
             AuthorityAction::WriteFile { path, content_hint } => (
@@ -1365,12 +1374,19 @@ impl PolicyAuthorityEngine {
                 vec![format!("{resource_type}:unsupported")],
                 vec!["extend-authority-policy".into()],
             )
-        } else if let Some(rule) = self
-            .bundle
-            .rules
-            .iter()
-            .find(|r| matches_rule(r, actor, action))
-        {
+        } else if let Some(rule) = self.bundle.rules.iter().find(|r| {
+            if matches_rule(r, actor, action) {
+                // For ExecuteCommand, the argv0 + environment intersection
+                // is enforced by command_allowed (§7.6 three axes).
+                if let AuthorityAction::ExecuteCommand { .. } = action {
+                    command_allowed(r, action, environment)
+                } else {
+                    true
+                }
+            } else {
+                false
+            }
+        }) {
             let role_name = serde_json::to_value(&actor.role)?
                 .as_str()
                 .unwrap_or_default()
@@ -1719,18 +1735,58 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
             let prefix = rule.path_prefix.as_deref().unwrap_or("");
             rule.operation_kind == "write_file" && (prefix.is_empty() || path.starts_with(prefix))
         }
-        AuthorityAction::ExecuteCommand { argv, .. } => {
-            rule.operation_kind == "execute_command"
-                && rule.argv0.as_deref().is_none_or(|expected| {
-                    argv.first()
-                        .and_then(|v| Path::new(v).file_name())
-                        .and_then(|v| v.to_str())
-                        == Some(expected)
-                })
-        }
+        AuthorityAction::ExecuteCommand { .. } => rule.operation_kind == "execute_command",
         AuthorityAction::Reserved { resource_type, .. } => rule.operation_kind == *resource_type,
         _ => false,
     }
+}
+
+/// Pure three-axis permission check for ExecuteCommand (§7.6).
+///
+/// - **content axis**: `environment.provides.commands` declares what the env supplies.
+/// - **permission axis**: `rule.environment` / `rule.argv0` gates which commands policy allows.
+/// - **isolation axis**: `rule.sandbox_class` decides jail/local/microvm (orthogonal, not checked here).
+///
+/// The effective allow-list is the intersection of the environment's
+/// `provides.commands` and the rule's `argv0` constraint, when both are present.
+/// Call directly from tests to prove three-axis independence.
+pub fn command_allowed(
+    rule: &PolicyRule,
+    action: &AuthorityAction,
+    environment: Option<(&str, &[String])>,
+) -> bool {
+    let AuthorityAction::ExecuteCommand { argv, .. } = action else {
+        return false;
+    };
+    if rule.operation_kind != "execute_command" {
+        return false;
+    }
+    let argv0 = argv
+        .first()
+        .and_then(|v| Path::new(v).file_name())
+        .and_then(|v| v.to_str());
+    // Permission axis: environment-matched rules.
+    if let Some(rule_env) = &rule.environment {
+        // Rule requires the item to use this environment.
+        let Some((item_env, provides)) = environment else {
+            return false;
+        };
+        if rule_env.as_str() != item_env {
+            return false;
+        }
+        // Content axis: argv0 must be in provides.commands.
+        let in_provides = argv0.is_some_and(|a| provides.iter().any(|p| p == a));
+        if !in_provides {
+            return false;
+        }
+    }
+    // Permission axis: argv0 constraint (intersection with environment if both).
+    if let Some(expected) = &rule.argv0 {
+        if argv0 != Some(expected.as_str()) {
+            return false;
+        }
+    }
+    true
 }
 fn hard_denied(action: &AuthorityAction, patterns: &[String]) -> bool {
     match action {
@@ -1979,6 +2035,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -2006,6 +2063,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 },
                 "act_abcdef".into(),
                 Utc::now().to_rfc3339(),
@@ -2093,6 +2151,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -2186,6 +2245,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: Some(&candidate),
+                    environment: None,
                 })
                 .unwrap();
             assert_eq!(decision.verdict, expected);
@@ -2227,6 +2287,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 })
                 .unwrap();
             assert_eq!(decision.verdict, expected);
@@ -2263,6 +2324,7 @@ mod tests {
                 timeout_secs: None,
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                environment: None,
             })
             .unwrap();
         assert_eq!(decision.verdict, Verdict::Allow);
@@ -2332,6 +2394,7 @@ mod tests {
                 timeout_secs: None,
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                environment: None,
             })
             .unwrap();
         assert_eq!(decision.verdict, Verdict::Escalate);
@@ -2391,6 +2454,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 })
                 .unwrap();
             assert_eq!(decision.verdict, expected);
@@ -2438,6 +2502,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -2467,6 +2532,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 },
                 "act_abcdef".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -2607,6 +2673,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    environment: None,
                 },
                 "act_expired".into(),
                 "2026-07-10T12:00:00Z".into(),
@@ -2645,6 +2712,7 @@ mod tests {
                 timeout_secs: Some(10),
                 env_keys: BTreeSet::from(["PATH".into()]),
                 domainforge_candidate: None,
+                environment: None,
             })
             .unwrap();
         let (_root, committed) = commit(&decision);
@@ -2704,6 +2772,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                environment: None,
                 })
                 .unwrap();
             assert_eq!(decision.verdict, Verdict::Allow);

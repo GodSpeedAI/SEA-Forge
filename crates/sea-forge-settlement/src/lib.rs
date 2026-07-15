@@ -70,6 +70,35 @@ pub fn settle(
                         );
                         accepted &= matches;
                     }
+                    // Evaluator scores recorded as evidence (§10.6 — never standing).
+                    for (name, score) in &claim.evaluator_scores {
+                        basis.push(format!("evaluator_score:{name}={score}"));
+                    }
+                    // Batch settlement (§7.6).
+                    if let Some(batch) = &claim.batch {
+                        basis.push(format!("batch_pass_ratio:{}", batch.pass_ratio));
+                        basis.push(format!("batch_threshold:{}", batch.min_pass_ratio));
+                        basis.push(format!("batch_passed:{}/{}", batch.passed, batch.total));
+                        if batch.pass_ratio < batch.min_pass_ratio {
+                            basis.push("batch_below_threshold".into());
+                            accepted = false;
+                        }
+                        // Write failing records to quarantine (never silently dropped).
+                        if !batch.failures.is_empty() {
+                            let q_dir = run_dir.join("quarantine");
+                            std::fs::create_dir_all(&q_dir)
+                                .map_err(|e| ForgeError::io("create quarantine dir", e))?;
+                            let q_path = q_dir.join(format!("{}.jsonl", claim.plan_item_id));
+                            let mut buf = Vec::new();
+                            for failure in &batch.failures {
+                                let line = serde_json::to_vec(failure)?;
+                                buf.extend(line);
+                                buf.push(b'\n');
+                            }
+                            std::fs::write(&q_path, buf)
+                                .map_err(|e| ForgeError::io("write quarantine", e))?;
+                        }
+                    }
                     (
                         if accepted {
                             SettlementStatus::Accepted
@@ -95,6 +124,42 @@ pub fn settle(
         settled_at: Utc::now().to_rfc3339(),
         criteria_ref: claim.criteria_ref.clone(),
     })
+}
+
+/// Evaluate a batch of records against a min_pass_ratio threshold (§7.6).
+/// Pure: scores are pre-computed; this function only tallies and quarantines.
+pub fn evaluate_batch(
+    records: &[serde_json::Value],
+    scores: &[f64],
+    min_pass_ratio: f64,
+) -> BatchEvaluationResult {
+    let total = records.len();
+    let mut passed = 0usize;
+    let mut failures = Vec::new();
+    for (i, record) in records.iter().enumerate() {
+        let score = scores.get(i).copied().unwrap_or(0.0);
+        if score >= 0.5 {
+            passed += 1;
+        } else {
+            failures.push(BatchFailure {
+                record: record.clone(),
+                score,
+                evidence_ref: format!("record_{i}"),
+            });
+        }
+    }
+    let pass_ratio = if total == 0 {
+        1.0
+    } else {
+        passed as f64 / total as f64
+    };
+    BatchEvaluationResult {
+        total,
+        passed,
+        pass_ratio,
+        min_pass_ratio,
+        failures,
+    }
 }
 
 fn file_contains(path: &Path, needle: &str) -> Result<bool, ForgeError> {
@@ -131,6 +196,7 @@ fn file_contains(path: &Path, needle: &str) -> Result<bool, ForgeError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
     #[test]
     fn escalation_wins_over_denial() {
         let claim = SettlementClaim {
@@ -139,12 +205,12 @@ mod tests {
             criteria_ref: None,
             criteria: SettlementCriteria {
                 require_exit_zero: true,
-                required_artifacts: vec![],
-                stdout_must_contain: None,
-                require_approval: false,
+                ..Default::default()
             },
             execution: None,
             authority_verdicts: vec![Verdict::Deny, Verdict::Escalate],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
         };
         assert_eq!(
             settle(&claim, Path::new("."), Path::new("."))
@@ -179,10 +245,12 @@ mod tests {
                 require_exit_zero: true,
                 required_artifacts: vec!["model.sea".into()],
                 stdout_must_contain: Some("model valid".into()),
-                require_approval: false,
+                ..Default::default()
             },
             execution: Some(execution),
             authority_verdicts: vec![Verdict::Allow],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
         };
         let event = settle(&claim, &workspace, &root).unwrap();
         assert_eq!(event.status, SettlementStatus::Rejected);

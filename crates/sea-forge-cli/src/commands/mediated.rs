@@ -66,6 +66,7 @@ pub fn authorize_with_bundle(
         timeout_secs: None,
         env_keys: Default::default(),
         domainforge_candidate: domainforge_candidate.as_ref(),
+        environment: None,
     })?;
     let committed = stream.commit_typed("authority_decision", vec![], &decision, vec![])?;
     crate::pipeline::rebuild_authority_mirrors(root, &stream, &committed)?;

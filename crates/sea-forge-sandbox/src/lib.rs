@@ -4,9 +4,15 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+pub mod environment;
 pub mod jail;
 pub mod local;
 
+pub use environment::{
+    demo_environment, load_pinned_environment, materialize_base, parse_env_ref,
+    parse_evaluator_score, store_builtin_environment, BaseFile, EnvironmentSpec, Evaluator,
+    Provides, ScoreFrom,
+};
 pub use jail::JailSandbox;
 pub use local::LocalSandbox;
 

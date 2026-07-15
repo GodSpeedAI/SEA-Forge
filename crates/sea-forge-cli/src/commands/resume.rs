@@ -186,6 +186,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                         .then_some(options.timeout_secs),
                     env_keys,
                     domainforge_candidate: None,
+                    environment: None,
                 })?;
                 let request = stream.commit_typed(
                     "authority_request",
@@ -370,6 +371,8 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                                 .iter()
                                 .map(|operation| operation.decision.verdict.clone())
                                 .collect(),
+                            evaluator_scores: BTreeMap::new(),
+                            batch: None,
                         },
                         &workspace,
                         &run_dir,

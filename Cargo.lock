@@ -1163,6 +1163,7 @@ dependencies = [
  "sea-forge-trace",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tracing",
  "tracing-subscriber",
 ]
@@ -1276,7 +1277,12 @@ dependencies = [
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-evidence",
+ "sea-forge-settlement",
+ "serde",
  "serde_json",
+ "serde_yaml",
+ "sha2",
+ "tempfile",
  "wait-timeout",
 ]
 
