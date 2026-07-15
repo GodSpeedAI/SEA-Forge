@@ -54,6 +54,7 @@ pub(crate) fn append_case_event(
         actor_id: actor.into(),
         timestamp: chrono::Utc::now().to_rfc3339(),
         payload,
+        cell_id: None,
     };
     LedgerStream::open(root, format!("case-{case_id}"), actor)?.commit_typed(
         "case_event",

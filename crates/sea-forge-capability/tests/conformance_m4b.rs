@@ -39,6 +39,7 @@ fn make_envelope(
         artifact_refs: vec![],
         extension_refs: vec![],
         projection_refs: vec![],
+        cell_id: None,
     }
 }
 

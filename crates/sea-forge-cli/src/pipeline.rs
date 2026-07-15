@@ -608,6 +608,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             artifact_refs,
             extension_refs: vec![],
             projection_refs: vec![],
+            cell_id: sea_forge_cell::ensure(&root).ok(),
         };
         let committed_envelope = authority_stream.commit_typed(
             "capability_envelope",

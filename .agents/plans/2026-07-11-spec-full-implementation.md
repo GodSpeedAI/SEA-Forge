@@ -735,7 +735,7 @@ cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-featu
 - [x] Promotion requires qualifying independent declarations; rebuild byte-pure; require_proven cites record+policy; unresolved, mismatched, or legacy-unattributed criteria cannot qualify *(Task 11)*
 - [x] Scoped recall with evidence; FTS index pure + fallback-equivalent *(Task 12)*
 - [x] Pipeline hash-chain + determinism + classification ceiling; CALM/RDF projections rebuild byte-identically *(Task 13)*
-- [ ] Bundles export/import with atomic rejection; no capability leakage *(Task 14)*
+- [x] Bundles export/import with atomic rejection; no capability leakage *(Task 14)*
 - [ ] Environment/evaluator/batch semantics per §12 M7; three-axis independence *(Task 15)*
 - [ ] No-teleportation + approved capitalization + capital rebuild purity *(Task 16)*
 - [ ] `cargo clippy … -D warnings` exits 0; `devbox run -- just check` green *(all)*

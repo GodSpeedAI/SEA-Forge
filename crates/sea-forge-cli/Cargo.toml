@@ -20,6 +20,7 @@ sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
 sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.1.0" }
 sea-forge-trace = { path = "../sea-forge-trace", version = "0.1.0" }
 sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
+sea-forge-cell = { path = "../sea-forge-cell", version = "0.1.0" }
 chrono.workspace = true
 serde.workspace = true
 tracing.workspace = true
