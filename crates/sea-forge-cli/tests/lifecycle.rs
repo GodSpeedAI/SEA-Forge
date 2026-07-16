@@ -198,9 +198,11 @@ fn required_integrity_checkpoint_precedes_command_start_and_witness_outage_halts
                     "recall stderr: {}",
                     String::from_utf8_lossy(&recall.stderr)
                 );
-                assert!(String::from_utf8(recall.stdout)
-                    .unwrap()
-                    .contains("externally_verified"));
+                let recall_stdout = String::from_utf8(recall.stdout).unwrap();
+                assert!(
+                    recall_stdout.contains("externally_verified"),
+                    "recall stdout: {recall_stdout}"
+                );
             }
         } else {
             assert!(!run_dir.join("workspace/model.sea").exists());

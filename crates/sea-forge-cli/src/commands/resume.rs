@@ -1,6 +1,6 @@
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids, types::*};
-use sea_forge_ledger::LedgerStream;
+use sea_forge_ledger::{LedgerEntry, LedgerStream};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
@@ -28,6 +28,91 @@ pub struct ResumeOutcome {
     pub case_id: String,
     pub state: &'static str,
     pub exit_code: u8,
+}
+
+fn load_ledgered_case_approvals(
+    entries: &[LedgerEntry],
+    plan: &CasePlan,
+    case_id: &str,
+) -> Result<Vec<ApprovalRequest>, ForgeError> {
+    let integrity_error =
+        |message: &str| ForgeError::Internal(format!("ledger_integrity_error: {message}"));
+    let mut requests = BTreeMap::<String, ApprovalRequest>::new();
+    let mut resolutions = BTreeMap::<String, ApprovalRequest>::new();
+    for entry in entries {
+        let target = match entry.record_kind.as_str() {
+            "approval_request" => &mut requests,
+            "approval_resolution" => &mut resolutions,
+            _ => continue,
+        };
+        let approval: ApprovalRequest = serde_json::from_value(entry.payload.clone())?;
+        if target
+            .insert(approval.approval_id.clone(), approval)
+            .is_some()
+        {
+            return Err(integrity_error("duplicate approval record"));
+        }
+    }
+    if resolutions.keys().any(|id| !requests.contains_key(id)) {
+        return Err(integrity_error("approval resolution has no request"));
+    }
+
+    requests
+        .into_values()
+        .map(|request| {
+            if request.case_id != case_id {
+                return Err(integrity_error("approval request case mismatch"));
+            }
+            let item = plan
+                .items
+                .iter()
+                .find(|item| item.plan_item_id == request.plan_item_id)
+                .ok_or_else(|| integrity_error("approval plan item is missing"))?;
+            if item.settlement_criteria_ref.as_deref() != request.criteria_ref.as_deref() {
+                return Err(integrity_error(
+                    "approval criteria does not match plan item",
+                ));
+            }
+            let criteria_ref = request
+                .criteria_ref
+                .as_deref()
+                .ok_or_else(|| integrity_error("approval criteria reference is missing"))?;
+            let criteria_entries = entries
+                .iter()
+                .filter(|entry| {
+                    entry.record_kind == "settlement_criteria"
+                        && entry.payload.get("criteria_id").and_then(Value::as_str)
+                            == Some(criteria_ref)
+                })
+                .collect::<Vec<_>>();
+            if criteria_entries.len() != 1 {
+                return Err(integrity_error("approval criteria record is not unique"));
+            }
+            let criteria: SettlementCriteriaRecord =
+                serde_json::from_value(criteria_entries[0].payload.clone())?;
+            if request.criteria_sha256.as_deref() != Some(criteria.criteria_sha256.as_str())
+                || request.criteria_record_hash.as_deref()
+                    != Some(criteria.criteria_record_hash.as_str())
+            {
+                return Err(integrity_error("approval criteria hash mismatch"));
+            }
+            let Some(resolution) = resolutions.remove(&request.approval_id) else {
+                return Ok(request);
+            };
+            if resolution.status == ApprovalStatus::Pending
+                || resolution.run_id != request.run_id
+                || resolution.case_id != request.case_id
+                || resolution.decision_id != request.decision_id
+                || resolution.plan_item_id != request.plan_item_id
+                || resolution.criteria_ref != request.criteria_ref
+                || resolution.criteria_sha256 != request.criteria_sha256
+                || resolution.criteria_record_hash != request.criteria_record_hash
+            {
+                return Err(integrity_error("approval resolution binding mismatch"));
+            }
+            Ok(resolution)
+        })
+        .collect()
 }
 
 pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
@@ -85,8 +170,9 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
     }
     let case_stream =
         LedgerStream::open(&root, format!("case-{}", options.case_id), &options.entity)?;
-    if case_stream
-        .read_entries()?
+    case_stream.verify()?;
+    let case_entries = case_stream.read_entries()?;
+    if case_entries
         .iter()
         .any(|entry| entry.record_kind == "pending_artifact_transition")
     {
@@ -132,21 +218,19 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
     }
 
     // Check approval status.
-    let pending = approvals::pending_for_case(&root, &options.case_id)?;
-    if !pending.is_empty() {
+    let case_approvals = load_ledgered_case_approvals(&case_entries, &plan, &options.case_id)?;
+    let pending = case_approvals
+        .iter()
+        .filter(|approval| approval.status == ApprovalStatus::Pending)
+        .count();
+    if pending > 0 {
         return Err(ForgeError::Input(format!(
             "case {} still has {} pending approval(s)",
-            options.case_id,
-            pending.len()
+            options.case_id, pending
         )));
     }
 
-    // Determine the approval outcome for this case.
-    let all_approvals = approvals::load_all(&root)?;
-    let case_approvals: Vec<_> = all_approvals
-        .iter()
-        .filter(|a| a.case_id == options.case_id)
-        .collect();
+    // Determine the approval outcome from authoritative case-ledger records.
     let has_approved = case_approvals
         .iter()
         .any(|a| a.status == ApprovalStatus::Approved);
@@ -208,7 +292,17 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
             continue;
         }
         for instance in 1..=item.max_instances {
-            let run_id = ids::run_id()?;
+            let run_id = if instance == 1 {
+                case_approvals
+                    .iter()
+                    .find(|approval| {
+                        approval.status == ApprovalStatus::Approved
+                            && approval.plan_item_id == item.plan_item_id
+                    })
+                    .map_or_else(ids::run_id, |approval| Ok(approval.run_id.clone()))?
+            } else {
+                ids::run_id()?
+            };
             let workspace = runs_dir.join(&run_id).join("workspace");
             let artifacts = runs_dir.join(&run_id).join("artifacts");
             let mut operations = Vec::new();
@@ -435,7 +529,9 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                             .collect::<Vec<_>>(),
                     )?;
                     write_json(&run_dir.join("settlement.json"), &settlement)?;
-                    case.run_ids.push(run_id.clone());
+                    if !case.run_ids.contains(&run_id) {
+                        case.run_ids.push(run_id.clone());
+                    }
                     let accepted = settlement.status == SettlementStatus::Accepted;
                     append_event(
                         &case_events,
@@ -693,7 +789,7 @@ fn resume_artifact_transition(
     } else {
         None
     };
-    let transition_grant = engine.grant_after_approval(
+    let transition_grant = engine.grant_after_approval_idempotent(
         &decision,
         &decision_entry.committed_ref(),
         &decision.operation,

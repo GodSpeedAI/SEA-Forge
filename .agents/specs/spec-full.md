@@ -1906,46 +1906,46 @@ Required only for: Landlock (Linux CI with a recent kernel), Seatbelt (macOS run
 
 ## 18. Implementation Checklist / Definition of Done
 
-- [ ] M0–M8 gates green in order; minimum-spec P1–P4b green after every milestone.
-- [ ] Integrity-ledger M0 proves canonical encoding, ULID uniqueness, append
+- [x] M0–M8 gates green in order; minimum-spec P1–P4b green after every milestone. *(workspace suite + `just proof`, Task 17)*
+- [x] Integrity-ledger M0 proves canonical encoding, ULID uniqueness, append
   ordinal continuity, predecessor chains, MMR inclusion/consistency proofs,
   signed global checkpoints, independent witness receipts, fork/rollback and
   crash-tail detection, key rotation, redaction/ciphertext handling, and
-  lossless legacy genesis import before any later milestone writes source state.
-- [ ] Authority M0 proves identity onboarding, deterministic hashes, file/API/git/PR/prompt/shell fail-closed behavior, engine-unavailable fail-closed behavior, conflict precedence, opaque constraints, and common audit mirroring before M1 sandbox hardening starts.
-- [ ] DomainForge M0 proves real `.sea` parse and semantic validation, stable
+  lossless legacy genesis import before any later milestone writes source state. *(`conformance_m0_ledger`, `conformance_m0_migrate`)*
+- [x] Authority M0 proves identity onboarding, deterministic hashes, file/API/git/PR/prompt/shell fail-closed behavior, engine-unavailable fail-closed behavior, conflict precedence, opaque constraints, and common audit mirroring before M1 sandbox hardening starts. *(`conformance_m0_authority`)*
+- [x] DomainForge M0 proves real `.sea` parse and semantic validation, stable
   DomainModelRef construction, concept-ref resolution, fail-closed authority
-  normalization, and zero side effects on invalid models before M1 starts.
-- [ ] Extension ABI M0 proves descriptor validation, authority-surface mapping, projection-ref compatibility, and disabled-by-default imported extensions before optional plugins are allowed.
-- [ ] M8 artifact-to-IP gate green before any artifact is reported as reusable capital.
-- [ ] No policy can grant an untrusted argv0 the `local` class (schema-level test exists).
-- [ ] Kernel crates contain no Tokio dependency (enforced via `cargo tree` check in CI).
-- [ ] All records at version 0.2 remain readable by 0.1 readers where fields are additive; a version-skew test exists.
-- [ ] Every new settling PlanItem resolves to a ledgered SettlementCriteriaRecord
+  normalization, and zero side effects on invalid models before M1 starts. *(`conformance_m0_domainforge`)*
+- [x] Extension ABI M0 proves descriptor validation, authority-surface mapping, projection-ref compatibility, and disabled-by-default imported extensions before optional plugins are allowed. *(`sea-forge-extension` tests)*
+- [x] M8 artifact-to-IP gate green before any artifact is reported as reusable capital. *(`conformance_m8`, `conformance_m8_artifact`)*
+- [x] No policy can grant an untrusted argv0 the `local` class (schema-level test exists). *(`conformance_m1_untrusted_argv0_cannot_use_local`)*
+- [x] Kernel crates contain no Tokio dependency (enforced via `cargo tree` check in CI). *(`just no-async-kernel`, included by `just ci`)*
+- [x] All records at version 0.2 remain readable by 0.1 readers where fields are additive; a version-skew test exists. *(`sea-forge-core/tests/version_skew.rs`)*
+- [x] Every new settling PlanItem resolves to a ledgered SettlementCriteriaRecord
   with a verified attributable origin chain; no redundant JobContract,
   criteria store, or provenance subsystem was added where existing substrate
-  already satisfied the contract.
-- [ ] ApprovalRequest and SettlementDeclaration bind to the same immutable
-  criteria record; stale or mismatched criteria cannot be approved or promoted.
-- [ ] Legacy embedded-only criteria remain readable without fabricated
-  provenance and cannot qualify for strong settlement.
-- [ ] M4a proves criteria predate execution, declarer standing and independence,
+  already satisfied the contract. *(`criteria_provenance` planner/settlement tests)*
+- [x] ApprovalRequest and SettlementDeclaration bind to the same immutable
+  criteria record; stale or mismatched criteria cannot be approved or promoted. *(`conformance_m3`, `conformance_m4a`)*
+- [x] Legacy embedded-only criteria remain readable without fabricated
+  provenance and cannot qualify for strong settlement. *(`criteria_provenance`, `conformance_m4a`)*
+- [x] M4a proves criteria predate execution, declarer standing and independence,
   complete reliability weighting, and immutable claim/evidence hashes before any
-  declaration qualifies for capability promotion.
-- [ ] `capability rebuild` purity test is green from envelopes, settlement
+  declaration qualifies for capability promotion. *(`conformance_m4a`)*
+- [x] `capability rebuild` purity test is green from envelopes, settlement
   declarations, and promotion-policy snapshots; accepted counts alone never
-  produce `proven`.
-- [ ] Capability promotion requires declared variation, disruption recovery,
+  produce `proven`. *(`conformance_m4a` rebuild/count tests)*
+- [x] Capability promotion requires declared variation, disruption recovery,
   and reduced orchestration burden; regression, revoked standing, invalidated
-  evidence, or policy change contracts status with an evidence-linked reason.
-- [ ] Spec-to-code pipeline can replay a small context deterministically and refuses proof upgrades until generated contracts reach real runtime acceptance.
-- [ ] M5 keeps `.sea` synthesis separate from DomainForge consumption; every
+  evidence, or policy change contracts status with an evidence-linked reason. *(`conformance_m4a` promotion/contraction tests)*
+- [x] Spec-to-code pipeline can replay a small context deterministically and refuses proof upgrades until generated contracts reach real runtime acceptance. *(`conformance_m5`)*
+- [x] M5 keeps `.sea` synthesis separate from DomainForge consumption; every
   synthesized source validates through the pinned `domainforge-core`, CALM and
   RDF projections pass, each enabled target has a validated ProjectionRecord,
-  and only SEA Forge materializes returned in-memory artifacts.
-- [ ] Artifact catalog and capital projections rebuild from JSONL sources; no capital record exists without a complete transition chain.
-- [ ] Server crash-recovery drill (§13) executed and documented once against a real run.
-- [ ] Every §0 question answerable from this spec + the minimum spec.
+  and only SEA Forge materializes returned in-memory artifacts. *(`conformance_m5`, DomainForge projection tests)*
+- [x] Artifact catalog and capital projections rebuild from JSONL sources; no capital record exists without a complete transition chain. *(`conformance_m8` rebuild/chain tests)*
+- [x] Server crash-recovery drill (§13) executed and documented once against a real run. *(`CURRENT_STATUS.md`, 2026-07-16 Task 17 drill)*
+- [x] Every §0 question answerable from this spec + the minimum spec. *(§0.1–§0.8 and minimum-spec fallback rule)*
 
 ## Appendix A. Milestone order and rationale
 

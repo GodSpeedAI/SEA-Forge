@@ -216,6 +216,7 @@ fn resolve(
     Ok(0)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn authorize_resolution(
     stream: &LedgerStream,
     root: &Path,
@@ -286,13 +287,22 @@ fn authorize_resolution(
         &json!({"kind":"approval_resolution_authority_request", "action": action}),
         vec![policy_record.entry_ulid().into()],
     )?;
+    // Derive the sequence from existing decisions so the approval-resolution
+    // decision_id (auth_{sequence:02}) never collides with an earlier escalate
+    // decision in the same case ledger.
+    let sequence = stream
+        .read_entries()?
+        .iter()
+        .filter(|entry| entry.record_kind == "authority_decision")
+        .count()
+        + 1;
     let decision = engine.evaluate(sea_forge_authority::AuthorityEvaluation {
         actor: &actor,
         binding: bundle.resolve_identity(actor_id, role),
         run_id: &approval.run_id,
         case_id,
         plan_item_id: &approval.plan_item_id,
-        sequence: 1,
+        sequence,
         action: &action,
         workspace_root: root,
         evidence_refs: vec![evidence.entry_ulid().into(), original.decision_id.clone()],

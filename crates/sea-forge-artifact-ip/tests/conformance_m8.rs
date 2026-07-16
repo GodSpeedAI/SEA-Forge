@@ -505,8 +505,10 @@ fn ledger_governance_with_options(
         commit_domain_model(root, "operator", &model);
         input.semantic_model_ref = Some(model.model_ref.semantic_model_sha256.clone());
     }
-    let (registrations, _) = load_ledger_records(root, "operator").unwrap();
-    drop(authorized_transition(root, input, &registrations, gate));
+    // Note: the caller is responsible for invoking `authorized_transition`
+    // after this helper returns. We deliberately do NOT grant here, because
+    // re-granting a capitalize (escalate) transition would trip the
+    // approval-grant consumption dedup in `grant_after_approval`.
 }
 
 fn strong_declaration(
@@ -2130,6 +2132,12 @@ fn conformance_m8_rebuild_rejects_allow_for_substituted_transition_action() {
     );
     let gate = profile(TransitionKind::Synthesize);
     ledger_governance(root.path(), &mut transition_input, &gate);
+    drop(authorized_transition(
+        root.path(),
+        &transition_input,
+        std::slice::from_ref(&registration),
+        &gate,
+    ));
     transition_input.actor_id = "substituted-requester".into();
     let token = transition(transition_input).unwrap();
     LedgerStream::open(root.path(), "artifact-ip", "operator")
@@ -2242,6 +2250,12 @@ fn conformance_m8_value_evidence_acceptance_is_derived_from_sources() {
     );
     let capital_profile = profile(TransitionKind::Capitalize);
     ledger_governance(root.path(), &mut capital_input, &capital_profile);
+    drop(authorized_transition(
+        root.path(),
+        &capital_input,
+        &[cognitive.clone(), product.clone()],
+        &capital_profile,
+    ));
     let derived = append_value_evidence(
         root.path(),
         "operator",
@@ -2385,6 +2399,12 @@ fn conformance_m8_rebuild_rejects_approval_for_unrelated_decision_and_criteria()
     let capital_profile = profile(TransitionKind::Capitalize);
     capital_input.approval_ref = Some("approval_unrelated".into());
     ledger_governance(root.path(), &mut capital_input, &capital_profile);
+    drop(authorized_transition(
+        root.path(),
+        &capital_input,
+        registrations,
+        &capital_profile,
+    ));
     let unrelated = ApprovalRequest {
         version: "0.2".into(),
         approval_id: "approval_unrelated".into(),
@@ -2453,6 +2473,12 @@ fn conformance_m8_rebuild_rejects_approval_with_missing_or_wrong_criteria_hashes
             )
         };
         ledger_governance(root.path(), &mut capital_input, &gate);
+        drop(authorized_transition(
+            root.path(),
+            &capital_input,
+            std::slice::from_ref(&registration),
+            &gate,
+        ));
         let wrong_approval = ApprovalRequest {
             version: "0.2".into(),
             approval_id: "approval_wrong_hash".into(),

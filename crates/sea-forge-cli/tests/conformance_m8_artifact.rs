@@ -269,12 +269,12 @@ fn run_governed_transition(bin: &Path, root: &Path, policy: &Path, kind: &str, i
 
 fn last_transition_token_id(root: &Path) -> String {
     let ledger = fs::read_to_string(root.join("ledgers/artifact-ip/entries.jsonl")).unwrap();
-    ledger
+    let last = ledger
         .lines()
         .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
-        .filter(|entry| entry["record_kind"] == "artifact_transition")
-        .last()
-        .unwrap()["payload"]["transition_token_id"]
+        .rfind(|entry| entry["record_kind"] == "artifact_transition")
+        .unwrap();
+    last["payload"]["transition_token_id"]
         .as_str()
         .unwrap()
         .to_owned()
