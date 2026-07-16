@@ -19,6 +19,7 @@ members = [
     "crates/sea-forge-spec-pipeline",
     "crates/sea-forge-cell",
     "crates/sea-forge-artifact-ip",
+    "crates/sea-forge-self-model",
 ]
 
 [workspace.package]

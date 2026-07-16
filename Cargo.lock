@@ -1325,6 +1325,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sea-forge-self-model"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-core",
+ "sea-forge-domainforge",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "sea-forge-server"
 version = "0.1.0"
 dependencies = [
