@@ -16,11 +16,11 @@ Resolved decisions (owner-supplied, 2026-07-14):
 
 - **ACP is adopted** as the protocol for CLI-resident agents. E17 is a committed capability, not a spike; its first gate still validates permission-mapping fidelity before broad rollout.
 - **SWE_SEED's interface shape** (inspected at `~/projects/SWE_SEED`, commit `a55d14b`, branch `deploy-prep`): SWE_SEED is a CLI harness (`swe-seed` clap CLI, no network surface of its own) that projects policy/hooks/skills into host coding agents (Claude, Codex, OpenCode, GitHub Copilot, Antigravity, CI) via `swe-seed sync --host`, and emits route/trace/proof artifacts under `.agent-harness/`. Therefore an "SWE_SEED instance" is a **host coding agent driven via ACP (E17) with the harness projected in**; its trace/proof artifacts are harvested as evidence, and its settlement declarations continue to arrive through the existing M4a `SweSeedTransport`. SWE_SEED is unlocked by E17, not E14.
-- **Transcript retention** is a config flag: `summarized` (default — bounded summary evidence plus transcript hash) or `full` (complete transcript as a content-addressed artifact). Crypto-shredding rules from `spec-full.md` §7.0c apply in both modes.
+- **Transcript retention** is blocked on the unresolved verification decision in §7.4. The previous requirement, “discard the canonical transcript in summarized mode but later hash-verify it,” is contradictory. M13 cannot claim completion until the owner selects a verifiable retention/commitment design.
 
 ## 0. Spec Frame
 
-1. What should be built? — Four extension capabilities in milestone order: **E14 AgentProvider seam** (a `complete`/`stream` provider trait with OpenAI-compatible and Anthropic-compatible implementations in a new adapter crate, activating the reserved `external_api` authority surface), **E15 governed `agent_task` delegation** (a new plan-item/operation kind whose execution is a dialogue with an agent endpoint, run as an ordinary governed run: turn-capped, cancellable, parallel under the existing server semaphore, transcript-evidenced, independently settled), **E16 orchestration topologies** (`sequential_agents`, `concurrent_agents` E8 templates plus the Thoth manager loop: bounded iterations of read-case → propose-discretionary-`agent_task` → await settlement), and **E17 ACP driver** (an ACP client adapter that drives CLI agents, mapping ACP permission requests onto SEA approvals and ACP sandbox modes onto `SandboxClass`, with continuation identity linking successive episodes to one external session).
+1. What should be built? — Four extension capabilities in milestone order: **E14 AgentProvider seam** (a `complete`/`stream` provider trait with OpenAI-compatible and Anthropic-compatible implementations in a new adapter crate, plus a one-call governed `agent_probe` operation, activating the reserved `external_api` authority surface), **E15 governed `agent_task` delegation** (a new plan-item/operation kind whose execution is a dialogue with an agent endpoint, run as an ordinary governed run: turn-capped, cancellable, parallel under the existing server semaphore, transcript-evidenced, independently settled), **E16 orchestration topologies** (`sequential_agents`, `concurrent_agents` E8 templates plus the Thoth manager loop: bounded iterations of read-case → propose-discretionary-`agent_task` → await settlement), and **E17 ACP driver** (an ACP client adapter that drives CLI agents, mapping ACP permission requests onto SEA approvals and ACP sandbox modes onto `SandboxClass`, with continuation identity linking successive episodes to one external session).
 2. What result should it produce? — A case plan can delegate work to N heterogeneous agents (HTTP-API agents and ACP CLI agents, including SWE_SEED-harnessed hosts) concurrently; each delegation leaves inspectable transcript evidence and settles on criteria, never on agent narration; Thoth can drive a whole case forward by proposing delegations under authority.
 3. How will we know the result is real? — Milestone gates in §17. A milestone that cannot pass P1–P4b and all prior milestone gates (M0–M11) unchanged has broken the kernel and MUST be rejected.
 4. What capability should get stronger after repeated use? — The installation's demonstrated ability to complete cases using delegated agent labor: capability records (E4) for `agent_task`-backed operations climb the attempted < demonstrated < proven ladder exactly like sandboxed work, and Thoth's answers about "what agents this installation can employ, and with what track record" grow from the same evidence.
@@ -59,13 +59,13 @@ Important boundary:
 
 ### 2.1 Goals
 
-- G1 **AgentProvider seam (E14)**: a new adapter crate `sea-forge-agent` MUST define a provider contract (`complete`, `stream`) over a typed message/tool vocabulary, with exactly two built-in implementations: `openai_compatible` (base URL + credential ref + request-shape mapping) and `anthropic`. Every provider call is a protected operation gated by the `external_api` authority surface (reserved since v0.1, activated here, deny-by-default). Typed errors; no inter-provider fallback.
+- G1 **AgentProvider seam (E14)**: a new adapter crate `sea-forge-agent` MUST define a provider contract (`complete`, `stream`) over a typed message/tool vocabulary, with exactly two built-in implementations: `openai_compatible` (base URL + credential ref + request-shape mapping) and `anthropic`. Every provider call, including `agent_probe`, is a protected operation gated by the `external_api` authority surface (reserved since v0.1, activated here, deny-by-default). Typed errors; no inter-provider fallback.
 - G2 **Endpoint registry (E14)**: agent endpoints are declared in configuration as **AgentEndpoint** entries and surfaced to the fabric as `ExtensionDescriptor`s of kind `runtime_adapter`, so registration, compatibility, and disclosure (via Thoth `AskAvailableAffordances`) reuse existing machinery.
 - G3 **Governed delegation (E15)**: `agent_task` MUST be an additive `PlanItem` kind and `Operation` kind. Executing one is an ordinary run: authority-checked per delegation, turn-capped by a grant boundary, executed through E14 (or E17), transcript-evidenced, and settled on the item's criteria. Agent output is untrusted input (`spec-full.md` §8.6); an agent's claim of success is never a settlement input with standing (extending the M4a self-declaration rejection to delegated work).
-- G4 **Parallelism and cancellation (E15)**: N `agent_task` runs MUST dispatch concurrently under the existing server `max_concurrent_runs` semaphore — no new pool. Any in-flight delegation MUST be cancellable (operator command or sentry decision) without affecting sibling runs; cancellation settles `rejected` with basis `cancelled`.
-- G5 **Transcript evidence (E15)**: every delegation MUST preserve dialogue evidence per the retention mode: `summarized` (default) stores a bounded summary record plus the SHA-256 of the canonical full transcript; `full` additionally stores the transcript as a content-addressed artifact file, hash-committed to the ledger. Mode is set globally and overridable per endpoint and per plan item (most specific wins).
-- G6 **Topology templates (E16)**: built-in E8 templates `sequential_agents@0.1.0` (chain of `agent_task` items linked by sentries on each predecessor's settlement) and `concurrent_agents@0.1.0` (N parallel `agent_task` items plus a rollup milestone whose sentry requires all N settlements) MUST instantiate to ordinary CasePlans with no new kernel types.
-- G7 **Thoth manager loop (E16)**: Thoth MUST be able to run a bounded manager iteration against a case: read the case file and trace ledger (its progress ledger — no second ledger), decide whether the outcome is satisfied / progress is being made / what should run next, and propose the next `agent_task` as a **discretionary item** through the existing governed plan-mutation path. Iteration count is a grant boundary; exhaustion parks the case and escalates through existing approval machinery. Thoth remains an R-AA actor: it proposes, it never settles, and it MUST NOT settle or promote work it proposed (structural separation of duties, enforced as in E13).
+- G4 **Parallelism and cancellation (E15)**: `sea-forge-server` owns case scheduling and dispatches each ready executable item as a run episode under the existing `max_concurrent_runs` semaphore — no new pool. The one-shot CLI uses the same episode-dispatch service with effective concurrency one. Any in-flight delegation MUST be cancellable (operator command or sentry decision) without affecting sibling runs; cancellation settles `rejected` with basis `cancelled`.
+- G5 **Transcript evidence (E15)**: every delegation MUST preserve dialogue evidence per the retention design selected in §7.4. Both modes retain a deterministic structural summary and the SHA-256 of the redacted canonical transcript. `full` stores the transcript as a content-addressed artifact file. The selected summarized-mode design MUST make the claimed verification property true; mode is set globally and overridable per endpoint and per plan item (most specific wins).
+- G6 **Topology templates (E16)**: built-in E8 templates `sequential_agents@0.1.0` (chain of `agent_task` items linked by source-bound sentries on each predecessor's settlement) and `concurrent_agents@0.1.0` (N parallel `agent_task` items plus an all-success rollup milestone) MUST instantiate to ordinary CasePlans. E8 gains only the typed deterministic list/repeat and explicit all-of control vocabulary needed for these templates; it adds no actor runtime.
+- G7 **Thoth manager loop (E16)**: Thoth MUST run a bounded, deterministic manager iteration against a case: read the case file and trace ledger (its progress ledger — no second ledger), classify the case as satisfied/progressing/stalled/blocked, and propose the next `agent_task` only from a versioned manager proposal catalog or a case-declared discretionary-item template. Iteration count is a grant boundary; exhaustion parks the case and escalates through existing approval machinery. Thoth remains an R-AA actor: it proposes, it never settles or promotes work it proposed. Immutable `proposed_by` provenance enforces that separation.
 - G8 **ACP driver (E17)**: an ACP client adapter MUST drive CLI-resident agents (Claude Code, Codex, and SWE_SEED-harnessed hosts) as `agent_task` executors: spawn/attach with continuation identity, surface ACP permission requests as SEA approval requests (never auto-grant beyond the run's grant), map the session's sandbox posture from the run's `SandboxClass`, and treat session transcripts identically to E15 evidence.
 - G9 **SWE_SEED integration (E17)**: when the delegate is an SWE_SEED-harnessed host, the adapter MUST harvest SWE_SEED trace/proof artifacts (route decision, `ProofStarted`/`ProofCompleted` outputs) from the workspace as evidence cross-linked to the delegating run, and settlement declarations arriving via the M4a `SweSeedTransport` MUST be correlatable to that run.
 
@@ -82,16 +82,16 @@ Important boundary:
 
 ### 3.1 Output Produced
 
-- `crates/sea-forge-agent/` — the adapter crate: provider trait, `openai_compatible` + `anthropic` implementations, ACP client driver, endpoint registry glue. The only workspace location where an HTTP client and async executor for agent dialogue may appear outside `sea-forge-server`.
-- Activated `external_api` authority surface rules in `sea-forge-authority` with grant boundaries: `endpoint_ref` (which endpoint), `max_turns` (dialogue cap), `token_budget` (optional cumulative cap), `max_manager_iterations` (E16 loops).
-- Additive kernel vocabulary in `sea-forge-core`: `Operation`/`PlanItem` kind `agent_task`; settlement bases `cancelled`, `turn_cap_exceeded`, `agent_endpoint_error`.
-- `.sea-forge/templates/sequential_agents@0.1.0.yaml` and `.sea-forge/templates/concurrent_agents@0.1.0.yaml`.
+- `crates/sea-forge-agent/` — the adapter crate: provider trait, `openai_compatible` + `anthropic` implementations, governed `agent_probe`, ACP client driver, endpoint registry glue. The only workspace location where an HTTP client and async executor for agent dialogue may appear outside `sea-forge-server`.
+- Activated `external_api` authority surface rules in `sea-forge-authority` with exact-action boundaries: endpoint ID, immutable descriptor/config digest, provider kind, normalized destination, model, request limits, and credential reference (never value), plus `max_turns`, `token_budget`, and `max_manager_iterations` where applicable. Credential resolution separately consumes `secret_access`.
+- Additive kernel vocabulary in `sea-forge-core`: `Operation::AgentProbe` (M12); `Operation`/`PlanItem` kind `agent_task` (M13); settlement bases `cancelled`, `turn_cap_exceeded`, `agent_endpoint_error`; and immutable authorship/proposal provenance needed for SoD.
+- Source-owned built-in template assets for `sequential_agents@0.1.0` and `concurrent_agents@0.1.0`, installed as pinned copies under `<root>/templates/`.
 - Per delegation: a `TranscriptEvidence` record (and, in `full` mode, `.sea-forge/artifacts/transcripts/<sha256>.jsonl`), ledger-committed.
 - CLI: `sea-forge agent probe <endpoint>`, `sea-forge agent list`, `sea-forge run cancel <run-id>`, `sea-forge case manage <case-id> --iterations N` (Thoth manager loop).
 
 ### 3.2 Outcome Verified
 
-The output counts as a verified outcome only when a delegation's run settles on its declared criteria with transcript evidence whose hash verifies against the ledger commitment, and replaying the ledger reproduces the dispatch/settlement ordering of any parallel batch.
+The output counts as a verified outcome only when a delegation's run settles on its declared criteria with transcript evidence verified according to the retention design selected in §7.4, and replaying the ledger reproduces the dispatch/settlement ordering of any parallel batch.
 
 A run MUST NOT be reported as complete when the agent asserted success but criteria evaluation did not pass, when transcript evidence is missing or hash-mismatched, or when an ACP permission was exercised without a recorded approval decision.
 
@@ -115,22 +115,22 @@ Not proven by: transcript volume, agent self-reports, or successful probes witho
 | Sentry chains suffice for sequential/concurrent topologies (no actor runtime needed) | Partially proven | M14 gate: both templates settle end-to-end incl. rollup | Case engine + E8 templates green (M2a–M2c); claim inherited from spec-full §5 | prove with real agent latencies and a parked-item path |
 | ACP's permission model maps losslessly onto SEA authority/approvals | Assumption (decision: adopt ACP) | T16.3: every ACP request kind exercised in a session maps to a recorded SEA decision; no unmapped grant | goose + t3code both ship working ACP endpoints (audit §5); no SEA-side mapping exists | first E17 gate; lossy mapping ⇒ narrow to allow-listed request kinds (§0.8) |
 | SWE_SEED instances are reachable as ACP-driven hosts with harvestable proofs | Partially proven | M16 gate: one SWE_SEED-harnessed host completes a delegation with proof artifacts cross-linked | SWE_SEED inspected: host projection for Claude/Codex/OpenCode/Copilot confirmed (`crates/swe-seed-core/src/adapters/`), trace/proof artifacts confirmed; no end-to-end run yet | run the M16 slice |
-| Summarized transcripts are sufficient evidence for settlement audit | Assumption | variation case: a disputed settlement audited from summary + hash alone | none | if insufficient in practice, flip the default to `full` (config change, no code change) |
+| Summarized transcripts are sufficient evidence for settlement audit | Unresolved contract decision | owner chooses a design that makes the claimed verification property true | a digest alone cannot be recomputed after its input is discarded | M13 is blocked until §7.4 is resolved |
 
 ## 6. System Overview
 
 ### 6.1 Architecture Pattern
 
-- Pattern: adapter crate + orchestrator extension over an existing governed run pipeline. Delegations are ordinary runs whose executor is an agent dialogue instead of an argv command.
-- Reason: every invariant needed (authority, concurrency, evidence, settlement, approvals, cancellation-adjacent parking) already exists for runs; reusing the run lifecycle means E14–E17 add vocabulary, not machinery.
+- Pattern: adapter crate + server-owned episode scheduler over an existing governed run pipeline. Delegations are ordinary run episodes whose executor is an agent dialogue instead of an argv command.
+- Reason: the current server semaphore caps whole CLI subprocesses and cannot cap concurrently active items inside one case. `sea-forge-server` therefore owns ready-item scheduling and holds the one existing semaphore per episode; it invokes synchronous planner/kernel services through `spawn_blocking`. The one-shot CLI reuses the same episode-dispatch service with effective concurrency one.
 - Patterns intentionally not used: actor runtime (SK), session-store-as-truth (goose), event-sourcing stack (t3code — the ledger already is one, stronger), background worker pool (server semaphore suffices).
 
 ### 6.2 Main Components
 
-1. `sea-forge-agent::provider` — the `AgentProvider` trait + `openai_compatible`/`anthropic` implementations. Inputs: instruction packet, dialogue state, endpoint config, credential ref. Outputs: typed completion/stream events, typed errors.
-2. `sea-forge-agent::acp` — ACP client driver. Inputs: endpoint config (argv or attach target), run grant (sandbox class, boundaries), approval channel. Outputs: session events, permission requests (surfaced as approvals), continuation identity, transcript.
+1. `sea-forge-agent::provider` — the `AgentProvider` trait + `openai_compatible`/`anthropic` implementations and the one-call `agent_probe` service. Inputs: typed packet, endpoint snapshot, separately authorized credential reference. Outputs: typed completion/stream events, probe evidence, typed errors.
+2. `sea-forge-agent::acp` — ACP client driver. Inputs: endpoint config (argv or attach target), run grant (sandbox class, boundaries), durable approval record. Outputs: session events, permission requests (surfaced as approvals), continuation identity, transcript.
 3. `sea-forge-agent::delegation` — executes an `agent_task` run: builds the instruction packet from PlanItem params, drives the provider/ACP loop under turn/token caps and the cancellation signal, emits `TranscriptEvidence`, returns a typed result for criteria evaluation. Never judges success itself.
-4. `sea-forge-thoth::manager` — the manager loop (E16): reads case file + ledger, produces a `ManagerIteration` decision, proposes discretionary `agent_task` items via the existing planner path. R-AA constraints enforced structurally.
+4. `sea-forge-thoth::manager` — the manager loop (E16): reads case file + ledger, applies the deterministic judgment table, and proposes catalog/template-backed discretionary `agent_task` items via the existing planner path. R-AA constraints are enforced structurally.
 
 ```mermaid
 flowchart LR
@@ -145,9 +145,11 @@ flowchart LR
 
 ### 6.3 External Dependencies
 
-- HTTP client (`reqwest` or equivalent) — E14 provider calls. Confined to `sea-forge-agent`; failure ⇒ typed `agent_endpoint_error`, run rejected.
-- ACP protocol implementation (Rust ACP crate if suitable, else a minimal client over the published schema — implementation-defined, documented at M16) — E17 sessions. Failure/disconnect ⇒ run rejected, transcript-so-far preserved.
+- HTTP client (an owner-approved, pinned implementation selected when M12 enters scope) — E14 provider calls. Confined to `sea-forge-agent`; failure ⇒ typed `agent_endpoint_error`, run rejected.
+- ACP protocol implementation (an owner-approved, pinned crate or minimal client over the published schema, selected when M16 enters scope) — E17 sessions. Failure/disconnect ⇒ run rejected, transcript-so-far preserved.
 - Child-process management (existing sandbox machinery) — spawning CLI agents under a jail-class grant. Failure ⇒ existing sandbox failure semantics.
+
+This spec selects neither package nor version. Adding a dependency, HTTP/async strategy, URL parser, secret-handling library, or ACP implementation requires a later owner approval of the exact versions and features; no such dependency belongs to M9–M11.
 
 ## 7. Core Domain Model — extensions only
 
@@ -157,14 +159,19 @@ All kernel types from prior specs are unchanged; everything here is additive und
 
 Purpose: a declared, registry-visible way to reach one agent. Used by: config loader, extension registry, authority checks, delegation executor, Thoth disclosure.
 
-- `id` (string) — stable key, `[a-z0-9_-]{1,64}`; doubles as the `endpoint_ref` grant boundary value.
+- `id` (string) — stable key, `[a-z0-9_-]{1,64}`; identifies the endpoint but is never a sufficient grant boundary by itself.
 - `kind` (enum) — `openai_compatible | anthropic | acp`.
 - `descriptor_ref` (string) — the `ExtensionDescriptor` (kind `runtime_adapter`) registered for this endpoint.
-- `base_url` (string, required for HTTP kinds) — validated absolute https/http URL. `argv` (list, required for `acp` kind) — tokenized, never shell-invoked.
+- `base_url` (string, required for HTTP kinds) — normalized absolute URL. Production endpoints require HTTPS; HTTP is permitted only for explicit loopback test/development configuration. `argv` (list, required for `acp` kind) — tokenized, validated, and never shell-invoked.
 - `credential_ref` (string or null) — name of an environment variable or secret-store key; the resolved value is `credential_bearing` and MUST never appear in records, logs, or errors.
-- `default_model` (string, optional), `transcript_retention` (enum override, optional), `status` (enum: `declared | probed | demonstrated`) — status climbs only on settled evidence, mirroring the E13 claim ladder.
+- `default_model` (string, optional), `transcript_retention` (enum override, optional), `status` (enum: `declared | probed | demonstrated`) — status is derived only from settled evidence, never asserted by config, mirroring the E13 claim ladder.
+- `descriptor_config_sha256` — hash of the canonical descriptor and executable endpoint configuration. Every exact external action binds this hash, normalized scheme/host/port/path, provider kind, model, and limits so a config reload cannot repoint an already-authorized call.
 
-### 7.2 agent_task PlanItem parameters (E15)
+### 7.2 AgentProbe (E14)
+
+`agent_probe` is a one-call diagnostic executable operation, not an `agent_task`. It uses the provider adapter but creates the ordinary intent → plan → exact authority decision → evidence → settlement chain. A schema-valid response may settle accepted; denial, credential failure, and endpoint failure leave typed evidence and no fallback. It exists in M12 so T12.1–T12.2 do not depend on M13's multi-turn delegation vocabulary.
+
+### 7.3 agent_task PlanItem parameters (E15)
 
 Purpose: what a delegation says to do. Used by: planner validation, delegation executor, criteria evaluation.
 
@@ -173,36 +180,38 @@ Purpose: what a delegation says to do. Used by: planner validation, delegation e
 - `max_turns` (integer ≥1) — required; also bounded above by the grant's `max_turns`.
 - `token_budget` (integer, optional), `response_schema` (JSON schema, optional — schema-valid final output becomes a named evidence field), `transcript_retention` (enum, optional override).
 
-### 7.3 TranscriptEvidence (E15)
+### 7.4 TranscriptEvidence (E15) — blocked retention decision
 
 Purpose: the audit record of one delegation dialogue. Used by: evidence pipeline, settlement audit, Thoth `AskEvidenceForClaim`.
 
 - `run_id`, `endpoint_ref`, `turns_used` (integer), `termination` (enum: `completed | turn_cap_exceeded | cancelled | endpoint_error | acp_disconnect`).
 - `transcript_sha256` (string) — SHA-256 of the canonical JSONL transcript (JCS-canonicalized messages, one per line), always present regardless of retention mode.
 - `summary` (string, bounded ≤ implementation-defined size) — always present; deterministic structural summary (turn count, tool calls made, final-message excerpt), not model-generated.
-- `artifact_ref` (string, only in `full` mode) — content-addressed transcript artifact path.
+- `artifact_ref` (string, in `full` mode) — content-addressed transcript artifact path.
 - `harvested_refs` (list, E17/SWE_SEED) — hashes+paths of harvested proof/trace artifacts.
 
 Redaction rule: credential values and any string matching the M0 sentinel-redaction patterns are redacted from transcript content *before* hashing and storage; the hash commits to the redacted canonical form.
 
-### 7.4 DelegationRun state (E15)
+The former summarized-mode rule retained only a summary and digest while requiring later digest recomputation. That is not verifiable. Before M13 implementation, the owner MUST select and record one of: (a) a sealed/encrypted canonical transcript retained outside the public `full` artifact surface and verified before crypto-shredding; (b) a separately verifiable commitment/proof structure; or (c) a narrower assurance claim in summarized mode that verifies ledger integrity of the recorded digest but not transcript recomputation. Until then, no implementation may claim summarized transcript hash verification or M13 completion.
 
-A delegation reuses the existing run lifecycle; additive fields on the run record: `agent_endpoint_ref`, `cancellation_requested_at` (timestamp or null), `continuation_key` (string or null, E17 — links successive episodes to one external ACP session).
+### 7.5 DelegationRun state and control (E15)
 
-### 7.5 ManagerIteration (E16)
+A delegation reuses the existing run lifecycle; additive fields on the run record: `agent_endpoint_ref`, `cancellation_requested_at` (timestamp or null), `continuation_key` (string or null, E17 — links successive episodes to one external ACP session). An append-only control request binds case, run episode, item, requester, authority decision, and ordinal. In-memory cancellation handles and approval channels are projections of that durable state. A cancellation/completion race has exactly one ledgered terminal winner; restart recovers from durable state rather than assuming a live handle exists.
+
+### 7.6 ManagerIteration (E16)
 
 Purpose: one auditable step of the Thoth manager loop. Used by: `sea-forge-thoth::manager`, ledger, escalation.
 
-- `case_id`, `iteration` (integer, 1-based), `snapshot_refs` (case-file version + ledger head consulted).
+- `case_id`, `iteration` (integer, 1-based), `snapshot_refs` (case-file version + ledger head consulted), `proposal_source_ref` (versioned catalog or case-declared template) and its hash.
 - `judgment` (enum: `satisfied | progressing | stalled | blocked`) with `rationale_claim_refs` (grounded-claim refs per E13 — the judgment must cite evidence, not narrate).
-- `action` (enum: `none | propose_item | escalate`) and `proposed_item_ref` (discretionary item id, when applicable).
+- `action` (enum: `none | propose_item | escalate`) and `proposed_item_ref` (discretionary item id, when applicable). A proposed item carries immutable `proposed_by` identity into settlement and capability-promotion checks.
 - Recorded to the ledger whether or not the proposal is granted; a denied proposal is an outcome, not an error.
 
 ## 8. Configuration and Input Contract
 
 ### 8.1 Sources and Resolution
 
-Precedence: per-plan-item params → per-endpoint config → `[agent]` section of the existing server/CLI config file → built-in defaults. Environment variables are read only through `credential_ref` indirection. Relative paths resolve against the `.sea-forge/` root. `argv` fields are tokenized argv, never shell.
+Precedence: per-plan-item params → per-endpoint config → `[agent]` section of the existing server/CLI config file → built-in defaults. Environment variables are read only through `credential_ref` indirection and only after the exact external action has been authorized; resolution separately consumes `secret_access`. Relative paths resolve against the `.sea-forge/` root. `argv` fields are tokenized argv, never shell, and ACP children receive a minimal explicit environment rather than the parent environment.
 
 ### 8.2 Required Config Fields
 
@@ -210,7 +219,7 @@ Precedence: per-plan-item params → per-endpoint config → `[agent]` section o
 |---|---|---:|---|---|
 | `agent.endpoints[].id` | string | yes | none | `[a-z0-9_-]{1,64}`, unique |
 | `agent.endpoints[].kind` | enum | yes | none | `openai_compatible \| anthropic \| acp` |
-| `agent.endpoints[].base_url` / `argv` | string / list | kind-dependent | none | absolute URL / non-empty argv; exactly the one matching `kind` |
+| `agent.endpoints[].base_url` / `argv` | string / list | kind-dependent | none | normalized HTTPS URL (or explicit loopback test URL) / non-empty validated argv; exactly the one matching `kind` |
 | `agent.endpoints[].credential_ref` | string | no | none | resolvable at preflight for HTTP kinds |
 | `agent.transcript_retention` | enum | no | `summarized` | `summarized \| full` |
 | `agent.default_max_turns` | integer | no | 16 | ≥1; per-item value may not exceed grant boundary |
@@ -226,7 +235,7 @@ Follows the server's existing reload posture: reloaded endpoint config applies t
 
 ### 8.5 Startup and Preflight
 
-Startup validates the `[agent]` section shape if present (absence is valid — installations without agent connectivity lose nothing). Per-dispatch preflight: endpoint exists and is registered, credential resolvable (HTTP kinds), grant covers `external_api` with a matching `endpoint_ref`, `max_turns` within boundary. Preflight failure parks the item with a typed error; no network I/O or spawn occurs.
+Startup validates the `[agent]` section shape if present (absence is valid — installations without agent connectivity lose nothing). Per-dispatch preflight snapshots the endpoint descriptor/config, confirms it is registered, validates destination safety, and obtains an exact `external_api` grant. It then obtains `secret_access` before resolving an HTTP credential. The action binds endpoint ID, descriptor/config hash, normalized destination, provider kind, model, limits, and credential reference. Preflight failure parks the item with a typed error; no network I/O, secret read, or spawn occurs.
 
 ### 8.6 Primary Input Contract
 
@@ -238,8 +247,8 @@ Inputs are `agent_task` plan items (validated at plan acceptance: §7.2 fields) 
 
 ```text
 plan accepted (agent_task items validated)
-  → sentry activates item → preflight + authority check (external_api, endpoint_ref, max_turns)
-  → server semaphore slot → delegation loop (provider or ACP; turns counted; cancellation polled;
+  → server-owned reducer identifies ready item → exact preflight + authority check
+  → server semaphore slot per run episode → delegation loop (provider or ACP; turns counted; cancellation polled;
      ACP permission requests → approval requests)
   → termination (completed | turn_cap_exceeded | cancelled | endpoint_error | acp_disconnect)
   → TranscriptEvidence committed (+ harvested SWE_SEED proofs, E17)
@@ -247,7 +256,7 @@ plan accepted (agent_task items validated)
   → downstream sentries fire / manager iteration observes
 ```
 
-Branches: denial ⇒ parked, zero side effects. Endpoint error mid-dialogue ⇒ transcript-so-far committed, settled rejected (`agent_endpoint_error`). Cancellation ⇒ best-effort abort (HTTP: drop request; ACP: session cancel then SIGTERM per sandbox rules), settled rejected (`cancelled`). Approval awaited (ACP permission) ⇒ existing `awaiting_approval` state, exit 5 semantics unchanged.
+Branches: denial ⇒ parked, zero side effects. Endpoint error mid-dialogue ⇒ transcript-so-far committed, settled rejected (`agent_endpoint_error`). Cancellation ⇒ durable control request, best-effort abort (HTTP: drop request; ACP: session cancel then SIGTERM per sandbox rules), then `rejected/cancelled`. ACP approval awaited creates a durable permission-request record and suspends the live session under a bounded timeout. Grant/deny returns through the approval ID when the session survives; crash/disconnect rejects the episode with partial transcript, and a later episode resumes only through a ledgered `continuation_key`.
 
 ### 9.2–9.3 States and Transitions
 
@@ -256,8 +265,8 @@ Delegations reuse the existing run state machine; the only additive terminal dis
 ### 9.4 Transition Triggers
 
 - Sentry fired — activates an `agent_task` item exactly like any other kind.
-- Cancellation requested (CLI/server op) — sets `cancellation_requested_at`; the delegation loop observes it between turns and during streaming.
-- ACP permission request — creates an approval request; grant/deny recorded; deny ⇒ the agent's action is refused inside the session (session continues; the run settles on criteria as usual).
+- Cancellation requested (CLI/server op) — appends a control request; the delegation loop observes its projected handle between turns and during streaming.
+- ACP permission request — appends a durable permission-request record; grant/deny is recorded and returned to the live session when possible; deny ⇒ the agent's action is refused inside the session (session continues; the run settles on criteria as usual).
 - Turn/token boundary reached — terminates the dialogue, `turn_cap_exceeded`.
 - Manager iteration tick — one read→judge→act cycle; never a background daemon, always an invoked, granted operation.
 
@@ -268,37 +277,40 @@ Delegations reuse the existing run state machine; the only additive terminal dis
 - ACP deny-inside-session differs from run cancellation: a denied permission leaves the session alive; only cancellation or termination ends it.
 - For SWE_SEED hosts, the *harness's* proof artifacts (not the host agent's chat) are the primary evidence; the transcript is corroboration.
 - Thoth's manager judgment `satisfied` does not settle anything — it merely stops proposing; settlement authority remains where M4a put it.
+- The manager's judgment is deterministic: completed case ⇒ satisfied; unresolved approval/required authority/terminal dependency block ⇒ blocked; active or enabled work/new settlement progress ⇒ progressing; otherwise unmet outcome ⇒ stalled. It cannot invent free-form task content.
 
 ## 10. Core Behavior Requirements
 
 ### 10.1 Authority and Isolation (E14/E15)
 
-- Every provider call and ACP session MUST execute under a grant covering `external_api` with a matching `endpoint_ref`; denial MUST prevent all network I/O and process spawn (proven by test, not by review).
+- Every provider call and ACP session MUST execute under an exact `external_api` grant; endpoint ID alone is insufficient. The grant binds endpoint descriptor/config hash, normalized scheme/host/port/path, provider kind, model, limits, and credential reference. Denial MUST prevent all network I/O and process spawn (proven by test, not by review).
+- HTTP destinations MUST reject private, loopback, link-local, multicast, and metadata-service addresses except explicit loopback test configuration; connection must be DNS-rebinding-safe. Redirects are disabled unless each target receives a new exact grant, and credentials never cross origins. Inherited proxy settings are ignored unless explicitly configured and granted.
 - The HTTP client and async executor MUST NOT appear in kernel crates; `cargo deny`-style checks (existing dependency-boundary gate mechanism) MUST enforce the crate boundary.
-- Credentials MUST be resolved at call time, held only in memory, and redacted from every persisted or logged surface.
+- Credentials MUST be resolved only after both `external_api` and `secret_access` authorization, held only in provider memory, and redacted from every persisted or logged surface. ACP children do not inherit credentials or the parent environment by default.
 
 ### 10.2 Delegation Execution (E15)
 
 - The implementation MUST count turns and enforce `max_turns`/`token_budget` inside the loop, not post-hoc.
 - The implementation MUST commit `TranscriptEvidence` for every terminated delegation, including failures and cancellations (transcript-so-far).
-- The implementation MUST dispatch parallel `agent_task` runs through the existing semaphore and MUST NOT introduce a second concurrency mechanism.
+- The server MUST dispatch parallel `agent_task` and sandboxed run episodes through the existing semaphore and MUST NOT introduce a second concurrency mechanism. The CLI has effective concurrency one.
 - The implementation MUST NOT retry a failed endpoint call against a different endpoint (no fallback).
 
 ### 10.3 Topologies and Manager Loop (E16)
 
-- Templates MUST instantiate deterministically (existing E8 determinism gate style) to plain CasePlans.
-- The manager loop MUST record a `ManagerIteration` for every cycle, cite grounded claims for its judgment, propose only through the discretionary-item path, and stop at the iteration boundary with escalation.
-- Thoth MUST NOT hold settlement authority over items it proposed; the SoD check is structural (same mechanism as E13's self-settlement bar).
+- Templates MUST instantiate deterministically to plain CasePlans. Typed list/repeat expansion has bounded cardinality and stable item IDs; rollups use explicit all-of success semantics. Sentries bind their predicate to the named source event.
+- The manager loop MUST record a `ManagerIteration` for every cycle, cite grounded claims for its judgment, propose only through the discretionary-item path from a versioned catalog or case-declared template, and stop at the iteration boundary with escalation.
+- Thoth MUST NOT hold settlement authority or capability-promotion authority over items it proposed; immutable `proposed_by` provenance makes the SoD check structural.
 
 ### 10.4 ACP Sessions (E17)
 
 - Every ACP permission request MUST map to a recorded SEA decision (approval or policy rule); an unmapped request kind MUST be denied with a typed error, never passed through.
 - Session sandbox posture MUST derive from the run's `SandboxClass`; the adapter MUST NOT accept a session-proposed escalation.
 - `continuation_key` MUST link resumed sessions to the same case lineage in the ledger.
+- ACP request-kind support is pinned to a documented protocol/schema version. Every supported kind is exercised in the fidelity sweep; unsupported or malformed kinds deny before action. Spawn/attach targets are validated, tokenized, and run under the grant's sandbox with a minimal explicit environment.
 
 ### 10.5 Completion Rules
 
-Complete only when: run settled, `TranscriptEvidence` committed and hash-verifiable, (E17) all exercised permissions have recorded decisions, (SWE_SEED) harvested proof refs resolve. Incomplete/blocked/failed whenever any of these is absent — regardless of what the agent reported.
+Complete only when: run settled, `TranscriptEvidence` committed and verified according to the selected §7.4 retention design, (E17) all exercised permissions have recorded decisions, (SWE_SEED) harvested proof refs resolve. Incomplete/blocked/failed whenever any of these is absent — regardless of what the agent reported.
 
 ## 11. Execution / Integration Contract
 
@@ -308,11 +320,11 @@ Complete only when: run settled, `TranscriptEvidence` committed and hash-verifia
 
 ## 12. Evidence, Proof, and Observability
 
-Required artifacts per delegation: `TranscriptEvidence` (always), transcript artifact (`full` mode), harvested SWE_SEED proofs (when applicable), settlement record with basis. Storage/retention: existing evidence store and ledger rules; `full` transcripts are content-addressed under `.sea-forge/artifacts/transcripts/` and subject to §7.0c crypto-shredding. Proof commands:
+Required artifacts per delegation: `TranscriptEvidence` (always), retention evidence required by the §7.4 owner decision, harvested SWE_SEED proofs (when applicable), settlement record with basis. Storage/retention follows existing evidence store and ledger rules; public `full` transcripts are content-addressed under `.sea-forge/artifacts/transcripts/` and subject to §7.0c crypto-shredding. Proof commands:
 
 ```text
 cargo test -p sea-forge-agent                         # contract, denial, redaction, cancellation suites
-sea-forge agent probe <endpoint> && sea-forge verify  # probe evidence chains + ledger verification
+sea-forge agent probe <local-test-endpoint> && sea-forge verify  # fixture-backed probe evidence chains + ledger verification
 sea-forge ledger replay --case <id>                   # reproduces parallel dispatch/settlement ordering
 ```
 
@@ -320,9 +332,9 @@ A proof passes when the gate's expected records exist, hashes verify, and replay
 
 ## 13. Repeatability and Variation Requirements
 
-Variation: (1) N=5 parallel delegations with `max_concurrent_runs`=2 — ordering replayable, cap never exceeded; (2) same template against both an HTTP endpoint and an ACP endpoint; (3) `summarized` vs `full` retention on the same delegation — identical `transcript_sha256`; (4) oversize/garbage agent output — typed rejection, no crash, no unredacted spill.
+Variation: (1) N=5 mixed sandboxed and agent run episodes with `max_concurrent_runs`=2 — server ordering replayable, cap never exceeded; (2) same template against both an HTTP endpoint and an ACP endpoint; (3) after the §7.4 choice, all retention modes on the same delegation — identical `transcript_sha256` and the selected verification property; (4) oversize/garbage agent output — typed rejection, no crash, no unredacted spill; (5) endpoint config swap, redirect, private-address/DNS-rebinding attempt, and denied secret access — zero forbidden I/O or secret read.
 
-Recovery: (1) endpoint dies mid-stream — transcript-so-far committed, rejected `agent_endpoint_error`, siblings unaffected; (2) cancel one of three parallel runs — cancelled settles `rejected/cancelled`, other two settle normally, rollup sentry behaves per its condition; (3) ACP disconnect and resume — `continuation_key` links the successor episode; (4) manager loop hits iteration cap on an unresolvable case — case parks, escalation recorded, no runaway.
+Recovery: (1) endpoint dies mid-stream — transcript-so-far committed, rejected `agent_endpoint_error`, siblings unaffected; (2) cancel one of three parallel runs — cancelled settles `rejected/cancelled`, other two settle normally, rollup sentry behaves per its condition; (3) server restart during cancellation or ACP approval — durable control/permission state yields one terminal outcome or a linked successor episode; (4) ACP disconnect and resume — `continuation_key` links the successor episode; (5) manager loop hits iteration cap on an unresolvable case — case parks, escalation recorded, no runaway.
 
 ## 14. Failure Model and Recovery Strategy
 
@@ -337,9 +349,9 @@ Phase separation: preflight failures abort with zero side effects; mid-dialogue 
 
 - Trusted: config file, authority policy, ledger, grants, approval decisions. Untrusted: everything an agent produces (messages, tool-call requests, ACP permission requests, files written in its workspace), everything SWE_SEED artifacts contain (evidence to verify, not instructions to obey).
 - Privileged operations: activating `external_api` rules, approving ACP permissions, settlement. The model/agent can request; only the fabric grants.
-- Secrets: via `credential_ref` indirection only; never logged, never in evidence, never in transcripts (redaction-before-hash, §7.3); a leaked-looking string in agent output is itself redacted by the M0 sentinel pass.
+- Secrets: via `credential_ref` indirection only; `secret_access` is authorized after the exact external action and before resolution. Values are never logged, persisted, or passed to ACP children by default; redaction precedes hashing (§7.4), including streaming chunk boundaries. A leaked-looking string in agent output is redacted by the M0 sentinel pass.
 - Prompt injection stance: the prompt is never the security boundary (inherited from E13). A hostile agent may say anything; it cannot exceed its grant, its sandbox class, or its approval decisions. Tests MUST include a hostile-transcript case (agent requests out-of-grant action; nothing happens beyond a recorded denial).
-- Thoth SoD: manager-loop proposals are attributed to Thoth's actor identity; the settlement path structurally excludes that identity for those items.
+- Thoth SoD: manager-loop proposals carry immutable `proposed_by`; settlement and promotion structurally exclude that identity, including copied or replayed proposal records.
 
 ## 16. Reference Algorithms
 
@@ -347,13 +359,18 @@ Phase separation: preflight failures abort with zero side effects; mid-dialogue 
 
 ```text
 function run_delegation(item, grant, endpoint, cancel):
-  preflight(endpoint, grant)                    # no side effects on failure
+  e = snapshot_and_validate(endpoint)           # normalized destination; SSRF/DNS/redirect policy
+  require exact_external_api(grant, e)          # ID + descriptor hash + destination + provider/model/limits/ref
+  credential = if e.is_http:
+    require_secret_access_then_resolve(grant, e.credential_ref)
+  else: none                                    # ACP has no ambient credential or inherited environment
+                                                # no network, secret read, or spawn before required decisions
   transcript = []; turns = 0
   msg = build_instruction_packet(item)
   loop:
-    if cancel.requested: return terminate(cancelled, transcript)
+    if durable_control(item.run_episode).cancel_requested: return terminate(cancelled, transcript)
     if turns >= min(item.max_turns, grant.max_turns): return terminate(turn_cap_exceeded, transcript)
-    resp = provider.complete_or_stream(endpoint, transcript + [msg])   # authority-gated call
+    resp = executor.complete_or_stream(e, credential, transcript + [msg]) # provider or ACP; exact authority-gated
     on error e: return terminate(agent_endpoint_error(e), transcript)
     transcript += [msg, resp]; turns += 1
     if resp.is_final or schema_satisfied(item.response_schema, resp): return terminate(completed, transcript)
@@ -361,7 +378,7 @@ function run_delegation(item, grant, endpoint, cancel):
 
 function terminate(reason, transcript):
   t = redact(canonicalize(transcript))
-  commit TranscriptEvidence{ sha256(t), summary(t), artifact if retention==full, reason }
+  commit TranscriptEvidence{ sha256(t), summary(t), retention_evidence(selected_retention_design, t), reason }
   return DelegationOutcome{ reason, evidence_ref }   # settlement happens downstream, on criteria
 ```
 
@@ -385,8 +402,8 @@ function manager_iterate(case_id, grant, i):
 
 | # | Test | Expected |
 |---|---|---|
-| T12.1 | `agent probe` against local stub (both API shapes) | schema-valid response, evidence committed, settled accepted |
-| T12.2 | probe without `external_api` grant | denied; instrumented stub proves zero connections opened |
+| T12.1 | `agent probe` against local stub (both API shapes) | ordinary intent → plan → exact authority → evidence → settlement chain; schema-valid response settles accepted |
+| T12.2 | probe without `external_api` grant, then with denied `secret_access` | denied; instrumented stub proves zero connections and credential fixture proves zero secret reads |
 | T12.3 | credential redaction sweep | key absent from every record, log, error, transcript |
 | T12.4 | contract fixtures (recorded request/response per shape) | pinned request shapes match byte-for-byte |
 | T12.5 | dependency boundary | HTTP client/async absent from all kernel crates (automated check) |
@@ -397,29 +414,29 @@ function manager_iterate(case_id, grant, i):
 | # | Test | Expected |
 |---|---|---|
 | T13.1 | two-item case: `agent_task` → sentry-gated `sandboxed_task` | chain settles end-to-end; downstream saw only settled evidence |
-| T13.2 | 5 parallel delegations, semaphore=2 | cap respected; ledger replay reproduces ordering |
-| T13.3 | cancel one of three in flight | cancelled ⇒ `rejected/cancelled` with partial transcript; siblings settle normally |
+| T13.2 | 5 mixed sandboxed and agent episodes, server semaphore=2 | server-owned scheduler respects one shared cap; ledger replay reproduces ordering |
+| T13.3 | cancel one of three in flight; restart during cancel or ACP approval | durable control/permission state yields exactly one terminal outcome or ledger-linked successor; siblings settle normally |
 | T13.4 | turn-cap breach | `turn_cap_exceeded`; criteria still evaluated against produced artifacts |
 | T13.5 | agent asserts success, criteria fail | settled rejected (narration has no standing) |
-| T13.6 | retention modes | same `transcript_sha256` both modes; artifact exists only in `full` |
+| T13.6 | selected retention design | same redacted canonical `transcript_sha256`; selected §7.4 verification property is demonstrated. This test cannot pass until the owner decision exists. |
 | T13.7 | hostile transcript (out-of-grant request) | recorded denial; no side effect; run continues/settles on criteria |
 
 ### 17.3 Core Conformance — M14 (E16a, topology templates)
 
 | # | Test | Expected |
 |---|---|---|
-| T14.1 | `sequential_agents@0.1.0` instantiation ×2 | deterministic identical plans; chain settles in order |
-| T14.2 | `concurrent_agents@0.1.0` with rollup | rollup milestone fires only when all N settled |
-| T14.3 | one branch rejected | rollup does not fire; case parks per sentry condition; no partial-success leak |
+| T14.1 | `sequential_agents@0.1.0` instantiation ×2 | deterministic identical plans with bounded typed expansion and stable IDs; chain settles in order |
+| T14.2 | `concurrent_agents@0.1.0` with rollup | explicit all-of rollup fires only when all N named branches settle successfully |
+| T14.3 | one branch rejected, plus an unrelated rejected settlement | rollup does not fire; a sentry accepts only its named source event; no partial-success leak |
 
 ### 17.4 Core Conformance — M15 (E16b, Thoth manager loop)
 
 | # | Test | Expected |
 |---|---|---|
-| T15.1 | stalled case, one iteration | `ManagerIteration` recorded, discretionary `agent_task` proposed and granted, runs, settles |
+| T15.1 | stalled case, one iteration | deterministic classification and `ManagerIteration` recorded; versioned-catalog/case-template discretionary `agent_task` proposed, granted, runs, settles |
 | T15.2 | proposal without authority | denied; denial recorded as the iteration's outcome; loop continues or escalates |
 | T15.3 | iteration cap reached | case parked; escalation through approvals; no further proposals |
-| T15.4 | SoD | Thoth identity structurally excluded from settling items it proposed |
+| T15.4 | SoD | immutable `proposed_by` identity structurally excluded from settling or promoting items it proposed; copied/replayed records cannot bypass it |
 | T15.5 | judgment grounding | every judgment cites resolvable claim refs; a judgment without evidence refs is rejected at record time |
 
 ### 17.5 Core Conformance — M16 (E17, ACP driver)
@@ -432,10 +449,11 @@ function manager_iterate(case_id, grant, i):
 | T16.4 | sandbox posture | session runs under the run's `SandboxClass`; escalation attempt refused |
 | T16.5 | disconnect + resume | first episode rejected with partial transcript; resumed episode linked by `continuation_key` |
 | T16.6 | SWE_SEED end-to-end | delegation to an SWE_SEED-projected host; route/proof artifacts harvested and cross-linked; `SweSeedTransport` declaration correlated to the run |
+| T16.7 | protocol/version rejection | unsupported or malformed ACP request kind is denied before action; no lossy fallback |
 
 ### 17.6 Regression (every milestone)
 
-P1–P4b and all M0–M11 gates unchanged; `cargo test --workspace` green; T12.5 dependency boundary re-run.
+P1–P4b and all M0–M11 gates unchanged; `cargo test --workspace` green; T12.5 dependency boundary and the source-owned-template check re-run.
 
 ### 17.7 Real Integration
 
@@ -445,8 +463,8 @@ Required once per release against one real hosted endpoint (operator-supplied cr
 
 | Milestone | Delivers | Depends on |
 |---|---|---|
-| M12 | E14 provider seam, `external_api` activation, `agent probe` | M0–M11 green |
-| M13 | E15 `agent_task` delegation: parallel, cancellable, transcript-evidenced | M12 |
+| M12 | E14 provider seam, `external_api` activation, `agent probe` | M0–M11 green + owner-approved dependency selection |
+| M13 | E15 `agent_task` delegation: parallel, cancellable, transcript-evidenced | M12 + selected §7.4 retention design |
 | M14 | E16a topology templates | M13 |
 | M15 | E16b Thoth manager loop | M14 + E13 (Thoth) |
 | M16 | E17 ACP driver + SWE_SEED integration | M13 (may proceed parallel to M14–M15) |
@@ -454,11 +472,11 @@ Required once per release against one real hosted endpoint (operator-supplied cr
 ## 18. Implementation Checklist / Definition of Done
 
 - [ ] `sea-forge-agent` crate exists; HTTP/async confined to it (T12.5 automated).
-- [ ] `external_api` surface activated deny-by-default with `endpoint_ref`/`max_turns`/`token_budget` boundaries.
+- [ ] `external_api` and `secret_access` surfaces activated deny-by-default with exact endpoint descriptor/config/destination/provider/model/limits/credential-reference boundaries.
 - [ ] `agent_task` kind additive; settlement bases `cancelled`/`turn_cap_exceeded`/`agent_endpoint_error` present.
-- [ ] Transcript retention flag implemented (`summarized` default, `full` content-addressed), redaction-before-hash proven.
-- [ ] Parallelism via existing semaphore only; cancellation settles, never vanishes.
-- [ ] Both topology templates deterministic; rollup gate proven.
+- [ ] Owner-selected §7.4 retention/commitment design implemented; redaction-before-hash and its claimed verification property proven. M13 remains incomplete without it.
+- [ ] Server-owned ready-item dispatch uses the existing semaphore per run episode; CLI concurrency is one; cancellation settles from durable control state, never vanishes.
+- [ ] Both source-owned topology templates install as pinned runtime copies and instantiate deterministically; source-bound sentries and all-of rollup gate proven.
 - [ ] Manager loop bounded, evidence-grounded, SoD-enforced, escalating on exhaustion.
 - [ ] ACP permission→approval mapping validated (T16.3) or scope narrowed per §0.8.
 - [ ] SWE_SEED slice green (T16.6) with proof harvest + settlement-transport correlation.
