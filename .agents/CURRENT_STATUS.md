@@ -566,6 +566,13 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
   (five digest fields + `snapshot_hash`), and canonical (jcs-nfc-v1-aligned)
   hashing. T9.1 + T9.2 green (lib 4 + conformance 2); clippy/fmt clean;
   no-async-kernel green.
+- Slice 1.4 (commit): added `build_cell_realization` — assembles a cell
+  realization from registry state, environment contracts, and evidenced probe
+  results; a missing/failed/unverifiable probe records `Unavailable` + evidence
+  ref and lists the tool under `degraded_components` (caps status, never
+  elevates, never crashes snapshot creation). No probe state is cached between
+  builds (V5). Probe *execution* stays in the CLI/server layer (slice 1.5); the
+  crate only consumes evidenced results. T9.5 + V5 green.
 
 ## Decisions
 

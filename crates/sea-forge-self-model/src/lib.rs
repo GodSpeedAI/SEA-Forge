@@ -360,6 +360,44 @@ pub fn cell_realization_sha256(c: &CellRealization) -> Result<String, ForgeError
     canonical_sha256(c)
 }
 
+/// Assemble a cell realization from registry state, environment contracts, and
+/// evidenced probe results (spec-adlc-thoth §7.2, §10.1, slice 1.4).
+///
+/// A missing, failed, or unverifiable probe records `Unavailable` (or the given
+/// result) and lists the tool under `degraded_components`. Probes NEVER elevate
+/// status and never crash snapshot creation; they only cap. Availability is not
+/// cached across snapshots: each call rebuilds solely from the `probes` evidence
+/// passed in (V5).
+pub fn build_cell_realization(
+    cell_id: &str,
+    mut active_extensions: Vec<ExtensionState>,
+    mut environments_present: Vec<String>,
+    mut probes: Vec<ToolchainProbe>,
+    mut sandbox_classes_available: Vec<String>,
+    probed_at: &str,
+) -> CellRealization {
+    let mut degraded: Vec<String> = probes
+        .iter()
+        .filter(|p| p.result != ProbeResult::Available)
+        .map(|p| p.tool.clone())
+        .collect();
+    active_extensions.sort_by(|a, b| a.descriptor_ref.cmp(&b.descriptor_ref));
+    environments_present.sort();
+    probes.sort_by(|a, b| a.tool.cmp(&b.tool));
+    sandbox_classes_available.sort();
+    degraded.sort();
+    degraded.dedup();
+    CellRealization {
+        cell_id: cell_id.to_string(),
+        active_extensions,
+        environments_present,
+        toolchain_probes: probes,
+        sandbox_classes_available,
+        degraded_components: degraded,
+        probed_at: probed_at.to_string(),
+    }
+}
+
 // ── Self-model snapshot ──────────────────────────────────────────────────────
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
