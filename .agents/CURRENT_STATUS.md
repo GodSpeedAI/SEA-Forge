@@ -548,6 +548,14 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
   (E6 hash import, 2). No global schema bump; M0–M8 records/readers unchanged.
   `cargo fmt`, clippy (`-D warnings`, 5 affected crates), workspace check, and
   affected-crate tests all green.
+- Slice 1.1 (commit): added release-owned model assets `models/seaforge-system@0.1.0.sea`
+  (canonical Genesis self-model, namespace `godspeed.seaforge.system`, 90
+  concepts) and `models/adlc-odi-case@0.1.0.sea` (from the seed, re-versioned
+  to 0.1.0, 131 concepts). Both validate through `load_validate`. Asset sha256
+  (pinned release constants for slice 1.3): system=
+  `09ead9ac9514009d60de0da18d936b82aa6a94a86db94c00dde7f3da54b77cfa`; adlc=
+  `8c891cff33fe7bb012ebb0fda6232bc8e996d5a1af47e9c5a675f2cc7a143613`; original
+  seed (spec-cited) = `2ea06fc9c59d28fac9b9d47f18c4787b2ffb740b0527513a70556cf91dcbffc5`.
 
 ## Decisions
 
