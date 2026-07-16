@@ -409,6 +409,21 @@ fn run_plan_inner(
             &approval,
             vec![],
         )?;
+        let run_dir = runs_dir.join(&run_id);
+        fs::create_dir_all(&run_dir)
+            .map_err(|error| ForgeError::io("create parked run directory", error))?;
+        write_json(&run_dir.join("plan.json"), &plan)?;
+        let mut decisions: Vec<&AuthorityDecision> = auth
+            .get(&(item_id.clone(), 1))
+            .into_iter()
+            .flatten()
+            .map(|operation| &operation.decision)
+            .collect();
+        if let Some(operation) = approval_authority.as_ref() {
+            decisions.push(&operation.decision);
+        }
+        write_json(&run_dir.join("authority.json"), &decisions)?;
+        case.run_ids.push(run_id.clone());
         if approval_authority
             .as_ref()
             .is_some_and(|operation| operation.decision.decision_id == decision_id)
@@ -659,7 +674,9 @@ fn run_plan_inner(
                             .collect::<Vec<_>>(),
                     )?;
                     write_json(&run_dir.join("settlement.json"), &settlement)?;
-                    case.run_ids.push(run_id);
+                    if !case.run_ids.contains(&run_id) {
+                        case.run_ids.push(run_id);
+                    }
                     let accepted = settlement.status == SettlementStatus::Accepted;
                     append_event(
                         &case_events,

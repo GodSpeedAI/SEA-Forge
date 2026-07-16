@@ -1221,6 +1221,66 @@ impl PolicyAuthorityEngine {
         assurance: Option<&PreActionAssurance>,
         stream: &LedgerStream,
     ) -> Result<ActionGrant, ForgeError> {
+        self.grant_after_approval_inner(
+            decision,
+            committed_decision,
+            action,
+            approval,
+            committed_approval,
+            criteria,
+            committed_criteria,
+            assurance,
+            stream,
+            false,
+        )
+    }
+
+    /// Idempotent variant for resume retries: when the approval was already
+    /// consumed by a prior grant (e.g. a parked resume that minted the grant
+    /// but could not complete the side effect), re-derive the same grant
+    /// instead of rejecting. Strict double-spend callers use
+    /// [`grant_after_approval`]; the protected side effect stays idempotent.
+    #[allow(clippy::too_many_arguments)]
+    pub fn grant_after_approval_idempotent(
+        &self,
+        decision: &AuthorityDecision,
+        committed_decision: &CommittedRecordRef,
+        action: &AuthorityAction,
+        approval: &ApprovalRequest,
+        committed_approval: &CommittedRecordRef,
+        criteria: &SettlementCriteriaRecord,
+        committed_criteria: &CommittedRecordRef,
+        assurance: Option<&PreActionAssurance>,
+        stream: &LedgerStream,
+    ) -> Result<ActionGrant, ForgeError> {
+        self.grant_after_approval_inner(
+            decision,
+            committed_decision,
+            action,
+            approval,
+            committed_approval,
+            criteria,
+            committed_criteria,
+            assurance,
+            stream,
+            true,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn grant_after_approval_inner(
+        &self,
+        decision: &AuthorityDecision,
+        committed_decision: &CommittedRecordRef,
+        action: &AuthorityAction,
+        approval: &ApprovalRequest,
+        committed_approval: &CommittedRecordRef,
+        criteria: &SettlementCriteriaRecord,
+        committed_criteria: &CommittedRecordRef,
+        assurance: Option<&PreActionAssurance>,
+        stream: &LedgerStream,
+        idempotent: bool,
+    ) -> Result<ActionGrant, ForgeError> {
         if decision.verdict != Verdict::Escalate
             || decision.normalized_disposition != NormalizedDisposition::Escalate
             || committed_decision.record_kind() != "authority_decision"
@@ -1369,25 +1429,32 @@ impl PolicyAuthorityEngine {
             "approval_id": approval.approval_id,
             "consumed_at": Utc::now().to_rfc3339(),
         });
-        stream
-            .commit_typed_new(
-                "approval_grant_consumption",
-                &consumption_key,
-                vec![decision.decision_id.clone(), approval.approval_id.clone()],
-                &consumption,
-                vec![
-                    committed_decision.entry_ulid().into(),
-                    committed_approval.entry_ulid().into(),
-                ],
-            )
-            .map_err(|error| match error {
-                ForgeError::Internal(message)
-                    if message.contains("idempotency key already committed") =>
-                {
-                    ForgeError::Input("approval resolution was already granted".into())
-                }
-                other => other,
-            })?;
+        match stream.commit_typed_new(
+            "approval_grant_consumption",
+            &consumption_key,
+            vec![decision.decision_id.clone(), approval.approval_id.clone()],
+            &consumption,
+            vec![
+                committed_decision.entry_ulid().into(),
+                committed_approval.entry_ulid().into(),
+            ],
+        ) {
+            Ok(_) => {}
+            Err(ForgeError::Internal(message))
+                if message.contains("idempotency key already committed") && idempotent =>
+            {
+                // Resume retry: a prior grant already consumed this approval;
+                // fall through and re-derive the same grant.
+            }
+            Err(ForgeError::Internal(message))
+                if message.contains("idempotency key already committed") =>
+            {
+                return Err(ForgeError::Input(
+                    "approval resolution was already granted".into(),
+                ));
+            }
+            Err(other) => return Err(other),
+        }
         // The grant window is a fresh five minutes; the approval's expiry only
         // shortens it when it still lies in the future.
         let grant_window = Utc::now() + chrono::Duration::minutes(5);

@@ -11,24 +11,28 @@ to `main` and pushed to origin first.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–15 are committed through `a09211b`. Task 16 M8
-is complete and uncommitted; its crate gate, integration gates, strict static
-checks, and minimum proofs pass.
+On branch `full-spec`. Tasks 1–15 are committed through `a09211b`. Tasks 16 M8
+and 17 closeout are complete and uncommitted; workspace tests, strict static
+checks, and minimum proofs pass after final review hardening. Context-coupled
+Devbox gates also pass after the final ledger-verification hardening.
 Accepted continuation steps 2–4 and 7–8 are implemented: approval-required
 authority remains escalated until an exact ledgered resolution is consumed;
 artifact transitions park as one canonical pending record; and approved strong
 transitions resume through SWE_SEED to exactly one manifest, declaration, and token.
 
-A code-review pass over `.tmp/cr.md` (27 findings) was applied: 13 fixed in source/tests
-(plan_item_id propagation, read/no-assurance authorization, per-episode approval sequence,
-required-role enforcement, derived_from canonicalization, resumed-token proposal-hash check,
-artifact_id path-traversal guard, attestation rebuild identity check, terminal retry
-idempotency, attestation degraded_controls binding, + 3 test fixes), 1 partial (policy
-identity_bindings + R-SO; SOD rule blocked structurally), 1 deferred (capitalize test rewrite
-applied but blocked green by 2 product defects), 10 verified already-fixed/invalid. Two
-unblocking product defects recorded in `.agents/OBSERVED_DEBT.md`: non-unique `settlement_id`
-and hardcoded approve `sequence`. The M8 artifact test suites remain partially red
-(pre-existing capitalize/approval-grant paths), unrelated to the review fixes.
+A code-review pass over `.tmp/cr.md` (27 findings) was applied: 14 fixed in
+source/tests (plan_item_id propagation, read/no-assurance authorization, per-episode
+approval sequence, required-role enforcement, derived_from canonicalization,
+resumed-token proposal-hash check, artifact_id path-traversal guard, attestation rebuild
+identity check, terminal retry idempotency, attestation degraded_controls binding, governed
+capitalize seeding, + 4 conformance-test fixes), 1 partial (policy identity_bindings + R-SO;
+transition SOD rule blocked structurally — SodRule can't scope to transition_kind), 10
+verified already-fixed/invalid. Pre-existing M8 CI debt was also cleared to green the gate:
+settlement_id is now unique per run, the approve-resolution sequence is derived from the
+case-ledger decision count, the capitalize double-grant in the artifact-ip test helpers was
+removed, and resume-retry approval grants are idempotent via grant_after_approval_idempotent
+(strict double-spend rejection preserved). The workspace is CI-green (fmt + clippy +
+289 tests). Remaining open debt: SodRule transition_kind scoping (.agents/OBSERVED_DEBT.md).
 
 ## Changed Files
 
@@ -51,6 +55,9 @@ and hardcoded approve `sequence`. The M8 artifact test suites remain partially r
   `legacy_import` files against recorded sha256/size.
 - `crates/sea-forge-cli/tests/conformance_m0_migrate.rs` — M0 migration gate tests.
 - `Cargo.toml` — added 10 new kernel crate members to workspace.
+- Task 17: `sea-forge-core/tests/version_skew.rs`; CLI `runs --unsettled`,
+  parked-run durability/resume reuse, CEP fixture and produced-envelope check;
+  final witnessed envelope checkpoint; §18 evidence links and status/debt updates.
 - `crates/sea-forge-artifact-ip/src/lib.rs` — M8 registration, transition,
   projection rebuild, strict caller proposal, pending/terminal/claim-manifest
   records, and exact typed authority/approval resolution.
@@ -357,10 +364,38 @@ and hardcoded approve `sequence`. The M8 artifact test suites remain partially r
   unresolved exact pending approval into one ledgered `expired` resolution before
   terminalizing the matching transition (exit 4, no token). Hostile replay
   coverage confirms terminal/no-token behavior and ledger idempotence.
+- Task 17 Definition-of-Done sweep: additive v0.2 fields are deserialized by
+  exact v0.1 reader snapshots from actual current record serialization; `just ci`
+  retains the no-Tokio kernel check; produced semantic envelopes are checked
+  against the copied CEP-0008 fixture with the divergence recorded as debt;
+  `runs --unsettled` reports run IDs lacking settlement; approval-parked runs
+  persist plan/authority snapshots and resume into the same run; required-integrity
+  runs append a final signed/witnessed checkpoint covering the semantic envelope.
+- Task 17 crash-recovery drill (2026-07-16): submitted real case
+  `case_20260716T175502Z_dcd297` through `sea-forge-server`, reaching approval hold
+  for `run_20260716T175502Z_5e7bcc`; terminated the server; verified the run kept
+  `plan.json` and `authority.json`; restarted the server and verified status was
+  absent from volatile memory (no auto-resume); `sea-forge runs --unsettled`
+  discovered the persisted run; explicit security-officer approval plus
+  `sea-forge resume` completed the same run with accepted settlement.
+- Task 17 substrate reconciliation: inspected and reused existing serde record
+  types, case files, ledger records, approval/resume path, integrity checkpoint
+  writer, CI recipe, and milestone conformance suites. Extended only the CLI
+  read path and parked/final checkpoint persistence; added compatibility and CEP
+  checks plus the copied schema. Deliberately added no database, recovery daemon,
+  second run store, JSON-schema dependency, or alternate envelope format.
+- Task 17 final review hardening: generic resume now derives approval status,
+  run identity, and criteria binding from unique case-ledger request/resolution
+  records rather than `approvals.jsonl`; `runs --unsettled` requires a parseable
+  settlement matching the run; value-source settlement lookup matches both
+  `set_01` and run ID; compatibility tests use exact v0.1 minimum-record and
+  authority shapes against actual current serialization.
+- Generic resume verifies the case ledger hash chain before consuming approval
+  truth; a hostile edited approval-resolution payload now fails closed.
 
 ## Remaining
 
-- Complete Task 17 §18 DoD sweep.
+- Commit Tasks 16–17 when requested.
 - Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
   once the log-file reset is no longer a safety-net concern.
 
@@ -424,10 +459,23 @@ and hardcoded approve `sequence`. The M8 artifact test suites remain partially r
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`,
   `cargo fmt --all -- --check`, and `git diff --check`: passed.
 - Final requested `just proof` was run once: P1–P4b passed.
+- Task 17 full gate through the context check: `cargo fmt --all -- --check`,
+  strict workspace clippy, workspace all-feature tests, and `just proof` passed;
+  `devbox run -- just check` then stopped only because this status update was due.
+- After the status refresh, `devbox run -- just context-check`,
+  `devbox run -- just check`, and `devbox run -- just test` all passed.
+- After final review hardening, formatting, strict workspace clippy, workspace
+  all-feature tests, and `just proof` passed again.
+- Final `devbox run -- just context-check`, `devbox run -- just check`, and
+  `devbox run -- just test` passed after review hardening.
+- After ledger-verification hardening, formatting, strict workspace clippy,
+  workspace all-feature tests, and `just proof` passed again.
+- Final `devbox run -- just context-check`, `devbox run -- just check`, and
+  `devbox run -- just test` passed after ledger-verification hardening.
 
 ## Blockers
 
-- None for Task 16.
+- None for Tasks 16–17.
 
 ## Decisions
 

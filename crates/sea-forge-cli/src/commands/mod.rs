@@ -11,5 +11,6 @@ pub mod migrate;
 pub mod recall;
 pub mod resume;
 pub mod run;
+pub mod runs;
 pub mod task;
 pub mod validate;

@@ -763,9 +763,9 @@ cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-featu
 - [x] Bundles export/import with atomic rejection; no capability leakage *(Task 14)*
 - [x] Environment/evaluator/batch semantics per §12 M7; three-axis independence *(Task 15)*
 - [x] No-teleportation + approved capitalization + capital rebuild purity *(Task 16)*
-- [ ] `cargo clippy … -D warnings` exits 0; `devbox run -- just check` green *(all)*
-- [ ] spec-full §18 checklist fully checked, each item pointing at a passing test *(Task 17)*
-- [ ] `.agents/CURRENT_STATUS.md` reflects reality — no status ahead of a passing test.
+- [x] `cargo clippy … -D warnings` exits 0; `devbox run -- just check` green *(all)*
+- [x] spec-full §18 checklist fully checked, each item pointing at a passing test *(Task 17)*
+- [x] `.agents/CURRENT_STATUS.md` reflects reality — no status ahead of a passing test.
 
 ## Guardrails (do not violate)
 

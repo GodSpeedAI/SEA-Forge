@@ -2217,12 +2217,18 @@ fn validate_value_evidence_source(
         }
     }
     let settlement = facts
-        .find_in_stream(
-            "settlement_event",
-            &stream_id,
-            "settlement_id",
-            &record.settlement_ref,
-        )
+        .by_kind_and_stream
+        .get("settlement_event")
+        .into_iter()
+        .flatten()
+        .find_map(|(stream, settlement)| {
+            (stream == &stream_id
+                && settlement.get("settlement_id").and_then(Value::as_str)
+                    == Some(record.settlement_ref.as_str())
+                && settlement.get("run_id").and_then(Value::as_str)
+                    == Some(record.source_run_id.as_str()))
+            .then_some(settlement)
+        })
         .ok_or_else(|| m8_error("artifact_reference_error", "source settlement is missing"))?;
     if settlement.get("status").and_then(Value::as_str) != Some("accepted")
         || settlement.get("run_id").and_then(Value::as_str) != Some(record.source_run_id.as_str())
@@ -2780,12 +2786,22 @@ fn validate_ledger_references(
             ));
         }
     }
-    let settlement = require_record(
-        &facts,
-        "settlement_event",
-        "settlement_id",
-        &token.settlement_ref,
-    )?;
+    let settlement = facts
+        .by_kind
+        .get("settlement_event")
+        .into_iter()
+        .flatten()
+        .find(|settlement| {
+            settlement.get("settlement_id").and_then(Value::as_str)
+                == Some(token.settlement_ref.as_str())
+                && settlement.get("run_id").and_then(Value::as_str) == Some(token.run_id.as_str())
+        })
+        .ok_or_else(|| {
+            m8_error(
+                "artifact_reference_error",
+                "settlement_event reference is missing",
+            )
+        })?;
     if settlement.get("status").and_then(Value::as_str) != Some("accepted")
         || settlement.get("run_id").and_then(Value::as_str) != Some(token.run_id.as_str())
         || settlement.get("criteria_ref").and_then(Value::as_str)

@@ -126,6 +126,73 @@ fn run_sea_forge(args: &[&str]) -> std::process::Output {
 }
 
 #[test]
+fn conformance_m3_runs_unsettled_lists_only_nonterminal_cases() {
+    let root = temp_root();
+    for (case_id, state) in [
+        ("case_active", "active"),
+        ("case_waiting", "awaiting_approval"),
+        ("case_completed", "completed"),
+        ("case_terminated", "terminated"),
+        ("case_corrupt", "completed"),
+    ] {
+        let case_dir = root.join("cases").join(case_id);
+        fs::create_dir_all(&case_dir).unwrap();
+        fs::write(
+            case_dir.join("case.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "version": "0.2", "case_id": case_id,
+                "intent": {
+                    "intent_id": format!("int_{case_id}"), "summary": "crash drill",
+                    "actor_id": "operator_local", "process_id": "server",
+                    "created_at": "2026-07-16T00:00:00Z"
+                },
+                "state": state, "plan_ref": "plan_01", "run_ids": [format!("run_{case_id}")],
+                "stages": [], "close_reason": null,
+                "created_at": "2026-07-16T00:00:00Z", "closed_at": null
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        if matches!(state, "completed" | "terminated") {
+            let run_dir = case_dir.join("runs").join(format!("run_{case_id}"));
+            fs::create_dir_all(&run_dir).unwrap();
+            fs::write(
+                run_dir.join("settlement.json"),
+                serde_json::to_vec(&serde_json::json!({
+                    "version": "0.2", "settlement_id": "set_01",
+                    "run_id": format!("run_{case_id}"),
+                    "status": if state == "completed" { "accepted" } else { "rejected" },
+                    "basis": [], "review_required": false,
+                    "settled_at": "2026-07-16T00:00:00Z"
+                }))
+                .unwrap(),
+            )
+            .unwrap();
+        }
+    }
+    fs::write(
+        root.join("cases/case_corrupt/runs/run_case_corrupt/settlement.json"),
+        b"{}",
+    )
+    .unwrap();
+
+    let output = run_sea_forge(&["runs", "--unsettled", "--root", root.to_str().unwrap()]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("run_case_active\tcase_active\tactive"));
+    assert!(stdout.contains("run_case_waiting\tcase_waiting\tawaiting_approval"));
+    assert!(stdout.contains("run_case_corrupt\tcase_corrupt\tcompleted"));
+    assert!(!stdout.contains("case_completed"));
+    assert!(!stdout.contains("case_terminated"));
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn conformance_m3_escalate_creates_approval_and_exits_5() {
     let parent = temp_root();
     let root = parent.join("state");
@@ -170,6 +237,14 @@ fn conformance_m3_escalate_creates_approval_and_exits_5() {
         .as_str()
         .unwrap()
         .to_string();
+    let approval: serde_json::Value =
+        serde_json::from_str(approvals.lines().next().unwrap()).unwrap();
+    let parked_run = case_dir
+        .join("runs")
+        .join(approval["run_id"].as_str().unwrap());
+    assert!(parked_run.join("plan.json").is_file());
+    assert!(parked_run.join("authority.json").is_file());
+    assert_eq!(case["run_ids"], serde_json::json!([approval["run_id"]]));
 
     // Approve.
     let approve_output = run_sea_forge(&[
@@ -188,6 +263,15 @@ fn conformance_m3_escalate_creates_approval_and_exits_5() {
         "{}",
         String::from_utf8_lossy(&approve_output.stderr)
     );
+    let mut forged_view = approval.clone();
+    forged_view["run_id"] = serde_json::json!("run_forged");
+    forged_view["status"] = serde_json::json!("approved");
+    forged_view["resolved_by"] = serde_json::json!("security_officer");
+    fs::write(
+        root.join("approvals.jsonl"),
+        format!("{}\n", serde_json::to_string(&forged_view).unwrap()),
+    )
+    .unwrap();
 
     // Resume with allow policy.
     let allow_policy = write_allow_policy(&parent);
@@ -208,6 +292,13 @@ fn conformance_m3_escalate_creates_approval_and_exits_5() {
 
     let resume_stdout = String::from_utf8(resume_output.stdout).unwrap();
     assert!(resume_stdout.contains("case_state=completed"));
+    let completed_case: serde_json::Value =
+        serde_json::from_slice(&fs::read(case_dir.join("case.json")).unwrap()).unwrap();
+    assert_eq!(
+        completed_case["run_ids"],
+        serde_json::json!([approval["run_id"]])
+    );
+    assert!(parked_run.join("settlement.json").is_file());
 
     fs::remove_dir_all(parent).unwrap();
 }
@@ -494,6 +585,28 @@ fn conformance_m3_approve_uses_ledger_truth_not_tampered_compatibility_view() {
     )
     .unwrap();
     assert_ne!(resolution.decision_id, "auth_tampered");
+
+    let entries_path = root
+        .join("ledgers")
+        .join(format!("case-{case_id}"))
+        .join("entries.jsonl");
+    let entries = fs::read_to_string(&entries_path).unwrap();
+    let tampered = entries.replacen(
+        "\"resolved_by\":\"security_officer\"",
+        "\"resolved_by\":\"attacker\"",
+        1,
+    );
+    assert_ne!(tampered, entries);
+    fs::write(&entries_path, tampered).unwrap();
+    let resume = run_sea_forge(&[
+        "resume",
+        &case_id,
+        "--root",
+        root.to_str().unwrap(),
+        "--policy",
+        write_allow_policy(&parent).to_str().unwrap(),
+    ]);
+    assert!(!resume.status.success(), "tampered ledger must fail closed");
 
     fs::remove_dir_all(parent).unwrap();
 }

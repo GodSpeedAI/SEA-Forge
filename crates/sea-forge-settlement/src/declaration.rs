@@ -363,7 +363,7 @@ impl SweSeedTransport for CommandSweSeedTransport {
             }
             thread::sleep(Duration::from_millis(10));
         }
-        let _ = stdin_writer
+        stdin_writer
             .join()
             .map_err(|_| settlement_authority_unavailable("SWE_SEED stdin writer failed"))?
             .map_err(settlement_authority_unavailable)?;

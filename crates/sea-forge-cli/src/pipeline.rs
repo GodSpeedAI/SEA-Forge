@@ -770,6 +770,30 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             &envelope,
             vec![],
         )?;
+        if policy_snapshot.integrity_ledger.required_for_side_effects {
+            let integrity = &policy_snapshot.integrity_ledger;
+            let key_dir = integrity.signing_key_dir.as_deref().ok_or_else(|| {
+                ForgeError::Internal("ledger_integrity_error: signing_key_dir is required".into())
+            })?;
+            LedgerManager::new(&root)?.create_pre_action_assurance(
+                key_dir,
+                &integrity.signing_key_id,
+                &intent.actor_id,
+                &integrity
+                    .witnesses
+                    .iter()
+                    .map(|witness| {
+                        (
+                            witness.witness_id.clone(),
+                            witness.key_dir.clone(),
+                            witness.key_id.clone(),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+                integrity.min_witnesses,
+                &[&committed_envelope],
+            )?;
+        }
         authority_stream.materialize_view(
             &committed_envelope,
             &run_dir.join("semantic-envelope.json"),

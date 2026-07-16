@@ -39,6 +39,12 @@ enum Command {
         #[arg(long, default_value = "cli")]
         process: String,
     },
+    Runs {
+        #[arg(long)]
+        unsettled: bool,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+    },
     #[command(hide = true)]
     Validate {
         file: PathBuf,
@@ -566,6 +572,9 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             outcome.exit_code
         })
         .map_err(|e| (1, e)),
+        Command::Runs { unsettled, root } => {
+            commands::runs::list(&root, unsettled).map_err(|e| (1, e))
+        }
         Command::Memory { action, root } => match action {
             MemoryCommand::Rebuild => commands::memory::rebuild(&root)
                 .map(|_| 0)
