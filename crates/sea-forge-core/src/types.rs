@@ -1005,6 +1005,13 @@ pub enum ProjectionKind {
     MemoryIndex,
     CapitalRecord,
     ImplementationDefined,
+    // M9 (E11) self-model projections. Appended so existing variants' Ord ranks
+    // are unchanged. Persisted ONLY under the `self_model_projection` ledger
+    // record_kind and `.sea-forge/self-model/`; old readers filter on
+    // record_kind and never deserialize these variants. See
+    // tests/projection_kind_boundary.rs for the isolation proof.
+    Kg,
+    SelfModelSnapshot,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

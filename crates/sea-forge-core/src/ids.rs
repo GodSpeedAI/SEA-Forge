@@ -32,6 +32,10 @@ pub fn run_id() -> Result<String, ForgeError> {
 pub fn case_id() -> Result<String, ForgeError> {
     timestamped("case")
 }
+/// `smsnap_<timestamp>_<6hex>` — self-model snapshot identifier (spec-adlc-thoth §7.6).
+pub fn snapshot_id() -> Result<String, ForgeError> {
+    timestamped("smsnap")
+}
 pub fn random_id(prefix: &str) -> Result<String, ForgeError> {
     Ok(format!("{prefix}_{}", random_hex()?))
 }
