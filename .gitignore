@@ -20,6 +20,9 @@
 # Understand-Anything knowledge graph (rebuildable projection; regenerate via the understand skill)
 /.ua/
 
+# opencode local session/config state (transient agent runtime)
+/.omc/
+
 # Local secret artifacts: only *.enc.env may be tracked under secrets/
 /secrets/*.env
 !/secrets/*.enc.env
