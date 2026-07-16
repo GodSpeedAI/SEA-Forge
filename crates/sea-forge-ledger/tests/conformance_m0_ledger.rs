@@ -4,7 +4,9 @@ use sea_forge_ledger::{AssuranceLevel, LedgerManager};
 use sha2::Digest;
 use std::collections::HashSet;
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Barrier};
 use tempfile::tempdir;
 
 fn append_mixed_records(
@@ -100,6 +102,146 @@ fn build_tree(leaves: &[String]) -> Vec<Vec<String>> {
         levels.push(next);
     }
     levels
+}
+
+#[test]
+fn commit_typed_once_returns_existing_record_for_same_payload() {
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "once_same", "writer_01").unwrap();
+    let payload = serde_json::json!({"case_id": "case_01", "state": "pending"});
+
+    let first = stream
+        .commit_typed_once(
+            "pending_transition",
+            "transition_01",
+            vec!["case_01".into()],
+            &payload,
+            vec!["decision_01".into()],
+        )
+        .unwrap();
+    let second = stream
+        .commit_typed_once(
+            "pending_transition",
+            "transition_01",
+            vec!["case_01".into()],
+            &payload,
+            vec!["decision_01".into()],
+        )
+        .unwrap();
+
+    assert_eq!(first, second);
+    let entries = stream.read_entries().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].idempotency_key.as_deref(), Some("transition_01"));
+}
+
+#[test]
+fn commit_typed_once_rejects_conflicting_payload() {
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "once_conflict", "writer_01").unwrap();
+    stream
+        .commit_typed_once(
+            "pending_transition",
+            "transition_01",
+            vec!["case_01".into()],
+            &serde_json::json!({"state": "pending"}),
+            vec![],
+        )
+        .unwrap();
+
+    let error = stream
+        .commit_typed_once(
+            "pending_transition",
+            "transition_01",
+            vec!["case_01".into()],
+            &serde_json::json!({"state": "accepted"}),
+            vec![],
+        )
+        .unwrap_err();
+
+    assert!(error.to_string().contains("ledger_integrity_error"));
+    assert_eq!(stream.read_entries().unwrap().len(), 1);
+}
+
+#[test]
+fn concurrent_commit_typed_once_appends_one_entry() {
+    let tmp = tempdir().unwrap();
+    let root = tmp.path().to_path_buf();
+    let barrier = Arc::new(Barrier::new(8));
+    let mut callers = Vec::new();
+    for _ in 0..8 {
+        let root = root.clone();
+        let barrier = Arc::clone(&barrier);
+        callers.push(std::thread::spawn(move || {
+            let stream = LedgerStream::open(&root, "once_concurrent", "writer_01").unwrap();
+            barrier.wait();
+            stream
+                .commit_typed_once(
+                    "pending_transition",
+                    "transition_01",
+                    vec!["case_01".into()],
+                    &serde_json::json!({"state": "pending"}),
+                    vec!["decision_01".into()],
+                )
+                .unwrap()
+        }));
+    }
+
+    let committed: Vec<_> = callers
+        .into_iter()
+        .map(|caller| caller.join().unwrap())
+        .collect();
+    assert!(committed.iter().all(|item| item == &committed[0]));
+    let stream = LedgerStream::open(&root, "once_concurrent", "writer_01").unwrap();
+    assert_eq!(stream.read_entries().unwrap().len(), 1);
+    stream.verify().unwrap();
+}
+
+#[test]
+fn concurrent_processes_commit_typed_once_append_one_entry() {
+    const CHILD_ROOT: &str = "SEA_FORGE_LEDGER_ONCE_CHILD_ROOT";
+    if let Some(root) = std::env::var_os(CHILD_ROOT) {
+        let mut start = [0];
+        std::io::stdin().read_exact(&mut start).unwrap();
+        LedgerStream::open(std::path::Path::new(&root), "once_process", "writer_01")
+            .unwrap()
+            .commit_typed_once(
+                "pending_transition",
+                "transition_01",
+                vec!["case_01".into()],
+                &serde_json::json!({"state": "pending"}),
+                vec!["decision_01".into()],
+            )
+            .unwrap();
+        return;
+    }
+
+    let tmp = tempdir().unwrap();
+    let executable = std::env::current_exe().unwrap();
+    let mut children: Vec<_> = (0..4)
+        .map(|_| {
+            Command::new(&executable)
+                .args([
+                    "--exact",
+                    "concurrent_processes_commit_typed_once_append_one_entry",
+                ])
+                .env(CHILD_ROOT, tmp.path())
+                .stdin(Stdio::piped())
+                .stdout(Stdio::null())
+                .spawn()
+                .unwrap()
+        })
+        .collect();
+    for child in &mut children {
+        child.stdin.take().unwrap().write_all(&[1]).unwrap();
+    }
+    for mut child in children {
+        assert!(child.wait().unwrap().success());
+    }
+
+    let stream = LedgerStream::open(tmp.path(), "once_process", "writer_01").unwrap();
+    assert_eq!(stream.read_entries().unwrap().len(), 1);
+    stream.verify().unwrap();
 }
 
 #[test]

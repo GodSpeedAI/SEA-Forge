@@ -19,6 +19,54 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub(crate) fn load_item_environment(
+    root: &Path,
+    item: &PlanItem,
+) -> Result<Option<sandbox::environment::EnvironmentSpec>, ForgeError> {
+    item.environment
+        .as_deref()
+        .map(|reference| sandbox::environment::load_pinned_environment(root, reference))
+        .transpose()
+}
+
+pub(crate) fn resolve_item_evaluator(
+    item: &PlanItem,
+    environment: Option<&sandbox::environment::EnvironmentSpec>,
+) -> Result<Option<(String, sandbox::environment::Evaluator)>, ForgeError> {
+    item.settlement_criteria
+        .evaluator
+        .as_deref()
+        .map(|reference| {
+            let (environment_ref, evaluator_name) =
+                reference.rsplit_once('.').ok_or_else(|| {
+                    ForgeError::Input(format!("invalid evaluator reference {reference}"))
+                })?;
+            if item.environment.as_deref() != Some(environment_ref) {
+                return Err(ForgeError::Config {
+                    class: "environment_unavailable",
+                    path: PathBuf::new(),
+                    message: format!("evaluator {reference} is outside item environment"),
+                });
+            }
+            let evaluator = environment
+                .ok_or_else(|| ForgeError::Config {
+                    class: "environment_unavailable",
+                    path: PathBuf::new(),
+                    message: format!("environment {environment_ref} was not loaded"),
+                })?
+                .evaluators
+                .get(evaluator_name)
+                .cloned()
+                .ok_or_else(|| ForgeError::Config {
+                    class: "environment_unavailable",
+                    path: PathBuf::new(),
+                    message: format!("evaluator {reference} not declared"),
+                })?;
+            Ok((reference.to_owned(), evaluator))
+        })
+        .transpose()
+}
+
 #[derive(Clone, Debug)]
 pub struct RunOptions {
     pub intent: String,
@@ -315,11 +363,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         let engine = PolicyAuthorityEngine::new(bundle)?;
         engine.load_opaque_constraints(load_opaque_constraints(&root)?)?;
         // Load environment spec if the item declares one (§7.6).
-        let env_spec = item
-            .environment
-            .as_deref()
-            .map(|r| sandbox::environment::load_pinned_environment(&root, r))
-            .transpose()?;
+        let env_spec = load_item_environment(&root, item)?;
         if let Some(ref spec) = env_spec {
             sandbox::environment::materialize_base(spec, &workspace)?;
         }
@@ -327,38 +371,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             let r = item.environment.as_deref().unwrap_or("");
             (r, spec.provides.commands.as_slice())
         });
-        let evaluator = item
-            .settlement_criteria
-            .evaluator
-            .as_deref()
-            .map(|reference| {
-                let (env_ref, evaluator_name) = reference.rsplit_once('.').ok_or_else(|| {
-                    ForgeError::Input(format!("invalid evaluator reference {reference}"))
-                })?;
-                if item.environment.as_deref() != Some(env_ref) {
-                    return Err(ForgeError::Config {
-                        class: "environment_unavailable",
-                        path: std::path::PathBuf::new(),
-                        message: format!("evaluator {reference} is outside item environment"),
-                    });
-                }
-                let spec = env_spec.as_ref().ok_or_else(|| ForgeError::Config {
-                    class: "environment_unavailable",
-                    path: std::path::PathBuf::new(),
-                    message: format!("environment {env_ref} was not loaded"),
-                })?;
-                let evaluator = spec
-                    .evaluators
-                    .get(evaluator_name)
-                    .cloned()
-                    .ok_or_else(|| ForgeError::Config {
-                        class: "environment_unavailable",
-                        path: std::path::PathBuf::new(),
-                        message: format!("evaluator {reference} not declared"),
-                    })?;
-                Ok((reference.to_owned(), evaluator))
-            })
-            .transpose()?;
+        let evaluator = resolve_item_evaluator(item, env_spec.as_ref())?;
         let mut operations = item.operations.clone();
         let evaluator_index = evaluator.as_ref().map(|(_, evaluator)| {
             let sandbox::environment::Evaluator::Command { argv, .. } = evaluator;
@@ -708,6 +721,19 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             batch: batch_result,
         };
         let settled = settlement::settle(&claim, &workspace, &run_dir)?;
+        authority_stream.commit_typed(
+            "settlement_event",
+            vec![
+                case_id.clone(),
+                run_id.clone(),
+                settled.settlement_id.clone(),
+            ],
+            &settled,
+            decisions
+                .iter()
+                .map(|decision| decision.decision_id.clone())
+                .collect(),
+        )?;
         write_json(&run_dir.join("settlement.json"), &settled)?;
         trace.append(
             TraceKind::SettlementRecorded,

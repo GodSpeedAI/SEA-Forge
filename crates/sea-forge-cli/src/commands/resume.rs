@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids, types::*};
 use sea_forge_ledger::LedgerStream;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::PathBuf;
@@ -48,6 +48,55 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
         &fs::read(case_dir.join("case.json")).map_err(|e| ForgeError::io("read case.json", e))?,
     )
     .map_err(|e| ForgeError::Serialization(format!("parse case.json: {e}")))?;
+
+    if let Some(completed) =
+        sea_forge_artifact_ip::load_completed_transition(&root, &options.entity, &options.case_id)?
+    {
+        let mut case = case;
+        case.state = CaseState::Completed;
+        case.closed_at
+            .get_or_insert_with(|| Utc::now().to_rfc3339());
+        write_json(&case_dir.join("case.json"), &case)?;
+        println!("declaration_id={}", completed.declaration.declaration_id);
+        println!(
+            "transition_token_id={}",
+            completed.token.transition_token_id
+        );
+        return Ok(ResumeOutcome {
+            case_id: options.case_id,
+            state: "completed",
+            exit_code: 0,
+        });
+    }
+    if sea_forge_artifact_ip::load_transition_terminal(&root, &options.entity, &options.case_id)?
+        .is_some()
+    {
+        let mut case = case;
+        case.state = CaseState::Terminated;
+        case.close_reason = Some("artifact_transition_terminal".into());
+        case.closed_at
+            .get_or_insert_with(|| Utc::now().to_rfc3339());
+        write_json(&case_dir.join("case.json"), &case)?;
+        return Ok(ResumeOutcome {
+            case_id: options.case_id,
+            state: "terminated",
+            exit_code: 4,
+        });
+    }
+    let case_stream =
+        LedgerStream::open(&root, format!("case-{}", options.case_id), &options.entity)?;
+    if case_stream
+        .read_entries()?
+        .iter()
+        .any(|entry| entry.record_kind == "pending_artifact_transition")
+    {
+        let pending = sea_forge_artifact_ip::load_pending_transition(
+            &root,
+            &options.entity,
+            &options.case_id,
+        )?;
+        return resume_artifact_transition(options, root, case_dir, case, pending);
+    }
 
     if case.state != CaseState::AwaitingApproval {
         return Err(ForgeError::Input(format!(
@@ -452,4 +501,497 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
             }
         }
     }
+}
+
+fn resume_artifact_transition(
+    options: ResumeOptions,
+    root: PathBuf,
+    case_dir: PathBuf,
+    mut case: Case,
+    pending: sea_forge_artifact_ip::PendingArtifactTransition,
+) -> Result<ResumeOutcome, ForgeError> {
+    let stream = LedgerStream::open(&root, format!("case-{}", options.case_id), &options.entity)?;
+    stream.verify()?;
+    let mut entries = stream.read_entries()?;
+    let mut resolutions = entries
+        .iter()
+        .filter(|entry| {
+            entry.record_kind == "approval_resolution"
+                && entry.payload.get("approval_id").and_then(Value::as_str)
+                    == Some(pending.approval_ref.as_str())
+        })
+        .collect::<Vec<_>>();
+    if resolutions.is_empty() {
+        let request_entry = unique_entry(
+            &entries,
+            "approval_request",
+            "approval_id",
+            &pending.approval_ref,
+        )?;
+        let request: ApprovalRequest = serde_json::from_value(request_entry.payload.clone())?;
+        approval_binds_pending(&request, &pending)?;
+        let expires_at = chrono::DateTime::parse_from_rfc3339(&request.expires_at)
+            .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?
+            .with_timezone(&Utc);
+        if request.status != ApprovalStatus::Pending || Utc::now() < expires_at {
+            return Ok(ResumeOutcome {
+                case_id: options.case_id,
+                state: "awaiting_approval",
+                exit_code: 5,
+            });
+        }
+        let expired = ApprovalRequest {
+            status: ApprovalStatus::Expired,
+            resolved_by: None,
+            resolved_at: Some(Utc::now().to_rfc3339()),
+            note: Some("ttl_expired".into()),
+            ..request
+        };
+        stream.commit_typed_once(
+            "approval_resolution",
+            &expired.approval_id,
+            vec![pending.case_id.clone(), expired.approval_id.clone()],
+            &expired,
+            vec![expired.decision_id.clone()],
+        )?;
+        approvals::append(&root, &expired)?;
+        entries = stream.read_entries()?;
+        resolutions = entries
+            .iter()
+            .filter(|entry| {
+                entry.record_kind == "approval_resolution"
+                    && entry.payload.get("approval_id").and_then(Value::as_str)
+                        == Some(pending.approval_ref.as_str())
+            })
+            .collect();
+    }
+    if resolutions.len() != 1 {
+        return Err(ForgeError::Internal(
+            "ledger_integrity_error: conflicting approval resolutions".into(),
+        ));
+    }
+    let resolution_entry = resolutions[0];
+    let approval: ApprovalRequest = serde_json::from_value(resolution_entry.payload.clone())?;
+    // Resume validates exact approval binding for ALL statuses before
+    // terminalizing: a detached rejected/expired resolution from another
+    // transition cannot affect this pending one.
+    let approval_expires = chrono::DateTime::parse_from_rfc3339(&approval.expires_at)
+        .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?
+        .with_timezone(&Utc);
+    let approval_resolved_after_expiry = approval
+        .resolved_at
+        .as_deref()
+        .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+        .map(|resolved| resolved.with_timezone(&Utc) > approval_expires)
+        .unwrap_or(false);
+    approval_binds_pending(&approval, &pending)?;
+    // An approval resolved Approved before expires_at remains valid after wall
+    // clock TTL; expiry only applies to unresolved pending or resolved_at
+    // after expiry. Rejected/expired resolutions are terminal regardless.
+    let terminal_for_expiry = approval.status == ApprovalStatus::Expired
+        || (approval.status != ApprovalStatus::Approved && Utc::now() > approval_expires)
+        || approval_resolved_after_expiry;
+    if approval.status == ApprovalStatus::Rejected || terminal_for_expiry {
+        let (status, reason, close_reason) = if approval.status == ApprovalStatus::Rejected {
+            (
+                sea_forge_artifact_ip::ArtifactTransitionTerminalStatus::Rejected,
+                sea_forge_artifact_ip::ArtifactTransitionTerminalReason::ApprovalRejected,
+                "artifact_transition_approval_rejected",
+            )
+        } else {
+            (
+                sea_forge_artifact_ip::ArtifactTransitionTerminalStatus::Expired,
+                sea_forge_artifact_ip::ArtifactTransitionTerminalReason::ApprovalExpired,
+                "artifact_transition_approval_expired",
+            )
+        };
+        sea_forge_artifact_ip::commit_transition_terminal(
+            &root,
+            &options.entity,
+            &sea_forge_artifact_ip::ArtifactTransitionTerminal {
+                version: sea_forge_artifact_ip::M8_RECORD_VERSION.into(),
+                pending_key: pending.pending_key,
+                case_id: options.case_id.clone(),
+                run_id: pending.run_id,
+                status,
+                reason,
+                transition_token_ref: None,
+                declaration_ref: None,
+                terminal_at: Utc::now().to_rfc3339(),
+            },
+        )?;
+        case.state = CaseState::Terminated;
+        case.close_reason = Some(close_reason.into());
+        case.closed_at = Some(Utc::now().to_rfc3339());
+        write_json(&case_dir.join("case.json"), &case)?;
+        return Ok(ResumeOutcome {
+            case_id: options.case_id,
+            state: "terminated",
+            exit_code: 4,
+        });
+    }
+    if approval.status != ApprovalStatus::Approved {
+        return Ok(ResumeOutcome {
+            case_id: options.case_id,
+            state: "awaiting_approval",
+            exit_code: 5,
+        });
+    }
+
+    let decision_entry = unique_entry(
+        &entries,
+        "authority_decision",
+        "decision_id",
+        &pending.authority_decision_ref,
+    )?;
+    let criteria_entry = unique_entry(
+        &entries,
+        "settlement_criteria",
+        "criteria_id",
+        &pending.criteria_ref,
+    )?;
+    let decision: AuthorityDecision = serde_json::from_value(decision_entry.payload.clone())?;
+    let criteria: SettlementCriteriaRecord =
+        serde_json::from_value(criteria_entry.payload.clone())?;
+    let plan: CasePlan = serde_json::from_slice(
+        &fs::read(case_dir.join("plan.json"))
+            .map_err(|error| ForgeError::io("read plan", error))?,
+    )?;
+    let item = plan
+        .items
+        .iter()
+        .find(|item| item.plan_item_id == pending.plan_item_id)
+        .ok_or_else(|| ForgeError::Internal("pending transition plan item is missing".into()))?;
+    let bundle = sea_forge_authority::AuthorityPolicyBundle::load(&options.policy)?;
+    let descriptor = bundle.strong_settlement_authority()?.clone();
+    let engine = sea_forge_authority::PolicyAuthorityEngine::new(bundle.clone())?;
+    let pre_action_assurance = if bundle.integrity_ledger.required_for_side_effects {
+        let integrity = &bundle.integrity_ledger;
+        let key_dir = integrity.signing_key_dir.as_deref().ok_or_else(|| {
+            ForgeError::Internal("ledger_integrity_error: signing_key_dir is required".into())
+        })?;
+        Some(
+            sea_forge_ledger::LedgerManager::new(&root)?.create_pre_action_assurance(
+                key_dir,
+                &integrity.signing_key_id,
+                &options.entity,
+                &integrity
+                    .witnesses
+                    .iter()
+                    .map(|witness| {
+                        (
+                            witness.witness_id.clone(),
+                            witness.key_dir.clone(),
+                            witness.key_id.clone(),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+                integrity.min_witnesses,
+                &[&decision_entry.committed_ref()],
+            )?,
+        )
+    } else {
+        None
+    };
+    let transition_grant = engine.grant_after_approval(
+        &decision,
+        &decision_entry.committed_ref(),
+        &decision.operation,
+        &approval,
+        &resolution_entry.committed_ref(),
+        &criteria,
+        &criteria_entry.committed_ref(),
+        pre_action_assurance.as_ref(),
+        &stream,
+    )?;
+    let actor = Actor {
+        actor_id: options.entity.clone(),
+        role: ActorRole::Operator,
+    };
+    let run_dir = case_dir.join("runs").join(&pending.run_id);
+    let workspace = run_dir.join("workspace");
+    let artifacts = run_dir.join("artifacts");
+    fs::create_dir_all(&workspace)
+        .and_then(|_| fs::create_dir_all(&artifacts))
+        .map_err(|error| ForgeError::io("create transition run directories", error))?;
+    let environment = crate::pipeline::load_item_environment(&root, item)?
+        .ok_or_else(|| ForgeError::Input("transition evaluator environment is missing".into()))?;
+    sea_forge_sandbox::environment::materialize_base(&environment, &workspace)?;
+    let (verifier_ref, evaluator) =
+        crate::pipeline::resolve_item_evaluator(item, Some(&environment))?
+            .ok_or_else(|| ForgeError::Input("transition evaluator is missing".into()))?;
+    let sea_forge_sandbox::Evaluator::Command { argv, score_from } = evaluator;
+    let operation = Operation::ExecuteCommand {
+        argv,
+        cwd: ".".into(),
+    };
+    let execution_key = format!("{}:artifact-transition-execution", pending.pending_key);
+    let settlement_key = format!("{}:artifact-transition-settlement", pending.pending_key);
+    let mut settlement_authority_refs = Vec::new();
+    let execution = if let Some(entry) = entries.iter().find(|entry| {
+        entry.record_kind == "artifact_transition_execution"
+            && entry.idempotency_key.as_deref() == Some(execution_key.as_str())
+    }) {
+        // Recover evaluator decision refs from the committed execution linkage.
+        settlement_authority_refs.extend(entry.authority_refs.iter().cloned());
+        serde_json::from_value(entry.payload.clone())?
+    } else {
+        let action = AuthorityAction::from(&operation);
+        let evaluator_decision = engine.evaluate(sea_forge_authority::AuthorityEvaluation {
+            actor: &actor,
+            binding: bundle.resolve_identity(&actor.actor_id, actor.role.clone()),
+            run_id: &pending.run_id,
+            case_id: &pending.case_id,
+            plan_item_id: &pending.plan_item_id,
+            sequence: 2,
+            action: &action,
+            workspace_root: &workspace,
+            evidence_refs: vec![pending.authority_decision_ref.clone()],
+            artifacts_root: Some(&artifacts),
+            timeout_secs: Some(options.timeout_secs),
+            env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
+            domainforge_candidate: None,
+            environment: Some((
+                item.environment.as_deref().unwrap_or(""),
+                environment.provides.commands.as_slice(),
+            )),
+        })?;
+        let evaluator_committed = stream.commit_typed(
+            "authority_decision",
+            vec![pending.case_id.clone(), pending.run_id.clone()],
+            &evaluator_decision,
+            vec![pending.authority_decision_ref.clone()],
+        )?;
+        let evaluator_assurance = if bundle.integrity_ledger.required_for_side_effects {
+            let integrity = &bundle.integrity_ledger;
+            let key_dir = integrity.signing_key_dir.as_deref().ok_or_else(|| {
+                ForgeError::Internal("ledger_integrity_error: signing_key_dir is required".into())
+            })?;
+            Some(
+                sea_forge_ledger::LedgerManager::new(&root)?.create_pre_action_assurance(
+                    key_dir,
+                    &integrity.signing_key_id,
+                    &options.entity,
+                    &integrity
+                        .witnesses
+                        .iter()
+                        .map(|witness| {
+                            (
+                                witness.witness_id.clone(),
+                                witness.key_dir.clone(),
+                                witness.key_id.clone(),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                    integrity.min_witnesses,
+                    &[&evaluator_committed],
+                )?,
+            )
+        } else {
+            None
+        };
+        let evaluator_grant = engine.grant(
+            &evaluator_decision,
+            &evaluator_committed,
+            &action,
+            evaluator_assurance.as_ref(),
+        )?;
+        let execution = sea_forge_runtime::execute(
+            evaluator_grant,
+            &ExecutionRequest {
+                plan_item_id: pending.plan_item_id.clone(),
+                operation,
+                timeout_secs: options.timeout_secs,
+                env: ["PATH", "HOME"]
+                    .into_iter()
+                    .filter_map(|key| std::env::var(key).ok().map(|value| (key.into(), value)))
+                    .collect(),
+                compensating_controls: evaluator_decision.compensating_controls.clone(),
+            },
+            &pending.run_id,
+            &workspace,
+            &artifacts,
+        )?;
+        stream.commit_typed_once(
+            "artifact_transition_execution",
+            &execution_key,
+            vec![pending.case_id.clone(), pending.run_id.clone()],
+            &execution,
+            vec![evaluator_decision.decision_id.clone()],
+        )?;
+        settlement_authority_refs.push(evaluator_decision.decision_id);
+        execution
+    };
+    let score =
+        sea_forge_sandbox::environment::parse_evaluator_score(&score_from, &execution, &run_dir)?;
+    let settlement = if let Some(entry) = entries.iter().find(|entry| {
+        entry.record_kind == "settlement_event"
+            && entry.idempotency_key.as_deref() == Some(settlement_key.as_str())
+    }) {
+        serde_json::from_value(entry.payload.clone())?
+    } else {
+        let settlement = sea_forge_settlement::settle(
+            &SettlementClaim {
+                run_id: pending.run_id.clone(),
+                plan_item_id: pending.plan_item_id.clone(),
+                criteria_ref: Some(criteria.criteria_id.clone()),
+                criteria: criteria.criteria.clone(),
+                execution: Some(execution.clone()),
+                authority_verdicts: vec![Verdict::Allow],
+                evaluator_scores: BTreeMap::from([(verifier_ref.clone(), score)]),
+                batch: None,
+            },
+            &workspace,
+            &run_dir,
+        )?;
+        stream.commit_typed_once(
+            "settlement_event",
+            &settlement_key,
+            vec![pending.case_id.clone(), pending.run_id.clone()],
+            &settlement,
+            settlement_authority_refs,
+        )?;
+        settlement
+    };
+    write_json(&run_dir.join("settlement.json"), &settlement)?;
+    if settlement.status != SettlementStatus::Accepted {
+        sea_forge_artifact_ip::commit_transition_terminal(
+            &root,
+            &options.entity,
+            &sea_forge_artifact_ip::ArtifactTransitionTerminal {
+                version: sea_forge_artifact_ip::M8_RECORD_VERSION.into(),
+                pending_key: pending.pending_key,
+                case_id: pending.case_id,
+                run_id: pending.run_id,
+                status: sea_forge_artifact_ip::ArtifactTransitionTerminalStatus::Rejected,
+                reason: sea_forge_artifact_ip::ArtifactTransitionTerminalReason::SettlementRejected,
+                transition_token_ref: None,
+                declaration_ref: None,
+                terminal_at: Utc::now().to_rfc3339(),
+            },
+        )?;
+        case.state = CaseState::Terminated;
+        case.close_reason = Some("artifact_transition_settlement_rejected".into());
+        case.closed_at = Some(Utc::now().to_rfc3339());
+        write_json(&case_dir.join("case.json"), &case)?;
+        return Ok(ResumeOutcome {
+            case_id: options.case_id,
+            state: "terminated",
+            exit_code: 4,
+        });
+    }
+
+    let transport = sea_forge_settlement::CommandSweSeedTransport::new(
+        descriptor.command.clone(),
+        descriptor.timeout_secs,
+    )?;
+    let authority =
+        sea_forge_settlement::SweSeedSettlementAuthority::new(transport, &options.entity)
+            .with_adapter_ref(&descriptor.authority_ref);
+    let declarer_role = descriptor
+        .permitted_declarer_roles
+        .first()
+        .cloned()
+        .ok_or_else(|| ForgeError::Internal("strong authority role is missing".into()))?;
+    let result = sea_forge_artifact_ip::resume_pending_transition(
+        &root,
+        &options.entity,
+        &pending,
+        &approval,
+        &criteria,
+        &settlement,
+        &execution.started_at,
+        &verifier_ref,
+        &sea_forge_ledger::types::hash_canonical(&environment)?,
+        &workspace,
+        Declarer {
+            actor_id: descriptor.declarer_actor_id,
+            authority_ref: descriptor.authority_ref,
+            role: declarer_role,
+            standing_basis: descriptor.standing_basis,
+        },
+        &authority,
+        transition_grant,
+    );
+    let resumed = match result {
+        Err(ForgeError::Plan {
+            class: "settlement_authority_unavailable",
+            ..
+        }) => {
+            return Ok(ResumeOutcome {
+                case_id: options.case_id,
+                state: "awaiting_approval",
+                exit_code: 5,
+            });
+        }
+        other => other?,
+    };
+    sea_forge_artifact_ip::commit_transition_terminal(
+        &root,
+        &options.entity,
+        &sea_forge_artifact_ip::ArtifactTransitionTerminal {
+            version: sea_forge_artifact_ip::M8_RECORD_VERSION.into(),
+            pending_key: pending.pending_key,
+            case_id: pending.case_id,
+            run_id: pending.run_id.clone(),
+            status: sea_forge_artifact_ip::ArtifactTransitionTerminalStatus::Completed,
+            reason: sea_forge_artifact_ip::ArtifactTransitionTerminalReason::TransitionCommitted,
+            transition_token_ref: Some(resumed.token.transition_token_id.clone()),
+            declaration_ref: Some(resumed.declaration.declaration_id.clone()),
+            terminal_at: Utc::now().to_rfc3339(),
+        },
+    )?;
+    case.state = CaseState::Completed;
+    case.run_ids = vec![pending.run_id];
+    case.closed_at = Some(Utc::now().to_rfc3339());
+    write_json(&case_dir.join("case.json"), &case)?;
+    println!("declaration_id={}", resumed.declaration.declaration_id);
+    println!("transition_token_id={}", resumed.token.transition_token_id);
+    Ok(ResumeOutcome {
+        case_id: options.case_id,
+        state: "completed",
+        exit_code: 0,
+    })
+}
+
+fn approval_binds_pending(
+    approval: &ApprovalRequest,
+    pending: &sea_forge_artifact_ip::PendingArtifactTransition,
+) -> Result<(), ForgeError> {
+    if approval.case_id != pending.case_id
+        || approval.run_id != pending.run_id
+        || approval.decision_id != pending.authority_decision_ref
+        || approval.plan_item_id != pending.plan_item_id
+        || approval.approval_id != pending.approval_ref
+        || approval.criteria_ref.as_deref() != Some(pending.criteria_ref.as_str())
+        || approval.criteria_sha256.as_deref() != Some(pending.criteria_sha256.as_str())
+        || approval.criteria_record_hash.as_deref() != Some(pending.criteria_record_hash.as_str())
+    {
+        return Err(ForgeError::Input(format!(
+            "approval resolution {} does not bind to pending transition {}",
+            approval.approval_id, pending.pending_key
+        )));
+    }
+    Ok(())
+}
+
+fn unique_entry<'a>(
+    entries: &'a [sea_forge_ledger::types::LedgerEntry],
+    kind: &str,
+    id_field: &str,
+    id: &str,
+) -> Result<&'a sea_forge_ledger::types::LedgerEntry, ForgeError> {
+    let matching = entries
+        .iter()
+        .filter(|entry| {
+            entry.record_kind == kind
+                && entry.payload.get(id_field).and_then(Value::as_str) == Some(id)
+        })
+        .collect::<Vec<_>>();
+    if matching.len() != 1 {
+        return Err(ForgeError::Internal(format!(
+            "ledger_integrity_error: expected one {kind} record for {id}"
+        )));
+    }
+    Ok(matching[0])
 }

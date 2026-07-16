@@ -1,12 +1,19 @@
 use std::{
     fs::{File, OpenOptions},
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     path::Path,
+    process::{Command, Stdio},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+    time::{Duration, Instant},
 };
 
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
-use sea_forge_ledger::types::hash_canonical;
+use sea_forge_ledger::{types::hash_canonical, CommittedRecordRef, LedgerStream};
 
 /// Compute the declaration hash over canonical content excluding `declaration_hash`.
 pub fn compute_declaration_hash(decl: &SettlementDeclaration) -> Result<String, ForgeError> {
@@ -27,6 +34,114 @@ pub fn append_declaration(path: &Path, decl: &SettlementDeclaration) -> Result<(
     file.write_all(&encoded)
         .and_then(|_| file.flush())
         .map_err(|e| ForgeError::io("append declaration", e))
+}
+
+/// Commit a declaration to the M0 ledger before appending its compatibility view.
+pub fn append_declaration_ledgered(
+    root: &Path,
+    view_path: &Path,
+    actor: &str,
+    decl: &SettlementDeclaration,
+) -> Result<(), ForgeError> {
+    if compute_declaration_hash(decl)? != decl.declaration_hash {
+        return Err(ForgeError::Plan {
+            class: "settlement_integrity_error",
+            message: "declaration_hash mismatch".into(),
+        });
+    }
+    LedgerStream::open(root, format!("case-{}", decl.case_id), actor)?.commit_typed(
+        "settlement_declaration",
+        vec![
+            decl.case_id.clone(),
+            decl.settlement_ref.clone(),
+            decl.declaration_id.clone(),
+        ],
+        decl,
+        vec![decl.declarer.authority_ref.clone()],
+    )?;
+    append_declaration(view_path, decl)
+}
+
+pub fn append_declaration_ledgered_once(
+    root: &Path,
+    view_path: &Path,
+    actor: &str,
+    decl: &SettlementDeclaration,
+) -> Result<CommittedRecordRef, ForgeError> {
+    if compute_declaration_hash(decl)? != decl.declaration_hash {
+        return Err(ForgeError::Plan {
+            class: "settlement_integrity_error",
+            message: "declaration_hash mismatch".into(),
+        });
+    }
+    let idempotency_key = hash_canonical(&(
+        &decl.case_id,
+        &decl.run_id,
+        &decl.claim_manifest_sha256,
+        &decl.declarer.authority_ref,
+        &decl.settlement_ref,
+        &decl.plan_item_id,
+    ))?;
+    let committed = LedgerStream::open(root, format!("case-{}", decl.case_id), actor)?
+        .commit_typed_once(
+            "settlement_declaration",
+            idempotency_key,
+            vec![decl.case_id.clone(), decl.run_id.clone()],
+            decl,
+            vec![decl.declarer.authority_ref.clone()],
+        )?;
+    append_declaration_view_once(view_path, decl)?;
+    Ok(committed)
+}
+
+/// Atomically check-and-append a declaration view under a file lock.
+/// Same declaration_id with identical content is a no-op; same ID with different
+/// content is rejected. The lock covers both read and write.
+fn append_declaration_view_once(
+    path: &Path,
+    decl: &SettlementDeclaration,
+) -> Result<(), ForgeError> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| ForgeError::io(format!("create {}", parent.display()), e))?;
+    }
+    let lock_path = path.with_extension("lock");
+    let lock_file = OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .map_err(|e| ForgeError::io(format!("open {}", lock_path.display()), e))?;
+    lock_file
+        .lock()
+        .map_err(|e| ForgeError::io("lock declaration view", e))?;
+    let result = (|| {
+        let declarations = load_declarations(path)?;
+        if let Some(existing) = declarations
+            .iter()
+            .find(|existing| existing.declaration_id == decl.declaration_id)
+        {
+            if existing.declaration_hash != decl.declaration_hash {
+                return Err(ForgeError::Plan {
+                    class: "settlement_integrity_error",
+                    message: format!(
+                        "declaration {} content conflicts with existing view entry",
+                        decl.declaration_id
+                    ),
+                });
+            }
+            return Ok(());
+        }
+        append_declaration(path, decl)
+    })();
+    let unlock = lock_file
+        .unlock()
+        .map_err(|e| ForgeError::io("unlock declaration view", e));
+    match result {
+        Ok(()) => unlock,
+        Err(error) => Err(error),
+    }
 }
 
 /// Load all declarations from a JSONL file. Returns empty vec if file does not exist.
@@ -140,6 +255,8 @@ impl SettlementAuthority for LocalSettlementAuthority {
 }
 
 /// Response from a SWE_SEED transport, carrying the external authority's reliability assessment.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct SweSeedResponse {
     pub attestation_ref: String,
     pub attribution_confidence: String,
@@ -154,10 +271,174 @@ pub trait SweSeedTransport {
     fn submit(&self, req: &SettlementDeclarationRequest) -> Result<SweSeedResponse, ForgeError>;
 }
 
+pub struct CommandSweSeedTransport {
+    argv: Vec<String>,
+    timeout: Duration,
+}
+
+impl CommandSweSeedTransport {
+    pub fn new(argv: Vec<String>, timeout_secs: u64) -> Result<Self, ForgeError> {
+        if argv.first().is_none_or(String::is_empty) || timeout_secs == 0 {
+            return Err(ForgeError::Config {
+                class: "settlement_authority_config_error",
+                path: "<policy>".into(),
+                message: "SWE_SEED command and positive timeout are required".into(),
+            });
+        }
+        Ok(Self {
+            argv,
+            timeout: Duration::from_secs(timeout_secs),
+        })
+    }
+}
+
+impl SweSeedTransport for CommandSweSeedTransport {
+    fn submit(&self, req: &SettlementDeclarationRequest) -> Result<SweSeedResponse, ForgeError> {
+        use std::os::unix::process::CommandExt;
+
+        let mut command = Command::new(&self.argv[0]);
+        command
+            .args(&self.argv[1..])
+            .env_clear()
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        // Own process group so timeout can terminate the full tree.
+        command.process_group(0);
+        let mut child = command.spawn().map_err(settlement_authority_unavailable)?;
+        let mut stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stdin was not piped"))?;
+        let request = serde_json::to_vec(req)?;
+        let stdin_done = Arc::new(AtomicBool::new(false));
+        let stdin_flag = Arc::clone(&stdin_done);
+        let stdin_writer = thread::spawn(move || {
+            let result = stdin.write_all(&request).and_then(|_| stdin.flush());
+            stdin_flag.store(true, Ordering::SeqCst);
+            result
+        });
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stdout was not piped"))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stderr was not piped"))?;
+        let stdout_reader = thread::spawn(move || {
+            let mut bytes = Vec::new();
+            stdout
+                .take(1_048_577)
+                .read_to_end(&mut bytes)
+                .map(|_| bytes)
+        });
+        let stderr_reader = thread::spawn(move || {
+            let mut bytes = Vec::new();
+            stderr.take(65_537).read_to_end(&mut bytes).map(|_| bytes)
+        });
+        let started = Instant::now();
+        let deadline = started + self.timeout;
+        let status = loop {
+            if let Some(status) = child.try_wait().map_err(settlement_authority_unavailable)? {
+                break status;
+            }
+            if Instant::now() >= deadline {
+                terminate_process_tree(&child)?;
+                let _ = child.wait();
+                return Err(settlement_authority_unavailable(
+                    "SWE_SEED command timed out",
+                ));
+            }
+            thread::sleep(Duration::from_millis(10));
+        };
+        // Require stdin completion within remaining timeout before accepting response.
+        while !stdin_done.load(Ordering::SeqCst) {
+            if Instant::now() >= deadline {
+                terminate_process_tree(&child)?;
+                let _ = child.wait();
+                return Err(settlement_authority_unavailable(
+                    "SWE_SEED command timed out",
+                ));
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        let _ = stdin_writer
+            .join()
+            .map_err(|_| settlement_authority_unavailable("SWE_SEED stdin writer failed"))?
+            .map_err(settlement_authority_unavailable)?;
+        let stdout = join_reader_within(stdout_reader, deadline, "stdout")?;
+        let stderr = join_reader_within(stderr_reader, deadline, "stderr")?;
+        if !status.success() || stdout.len() > 1_048_576 || stderr.len() > 65_536 {
+            return Err(settlement_authority_unavailable(
+                "SWE_SEED command failed or exceeded output limits",
+            ));
+        }
+        serde_json::from_slice(&stdout).map_err(|_| {
+            settlement_authority_unavailable("SWE_SEED returned an invalid JSON response")
+        })
+    }
+}
+
+fn terminate_process_tree(child: &std::process::Child) -> Result<(), ForgeError> {
+    let group = format!("-{}", child.id());
+    let group_kill = Command::new("/bin/kill")
+        .args(["-KILL", "--", &group])
+        .env_clear()
+        .output()
+        .map_err(settlement_authority_unavailable)?;
+    if !group_kill.status.success() {
+        let group_still_exists = Command::new("/bin/kill")
+            .args(["-0", "--", &group])
+            .env_clear()
+            .output()
+            .map_err(settlement_authority_unavailable)?
+            .status
+            .success();
+        if group_still_exists {
+            return Err(settlement_authority_unavailable(
+                "SWE_SEED process group survived termination",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn join_reader_within(
+    handle: thread::JoinHandle<std::io::Result<Vec<u8>>>,
+    deadline: Instant,
+    label: &str,
+) -> Result<Vec<u8>, ForgeError> {
+    loop {
+        if handle.is_finished() {
+            return handle
+                .join()
+                .map_err(|_| {
+                    settlement_authority_unavailable(format!("SWE_SEED {label} reader failed"))
+                })?
+                .map_err(settlement_authority_unavailable);
+        }
+        if Instant::now() >= deadline {
+            return Err(settlement_authority_unavailable(
+                "SWE_SEED command timed out",
+            ));
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn settlement_authority_unavailable(error: impl std::fmt::Display) -> ForgeError {
+    ForgeError::Plan {
+        class: "settlement_authority_unavailable",
+        message: error.to_string(),
+    }
+}
+
 /// SWE_SEED settlement authority — issues strong declarations backed by external verification.
 pub struct SweSeedSettlementAuthority<T: SweSeedTransport> {
     transport: T,
     acting_entity_id: String,
+    adapter_ref: String,
 }
 
 impl<T: SweSeedTransport> SweSeedSettlementAuthority<T> {
@@ -165,13 +446,19 @@ impl<T: SweSeedTransport> SweSeedSettlementAuthority<T> {
         Self {
             transport,
             acting_entity_id: acting_entity_id.into(),
+            adapter_ref: "swe_seed".into(),
         }
+    }
+
+    pub fn with_adapter_ref(mut self, adapter_ref: &str) -> Self {
+        self.adapter_ref = adapter_ref.into();
+        self
     }
 }
 
 impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> {
     fn adapter_ref(&self) -> &str {
-        "swe_seed"
+        &self.adapter_ref
     }
 
     fn declare(

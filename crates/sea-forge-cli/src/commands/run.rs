@@ -18,6 +18,8 @@ pub fn execute(
             timeout_secs,
             entity,
             process,
+            intent_summary: None,
+            origin_evidence_refs: vec![],
         })?;
         println!("case_id={}", outcome.case_id);
         println!("case_state={}", outcome.state);

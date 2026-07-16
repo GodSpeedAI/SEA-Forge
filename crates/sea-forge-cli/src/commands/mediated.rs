@@ -1,27 +1,141 @@
-use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+use sea_forge_authority::{
+    ActionGrant, AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine,
+};
 use sea_forge_core::{
     errors::ForgeError,
-    types::{Actor, ActorRole, AuthorityAction},
+    types::{Actor, ActorRole, AuthorityAction, AuthorityDecision},
 };
-use sea_forge_ledger::{signing::read_verifying_key, LedgerManager, LedgerStream};
+use sea_forge_ledger::{
+    signing::read_verifying_key, CommittedRecordRef, LedgerManager, LedgerStream,
+};
 use std::path::Path;
 
+/// Mediate an action which will cause a governed side effect after this call.
+pub fn authorize_action(
+    root: &Path,
+    policy_path: &Path,
+    actor_id: &str,
+    action: &AuthorityAction,
+) -> Result<(), ForgeError> {
+    with_authorized_action(root, policy_path, actor_id, action, true, |grant| {
+        let context = action_context(action);
+        grant.authorize(action, context, context, root)
+    })
+}
+
+pub fn with_authorized_action<T>(
+    root: &Path,
+    policy_path: &Path,
+    actor_id: &str,
+    action: &AuthorityAction,
+    require_side_effect_assurance: bool,
+    callback: impl FnOnce(ActionGrant) -> Result<T, ForgeError>,
+) -> Result<T, ForgeError> {
+    let bundle = AuthorityPolicyBundle::load(policy_path)?;
+    let context = action_context(action);
+    authorize_with_bundle_callback(
+        root,
+        actor_id,
+        action,
+        bundle,
+        AuthorityContext {
+            run_id: context,
+            case_id: context,
+            plan_item_id: context,
+            sequence: 1,
+        },
+        require_side_effect_assurance,
+        |grant, _, _| callback(grant),
+    )
+}
+
+pub struct AuthorityContext<'a> {
+    pub run_id: &'a str,
+    pub case_id: &'a str,
+    pub plan_item_id: &'a str,
+    pub sequence: usize,
+}
+
+pub fn with_authorized_action_in_context<T>(
+    root: &Path,
+    policy_path: &Path,
+    actor_id: &str,
+    action: &AuthorityAction,
+    context: AuthorityContext<'_>,
+    callback: impl FnOnce(ActionGrant, String) -> Result<T, ForgeError>,
+) -> Result<T, ForgeError> {
+    let bundle = AuthorityPolicyBundle::load(policy_path)?;
+    authorize_with_bundle_callback(
+        root,
+        actor_id,
+        action,
+        bundle,
+        context,
+        true,
+        |grant, decision, _| callback(grant, decision.decision_id),
+    )
+}
+
+pub fn with_authorized_action_binding<T>(
+    root: &Path,
+    policy_path: &Path,
+    actor_id: &str,
+    action: &AuthorityAction,
+    callback: impl FnOnce(ActionGrant, AuthorityDecision, CommittedRecordRef) -> Result<T, ForgeError>,
+) -> Result<T, ForgeError> {
+    let bundle = AuthorityPolicyBundle::load(policy_path)?;
+    let context = action_context(action);
+    authorize_with_bundle_callback(
+        root,
+        actor_id,
+        action,
+        bundle,
+        AuthorityContext {
+            run_id: context,
+            case_id: context,
+            plan_item_id: context,
+            sequence: 1,
+        },
+        true,
+        callback,
+    )
+}
+
+/// Compatibility wrapper for read-only command callers.
 pub fn authorize_read(
     root: &Path,
     policy_path: &Path,
     actor_id: &str,
     action: &AuthorityAction,
 ) -> Result<(), ForgeError> {
-    let bundle = AuthorityPolicyBundle::load(policy_path)?;
-    authorize_with_bundle(root, actor_id, action, bundle)
+    // Reads govern no side effect, so they must not build or require
+    // pre-action side-effect assurance.
+    with_authorized_action(root, policy_path, actor_id, action, false, |grant| {
+        let context = action_context(action);
+        grant.authorize(action, context, context, root)
+    })
 }
 
-pub fn authorize_with_bundle(
+fn action_context(action: &AuthorityAction) -> &'static str {
+    match action {
+        AuthorityAction::Reserved { resource_type, .. }
+            if resource_type == "attest_artifact_identity" =>
+        {
+            "attestation_ingress"
+        }
+        _ => "read_ingress",
+    }
+}
+
+fn authorize_with_bundle_callback<T>(
     root: &Path,
     actor_id: &str,
     action: &AuthorityAction,
     bundle: AuthorityPolicyBundle,
-) -> Result<(), ForgeError> {
+    context: AuthorityContext<'_>,
+    require_side_effect_assurance: bool,
+    callback: impl FnOnce(ActionGrant, AuthorityDecision, CommittedRecordRef) -> Result<T, ForgeError>,
+) -> Result<T, ForgeError> {
     let stream = LedgerStream::open(root, "authority-reads", actor_id)?;
     stream.commit_typed("authority_policy", vec![], &bundle, vec![])?;
     let integrity = bundle.integrity_ledger.clone();
@@ -55,10 +169,10 @@ pub fn authorize_with_bundle(
     let decision = engine.evaluate(AuthorityEvaluation {
         actor: &actor,
         binding,
-        run_id: "read_ingress",
-        case_id: "read_ingress",
-        plan_item_id: "read_ingress",
-        sequence: 1,
+        run_id: context.run_id,
+        case_id: context.case_id,
+        plan_item_id: context.plan_item_id,
+        sequence: context.sequence,
         action,
         workspace_root: root,
         evidence_refs: vec![evidence.entry_ulid().into()],
@@ -70,31 +184,35 @@ pub fn authorize_with_bundle(
     })?;
     let committed = stream.commit_typed("authority_decision", vec![], &decision, vec![])?;
     crate::pipeline::rebuild_authority_mirrors(root, &stream, &committed)?;
-    if integrity.required_for_side_effects {
+    let assurance = if require_side_effect_assurance && integrity.required_for_side_effects {
         let key_dir = integrity.signing_key_dir.as_deref().ok_or_else(|| {
             ForgeError::Internal("ledger_integrity_error: signing_key_dir is required".into())
         })?;
-        LedgerManager::new(root)?.create_pre_action_assurance(
-            key_dir,
-            &integrity.signing_key_id,
-            actor_id,
-            &integrity
-                .witnesses
-                .iter()
-                .map(|witness| {
-                    (
-                        witness.witness_id.clone(),
-                        witness.key_dir.clone(),
-                        witness.key_id.clone(),
-                    )
-                })
-                .collect::<Vec<_>>(),
-            integrity.min_witnesses,
-            &[&committed],
-        )?;
-    }
-    let grant = engine.grant(&decision, &committed, action, None)?;
-    grant.authorize(action, "read_ingress", "read_ingress", root)
+        Some(
+            LedgerManager::new(root)?.create_pre_action_assurance(
+                key_dir,
+                &integrity.signing_key_id,
+                actor_id,
+                &integrity
+                    .witnesses
+                    .iter()
+                    .map(|witness| {
+                        (
+                            witness.witness_id.clone(),
+                            witness.key_dir.clone(),
+                            witness.key_id.clone(),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+                integrity.min_witnesses,
+                &[&committed],
+            )?,
+        )
+    } else {
+        None
+    };
+    let grant = engine.grant(&decision, &committed, action, assurance.as_ref())?;
+    callback(grant, decision, committed)
 }
 
 pub fn policy_path(root: &Path, explicit: Option<&Path>) -> std::path::PathBuf {

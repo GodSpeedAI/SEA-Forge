@@ -3,7 +3,7 @@ use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSIO
 use sea_forge_domainforge::{
     evaluate_authority, CandidateDisposition, DomainForgeTrace, DomainModel, DomainModelRef,
 };
-use sea_forge_ledger::{types::payload_hash, CommittedRecordRef, PreActionAssurance};
+use sea_forge_ledger::{types::payload_hash, CommittedRecordRef, LedgerStream, PreActionAssurance};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -357,6 +357,29 @@ pub struct AuthorityPolicyBundle {
     pub identity_bindings: Vec<ConfiguredIdentity>,
     #[serde(default)]
     pub integrity_ledger: IntegrityLedgerPolicy,
+    #[serde(default)]
+    pub settlement_authorities: Vec<SettlementAuthorityDescriptor>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SettlementAuthorityDescriptor {
+    pub authority_ref: String,
+    pub adapter: String,
+    #[serde(default)]
+    pub command: Vec<String>,
+    #[serde(default = "default_settlement_timeout_secs")]
+    pub timeout_secs: u64,
+    pub trust_anchor_ref: String,
+    pub declarer_actor_id: String,
+    pub permitted_declarer_roles: Vec<String>,
+    pub standing_basis: String,
+    #[serde(default)]
+    pub may_issue_strong: bool,
+}
+
+fn default_settlement_timeout_secs() -> u64 {
+    60
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -585,16 +608,62 @@ pub struct PolicyRule {
     #[serde(default)]
     pub sandbox_class: Option<String>,
     #[serde(default)]
-    pub requires_approval: bool,
+    pub requires_approval: Option<bool>,
     #[serde(default)]
     pub memory_scope: Option<String>,
     /// Environment reference `name@version` — when set, ExecuteCommand rules
     /// match the intersection of provides.commands and the rule's argv0 (§7.6).
     #[serde(default)]
     pub environment: Option<String>,
+    #[serde(default)]
+    pub transition_kind: Option<String>,
+    #[serde(default)]
+    pub from_stage: Option<String>,
+    #[serde(default)]
+    pub to_stage: Option<String>,
+    #[serde(default)]
+    pub modes: Option<Vec<String>>,
+    #[serde(default)]
+    pub gate_profile_ref: Option<String>,
+    #[serde(default)]
+    pub required_settlement_strength: Option<String>,
+    #[serde(default)]
+    pub qualifying_value_evidence_kinds: Option<Vec<String>>,
+    #[serde(default)]
+    pub license_allowlist: Vec<String>,
+    #[serde(default, rename = "ledger")]
+    pub attestation_ledger: Option<String>,
+    #[serde(default)]
+    pub requester_roles: Option<Vec<String>>,
+    #[serde(default)]
+    pub approver_roles: Option<Vec<String>>,
+    #[serde(default)]
+    pub degraded_mode: Option<String>,
 }
 
 impl AuthorityPolicyBundle {
+    pub fn strong_settlement_authority(
+        &self,
+    ) -> Result<&SettlementAuthorityDescriptor, ForgeError> {
+        let mut matching = self
+            .settlement_authorities
+            .iter()
+            .filter(|descriptor| descriptor.may_issue_strong);
+        let descriptor = matching.next().ok_or_else(|| ForgeError::Config {
+            class: "settlement_authority_config_error",
+            path: PathBuf::from("<policy>"),
+            message: "no strong settlement authority is configured".into(),
+        })?;
+        if matching.next().is_some() {
+            return Err(ForgeError::Config {
+                class: "settlement_authority_config_error",
+                path: PathBuf::from("<policy>"),
+                message: "multiple strong settlement authorities are configured".into(),
+            });
+        }
+        Ok(descriptor)
+    }
+
     pub fn refresh_policy_bundle_hash(&mut self) -> Result<(), ForgeError> {
         self.policy_bundle_hash = None;
         let source_base = self.source_base.take();
@@ -827,6 +896,32 @@ impl AuthorityPolicyBundle {
             return Err(schema("invalid policy surface mode/default".into()));
         }
         let mut names = HashSet::new();
+        let mut authority_refs = HashSet::new();
+        for descriptor in &self.settlement_authorities {
+            let invalid_common = descriptor.authority_ref.is_empty()
+                || !authority_refs.insert(&descriptor.authority_ref)
+                || descriptor.trust_anchor_ref.is_empty()
+                || descriptor.declarer_actor_id.is_empty()
+                || descriptor.permitted_declarer_roles.is_empty()
+                || descriptor
+                    .permitted_declarer_roles
+                    .iter()
+                    .any(String::is_empty)
+                || descriptor.standing_basis.is_empty()
+                || descriptor.timeout_secs == 0;
+            let invalid_adapter = match descriptor.adapter.as_str() {
+                "local" => descriptor.may_issue_strong || !descriptor.command.is_empty(),
+                "swe_seed" => descriptor.command.first().is_none_or(String::is_empty),
+                _ => true,
+            };
+            if invalid_common || invalid_adapter {
+                return Err(ForgeError::Config {
+                    class: "settlement_authority_config_error",
+                    path: path.into(),
+                    message: "invalid settlement authority descriptor".into(),
+                });
+            }
+        }
         if self.policy_engines.iter().any(|engine| {
             engine.engine.is_empty()
                 || engine.fail_mode != "closed"
@@ -888,6 +983,10 @@ impl AuthorityPolicyBundle {
                     | "identity_minting"
                     | "artifact_transition"
                     | "attestation"
+                    | "transition_artifact_stage"
+                    | "attest_artifact_identity"
+                    | "artifact_lifecycle"
+                    | "review_artifact_rights"
                     | "run_spec_pipeline"
                     | "run_projection"
                     | "import_bundle"
@@ -943,6 +1042,52 @@ impl AuthorityPolicyBundle {
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
+            }
+            if rule.operation_kind == "transition_artifact_stage" {
+                let transition = rule.transition_kind.as_deref();
+                let from = rule.from_stage.as_deref();
+                let to = rule.to_stage.as_deref();
+                let legal = matches!(
+                    (transition, from, to),
+                    (Some("synthesize"), Some("cognitive"), Some("intellectual"))
+                        | (Some("productize"), Some("intellectual"), Some("product"))
+                        | (Some("capitalize"), Some("product"), Some("capital"))
+                );
+                let modes = rule.modes.as_deref().unwrap_or_default();
+                let evidence = rule
+                    .qualifying_value_evidence_kinds
+                    .as_deref()
+                    .unwrap_or_default();
+                if !legal
+                    || modes.is_empty()
+                    || modes
+                        .iter()
+                        .any(|mode| mode != "derive" && mode != "promote")
+                    || rule.gate_profile_ref.as_deref().is_none_or(str::is_empty)
+                    || rule
+                        .required_settlement_strength
+                        .as_deref()
+                        .is_none_or(|strength| !matches!(strength, "local" | "strong"))
+                    || rule.qualifying_value_evidence_kinds.is_none()
+                    || rule.requires_approval.is_none()
+                    || (transition == Some("capitalize")
+                        && (rule.requires_approval != Some(true)
+                            || modes != ["promote"]
+                            || evidence.is_empty()))
+                {
+                    return Err(schema("invalid artifact transition policy rule".into()));
+                }
+            }
+            if rule.operation_kind == "attest_artifact_identity"
+                && (rule.attestation_ledger.as_deref().is_none_or(str::is_empty)
+                    || rule.requester_roles.as_ref().is_none_or(Vec::is_empty)
+                    || rule.approver_roles.as_ref().is_none_or(Vec::is_empty)
+                    || rule
+                        .degraded_mode
+                        .as_deref()
+                        .is_none_or(|mode| !matches!(mode, "forbidden" | "pre_mint_only")))
+            {
+                return Err(schema("invalid artifact attestation policy rule".into()));
             }
         }
         Ok(())
@@ -1052,6 +1197,232 @@ impl PolicyAuthorityEngine {
         action: &AuthorityAction,
         assurance: Option<&PreActionAssurance>,
     ) -> Result<ActionGrant, ForgeError> {
+        self.grant_exact(
+            decision,
+            committed,
+            action,
+            assurance,
+            Verdict::Allow,
+            decision.sandbox_class_granted.clone(),
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn grant_after_approval(
+        &self,
+        decision: &AuthorityDecision,
+        committed_decision: &CommittedRecordRef,
+        action: &AuthorityAction,
+        approval: &ApprovalRequest,
+        committed_approval: &CommittedRecordRef,
+        criteria: &SettlementCriteriaRecord,
+        committed_criteria: &CommittedRecordRef,
+        assurance: Option<&PreActionAssurance>,
+        stream: &LedgerStream,
+    ) -> Result<ActionGrant, ForgeError> {
+        if decision.verdict != Verdict::Escalate
+            || decision.normalized_disposition != NormalizedDisposition::Escalate
+            || committed_decision.record_kind() != "authority_decision"
+            || committed_approval.record_kind() != "approval_resolution"
+            || committed_criteria.record_kind() != "settlement_criteria"
+            || committed_decision.ledger_id() != committed_approval.ledger_id()
+            || committed_decision.ledger_id() != committed_criteria.ledger_id()
+        {
+            return Err(ForgeError::Input(
+                "approval grant requires exact records from one ledger".into(),
+            ));
+        }
+        if committed_approval.payload_hash() != payload_hash(&serde_json::to_value(approval)?)?
+            || committed_criteria.payload_hash() != payload_hash(&serde_json::to_value(criteria)?)?
+        {
+            return Err(ForgeError::Input(
+                "approval or criteria record is not bound to its committed payload".into(),
+            ));
+        }
+        let case_id =
+            decision.audit_record.case_id.as_deref().ok_or_else(|| {
+                ForgeError::Input("authority decision has no case context".into())
+            })?;
+        let requester = decision
+            .action_request
+            .actor
+            .get("actor_id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| ForgeError::Input("authority requester is malformed".into()))?;
+        if approval.status != ApprovalStatus::Approved
+            || approval.decision_id != decision.decision_id
+            || approval.case_id != case_id
+            || approval.run_id != decision.run_id
+            || approval.plan_item_id != decision.plan_item_id
+            || approval.criteria_ref.as_deref() != Some(criteria.criteria_id.as_str())
+            || approval.criteria_sha256.as_deref() != Some(criteria.criteria_sha256.as_str())
+            || approval.criteria_record_hash.as_deref()
+                != Some(criteria.criteria_record_hash.as_str())
+            || approval
+                .resolved_by
+                .as_deref()
+                .is_none_or(|resolver| resolver.is_empty() || resolver == requester)
+        {
+            return Err(ForgeError::Input(
+                "approval resolution does not match the escalated decision".into(),
+            ));
+        }
+        let expected_criteria_sha = hash_canonical(&criteria.criteria)?;
+        let mut unhashed_criteria = criteria.clone();
+        unhashed_criteria.criteria_record_hash.clear();
+        if criteria.criteria_sha256 != expected_criteria_sha
+            || criteria.criteria_record_hash != hash_canonical(&unhashed_criteria)?
+        {
+            return Err(ForgeError::Input(
+                "approval criteria hashes are invalid".into(),
+            ));
+        }
+        let expires_at = chrono::DateTime::parse_from_rfc3339(&approval.expires_at)
+            .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?
+            .with_timezone(&Utc);
+        let resolved_at = approval
+            .resolved_at
+            .as_deref()
+            .ok_or_else(|| ForgeError::Input("approved resolution has no timestamp".into()))
+            .and_then(|value| {
+                chrono::DateTime::parse_from_rfc3339(value).map_err(|_| {
+                    ForgeError::Input("approval resolution timestamp is invalid".into())
+                })
+            })?
+            .with_timezone(&Utc);
+        // An approval resolved Approved before expires_at remains valid after
+        // wall clock TTL; expiry only applies to unresolved pending or to a
+        // resolution recorded after the deadline.
+        if resolved_at > expires_at {
+            return Err(ForgeError::Input("approval resolution expired".into()));
+        }
+        let rule = decision
+            .matched_rule
+            .as_deref()
+            .and_then(|name| self.bundle.rules.iter().find(|rule| rule.name == name))
+            .ok_or_else(|| {
+                ForgeError::Input("authority decision was not escalated for approval".into())
+            })?;
+        let matching_sod = self
+            .bundle
+            .sod_rules
+            .iter()
+            .filter(|sod| {
+                sod.operation_kind
+                    .as_deref()
+                    .is_none_or(|kind| kind == rule.operation_kind)
+            })
+            .collect::<Vec<_>>();
+        let escalated_for_approval =
+            rule.requires_approval == Some(true) || !matching_sod.is_empty();
+        if !escalated_for_approval {
+            return Err(ForgeError::Input(
+                "authority decision was not escalated for approval".into(),
+            ));
+        }
+        // SOD-only and SOD-backed escalations require non-empty approver roles
+        // and a resolver whose bound role matches those roles.
+        if !matching_sod.is_empty() {
+            let required_roles = matching_sod
+                .iter()
+                .map(|sod| sod.approver_role.as_str())
+                .filter(|role| !role.is_empty())
+                .collect::<Vec<_>>();
+            if required_roles.is_empty() {
+                return Err(ForgeError::Input(
+                    "approval requires non-empty required_approver_roles".into(),
+                ));
+            }
+            let resolver_id = approval.resolved_by.as_deref().ok_or_else(|| {
+                ForgeError::Input(
+                    "approval resolution does not match the escalated decision".into(),
+                )
+            })?;
+            let resolver_role = self
+                .bundle
+                .identity_bindings
+                .iter()
+                .find(|binding| binding.principal == resolver_id)
+                .map(|binding| binding.role.clone())
+                .ok_or_else(|| {
+                    ForgeError::Input("approval resolver is not bound in policy identity".into())
+                })?;
+            let resolver_role_name = serde_json::to_value(&resolver_role)?
+                .as_str()
+                .unwrap_or_default()
+                .to_owned();
+            if !required_roles
+                .iter()
+                .any(|role| *role == resolver_role_name)
+            {
+                return Err(ForgeError::Input(
+                    "approval resolver role does not match SOD approver roles".into(),
+                ));
+            }
+        }
+        // Ledger-backed consumption keyed by semantic decision+approval identity.
+        // Fail-closed if grant minting fails after the consumption append.
+        let consumption_key = format!("{}:{}", decision.decision_id, approval.approval_id);
+        let consumption = json!({
+            "decision_id": decision.decision_id,
+            "approval_id": approval.approval_id,
+            "consumed_at": Utc::now().to_rfc3339(),
+        });
+        stream
+            .commit_typed_new(
+                "approval_grant_consumption",
+                &consumption_key,
+                vec![decision.decision_id.clone(), approval.approval_id.clone()],
+                &consumption,
+                vec![
+                    committed_decision.entry_ulid().into(),
+                    committed_approval.entry_ulid().into(),
+                ],
+            )
+            .map_err(|error| match error {
+                ForgeError::Internal(message)
+                    if message.contains("idempotency key already committed") =>
+                {
+                    ForgeError::Input("approval resolution was already granted".into())
+                }
+                other => other,
+            })?;
+        // The grant window is a fresh five minutes; the approval's expiry only
+        // shortens it when it still lies in the future.
+        let grant_window = Utc::now() + chrono::Duration::minutes(5);
+        let grant_expiry = if expires_at > Utc::now() {
+            std::cmp::min(grant_window, expires_at)
+        } else {
+            grant_window
+        };
+        self.grant_exact(
+            decision,
+            committed_decision,
+            action,
+            assurance,
+            Verdict::Escalate,
+            Some(rule.sandbox_class.clone().unwrap_or_else(|| "local".into())),
+            Some(grant_expiry),
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn grant_exact(
+        &self,
+        decision: &AuthorityDecision,
+        committed: &CommittedRecordRef,
+        action: &AuthorityAction,
+        assurance: Option<&PreActionAssurance>,
+        expected_verdict: Verdict,
+        sandbox_class: Option<String>,
+        approval_expiry: Option<chrono::DateTime<Utc>>,
+    ) -> Result<ActionGrant, ForgeError> {
+        if committed.record_kind() != "authority_decision" {
+            return Err(ForgeError::Input(
+                "authority decision has the wrong committed record kind".into(),
+            ));
+        }
         let is_read = matches!(
             action,
             AuthorityAction::Reserved { resource_type, .. }
@@ -1078,7 +1449,7 @@ impl PolicyAuthorityEngine {
             .evidence
             .get("payload_hash")
             .and_then(Value::as_str);
-        if decision.verdict != Verdict::Allow || bound_hash != Some(action_hash.as_str()) {
+        if decision.verdict != expected_verdict || bound_hash != Some(action_hash.as_str()) {
             return Err(ForgeError::Input(
                 "authority decision does not grant this action".into(),
             ));
@@ -1125,21 +1496,25 @@ impl PolicyAuthorityEngine {
             .filter_map(Value::as_str)
             .map(str::to_owned)
             .collect();
-        let decision_hash = issued_decision_key(decision)?;
-        if !self
-            .issued_decisions
-            .lock()
-            .map_err(|_| ForgeError::Internal("authority issuer state poisoned".into()))?
-            .remove(&decision_hash)
-        {
-            return Err(ForgeError::Input(
-                "authority decision was not issued by this mediator or was replayed".into(),
-            ));
-        }
-        let decided_at = chrono::DateTime::parse_from_rfc3339(&decision.decided_at)
-            .map_err(|_| ForgeError::Input("authority decision timestamp is invalid".into()))?
-            .with_timezone(&Utc);
-        let expires_at = decided_at + chrono::Duration::minutes(5);
+        let expires_at = if let Some(expiry) = approval_expiry {
+            expiry
+        } else {
+            let decision_hash = issued_decision_key(decision)?;
+            if !self
+                .issued_decisions
+                .lock()
+                .map_err(|_| ForgeError::Internal("authority issuer state poisoned".into()))?
+                .remove(&decision_hash)
+            {
+                return Err(ForgeError::Input(
+                    "authority decision was not issued by this mediator or was replayed".into(),
+                ));
+            }
+            chrono::DateTime::parse_from_rfc3339(&decision.decided_at)
+                .map_err(|_| ForgeError::Input("authority decision timestamp is invalid".into()))?
+                .with_timezone(&Utc)
+                + chrono::Duration::minutes(5)
+        };
         if Utc::now() > expires_at {
             return Err(ForgeError::Input("authority decision expired".into()));
         }
@@ -1152,9 +1527,7 @@ impl PolicyAuthorityEngine {
             timeout_secs,
             env_keys,
             _assurance_ref: assurance.map(|value| value.global_checkpoint_hash().into()),
-            sandbox_class: decision
-                .sandbox_class_granted
-                .clone()
+            sandbox_class: sandbox_class
                 .ok_or_else(|| ForgeError::Input("authority decision grants no sandbox".into()))?,
             boundaries: decision.boundary_constraints.clone(),
             compensating_controls: decision.compensating_controls.clone(),
@@ -1406,7 +1779,7 @@ impl PolicyAuthorityEngine {
             let sod_requires_approval = !matching_sod.is_empty();
             let effective_verdict = if !has_permission {
                 Verdict::Deny
-            } else if rule.requires_approval || sod_requires_approval {
+            } else if rule.requires_approval.unwrap_or(false) || sod_requires_approval {
                 Verdict::Escalate
             } else {
                 rule.verdict.clone()
@@ -1736,9 +2109,112 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
             rule.operation_kind == "write_file" && (prefix.is_empty() || path.starts_with(prefix))
         }
         AuthorityAction::ExecuteCommand { .. } => rule.operation_kind == "execute_command",
-        AuthorityAction::Reserved { resource_type, .. } => rule.operation_kind == *resource_type,
+        AuthorityAction::Reserved {
+            resource_type,
+            parameters,
+            ..
+        } => {
+            rule.operation_kind == *resource_type
+                && match resource_type.as_str() {
+                    "transition_artifact_stage" => matches_transition_parameters(rule, parameters),
+                    "attest_artifact_identity" => {
+                        matches_attestation_parameters(rule, parameters, actor)
+                    }
+                    "approval_resolution" => {
+                        matches_approval_resolution_parameters(parameters, actor)
+                    }
+                    _ => true,
+                }
+        }
         _ => false,
     }
+}
+
+fn matches_approval_resolution_parameters(parameters: &Value, actor: &Actor) -> bool {
+    let role = serde_json::to_value(&actor.role)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned));
+    let required_roles = parameters
+        .get("required_approver_roles")
+        .and_then(Value::as_array)
+        .map(|roles| roles.iter().filter_map(Value::as_str).collect::<Vec<_>>());
+    parameter_str(parameters, "approval_id").is_some()
+        && parameter_str(parameters, "original_decision_id").is_some()
+        && parameter_str(parameters, "requester_id")
+            .is_some_and(|requester| requester != actor.actor_id)
+        && matches!(
+            parameter_str(parameters, "resolution"),
+            Some("approved" | "rejected")
+        )
+        && required_roles.is_some_and(|roles| {
+            roles.is_empty() || role.as_deref().is_some_and(|role| roles.contains(&role))
+        })
+}
+
+fn parameter_str<'a>(parameters: &'a Value, name: &str) -> Option<&'a str> {
+    parameters.get(name).and_then(Value::as_str)
+}
+
+fn matches_transition_parameters(rule: &PolicyRule, parameters: &Value) -> bool {
+    let configured_evidence = rule
+        .qualifying_value_evidence_kinds
+        .as_deref()
+        .unwrap_or_default();
+    let requested_evidence = parameters
+        .get("qualifying_value_evidence_kinds")
+        .and_then(Value::as_array)
+        .map(|values| values.iter().filter_map(Value::as_str).collect::<Vec<_>>());
+    let licenses = parameters
+        .get("licenses")
+        .and_then(Value::as_array)
+        .map(|values| values.iter().filter_map(Value::as_str).collect::<Vec<_>>());
+    parameter_str(parameters, "transition_kind") == rule.transition_kind.as_deref()
+        && parameter_str(parameters, "from_stage") == rule.from_stage.as_deref()
+        && parameter_str(parameters, "to_stage") == rule.to_stage.as_deref()
+        && parameter_str(parameters, "mode").is_some_and(|mode| {
+            rule.modes
+                .as_deref()
+                .is_some_and(|modes| modes.iter().any(|allowed| allowed == mode))
+        })
+        && parameter_str(parameters, "gate_profile_ref") == rule.gate_profile_ref.as_deref()
+        && parameter_str(parameters, "required_settlement_strength")
+            == rule.required_settlement_strength.as_deref()
+        && requested_evidence.as_ref().is_some_and(|requested| {
+            requested.len() == configured_evidence.len()
+                && requested
+                    .iter()
+                    .zip(configured_evidence)
+                    .all(|(actual, expected)| actual == expected)
+        })
+        && parameters.get("requires_approval").and_then(Value::as_bool) == rule.requires_approval
+        && licenses.as_ref().is_some_and(|licenses| {
+            !licenses.is_empty()
+                && (rule.license_allowlist.is_empty()
+                    || licenses.iter().all(|license| {
+                        rule.license_allowlist
+                            .iter()
+                            .any(|allowed| allowed == license)
+                    }))
+        })
+}
+
+fn matches_attestation_parameters(rule: &PolicyRule, parameters: &Value, actor: &Actor) -> bool {
+    let actor_role = serde_json::to_value(&actor.role)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned));
+    parameter_str(parameters, "ledger") == rule.attestation_ledger.as_deref()
+        && parameter_str(parameters, "degraded_mode") == rule.degraded_mode.as_deref()
+        && parameter_str(parameters, "requester_role") == actor_role.as_deref()
+        && parameter_str(parameters, "requester_role").is_some_and(|role| {
+            rule.requester_roles
+                .as_deref()
+                .is_some_and(|roles| roles.iter().any(|allowed| allowed == role))
+        })
+        && parameter_str(parameters, "approver_role").is_some_and(|role| {
+            rule.approver_roles
+                .as_deref()
+                .is_some_and(|roles| roles.iter().any(|allowed| allowed == role))
+        })
 }
 
 /// Pure three-axis permission check for ExecuteCommand (§7.6).
@@ -1831,11 +2307,15 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "evidence_record",
                 "spec_projection",
                 "artifact_transition",
+                "transition_artifact_stage",
+                "attest_artifact_identity",
+                "artifact_lifecycle",
                 "identity_binding",
                 "install_extension",
                 "adopt_extension",
                 "disable_extension",
                 "projection_execution",
+                "approval_resolution",
                 "recall_memory",
                 "inspect_run",
                 "validate_model",
@@ -1858,6 +2338,7 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "rollback",
                 "artifact_transition",
                 "attestation",
+                "review_artifact_rights",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()
@@ -2125,6 +2606,428 @@ mod tests {
         });
         assert_eq!(unknown_reserved.verdict, Verdict::Deny);
         assert_eq!(unknown_reserved.reason_codes, ["unclassified"]);
+    }
+
+    #[test]
+    fn reserved_transition_grant_rejects_a_substituted_action() {
+        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+            "version: \"0.1\"\nrules:\n  - name: transition\n    verdict: allow\n    actor_role: operator\n    operation_kind: transition_artifact_stage\n    transition_kind: synthesize\n    from_stage: cognitive\n    to_stage: intellectual\n    modes: [promote]\n    gate_profile_ref: synthesize@1\n    required_settlement_strength: local\n    qualifying_value_evidence_kinds: []\n    requires_approval: false\n    license_allowlist: [internal]\n",
+        )
+        .unwrap();
+        let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+        let action = AuthorityAction::Reserved {
+            resource_type: "transition_artifact_stage".into(),
+            resource_id: "art_model".into(),
+            parameters: json!({"transition_kind":"synthesize","from_stage":"cognitive","to_stage":"intellectual","mode":"promote","gate_profile_ref":"synthesize@1","required_settlement_strength":"local","qualifying_value_evidence_kinds":[],"requires_approval":false,"licenses":["internal"]}),
+        };
+        let decision = evaluate_with(&engine, &action);
+        assert_eq!(decision.verdict, Verdict::Allow);
+        let (_root, committed) = commit(&decision);
+        let substituted = AuthorityAction::Reserved {
+            resource_type: "transition_artifact_stage".into(),
+            resource_id: "art_other".into(),
+            parameters: json!({"transition_kind":"synthesize","from_stage":"cognitive","to_stage":"intellectual","mode":"promote","gate_profile_ref":"synthesize@1","required_settlement_strength":"local","qualifying_value_evidence_kinds":[],"requires_approval":false,"licenses":["internal"]}),
+        };
+        assert!(engine
+            .grant(&decision, &committed, &substituted, None)
+            .is_err());
+    }
+
+    fn approval_transition_fixture() -> (
+        PolicyAuthorityEngine,
+        AuthorityAction,
+        AuthorityDecision,
+        ApprovalRequest,
+        SettlementCriteriaRecord,
+        tempfile::TempDir,
+        CommittedRecordRef,
+        CommittedRecordRef,
+        CommittedRecordRef,
+    ) {
+        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+            "version: \"0.1\"\nrules:\n  - name: capitalize\n    verdict: allow\n    actor_role: operator\n    operation_kind: transition_artifact_stage\n    transition_kind: capitalize\n    from_stage: product\n    to_stage: capital\n    modes: [promote]\n    gate_profile_ref: capital@1\n    required_settlement_strength: strong\n    qualifying_value_evidence_kinds: [adoption]\n    requires_approval: true\n    license_allowlist: [internal]\n",
+        )
+        .unwrap();
+        let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+        let action = AuthorityAction::Reserved {
+            resource_type: "transition_artifact_stage".into(),
+            resource_id: "art_model".into(),
+            parameters: json!({"transition_kind":"capitalize","from_stage":"product","to_stage":"capital","mode":"promote","gate_profile_ref":"capital@1","required_settlement_strength":"strong","qualifying_value_evidence_kinds":["adoption"],"requires_approval":true,"licenses":["internal"]}),
+        };
+        let requester = actor();
+        let decision_time = Utc::now() - chrono::Duration::minutes(10);
+        let decision = engine
+            .evaluate_at(
+                AuthorityEvaluation {
+                    actor: &requester,
+                    binding: binding(),
+                    run_id: "run_20260710T120000Z_abcdef",
+                    case_id: "case_test",
+                    plan_item_id: "item_01",
+                    sequence: 1,
+                    action: &action,
+                    workspace_root: Path::new("/tmp/workspace"),
+                    evidence_refs: vec![],
+                    artifacts_root: None,
+                    timeout_secs: None,
+                    env_keys: Default::default(),
+                    domainforge_candidate: None,
+                    environment: None,
+                },
+                "act_abcdef".into(),
+                decision_time.to_rfc3339(),
+            )
+            .unwrap();
+        assert_eq!(decision.verdict, Verdict::Escalate);
+        let criteria = SettlementCriteriaRecord {
+            version: RECORD_VERSION.into(),
+            criteria_id: "crit_capital".into(),
+            criteria: SettlementCriteria {
+                require_exit_zero: true,
+                required_artifacts: vec![],
+                stdout_must_contain: None,
+                require_approval: true,
+                evaluator: None,
+                records: None,
+                per_record_evaluator: None,
+                min_pass_ratio: None,
+            },
+            origin_refs: vec![OriginRef {
+                kind: OriginRefKind::Intent,
+                reference: "int_capital".into(),
+                sha256: "sha256:intent".into(),
+                role: OriginRole::AcceptanceSource,
+                evidence_refs: vec![],
+            }],
+            derivation: CriteriaDerivation {
+                method: DerivationMethod::DeterministicPlanner,
+                actor_ref: "operator_local".into(),
+                producer_ref: None,
+                rationale: "capitalization fixture".into(),
+            },
+            declared_at: Utc::now().to_rfc3339(),
+            criteria_sha256: String::new(),
+            criteria_record_hash: String::new(),
+        };
+        let mut criteria = criteria;
+        criteria.criteria_sha256 =
+            sea_forge_ledger::types::hash_canonical(&criteria.criteria).unwrap();
+        let mut unhashed = criteria.clone();
+        unhashed.criteria_record_hash.clear();
+        criteria.criteria_record_hash = sea_forge_ledger::types::hash_canonical(&unhashed).unwrap();
+        let approval = ApprovalRequest {
+            version: RECORD_VERSION.into(),
+            approval_id: "apr_capital".into(),
+            run_id: decision.run_id.clone(),
+            case_id: decision.audit_record.case_id.clone().unwrap(),
+            decision_id: decision.decision_id.clone(),
+            plan_item_id: decision.plan_item_id.clone(),
+            criteria_ref: Some(criteria.criteria_id.clone()),
+            criteria_sha256: Some(criteria.criteria_sha256.clone()),
+            criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
+            job_contract_ref: None,
+            requested_at: decision_time.to_rfc3339(),
+            expires_at: (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
+            status: ApprovalStatus::Approved,
+            resolved_by: Some("security_officer".into()),
+            resolved_at: Some(Utc::now().to_rfc3339()),
+            note: None,
+        };
+        let root = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(root.path(), "case-case_test", "test-writer").unwrap();
+        let decision_ref = stream
+            .commit_typed("authority_decision", vec![], &decision, vec![])
+            .unwrap();
+        let criteria_ref = stream
+            .commit_typed("settlement_criteria", vec![], &criteria, vec![])
+            .unwrap();
+        let approval_ref = stream
+            .commit_typed("approval_resolution", vec![], &approval, vec![])
+            .unwrap();
+        (
+            engine,
+            action,
+            decision,
+            approval,
+            criteria,
+            root,
+            decision_ref,
+            approval_ref,
+            criteria_ref,
+        )
+    }
+
+    #[test]
+    fn caller_supplied_approval_refs_do_not_change_escalation() {
+        let (engine, mut action, ..) = approval_transition_fixture();
+        if let AuthorityAction::Reserved { parameters, .. } = &mut action {
+            parameters["approval_ref"] = json!("apr_capital");
+            parameters["approver_id"] = json!("security_officer");
+        }
+        assert_eq!(evaluate_with(&engine, &action).verdict, Verdict::Escalate);
+    }
+
+    #[test]
+    fn exact_ledgered_approval_yields_one_exact_grant() {
+        let (
+            engine,
+            action,
+            decision,
+            approval,
+            criteria,
+            _root,
+            decision_ref,
+            approval_ref,
+            criteria_ref,
+        ) = approval_transition_fixture();
+        let resumed_engine = PolicyAuthorityEngine::new(engine.bundle.clone()).unwrap();
+        let stream = LedgerStream::open(_root.path(), "case-case_test", "test-writer").unwrap();
+        let grant = resumed_engine
+            .grant_after_approval(
+                &decision,
+                &decision_ref,
+                &action,
+                &approval,
+                &approval_ref,
+                &criteria,
+                &criteria_ref,
+                None,
+                &stream,
+            )
+            .unwrap();
+        grant
+            .authorize(
+                &action,
+                &decision.run_id,
+                &decision.plan_item_id,
+                Path::new("/tmp/workspace"),
+            )
+            .unwrap();
+        assert!(resumed_engine
+            .grant_after_approval(
+                &decision,
+                &decision_ref,
+                &action,
+                &approval,
+                &approval_ref,
+                &criteria,
+                &criteria_ref,
+                None,
+                &stream,
+            )
+            .is_err());
+    }
+
+    #[test]
+    fn wrong_self_expired_rejected_or_tampered_approval_is_denied() {
+        for variant in ["wrong", "self", "expired", "rejected", "tampered"] {
+            let (
+                engine,
+                action,
+                decision,
+                mut approval,
+                criteria,
+                _root,
+                decision_ref,
+                approval_ref,
+                criteria_ref,
+            ) = approval_transition_fixture();
+            match variant {
+                "wrong" => approval.plan_item_id = "other_item".into(),
+                "self" => approval.resolved_by = Some("operator_local".into()),
+                "expired" => approval.expires_at = "2020-01-01T00:00:00Z".into(),
+                "rejected" => approval.status = ApprovalStatus::Rejected,
+                "tampered" => approval.criteria_record_hash = Some("sha256:tampered".into()),
+                _ => unreachable!(),
+            }
+            let stream = LedgerStream::open(_root.path(), "case-case_test", "test-writer").unwrap();
+            assert!(
+                engine
+                    .grant_after_approval(
+                        &decision,
+                        &decision_ref,
+                        &action,
+                        &approval,
+                        &approval_ref,
+                        &criteria,
+                        &criteria_ref,
+                        None,
+                        &stream,
+                    )
+                    .is_err(),
+                "variant {variant}"
+            );
+        }
+    }
+
+    #[test]
+    fn approved_before_expiry_remains_valid_after_wall_clock_ttl() {
+        let (
+            engine,
+            action,
+            decision,
+            mut approval,
+            criteria,
+            root,
+            decision_ref,
+            _approval_ref,
+            criteria_ref,
+        ) = approval_transition_fixture();
+        // Resolved Approved before expires_at, but wall clock is now past expiry.
+        let expires = Utc::now() - chrono::Duration::minutes(10);
+        let resolved = Utc::now() - chrono::Duration::minutes(20);
+        approval.status = ApprovalStatus::Approved;
+        approval.resolved_at = Some(resolved.to_rfc3339());
+        approval.expires_at = expires.to_rfc3339();
+        let stream = LedgerStream::open(root.path(), "case-case_test", "test-writer").unwrap();
+        let approval_ref = stream
+            .commit_typed_once(
+                "approval_resolution",
+                "apr_past_ttl",
+                vec!["apr_past_ttl".into()],
+                &approval,
+                vec![],
+            )
+            .unwrap();
+        let resumed_engine = PolicyAuthorityEngine::new(engine.bundle.clone()).unwrap();
+        let grant = resumed_engine
+            .grant_after_approval(
+                &decision,
+                &decision_ref,
+                &action,
+                &approval,
+                &approval_ref,
+                &criteria,
+                &criteria_ref,
+                None,
+                &stream,
+            )
+            .unwrap();
+        grant
+            .authorize(
+                &action,
+                &decision.run_id,
+                &decision.plan_item_id,
+                Path::new("/tmp/workspace"),
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn approved_resolved_after_expiry_is_denied() {
+        let (
+            engine,
+            action,
+            decision,
+            mut approval,
+            criteria,
+            root,
+            decision_ref,
+            _approval_ref,
+            criteria_ref,
+        ) = approval_transition_fixture();
+        let past = Utc::now() - chrono::Duration::hours(2);
+        let even_more_past = Utc::now() - chrono::Duration::days(1);
+        approval.status = ApprovalStatus::Approved;
+        approval.resolved_at = Some(past.to_rfc3339());
+        approval.expires_at = even_more_past.to_rfc3339();
+        let stream = LedgerStream::open(root.path(), "case-case_test", "test-writer").unwrap();
+        let approval_ref = stream
+            .commit_typed_once(
+                "approval_resolution",
+                "apr_late",
+                vec!["apr_late".into()],
+                &approval,
+                vec![],
+            )
+            .unwrap();
+        let resumed_engine = PolicyAuthorityEngine::new(engine.bundle.clone()).unwrap();
+        assert!(resumed_engine
+            .grant_after_approval(
+                &decision,
+                &decision_ref,
+                &action,
+                &approval,
+                &approval_ref,
+                &criteria,
+                &criteria_ref,
+                None,
+                &stream,
+            )
+            .is_err());
+    }
+
+    #[test]
+    fn m8_transition_parameter_mismatches_deny_before_grant() {
+        let policy = "version: \"0.1\"\nrules:\n  - name: transition\n    verdict: allow\n    actor_role: operator\n    operation_kind: transition_artifact_stage\n    transition_kind: synthesize\n    from_stage: cognitive\n    to_stage: intellectual\n    modes: [promote]\n    gate_profile_ref: synthesize@1\n    required_settlement_strength: local\n    qualifying_value_evidence_kinds: [adoption]\n    requires_approval: false\n    license_allowlist: [internal]\n";
+        let valid = json!({
+            "transition_kind":"synthesize",
+            "from_stage":"cognitive",
+            "to_stage":"intellectual",
+            "mode":"promote",
+            "gate_profile_ref":"synthesize@1",
+            "required_settlement_strength":"local",
+            "qualifying_value_evidence_kinds":["adoption"],
+            "requires_approval":false,
+            "licenses":["internal"]
+        });
+        for (field, replacement) in [
+            ("transition_kind", json!("productize")),
+            ("from_stage", json!("intellectual")),
+            ("to_stage", json!("product")),
+            ("mode", json!("derive")),
+            ("gate_profile_ref", json!("other@1")),
+            ("required_settlement_strength", json!("strong")),
+            ("qualifying_value_evidence_kinds", json!(["quality"])),
+            ("requires_approval", json!(true)),
+            ("licenses", json!(["proprietary"])),
+        ] {
+            let mut parameters = valid.clone();
+            parameters[field] = replacement;
+            let engine = PolicyAuthorityEngine::new(serde_yaml::from_str(policy).unwrap()).unwrap();
+            let action = AuthorityAction::Reserved {
+                resource_type: "transition_artifact_stage".into(),
+                resource_id: "art_model".into(),
+                parameters,
+            };
+            let decision = evaluate_with(&engine, &action);
+            assert_eq!(decision.verdict, Verdict::Deny, "field {field}");
+            let (_root, committed) = commit(&decision);
+            assert!(
+                engine.grant(&decision, &committed, &action, None).is_err(),
+                "field {field}"
+            );
+        }
+    }
+
+    #[test]
+    fn m8_attestation_parameter_mismatches_deny_before_grant() {
+        let policy = "version: \"0.1\"\nrules:\n  - name: attest\n    verdict: allow\n    actor_role: operator\n    operation_kind: attest_artifact_identity\n    ledger: ifl\n    requester_roles: [operator]\n    approver_roles: [R-SO]\n    degraded_mode: forbidden\n";
+        let valid = json!({
+            "ledger":"ifl",
+            "requester_role":"operator",
+            "approver_role":"R-SO",
+            "degraded_mode":"forbidden"
+        });
+        for (field, replacement) in [
+            ("ledger", json!("other")),
+            ("requester_role", json!("R-AA")),
+            ("approver_role", json!("R-DEV")),
+            ("degraded_mode", json!("pre_mint_only")),
+        ] {
+            let mut parameters = valid.clone();
+            parameters[field] = replacement;
+            let engine = PolicyAuthorityEngine::new(serde_yaml::from_str(policy).unwrap()).unwrap();
+            let action = AuthorityAction::Reserved {
+                resource_type: "attest_artifact_identity".into(),
+                resource_id: "art_model".into(),
+                parameters,
+            };
+            let decision = evaluate_with(&engine, &action);
+            assert_eq!(decision.verdict, Verdict::Deny, "field {field}");
+            let (_root, committed) = commit(&decision);
+            assert!(engine.grant(&decision, &committed, &action, None).is_err());
+        }
     }
 
     #[test]

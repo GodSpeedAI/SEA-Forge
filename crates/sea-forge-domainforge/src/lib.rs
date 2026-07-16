@@ -47,6 +47,8 @@ pub struct DomainModelRef {
     pub parse_options_sha256: String,
     pub semantic_model_sha256: String,
     pub concept_refs: Vec<String>,
+    #[serde(default)]
+    pub class_refs: Vec<String>,
     pub validation_evidence_refs: Vec<String>,
 }
 
@@ -169,6 +171,13 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
     concept_refs.extend(graph.all_resources().iter().map(|r| r.name().to_string()));
     concept_refs.sort();
     concept_refs.dedup();
+    let mut class_refs: Vec<String> = graph
+        .all_resources()
+        .iter()
+        .map(|resource| resource.name().to_string())
+        .collect();
+    class_refs.sort();
+    class_refs.dedup();
 
     let model_ref = DomainModelRef {
         source_refs,
@@ -177,6 +186,7 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
         parse_options_sha256,
         semantic_model_sha256,
         concept_refs,
+        class_refs,
         validation_evidence_refs: vec![format!(
             "validation:error_count={}",
             validation.error_count

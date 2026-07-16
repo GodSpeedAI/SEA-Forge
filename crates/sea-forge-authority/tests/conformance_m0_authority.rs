@@ -1,5 +1,6 @@
 use sea_forge_authority::{
-    resolve_candidates, GovernanceDisposition as D, GovernanceVerdict, ResolutionPolicy,
+    resolve_candidates, AuthorityPolicyBundle, GovernanceDisposition as D, GovernanceVerdict,
+    PolicyAuthorityEngine, ResolutionPolicy,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -19,6 +20,123 @@ fn candidate(disposition: D) -> GovernanceVerdict {
         },
         reason: "fixture".into(),
         evidence_refs: vec!["evi_fixture".into()],
+    }
+}
+
+#[test]
+fn m8_transition_rule_missing_required_contract_is_schema_error() {
+    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+rules:
+  - name: incomplete-transition
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+"#,
+    )
+    .unwrap();
+    let error = PolicyAuthorityEngine::new(bundle).err().unwrap();
+    assert_eq!(error.class(), "schema_error");
+}
+
+#[test]
+fn settlement_authority_descriptor_selects_one_strong_adapter_and_local_cannot_be_strong() {
+    let valid: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+settlement_authorities:
+  - authority_ref: local
+    adapter: local
+    trust_anchor_ref: local-kernel
+    declarer_actor_id: operator
+    permitted_declarer_roles: [operator]
+    standing_basis: local-only
+  - authority_ref: swe_seed_prod
+    adapter: swe_seed
+    command: ["/opt/swe-seed", "declare"]
+    timeout_secs: 30
+    trust_anchor_ref: key://swe-seed/current
+    declarer_actor_id: swe_seed
+    permitted_declarer_roles: [R-AA]
+    standing_basis: externally-attested
+    may_issue_strong: true
+rules: []
+"#,
+    )
+    .unwrap();
+    let engine = PolicyAuthorityEngine::new(valid.clone());
+    assert!(engine.is_ok());
+    assert_eq!(
+        valid.strong_settlement_authority().unwrap().authority_ref,
+        "swe_seed_prod"
+    );
+
+    let invalid: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+settlement_authorities:
+  - authority_ref: local
+    adapter: local
+    trust_anchor_ref: local-kernel
+    declarer_actor_id: operator
+    permitted_declarer_roles: [operator]
+    standing_basis: local-only
+    may_issue_strong: true
+rules: []
+"#,
+    )
+    .unwrap();
+    assert_eq!(
+        PolicyAuthorityEngine::new(invalid).err().unwrap().class(),
+        "settlement_authority_config_error"
+    );
+}
+
+#[test]
+fn m8_attestation_rule_missing_role_constraints_is_schema_error() {
+    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+rules:
+  - name: incomplete-attestation
+    verdict: allow
+    actor_role: operator
+    operation_kind: attest_artifact_identity
+    ledger: ifl
+    degraded_mode: forbidden
+"#,
+    )
+    .unwrap();
+    let error = PolicyAuthorityEngine::new(bundle).err().unwrap();
+    assert_eq!(error.class(), "schema_error");
+}
+
+#[test]
+fn m8_capitalization_schema_requires_approval_promote_and_value_evidence() {
+    for (requires_approval, modes, evidence) in [
+        ("false", "[promote]", "[adoption]"),
+        ("true", "[derive]", "[adoption]"),
+        ("true", "[promote]", "[]"),
+    ] {
+        let yaml = format!(
+            r#"version: "0.1"
+rules:
+  - name: capitalize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: capitalize
+    from_stage: product
+    to_stage: capital
+    modes: {modes}
+    gate_profile_ref: capital@1
+    required_settlement_strength: strong
+    qualifying_value_evidence_kinds: {evidence}
+    requires_approval: {requires_approval}
+"#
+        );
+        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(
+            PolicyAuthorityEngine::new(bundle).err().unwrap().class(),
+            "schema_error"
+        );
     }
 }
 
