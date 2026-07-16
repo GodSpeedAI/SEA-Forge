@@ -555,7 +555,17 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
   (pinned release constants for slice 1.3): system=
   `09ead9ac9514009d60de0da18d936b82aa6a94a86db94c00dde7f3da54b77cfa`; adlc=
   `8c891cff33fe7bb012ebb0fda6232bc8e996d5a1af47e9c5a675f2cc7a143613`; original
-  seed (spec-cited) = `2ea06fc9c59d28fac9b9d47f18c4787b2ffb740b0527513a70556cf91dcbffc5`.
+  seed (spec-cited) =   `2ea06fc9c59d28fac9b9d47f18c4787b2ffb740b0527513a70556cf91dcbffc5`.
+- Slice 1.2b+1.3 (commit): added synchronous kernel crate
+  `sea-forge-self-model` (workspace member; added to `no-async-kernel`
+  inventory). Provides `BundledModels` + `verify_bundled` (byte-check against
+  pinned release sha256 before validation), `load_composed` (validates both
+  models through DomainForge), `ComposedModel` (typed read-only concept lookup,
+  no raw graph), `ReleaseRealization` (deterministic via SOURCE_DATE_EPOCH),
+  `CellRealization` (+ `ToolchainProbe`/`ProbeResult`), `SelfModelSnapshot`
+  (five digest fields + `snapshot_hash`), and canonical (jcs-nfc-v1-aligned)
+  hashing. T9.1 + T9.2 green (lib 4 + conformance 2); clippy/fmt clean;
+  no-async-kernel green.
 
 ## Decisions
 
