@@ -537,6 +537,18 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
 - `devbox run -- just no-async-kernel` — "ok: no tokio in kernel crates".
 - Tracked `.sea-forge/**`: 0 files (confirmed via `git ls-files`).
 
+## M9 progress (Task 1)
+
+- Slice 1.2a (commit): added `ProjectionKind::{Kg, SelfModelSnapshot}` (appended
+  to preserve existing Ord), `ForgeError::SelfModel` (class `self_model_error`),
+  and `ids::snapshot_id()` (`smsnap_`). Compatibility boundary proven by 11 new
+  tests: `crates/sea-forge-core/tests/projection_kind_boundary.rs` (serde, 6),
+  `crates/sea-forge-ledger/tests/projection_boundary.rs` (record_kind skip +
+  verify-immune, 3), `crates/sea-forge-cell/tests/projection_bundle_boundary.rs`
+  (E6 hash import, 2). No global schema bump; M0–M8 records/readers unchanged.
+  `cargo fmt`, clippy (`-D warnings`, 5 affected crates), workspace check, and
+  affected-crate tests all green.
+
 ## Decisions
 
 - Pipeline moved to `sea-forge-cli` (not kept in `sea-forge-core`) because keeping
