@@ -82,11 +82,11 @@ Important boundaries:
 Everything in spec-full §3.1, plus:
 
 - `models/seaforge-system@<version>.sea` (bundled, read-only at runtime) — the canonical Genesis Self-Model; `models/adlc-odi-case@<version>.sea` — the methodology seed (content: the current `adlc_odi_seaforge_case_kg_seed.sea`, versioned and namespaced). Both are release artifacts with recorded SHA-256; installations reference, never edit, them.
-- `.sea-forge/self-model/snapshots/<snapshot_id>.json` — immutable `SelfModelSnapshot` records: DomainModelRef of the validated canonical model + seed, release realization digest, cell realization digest, capability-projection digest, created_at. Ledgered like every v0.2 record.
+- `.sea-forge/self-model/snapshots/<snapshot_id>.json` — immutable `SelfModelSnapshot` records: DomainModelRef of the validated canonical model + seed, release realization digest, cell realization digest, capability-projection digest, created_at. Ledgered in a `self_model.v1` envelope.
 - `.sea-forge/self-model/realization/release.json` — release realization: crate versions, record schema versions, built-in extensions, projection targets with per-target limitations, supported platform classes, bundled templates/environments/models. Generated at build/release time, hash-pinned.
 - `.sea-forge/self-model/realization/cell.json` — installation realization: installed/active extensions (from the extension registry), environment contracts present, toolchain probe results (e.g. `tla2tools: unavailable`), sandbox classes available on this host, degraded/missing components. Rebuildable from registry + probes; probe runs are evidenced.
-- `.sea-forge/self-model/projections/` — rebuildable KG/CALM/JSON projections of the composed self-model, each an ordinary `ProjectionRecord` (spec-full §7.0b) with `projection_kind: kg | calm | self_model_snapshot`.
-- `.sea-forge/templates/adlc_case@<version>.yaml` and `.sea-forge/templates/odi_adlc_case@<version>.yaml` — built-in E8 templates (E12).
+- `.sea-forge/self-model/projections/` — rebuildable KG/CALM/JSON projections of the composed self-model. Each payload is an ordinary `ProjectionRecord` (spec-full §7.0b) with `projection_kind: kg | calm | self_model_snapshot`, carried in a `self_model.v1` envelope.
+- `<source-owned built-in template assets>/adlc_case@<version>.yaml` and `<source-owned built-in template assets>/odi_adlc_case@<version>.yaml` — built-in E8 templates (E12). The built-in installer materializes pinned runtime copies under `<root>/templates/`; no tracked template belongs under `.sea-forge/`.
 - `.sea-forge/thoth/questions.jsonl` and `.sea-forge/thoth/answers.jsonl` — append-only compatibility views of ledgered `ThothQuestion` / `ThothAnswer` records; the ledger remains authoritative.
 - `.sea-forge/authority/policy-bundles/…` gains the `self_disclosure` surface (§8.2).
 
@@ -170,18 +170,18 @@ None. `domainforge-core` (pinned per spec-full §6.3), the ledger, E8 templates,
 
 ## 7. Core Domain Model — extensions only
 
-All spec-full entities stand. New/extended (additive; persisted records use `version: "0.2"` and are ledgered per §7.0c):
+All spec-full entities stand. New/extended records are ledgered per §7.0c. Existing v0.2 records remain v0.2; E11's new self-model records and self-model projection envelopes use `schema: self_model.v1` (§7.7).
 
 ### 7.1 SelfModelSnapshot (E11)
 
-- `snapshot_id` (`smsnap_` + ULID-derived), `release_id`, `created_at`.
+- `schema: self_model.v1`, `snapshot_id` (`smsnap_` + ULID-derived), `release_id`, `created_at`.
 - `system_model_ref` (DomainModelRef — the validated `godspeed.seaforge.system` source set).
 - `seed_model_refs` (array of DomainModelRef — `godspeed.adlc_odi_case` and future seeds).
 - `release_realization_sha256`, `cell_realization_sha256`.
 - `capability_projection_sha256` — hash of the canonical demonstrated-self join (sorted capability names → status/evidence refs) at snapshot time.
 - `snapshot_hash` — hash of canonical `{system_model_ref.semantic_model_sha256, seed refs, three realization/projection hashes, release_id}`.
 
-A snapshot is created on `init`, on upgrade, on extension install/adopt/disable, and on demand (`sea-forge self-model rebuild`). Thoth answers always name exactly one snapshot. A stale snapshot (any source hash drifted) is `freshness: stale`; answering from it is permitted only with `freshness` disclosed, and rebuild is required before `assurance` above `local_tamper_evident` may be claimed.
+A snapshot is created on first-root initialization, on detected release upgrade, on extension install/adopt/disable, and on demand (`sea-forge self-model rebuild`). One shared initialization service and one extension-registry mutation service own these triggers for both CLI and server. A failed rebuild records `self_model_error`, preserves the prior snapshot as verifiable but stale, and never rolls back a committed extension mutation. Thoth answers always name exactly one snapshot. A stale snapshot (any source hash drifted) is `freshness: stale`; answering from it is permitted only with `freshness` disclosed, and rebuild is required before `assurance` above `local_tamper_evident` may be claimed.
 
 ### 7.2 Realization records (E11)
 
@@ -195,7 +195,7 @@ A snapshot is created on `init`, on upgrade, on extension install/adopt/disable,
 
 **ClaimClass** (disclosure vocabulary): `identity | architecture | declared_capability | installed_capability | demonstrated_capability | authority_requirements | environment_status | failure_condition | security_implementation | customer_private | credential_bearing | policy_thresholds`. The last four default to deny for every actor; there is no built-in rule that allows them.
 
-**GroundedClaim**: `claim_id`, `claim_class`, `subject` (concept ref or capability name), `status` (ClaimStatus + flags), `statement` (string, generated deterministically from typed fields — never free-form model output), `snapshot_ref`, `evidence_refs`, `settlement_refs`, `capability_record_ref` (nullable), `limitations` (array; e.g. the Cedar baseline caveat carried from the release realization).
+**GroundedClaim**: `claim_id`, `claim_class`, `subject` (concept ref or capability name), `status` (ClaimStatus + flags), `statement` (string, generated deterministically from typed fields — never free-form model output), `snapshot_ref`, `evidence_refs`, `settlement_refs`, `capability_record_ref` (nullable), `limitations` (array; e.g. the Cedar baseline caveat carried from the release realization), `authored_by` (immutable actor identity when Thoth authors the claim).
 
 ### 7.4 ThothQuestion / ThothAnswer (E13)
 
@@ -207,13 +207,19 @@ A snapshot is created on `init`, on upgrade, on extension install/adopt/disable,
 
 ### 7.5 ODI provenance (E12)
 
-**OriginRefKind** gains `desired_outcome`: an `OriginRef` whose target is a DomainForge concept ref (with `domain_model_ref`) naming a Desired Outcome Criterion entity in a validated seed/client model. `SettlementCriteriaRecord.origin_refs` MAY include any number of these; `verify_item_criteria` extends to check that each desired-outcome ref resolves in the referenced validated model. No other criteria semantics change: a desired-outcome ref explains *why* a criterion exists; the criterion's checks still decide settlement.
+**OriginRefKind** gains `desired_outcome`: an `OriginRef` whose `reference` is a canonical DomainForge concept ref and whose additive typed `domain_model_ref` field is REQUIRED for this kind and absent for legacy kinds. It names a Desired Outcome Criterion entity in a validated seed/client model. The bound source/model hash covers the concept/model tuple. `SettlementCriteriaRecord.origin_refs` MAY include any number of these; `verify_item_criteria` extends to check model hash, concept membership, and expected class through a resolver at plan-commit time. No other criteria semantics change: a desired-outcome ref explains *why* a criterion exists; the criterion's checks still decide settlement.
 
-**Templates**: `adlc_case@0.1.0` encodes stages Frame (preparation/hypothesis, scope, `ProblemFramed` milestone), Form (design, simulation, `DevelopmentAuthorized`), Build (implementation, continuous evaluation, `ReleaseCandidateAccepted`), Activate (controlled deployment, production observation, `ActivationSettled`) with reactivation sentries (e.g. simulation `settlement_status: rejected` re-enters design via repetition markers) and a discretionary-item slot. `odi_adlc_case@0.1.0` prepends job-framing and outcome-discovery/selection stages and parameterizes desired-outcome concept refs. Both are ordinary E8 templates: zero privilege, full schema validation, deterministic instantiation.
+**Templates**: `adlc_case@0.1.0` encodes stages Frame (preparation/hypothesis, scope, `ProblemFramed` milestone), Form (design, simulation, `DevelopmentAuthorized`), Build (implementation, continuous evaluation, `ReleaseCandidateAccepted`), Activate (controlled deployment, production observation, `ActivationSettled`) with reactivation sentries (e.g. the named simulation's `settlement_status: rejected` re-enters design via repetition markers) and a discretionary-item slot. `odi_adlc_case@0.1.0` prepends job-framing and outcome-discovery/selection stages and parameterizes desired-outcome concept refs. E8 template items therefore carry entry/exit criteria, parent stage, and dependencies; instantiation projects them byte-for-byte to a CasePlan. Sentry predicates evaluate the event from their named source, not any matching event in the case. Both are ordinary E8 templates: zero privilege, full schema validation, deterministic instantiation.
 
 ### 7.6 Identifiers
 
 New prefixes: `smsnap_`, `thq_`, `tha_` follow the spec-full ULID-backed record rules. All other ID grammar unchanged.
+
+### 7.7 Self-model record compatibility
+
+`SelfModelSnapshot`, `ReleaseRealization`, `CellRealization`, and self-model projection records are new record kinds with `schema: self_model.v1`; this is an additive record family, not a global v0.2-to-v0.3 migration. The latter projection records carry an existing `ProjectionRecord` payload but use the `self_model.v1` envelope as their ledger type boundary.
+
+`ProjectionKind` gains `kg` and `self_model_snapshot`. Because existing readers use a closed enum, an older binary MUST inspect the record type/schema before deserializing the payload. It MUST skip an unsupported `self_model.v1` record with an explicit unsupported-record result while preserving ledger verification and replay of supported records. It MUST NOT attempt to decode a new projection kind into an old enum, fail mid-replay, or treat the record as verified content it can interpret. Federation/import negotiates this record schema before transfer. M9 proves both new variants against an old-reader fixture; no global record-version bump is authorized by this spec.
 
 ## 8. Configuration and Input Contract
 
@@ -252,7 +258,7 @@ Server: disclosure policy reloads with the existing bundle reload (last-known-go
 
 ### 8.5 Startup and Preflight
 
-On `init`/upgrade: verify bundled model hashes against the release realization → `load_validate` both models → assemble/verify realizations → write snapshot → (optionally) rebuild projections. Any failure: typed `self_model_error`, exit 1 for self-model commands; other subsystems unaffected.
+First-root initialization occurs only when the installation manifest is absent. Upgrade occurs only when the manifest's release ID or supported schema set changes. Both enter the same initialization service: verify bundled model hashes against the release realization → `load_validate` both models → assemble/verify realizations → write snapshot → (optionally) rebuild projections. Extension install, adopt, and disable enter one registry-mutation service that commits the mutation, marks the current snapshot stale, and requests the same rebuild. Any failure: typed `self_model_error`, exit 1 for self-model commands; other subsystems and the committed registry mutation remain intact. Retrying is safe and never rewrites an immutable snapshot.
 
 ### 8.6 Primary Input Contract
 
@@ -264,7 +270,8 @@ On `init`/upgrade: verify bundled model hashes against the release realization �
 
 ```text
 parse typed question → classify (kind → candidate claim classes)
-  → CanonicalActionRequest {resource_type: self_disclosure, parameters: {kind, claim_classes, subject_digest}}
+  → CanonicalActionRequest {resource_type: self_disclosure,
+       parameters: {kind, claim_classes, subject_digest, snapshot_ref, freshness_requirement}}
   → authority decision (ledgered)
   → deny ⇒ ThothAnswer{disposition: denied} + evidence → exit 4
   → allow ⇒ DisclosurePlan (permitted classes ∩ candidate classes, permitted regions)
@@ -295,6 +302,7 @@ ADLC/ODI case flow is the existing M2 case loop; this spec adds no new case stat
 - Composition (system model + seeds + overlays) MUST go through DomainForge namespace semantics; the composed DomainModelRef covers all sources (spec-full §7.0a rules apply unchanged).
 - Realization and capability-projection joins MUST read only ledger-verified records; an unverifiable ledger scope excludes its records from the demonstrated view (capping status) rather than failing the snapshot.
 - All self-model projections go through the ProjectionRecord ABI: deterministic, validated, quarantining, rebuildable, settled.
+- The release realization is generated from explicit release metadata or `SOURCE_DATE_EPOCH`; wall-clock build time is not an input to its hash. Cargo build scripts may write only to `OUT_DIR`; installations verify the release realization and never regenerate it.
 
 ### 10.2 Claim derivation (E13)
 
@@ -308,12 +316,13 @@ ADLC/ODI case flow is the existing M2 case loop; this spec adds no new case stat
 - The permitted-regions set MUST be applied inside the query executor (the query cannot construct results from non-permitted regions), and the executed query plan MUST be committed as evidence so the boundary is auditable.
 - Denied claim classes are named in the answer *as classes only*. The implementation MUST NOT vary denial messages by restricted content (no oracle behavior: asking about two different restricted subjects yields byte-identical denial shapes apart from IDs/timestamps).
 - Thoth's own operations are the most-governed path: every question is a protected action; Thoth has no bypass, no ambient reads, and its identity binding requires a sponsor for any grant beyond the default agent classes.
+- A Thoth-authored claim carries immutable `authored_by` provenance. Settlement declaration and capability-promotion inputs bind that provenance and MUST reject the same actor as declarer or promoter. Re-labeling, copying, or replaying a claim cannot remove the binding.
 
 ### 10.4 ADLC/ODI templates (E12)
 
-- Template instantiation, validation, and provenance follow E8/M2c unchanged. The templates MUST pass the existing instantiation-determinism and forbidden-substitution gates.
+- Template instantiation, validation, and provenance follow E8/M2c with the additive E8 control-flow vocabulary in §7.5. The templates MUST pass instantiation-determinism and forbidden-substitution gates. Parameters remain forbidden in IDs, names, item kinds, sentry event kinds, sentry source IDs, and sandbox classes.
 - Desired-outcome OriginRefs MUST resolve against a validated model at plan-commit time; unresolvable refs are `criteria_provenance_error` before authority (fail before side effects).
-- Reactivation is expressed entirely in sentries/repetition markers; the implementation MUST NOT add engine state to support it.
+- Reactivation is expressed entirely in source-bound sentries/repetition markers; the implementation MUST NOT add engine state to support it. A settlement from one item MUST NOT satisfy a predicate bound to another item.
 
 ### 10.5 Completion Rules
 
@@ -389,7 +398,7 @@ Every class above fails closed toward *less claimed capability and less disclosu
 
 - **Trust boundary**: external agents ↔ Thoth protocol. Everything past the typed-question parse is kernel-governed. The self-model and its projections are inside the boundary; only ThothAnswers cross it.
 - Semantic disclosure control is *claims-based*, not file-RBAC: the unit of protection is a claim class, enforced pre-retrieval (§10.3). The four high-risk classes (`security_implementation`, `customer_private`, `credential_bearing`, `policy_thresholds`) are deny-by-default with schema-level friction to grant.
-- Thoth identity: role `R-AA`, sponsor required for privileged grants; SoD: Thoth may not be a settlement declarer for any claim it authored (extends the existing proposer≠approver family).
+- Thoth identity: role `R-AA`, sponsor required for privileged grants. Thoth may not declare settlement or promote capability for a claim it authored. The check compares immutable authorship provenance at both the settlement and promotion boundary; it is not a role-only or advisory rule.
 - Knowledge ≠ authority is structural, not advisory: `ThothAnswer` carries no grant material, and nothing in the runtime accepts an answer as an authorization input.
 - The bundled models are release-signed content (hashes in the release realization, committed to the ledger at init); tampering surfaces as `self_model_error` before any answer.
 - Prompt-injection surface: none in this spec's scope (no LLM). The typed protocol is the seam that keeps a future LLM presenter outside the security boundary.
@@ -431,18 +440,19 @@ return answered(claims, omitted = candidate_classes − permitted)
 
 ### 17.1 Core Conformance — M9 (E11, Genesis Self-Model)
 
-- T9.1: bundled `seaforge-system` and `adlc-odi-case` models verify hashes and pass `load_validate`; snapshot created with all five digest fields; ledgered.
+- T9.1: bundled `seaforge-system` and `adlc-odi-case` models verify hashes and pass `load_validate`; snapshot created with all five digest fields in a `self_model.v1` envelope; ledgered. First initialization, detected upgrade, and each registry mutation create or request the correct snapshot lifecycle transition without rewriting an old snapshot.
 - T9.2: one-byte model tamper ⇒ `self_model_error` before validation; `ask` refuses; runs unaffected.
 - T9.3: KG/CALM/JSON self-projections rebuild byte-identically (modulo `rebuilt_at`) and carry full ProjectionRecord provenance; bundled pre-generated projection with wrong output hash is regenerated, not trusted.
 - T9.4: disabling an extension then `rebuild` ⇒ new snapshot; composed view reflects `disabled_by_policy`; old snapshot still verifies.
 - T9.5: cell realization with a failing toolchain probe records `unavailable` + probe evidence.
+- T9.6: an old-reader fixture skips unsupported `self_model.v1` records carrying each new projection kind (`kg`, `self_model_snapshot`) before payload deserialization; it continues to verify and replay supported records.
 - Gate: P1–P4b + all spec-full gates unchanged.
 
 ### 17.2 Core Conformance — M10 (E12, ADLC/ODI templates)
 
 - T10.1: `adlc_case@0.1.0` instantiation is byte-deterministic; passes existing E8 gates.
-- T10.2: rejected simulation settlement re-enables the design item via sentry (V3 scenario); ledger replay reproduces activation order.
-- T10.3: `odi_adlc_case@0.1.0` criteria records carry `desired_outcome` OriginRefs resolving into the validated seed model; `verify_plan_criteria` green; hash changes when the outcome ref changes.
+- T10.2: rejected simulation settlement re-enables the design item via a source-bound sentry (V3 scenario); a rejection from another item cannot satisfy it; ledger replay reproduces activation order.
+- T10.3: `odi_adlc_case@0.1.0` criteria records carry `desired_outcome` OriginRefs with required `domain_model_ref`, resolving into the validated seed model; `verify_plan_criteria` green; hash changes when the outcome ref or model ref changes.
 - T10.4: unresolvable desired-outcome ref ⇒ `criteria_provenance_error` before authority, no side effects.
 - T10.5: discretionary item added mid-case is authority-checked and evidenced (existing M2 behavior exercised through the template).
 
@@ -454,7 +464,7 @@ return answered(claims, omitted = candidate_classes − permitted)
 - T11.4: replay determinism — same question + snapshot ⇒ identical claims (V1).
 - T11.5: `ask_why_denied` answers from the recorded decision without re-query.
 - T11.6: answer contains the authority notice; a contrived attempt to feed a ThothAnswer where a grant is required fails to compile / is rejected at the type level.
-- T11.7: Thoth attempting to declare settlement on its own claim ⇒ SoD deny.
+- T11.7: Thoth attempting to declare settlement or promote capability on a claim carrying its `authored_by` identity ⇒ SoD deny; copied or relabeled provenance cannot bypass the check.
 - T11.8: absent `self_disclosure` surface ⇒ every question denied.
 - T11.9: stale snapshot ⇒ `freshness: stale` disclosed, or refusal under `require_fresh_snapshot`.
 - T11.10: server-socket `ask` follows the identical governance path (decision + evidence ledgered) as CLI.

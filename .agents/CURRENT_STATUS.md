@@ -4,17 +4,31 @@ Updated: 2026-07-16
 
 ## Objective
 
-Implement `.agents/plans/2026-07-11-spec-full-implementation.md`: execute the
-SEA Forge full-system plan (spec-full.md M0–M8) task by task, committing after
-each milestone gate. Work happens on the `full-spec` branch; `ci-cd` was merged
-to `main` and pushed to origin first.
+Prepare the next implementation sequence for
+`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md` (M9–M16). The plan
+has been adversarially reviewed and revised against the specs and current code.
+No M9–M16 milestone is verified complete. Task 0.1 (baseline re-run) is
+complete and green (below). Task 0.2 contract approvals: items 1 and 3–7
+approved; item 2 (`ProjectionKind::{Kg,SelfModelSnapshot}`) conditionally
+approved and its compatibility-boundary condition is now satisfied (the
+discriminator old readers inspect is the envelope `record_kind`, not a field
+tag; proven by 11 tests across core serde, ledger replay, and E6 import).
+Task 0.3 needs no new dependencies for M9. Task 0.4 is decided (sealed
+canonical transcript; gates M13). Committing per the plan §0.2
+(slice-per-commit); M9 proceeds straight through to the cumulative gate.
 
 ## Worktree State
 
-On branch `full-spec`. Tasks 1–15 are committed through `a09211b`. Tasks 16 M8
-and 17 closeout are complete and uncommitted; workspace tests, strict static
-checks, and minimum proofs pass after final review hardening. Context-coupled
-Devbox gates also pass after the final ledger-verification hardening.
+On branch `full-spec` at `b351c95`. The M0–M8 implementation and closeout are
+committed. Current worktree changes are the untracked, revised M9–M16 plan and
+updates to this status, `OPEN_QUESTIONS.md`, and the two companion M9–M16
+specifications. The last recorded M0–M8
+workspace tests, strict static checks, minimum proofs, and context-coupled
+Devbox gates passed; Task 0 of the new plan must re-run them before relying on
+that baseline. The shared worktree also contains uncommitted M9-related source
+and test edits that this documentation pass did not create or verify; preserve
+and review them against the now-normative M9 contract before treating them as
+an implementation result.
 Accepted continuation steps 2–4 and 7–8 are implemented: approval-required
 authority remains escalated until an exact ledgered resolution is consumed;
 artifact transitions park as one canonical pending record; and approved strong
@@ -36,6 +50,20 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Changed Files
 
+- `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md` — revised after
+  adversarial review to add approval gates, source-owned template assets, E8
+  vocabulary prerequisites, source-bound sentries, item-level scheduling,
+  durable cancellation/approval control, exact endpoint authorization,
+  credential authority, SoD provenance, and portable/real integration gates.
+- `.agents/OPEN_QUESTIONS.md` — records the unresolved contradiction between
+  summarized transcript disposal and later hash recomputation.
+- `.agents/specs/spec-adlc-thoth-minimum.md` — makes the M9 `self_model.v1`
+  additive-record compatibility contract, source-owned templates, lifecycle
+  triggers, provenance, and source-bound sentry requirements normative.
+- `.agents/specs/spec-agent-orchestration.md` — makes server-owned episode
+  scheduling, exact external/secret authorization, durable control/approval,
+  source-bound topology semantics, manager SoD, and the M13 transcript-design
+  gate normative.
 - `crates/sea-forge-sandbox/src/lib.rs` — SandboxClass, ExecutionSandbox trait,
   select_sandbox, SandboxSpec/Handle/Error/RelPath types.
 - `crates/sea-forge-sandbox/src/local.rs` — LocalSandbox backend (existing behavior).
@@ -475,7 +503,39 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Blockers
 
-- None for Tasks 16–17.
+- **Task 0.2 (M9 contract delta) — awaiting owner approval.** Seven additive
+  changes; the only one with a real compatibility tradeoff is the closed
+  `ProjectionKind` enum gaining `Kg` + `SelfModelSnapshot` (old readers reject
+  records carrying the new variants; recommended policy: schema-tag the new
+  self-model records `self_model.v1`, no global 0.2→0.3 bump). See the approval
+  package in chat / this section.
+- M10–M16 contract items (OriginRefKind::DesiredOutcome, ItemKind::AgentTask,
+  Operation::AgentTask, self_disclosure/external_api/secret_access surfaces,
+  ManagerIteration, settlement bases, cancellation records, authorship
+  provenance) are inventoried but do NOT block Task 1; approval requested per
+  task when each milestone enters scope.
+- M12/M16 dependency selection (HTTP client, async strategy, URL, zeroization,
+  ACP client) is blocked on explicit approval of exact versions/features; not
+  needed for Task 1 (M9 declares no new dependencies).
+- M13 transcript evidence uses the Task 0.4 decision (owner, 2026-07-16):
+  retain a sealed, encrypted canonical transcript for `summarized` mode, verify
+  it before crypto-shredding, expose only the deterministic summary by default.
+  Recorded in `.agents/OPEN_QUESTIONS.md`; gates M13, not M9.
+
+## Task 0.1 — Baseline re-run (2026-07-16)
+
+Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
+- `devbox run -- just context-check` — passed.
+- `devbox run -- just check` — passed (fmt-check, clippy `-D warnings`
+  workspace/all-targets/all-features, typecheck, security). cargo-deny emitted
+  only the known non-fatal getrandom 0.2/0.3 duplicate (transitive via
+  domainforge-core 0.13.0); no fatal advisories.
+- `devbox run -- just test` — passed (full `cargo test --workspace
+  --all-features --locked`, exit 0; prior CI-green record = 289 tests; no
+  platform skips).
+- `devbox run -- just proof` — P1–P4b passed.
+- `devbox run -- just no-async-kernel` — "ok: no tokio in kernel crates".
+- Tracked `.sea-forge/**`: 0 files (confirmed via `git ls-files`).
 
 ## Decisions
 
