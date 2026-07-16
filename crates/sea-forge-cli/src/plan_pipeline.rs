@@ -17,12 +17,31 @@ pub struct PlanRunOptions {
     pub timeout_secs: u64,
     pub entity: String,
     pub process: String,
+    pub intent_summary: Option<String>,
+    pub origin_evidence_refs: Vec<String>,
 }
 
 pub struct PlanRunOutcome {
     pub case_id: String,
     pub state: &'static str,
     pub exit_code: u8,
+}
+
+pub struct ApprovalParkingContext {
+    pub case_id: String,
+    pub run_id: String,
+    pub plan_item_id: String,
+    pub criteria: SettlementCriteriaRecord,
+    pub decision: AuthorityDecision,
+    pub committed_decision: CommittedRecordRef,
+    pub approval: ApprovalRequest,
+    pub committed_approval: CommittedRecordRef,
+}
+
+pub struct PlanApprovalExtension {
+    pub plan_item_id: String,
+    pub action: AuthorityAction,
+    pub before_awaiting_approval: Box<dyn FnOnce(ApprovalParkingContext) -> Result<(), ForgeError>>,
 }
 
 struct AuthorizedOperation {
@@ -80,6 +99,20 @@ fn load_plan(path: &Path) -> Result<CasePlan, ForgeError> {
 }
 
 pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
+    run_plan_inner(options, None)
+}
+
+pub fn run_plan_with_approval_extension(
+    options: PlanRunOptions,
+    extension: PlanApprovalExtension,
+) -> Result<PlanRunOutcome, ForgeError> {
+    run_plan_inner(options, Some(extension))
+}
+
+fn run_plan_inner(
+    options: PlanRunOptions,
+    mut approval_extension: Option<PlanApprovalExtension>,
+) -> Result<PlanRunOutcome, ForgeError> {
     // Proposal and policy validation precede state creation.
     let mut plan = load_plan(&options.plan)?;
     validate_proposal(&mut plan)?;
@@ -103,7 +136,10 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
 
     let intent = Intent {
         intent_id: ids::random_id("int")?,
-        summary: format!("Execute plan {}", options.plan.display()),
+        summary: options
+            .intent_summary
+            .clone()
+            .unwrap_or_else(|| format!("Execute plan {}", options.plan.display())),
         actor_id: options.entity.clone(),
         process_id: options.process.clone(),
         created_at: Utc::now().to_rfc3339(),
@@ -118,8 +154,14 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
     let mut criteria_map: BTreeMap<String, SettlementCriteriaRecord> = BTreeMap::new();
     let declared_at = Utc::now().to_rfc3339();
     for item in &mut plan.items {
-        let record =
+        let mut record =
             sea_forge_planner::derive_from_intent(&intent, item, &options.entity, &declared_at)?;
+        if !options.origin_evidence_refs.is_empty() {
+            record.origin_refs[0]
+                .evidence_refs
+                .clone_from(&options.origin_evidence_refs);
+            record.criteria_record_hash = sea_forge_planner::compute_record_hash(&record)?;
+        }
         let committed = stream.commit_typed(
             "settlement_criteria",
             vec![case_id.clone(), record.criteria_id.clone()],
@@ -135,16 +177,82 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
     // Allocate every potential episode and decide every operation before activation.
     let mut run_ids = HashMap::<(String, u32), String>::new();
     let mut auth = HashMap::<(String, u32), Vec<AuthorizedOperation>>::new();
+    let mut approval_authority: Option<AuthorizedOperation> = None;
     for item in &plan.items {
         if item.item_kind != ItemKind::SandboxedTask {
             continue;
         }
         for instance in 1..=item.max_instances {
+            let mut has_approval_gate = false;
             let run_id = ids::run_id()?;
             let workspace = runs_dir.join(&run_id).join("workspace");
             let artifacts = runs_dir.join(&run_id).join("artifacts");
+            let env_spec = crate::pipeline::load_item_environment(&root, item)?;
+            let evaluator = crate::pipeline::resolve_item_evaluator(item, env_spec.as_ref())?;
+            let mut item_operations = item.operations.clone();
+            if let Some((_, sea_forge_sandbox::Evaluator::Command { argv, .. })) = &evaluator {
+                item_operations.push(Operation::ExecuteCommand {
+                    argv: argv.clone(),
+                    cwd: ".".into(),
+                });
+            }
+            let environment = env_spec.as_ref().map(|spec| {
+                (
+                    item.environment.as_deref().unwrap_or(""),
+                    spec.provides.commands.as_slice(),
+                )
+            });
+            if instance == 1
+                && approval_extension
+                    .as_ref()
+                    .is_some_and(|extension| extension.plan_item_id == item.plan_item_id)
+            {
+                let action = &approval_extension
+                    .as_ref()
+                    .ok_or_else(|| ForgeError::Internal("approval extension is missing".into()))?
+                    .action;
+                let evidence = stream.commit_typed(
+                    "authority_evidence",
+                    vec![run_id.clone(), item.plan_item_id.clone()],
+                    &json!({"kind": "artifact_transition", "action": action}),
+                    vec![],
+                )?;
+                let decision = engine.evaluate(AuthorityEvaluation {
+                    actor: &actor,
+                    binding: binding.clone(),
+                    run_id: &run_id,
+                    case_id: &case_id,
+                    plan_item_id: &item.plan_item_id,
+                    sequence: 1,
+                    action,
+                    workspace_root: &workspace,
+                    evidence_refs: vec![evidence.entry_ulid().into()],
+                    artifacts_root: None,
+                    timeout_secs: None,
+                    env_keys: Default::default(),
+                    domainforge_candidate: None,
+                    environment: None,
+                })?;
+                let request = stream.commit_typed(
+                    "authority_request",
+                    vec![run_id.clone(), item.plan_item_id.clone()],
+                    &decision.action_request,
+                    vec![],
+                )?;
+                let committed = stream.commit_typed(
+                    "authority_decision",
+                    vec![run_id.clone(), item.plan_item_id.clone()],
+                    &decision,
+                    vec![request.entry_ulid().into()],
+                )?;
+                approval_authority = Some(AuthorizedOperation {
+                    decision,
+                    committed,
+                });
+                has_approval_gate = true;
+            }
             let mut operations = Vec::new();
-            for (sequence, operation) in item.operations.iter().enumerate() {
+            for (sequence, operation) in item_operations.iter().enumerate() {
                 let action = AuthorityAction::from(operation);
                 let evidence = stream.commit_typed(
                     "authority_evidence",
@@ -163,7 +271,7 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                     run_id: &run_id,
                     case_id: &case_id,
                     plan_item_id: &item.plan_item_id,
-                    sequence: sequence + 1,
+                    sequence: sequence + 1 + usize::from(has_approval_gate),
                     action: &action,
                     workspace_root: &workspace,
                     evidence_refs: vec![evidence.entry_ulid().into()],
@@ -173,7 +281,7 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                         .then_some(options.timeout_secs),
                     env_keys,
                     domainforge_candidate: None,
-                    environment: None,
+                    environment,
                 })?;
                 let request = stream.commit_typed(
                     "authority_request",
@@ -196,17 +304,38 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
             auth.insert((item.plan_item_id.clone(), instance), operations);
         }
     }
+    if approval_extension.is_some()
+        && approval_authority
+            .as_ref()
+            .is_none_or(|operation| operation.decision.verdict != Verdict::Escalate)
+    {
+        return Err(ForgeError::Plan {
+            class: "artifact_transition_authority_error",
+            message: "external transition gate requires an exact escalated decision".into(),
+        });
+    }
 
     // Check for escalated items and create approval requests.
     let now = Utc::now();
     let now_rfc = now.to_rfc3339();
     // ponytail: TTL from policy or default 24h; policy parsing added when server lands
     let expires_at = (now + chrono::Duration::hours(24)).to_rfc3339();
-    let mut escalated: Option<(&str, &str)> = None;
+    let mut escalated: Option<(String, String)> = approval_authority
+        .as_ref()
+        .filter(|operation| operation.decision.verdict == Verdict::Escalate)
+        .map(|operation| {
+            (
+                operation.decision.plan_item_id.clone(),
+                operation.decision.decision_id.clone(),
+            )
+        });
     'outer: for ((item_id, _instance), ops) in &auth {
+        if escalated.is_some() {
+            break;
+        }
         for op in ops {
             if op.decision.verdict == Verdict::Escalate {
-                escalated = Some((item_id, &op.decision.decision_id));
+                escalated = Some((item_id.clone(), op.decision.decision_id.clone()));
                 break 'outer;
             }
         }
@@ -244,19 +373,28 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
     // If any item escalated, create an approval request and park the case.
     if let Some((item_id, decision_id)) = escalated {
         let run_id = run_ids
-            .get(&(item_id.to_string(), 1))
+            .get(&(item_id.clone(), 1))
             .cloned()
             .unwrap_or_default();
+        let criteria_ref = plan
+            .items
+            .iter()
+            .find(|item| item.plan_item_id == item_id)
+            .and_then(|item| item.settlement_criteria_ref.as_ref())
+            .ok_or_else(|| ForgeError::Internal("approval item has no criteria ref".into()))?;
+        let criteria = criteria_map
+            .get(criteria_ref)
+            .ok_or_else(|| ForgeError::Internal("approval criteria record is missing".into()))?;
         let approval = ApprovalRequest {
             version: RECORD_VERSION.into(),
             approval_id: ids::seq_id("apr", 4, 1),
             run_id: run_id.clone(),
             case_id: case_id.clone(),
-            decision_id: decision_id.into(),
-            plan_item_id: item_id.into(),
-            criteria_ref: None,
-            criteria_sha256: None,
-            criteria_record_hash: None,
+            decision_id: decision_id.clone(),
+            plan_item_id: item_id.clone(),
+            criteria_ref: Some(criteria_ref.clone()),
+            criteria_sha256: Some(criteria.criteria_sha256.clone()),
+            criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
             job_contract_ref: None,
             requested_at: now_rfc.clone(),
             expires_at: expires_at.clone(),
@@ -265,12 +403,33 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
             resolved_at: None,
             note: None,
         };
-        stream.commit_typed(
+        let committed_approval = stream.commit_typed(
             "approval_request",
             vec![case_id.clone(), approval.approval_id.clone()],
             &approval,
             vec![],
         )?;
+        if approval_authority
+            .as_ref()
+            .is_some_and(|operation| operation.decision.decision_id == decision_id)
+        {
+            let extension = approval_extension.take().ok_or_else(|| {
+                ForgeError::Internal("approval extension callback is missing".into())
+            })?;
+            let operation = approval_authority.take().ok_or_else(|| {
+                ForgeError::Internal("approval extension decision is missing".into())
+            })?;
+            (extension.before_awaiting_approval)(ApprovalParkingContext {
+                case_id: case_id.clone(),
+                run_id: run_id.clone(),
+                plan_item_id: item_id,
+                criteria: criteria.clone(),
+                decision: operation.decision,
+                committed_decision: operation.committed,
+                approval: approval.clone(),
+                committed_approval,
+            })?;
+        }
         crate::approvals::append(&root, &approval)?;
         case.state = CaseState::AwaitingApproval;
         write_json(&case_dir.join("case.json"), &case)?;
@@ -356,15 +515,31 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                         .iter()
                         .find(|item| item.plan_item_id == item_id)
                         .ok_or_else(|| ForgeError::Internal("missing plan item".into()))?;
+                    let env_spec = crate::pipeline::load_item_environment(&root, item)?;
+                    if let Some(spec) = &env_spec {
+                        sea_forge_sandbox::environment::materialize_base(spec, &workspace)?;
+                    }
+                    let evaluator =
+                        crate::pipeline::resolve_item_evaluator(item, env_spec.as_ref())?;
+                    let mut operations = item.operations.clone();
+                    let evaluator_index = evaluator.as_ref().map(|(_, evaluator)| {
+                        let sea_forge_sandbox::Evaluator::Command { argv, .. } = evaluator;
+                        operations.push(Operation::ExecuteCommand {
+                            argv: argv.clone(),
+                            cwd: ".".into(),
+                        });
+                        operations.len() - 1
+                    });
                     let authorized = auth
                         .get(&(item_id.clone(), instance))
                         .ok_or_else(|| ForgeError::Internal("missing episode authority".into()))?;
                     let mut execution = None;
+                    let mut evaluator_scores = BTreeMap::new();
                     let allowed = authorized
                         .iter()
                         .all(|operation| operation.decision.verdict == Verdict::Allow);
                     if allowed {
-                        for (index, operation) in item.operations.iter().enumerate() {
+                        for (index, operation) in operations.iter().enumerate() {
                             let granted = &authorized[index];
                             let grant = engine.grant(
                                 &granted.decision,
@@ -389,7 +564,7 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                                     if let Ok(value) = std::env::var("HOME") {
                                         env.insert("HOME".into(), value);
                                     }
-                                    execution = Some(sea_forge_runtime::execute(
+                                    let result = sea_forge_runtime::execute(
                                         grant,
                                         &ExecutionRequest {
                                             plan_item_id: item_id.clone(),
@@ -404,7 +579,29 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                                         &run_id,
                                         &workspace,
                                         &artifacts,
-                                    )?);
+                                    )?;
+                                    if Some(index) == evaluator_index {
+                                        let (reference, evaluator) =
+                                            evaluator.as_ref().ok_or_else(|| {
+                                                ForgeError::Internal(
+                                                    "missing resolved evaluator".into(),
+                                                )
+                                            })?;
+                                        let sea_forge_sandbox::Evaluator::Command {
+                                            score_from,
+                                            ..
+                                        } = evaluator;
+                                        let score =
+                                            sea_forge_sandbox::environment::parse_evaluator_score(
+                                                score_from, &result, &run_dir,
+                                            )?;
+                                        evaluator_scores.insert(reference.clone(), score);
+                                        if item.operations.is_empty() {
+                                            execution = Some(result);
+                                        }
+                                    } else {
+                                        execution = Some(result);
+                                    }
                                 }
                             }
                         }
@@ -434,11 +631,24 @@ pub fn run_plan(options: PlanRunOptions) -> Result<PlanRunOutcome, ForgeError> {
                                 .iter()
                                 .map(|operation| operation.decision.verdict.clone())
                                 .collect(),
-                            evaluator_scores: BTreeMap::new(),
+                            evaluator_scores,
                             batch: None,
                         },
                         &workspace,
                         &run_dir,
+                    )?;
+                    stream.commit_typed(
+                        "settlement_event",
+                        vec![
+                            case_id.clone(),
+                            run_id.clone(),
+                            settlement.settlement_id.clone(),
+                        ],
+                        &settlement,
+                        authorized
+                            .iter()
+                            .map(|operation| operation.decision.decision_id.clone())
+                            .collect(),
                     )?;
                     write_json(&run_dir.join("plan.json"), &plan)?;
                     write_json(

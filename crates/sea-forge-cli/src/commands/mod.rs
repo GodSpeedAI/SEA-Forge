@@ -1,4 +1,5 @@
 pub mod approve;
+pub mod artifact;
 pub mod case;
 pub mod env;
 pub mod federation;

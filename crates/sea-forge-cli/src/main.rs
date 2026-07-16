@@ -49,6 +49,15 @@ enum Command {
     },
     #[command(hide = true)]
     InternalTestSleep { seconds: u64 },
+    #[command(hide = true)]
+    InternalTestSweSeed {
+        #[arg(long)]
+        fail: bool,
+        #[arg(long)]
+        delay: Option<u64>,
+        #[arg(long)]
+        outage_file: Option<PathBuf>,
+    },
     Recall {
         query: String,
         #[arg(long, default_value = ".sea-forge")]
@@ -201,6 +210,16 @@ enum Command {
         #[arg(long, default_value = "operator_local")]
         actor: String,
     },
+    Artifact {
+        #[command(subcommand)]
+        action: ArtifactCommand,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -233,6 +252,32 @@ enum TaskCommand {
         item_id: String,
         #[arg(long)]
         note: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum ArtifactCommand {
+    Synthesize {
+        input: PathBuf,
+    },
+    Productize {
+        input: PathBuf,
+    },
+    Capitalize {
+        input: PathBuf,
+    },
+    Attest {
+        artifact_id: String,
+        #[arg(long, default_value = "ifl")]
+        ledger: String,
+        #[arg(long, default_value = "forbidden")]
+        degraded_mode: String,
+        #[arg(long, default_value = "operator")]
+        requester_role: String,
+        #[arg(long, default_value = "R-SO")]
+        approver_role: String,
+        #[arg(long = "degraded-control")]
+        degraded_controls: Vec<String>,
     },
 }
 
@@ -309,6 +354,50 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
         }
         Command::InternalTestSleep { seconds } => {
             std::thread::sleep(std::time::Duration::from_secs(seconds));
+            Ok(0)
+        }
+        Command::InternalTestSweSeed {
+            fail,
+            delay,
+            outage_file,
+        } => {
+            use std::io::Read;
+            if let Some(seconds) = delay {
+                std::thread::sleep(std::time::Duration::from_secs(seconds));
+            }
+            let mut request = Vec::new();
+            std::io::stdin()
+                .read_to_end(&mut request)
+                .map_err(|error| {
+                    (
+                        1,
+                        sea_forge_core::ForgeError::io("read SWE_SEED request", error),
+                    )
+                })?;
+            serde_json::from_slice::<sea_forge_core::types::SettlementDeclarationRequest>(&request)
+                .map_err(|error| {
+                    (
+                        1,
+                        sea_forge_core::ForgeError::Serialization(error.to_string()),
+                    )
+                })?;
+            if fail || outage_file.is_some_and(|path| path.exists()) {
+                return Ok(1);
+            }
+            println!(
+                "{}",
+                serde_json::to_string(&sea_forge_settlement::SweSeedResponse {
+                    attestation_ref: "attestation:test-swe-seed".into(),
+                    attribution_confidence: "1.000000".into(),
+                    gaming_exposure: "0.000000".into(),
+                    hidden_debt_blindness: "0.000000".into(),
+                    feedback_delay_ms: 1,
+                })
+                .map_err(|error| (
+                    1,
+                    sea_forge_core::ForgeError::Serialization(error.to_string())
+                ))?
+            );
             Ok(0)
         }
         Command::Run {
@@ -422,11 +511,11 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             case_id,
             approval_id,
             root,
-            policy: _,
+            policy,
             actor,
             note,
         } => {
-            let policy = commands::mediated::policy_path(&root, None);
+            let policy = commands::mediated::policy_path(&root, policy.as_deref());
             commands::approve::approve(commands::approve::ApproveOptions {
                 root: &root,
                 case_id: &case_id,
@@ -441,11 +530,11 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             case_id,
             approval_id,
             root,
-            policy: _,
+            policy,
             actor,
             note,
         } => {
-            let policy = commands::mediated::policy_path(&root, None);
+            let policy = commands::mediated::policy_path(&root, policy.as_deref());
             commands::approve::reject(commands::approve::ApproveOptions {
                 root: &root,
                 case_id: &case_id,
@@ -530,6 +619,56 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             reference: &reference,
         })
         .map_err(|e| (1, e)),
+        Command::Artifact {
+            action,
+            root,
+            policy,
+            actor,
+        } => {
+            let policy = commands::mediated::policy_path(&root, policy.as_deref());
+            match action {
+                ArtifactCommand::Synthesize { input } => commands::artifact::transition_command(
+                    &root,
+                    &policy,
+                    &actor,
+                    sea_forge_artifact_ip::TransitionKind::Synthesize,
+                    &input,
+                ),
+                ArtifactCommand::Productize { input } => commands::artifact::transition_command(
+                    &root,
+                    &policy,
+                    &actor,
+                    sea_forge_artifact_ip::TransitionKind::Productize,
+                    &input,
+                ),
+                ArtifactCommand::Capitalize { input } => commands::artifact::transition_command(
+                    &root,
+                    &policy,
+                    &actor,
+                    sea_forge_artifact_ip::TransitionKind::Capitalize,
+                    &input,
+                ),
+                ArtifactCommand::Attest {
+                    artifact_id,
+                    ledger,
+                    degraded_mode,
+                    requester_role,
+                    approver_role,
+                    degraded_controls,
+                } => commands::artifact::attest_command(commands::artifact::AttestOptions {
+                    root: &root,
+                    policy: &policy,
+                    actor: &actor,
+                    artifact_id: &artifact_id,
+                    ledger: &ledger,
+                    degraded_mode: &degraded_mode,
+                    requester_role: &requester_role,
+                    approver_role: &approver_role,
+                    degraded_controls,
+                }),
+            }
+            .map_err(|e| (1, e))
+        }
     }
 }
 fn init_diagnostics() {

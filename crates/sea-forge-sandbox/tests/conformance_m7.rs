@@ -134,9 +134,21 @@ fn rule(verdict: Verdict, argv0: Option<&str>, env: Option<&str>) -> PolicyRule 
         boundary_constraints: BTreeMap::new(),
         compensating_controls: vec![],
         sandbox_class: None,
-        requires_approval: false,
+        requires_approval: Some(false),
         memory_scope: None,
         environment: env.map(Into::into),
+        transition_kind: None,
+        from_stage: None,
+        to_stage: None,
+        modes: None,
+        gate_profile_ref: None,
+        required_settlement_strength: None,
+        qualifying_value_evidence_kinds: None,
+        license_allowlist: vec![],
+        attestation_ledger: None,
+        requester_roles: None,
+        approver_roles: None,
+        degraded_mode: None,
     }
 }
 

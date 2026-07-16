@@ -8,7 +8,8 @@ use sea_forge_sandbox::safe_existing;
 pub mod declaration;
 
 pub use declaration::{
-    append_declaration, compute_declaration_hash, load_declarations, LocalSettlementAuthority,
+    append_declaration, append_declaration_ledgered, append_declaration_ledgered_once,
+    compute_declaration_hash, load_declarations, CommandSweSeedTransport, LocalSettlementAuthority,
     SettlementAuthority, SweSeedResponse, SweSeedSettlementAuthority, SweSeedTransport,
 };
 

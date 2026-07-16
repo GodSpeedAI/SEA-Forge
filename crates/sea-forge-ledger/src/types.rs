@@ -207,6 +207,8 @@ pub struct LedgerEntry {
     pub record_ulid: String,
     pub append_ordinal: u64,
     pub record_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub idempotency_key: Option<String>,
     pub subject_refs: Vec<String>,
     pub canonicalization: String,
     pub hash_algorithm: String,
@@ -218,6 +220,12 @@ pub struct LedgerEntry {
     pub committed_at: String,
     pub writer_identity_ref: String,
     pub authority_refs: Vec<String>,
+}
+
+impl LedgerEntry {
+    pub fn committed_ref(&self) -> CommittedRecordRef {
+        committed_record_ref(self.clone())
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -416,6 +424,7 @@ pub struct LedgerStream {
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct CommittedRecordRef {
     ledger_id: String,
+    record_kind: String,
     entry_ulid: String,
     record_ulid: String,
     append_ordinal: u64,
@@ -458,6 +467,14 @@ pub struct CompatibilityViewState {
 }
 
 impl CommittedRecordRef {
+    pub fn ledger_id(&self) -> &str {
+        &self.ledger_id
+    }
+
+    pub fn record_kind(&self) -> &str {
+        &self.record_kind
+    }
+
     pub fn entry_ulid(&self) -> &str {
         &self.entry_ulid
     }
@@ -500,11 +517,89 @@ impl LedgerStream {
         let entry = self.append(record_kind, subject_refs, payload, authority_refs)?;
         Ok(CommittedRecordRef {
             ledger_id: entry.ledger_id,
+            record_kind: entry.record_kind,
             entry_ulid: entry.entry_ulid,
             record_ulid: entry.record_ulid,
             append_ordinal: entry.append_ordinal,
             entry_hash: entry.entry_hash,
             payload_hash: entry.payload_hash,
+        })
+    }
+
+    pub fn commit_typed_once<T: Serialize>(
+        &self,
+        record_kind: impl Into<String>,
+        idempotency_key: impl Into<String>,
+        subject_refs: Vec<String>,
+        record: &T,
+        authority_refs: Vec<String>,
+    ) -> Result<CommittedRecordRef, ForgeError> {
+        let record_kind = record_kind.into();
+        let idempotency_key = idempotency_key.into();
+        let payload = serde_json::to_value(record)?;
+        check_redaction(&payload)?;
+        let expected_payload_hash = payload_hash(&payload)?;
+
+        self.with_exclusive_lock(|| {
+            if let Some(entry) = self.read_entries()?.into_iter().find(|entry| {
+                entry.record_kind == record_kind
+                    && entry.idempotency_key.as_deref() == Some(idempotency_key.as_str())
+            }) {
+                if entry.payload_hash != expected_payload_hash
+                    || entry.subject_refs != subject_refs
+                    || entry.authority_refs != authority_refs
+                {
+                    return Err(ForgeError::Internal(
+                        "ledger_integrity_error: idempotency key payload conflict".into(),
+                    ));
+                }
+                return Ok(committed_record_ref(entry));
+            }
+
+            self.append_under_lock(
+                record_kind,
+                Some(idempotency_key),
+                subject_refs,
+                payload,
+                authority_refs,
+            )
+            .map(committed_record_ref)
+        })
+    }
+
+    /// Append a typed record under an idempotency key, failing if the key already exists.
+    /// Unlike [`commit_typed_once`], matching keys never return Ok — they always conflict.
+    pub fn commit_typed_new<T: Serialize>(
+        &self,
+        record_kind: impl Into<String>,
+        idempotency_key: impl Into<String>,
+        subject_refs: Vec<String>,
+        record: &T,
+        authority_refs: Vec<String>,
+    ) -> Result<CommittedRecordRef, ForgeError> {
+        let record_kind = record_kind.into();
+        let idempotency_key = idempotency_key.into();
+        let payload = serde_json::to_value(record)?;
+        check_redaction(&payload)?;
+
+        self.with_exclusive_lock(|| {
+            if self.read_entries()?.into_iter().any(|entry| {
+                entry.record_kind == record_kind
+                    && entry.idempotency_key.as_deref() == Some(idempotency_key.as_str())
+            }) {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: idempotency key already committed".into(),
+                ));
+            }
+
+            self.append_under_lock(
+                record_kind,
+                Some(idempotency_key),
+                subject_refs,
+                payload,
+                authority_refs,
+            )
+            .map(committed_record_ref)
         })
     }
 
@@ -596,6 +691,37 @@ impl LedgerStream {
             .join("ledgers")
             .join(&self.ledger_id)
             .join("mmr.json")
+    }
+
+    fn lock_path(&self) -> PathBuf {
+        self.root
+            .join("ledgers")
+            .join(&self.ledger_id)
+            .join("stream.lock")
+    }
+
+    fn with_exclusive_lock<T>(
+        &self,
+        operation: impl FnOnce() -> Result<T, ForgeError>,
+    ) -> Result<T, ForgeError> {
+        let lock_file = OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(self.lock_path())
+            .map_err(|error| ForgeError::io("open ledger stream lock", error))?;
+        lock_file
+            .lock()
+            .map_err(|error| ForgeError::io("lock ledger stream", error))?;
+        let result = operation();
+        let unlock_result = lock_file
+            .unlock()
+            .map_err(|error| ForgeError::io("unlock ledger stream", error));
+        match result {
+            Ok(value) => unlock_result.map(|()| value),
+            Err(error) => Err(error),
+        }
     }
 
     pub fn checkpoints_path(&self) -> PathBuf {
@@ -849,6 +975,20 @@ impl LedgerStream {
         payload: Value,
         authority_refs: Vec<String>,
     ) -> Result<LedgerEntry, ForgeError> {
+        let record_kind = record_kind.into();
+        self.with_exclusive_lock(|| {
+            self.append_under_lock(record_kind, None, subject_refs, payload, authority_refs)
+        })
+    }
+
+    fn append_under_lock(
+        &self,
+        record_kind: String,
+        idempotency_key: Option<String>,
+        subject_refs: Vec<String>,
+        payload: Value,
+        authority_refs: Vec<String>,
+    ) -> Result<LedgerEntry, ForgeError> {
         check_redaction(&payload)?;
         let last = self.read_last_entry()?;
         let append_ordinal = last.as_ref().map(|e| e.append_ordinal + 1).unwrap_or(0);
@@ -864,7 +1004,8 @@ impl LedgerStream {
             entry_ulid,
             record_ulid,
             append_ordinal,
-            record_kind: record_kind.into(),
+            record_kind,
+            idempotency_key,
             subject_refs,
             canonicalization: CANONICALIZATION.into(),
             hash_algorithm: HASH_ALGORITHM.into(),
@@ -1234,6 +1375,18 @@ impl LedgerStream {
 
 fn hash_entry(entry: &LedgerEntry) -> String {
     entry.entry_hash.clone()
+}
+
+fn committed_record_ref(entry: LedgerEntry) -> CommittedRecordRef {
+    CommittedRecordRef {
+        ledger_id: entry.ledger_id,
+        record_kind: entry.record_kind,
+        entry_ulid: entry.entry_ulid,
+        record_ulid: entry.record_ulid,
+        append_ordinal: entry.append_ordinal,
+        entry_hash: entry.entry_hash,
+        payload_hash: entry.payload_hash,
+    }
 }
 
 /// Manages multiple ledger streams and creates/verifies global checkpoints.
