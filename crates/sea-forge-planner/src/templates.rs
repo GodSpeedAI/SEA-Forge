@@ -1,6 +1,8 @@
 use sea_forge_core::{
     errors::ForgeError,
-    types::{CasePlan, ItemKind, JobContract, Operation, OriginRef, PlanItem, SettlementCriteria},
+    types::{
+        CasePlan, ItemKind, JobContract, Operation, OriginRef, PlanItem, Sentry, SettlementCriteria,
+    },
     RECORD_VERSION,
 };
 use serde::{Deserialize, Serialize};
@@ -62,6 +64,15 @@ pub struct TemplateItem {
     /// Optional environment reference (§7.6) — projected to PlanItem.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<String>,
+    /// E8 control-flow vocabulary (§7.5): projected byte-for-byte to PlanItem.
+    #[serde(default)]
+    pub entry_criteria: Vec<Sentry>,
+    #[serde(default)]
+    pub exit_criteria: Vec<Sentry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_stage: Option<String>,
+    #[serde(default)]
+    pub depends_on: Vec<String>,
 }
 
 fn default_max_instances() -> u32 {
@@ -78,7 +89,8 @@ pub enum TemplateOperation {
 }
 
 /// Validate that no `${param}` appears in a forbidden position.
-/// Forbidden: `kind` (tag), `argv[0]`, `plan_item_id`, `name`, sentry structure.
+/// Forbidden: `kind` (tag), `argv[0]`, `plan_item_id`, `name`, sentry event
+/// kinds, sentry source IDs, `item_kind` (enum tag), and sandbox classes.
 fn check_substitution_sites(template: &PlanTemplate) -> Result<(), ForgeError> {
     for item in &template.plan.items {
         if has_param(&item.plan_item_id) || has_param(&item.name) {
@@ -94,6 +106,22 @@ fn check_substitution_sites(template: &PlanTemplate) -> Result<(), ForgeError> {
                 path: std::path::PathBuf::new(),
                 message: "template parameter in sandbox_class is forbidden".into(),
             });
+        }
+        for sentry in item.entry_criteria.iter().chain(&item.exit_criteria) {
+            if has_param(&sentry.on.source) {
+                return Err(ForgeError::Config {
+                    class: "schema_error",
+                    path: std::path::PathBuf::new(),
+                    message: "template parameter in sentry source is forbidden".into(),
+                });
+            }
+            if has_param(&sentry.on.event) {
+                return Err(ForgeError::Config {
+                    class: "schema_error",
+                    path: std::path::PathBuf::new(),
+                    message: "template parameter in sentry event kind is forbidden".into(),
+                });
+            }
         }
         for op in &item.operations {
             if let TemplateOperation::ExecuteCommand { argv, .. } = op {
@@ -235,8 +263,8 @@ pub fn instantiate(
                         }
                     })
                     .collect(),
-                entry_criteria: vec![],
-                exit_criteria: vec![],
+                entry_criteria: ti.entry_criteria.clone(),
+                exit_criteria: ti.exit_criteria.clone(),
                 settlement_criteria: SettlementCriteria {
                     require_exit_zero: ti.settlement_criteria.require_exit_zero,
                     required_artifacts: ti
@@ -256,10 +284,10 @@ pub fn instantiate(
                 settlement_criteria_ref: None,
                 item_kind: ti.item_kind.clone(),
                 sandbox_class: ti.sandbox_class.clone(),
-                parent_stage: None,
+                parent_stage: ti.parent_stage.clone(),
                 markers: ti.markers.clone(),
                 max_instances: ti.max_instances,
-                depends_on: vec![],
+                depends_on: ti.depends_on.clone(),
                 environment: ti.environment.clone(),
             })
         })
@@ -417,6 +445,10 @@ pub fn sea_model_demo_template() -> PlanTemplate {
                 markers: Default::default(),
                 max_instances: 1,
                 environment: None,
+                entry_criteria: vec![],
+                exit_criteria: vec![],
+                parent_stage: None,
+                depends_on: vec![],
             }],
         },
     }
