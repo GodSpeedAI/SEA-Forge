@@ -1380,6 +1380,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "sea-forge-thoth"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+ "sea-forge-self-model",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+]
+
+[[package]]
 name = "sea-forge-trace"
 version = "0.1.0"
 dependencies = [

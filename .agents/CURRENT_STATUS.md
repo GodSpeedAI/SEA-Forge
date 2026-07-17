@@ -5,9 +5,9 @@ Updated: 2026-07-17
 ## Objective
 
 Implement Tasks 2–3 (M10 E8/ADLC/ODI templates + M11 Thoth) from
-`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`. M9 is complete
-and gated (313 tests). M10 COMPLETE and gated (332 tests, P1-P4b,
-no-async-kernel). Starting M11 (Thoth typed disclosure protocol).
+`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`. M9 complete.
+M10 COMPLETE and gated (332 tests). M11 slice 3.1 done (Thoth protocol
+types); slice 3.2 (self_disclosure authority surface) in progress.
 tag; proven by 11 tests across core serde, ledger replay, and E6 import).
 Task 0.3 needs no new dependencies for M9. Task 0.4 is decided (sealed
 canonical transcript; gates M13). Committing per the plan §0.2
