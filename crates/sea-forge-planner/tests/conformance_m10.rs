@@ -1,4 +1,4 @@
-use sea_forge_core::types::{ItemKind, OriginRefKind, SettlementStatus, TraceEvent, TraceKind};
+use sea_forge_core::types::{ItemKind, OriginRefKind, TraceEvent, TraceKind};
 use sea_forge_planner::case_engine::{evaluate_sentries, replay_activations};
 use sea_forge_planner::templates::{adlc_case_template, instantiate, odi_adlc_case_template};
 use std::collections::BTreeMap;

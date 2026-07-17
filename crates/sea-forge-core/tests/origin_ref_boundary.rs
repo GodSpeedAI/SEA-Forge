@@ -36,6 +36,7 @@ fn old_reader_rejects_desired_outcome_variant_cleanly() {
     }
 
     #[derive(serde::Deserialize, Debug)]
+    #[allow(dead_code)]
     struct LegacyRef {
         kind: LegacyOriginRefKind,
         reference: String,
