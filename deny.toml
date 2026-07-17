@@ -13,6 +13,7 @@ ignore = []
 
 [licenses]
 allow = [
+    "LicenseRef-SEA-Forge",
     "MIT",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
@@ -24,6 +25,23 @@ allow = [
     "Zlib",
 ]
 confidence-threshold = 0.8
+
+# SEA Forge uses a nonstandard source-available license. Bind the custom SPDX
+# reference to the exact controlling text; cargo-deny rejects the clarification
+# automatically if that file changes.
+[[licenses.clarify]]
+crate = "sea-forge-core"
+expression = "LicenseRef-SEA-Forge"
+license-files = [
+    { path = "../../LICENSE", hash = 0x58d205c2 },
+]
+
+[[licenses.clarify]]
+crate = "sea-forge-cli"
+expression = "LicenseRef-SEA-Forge"
+license-files = [
+    { path = "../../LICENSE", hash = 0x58d205c2 },
+]
 
 [bans]
 multiple-versions = "warn"

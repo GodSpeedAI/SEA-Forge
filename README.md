@@ -238,3 +238,31 @@ conflated (Shell-SPEC §3.1).
   `.sea` semantics; SEA Forge owns governed execution and final authority.
 
 See `ARCHITECTURE.md` for the system map and how the layers fit together.
+
+## License and commercial use
+
+SEA Forge is source-available under the
+[SEA-Forge Sustainable Use License](LICENSE). Separate
+[commercial licensing](COMMERCIAL-LICENSE.md) is available for hosted,
+embedded, redistributed, white-labeled, client-facing, and enterprise use.
+
+SEA Forge follows the **Photoshop Principle**: you may own and commercialize
+independent outputs you create with the tool, but you do not own or resell the
+tool itself.
+
+- **You may:** use and modify SEA Forge for permitted internal, personal,
+  educational, research, evaluation, and non-commercial purposes.
+- **You may also:** own and commercialize independent outputs generated with
+  SEA Forge, provided they do not include SEA Forge itself, repository-generated
+  materials, or enterprise-only components.
+- **You may not without a commercial license:** resell or redistribute SEA
+  Forge, offer it as a hosted or managed service, embed it in a paid product,
+  white-label it, provide SEA-Forge-powered services to clients, or use
+  enterprise-only components.
+
+Enterprise-only files are identified by the rules in
+[LICENSE_EE.md](LICENSE_EE.md). Third-party components remain subject to their
+own licenses.
+
+For production agents, client-facing deployments, or enterprise rights,
+contact [licensing@godspeedai.com](mailto:licensing@godspeedai.com).
