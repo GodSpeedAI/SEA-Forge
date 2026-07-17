@@ -127,9 +127,7 @@ pub fn answer_question(
     // Bounded query: derive claims only from permitted classes.
     let claims = derive_claims(&question.kind, &question.subject, snapshot, &permitted);
     let freshness = freshness_of(snapshot, policy);
-    let disposition = if claims.is_empty() {
-        Disposition::Answered
-    } else if omitted.is_empty() {
+    let disposition = if omitted.is_empty() {
         Disposition::Answered
     } else {
         Disposition::Partial
@@ -180,7 +178,7 @@ fn derive_claims(
                     || permitted.contains(&ClaimClass::InstalledCapability)
                     || permitted.contains(&ClaimClass::DemonstratedCapability)
                 {
-                    claims.push(capability_claim(&cap, &snap_ref));
+                    claims.push(capability_claim(&cap, snap_ref));
                 }
             } else {
                 // Absent capability → unsupported (§10.2).
@@ -203,7 +201,7 @@ fn derive_claims(
         QuestionKind::AskProjectionSupport => {
             if let Some(cap) = snapshot.capability(subject) {
                 if permitted.contains(&ClaimClass::DeclaredCapability) {
-                    claims.push(capability_claim(&cap, &snap_ref));
+                    claims.push(capability_claim(&cap, snap_ref));
                 }
             }
         }
@@ -248,7 +246,7 @@ fn derive_claims(
             if permitted.contains(&ClaimClass::DeclaredCapability) {
                 for name in snapshot.declared_capabilities() {
                     if let Some(cap) = snapshot.capability(&name) {
-                        claims.push(capability_claim(&cap, &snap_ref));
+                        claims.push(capability_claim(&cap, snap_ref));
                     }
                 }
             }

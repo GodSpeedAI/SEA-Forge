@@ -698,7 +698,7 @@ impl SelfDisclosureSurface {
 
 fn schema(message: String) -> ForgeError {
     ForgeError::Config {
-        class: "schema_error".into(),
+        class: "schema_error",
         path: PathBuf::new(),
         message,
     }
@@ -1016,7 +1016,7 @@ impl AuthorityPolicyBundle {
             .self_disclosure
             .validate()
             .map_err(|e| ForgeError::Config {
-                class: "schema_error".into(),
+                class: "schema_error",
                 path: path.into(),
                 message: e.to_string(),
             })?;
