@@ -129,6 +129,7 @@ fn make_decl_req(
             sha256: "sha256:origin1".into(),
             role: OriginRole::DesiredResult,
             evidence_refs: vec![],
+            domain_model_ref: None,
         }],
         verifier_ref: "builtin:local".into(),
         verifier_sha256: "sha256:verifier".into(),

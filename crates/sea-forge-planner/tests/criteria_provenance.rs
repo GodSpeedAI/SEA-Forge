@@ -1,4 +1,5 @@
 use sea_forge_core::types::*;
+use sea_forge_core::ForgeError;
 use sea_forge_ledger::LedgerStream;
 use sea_forge_planner::{
     criteria::{
@@ -350,4 +351,102 @@ fn built_in_demo_does_not_create_redundant_job_contract() {
         record.derivation.method,
         DerivationMethod::DeterministicPlanner
     );
+}
+
+// ── M10 (E12 §7.5): DesiredOutcome origin ref ──
+
+use sea_forge_planner::{verify_desired_outcome_refs, DesiredOutcomeResolver, NoModelResolver};
+
+struct StubResolver {
+    known: std::collections::HashSet<String>,
+}
+
+impl DesiredOutcomeResolver for StubResolver {
+    fn verify_desired_outcome(
+        &self,
+        reference: &str,
+        _domain_model_ref: &str,
+        _model_sha256: &str,
+    ) -> Result<(), ForgeError> {
+        if self.known.contains(reference) {
+            Ok(())
+        } else {
+            Err(ForgeError::Plan {
+                class: "criteria_provenance_error",
+                message: format!("unresolved desired-outcome ref: {reference}"),
+            })
+        }
+    }
+}
+
+fn desired_outcome_record(reference: &str, dmr: Option<&str>) -> SettlementCriteriaRecord {
+    let mut record = derive_from_intent(
+        &demo_intent(),
+        &demo_item(),
+        "entity",
+        "2026-07-13T00:00:00Z",
+    )
+    .unwrap();
+    record.origin_refs.push(OriginRef {
+        kind: OriginRefKind::DesiredOutcome,
+        reference: reference.into(),
+        sha256: "sha256:model_hash".into(),
+        role: OriginRole::DesiredResult,
+        evidence_refs: vec![],
+        domain_model_ref: dmr.map(str::to_owned),
+    });
+    record.criteria_record_hash = sea_forge_planner::compute_record_hash(&record).unwrap();
+    record
+}
+
+#[test]
+fn m10_desired_outcome_resolves_with_valid_resolver() {
+    let record = desired_outcome_record("outcome:faster_builds", Some("godspeed.adlc_odi_case"));
+    let resolver = StubResolver {
+        known: ["outcome:faster_builds".into()].into(),
+    };
+    assert!(verify_desired_outcome_refs(&record, &resolver).is_ok());
+}
+
+#[test]
+fn m10_desired_outcome_without_resolver_is_rejected() {
+    let record = desired_outcome_record("outcome:faster_builds", Some("godspeed.adlc_odi_case"));
+    // NoModelResolver rejects everything (fail-closed).
+    let error = verify_desired_outcome_refs(&record, &NoModelResolver).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+}
+
+#[test]
+fn m10_desired_outcome_without_domain_model_ref_is_rejected() {
+    let record = desired_outcome_record("outcome:faster_builds", None);
+    let resolver = StubResolver {
+        known: ["outcome:faster_builds".into()].into(),
+    };
+    let error = verify_desired_outcome_refs(&record, &resolver).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+    assert!(error.to_string().contains("domain_model_ref"));
+}
+
+#[test]
+fn m10_unresolved_desired_outcome_ref_is_criteria_provenance_error() {
+    let record = desired_outcome_record("outcome:nonexistent", Some("godspeed.adlc_odi_case"));
+    let resolver = StubResolver {
+        known: ["outcome:faster_builds".into()].into(),
+    };
+    let error = verify_desired_outcome_refs(&record, &resolver).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+    assert!(error.to_string().contains("unresolved"));
+}
+
+#[test]
+fn m10_desired_outcome_hash_changes_when_ref_or_model_changes() {
+    let r1 = desired_outcome_record("outcome:A", Some("model_v1"));
+    let r2 = desired_outcome_record("outcome:B", Some("model_v1"));
+    let r3 = desired_outcome_record("outcome:A", Some("model_v2"));
+    let h1 = sea_forge_planner::compute_record_hash(&r1).unwrap();
+    let h2 = sea_forge_planner::compute_record_hash(&r2).unwrap();
+    let h3 = sea_forge_planner::compute_record_hash(&r3).unwrap();
+    assert_ne!(h1, h2);
+    assert_ne!(h1, h3);
+    assert_ne!(h2, h3);
 }

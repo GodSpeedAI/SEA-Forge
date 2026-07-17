@@ -516,6 +516,11 @@ pub struct OriginRef {
     pub role: OriginRole,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence_refs: Vec<String>,
+    /// M10 (E12 §7.5): typed model reference required for `DesiredOutcome`
+    /// kind; absent for all legacy kinds. Names the validated seed/client model
+    /// that contains the desired-outcome concept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -529,6 +534,11 @@ pub enum OriginRefKind {
     ExternalRequirement,
     JobContract,
     ImplementationDefined,
+    /// M10 (E12 §7.5): reference to a Desired Outcome Criterion entity in a
+    /// validated seed/client model. Old readers fail cleanly on serde Err for
+    /// this variant; they are structurally shielded because `desired_outcome`
+    /// refs only appear in new ADLC/ODI template-derived criteria records.
+    DesiredOutcome,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
