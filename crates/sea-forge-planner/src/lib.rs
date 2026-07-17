@@ -7,7 +7,8 @@ pub mod templates;
 
 pub use criteria::{
     compute_criteria_sha256, compute_record_hash, derive_from_intent, derive_from_template,
-    verify_item_criteria, verify_plan_criteria, CriteriaLookup,
+    verify_desired_outcome_refs, verify_item_criteria, verify_plan_criteria,
+    verify_plan_criteria_with_resolver, CriteriaLookup, DesiredOutcomeResolver, NoModelResolver,
 };
 pub use templates::{
     instantiate, load, load_pinned, sea_model_demo_template, store_builtin, PlanTemplate,

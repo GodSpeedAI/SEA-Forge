@@ -582,6 +582,7 @@ fn test_criteria_record(input: &TransitionInput) -> SettlementCriteriaRecord {
             sha256: "sha256:origin".into(),
             role: OriginRole::AcceptanceSource,
             evidence_refs: vec![],
+            domain_model_ref: None,
         }],
         derivation: CriteriaDerivation {
             method: DerivationMethod::ImplementationDefined,

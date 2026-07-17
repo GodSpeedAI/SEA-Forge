@@ -35,6 +35,7 @@ pub fn derive_from_intent(
         sha256: hash_canonical(intent)?,
         role: OriginRole::DesiredResult,
         evidence_refs: vec![],
+        domain_model_ref: None,
     };
     let mut record = SettlementCriteriaRecord {
         version: RECORD_VERSION.into(),
@@ -79,6 +80,7 @@ pub fn derive_from_template(
             sha256: hash_canonical(intent)?,
             role: OriginRole::DesiredResult,
             evidence_refs: vec![],
+            domain_model_ref: None,
         },
         OriginRef {
             kind: OriginRefKind::PlanTemplate,
@@ -86,6 +88,7 @@ pub fn derive_from_template(
             sha256: hash_canonical(template)?,
             role: OriginRole::AcceptanceSource,
             evidence_refs: vec![],
+            domain_model_ref: None,
         },
     ];
     for origin in &template.origin_refs {
@@ -131,6 +134,63 @@ impl CriteriaLookup for Vec<SettlementCriteriaRecord> {
             .find(|record| record.criteria_id == criteria_id)
             .cloned()
     }
+}
+
+/// Resolver for desired-outcome concept refs (§7.5). Verifies that a
+/// `reference` names a Desired Outcome Criterion entity in the validated model
+/// identified by `domain_model_ref`, and that the model hash matches.
+/// The planner does not hard-couple to the self-model crate; callers inject
+/// this resolver at plan-commit time.
+pub trait DesiredOutcomeResolver {
+    fn verify_desired_outcome(
+        &self,
+        reference: &str,
+        domain_model_ref: &str,
+        model_sha256: &str,
+    ) -> Result<(), ForgeError>;
+}
+
+/// Fail-closed resolver: rejects all desired-outcome refs. Used when no
+/// validated model is loaded. Ensures desired-outcome refs cannot pass
+/// verification without a real model backing them (§10.4).
+pub struct NoModelResolver;
+
+impl DesiredOutcomeResolver for NoModelResolver {
+    fn verify_desired_outcome(
+        &self,
+        _reference: &str,
+        _domain_model_ref: &str,
+        _model_sha256: &str,
+    ) -> Result<(), ForgeError> {
+        Err(ForgeError::Plan {
+            class: "criteria_provenance_error",
+            message: "desired_outcome origin ref requires a validated model resolver".into(),
+        })
+    }
+}
+
+/// Verify desired-outcome origin refs in a criteria record through the resolver.
+/// Each `DesiredOutcome` ref MUST have a `domain_model_ref` and MUST resolve.
+pub fn verify_desired_outcome_refs(
+    record: &SettlementCriteriaRecord,
+    resolver: &impl DesiredOutcomeResolver,
+) -> Result<(), ForgeError> {
+    for origin in &record.origin_refs {
+        if origin.kind == OriginRefKind::DesiredOutcome {
+            let dmr = origin
+                .domain_model_ref
+                .as_deref()
+                .ok_or_else(|| ForgeError::Plan {
+                    class: "criteria_provenance_error",
+                    message: format!(
+                        "desired_outcome origin ref in {} missing required domain_model_ref",
+                        record.criteria_id
+                    ),
+                })?;
+            resolver.verify_desired_outcome(&origin.reference, dmr, &origin.sha256)?;
+        }
+    }
+    Ok(())
 }
 
 /// Verify a PlanItem's settlement criteria provenance.
@@ -202,16 +262,32 @@ pub fn verify_item_criteria(
 
 /// Verify every PlanItem that has a `settlement_criteria_ref`.
 /// Items without a ref are treated as legacy-unattributed and are skipped.
+/// Desired-outcome refs are rejected (fail-closed) because no model resolver
+/// is available; use `verify_plan_criteria_with_resolver` for ADLC/ODI plans.
 pub fn verify_plan_criteria(
     plan: &CasePlan,
     lookup: &impl CriteriaLookup,
+) -> Result<Vec<SettlementCriteriaRecord>, ForgeError> {
+    verify_plan_criteria_with_resolver(plan, lookup, &NoModelResolver)
+}
+
+/// Verify plan criteria with a desired-outcome resolver (§7.5/§10.4).
+/// Each item's criteria record is resolved and verified; desired-outcome
+/// origin refs are checked through the resolver before authority and before
+/// any execution side effects.
+pub fn verify_plan_criteria_with_resolver(
+    plan: &CasePlan,
+    lookup: &impl CriteriaLookup,
+    resolver: &impl DesiredOutcomeResolver,
 ) -> Result<Vec<SettlementCriteriaRecord>, ForgeError> {
     let mut records = Vec::new();
     for item in &plan.items {
         if item.settlement_criteria_ref.is_none() {
             continue;
         }
-        records.push(verify_item_criteria(item, lookup)?);
+        let record = verify_item_criteria(item, lookup)?;
+        verify_desired_outcome_refs(&record, resolver)?;
+        records.push(record)
     }
     Ok(records)
 }
