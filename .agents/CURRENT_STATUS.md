@@ -6,9 +6,8 @@ Updated: 2026-07-17
 
 Implement Tasks 2–3 (M10 E8/ADLC/ODI templates + M11 Thoth) from
 `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`. M9 is complete
-and gated (313 tests, P1–P4b, no-async-kernel). M10 slices 2.1–2.3 done
-(E8 control-flow vocab + source-bound sentry fix + DesiredOutcome origin
-ref + resolver); 2.4 (ADLC/ODI template assets) next.
+and gated (313 tests, P1–P4b, no-async-kernel). M10 slices 2.1–2.4 done;
+running cumulative gate next.
 tag; proven by 11 tests across core serde, ledger replay, and E6 import).
 Task 0.3 needs no new dependencies for M9. Task 0.4 is decided (sealed
 canonical transcript; gates M13). Committing per the plan §0.2
