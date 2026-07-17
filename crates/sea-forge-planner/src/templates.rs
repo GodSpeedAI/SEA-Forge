@@ -1,7 +1,8 @@
 use sea_forge_core::{
     errors::ForgeError,
     types::{
-        CasePlan, ItemKind, JobContract, Operation, OriginRef, PlanItem, Sentry, SettlementCriteria,
+        CasePlan, ItemKind, ItemMarkers, JobContract, Operation, OriginRef, OriginRefKind,
+        OriginRole, PlanItem, Sentry, SentryPredicate, SentryTrigger, SettlementCriteria,
     },
     RECORD_VERSION,
 };
@@ -10,7 +11,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 
 /// A plan template parameter definition.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -392,6 +393,16 @@ pub fn load_pinned(root: &Path, reference: &str) -> Result<PlanTemplate, ForgeEr
 /// overwritten; version changes require a new filename.
 pub fn store_builtin(root: &Path) -> Result<std::path::PathBuf, ForgeError> {
     let template = sea_model_demo_template();
+    let path = store_template(root, &template)?;
+    // Also materialize the M10 ADLC/ODI built-ins.
+    store_template(root, &adlc_case_template())?;
+    store_template(root, &odi_adlc_case_template())?;
+    Ok(path)
+}
+
+/// Materialize a built-in template as `<root>/templates/<name>@<version>.yaml`
+/// without overwriting an existing file (§0.3 source-owned assets).
+fn store_template(root: &Path, template: &PlanTemplate) -> Result<PathBuf, ForgeError> {
     let templates = root.join("templates");
     std::fs::create_dir_all(&templates)
         .map_err(|error| ForgeError::io("create templates directory", error))?;
@@ -399,7 +410,7 @@ pub fn store_builtin(root: &Path) -> Result<std::path::PathBuf, ForgeError> {
     match OpenOptions::new().create_new(true).write(true).open(&path) {
         Ok(mut file) => file
             .write_all(
-                serde_yaml::to_string(&template)
+                serde_yaml::to_string(template)
                     .map_err(|error| ForgeError::Serialization(error.to_string()))?
                     .as_bytes(),
             )
@@ -451,5 +462,285 @@ pub fn sea_model_demo_template() -> PlanTemplate {
                 depends_on: vec![],
             }],
         },
+    }
+}
+
+// ── M10 (E12 §7.5): ADLC/ODI built-in templates ──
+
+/// Helper: a stage item (no operations, no sentry).
+fn stage(id: &str, name: &str, entry: Vec<Sentry>) -> TemplateItem {
+    TemplateItem {
+        plan_item_id: id.into(),
+        name: name.into(),
+        operations: vec![],
+        settlement_criteria: SettlementCriteria::default(),
+        item_kind: ItemKind::Stage,
+        sandbox_class: None,
+        markers: ItemMarkers::default(),
+        max_instances: 1,
+        environment: None,
+        entry_criteria: entry,
+        exit_criteria: vec![],
+        parent_stage: None,
+        depends_on: vec![],
+    }
+}
+
+/// Helper: a milestone item within a stage.
+fn milestone(id: &str, name: &str, parent: &str) -> TemplateItem {
+    TemplateItem {
+        plan_item_id: id.into(),
+        name: name.into(),
+        operations: vec![],
+        settlement_criteria: SettlementCriteria::default(),
+        item_kind: ItemKind::Milestone,
+        sandbox_class: None,
+        markers: ItemMarkers::default(),
+        max_instances: 1,
+        environment: None,
+        entry_criteria: vec![],
+        exit_criteria: vec![],
+        parent_stage: Some(parent.into()),
+        depends_on: vec![],
+    }
+}
+
+/// Helper: a sandboxed task within a stage with optional sentries.
+fn task(
+    id: &str,
+    name: &str,
+    parent: &str,
+    entry: Vec<Sentry>,
+    markers: ItemMarkers,
+    max_instances: u32,
+) -> TemplateItem {
+    TemplateItem {
+        plan_item_id: id.into(),
+        name: name.into(),
+        operations: vec![],
+        settlement_criteria: SettlementCriteria {
+            require_exit_zero: true,
+            ..Default::default()
+        },
+        item_kind: ItemKind::SandboxedTask,
+        sandbox_class: Some("local".into()),
+        markers,
+        max_instances,
+        environment: None,
+        entry_criteria: entry,
+        exit_criteria: vec![],
+        parent_stage: Some(parent.into()),
+        depends_on: vec![],
+    }
+}
+
+/// Source-bound reactivation sentry: fires when `src` settles with `status`.
+fn reactivation_sentry(src: &str, status: &str) -> Sentry {
+    Sentry {
+        on: SentryTrigger {
+            source: src.into(),
+            event: "settlement_status".into(),
+        },
+        if_predicate: Some(SentryPredicate::SettlementStatus {
+            status: status.into(),
+        }),
+    }
+}
+
+fn milestone_sentry(src: &str) -> Sentry {
+    Sentry {
+        on: SentryTrigger {
+            source: src.into(),
+            event: "milestone_achieved".into(),
+        },
+        if_predicate: None,
+    }
+}
+
+/// The built-in `adlc_case@0.1.0` template: Frame → Form → Build → Activate
+/// with reactivation sentries (simulation rejection re-enters design) and a
+/// discretionary-item slot (spec-adlc-thoth §7.5).
+pub fn adlc_case_template() -> PlanTemplate {
+    PlanTemplate {
+        name: "adlc_case".into(),
+        version: "0.1.0".into(),
+        description: "ADLC lifecycle: Frame → Form → Build → Activate with reactivation".into(),
+        parameters: BTreeMap::new(),
+        origin_refs: vec![],
+        job_contract: None,
+        plan: TemplatePlan {
+            items: vec![
+                // Stage: Frame
+                stage("stage_frame", "Frame", vec![]),
+                task(
+                    "task_preparation",
+                    "Preparation & Hypothesis",
+                    "stage_frame",
+                    vec![],
+                    ItemMarkers::default(),
+                    1,
+                ),
+                milestone("ms_problem_framed", "Problem Framed", "stage_frame"),
+                // Stage: Form (activated when Frame milestone achieved)
+                stage(
+                    "stage_form",
+                    "Form",
+                    vec![milestone_sentry("ms_problem_framed")],
+                ),
+                task(
+                    "task_design",
+                    "Design",
+                    "stage_form",
+                    // Reactivation: simulation rejection re-enters design
+                    vec![reactivation_sentry("task_simulation", "rejected")],
+                    ItemMarkers {
+                        repetition: true,
+                        ..Default::default()
+                    },
+                    3,
+                ),
+                task(
+                    "task_simulation",
+                    "Simulation",
+                    "stage_form",
+                    vec![milestone_sentry("task_design")],
+                    ItemMarkers::default(),
+                    1,
+                ),
+                milestone("ms_dev_authorized", "Development Authorized", "stage_form"),
+                // Stage: Build
+                stage(
+                    "stage_build",
+                    "Build",
+                    vec![milestone_sentry("ms_dev_authorized")],
+                ),
+                task(
+                    "task_implementation",
+                    "Implementation",
+                    "stage_build",
+                    vec![],
+                    ItemMarkers::default(),
+                    1,
+                ),
+                milestone(
+                    "ms_rc_accepted",
+                    "Release Candidate Accepted",
+                    "stage_build",
+                ),
+                // Stage: Activate
+                stage(
+                    "stage_activate",
+                    "Activate",
+                    vec![milestone_sentry("ms_rc_accepted")],
+                ),
+                task(
+                    "task_deployment",
+                    "Controlled Deployment",
+                    "stage_activate",
+                    vec![],
+                    ItemMarkers::default(),
+                    1,
+                ),
+                milestone(
+                    "ms_activation_settled",
+                    "Activation Settled",
+                    "stage_activate",
+                ),
+                // Discretionary item slot (manual activation)
+                TemplateItem {
+                    plan_item_id: "disc_item".into(),
+                    name: "Discretionary Item".into(),
+                    operations: vec![],
+                    settlement_criteria: SettlementCriteria::default(),
+                    item_kind: ItemKind::SandboxedTask,
+                    sandbox_class: Some("local".into()),
+                    markers: ItemMarkers {
+                        manual_activation: true,
+                        ..Default::default()
+                    },
+                    max_instances: 1,
+                    environment: None,
+                    entry_criteria: vec![],
+                    exit_criteria: vec![],
+                    parent_stage: None,
+                    depends_on: vec![],
+                },
+            ],
+        },
+    }
+}
+
+/// The built-in `odi_adlc_case@0.1.0` template: prepends Job Framing and
+/// Outcome Discovery/Selection stages before the ADLC lifecycle, binding
+/// desired-outcome concept refs into the criteria origin_refs (§7.5).
+pub fn odi_adlc_case_template() -> PlanTemplate {
+    // Start from the ADLC case and prepend ODI stages + desired-outcome provenance.
+    let adlc = adlc_case_template();
+    let mut items = vec![
+        // Stage: Job Framing
+        stage("stage_job_framing", "Job Framing", vec![]),
+        task(
+            "task_job_discovery",
+            "Job Discovery",
+            "stage_job_framing",
+            vec![],
+            ItemMarkers::default(),
+            1,
+        ),
+        milestone("ms_job_framed", "Job Framed", "stage_job_framing"),
+        // Stage: Outcome Discovery & Selection
+        stage(
+            "stage_outcome_discovery",
+            "Outcome Discovery",
+            vec![milestone_sentry("ms_job_framed")],
+        ),
+        task(
+            "task_outcome_discovery",
+            "Outcome Discovery",
+            "stage_outcome_discovery",
+            vec![],
+            ItemMarkers::default(),
+            1,
+        ),
+        task(
+            "task_outcome_selection",
+            "Outcome Selection",
+            "stage_outcome_discovery",
+            vec![],
+            ItemMarkers::default(),
+            1,
+        ),
+        milestone(
+            "ms_outcome_selected",
+            "Outcome Selected",
+            "stage_outcome_discovery",
+        ),
+    ];
+    // The ADLC stages now activate after outcome selection.
+    // Adjust stage_frame entry criteria to depend on outcome selection.
+    let mut adlc_items = adlc.plan.items;
+    if let Some(frame) = adlc_items
+        .iter_mut()
+        .find(|i| i.plan_item_id == "stage_frame")
+    {
+        frame.entry_criteria = vec![milestone_sentry("ms_outcome_selected")];
+    }
+    items.append(&mut adlc_items);
+    PlanTemplate {
+        name: "odi_adlc_case".into(),
+        version: "0.1.0".into(),
+        description:
+            "ODI + ADLC: Job Framing → Outcome Discovery → Frame → Form → Build → Activate".into(),
+        parameters: BTreeMap::new(),
+        origin_refs: vec![OriginRef {
+            kind: OriginRefKind::DesiredOutcome,
+            reference: "outcome:primary".into(),
+            sha256: "sha256:placeholder".into(),
+            role: OriginRole::DesiredResult,
+            evidence_refs: vec![],
+            domain_model_ref: Some("godspeed.adlc_odi_case".into()),
+        }],
+        job_contract: None,
+        plan: TemplatePlan { items },
     }
 }

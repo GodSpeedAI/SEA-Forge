@@ -11,7 +11,8 @@ pub use criteria::{
     verify_plan_criteria_with_resolver, CriteriaLookup, DesiredOutcomeResolver, NoModelResolver,
 };
 pub use templates::{
-    instantiate, load, load_pinned, sea_model_demo_template, store_builtin, PlanTemplate,
+    adlc_case_template, instantiate, load, load_pinned, odi_adlc_case_template,
+    sea_model_demo_template, store_builtin, PlanTemplate,
 };
 
 pub const DEMO_MODEL: &str = r#"{"domain": "demo", "entities": [{"name": "Sample"}]}"#;
