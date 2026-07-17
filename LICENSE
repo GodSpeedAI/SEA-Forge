@@ -1,0 +1,199 @@
+# SEA-Forge License
+
+This license applies to all branches, tags, releases, forks, and copies of SEA-Forge unless a specific file, directory, component, or written agreement expressly states otherwise.
+
+Portions of this software are licensed as follows:
+
+- Source code files that contain `.ee.` in their filename or `.ee` in their directory path are NOT licensed under the SEA-Forge Sustainable Use License. To use source code files that contain `.ee.` in their filename or `.ee` in their directory path, you must hold a valid SEA-Forge Enterprise License specifically allowing access to such source code files, as defined in `LICENSE_EE.md`.
+
+- Third-party components incorporated into SEA-Forge are licensed under the original licenses provided by their respective owners.
+
+- DomainForge, SEA-DSL, or other separately identified components may be licensed under different terms, such as Apache License 2.0, as specified in their respective repositories, directories, or license files.
+
+- Content outside the above files, exclusions, or separately licensed components is available under the SEA-Forge Sustainable Use License below.
+
+---
+
+# SEA-Forge Sustainable Use License
+
+Version 1.0
+
+## Source-Available Notice
+
+The SEA-Forge Sustainable Use License is a source-available license. It is not an Open Source Initiative approved open-source license because it restricts certain commercial uses.
+
+DomainForge, SEA-DSL, or other separately identified components may be licensed under open-source licenses such as Apache License 2.0 where expressly stated.
+
+## Acceptance
+
+By using the software, you agree to all of the terms and conditions below.
+
+## Copyright License
+
+The licensor grants you a non-exclusive, royalty-free, worldwide, non-sublicensable, non-transferable license to use, copy, distribute, make available, and prepare derivative works of the software, in each case subject to the limitations below.
+
+## Permitted Use
+
+You may use and modify the software only for:
+
+1. your own internal business purposes;
+2. non-commercial research, education, evaluation, or experimentation;
+3. personal use;
+4. internal development, testing, governance, automation, compliance, AI-agent management, software-development workflows, or operational workflows within your own organization.
+
+You may distribute the software or provide it to others only if you do so free of charge and for non-commercial purposes.
+
+For clarity, internal business use by an organization is permitted under this license, even if that organization is commercial, provided the software is not itself sold, hosted, embedded, bundled, white-labeled, sublicensed, commercially distributed, or commercially provided to third parties.
+
+## Commercial Use Restrictions
+
+You may not, without a separate written commercial license from the licensor:
+
+1. sell, rent, lease, sublicense, or otherwise commercially provide the software to any third party;
+
+2. offer the software, modified software, or any material part of the software as a hosted service, managed service, SaaS product, platform service, API service, embedded service, or similar offering;
+
+3. provide third parties with direct or indirect access to the software, including through a user interface, API, agent runtime, governance runtime, automation service, compliance service, developer tool, hosted control plane, or managed deployment;
+
+4. use the software to operate, govern, monitor, automate, control, or manage third-party systems, repositories, agents, workflows, data, users, compliance processes, or operations as part of a paid product, paid platform, paid consulting deliverable, managed service, or other commercial offering;
+
+5. embed, bundle, package, integrate, or distribute the software as part of a commercial product or service provided to third parties;
+
+6. white-label, rebrand, resell, or market the software, modified software, or substantially equivalent software functionality as your own product or service;
+
+7. commercially distribute modified versions of the software;
+
+8. use the software in a manner that provides substantially the same functional value as the licensor’s hosted offerings, enterprise licenses, commercial licenses, commercial support offerings, or managed services to third parties.
+
+For clarity, you may use the software internally within your own organization, including for internal governance, compliance, automation, AI-agent management, software-development workflows, research, evaluation, and internal operational tooling.
+
+For clarity, a consultant, contractor, systems integrator, managed service provider, or similar service provider may use the software for its own internal business operations under this license. However, using the software to operate, govern, monitor, automate, control, or manage client or third-party systems, agents, workflows, repositories, compliance processes, data, users, or operations as part of a paid service requires a separate written commercial license.
+
+## Generated Code and Generated Outputs
+
+Generated code, generated documentation, generated schemas, generated manifests, generated policies, generated tests, generated configuration, generated artifacts, and other generated materials that are included in this repository or distributed as part of SEA-Forge are part of the software and are licensed under the same license terms that apply to the files, directories, or components in which they appear.
+
+For clarity, generated materials committed to the SEA-Forge repository are covered by the SEA-Forge Sustainable Use License unless they are:
+
+1. enterprise-only components covered by `LICENSE_EE.md`;
+2. third-party components covered by their original licenses; or
+3. separately licensed components expressly identified in this repository.
+
+Generated outputs created by users outside this repository are not automatically subject to the SEA-Forge Sustainable Use License merely because they were generated by SEA-Forge.
+
+Users may own, use, modify, distribute, commercialize, and license their user generated outputs under terms of their choosing, provided those outputs do not include copied, modified, embedded, bundled, or derivative portions of SEA-Forge source code, SEA-Forge repository generated materials, enterprise-only components, or other separately licensed SEA-Forge materials except as separately permitted by this license or by a written commercial license.
+
+For clarity:
+
+- Repository generated materials are part of SEA-Forge and remain under the applicable SEA-Forge license.
+- User generated outputs outside the SEA-Forge repository belong to the user and may be licensed separately.
+- Using SEA-Forge to generate software, documentation, policies, schemas, manifests, specifications, reports, tests, workflows, applications, architecture artifacts, cognitive artifacts, knowledge graphs, information products, or other artifacts does not by itself place those generated outputs under the SEA-Forge license.
+- You may use SEA-Forge internally to generate proprietary software for your own organization.
+- You may use SEA-Forge internally to generate documentation, policies, specifications, architecture artifacts, cognitive artifacts, knowledge graphs, information products, or operational workflows for your own organization.
+- You may commercialize user generated outputs, provided SEA-Forge itself is not copied, modified, embedded, bundled, hosted, sublicensed, distributed, white-labeled, or provided as part of that commercial offering without a separate written commercial license.
+- Embedding, copying, redistributing, hosting, sublicensing, commercially distributing, or white-labeling SEA-Forge itself, including generated repository code that is part of SEA-Forge, remains subject to this license.
+
+## Enterprise Components
+
+Files, directories, modules, services, plugins, integrations, deployment tooling, hosted-control-plane components, enterprise features, or other materials marked as enterprise-only, including files containing `.ee.` in their filename or `.ee` in their directory path, are not licensed under this license.
+
+Use of enterprise-only components requires a separate SEA-Forge Enterprise License.
+
+## Third-Party Components
+
+Third-party components included with or used by the software remain subject to their own licenses. This license does not grant rights to third-party components beyond the rights granted by their respective owners.
+
+## Trademarks
+
+This license does not grant you any right to use the licensor’s names, trademarks, service marks, logos, trade names, product names, domain names, or branding, including but not limited to “SEA-Forge,” “SEA,” “GodSpeed AI,” “DomainForge,” “SEA-DSL,”, "GovernedSpeed", or related marks, except as required to accurately identify the software in accordance with applicable law.
+
+You may not remove, alter, or obscure any trademark, copyright, attribution, licensing, or other proprietary notices included in the software.
+
+## Patents
+
+The licensor grants you a license, under any patent claims the licensor can license or later becomes able to license, to make, have made, use, sell, offer for sale, import, and have imported the software, in each case subject to the limitations and conditions in this license.
+
+This patent license does not cover patent claims that you cause to be infringed by modifications, additions, combinations, or derivative works of the software.
+
+If you or your company make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+
+## Notices
+
+You must ensure that anyone who receives a copy of any part of the software from you also receives a copy of these terms.
+
+If you modify the software, you must include in any modified copies of the software a prominent notice stating that you have modified the software.
+
+You may not alter, remove, or obscure any licensing, copyright, attribution, trademark, or other notices of the licensor in the software.
+
+## Examples
+
+The following examples are provided for clarity. If there is a conflict between these examples and the license terms above, the license terms control.
+
+### Allowed without a separate commercial license
+
+- A company self-hosts SEA-Forge to govern its own internal AI agents.
+- A company uses SEA-Forge internally to generate policies, documentation, code, schemas, manifests, tests, workflows, architecture artifacts, cognitive artifacts, knowledge graphs, or operational artifacts for its own operations.
+- A company modifies SEA-Forge for its own internal use and does not provide SEA-Forge or SEA-Forge functionality to third parties.
+- An individual uses SEA-Forge for personal research, experimentation, or learning.
+- A university or nonprofit uses SEA-Forge for non-commercial research or education.
+- A consultant uses SEA-Forge internally to manage the consultant’s own internal workflows, repositories, agents, governance processes, and operations.
+- A company uses SEA-Forge internally to generate proprietary software or internal tools for its own organization.
+
+### Requires a separate commercial license
+
+- A company hosts SEA-Forge and charges customers to access it.
+- A company embeds SEA-Forge into a paid SaaS product.
+- A company white-labels SEA-Forge as its own governance, compliance, automation, software-generation, organizational-twin, or agent-management platform.
+- A consulting firm uses SEA-Forge to govern, monitor, automate, control, or manage client systems or client AI agents as part of a paid service.
+- A managed service provider runs SEA-Forge on behalf of one or more customers.
+- A software vendor distributes SEA-Forge or modified SEA-Forge as part of a commercial product.
+- A company offers SEA-Forge-powered compliance automation, AI-agent governance, software-generation automation, organizational-twin services, runtime governance, or managed governance services to third parties.
+- A company provides customers direct or indirect access to SEA-Forge through a hosted control plane, API, user interface, agent runtime, governance runtime, automation service, or managed deployment.
+
+## No Other Rights
+
+These terms do not imply or grant any licenses other than those expressly granted in these terms.
+
+All rights not expressly granted are reserved by the licensor.
+
+## Termination
+
+If you use the software in violation of these terms, such use is not licensed, and your license will automatically terminate.
+
+If the licensor provides you with notice of your violation, and you cease all violation of this license no later than 30 days after you receive that notice, your license will be reinstated retroactively.
+
+However, if you violate these terms after such reinstatement, any additional violation of these terms will cause your license to terminate automatically and permanently.
+
+Upon termination, you must cease all use, copying, modification, distribution, hosting, making available, or commercial exploitation of the software, except to the extent separately permitted by a written commercial license.
+
+## No Warranty
+
+As far as the law allows, the software is provided “as is,” without warranty or condition of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, title, non-infringement, accuracy, availability, security, or reliability.
+
+## Limitation of Liability
+
+As far as the law allows, the licensor will not be liable to you for any damages arising out of these terms or the use, inability to use, performance, security, reliability, or nature of the software, under any legal claim, including but not limited to direct, indirect, special, incidental, consequential, punitive, exemplary, or reliance damages, or damages for lost profits, lost revenue, lost data, lost goodwill, business interruption, or procurement of substitute goods or services.
+
+## Definitions
+
+The “licensor” is the individual or entity offering these terms.
+
+The “software” is the SEA-Forge software the licensor makes available under these terms, including any portion of it, except for components expressly excluded or separately licensed.
+
+“You” refers to the individual or entity agreeing to these terms.
+
+“Your company” means any legal entity, sole proprietorship, partnership, organization, or other entity that you work for or act on behalf of, plus all entities that control, are controlled by, or are under common control with that entity. Control means ownership of substantially all assets of an entity, ownership of more than 50% of voting interests, or the power to direct management and policies by vote, contract, or otherwise. Control may be direct or indirect.
+
+“Internal business purposes” means use of the software solely within your own organization for your own internal operations, development, testing, governance, compliance, automation, research, evaluation, AI-agent management, software-development workflows, or administrative purposes, and not for providing the software or substantially similar functionality to third parties as a commercial product or service.
+
+“Commercial offering” means any product, service, hosted service, managed service, SaaS offering, API, platform, subscription, license, support package, consulting deliverable, managed deployment, or other offering provided to third parties for compensation or commercial advantage where the software, modified software, or SEA-Forge functionality forms a material part of the value offered.
+
+“Repository generated materials” means generated code, documentation, schemas, manifests, policies, tests, configuration, artifacts, or other generated materials that are included in this repository or distributed as part of SEA-Forge.
+
+“User generated outputs” means artifacts created by a user through use of the software outside this repository, including but not limited to code, documentation, schemas, manifests, policies, specifications, reports, tests, workflows, applications, architecture artifacts, cognitive artifacts, knowledge graphs, information products, and operational artifacts.
+
+“Use” means anything you do with the software requiring a license.
+
+“Trademark” means trademarks, service marks, trade names, logos, product names, domain names, and similar rights.
+
+“Your license” means the license granted to you for the software under these terms.
