@@ -589,6 +589,21 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
   round-trip, distinct snapshot on re-rebuild, and corrupt-snapshot ⇒ exit 1
   `self_model_error`.
 
+## M9 gate (2026-07-17) — GREEN
+
+Cumulative gate on `full-spec` after all M9 slices:
+- `devbox run -- just context-check` — passed.
+- `devbox run -- just check` — passed (fmt, clippy `-D warnings`
+  workspace/all-targets/all-features, typecheck, security).
+- `devbox run -- just test` — passed; **313 tests, 0 failed, 0 platform skips**
+  (baseline was 289; +24 new M9 tests: 11 ProjectionKind boundary + 4
+  self-model lib + 7 conformance_m9 [T9.1–T9.5, V5] + 2 CLI integration).
+- `devbox run -- just proof` — P1–P4b passed (unchanged).
+- `devbox run -- just no-async-kernel` — "ok: no tokio in kernel crates"
+  (sea-forge-self-model included in the inventory).
+- Tracked `.sea-forge/**`: still 0 files.
+- T9.1–T9.5 + V5 all green. M9 is code-complete and gated. Remaining: M10–M16.
+
 ## Decisions
 
 - Pipeline moved to `sea-forge-cli` (not kept in `sea-forge-core`) because keeping
