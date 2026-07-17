@@ -1198,6 +1198,7 @@ dependencies = [
  "sea-forge-sandbox",
  "sea-forge-self-model",
  "sea-forge-settlement",
+ "sea-forge-thoth",
  "sea-forge-trace",
  "serde",
  "serde_json",
