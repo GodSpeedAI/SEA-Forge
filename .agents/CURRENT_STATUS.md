@@ -517,10 +517,11 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 - M12/M16 dependency selection (HTTP client, async strategy, URL, zeroization,
   ACP client) is blocked on explicit approval of exact versions/features; not
   needed for Task 1 (M9 declares no new dependencies).
-- M13 transcript evidence uses the Task 0.4 decision (owner, 2026-07-16):
-  retain a sealed, encrypted canonical transcript for `summarized` mode, verify
-  it before crypto-shredding, expose only the deterministic summary by default.
-  Recorded in `.agents/OPEN_QUESTIONS.md`; gates M13, not M9.
+- M13 transcript evidence uses the Task 0.4 decision (owner-accepted
+  2026-07-17): retain a sealed, encrypted canonical transcript for `summarized`
+  mode, verify it before crypto-shredding, expose only the deterministic summary
+  by default. Canonically recorded in `spec-agent-orchestration.md` "Resolved
+  decisions"; `OPEN_QUESTIONS.md` entry retired. Gates M13, not M9.
 
 ## Task 0.1 — Baseline re-run (2026-07-16)
 
