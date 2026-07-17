@@ -135,7 +135,7 @@ jobs:
           # success is therefore either a real failure or an unexplained skip;
           # the latter is treated as failure per the CI/CD directive.
           #
-          # GitHub Actions resolves `${{ ... }}` at job-setup time, so a dynamic
+          # GitHub Actions resolves expressions at job-setup time, so a dynamic
           # `needs.${name}.result` shell loop is impossible. Instead each result
           # is statically interpolated into an env var above, and the loop reads
           # those vars by name.
