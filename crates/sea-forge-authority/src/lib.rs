@@ -489,6 +489,9 @@ pub struct PolicySurfaces {
     pub github_pr: GithubPrSurface,
     #[serde(default)]
     pub prompt_risk: PromptRiskSurface,
+    /// M11 (E13 §8.2): self-disclosure policy surface. Absent ⇒ deny-all.
+    #[serde(default)]
+    pub self_disclosure: SelfDisclosureSurface,
 }
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
@@ -588,6 +591,119 @@ impl Default for FileSurface {
         }
     }
 }
+
+// ── M11 (E13 §8.2): self_disclosure policy surface ──
+
+/// Valid claim class names for the self_disclosure surface.
+pub const VALID_CLAIM_CLASSES: &[&str] = &[
+    "identity",
+    "architecture",
+    "declared_capability",
+    "installed_capability",
+    "demonstrated_capability",
+    "authority_requirements",
+    "environment_status",
+    "failure_condition",
+    "security_implementation",
+    "customer_private",
+    "credential_bearing",
+    "policy_thresholds",
+];
+
+/// The four high-risk classes that require explicit_high_risk + compensating
+/// control (§8.2).
+pub const HIGH_RISK_CLASSES: &[&str] = &[
+    "security_implementation",
+    "customer_private",
+    "credential_bearing",
+    "policy_thresholds",
+];
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct SelfDisclosureGrant {
+    pub name: String,
+    pub actor_role: String,
+    pub claim_classes: Vec<String>,
+    #[serde(default)]
+    pub explicit_high_risk: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compensating_control: Option<String>,
+    /// Per-grant freshness override (implementation-defined default false).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub require_fresh_snapshot: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct SelfDisclosureSurface {
+    #[serde(default = "deny_mode")]
+    pub mode: String,
+    #[serde(default)]
+    pub grants: Vec<SelfDisclosureGrant>,
+}
+
+impl Default for SelfDisclosureSurface {
+    fn default() -> Self {
+        Self {
+            mode: deny_mode(),
+            grants: vec![],
+        }
+    }
+}
+
+impl SelfDisclosureSurface {
+    /// Validate the surface (§8.2): mode must be deny-by-default, claim
+    /// classes must be known, high-risk grants need friction.
+    pub fn validate(&self) -> Result<(), ForgeError> {
+        if self.mode != "deny-by-default" {
+            return Err(schema(
+                "self_disclosure.mode must be deny-by-default".into(),
+            ));
+        }
+        for grant in &self.grants {
+            for class in &grant.claim_classes {
+                if !VALID_CLAIM_CLASSES.contains(&class.as_str()) {
+                    return Err(schema(format!(
+                        "unknown claim class '{class}' in self_disclosure grant '{}'",
+                        grant.name
+                    )));
+                }
+                if HIGH_RISK_CLASSES.contains(&class.as_str())
+                    && (!grant.explicit_high_risk
+                        || grant
+                            .compensating_control
+                            .as_deref()
+                            .unwrap_or("")
+                            .is_empty())
+                {
+                    return Err(schema(format!(
+                        "high-risk class '{class}' in grant '{}' requires explicit_high_risk: true and a compensating control",
+                        grant.name
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Returns true if `actor_role` is permitted to disclose `claim_class`.
+    /// Absent surface ⇒ deny (§8.2).
+    pub fn permits(&self, actor_role: &str, claim_class: &str) -> bool {
+        self.grants.iter().any(|grant| {
+            grant.actor_role == actor_role && grant.claim_classes.iter().any(|c| c == claim_class)
+        })
+    }
+}
+
+fn schema(message: String) -> ForgeError {
+    ForgeError::Config {
+        class: "schema_error".into(),
+        path: PathBuf::new(),
+        message,
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct PolicyRule {
@@ -895,6 +1011,15 @@ impl AuthorityPolicyBundle {
         {
             return Err(schema("invalid policy surface mode/default".into()));
         }
+        // M11 (E13 §8.2): validate self_disclosure surface.
+        self.policy_surfaces
+            .self_disclosure
+            .validate()
+            .map_err(|e| ForgeError::Config {
+                class: "schema_error".into(),
+                path: path.into(),
+                message: e.to_string(),
+            })?;
         let mut names = HashSet::new();
         let mut authority_refs = HashSet::new();
         for descriptor in &self.settlement_authorities {

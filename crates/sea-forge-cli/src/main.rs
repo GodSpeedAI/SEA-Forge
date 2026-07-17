@@ -233,6 +233,23 @@ enum Command {
         #[arg(long, default_value = ".sea-forge")]
         root: PathBuf,
     },
+    /// Ask Thoth a typed question about the self-model (spec-adlc-thoth E13).
+    Ask {
+        /// Question kind (§7.4).
+        kind: String,
+        /// Subject (capability name, concept ref, etc.).
+        subject: String,
+        #[arg(long, default_value = "planning")]
+        purpose: String,
+        #[arg(long)]
+        case: Option<String>,
+        #[arg(long)]
+        json: bool,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -711,6 +728,24 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             } => commands::self_model::rebuild(&root, probe, &capability_hash),
             SelfModelCommand::Show { json } => commands::self_model::show(&root, json),
         }
+        .map_err(|e| (1, e)),
+        Command::Ask {
+            kind,
+            subject,
+            purpose,
+            case,
+            json,
+            root,
+            actor,
+        } => commands::ask::run(
+            &kind,
+            &subject,
+            &purpose,
+            case.as_deref(),
+            json,
+            &root,
+            &actor,
+        )
         .map_err(|e| (1, e)),
     }
 }
