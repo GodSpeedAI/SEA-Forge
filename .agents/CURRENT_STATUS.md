@@ -139,6 +139,10 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Completed
 
+- Repaired the `full-spec` pre-push license gate: workspace crates now use the
+  valid custom SPDX reference `LicenseRef-SEA-Forge`, cargo-deny explicitly
+  allows that reference, and README license links resolve to the checked-in
+  `LICENSE` and `COMMERCIAL-LICENSE.md` files.
 - Merged `ci-cd` into `main` and pushed to `origin/main`.
 - Task 1 — M0a mechanical crate graduation: moved 14 slice modules into 10 new
   kernel crates plus `pipeline.rs` into `sea-forge-cli`, fixed cross-crate imports,
