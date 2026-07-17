@@ -30,21 +30,26 @@ fn trigger_fired<'a>(
     })
 }
 
-/// Check whether a sentry's `if` predicate holds given the current case state.
+/// Check whether a sentry's `if` predicate holds for the trigger source.
+/// `source` is the sentry's named source item; `"case"` is a wildcard.
 fn predicate_holds(
     predicate: &SentryPredicate,
+    source: &str,
     events: &[TraceEvent],
     workspace_files: &HashSet<String>,
 ) -> bool {
     match predicate {
         SentryPredicate::ArtifactExists { path } => workspace_files.contains(path),
-        SentryPredicate::SettlementStatus { status } => {
-            // Check if any settlement event has this status.
-            events.iter().any(|event| {
-                event.kind == TraceKind::SettlementRecorded
-                    && event.payload.get("status").and_then(|v| v.as_str()) == Some(status)
-            })
-        }
+        // Source-bound: evaluate only settlement events from the named source,
+        // not any matching event in the case (spec-adlc-thoth §7.5/§10.4).
+        SentryPredicate::SettlementStatus { status } => events.iter().any(|event| {
+            if event.kind != TraceKind::SettlementRecorded {
+                return false;
+            }
+            let source_ok = source == "case" || event.plan_item_id.as_deref() == Some(source);
+            source_ok
+                && event.payload.get("status").and_then(|v| v.as_str()) == Some(status.as_str())
+        }),
     }
 }
 
@@ -54,12 +59,12 @@ fn sentry_satisfied(
     events: &[TraceEvent],
     workspace_files: &HashSet<String>,
 ) -> bool {
-    let Some(_trigger_event) = trigger_fired(sentry, events) else {
+    if trigger_fired(sentry, events).is_none() {
         return false;
     };
     match &sentry.if_predicate {
         None => true,
-        Some(pred) => predicate_holds(pred, events, workspace_files),
+        Some(pred) => predicate_holds(pred, &sentry.on.source, events, workspace_files),
     }
 }
 

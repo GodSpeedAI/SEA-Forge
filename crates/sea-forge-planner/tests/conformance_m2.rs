@@ -378,3 +378,120 @@ fn conformance_m2_proposal_validation_compiles_depends_on_and_rejects_bad_paths(
     let error = validate_proposal(&mut bad).unwrap_err();
     assert_eq!(error.class(), "plan_schema_error");
 }
+
+// ── M10 (§7.5): source-bound sentry semantics ──
+
+fn settlement_sentry(source: &str, status: &str) -> Sentry {
+    Sentry {
+        on: SentryTrigger {
+            source: source.into(),
+            event: "settlement_status".into(),
+        },
+        if_predicate: Some(SentryPredicate::SettlementStatus {
+            status: status.into(),
+        }),
+    }
+}
+
+#[test]
+fn m10_rejection_from_a_cannot_activate_sentry_bound_to_b() {
+    // Item C has a sentry: on A settlement_status, if rejected.
+    // Item D has a sentry: on B settlement_status, if rejected.
+    let items = vec![
+        task_item("A", true, vec![], 1),
+        task_item("B", true, vec![], 1),
+        task_item("C", false, vec![settlement_sentry("A", "rejected")], 1),
+        task_item("D", false, vec![settlement_sentry("B", "rejected")], 1),
+    ];
+    let events = vec![
+        trace_event(
+            TraceKind::SettlementRecorded,
+            Some("A"),
+            serde_json::json!({"status": "accepted"}),
+        ),
+        trace_event(
+            TraceKind::SettlementRecorded,
+            Some("B"),
+            serde_json::json!({"status": "rejected"}),
+        ),
+    ];
+    let ws = HashSet::new();
+    // After both events: B was rejected, but C's sentry is bound to A (which was accepted).
+    let activated = evaluate_sentries(&items, &events, &ws);
+    assert!(
+        !activated.contains(&"C".to_string()),
+        "C must not activate: its sentry is on A, which was accepted, not rejected"
+    );
+    assert!(
+        activated.contains(&"D".to_string()),
+        "D must activate: B was rejected"
+    );
+}
+
+#[test]
+fn m10_repeated_rejection_reactivates_only_intended_successor() {
+    // Design has a repetition sentry: on Sim settlement_status, if rejected.
+    let items = vec![
+        task_item("Sim", true, vec![], 1),
+        task_item(
+            "Design",
+            false,
+            vec![settlement_sentry("Sim", "rejected")],
+            3, // repetition
+        ),
+    ];
+    let events = vec![
+        trace_event(
+            TraceKind::SettlementRecorded,
+            Some("Sim"),
+            serde_json::json!({"status": "rejected"}),
+        ),
+        trace_event(
+            TraceKind::SettlementRecorded,
+            Some("Sim"),
+            serde_json::json!({"status": "rejected"}),
+        ),
+        trace_event(
+            TraceKind::SettlementRecorded,
+            Some("Sim"),
+            serde_json::json!({"status": "accepted"}),
+        ),
+    ];
+    let ws = HashSet::new();
+    // After first rejection: Design should be activated.
+    let a1 = evaluate_sentries(&items, &events[..1], &ws);
+    assert!(a1.contains(&"Design".to_string()));
+    // After second rejection: Design still satisfies sentry.
+    let a2 = evaluate_sentries(&items, &events[..2], &ws);
+    assert!(a2.contains(&"Design".to_string()));
+    // Replay produces same activation sequence each run.
+    let r1 = replay_activations(&items, &events);
+    let r2 = replay_activations(&items, &events);
+    assert_eq!(r1, r2);
+}
+
+#[test]
+fn m10_or_of_sentries_behavior_unchanged() {
+    // Multiple entry criteria (OR): any satisfied activates.
+    let items = vec![
+        task_item("A", true, vec![], 1),
+        task_item("B", true, vec![], 1),
+        task_item(
+            "C",
+            false,
+            vec![
+                sentry("A", "milestone_achieved"),
+                sentry("B", "milestone_achieved"),
+            ],
+            1,
+        ),
+    ];
+    let events = vec![trace_event(
+        TraceKind::MilestoneAchieved,
+        Some("A"),
+        serde_json::json!({}),
+    )];
+    let ws = HashSet::new();
+    let activated = evaluate_sentries(&items, &events, &ws);
+    assert!(activated.contains(&"C".to_string()));
+}
