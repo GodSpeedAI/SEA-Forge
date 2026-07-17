@@ -582,6 +582,12 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
   snapshots, validate). T9.3 (projection determinism + drift rejection) and
   T9.4 (extension-disable rebuild keeps prior snapshot verifiable) green; init
   idempotency green. CLI wiring (validate/rebuild/show) is the next sub-slice.
+- Slice 1.5b (commit): CLI `sea-forge self-model validate|rebuild [--probe]
+  [--capability-hash]|show [--json]` wired through `commands::self_model` over
+  the store. domainforge Kg output renamed to `model.ttl` (no double nesting).
+  CLI integration test (binary spawn) green: rebuild→validate→show--json
+  round-trip, distinct snapshot on re-rebuild, and corrupt-snapshot ⇒ exit 1
+  `self_model_error`.
 
 ## Decisions
 

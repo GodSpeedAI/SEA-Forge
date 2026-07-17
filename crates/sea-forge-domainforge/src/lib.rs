@@ -305,7 +305,7 @@ pub fn project(
                 })?;
             let turtle = kg.to_turtle();
             let mut map = BTreeMap::new();
-            map.insert("kg/model.ttl".into(), turtle);
+            map.insert("model.ttl".into(), turtle);
             Ok(map)
         }
         _ => Err(ForgeError::Input(format!(
