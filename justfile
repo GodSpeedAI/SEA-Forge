@@ -114,7 +114,7 @@ test:
 no-async-kernel:
     #!/usr/bin/env bash
     {{set}}
-    for crate in sea-forge-core sea-forge-domain sea-forge-authority sea-forge-planner sea-forge-sandbox sea-forge-runtime sea-forge-trace sea-forge-evidence sea-forge-settlement sea-forge-capability sea-forge-extension sea-forge-self-model; do
+    for crate in sea-forge-core sea-forge-domain sea-forge-authority sea-forge-planner sea-forge-sandbox sea-forge-runtime sea-forge-trace sea-forge-evidence sea-forge-settlement sea-forge-capability sea-forge-extension sea-forge-self-model sea-forge-thoth; do
         if output=$(cargo tree -i tokio -p "$crate" --locked 2>&1) && echo "$output" | grep -q '^tokio '; then
             echo "fail: $crate depends on tokio" >&2
             exit 1

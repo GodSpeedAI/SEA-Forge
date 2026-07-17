@@ -1,0 +1,21 @@
+[package]
+name = "sea-forge-thoth"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SEA Forge Thoth: typed governed epistemic interface (spec-adlc-thoth E13)."
+
+[dependencies]
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-self-model = { path = "../sea-forge-self-model", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
