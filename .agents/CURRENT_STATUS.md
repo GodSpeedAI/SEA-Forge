@@ -4,14 +4,10 @@ Updated: 2026-07-17
 
 ## Objective
 
-Prepare the next implementation sequence for
-`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md` (M9–M16). The plan
-has been adversarially reviewed and revised against the specs and current code.
-No M9–M16 milestone is verified complete. Task 0.1 (baseline re-run) is
-complete and green (below). Task 0.2 contract approvals: items 1 and 3–7
-approved; item 2 (`ProjectionKind::{Kg,SelfModelSnapshot}`) conditionally
-approved and its compatibility-boundary condition is now satisfied (the
-discriminator old readers inspect is the envelope `record_kind`, not a field
+Implement Tasks 2–3 (M10 E8/ADLC/ODI templates + M11 Thoth) from
+`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`. M9 is complete
+and gated (313 tests, P1–P4b, no-async-kernel). M10 slice 2.1 (E8 control-flow
+vocabulary) is in progress.
 tag; proven by 11 tests across core serde, ledger replay, and E6 import).
 Task 0.3 needs no new dependencies for M9. Task 0.4 is decided (sealed
 canonical transcript; gates M13). Committing per the plan §0.2

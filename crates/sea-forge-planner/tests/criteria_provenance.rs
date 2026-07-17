@@ -141,6 +141,10 @@ fn template_instantiation_criteria_is_deterministic_ignoring_id() {
                 markers: Default::default(),
                 max_instances: 1,
                 environment: None,
+                entry_criteria: vec![],
+                exit_criteria: vec![],
+                parent_stage: None,
+                depends_on: vec![],
             }],
         },
     };
@@ -215,6 +219,10 @@ fn template_origin_reuses_intent_and_template() {
                 markers: Default::default(),
                 max_instances: 1,
                 environment: None,
+                entry_criteria: vec![],
+                exit_criteria: vec![],
+                parent_stage: None,
+                depends_on: vec![],
             }],
         },
     };
