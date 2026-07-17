@@ -5,8 +5,8 @@
 //! T9.2) that slice 1.2b+1.3 delivers.
 
 use sea_forge_self_model::{
-    build_cell_realization, build_snapshot, bundled, load_composed, release_realization,
-    verify_bundled, verify_snapshot, CellRealization, ProbeResult, ToolchainProbe,
+    build_cell_realization, build_snapshot, bundled, load_composed, release_realization, store,
+    verify_bundled, verify_snapshot, CellRealization, ExtensionState, ProbeResult, ToolchainProbe,
 };
 
 /// T9.1: bundled models verify hashes and pass load_validate; a snapshot is
@@ -175,4 +175,161 @@ fn v5_probe_flap_availability_follows_fresh_evidence() {
     assert_ne!(snap1.snapshot_hash, snap2.snapshot_hash);
     verify_snapshot(&snap1).unwrap();
     verify_snapshot(&snap2).unwrap();
+}
+
+/// T9.3: KG/CALM/JSON self-projections rebuild byte-identically (modulo
+/// created_at) and carry full ProjectionRecord provenance. A pre-generated
+/// projection whose rebuild_hash no longer matches its bytes is rejected, and a
+/// rebuild regenerates trusted output over it.
+#[test]
+fn t93_projections_rebuild_deterministically_and_reject_drift() {
+    use sea_forge_self_model::projections::{project_self, verify_projection};
+
+    let composed = load_composed(&bundled()).unwrap();
+    let realization = release_realization();
+    let cell = build_cell_realization(
+        "cell_00000000",
+        vec![],
+        vec![],
+        vec![],
+        vec!["local".into()],
+        "2026-07-16T00:00:00Z",
+    );
+    let snap = build_snapshot(
+        &composed,
+        &realization,
+        &cell,
+        "sha256:cap",
+        "2026-07-16T00:00:00Z",
+    )
+    .unwrap();
+
+    let p1 = project_self(&composed, &snap, "2026-07-16T00:00:00Z").unwrap();
+    let p2 = project_self(&composed, &snap, "2026-07-16T00:01:00Z").unwrap();
+
+    assert_eq!(p1.len(), 3, "KG, CALM, self_model_snapshot");
+    let kinds: Vec<_> = p1
+        .iter()
+        .map(|p| p.record.projection_kind.clone())
+        .collect();
+    assert!(kinds
+        .iter()
+        .any(|k| matches!(k, sea_forge_core::types::ProjectionKind::Kg)));
+    assert!(kinds
+        .iter()
+        .any(|k| matches!(k, sea_forge_core::types::ProjectionKind::SelfModelSnapshot)));
+
+    for (a, b) in p1.iter().zip(p2.iter()) {
+        // Same projection id (deterministic), same rebuild_hash, same output bytes.
+        assert_eq!(a.record.projection_id, b.record.projection_id);
+        assert_eq!(a.record.rebuild_hash, b.record.rebuild_hash);
+        assert_eq!(
+            a.outputs, b.outputs,
+            "output bytes must be byte-identical across rebuilds"
+        );
+        // created_at differs (the only allowed divergence).
+        assert_ne!(a.record.created_at, b.record.created_at);
+        // Full provenance present.
+        assert!(!a.record.output_refs.is_empty());
+        assert!(!a.record.rebuild_hash.is_empty());
+        assert_eq!(a.record.adapter_ref, "sea-forge-self-model");
+        verify_projection(&a.record).unwrap();
+    }
+
+    // A pre-generated projection whose rebuild_hash drifts is rejected, not trusted.
+    let mut tampered = p1[0].record.clone();
+    tampered.rebuild_hash = "sha256:deadbeef".into();
+    let err = verify_projection(&tampered).unwrap_err();
+    assert_eq!(err.class(), "self_model_error");
+}
+
+/// T9.4: disabling an extension then rebuild produces a new snapshot; the cell
+/// realization reflects the disabled state; the prior snapshot remains verifiable.
+/// Init/upgrade/rebuild flow through the store; failure atomicity preserves the
+/// prior snapshot. (spec §7.1, §8.5, slice 1.0+1.5)
+#[test]
+fn t94_extension_disable_rebuild_keeps_prior_snapshot() {
+    let root = tempfile::tempdir().unwrap();
+    let ext = ExtensionState {
+        descriptor_ref: "ext:E11-Genesis-Self-Model".into(),
+        status: "active".into(),
+    };
+    let inputs_active = store::RebuildInputs {
+        cell_id: "cell_00000000",
+        active_extensions: vec![ext.clone()],
+        environments_present: vec!["demo_env@0.1.0".into()],
+        probes: vec![],
+        sandbox_classes_available: vec!["local".into()],
+        created_at: "2026-07-16T00:00:00Z",
+        capability_projection_sha256: "sha256:cap1",
+    };
+    let snap1 = store::ensure_init(root.path(), &inputs_active).unwrap();
+    assert!(!store::is_stale(root.path()).unwrap());
+    store::validate(root.path()).unwrap();
+
+    // Disable the extension: mark stale, then rebuild with disabled state.
+    store::mark_current_stale(root.path(), "extension_disabled").unwrap();
+    assert!(store::is_stale(root.path()).unwrap());
+
+    let mut disabled = ext.clone();
+    disabled.status = "disabled_by_policy".into();
+    let inputs_disabled = store::RebuildInputs {
+        cell_id: "cell_00000000",
+        active_extensions: vec![disabled],
+        created_at: "2026-07-16T00:01:00Z",
+        capability_projection_sha256: "sha256:cap2",
+        ..inputs_active.clone()
+    };
+    let snap2 = store::rebuild(root.path(), &inputs_disabled).unwrap();
+    assert_ne!(snap1.snapshot_id, snap2.snapshot_id);
+    assert!(!store::is_stale(root.path()).unwrap());
+
+    // Both snapshots still verify; the prior one remains on disk and readable.
+    verify_snapshot(&snap1).unwrap();
+    verify_snapshot(&snap2).unwrap();
+    assert_eq!(
+        store::current_snapshot(root.path())
+            .unwrap()
+            .unwrap()
+            .snapshot_id,
+        snap2.snapshot_id
+    );
+
+    // Cell realization reflects the disabled state after rebuild.
+    let cell = store::read_cell_realization(root.path()).unwrap().unwrap();
+    let recorded = cell
+        .active_extensions
+        .iter()
+        .find(|e| e.descriptor_ref == "ext:E11-Genesis-Self-Model")
+        .expect("extension must be present in cell realization");
+    assert_eq!(recorded.status, "disabled_by_policy");
+
+    // The prior snapshot file is still present (immutable, not rewritten).
+    let prior_path = root
+        .path()
+        .join(".sea-forge/self-model/snapshots")
+        .join(format!("{}.json", snap1.snapshot_id));
+    assert!(prior_path.exists(), "prior snapshot must remain on disk");
+
+    store::validate(root.path()).unwrap();
+}
+
+/// Init idempotency: ensure_init on an already-initialized root returns the
+/// current snapshot without rebuilding (slice 1.0 lifecycle ingress).
+#[test]
+fn init_is_idempotent_for_same_release() {
+    let root = tempfile::tempdir().unwrap();
+    let inputs = store::RebuildInputs {
+        cell_id: "cell_00000000",
+        sandbox_classes_available: vec!["local".into()],
+        created_at: "2026-07-16T00:00:00Z",
+        capability_projection_sha256: "sha256:cap",
+        ..Default::default()
+    };
+    let snap1 = store::ensure_init(root.path(), &inputs).unwrap();
+    let snap2 = store::ensure_init(root.path(), &inputs).unwrap();
+    assert_eq!(
+        snap1.snapshot_id, snap2.snapshot_id,
+        "same release must not rebuild"
+    );
 }

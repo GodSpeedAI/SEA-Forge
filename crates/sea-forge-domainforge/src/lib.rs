@@ -296,6 +296,18 @@ pub fn project(
             map.insert("model.rdf".into(), rdf_xml);
             Ok(map)
         }
+        ProjectionKind::Kg => {
+            // M9 (E11): the self-model knowledge-graph projection. The KG is the
+            // canonical Turtle serialization of the validated graph.
+            let kg =
+                domainforge_core::kg::KnowledgeGraph::from_graph(&model.graph).map_err(|e| {
+                    ForgeError::Internal(format!("domain_model_error: KG build failed: {e}"))
+                })?;
+            let turtle = kg.to_turtle();
+            let mut map = BTreeMap::new();
+            map.insert("kg/model.ttl".into(), turtle);
+            Ok(map)
+        }
         _ => Err(ForgeError::Input(format!(
             "unsupported projection kind for DomainForge adapter: {kind:?}"
         ))),
