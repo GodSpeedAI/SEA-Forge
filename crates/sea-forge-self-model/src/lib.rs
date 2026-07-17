@@ -13,6 +13,9 @@
 
 #![forbid(unsafe_code)]
 
+pub mod projections;
+pub mod store;
+
 use chrono::{DateTime, Utc};
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::ids;

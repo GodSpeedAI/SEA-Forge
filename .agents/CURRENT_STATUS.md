@@ -573,6 +573,15 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
   elevates, never crashes snapshot creation). No probe state is cached between
   builds (V5). Probe *execution* stays in the CLI/server layer (slice 1.5); the
   crate only consumes evidenced results. T9.5 + V5 green.
+- Slice 1.5a (commit): KG/CALM/JSON self-projections + persistence/lifecycle.
+  `domainforge::project` gained a `Kg` arm (Turtle KG). `sea-forge-self-model`
+  gained `projections` (project_self → 3 ProjectionRecords with deterministic
+  rebuild_hash + verify_projection; byte-identical across rebuilds modulo
+  created_at) and `store` (manifest-gated init/upgrade/rebuild, immutable
+  snapshot files, rebuildable projections, mark_current_stale without mutating
+  snapshots, validate). T9.3 (projection determinism + drift rejection) and
+  T9.4 (extension-disable rebuild keeps prior snapshot verifiable) green; init
+  idempotency green. CLI wiring (validate/rebuild/show) is the next sub-slice.
 
 ## Decisions
 
