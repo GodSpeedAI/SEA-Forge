@@ -12,5 +12,6 @@ pub mod recall;
 pub mod resume;
 pub mod run;
 pub mod runs;
+pub mod self_model;
 pub mod task;
 pub mod validate;

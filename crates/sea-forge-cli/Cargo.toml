@@ -23,6 +23,7 @@ sea-forge-trace = { path = "../sea-forge-trace", version = "0.1.0" }
 sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
 sea-forge-cell = { path = "../sea-forge-cell", version = "0.1.0" }
 sea-forge-artifact-ip = { path = "../sea-forge-artifact-ip", version = "0.1.0" }
+sea-forge-self-model = { path = "../sea-forge-self-model", version = "0.1.0" }
 chrono.workspace = true
 serde.workspace = true
 tracing.workspace = true

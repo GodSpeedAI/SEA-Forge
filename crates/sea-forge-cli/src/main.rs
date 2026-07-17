@@ -226,6 +226,13 @@ enum Command {
         #[arg(long, default_value = "operator_local")]
         actor: String,
     },
+    /// Genesis self-model (spec-adlc-thoth E11): validate, rebuild, show.
+    SelfModel {
+        #[command(subcommand)]
+        action: SelfModelCommand,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -291,6 +298,24 @@ enum ArtifactCommand {
 enum MemoryCommand {
     /// Rebuild the memory FTS index from items.jsonl (§10.5).
     Rebuild,
+}
+
+#[derive(Subcommand)]
+enum SelfModelCommand {
+    /// Verify bundled models + current snapshot + projections.
+    Validate,
+    /// Build a new self-model snapshot (init-or-upgrade, then rebuild).
+    Rebuild {
+        #[arg(long)]
+        probe: bool,
+        #[arg(long, default_value = "sha256:capability-projection")]
+        capability_hash: String,
+    },
+    /// Show the newest snapshot (composed-view summary, or full JSON).
+    Show {
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -678,6 +703,15 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             }
             .map_err(|e| (1, e))
         }
+        Command::SelfModel { action, root } => match action {
+            SelfModelCommand::Validate => commands::self_model::validate(&root),
+            SelfModelCommand::Rebuild {
+                probe,
+                capability_hash,
+            } => commands::self_model::rebuild(&root, probe, &capability_hash),
+            SelfModelCommand::Show { json } => commands::self_model::show(&root, json),
+        }
+        .map_err(|e| (1, e)),
     }
 }
 fn init_diagnostics() {
