@@ -1,7 +1,13 @@
 use std::{collections::BTreeSet, fs, process::Command};
 
 #[test]
-fn produced_semantic_envelope_has_documented_cep0008_flat_profile_divergence() {
+fn native_semantic_envelope_intentionally_diverges_from_cep0008_flat_profile() {
+    // The native SemanticEnvelope intentionally diverges from the CEP-0008 v1
+    // flat wire profile. The native envelope preserves SEA Forge's richer
+    // contract; the CEP-0008 flat projection is available separately via
+    // `sea_forge_extension::cep0008::project_to_cep0008_flat_v1`. This test
+    // documents the divergence so a future change does not silently break
+    // either contract.
     let schema: serde_json::Value =
         serde_json::from_str(include_str!("fixtures/cep/semantic-envelope.schema.json")).unwrap();
     let temp = tempfile::tempdir().unwrap();

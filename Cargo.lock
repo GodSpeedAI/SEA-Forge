@@ -1257,6 +1257,7 @@ dependencies = [
 name = "sea-forge-extension"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",

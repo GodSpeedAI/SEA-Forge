@@ -432,6 +432,13 @@ pub struct SodRule {
     pub approver_role: String,
     #[serde(default)]
     pub operation_kind: Option<String>,
+    /// When set, scopes a transition SOD rule to one edge
+    /// (`synthesize` | `productize` | `capitalize`). Required for
+    /// `operation_kind: transition_artifact_stage`; forbidden otherwise.
+    /// Absent on non-transition rules so canonical serialization and policy
+    /// hashes stay unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transition_kind: Option<String>,
     #[serde(default)]
     pub allow_same_principal: bool,
 }
@@ -953,15 +960,21 @@ impl AuthorityPolicyBundle {
                 "evidence_mutation",
             ];
             const ROLES: &[&str] = &["R-DS", "R-AG", "R-LC", "R-SO", "R-RM", "R-DEV", "R-AA"];
-            const SOD: &[(&str, &str)] = &[
-                ("production_proposer_approver", "pr_merge"),
+            // (name, operation_kind, optional transition_kind selector)
+            const SOD: &[(&str, &str, Option<&str>)] = &[
+                ("production_proposer_approver", "pr_merge", None),
                 (
                     "semantic_debt_requester_acceptor",
                     "settlement_authority_mutation",
+                    None,
                 ),
-                ("break_glass_requester_approver", "policy_mutation"),
-                ("key_generator_approver", "identity_minting"),
-                ("capitalization_requester_approver", "artifact_transition"),
+                ("break_glass_requester_approver", "policy_mutation", None),
+                ("key_generator_approver", "identity_minting", None),
+                (
+                    "capitalization_requester_approver",
+                    "transition_artifact_stage",
+                    Some("capitalize"),
+                ),
             ];
             if self.bundle_id.as_deref().is_none_or(str::is_empty)
                 || self.policy_bundle_hash.as_deref().is_none_or(str::is_empty)
@@ -980,9 +993,11 @@ impl AuthorityPolicyBundle {
                         .iter()
                         .any(|permission| permission.role == *role)
                 })
-                || SOD.iter().any(|(name, operation)| {
+                || SOD.iter().any(|(name, operation, transition)| {
                     !self.sod_rules.iter().any(|rule| {
-                        rule.name == *name && rule.operation_kind.as_deref() == Some(*operation)
+                        rule.name == *name
+                            && rule.operation_kind.as_deref() == Some(*operation)
+                            && rule.transition_kind.as_deref() == *transition
                     })
                 })
                 || !self.sod_rules.iter().any(|rule| {
@@ -1061,14 +1076,41 @@ impl AuthorityPolicyBundle {
                 message: "action-gating engines must be known and fail_mode closed".into(),
             });
         }
-        if self.sod_rules.iter().any(|rule| {
-            rule.name.is_empty()
+        for rule in &self.sod_rules {
+            if rule.name.is_empty()
                 || rule.requester_role.is_empty()
                 || rule.approver_role.is_empty()
                 || rule.operation_kind.as_deref().is_none_or(str::is_empty)
                 || rule.allow_same_principal
-        }) {
-            return Err(schema("invalid separation-of-duty rule".into()));
+            {
+                return Err(schema("invalid separation-of-duty rule".into()));
+            }
+            match (
+                rule.operation_kind.as_deref(),
+                rule.transition_kind.as_deref(),
+            ) {
+                (
+                    Some("transition_artifact_stage"),
+                    Some("synthesize" | "productize" | "capitalize"),
+                ) => {}
+                (Some("transition_artifact_stage"), Some(_)) => {
+                    return Err(schema(
+                        "unknown transition_kind on separation-of-duty rule".into(),
+                    ));
+                }
+                (Some("transition_artifact_stage"), None) => {
+                    return Err(schema(
+                        "transition_artifact_stage SOD rules require transition_kind".into(),
+                    ));
+                }
+                (_, Some(_)) => {
+                    return Err(schema(
+                        "transition_kind is only allowed on transition_artifact_stage SOD rules"
+                            .into(),
+                    ));
+                }
+                _ => {}
+            }
         }
         for rule in &self.rules {
             if rule.name.is_empty() || !names.insert(&rule.name) {
@@ -1489,16 +1531,13 @@ impl PolicyAuthorityEngine {
             .ok_or_else(|| {
                 ForgeError::Input("authority decision was not escalated for approval".into())
             })?;
-        let matching_sod = self
-            .bundle
-            .sod_rules
-            .iter()
-            .filter(|sod| {
-                sod.operation_kind
-                    .as_deref()
-                    .is_none_or(|kind| kind == rule.operation_kind)
-            })
-            .collect::<Vec<_>>();
+        // Re-derive matching SOD from the exact action and the matched rule's
+        // actor role so grant validation agrees with initial evaluation.
+        let rule_actor_role = serde_json::to_value(&rule.actor_role)?
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        let matching_sod = matching_sod_rules(&self.bundle.sod_rules, &rule_actor_role, action);
         let escalated_for_approval =
             rule.requires_approval == Some(true) || !matching_sod.is_empty();
         if !escalated_for_approval {
@@ -1962,12 +2001,7 @@ impl PolicyAuthorityEngine {
                         && (permission.operation_kind == "*"
                             || permission.operation_kind == rule.operation_kind)
                 });
-            let matching_sod = self
-                .bundle
-                .sod_rules
-                .iter()
-                .filter(|sod| sod.operation_kind.as_deref() == Some(&rule.operation_kind))
-                .collect::<Vec<_>>();
+            let matching_sod = matching_sod_rules(&self.bundle.sod_rules, &role_name, action);
             let sod_requires_approval = !matching_sod.is_empty();
             let effective_verdict = if !has_permission {
                 Verdict::Deny
@@ -2291,6 +2325,54 @@ fn untrusted_executable(action: &AuthorityAction) -> bool {
     };
     std::fs::canonicalize(executable).map_or(true, |actual| actual != expected)
 }
+/// Canonical SOD match: requester role, operation kind, and optional
+/// transition_kind selector. Never treats a configured selector as a wildcard
+/// when action parameters are missing or malformed.
+fn sod_rule_matches_action(rule: &SodRule, actor_role: &str, action: &AuthorityAction) -> bool {
+    if rule.requester_role != actor_role {
+        return false;
+    }
+    let Some(operation_kind) = rule.operation_kind.as_deref() else {
+        return false;
+    };
+    let (action_kind, parameters) = match action {
+        AuthorityAction::WriteFile { .. } => ("write_file", None),
+        AuthorityAction::ExecuteCommand { .. } => ("execute_command", None),
+        AuthorityAction::ExternalApi { .. } => ("external_api", None),
+        AuthorityAction::GitCommit { .. } => ("git_commit", None),
+        AuthorityAction::GithubPr { .. } => ("github_pr", None),
+        AuthorityAction::Reserved {
+            resource_type,
+            parameters,
+            ..
+        } => (resource_type.as_str(), Some(parameters)),
+        AuthorityAction::Unclassified { .. } => return false,
+    };
+    if operation_kind != action_kind {
+        return false;
+    }
+    match rule.transition_kind.as_deref() {
+        None => true,
+        Some(expected) => match parameters {
+            Some(params) if action_kind == "transition_artifact_stage" => {
+                parameter_str(params, "transition_kind") == Some(expected)
+            }
+            _ => false,
+        },
+    }
+}
+
+fn matching_sod_rules<'a>(
+    sod_rules: &'a [SodRule],
+    actor_role: &str,
+    action: &AuthorityAction,
+) -> Vec<&'a SodRule> {
+    sod_rules
+        .iter()
+        .filter(|sod| sod_rule_matches_action(sod, actor_role, action))
+        .collect()
+}
+
 fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> bool {
     if rule.actor_role != actor.role {
         return false;
@@ -2598,7 +2680,7 @@ mod tests {
         ).unwrap();
         PolicyAuthorityEngine::new(bundle).unwrap()
     }
-    fn complete_v02(mut bundle: AuthorityPolicyBundle) -> AuthorityPolicyBundle {
+    pub(super) fn complete_v02(mut bundle: AuthorityPolicyBundle) -> AuthorityPolicyBundle {
         const SURFACES: &[&str] = &[
             "authority_hooks",
             "identity_map",
@@ -2623,15 +2705,21 @@ mod tests {
         const ROLES: &[&str] = &[
             "R-DS", "R-AG", "R-LC", "R-SO", "R-RM", "R-DEV", "R-AA", "operator",
         ];
-        const SOD: &[(&str, &str)] = &[
-            ("production_proposer_approver", "pr_merge"),
+        // (name, operation_kind, optional transition_kind)
+        const SOD: &[(&str, &str, Option<&str>)] = &[
+            ("production_proposer_approver", "pr_merge", None),
             (
                 "semantic_debt_requester_acceptor",
                 "settlement_authority_mutation",
+                None,
             ),
-            ("break_glass_requester_approver", "policy_mutation"),
-            ("key_generator_approver", "identity_minting"),
-            ("capitalization_requester_approver", "artifact_transition"),
+            ("break_glass_requester_approver", "policy_mutation", None),
+            ("key_generator_approver", "identity_minting", None),
+            (
+                "capitalization_requester_approver",
+                "transition_artifact_stage",
+                Some("capitalize"),
+            ),
         ];
         bundle.bundle_id = Some("bundle_test".into());
         bundle.policy_bundle_hash = None;
@@ -2656,14 +2744,17 @@ mod tests {
                 operation_kind: "*".into(),
             })
             .collect();
+        // requester_role is operator so unit tests that evaluate as operator
+        // exercise SOD matching; schema only requires non-empty requester.
         bundle.sod_rules = SOD
             .iter()
-            .map(|(name, operation)| SodRule {
+            .map(|(name, operation, transition)| SodRule {
                 name: (*name).into(),
-                requester_role: "R-DEV".into(),
+                requester_role: "operator".into(),
                 approver_role: "R-SO".into(),
                 allow_same_principal: false,
                 operation_kind: Some((*operation).into()),
+                transition_kind: transition.map(str::to_owned),
             })
             .collect();
         bundle.policy_bundle_hash = Some(hash_canonical(&bundle).unwrap());
@@ -4005,5 +4096,409 @@ mod resolver_tests {
         candidate.evidence_refs.clear();
         let resolved = resolve_candidates(&[candidate], &ResolutionPolicy::default());
         assert_eq!(resolved.disposition, GovernanceDisposition::Deny);
+    }
+
+    fn capitalize_action(kind: &str) -> AuthorityAction {
+        let (from, to, strength, value, requires) = match kind {
+            "synthesize" => ("cognitive", "intellectual", "local", json!([]), false),
+            "productize" => ("intellectual", "product", "local", json!([]), false),
+            "capitalize" => ("product", "capital", "strong", json!(["adoption"]), true),
+            other => panic!("unknown transition kind {other}"),
+        };
+        AuthorityAction::Reserved {
+            resource_type: "transition_artifact_stage".into(),
+            resource_id: "art_model".into(),
+            parameters: json!({
+                "transition_kind": kind,
+                "from_stage": from,
+                "to_stage": to,
+                "mode": "promote",
+                "gate_profile_ref": format!("{kind}@1"),
+                "required_settlement_strength": strength,
+                "qualifying_value_evidence_kinds": value,
+                "requires_approval": requires,
+                "licenses": ["internal"],
+            }),
+        }
+    }
+
+    fn capitalize_sod_bundle(requester_role: &str) -> AuthorityPolicyBundle {
+        let mut base: AuthorityPolicyBundle = serde_yaml::from_str(
+            r#"version: "0.2"
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+  - principal: security_officer
+    actor_type: human
+    role: R-SO
+  - principal: wrong_resolver
+    actor_type: human
+    role: R-DEV
+rules:
+  - name: synthesize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: synthesize
+    from_stage: cognitive
+    to_stage: intellectual
+    modes: [promote]
+    gate_profile_ref: synthesize@1
+    required_settlement_strength: local
+    qualifying_value_evidence_kinds: []
+    requires_approval: false
+    license_allowlist: [internal]
+  - name: productize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: productize
+    from_stage: intellectual
+    to_stage: product
+    modes: [promote]
+    gate_profile_ref: productize@1
+    required_settlement_strength: local
+    qualifying_value_evidence_kinds: []
+    requires_approval: false
+    license_allowlist: [internal]
+  - name: capitalize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: capitalize
+    from_stage: product
+    to_stage: capital
+    modes: [promote]
+    gate_profile_ref: capitalize@1
+    required_settlement_strength: strong
+    qualifying_value_evidence_kinds: [adoption]
+    requires_approval: true
+    license_allowlist: [internal]
+  - name: resolve-approval
+    verdict: allow
+    actor_role: R-SO
+    operation_kind: approval_resolution
+"#,
+        )
+        .unwrap();
+        base = super::tests::complete_v02(base);
+        if let Some(rule) = base
+            .sod_rules
+            .iter_mut()
+            .find(|rule| rule.name == "capitalization_requester_approver")
+        {
+            rule.requester_role = requester_role.into();
+            rule.approver_role = "R-SO".into();
+            rule.operation_kind = Some("transition_artifact_stage".into());
+            rule.transition_kind = Some("capitalize".into());
+            rule.allow_same_principal = false;
+        }
+        base.refresh_policy_bundle_hash().unwrap();
+        base
+    }
+
+    fn evaluate_capital(engine: &PolicyAuthorityEngine, kind: &str) -> AuthorityDecision {
+        let actor = Actor {
+            actor_id: "operator_local".into(),
+            role: ActorRole::Operator,
+        };
+        let action = capitalize_action(kind);
+        engine
+            .evaluate(AuthorityEvaluation {
+                actor: &actor,
+                binding: engine
+                    .bundle
+                    .resolve_identity("operator_local", ActorRole::Operator),
+                run_id: "run_capital_sod",
+                case_id: "case_test",
+                plan_item_id: "item_capital",
+                sequence: 1,
+                action: &action,
+                workspace_root: Path::new("/tmp/workspace"),
+                evidence_refs: vec![],
+                artifacts_root: None,
+                timeout_secs: None,
+                env_keys: Default::default(),
+                domainforge_candidate: None,
+                environment: None,
+            })
+            .unwrap()
+    }
+
+    #[test]
+    fn capitalize_sod_escalates_only_capitalize_with_role_and_decision_markers() {
+        let bundle = capitalize_sod_bundle("operator");
+        let sod = bundle
+            .sod_rules
+            .iter()
+            .find(|rule| rule.name == "capitalization_requester_approver")
+            .unwrap();
+        assert!(sod_rule_matches_action(
+            sod,
+            "operator",
+            &capitalize_action("capitalize")
+        ));
+        let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+        let synthesize = evaluate_capital(&engine, "synthesize");
+        assert_eq!(
+            synthesize.verdict,
+            Verdict::Allow,
+            "{:?}",
+            synthesize.policy_refs
+        );
+        let productize = evaluate_capital(&engine, "productize");
+        assert_eq!(
+            productize.verdict,
+            Verdict::Allow,
+            "{:?}",
+            productize.policy_refs
+        );
+        let capital = evaluate_capital(&engine, "capitalize");
+        assert_eq!(capital.verdict, Verdict::Escalate);
+        assert!(
+            capital
+                .policy_refs
+                .iter()
+                .any(|r| r == "sod: capitalization_requester_approver"),
+            "{:?}",
+            capital.policy_refs
+        );
+        assert!(
+            capital
+                .required_next_steps
+                .contains(&"approval-role:R-SO".into()),
+            "{:?}",
+            capital.required_next_steps
+        );
+    }
+
+    #[test]
+    fn sod_requester_role_must_match_actor() {
+        let mismatched = PolicyAuthorityEngine::new(capitalize_sod_bundle("R-DEV")).unwrap();
+        let decision = evaluate_capital(&mismatched, "capitalize");
+        assert_eq!(decision.verdict, Verdict::Escalate);
+        assert!(
+            !decision
+                .policy_refs
+                .iter()
+                .any(|reason| reason == "sod: capitalization_requester_approver"),
+            "requester_role R-DEV must not apply to operator"
+        );
+        let matched = PolicyAuthorityEngine::new(capitalize_sod_bundle("operator")).unwrap();
+        assert_eq!(
+            evaluate_capital(&matched, "capitalize").verdict,
+            Verdict::Escalate,
+            "matching requester_role must apply"
+        );
+    }
+
+    #[test]
+    fn sod_transition_kind_validation_is_fail_closed() {
+        let path = Path::new("policy.yaml");
+        let mut unscoped = capitalize_sod_bundle("operator");
+        unscoped
+            .sod_rules
+            .iter_mut()
+            .find(|rule| rule.name == "capitalization_requester_approver")
+            .unwrap()
+            .transition_kind = None;
+        unscoped.refresh_policy_bundle_hash().unwrap();
+        let err = unscoped.validate(path).unwrap_err();
+        assert_eq!(err.class(), "schema_error");
+
+        let mut unknown = capitalize_sod_bundle("operator");
+        unknown
+            .sod_rules
+            .iter_mut()
+            .find(|rule| rule.name == "capitalization_requester_approver")
+            .unwrap()
+            .transition_kind = Some("teleport".into());
+        unknown.refresh_policy_bundle_hash().unwrap();
+        let err = unknown.validate(path).unwrap_err();
+        assert_eq!(err.class(), "schema_error");
+
+        let mut non_transition = capitalize_sod_bundle("operator");
+        non_transition
+            .sod_rules
+            .iter_mut()
+            .find(|rule| rule.name == "break_glass_requester_approver")
+            .unwrap()
+            .transition_kind = Some("capitalize".into());
+        non_transition.refresh_policy_bundle_hash().unwrap();
+        let err = non_transition.validate(path).unwrap_err();
+        assert_eq!(err.class(), "schema_error");
+    }
+
+    #[test]
+    fn legacy_non_transition_sod_omits_transition_kind_in_serialization() {
+        let rule = SodRule {
+            name: "write_requires_security_officer".into(),
+            requester_role: "operator".into(),
+            approver_role: "R-SO".into(),
+            operation_kind: Some("write_file".into()),
+            transition_kind: None,
+            allow_same_principal: false,
+        };
+        let value = serde_json::to_value(&rule).unwrap();
+        assert!(
+            value.get("transition_kind").is_none(),
+            "absent transition_kind must not serialize as null: {value}"
+        );
+    }
+
+    #[test]
+    fn capitalize_sod_post_approval_grant_and_exact_action_binding() {
+        let bundle = capitalize_sod_bundle("operator");
+        let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+        let action = capitalize_action("capitalize");
+        let decision = evaluate_capital(&engine, "capitalize");
+        assert_eq!(decision.verdict, Verdict::Escalate);
+        assert!(decision
+            .policy_refs
+            .iter()
+            .any(|r| r == "sod: capitalization_requester_approver"));
+
+        let criteria = SettlementCriteriaRecord {
+            version: RECORD_VERSION.into(),
+            criteria_id: "crit_capital_sod".into(),
+            criteria: SettlementCriteria {
+                require_exit_zero: true,
+                required_artifacts: vec![],
+                stdout_must_contain: None,
+                require_approval: true,
+                evaluator: None,
+                records: None,
+                per_record_evaluator: None,
+                min_pass_ratio: None,
+            },
+            origin_refs: vec![OriginRef {
+                kind: OriginRefKind::Intent,
+                reference: "int_capital".into(),
+                sha256: "sha256:intent".into(),
+                role: OriginRole::AcceptanceSource,
+                evidence_refs: vec![],
+                domain_model_ref: None,
+            }],
+            derivation: CriteriaDerivation {
+                method: DerivationMethod::DeterministicPlanner,
+                actor_ref: "operator_local".into(),
+                producer_ref: None,
+                rationale: "capitalization SOD fixture".into(),
+            },
+            declared_at: Utc::now().to_rfc3339(),
+            criteria_sha256: String::new(),
+            criteria_record_hash: String::new(),
+        };
+        let mut criteria = criteria;
+        criteria.criteria_sha256 =
+            sea_forge_ledger::types::hash_canonical(&criteria.criteria).unwrap();
+        let mut unhashed = criteria.clone();
+        unhashed.criteria_record_hash.clear();
+        criteria.criteria_record_hash = sea_forge_ledger::types::hash_canonical(&unhashed).unwrap();
+
+        let approval = ApprovalRequest {
+            version: RECORD_VERSION.into(),
+            approval_id: "apr_capital_sod".into(),
+            run_id: decision.run_id.clone(),
+            case_id: decision.audit_record.case_id.clone().unwrap(),
+            decision_id: decision.decision_id.clone(),
+            plan_item_id: decision.plan_item_id.clone(),
+            criteria_ref: Some(criteria.criteria_id.clone()),
+            criteria_sha256: Some(criteria.criteria_sha256.clone()),
+            criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
+            job_contract_ref: None,
+            requested_at: Utc::now().to_rfc3339(),
+            expires_at: (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
+            status: ApprovalStatus::Approved,
+            resolved_by: Some("security_officer".into()),
+            resolved_at: Some(Utc::now().to_rfc3339()),
+            note: None,
+        };
+
+        let root = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(root.path(), "case-case_test", "test-writer").unwrap();
+        let decision_ref = stream
+            .commit_typed("authority_decision", vec![], &decision, vec![])
+            .unwrap();
+        let criteria_ref = stream
+            .commit_typed("settlement_criteria", vec![], &criteria, vec![])
+            .unwrap();
+        let approval_ref = stream
+            .commit_typed("approval_resolution", vec![], &approval, vec![])
+            .unwrap();
+
+        // Non-R-SO resolver is rejected.
+        let mut wrong_role = approval.clone();
+        wrong_role.resolved_by = Some("wrong_resolver".into());
+        wrong_role.approval_id = "apr_capital_sod_wrong".into();
+        let wrong_ref = stream
+            .commit_typed("approval_resolution", vec![], &wrong_role, vec![])
+            .unwrap();
+        assert!(engine
+            .grant_after_approval(
+                &decision,
+                &decision_ref,
+                &action,
+                &wrong_role,
+                &wrong_ref,
+                &criteria,
+                &criteria_ref,
+                None,
+                &stream,
+            )
+            .is_err());
+
+        // Substituting synthesize/productize parameters fails exact-action binding
+        // (and must not be granted under the capitalization decision).
+        for kind in ["synthesize", "productize"] {
+            let substituted = capitalize_action(kind);
+            let mut substituted_approval = approval.clone();
+            substituted_approval.approval_id = format!("apr_capital_sod_{kind}");
+            let substituted_ref = stream
+                .commit_typed("approval_resolution", vec![], &substituted_approval, vec![])
+                .unwrap();
+            let error = match engine.grant_after_approval(
+                &decision,
+                &decision_ref,
+                &substituted,
+                &substituted_approval,
+                &substituted_ref,
+                &criteria,
+                &criteria_ref,
+                None,
+                &stream,
+            ) {
+                Ok(_) => panic!("substituted {kind} must fail exact-action validation"),
+                Err(error) => error,
+            };
+            assert!(
+                error.to_string().contains("does not grant this action"),
+                "substituted {kind} must fail exact-action validation: {error}"
+            );
+        }
+
+        // R-SO resolver distinct from requester succeeds; SOD match agrees.
+        let grant = engine
+            .grant_after_approval(
+                &decision,
+                &decision_ref,
+                &action,
+                &approval,
+                &approval_ref,
+                &criteria,
+                &criteria_ref,
+                None,
+                &stream,
+            )
+            .unwrap();
+        grant
+            .authorize(
+                &action,
+                &decision.run_id,
+                &decision.plan_item_id,
+                Path::new("/tmp/workspace"),
+            )
+            .unwrap();
     }
 }

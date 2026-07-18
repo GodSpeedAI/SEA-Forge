@@ -5,13 +5,28 @@ Updated: 2026-07-17
 ## Objective
 
 Implement Tasks 2–3 (M10 E8/ADLC/ODI templates + M11 Thoth) from
-`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`. M9 complete.
-M10 COMPLETE and gated (332 tests). M11 COMPLETE and gated (351 tests,
-P1-P4b, no-async-kernel). Tasks 2-3 done.
-tag; proven by 11 tests across core serde, ledger replay, and E6 import).
-Task 0.3 needs no new dependencies for M9. Task 0.4 is decided (sealed
-canonical transcript; gates M13). Committing per the plan §0.2
-(slice-per-commit); M9 proceeds straight through to the cumulative gate.
+`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`, then fix the
+CEP-0008 flat profile divergence debt from `.agents/OBSERVED_DEBT.md`. M9
+complete. M10 COMPLETE and gated (332 tests). M11 COMPLETE and gated (351
+tests, P1-P4b, no-async-kernel). CEP-0008 adapter COMPLETE and gated (372
+tests, P1-P4b, no-async-kernel). All three tasks done. CEP-0008 and SodRule
+debt entries are resolved and removed. No commit per task instructions.
+
+## SodRule transition scope closeout (2026-07-17)
+
+- Added additive `SodRule.transition_kind: Option<String>` with omitted-None
+  serialization for policy-hash compatibility. Validation now rejects unscoped
+  or unknown `transition_artifact_stage` selectors and selectors on other
+  operations.
+- A single fail-closed action matcher enforces requester role, canonical action
+  operation, and transition selector in both policy evaluation and
+  post-approval grants. The v0.2 capitalization SOD rule now targets
+  `transition_artifact_stage` / `capitalize`; non-R-SO resolution remains
+  rejected.
+- Proof passed: `cargo fmt --all -- --check`; `cargo check -p
+  sea-forge-authority`; `cargo test -p sea-forge-authority --locked`; M8 CLI
+  and artifact-IP tests; `devbox run -- just context-check`, `just check`, and
+  `just test`. No tests skipped.
 
 ## Worktree State
 
@@ -46,6 +61,9 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Changed Files
 
+- `spec/CEP-0008-semantic-envelope.md` — authoritative CEP-0008 source copied
+  from `/home/sprime01/projects/cep/spec/` to support the SemanticEnvelope
+  compatibility-debt refactor.
 - `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md` — revised after
   adversarial review to add approval gates, source-owned template assets, E8
   vocabulary prerequisites, source-bound sentries, item-level scheduling,
@@ -135,6 +153,9 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Completed
 
+- Copied the authoritative CEP-0008 Semantic Envelope specification into the
+  repository; its text matches the source, apart from adding the conventional
+  trailing newline.
 - Repaired the `full-spec` pre-push license gate: workspace crates now use the
   valid custom SPDX reference `LicenseRef-SEA-Forge`, cargo-deny explicitly
   allows that reference, and README license links resolve to the checked-in

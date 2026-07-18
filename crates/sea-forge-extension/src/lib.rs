@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod cep0008;
+
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::{ExtensionDescriptor, ExtensionKind};
 use sea_forge_ledger::{CommittedRecordRef, LedgerStream};
