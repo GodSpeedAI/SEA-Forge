@@ -84,6 +84,13 @@ identity_bindings:
   - principal: security_officer
     actor_type: human
     role: R-SO
+sod_rules:
+  - name: capitalization_requester_approver
+    requester_role: operator
+    approver_role: R-SO
+    operation_kind: transition_artifact_stage
+    transition_kind: capitalize
+    allow_same_principal: false
 settlement_authorities:
   - authority_ref: swe_seed_test
     adapter: swe_seed
@@ -459,6 +466,13 @@ identity_bindings:
   - principal: security_officer
     actor_type: human
     role: R-SO
+sod_rules:
+  - name: capitalization_requester_approver
+    requester_role: operator
+    approver_role: R-SO
+    operation_kind: transition_artifact_stage
+    transition_kind: capitalize
+    allow_same_principal: false
 settlement_authorities:
   - authority_ref: swe_seed_test
     adapter: swe_seed

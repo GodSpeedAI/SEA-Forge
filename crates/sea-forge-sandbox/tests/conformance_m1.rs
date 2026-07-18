@@ -151,15 +151,21 @@ fn untrusted_argv0_on_local_is_schema_error() {
         "evidence_mutation",
     ];
     const ROLES: &[&str] = &["R-DS", "R-AG", "R-LC", "R-SO", "R-RM", "R-DEV", "R-AA"];
-    const SOD: &[(&str, &str)] = &[
-        ("production_proposer_approver", "pr_merge"),
+    // (name, operation_kind, optional transition_kind)
+    const SOD: &[(&str, &str, Option<&str>)] = &[
+        ("production_proposer_approver", "pr_merge", None),
         (
             "semantic_debt_requester_acceptor",
             "settlement_authority_mutation",
+            None,
         ),
-        ("break_glass_requester_approver", "policy_mutation"),
-        ("key_generator_approver", "identity_minting"),
-        ("capitalization_requester_approver", "artifact_transition"),
+        ("break_glass_requester_approver", "policy_mutation", None),
+        ("key_generator_approver", "identity_minting", None),
+        (
+            "capitalization_requester_approver",
+            "transition_artifact_stage",
+            Some("capitalize"),
+        ),
     ];
 
     let sources: Vec<serde_json::Value> = SURFACES
@@ -184,7 +190,19 @@ fn untrusted_argv0_on_local_is_schema_error() {
         "sources": sources,
         "roles": ROLES.iter().map(|r| ((*r).to_owned(), vec!["fixture"])).collect::<std::collections::BTreeMap<_, _>>(),
         "permissions": ROLES.iter().map(|r| serde_json::json!({"role": r, "operation_kind": "*"})).collect::<Vec<_>>(),
-        "sod_rules": SOD.iter().map(|(n, op)| serde_json::json!({"name": n, "requester_role": "R-DEV", "approver_role": "R-SO", "operation_kind": op})).collect::<Vec<_>>(),
+        "sod_rules": SOD.iter().map(|(n, op, transition)| {
+            let mut rule = serde_json::json!({
+                "name": n,
+                "requester_role": "R-DEV",
+                "approver_role": "R-SO",
+                "operation_kind": op,
+                "allow_same_principal": false
+            });
+            if let Some(kind) = transition {
+                rule["transition_kind"] = serde_json::json!(kind);
+            }
+            rule
+        }).collect::<Vec<_>>(),
         "identity_bindings": [{"principal": "operator_local", "actor_type": "human", "role": "operator"}],
         "policy_engines": [],
         "rules": [

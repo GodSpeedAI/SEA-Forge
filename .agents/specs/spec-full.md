@@ -321,7 +321,7 @@ All minimum-spec entities stand. New/extended (kept additive; every change bumps
 - `bundle_id`, `policy_bundle_hash`, `policy_bundle_version`, `loaded_at`.
 - `sources`: array of `{surface, path, sha256}`. Required first-class surfaces: `authority_hooks`, `identity_map`, `domain_model`, `file_access`, `api_allowlist`, `git_commit`, `pr_merge`, `prompt_risk`, `memory_recall`, `spec_pipeline`, `artifact_transition`, `attestation`, `approval`, `settlement_authority`, `capability_promotion`, `deployment`, `secret_access`, `policy_mutation`, `evidence_mutation`.
 - `roles` and `permissions`: RBAC grants for the role names above.
-- `sod_rules`: separation-of-duty rules. Required rules: proposer != approver in production, semantic-debt requester != acceptor, break-glass requester != approver and approver has `R-SO`, key generator != key approver, capitalization requester != approver.
+- `sod_rules`: separation-of-duty rules. Required rules: proposer != approver in production, semantic-debt requester != acceptor, break-glass requester != approver and approver has `R-SO`, key generator != key approver, capitalization requester != approver. Each rule matches `requester_role`, `operation_kind`, and an optional `transition_kind` selector. Transition SOD rules (`operation_kind: transition_artifact_stage`) MUST set `transition_kind` to exactly one of `synthesize | productize | capitalize`; an unscoped transition SOD rule is a `schema_error`. `transition_kind` is forbidden on every other SOD operation kind (`schema_error`). The required `capitalization_requester_approver` rule MUST target `operation_kind: transition_artifact_stage` with `transition_kind: capitalize` and `allow_same_principal: false` — not a legacy alias such as `artifact_transition`.
 - `policy_engine_refs`: candidate evaluators (`local`, `domainforge`, `opa`,
   `governedspeed`, implementation-defined) and their fail modes. Action-gating
   evaluators MUST be fail-closed; fail-open/pass modes are schema errors.
@@ -1201,7 +1201,7 @@ contain private key bytes.
 ### 8.2 Policy file additions (policy `version: "0.2"`, backward compatible: 0.1 policies load with defaults)
 
 - `identity_map` and `authority_hooks` sources are REQUIRED in governed environments. Missing identity for a protected actor escalates to onboarding; it never falls back to ambient OS/user identity.
-- `roles`, `permissions`, and `sod_rules` define RBAC and separation of duties. Implementations MUST ship the role names `R-DS`, `R-AG`, `R-LC`, `R-SO`, `R-RM`, `R-DEV`, and `R-AA`; additional roles are allowed when namespaced.
+- `roles`, `permissions`, and `sod_rules` define RBAC and separation of duties. Implementations MUST ship the role names `R-DS`, `R-AG`, `R-LC`, `R-SO`, `R-RM`, `R-DEV`, and `R-AA`; additional roles are allowed when namespaced. SOD evaluation matches the requesting actor's serialized role to `requester_role`, the protected action's operation kind to `operation_kind`, and — when present — the action parameter `transition_kind` to the rule's `transition_kind`. A missing or malformed action parameter never acts as a wildcard. Transition SOD rules require `transition_kind`; non-transition SOD rules MUST omit it. The required capitalization SOD rule is `capitalization_requester_approver` on `transition_artifact_stage` / `capitalize`.
 - `policy_engines[]` declares candidate engines (`local`, `domainforge`, `opa`,
   `governedspeed`, implementation-defined), endpoint/config refs, supported
   surfaces, and fail mode. `domainforge` additionally declares the required

@@ -52,15 +52,21 @@ fn integrity_policy(
     const ROLES: &[&str] = &[
         "R-DS", "R-AG", "R-LC", "R-SO", "R-RM", "R-DEV", "R-AA", "operator",
     ];
-    const SOD: &[(&str, &str)] = &[
-        ("production_proposer_approver", "pr_merge"),
+    // (name, operation_kind, optional transition_kind)
+    const SOD: &[(&str, &str, Option<&str>)] = &[
+        ("production_proposer_approver", "pr_merge", None),
         (
             "semantic_debt_requester_acceptor",
             "settlement_authority_mutation",
+            None,
         ),
-        ("break_glass_requester_approver", "policy_mutation"),
-        ("key_generator_approver", "identity_minting"),
-        ("capitalization_requester_approver", "artifact_transition"),
+        ("break_glass_requester_approver", "policy_mutation", None),
+        ("key_generator_approver", "identity_minting", None),
+        (
+            "capitalization_requester_approver",
+            "transition_artifact_stage",
+            Some("capitalize"),
+        ),
     ];
     let path = parent.join(format!("integrity-{min_witnesses}-{include_witness}.json"));
     let sources_dir = parent.join("sources");
@@ -99,7 +105,19 @@ fn integrity_policy(
             "sources": sources,
             "roles": ROLES.iter().map(|role| ((*role).to_owned(), vec!["fixture"])).collect::<std::collections::BTreeMap<_, _>>(),
             "permissions": ROLES.iter().map(|role| serde_json::json!({"role": role, "operation_kind": "*"})).collect::<Vec<_>>(),
-            "sod_rules": SOD.iter().map(|(name, operation)| serde_json::json!({"name": name, "requester_role": "R-DEV", "approver_role": "R-SO", "operation_kind": operation})).collect::<Vec<_>>(),
+            "sod_rules": SOD.iter().map(|(name, operation, transition)| {
+                let mut rule = serde_json::json!({
+                    "name": name,
+                    "requester_role": "R-DEV",
+                    "approver_role": "R-SO",
+                    "operation_kind": operation,
+                    "allow_same_principal": false
+                });
+                if let Some(kind) = transition {
+                    rule["transition_kind"] = serde_json::json!(kind);
+                }
+                rule
+            }).collect::<Vec<_>>(),
             "identity_bindings": [{"principal": "operator_local", "actor_type": "human", "role": "operator"}],
             "policy_engines": if include_domainforge { vec![serde_json::json!({"engine": "domainforge", "fail_mode": "closed", "required": false})] } else { vec![] },
             "integrity_ledger": {
