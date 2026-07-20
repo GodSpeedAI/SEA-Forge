@@ -7,12 +7,13 @@ Updated: 2026-07-20
 Continue implementing `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`
 Tasks 4–8 (M12 AgentProvider seam, M13 governed delegation, M14 topology
 templates, M15 Thoth manager loop, M16 ACP + SWE_SEED). M9–M11 + CEP-0008
-adapter are complete and committed. M12 (Task 4) base is in progress:
-sea-forge-agent adapter crate, exact-action external_api authority,
-governed agent_probe service, and CLI/server wiring are landed (394 tests,
-clippy clean). Closing the remaining M12 gaps (T12.5 dependency-boundary
-gate, snapshot-stale on endpoint register, T12.6 error taxonomy, spec §5
-claim table) before the M12 cumulative gate.
+adapter complete. M12 (Task 4) COMPLETE and gated (408 tests, 3 commits:
+af94ff0, c6aebb6, 4d6d22e). M13 (Task 5) in progress: slice 5.2
+(agent_task vocabulary) landed — `ItemKind::AgentTask`,
+`Operation::AgentTask`, `AuthorityAction::AgentTask`, settlement basis
+constants, authority engine wiring, planner validation, and authority
+conformance test all green. Next: slice 5.4 (delegation executor + sealed
+transcript) and slice 5.3 (durable cancellation).
 
 ## SodRule transition scope closeout (2026-07-17)
 

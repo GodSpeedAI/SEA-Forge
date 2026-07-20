@@ -246,6 +246,117 @@ rules:
         .is_err());
 }
 
+#[test]
+fn m13_agent_task_requires_exact_endpoint_policy_and_grant_binding() {
+    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+policy_surfaces:
+  external_api:
+    mode: deny-by-default
+    allow_hosts: [127.0.0.1]
+rules:
+  - name: allow-agent-task
+    verdict: allow
+    actor_role: operator
+    operation_kind: agent_task
+"#,
+    )
+    .unwrap();
+    let binding = bundle.resolve_identity("operator_local", ActorRole::Operator);
+    let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+    let actor = Actor {
+        actor_id: "operator_local".into(),
+        role: ActorRole::Operator,
+    };
+    let action = AuthorityAction::AgentTask {
+        endpoint_ref: "local-test".into(),
+        descriptor_config_sha256: "sha256:descriptor".into(),
+        provider_kind: "openai_compatible".into(),
+        scheme: "http".into(),
+        host: "127.0.0.1".into(),
+        port: 8080,
+        path: "/".into(),
+        model: "test-model".into(),
+        max_request_bytes: 4096,
+        max_response_bytes: 8192,
+        timeout_secs: 30,
+        credential_ref: Some("TEST_KEY".into()),
+        instruction_sha256: "sha256:instruction".into(),
+        max_turns: 5,
+        token_budget: Some(4096),
+    };
+    let decision = engine
+        .evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding,
+            run_id: "run_agent_task",
+            case_id: "case_agent_task",
+            plan_item_id: "item_agent_task",
+            sequence: 1,
+            action: &action,
+            workspace_root: Path::new("/tmp/workspace"),
+            evidence_refs: vec!["intent:agent_task".into()],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            environment: None,
+        })
+        .unwrap();
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Allow);
+
+    let root = tempfile::tempdir().unwrap();
+    let stream =
+        sea_forge_ledger::LedgerStream::open(root.path(), "agent-task-authority", "test").unwrap();
+    let committed = stream
+        .commit_typed("authority_decision", vec![], &decision, vec![])
+        .unwrap();
+    engine
+        .grant(&decision, &committed, &action, None)
+        .expect("exact agent task action should mint a grant");
+
+    // Substituting max_turns must break the grant binding.
+    let substituted = match action.clone() {
+        AuthorityAction::AgentTask {
+            endpoint_ref,
+            descriptor_config_sha256,
+            provider_kind,
+            scheme,
+            host,
+            port,
+            path,
+            model,
+            max_request_bytes,
+            max_response_bytes,
+            timeout_secs,
+            credential_ref,
+            instruction_sha256,
+            token_budget,
+            ..
+        } => AuthorityAction::AgentTask {
+            endpoint_ref,
+            descriptor_config_sha256,
+            provider_kind,
+            scheme,
+            host,
+            port,
+            path,
+            model,
+            max_request_bytes,
+            max_response_bytes,
+            timeout_secs,
+            credential_ref,
+            instruction_sha256,
+            max_turns: 99,
+            token_budget,
+        },
+        _ => unreachable!(),
+    };
+    assert!(engine
+        .grant(&decision, &committed, &substituted, None)
+        .is_err());
+}
+
 fn expected(left: &D, right: &D) -> D {
     if left == &D::Deny || right == &D::Deny {
         D::Deny

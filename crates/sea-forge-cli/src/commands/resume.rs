@@ -494,6 +494,9 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                                 Operation::AgentProbe { .. } => {
                                     unreachable!("agent_probe is rejected before execution")
                                 }
+                                Operation::AgentTask { .. } => {
+                                    unreachable!("agent_task is rejected before execution")
+                                }
                             }
                         }
                     }

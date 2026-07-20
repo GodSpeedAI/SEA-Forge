@@ -626,6 +626,9 @@ fn run_plan_inner(
                                 Operation::AgentProbe { .. } => {
                                     unreachable!("agent_probe is rejected before execution")
                                 }
+                                Operation::AgentTask { .. } => {
+                                    unreachable!("agent_task is rejected before execution")
+                                }
                             }
                         }
                     }
