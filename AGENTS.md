@@ -186,3 +186,37 @@ Never:
 - Never hand-edit generated zones; change the source or generator and regenerate.
 - Commit runtime output under `.sea-forge/`, vendored/generated dependencies, secrets,
   or credentials.
+
+## Codebase Search
+
+When the edit location is unknown, localize before reading broadly. Use `rg --files` or glob patterns to find likely files, then `rg` with exact symbols, errors, config keys, domain terms, and naming variants. Search likely implementations, callers, tests, and configuration in parallel. Prefer file-only results first, then inspect only the strongest matches.
+
+Read narrow ranges with `sed` or `awk`, usually 30–80 lines around a match, and avoid rereading content already in context. Cap noisy output, change search terms when results are weak, and stop once the implementation, execution path, tests, and relevant dependencies are identified. Use Understand Anything when this would otherwise require a long multi-file search chain.
+
+## Understand Anything
+
+Use Understand Anything when uncertainty about location, relationships, execution flow, or change impact would otherwise require broad exploratory reading. Do not use it when direct search and local inspection are sufficient.
+
+Use the smallest operation that resolves the uncertainty:
+
+- `/understand-chat <question>` — semantically locate relevant code, responsibilities, flows, or relationships.
+- `/understand-explain <path-or-symbol>` — deeply explain one file, function, class, module, or component.
+- `/understand-diff` — identify dependencies, affected components, and likely ripple effects of current changes.
+- `/understand <directory>` — analyze or refresh only the relevant subsystem when its graph data is missing or stale.
+- `/understand` — analyze the whole repository only when no usable graph exists or repository-wide refresh is genuinely required.
+
+Examples:
+
+```text
+/understand-chat Where is authorization enforced for API requests?
+/understand-chat What components participate in compiling a .sea file?
+/understand-explain crates/compiler/src/lowering.rs
+/understand-diff
+/understand packages/application-compiler
+```
+
+Treat results as navigation and comprehension aids, not authoritative proof. Verify material conclusions against the source code, tests, configuration, and runtime behavior.
+
+Do not generate dashboards, onboarding guides, domain views, or repository-wide analyses unless the task specifically requires them. Do not load the full graph into context when a focused query or explanation is sufficient.
+
+On Codex, use `$understand`, `$understand-chat`, `$understand-explain`, and `$understand-diff` instead of slash-prefixed commands.

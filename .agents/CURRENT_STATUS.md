@@ -38,6 +38,10 @@ the server, routes `agent_task` to it, emits `SettlementRecorded`, unlocks
 the downstream sandboxed task, and completes the case. Next: M13 review and
 any deferred ACP continuation work belongs to M16.
 
+Repository search and scoped Understand Anything guidance is staged for its
+own documentation commit. Next implementation gap: T13.2 mixed sandboxed and
+agent load with replayable dispatch/settlement ordering.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None
