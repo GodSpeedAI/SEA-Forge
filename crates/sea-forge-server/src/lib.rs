@@ -7,11 +7,21 @@
 //! via `spawn_blocking`. Kernel logic stays synchronous; Tokio lives only
 //! here.
 
+use chrono::Utc;
+use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+use sea_forge_core::{
+    ids::{case_id, random_id, run_id, valid_run_id},
+    types::{Actor, ActorRole, AuthorityAction, Verdict},
+};
+use sea_forge_ledger::LedgerStream;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::process::Command;
@@ -36,7 +46,15 @@ pub struct CaseEntry {
 pub struct ServerState {
     pub config: ServerConfig,
     pub cases: Mutex<HashMap<String, CaseEntry>>,
+    delegations: Mutex<HashMap<String, DelegationHandle>>,
     pub semaphore: Semaphore,
+}
+
+#[derive(Clone)]
+struct DelegationHandle {
+    case_id: String,
+    cancel: Arc<AtomicBool>,
+    requested: Arc<AtomicBool>,
 }
 
 impl ServerState {
@@ -45,6 +63,7 @@ impl ServerState {
         Self {
             config,
             cases: Mutex::new(HashMap::new()),
+            delegations: Mutex::new(HashMap::new()),
             semaphore: Semaphore::new(max),
         }
     }
@@ -99,10 +118,21 @@ enum Request {
         endpoint: String,
         instruction: String,
         #[serde(default)]
+        run_id: Option<String>,
+        #[serde(default)]
         model: Option<String>,
         max_turns: u32,
         #[serde(default)]
         token_budget: Option<u64>,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default = "default_entity")]
+        entity: String,
+        #[serde(default = "default_process")]
+        process: String,
+    },
+    CancelDelegation {
+        run_id: String,
         #[serde(default = "default_policy")]
         policy: String,
         #[serde(default = "default_entity")]
@@ -360,6 +390,7 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
         Request::Delegate {
             endpoint,
             instruction,
+            run_id: requested_run_id,
             model,
             max_turns,
             token_budget,
@@ -367,12 +398,44 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
             entity,
             process,
         } => {
+            let delegation_run_id = match requested_run_id {
+                Some(value) if valid_run_id(&value) => value,
+                Some(_) => return serde_json::json!({"error":"invalid delegation run_id"}),
+                None => match run_id() {
+                    Ok(value) => value,
+                    Err(error) => return serde_json::json!({"error": error.to_string()}),
+                },
+            };
+            let delegation_case_id = match case_id() {
+                Ok(value) => value,
+                Err(error) => return serde_json::json!({"error": error.to_string()}),
+            };
             let permit = match state.semaphore.acquire().await {
                 Ok(permit) => permit,
                 Err(_) => return serde_json::json!({"error":"server semaphore unavailable"}),
             };
+            let cancel = Arc::new(AtomicBool::new(false));
+            let requested = Arc::new(AtomicBool::new(false));
+            let handle = DelegationHandle {
+                case_id: delegation_case_id.clone(),
+                cancel: Arc::clone(&cancel),
+                requested,
+            };
+            if state
+                .delegations
+                .lock()
+                .await
+                .insert(delegation_run_id.clone(), handle)
+                .is_some()
+            {
+                drop(permit);
+                return serde_json::json!({"error":"delegation run_id already active"});
+            }
             let config = state.config.clone();
-            let result = delegation::execute(
+            let run_for_execution = delegation_run_id.clone();
+            let case_for_execution = delegation_case_id.clone();
+            let cancel_for_execution = Arc::clone(&cancel);
+            let result = delegation::execute_with_control(
                 &config,
                 delegation::DelegationRequest {
                     endpoint_id: &endpoint,
@@ -385,8 +448,12 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
                     process: &process,
                 },
                 &agent_probe::EnvironmentCredentialResolver,
+                Some(&run_for_execution),
+                Some(&case_for_execution),
+                move || cancel_for_execution.load(Ordering::SeqCst),
             )
             .await;
+            state.delegations.lock().await.remove(&delegation_run_id);
             drop(permit);
             match result {
                 Ok(outcome) => serde_json::to_value(outcome).unwrap_or_else(
@@ -397,7 +464,155 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
                 }
             }
         }
+        Request::CancelDelegation {
+            run_id,
+            policy,
+            entity,
+            process,
+        } => cancel_delegation(state, &run_id, &policy, &entity, &process).await,
     }
+}
+
+#[derive(Serialize)]
+struct CancellationRequestRecord {
+    version: &'static str,
+    control_id: String,
+    case_id: String,
+    run_id: String,
+    plan_item_id: &'static str,
+    requester: String,
+    authority_decision_ref: String,
+    requested_at: String,
+    ordinal: u64,
+}
+
+async fn cancel_delegation(
+    state: &Arc<ServerState>,
+    run_id: &str,
+    policy_path: &str,
+    entity: &str,
+    process: &str,
+) -> serde_json::Value {
+    let handle = match state.delegations.lock().await.get(run_id).cloned() {
+        Some(handle) => handle,
+        None => return serde_json::json!({"error":"delegation run not active"}),
+    };
+
+    if handle
+        .requested
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return serde_json::json!({
+            "run_id": run_id,
+            "state": "cancellation_already_requested"
+        });
+    }
+
+    let result = record_cancellation(
+        &state.config,
+        run_id,
+        &handle.case_id,
+        policy_path,
+        entity,
+        process,
+    );
+    match result {
+        Ok(control_id) => {
+            handle.cancel.store(true, Ordering::SeqCst);
+            serde_json::json!({
+                "run_id": run_id,
+                "state": "cancellation_requested",
+                "control_id": control_id
+            })
+        }
+        Err(error) => {
+            handle.requested.store(false, Ordering::SeqCst);
+            serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+        }
+    }
+}
+
+fn record_cancellation(
+    config: &ServerConfig,
+    run_id: &str,
+    case_id: &str,
+    policy_path: &str,
+    entity: &str,
+    process: &str,
+) -> Result<String, sea_forge_core::ForgeError> {
+    let policy = agent_probe::resolve_policy_path(&config.root, policy_path);
+    let bundle = AuthorityPolicyBundle::load(&policy)?;
+    let engine = PolicyAuthorityEngine::new(bundle.clone())?;
+    let actor = Actor {
+        actor_id: entity.into(),
+        role: ActorRole::Operator,
+    };
+    let action = AuthorityAction::Reserved {
+        resource_type: "run_cancel".into(),
+        resource_id: run_id.into(),
+        parameters: serde_json::json!({"process": process}),
+    };
+    let ledger = LedgerStream::open(&config.root, format!("case-{case_id}"), "sea-forge-server")?;
+    let decision = engine.evaluate(AuthorityEvaluation {
+        actor: &actor,
+        binding: bundle.resolve_identity(&actor.actor_id, actor.role.clone()),
+        run_id,
+        case_id,
+        plan_item_id: "control_cancel",
+        sequence: 1,
+        action: &action,
+        workspace_root: &config.root,
+        evidence_refs: vec![],
+        artifacts_root: None,
+        timeout_secs: None,
+        env_keys: Default::default(),
+        domainforge_candidate: None,
+        environment: None,
+    })?;
+    let authority_ref = agent_probe::commit_view(
+        &ledger,
+        "authority_decision",
+        vec![run_id.into(), "control_cancel".into()],
+        &decision,
+        &config
+            .root
+            .join("runs")
+            .join(run_id)
+            .join("cancellation-authority.json"),
+        vec![],
+    )?;
+    if decision.verdict != Verdict::Allow {
+        return Err(sea_forge_core::ForgeError::Input(
+            "cancellation authority denied".into(),
+        ));
+    }
+
+    let control_id = random_id("cancel")?;
+    let record = CancellationRequestRecord {
+        version: "0.2",
+        control_id: control_id.clone(),
+        case_id: case_id.into(),
+        run_id: run_id.into(),
+        plan_item_id: "agent_task",
+        requester: entity.into(),
+        authority_decision_ref: authority_ref.entry_ulid().into(),
+        requested_at: Utc::now().to_rfc3339(),
+        ordinal: 1,
+    };
+    agent_probe::commit_view(
+        &ledger,
+        "control_request",
+        vec![case_id.into(), run_id.into(), "agent_task".into()],
+        &record,
+        &config
+            .root
+            .join("runs")
+            .join(run_id)
+            .join(format!("control-{control_id}.json")),
+        vec![authority_ref.entry_ulid().into()],
+    )?;
+    Ok(control_id)
 }
 
 struct DispatchOutcome {
@@ -539,4 +754,50 @@ fn fire_notify(argv: &[String], event: serde_json::Value) -> Result<(), String> 
     }
     let _ = child.wait();
     Ok(())
+}
+
+#[cfg(test)]
+mod cancellation_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn cancellation_is_authorized_and_durably_recorded_before_signalling() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(
+            root.path().join("policy.yaml"),
+            "version: \"0.1\"\nrules:\n  - name: allow-cancel\n    verdict: allow\n    actor_role: operator\n    operation_kind: run_cancel\n",
+        )
+        .unwrap();
+        let config = ServerConfig {
+            root: root.path().to_path_buf(),
+            ..ServerConfig::default()
+        };
+        let state = Arc::new(ServerState::new(config));
+        let run = run_id().unwrap();
+        let case = case_id().unwrap();
+        let cancel = Arc::new(AtomicBool::new(false));
+        state.delegations.lock().await.insert(
+            run.clone(),
+            DelegationHandle {
+                case_id: case.clone(),
+                cancel: Arc::clone(&cancel),
+                requested: Arc::new(AtomicBool::new(false)),
+            },
+        );
+
+        let response =
+            cancel_delegation(&state, &run, "policy.yaml", "operator_local", "test").await;
+
+        assert!(response.get("error").is_none(), "{response}");
+        assert_eq!(response["state"], "cancellation_requested");
+        assert!(cancel.load(Ordering::SeqCst));
+        let ledger = LedgerStream::open(root.path(), format!("case-{case}"), "test").unwrap();
+        let entries = ledger.read_entries().unwrap();
+        assert!(entries
+            .iter()
+            .any(|entry| entry.record_kind == "authority_decision"));
+        assert!(entries
+            .iter()
+            .any(|entry| entry.record_kind == "control_request"));
+    }
 }

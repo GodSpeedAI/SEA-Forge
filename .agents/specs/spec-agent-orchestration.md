@@ -418,7 +418,7 @@ function manager_iterate(case_id, grant, i):
 |---|---|---|---|
 | T13.1 | two-item case: `agent_task` → sentry-gated `sandboxed_task` | chain settles end-to-end; downstream saw only settled evidence | pending (plan pipeline integration) |
 | T13.2 | 5 mixed sandboxed and agent episodes, server semaphore=2 | server-owned scheduler respects one shared cap; ledger replay reproduces ordering | pending (scheduler refactor) |
-| T13.3 | cancel one of three in flight; restart during cancel or ACP approval | durable control/permission state yields exactly one terminal outcome or ledger-linked successor; siblings settle normally | pending (durable cancellation) |
+| T13.3 | cancel one of three in flight; restart during cancel or ACP approval | durable control/permission state yields exactly one terminal outcome or ledger-linked successor; siblings settle normally | partial: authorized append-only `control_request` plus live cancellation projection; scheduler/restart scenario pending |
 | T13.4 | turn-cap breach | `turn_cap_exceeded`; criteria still evaluated against produced artifacts | green (server conformance_m13: token_budget breach → turn_cap_exceeded, transcript evidence committed) |
 | T13.5 | agent asserts success, criteria fail | settled rejected (narration has no standing) | pending (criteria evaluation against delegation output) |
 | T13.6 | selected retention design | same redacted canonical `transcript_sha256`; selected §7.4 verification property is demonstrated | pending (sealed transcript path) |
