@@ -41,10 +41,12 @@ pub fn probe(
                 .into(),
         ));
     }
+    // Exit codes follow repo convention (spec-minimum §12.2): accepted = 0,
+    // rejected settlement = 3. Internal errors surface as 1 via the caller.
     Ok(if response["settlement"] == "accepted" {
         0
     } else {
-        1
+        3
     })
 }
 

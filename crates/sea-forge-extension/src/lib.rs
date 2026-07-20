@@ -135,7 +135,9 @@ impl ExtensionRegistry {
     }
 
     /// Register an immutable runtime adapter. A descriptor change must use a
-    /// new version; silently repointing an installed endpoint is forbidden.
+    /// new version; silently repointing an installed endpoint (same version,
+    /// different descriptor hash) is forbidden. A versioned change replaces
+    /// the prior entry in place.
     pub fn register_immutable_runtime_adapter(
         &mut self,
         descriptor: &ExtensionDescriptor,
@@ -147,16 +149,30 @@ impl ExtensionRegistry {
         }
         validate_descriptor(descriptor)?;
         let hash = hash_descriptor(descriptor)?;
-        if let Some(existing) = self
+        if let Some(existing_idx) = self
             .extensions
             .iter()
-            .find(|entry| entry.extension_id == descriptor.extension_id)
+            .position(|entry| entry.extension_id == descriptor.extension_id)
         {
-            if existing.version != descriptor.version || existing.descriptor_sha256 != hash {
+            let existing = &self.extensions[existing_idx];
+            if existing.version == descriptor.version {
+                if existing.descriptor_sha256 == hash {
+                    return Ok(()); // Idempotent re-registration.
+                }
                 return Err(ForgeError::Input(
-                    "registered runtime adapter is immutable; change requires a new version".into(),
+                    "registered runtime adapter is immutable for a given version; bump the version to change the descriptor".into(),
                 ));
             }
+            // Versioned change: replace in place.
+            self.extensions[existing_idx] = RegistryEntry {
+                extension_id: descriptor.extension_id.clone(),
+                version: descriptor.version.clone(),
+                descriptor_sha256: hash,
+                trust_level: TrustLevel::FirstParty,
+                status: ExtensionStatus::Active,
+                authority_ref: None,
+            };
+            self.updated_at = chrono_now();
             return Ok(());
         }
         self.extensions.push(RegistryEntry {
@@ -587,5 +603,139 @@ mod tests {
             policy_surfaces.contains(&d.authority_surface.as_str()),
             "authority_surface must map to a policy surface"
         );
+    }
+
+    fn runtime_adapter(id: &str, version: &str, sha_hex: &str) -> ExtensionDescriptor {
+        let input_sha = format!("sha256:{sha_hex}");
+        ExtensionDescriptor {
+            extension_id: id.into(),
+            kind: ExtensionKind::RuntimeAdapter,
+            name: format!("{id} adapter"),
+            version: version.into(),
+            provider: "sea-forge-agent".into(),
+            capabilities: vec!["agent_probe".into()],
+            authority_surface: "external_api".into(),
+            input_contract: ContractRef {
+                schema: "sea-forge-agent.endpoint.v1".into(),
+                sha256: input_sha,
+            },
+            output_contract: ContractRef {
+                schema: "sea-forge-agent.probe.v1".into(),
+                sha256: format!("sha256:{}", "b".repeat(64)),
+            },
+            deterministic: false,
+            installed_at: None,
+        }
+    }
+
+    #[test]
+    fn immutable_runtime_adapter_is_idempotent_for_same_version_and_hash() {
+        let mut registry = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        let descriptor = runtime_adapter("agent_endpoint_local", "0.1.0", &"a".repeat(64));
+        registry
+            .register_immutable_runtime_adapter(&descriptor)
+            .unwrap();
+        // Re-registering the identical descriptor is a no-op.
+        registry
+            .register_immutable_runtime_adapter(&descriptor)
+            .unwrap();
+        assert_eq!(
+            registry
+                .extensions
+                .iter()
+                .filter(|e| e.extension_id == "agent_endpoint_local")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn immutable_runtime_adapter_rejects_same_version_hash_change() {
+        let mut registry = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        registry
+            .register_immutable_runtime_adapter(&runtime_adapter(
+                "agent_endpoint_local",
+                "0.1.0",
+                &"a".repeat(64),
+            ))
+            .unwrap();
+        let err = registry
+            .register_immutable_runtime_adapter(&runtime_adapter(
+                "agent_endpoint_local",
+                "0.1.0",
+                &"b".repeat(64),
+            ))
+            .unwrap_err();
+        assert!(
+            matches!(err, ForgeError::Input(ref m) if m.contains("immutable for a given version"))
+        );
+    }
+
+    #[test]
+    fn immutable_runtime_adapter_allows_versioned_upgrade_in_place() {
+        let mut registry = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        registry
+            .register_immutable_runtime_adapter(&runtime_adapter(
+                "agent_endpoint_local",
+                "0.1.0",
+                &"a".repeat(64),
+            ))
+            .unwrap();
+        let first_hash = registry
+            .extensions
+            .iter()
+            .find(|e| e.extension_id == "agent_endpoint_local")
+            .unwrap()
+            .descriptor_sha256
+            .clone();
+        registry
+            .register_immutable_runtime_adapter(&runtime_adapter(
+                "agent_endpoint_local",
+                "0.2.0",
+                &"b".repeat(64),
+            ))
+            .unwrap();
+        let entries: Vec<_> = registry
+            .extensions
+            .iter()
+            .filter(|e| e.extension_id == "agent_endpoint_local")
+            .collect();
+        assert_eq!(
+            entries.len(),
+            1,
+            "versioned upgrade replaces, not duplicates"
+        );
+        assert_eq!(entries[0].version, "0.2.0");
+        assert_ne!(
+            entries[0].descriptor_sha256, first_hash,
+            "versioned upgrade must rebind the descriptor hash"
+        );
+    }
+
+    #[test]
+    fn immutable_runtime_adapter_rejects_non_runtime_kind() {
+        let mut registry = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        let mut descriptor = runtime_adapter("agent_endpoint_local", "0.1.0", &"a".repeat(64));
+        descriptor.kind = ExtensionKind::ProjectionAdapter;
+        let err = registry
+            .register_immutable_runtime_adapter(&descriptor)
+            .unwrap_err();
+        assert!(matches!(err, ForgeError::Input(ref m) if m.contains("runtime_adapter")));
     }
 }
