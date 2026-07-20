@@ -18,9 +18,11 @@ races with a response settle rejected. T13.3 remains pending its three-run,
 restart, and successor-episode conformance path. Slice 5.5/T13.5 output
 criterion landed: an additive `agent_output_must_contain` field on
 `SettlementCriteria` rejects an agent's narrated success when the final
-response lacks the required literal. 424 tests pass. Next: T13.1
-agent_task → sandboxed_task chain, T13.3 restart/sibling scheduler path,
-T13.6 retention design, T13.7 hostile tool requests.
+response lacks the required literal. T13.6 retention design landed: full
+mode persists the redacted canonical transcript artifact and a test
+recomputes its SHA-256 to match the recorded `transcript_sha256`. 424
+tests pass. Next: T13.1 agent_task → sandboxed_task chain, T13.3
+restart/sibling scheduler path, T13.7 hostile tool requests.
 
 ## SodRule transition scope closeout (2026-07-17)
 

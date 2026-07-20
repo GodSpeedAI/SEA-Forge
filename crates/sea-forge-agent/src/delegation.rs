@@ -110,7 +110,9 @@ fn canonical_jsonl(entries: &[TranscriptEntry]) -> String {
         .join("\n")
 }
 
-fn transcript_sha256(entries: &[TranscriptEntry]) -> String {
+/// Compute the canonical SHA-256 over redacted transcript entries.
+/// Exported so callers can verify an artifact against a recorded digest.
+pub fn transcript_sha256(entries: &[TranscriptEntry]) -> String {
     let canonical = canonical_jsonl(entries);
     let hash = Sha256::digest(canonical.as_bytes());
     format!("sha256:{hash:x}")

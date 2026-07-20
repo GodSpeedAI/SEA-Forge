@@ -368,3 +368,56 @@ async fn t13_agent_success_with_failed_output_criteria_settles_rejected() {
         .is_file());
     let _ = task.await;
 }
+
+#[tokio::test]
+async fn t13_transcript_artifact_hash_verifies() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"artifact: accepted"}}],"usage":{"total_tokens":42}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    let outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "publish proof",
+            model: None,
+            max_turns: 1,
+            token_budget: None,
+            criteria: SettlementCriteria::default(),
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+
+    let evidence_path = root
+        .path()
+        .join("runs")
+        .join(&outcome.run_id)
+        .join("transcript-evidence.json");
+    let evidence: sea_forge_core::types::TranscriptEvidence =
+        serde_json::from_str(&fs::read_to_string(&evidence_path).unwrap()).unwrap();
+    let artifact_ref = evidence
+        .artifact_ref
+        .as_deref()
+        .expect("full-mode artifact_ref present");
+    let artifact_path = root.path().join(artifact_ref);
+    assert!(artifact_path.is_file());
+
+    let content = fs::read_to_string(&artifact_path).unwrap();
+    let entries: Vec<sea_forge_agent::TranscriptEntry> = content
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(
+        sea_forge_agent::transcript_sha256(&entries),
+        evidence.transcript_sha256
+    );
+    let _ = task.await;
+}
