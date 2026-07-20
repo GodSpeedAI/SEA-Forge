@@ -630,8 +630,26 @@ Cumulative gate on `full-spec` after all M9 slices:
 
 ## M12 progress (Task 4 — E14 AgentProvider seam)
 
-**M12 COMPLETE (408 tests, clippy/fmt clean, no-async-kernel green).** Base
-landed in af94ff0; gap closure in this update. `sea-forge-agent` adapter crate with
+**M12 COMPLETE and GATED (408 tests, P1–P4b, no-async-kernel, cargo-deny).**
+Base landed in af94ff0; gap closure in c6aebb6; license/spec/status update
+in this change.
+
+M12 gate (2026-07-20): `just context-check`, `just check` (fmt + clippy
+`-D warnings` workspace/all-targets/all-features + cargo-deny
+licenses/bans/sources), `just test` (408 tests, 0 failed, 0 platform
+skips), `just proof` (P1–P4b), `just no-async-kernel` (18 kernel crates)
+all green. T12.1–T12.6 green. Tracked `.sea-forge/**` still 0 files.
+
+deny.toml: added `CDLA-Permissive-2.0` to the license allow-list —
+carried by `webpki-roots` (Mozilla root CA bundle), a transitive dep of
+the approved `reqwest` rustls-tls feature. Permissive license, not
+copyleft; mechanical consequence of the approved M12 dependency.
+
+spec-agent-orchestration.md: §5 claim table records M12 evidence
+(AgentProvider seam, declared-config-not-status, endpoint failure
+taxonomy); §17.1 T12 table annotated with status; §17.6 records the
+GREEN gate; §18 checklist M12 items checked; summarized-transcript row
+updated to the resolved sealed-transcript decision. `sea-forge-agent` adapter crate with
 OpenAI-compatible + Anthropic providers (object-safe `AgentProvider` via
 `BoxFuture`, no async-trait dep), `Operation::AgentProbe` + exact-action
 `AuthorityAction::AgentProbe` (binds endpoint_ref +
