@@ -477,7 +477,7 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
         },
         ..ServerConfig::default()
     };
-    let state = Arc::new(ServerState::new(config));
+    let state = Arc::new(ServerState::new(config).unwrap());
 
     let mut handles = vec![];
     for _ in 0..4 {
@@ -584,7 +584,7 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
         },
         ..ServerConfig::default()
     };
-    let state = Arc::new(ServerState::new(config));
+    let state = Arc::new(ServerState::new(config).unwrap());
 
     let run_a = sea_forge_core::ids::run_id().unwrap();
     let run_b = sea_forge_core::ids::run_id().unwrap();
@@ -644,4 +644,99 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
     assert_eq!(res_c["settlement"], "accepted");
     assert_eq!(res_b["termination"], "cancelled");
     assert_eq!(res_b["settlement"], "rejected");
+}
+
+/// T13.3: after restart, a durable cancellation control settles the
+/// interrupted HTTP delegation exactly once without resuming it.
+#[test]
+fn t13_3_restart_after_durable_cancellation_settles_once() {
+    let root = tempfile::tempdir().unwrap();
+    let run = sea_forge_core::ids::run_id().unwrap();
+    let case = sea_forge_core::ids::case_id().unwrap();
+    let plan = sea_forge_core::types::CasePlan {
+        version: "0.2".into(),
+        plan_id: "plan_test".into(),
+        case_id: case.clone(),
+        run_id: run.clone(),
+        intent_id: "int_test".into(),
+        items: vec![sea_forge_core::types::PlanItem {
+            plan_item_id: "agent".into(),
+            name: "agent_task".into(),
+            operations: vec![sea_forge_core::types::Operation::AgentTask {
+                endpoint_ref: "local-test".into(),
+                instruction: "test".into(),
+                max_turns: 1,
+                token_budget: None,
+                response_schema: None,
+                transcript_retention: None,
+            }],
+            entry_criteria: vec![],
+            exit_criteria: vec![],
+            settlement_criteria: SettlementCriteria::default(),
+            settlement_criteria_ref: None,
+            item_kind: sea_forge_core::types::ItemKind::AgentTask,
+            sandbox_class: None,
+            parent_stage: None,
+            markers: Default::default(),
+            max_instances: 1,
+            depends_on: vec![],
+            environment: None,
+        }],
+        template_ref: None,
+        job_contract_ref: None,
+    };
+    let run_dir = root.path().join("runs").join(&run);
+    fs::create_dir_all(&run_dir).unwrap();
+    fs::write(
+        run_dir.join("plan.json"),
+        serde_json::to_vec_pretty(&plan).unwrap(),
+    )
+    .unwrap();
+    let ledger =
+        sea_forge_ledger::LedgerStream::open(root.path(), format!("case-{case}"), "test").unwrap();
+    ledger
+        .commit_typed(
+            "control_request",
+            vec![case.clone(), run.clone(), "agent".into()],
+            &serde_json::json!({
+                "version": "0.2",
+                "control_id": "cancel_test",
+                "case_id": case,
+                "run_id": run,
+                "plan_item_id": "agent",
+                "requester": "operator_local",
+                "authority_decision_ref": "dec_test",
+                "requested_at": "2026-07-20T00:00:00Z",
+                "ordinal": 1
+            }),
+            vec!["dec_test".into()],
+        )
+        .unwrap();
+
+    let state = ServerState::new(config(root.path(), endpoint(1))).unwrap();
+    drop(state);
+
+    let entries = ledger.read_entries().unwrap();
+    let settlements: Vec<_> = entries
+        .iter()
+        .filter(|entry| entry.record_kind == "settlement" && entry.payload["run_id"] == run)
+        .collect();
+    assert_eq!(settlements.len(), 1, "exactly one terminal settlement");
+    assert_eq!(settlements[0].payload["status"], "rejected");
+    assert_eq!(
+        settlements[0].payload["basis"],
+        serde_json::json!(["cancelled"])
+    );
+    assert!(run_dir.join("transcript-evidence.json").is_file());
+
+    // A second restart sees the terminal settlement and does not append one.
+    let state = ServerState::new(config(root.path(), endpoint(1))).unwrap();
+    drop(state);
+    let count = ledger
+        .read_entries()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry.record_kind == "settlement" && entry.payload["run_id"] == run)
+        .count();
+    assert_eq!(count, 1);
 }
