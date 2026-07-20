@@ -272,3 +272,45 @@ async fn t13_endpoint_error_settles_rejected_with_transcript() {
     assert!(run.join("transcript-evidence.json").is_file());
     let _ = task.await;
 }
+
+#[tokio::test]
+async fn t13_token_budget_breach_settles_turn_cap_exceeded() {
+    // The stub reports 42 tokens per call. With a budget of 25, the
+    // delegation must terminate immediately as turn_cap_exceeded.
+    let (address, _connections, task) =
+        stub(r#"{"choices":[{"message":{"content":"response"}}],"usage":{"total_tokens":42}}"#)
+            .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    let outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "test",
+            model: None,
+            max_turns: 5,
+            token_budget: Some(25),
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(outcome.termination.as_deref(), Some("turn_cap_exceeded"));
+    assert_eq!(
+        outcome.error_class.as_deref(),
+        Some("token_budget_exceeded")
+    );
+    assert_eq!(
+        outcome.settlement,
+        sea_forge_core::types::SettlementStatus::Rejected
+    );
+    // Transcript evidence still committed despite budget breach.
+    let run = root.path().join("runs").join(&outcome.run_id);
+    assert!(run.join("transcript-evidence.json").is_file());
+    let _ = task.await;
+}
