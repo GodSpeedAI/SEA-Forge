@@ -57,6 +57,18 @@ pub async fn execute(
     request: DelegationRequest<'_>,
     resolver: &dyn CredentialResolver,
 ) -> Result<DelegationResult, ForgeError> {
+    execute_with_control(config, request, resolver, None, None, || false).await
+}
+
+/// Execute a delegation with a caller-owned run identity and cancellation projection.
+pub async fn execute_with_control(
+    config: &ServerConfig,
+    request: DelegationRequest<'_>,
+    resolver: &dyn CredentialResolver,
+    requested_run_id: Option<&str>,
+    requested_case_id: Option<&str>,
+    cancel: impl Fn() -> bool + Send + Sync + 'static,
+) -> Result<DelegationResult, ForgeError> {
     let endpoint_id = request.endpoint_id;
     let instruction = request.instruction;
 
@@ -91,8 +103,8 @@ pub async fn execute(
         ));
     }
 
-    let run = run_id()?;
-    let case = case_id()?;
+    let run = requested_run_id.map(str::to_owned).unwrap_or(run_id()?);
+    let case = requested_case_id.map(str::to_owned).unwrap_or(case_id()?);
     let item = "item_agent_task";
     let ledger = LedgerStream::open(&config.root, format!("case-{case}"), "sea-forge-agent")?;
 
@@ -282,7 +294,7 @@ pub async fn execute(
                     message,
                 }
             })?;
-            run_delegation(&provider, credential, &delegation_config, || false)
+            run_delegation(&provider, credential, &delegation_config, &cancel)
                 .await
                 .map_err(|e| ForgeError::Internal(e.to_string()))?
         }
@@ -293,7 +305,7 @@ pub async fn execute(
                     path: config.root.join("server.yaml"),
                     message,
                 })?;
-            run_delegation(&provider, credential, &delegation_config, || false)
+            run_delegation(&provider, credential, &delegation_config, &cancel)
                 .await
                 .map_err(|e| ForgeError::Internal(e.to_string()))?
         }

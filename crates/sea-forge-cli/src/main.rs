@@ -369,12 +369,25 @@ enum AgentCommand {
     Delegate {
         endpoint: String,
         instruction: String,
+        /// Stable run identity required to cancel this delegation while in flight.
+        #[arg(long)]
+        run_id: Option<String>,
         #[arg(long)]
         model: Option<String>,
         #[arg(long, default_value_t = 1)]
         max_turns: u32,
         #[arg(long)]
         token_budget: Option<u64>,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: String,
+        #[arg(long, default_value = "operator_local")]
+        entity: String,
+        #[arg(long, default_value = "cli")]
+        process: String,
+    },
+    /// Request cancellation of an active delegation.
+    Cancel {
+        run_id: String,
         #[arg(long, default_value = "sea-forge-policy.yaml")]
         policy: String,
         #[arg(long, default_value = "operator_local")]
@@ -809,6 +822,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             AgentCommand::Delegate {
                 endpoint,
                 instruction,
+                run_id,
                 model,
                 max_turns,
                 token_budget,
@@ -819,6 +833,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 &root,
                 &endpoint,
                 &instruction,
+                run_id.as_deref(),
                 model.as_deref(),
                 max_turns,
                 token_budget,
@@ -826,6 +841,12 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 &entity,
                 &process,
             ),
+            AgentCommand::Cancel {
+                run_id,
+                policy,
+                entity,
+                process,
+            } => commands::agent::cancel(&root, &run_id, &policy, &entity, &process),
         }
         .map_err(|e| (1, e)),
     }

@@ -11,8 +11,12 @@ adapter complete. M12 (Task 4) COMPLETE and gated (408 tests). M13 (Task 5) in p
 slices 5.2, 5.4, server delegation service, CLI delegate command, and
 T13.4 token-budget test all landed. 420 tests pass. The M13 conformance
 table now records T13.4 green and the remaining tests pending. Next:
-slice 5.3 durable cancellation, then slice 5.5 hostile tool requests and
-the remaining T13 conformance tests.
+slice 5.3's first vertical path is landed: a caller-supplied run ID can be
+cancelled through the server only after a `run_cancel` authority decision and
+append-only `control_request`; the provider loop makes a cancellation that
+races with a response settle rejected. T13.3 remains pending its three-run,
+restart, and successor-episode conformance path. Next: slice 5.5 hostile tool
+requests, then the remaining T13 tests.
 
 ## SodRule transition scope closeout (2026-07-17)
 

@@ -1160,6 +1160,7 @@ impl AuthorityPolicyBundle {
                     | "review_artifact_rights"
                     | "run_spec_pipeline"
                     | "run_projection"
+                    | "run_cancel"
                     | "import_bundle"
                     | "export_bundle"
                     | "adopt_template"
@@ -2771,6 +2772,7 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "artifact_transition",
                 "attestation",
                 "review_artifact_rights",
+                "run_cancel",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()

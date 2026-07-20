@@ -201,6 +201,19 @@ pub async fn run_delegation(
                 turns += 1;
                 total_tokens += usage_tokens(&resp);
 
+                // A request arriving while the provider was in flight wins
+                // over completion; the response remains in transcript evidence.
+                if cancel() {
+                    return Ok(terminate(
+                        DelegationTermination::Cancelled,
+                        turns,
+                        Some(resp.message.content.clone()),
+                        &transcript,
+                        &credential,
+                        None,
+                    ));
+                }
+
                 if let Some(budget) = config.token_budget {
                     if total_tokens >= budget {
                         return Ok(terminate(
@@ -419,6 +432,70 @@ mod tests {
         assert_eq!(outcome.termination, DelegationTermination::Cancelled);
         assert_eq!(outcome.turns_used, 0);
         assert!(outcome.final_output.is_none());
+    }
+
+    #[tokio::test]
+    async fn cancellation_after_provider_response_wins_over_completion() {
+        struct CancellingProvider(Arc<std::sync::atomic::AtomicBool>);
+
+        impl AgentProvider for CancellingProvider {
+            fn kind(&self) -> crate::ProviderKind {
+                crate::ProviderKind::OpenAiCompatible
+            }
+
+            fn complete<'a>(
+                &'a self,
+                _: CompletionRequest,
+                _: Zeroizing<String>,
+            ) -> crate::provider::BoxFuture<'a, Result<CompletionResponse, AgentError>>
+            {
+                self.0.store(true, Ordering::SeqCst);
+                Box::pin(async {
+                    Ok(CompletionResponse {
+                        message: AgentMessage {
+                            role: MessageRole::Assistant,
+                            content: "response raced with cancellation".into(),
+                        },
+                        usage: None,
+                    })
+                })
+            }
+
+            fn stream<'a>(
+                &'a self,
+                _: CompletionRequest,
+                _: Zeroizing<String>,
+            ) -> crate::provider::BoxFuture<'a, Result<Box<dyn crate::AgentEventStream>, AgentError>>
+            {
+                unimplemented!()
+            }
+        }
+
+        let cancelled = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let provider = CancellingProvider(Arc::clone(&cancelled));
+        let config = DelegationConfig {
+            model: "test-model".into(),
+            instruction: "test".into(),
+            max_turns: 1,
+            token_budget: None,
+            max_output_tokens: None,
+        };
+        let outcome = run_delegation(
+            &provider,
+            Zeroizing::new("key".into()),
+            &config,
+            move || cancelled.load(Ordering::SeqCst),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(outcome.termination, DelegationTermination::Cancelled);
+        assert_eq!(outcome.turns_used, 1);
+        assert_eq!(
+            outcome.final_output.as_deref(),
+            Some("response raced with cancellation")
+        );
+        assert_eq!(outcome.transcript.len(), 2);
     }
 
     #[tokio::test]

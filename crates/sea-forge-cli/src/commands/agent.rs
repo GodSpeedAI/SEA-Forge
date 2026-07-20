@@ -55,6 +55,7 @@ pub fn delegate(
     root: &Path,
     endpoint: &str,
     instruction: &str,
+    run_id: Option<&str>,
     model: Option<&str>,
     max_turns: u32,
     token_budget: Option<u64>,
@@ -68,6 +69,7 @@ pub fn delegate(
             "verb": "delegate",
             "endpoint": endpoint,
             "instruction": instruction,
+            "run_id": run_id,
             "model": model,
             "max_turns": max_turns,
             "token_budget": token_budget,
@@ -90,6 +92,35 @@ pub fn delegate(
     } else {
         3
     })
+}
+
+pub fn cancel(
+    root: &Path,
+    run_id: &str,
+    policy: &str,
+    entity: &str,
+    process: &str,
+) -> Result<u8, ForgeError> {
+    let response = request(
+        root,
+        json!({
+            "verb": "cancel_delegation",
+            "run_id": run_id,
+            "policy": policy,
+            "entity": entity,
+            "process": process,
+        }),
+    )?;
+    println!("{}", serde_json::to_string_pretty(&response)?);
+    if response.get("error").is_some() {
+        return Err(ForgeError::Input(
+            response["error"]
+                .as_str()
+                .unwrap_or("agent delegation cancellation failed")
+                .into(),
+        ));
+    }
+    Ok(0)
 }
 
 fn request(root: &Path, request: Value) -> Result<Value, ForgeError> {
