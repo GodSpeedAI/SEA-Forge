@@ -81,7 +81,8 @@ impl ServerState {
 #[derive(Deserialize)]
 #[serde(tag = "verb")]
 #[serde(rename_all = "snake_case")]
-enum Request {
+#[allow(clippy::large_enum_variant)]
+pub enum Request {
     Submit {
         #[serde(flatten)]
         payload: SubmitPayload,
@@ -145,7 +146,7 @@ enum Request {
 }
 
 #[derive(Deserialize)]
-struct SubmitPayload {
+pub struct SubmitPayload {
     #[serde(default)]
     intent: Option<String>,
     #[serde(default)]
@@ -231,7 +232,7 @@ async fn handle_connection(
     Ok(())
 }
 
-async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_json::Value {
+pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_json::Value {
     match request {
         Request::Submit { payload } => {
             let plan = match payload.plan.as_deref() {
