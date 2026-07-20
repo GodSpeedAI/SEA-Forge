@@ -7,14 +7,12 @@ Updated: 2026-07-20
 Continue implementing `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`
 Tasks 4–8 (M12 AgentProvider seam, M13 governed delegation, M14 topology
 templates, M15 Thoth manager loop, M16 ACP + SWE_SEED). M9–M11 + CEP-0008
-adapter complete. M12 (Task 4) COMPLETE and gated (408 tests, 3 commits:
-af94ff0, c6aebb6, 4d6d22e). M13 (Task 5) in progress: slice 5.2
-(agent_task vocabulary), slice 5.4 (delegation loop + transcript
-evidence), and server delegation service all landed — the full
-governed chain (intent → plan → authority → credential → delegation
-loop → transcript evidence → settlement) works end-to-end via the
-server socket. 419 tests pass. Next: slice 5.3 (durable cancellation
-records), slice 5.5 (hostile tool requests), T13 conformance tests.
+adapter complete. M12 (Task 4) COMPLETE and gated (408 tests). M13 (Task 5) in progress:
+slices 5.2 (vocabulary), 5.4 (delegation loop + transcript evidence),
+server delegation service, and CLI `agent delegate` command all landed.
+The full governed chain works end-to-end via server socket. 419 tests
+pass. Next: slice 5.3 (durable cancellation), slice 5.5 (hostile tool
+requests), remaining T13 conformance tests.
 
 ## SodRule transition scope closeout (2026-07-17)
 
