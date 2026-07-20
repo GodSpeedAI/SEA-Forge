@@ -9,9 +9,10 @@ Tasks 4–8 (M12 AgentProvider seam, M13 governed delegation, M14 topology
 templates, M15 Thoth manager loop, M16 ACP + SWE_SEED). M9–M11 + CEP-0008
 adapter complete. M12 (Task 4) COMPLETE and gated (408 tests). M13 (Task 5) in progress:
 slices 5.2, 5.4, server delegation service, CLI delegate command, and
-T13.4 token-budget test all landed. 420 tests pass. Next: slice 5.3
-(durable cancellation), slice 5.5 (hostile tool requests), remaining
-T13 conformance tests.
+T13.4 token-budget test all landed. 420 tests pass. The M13 conformance
+table now records T13.4 green and the remaining tests pending. Next:
+slice 5.3 durable cancellation, then slice 5.5 hostile tool requests and
+the remaining T13 conformance tests.
 
 ## SodRule transition scope closeout (2026-07-17)
 

@@ -414,15 +414,15 @@ function manager_iterate(case_id, grant, i):
 
 ### 17.2 Core Conformance — M13 (E15, governed delegation)
 
-| # | Test | Expected |
-|---|---|---|
-| T13.1 | two-item case: `agent_task` → sentry-gated `sandboxed_task` | chain settles end-to-end; downstream saw only settled evidence |
-| T13.2 | 5 mixed sandboxed and agent episodes, server semaphore=2 | server-owned scheduler respects one shared cap; ledger replay reproduces ordering |
-| T13.3 | cancel one of three in flight; restart during cancel or ACP approval | durable control/permission state yields exactly one terminal outcome or ledger-linked successor; siblings settle normally |
-| T13.4 | turn-cap breach | `turn_cap_exceeded`; criteria still evaluated against produced artifacts |
-| T13.5 | agent asserts success, criteria fail | settled rejected (narration has no standing) |
-| T13.6 | selected retention design | same redacted canonical `transcript_sha256`; selected §7.4 verification property is demonstrated. This test cannot pass until the owner decision exists. |
-| T13.7 | hostile transcript (out-of-grant request) | recorded denial; no side effect; run continues/settles on criteria |
+| # | Test | Expected | Status |
+|---|---|---|---|
+| T13.1 | two-item case: `agent_task` → sentry-gated `sandboxed_task` | chain settles end-to-end; downstream saw only settled evidence | pending (plan pipeline integration) |
+| T13.2 | 5 mixed sandboxed and agent episodes, server semaphore=2 | server-owned scheduler respects one shared cap; ledger replay reproduces ordering | pending (scheduler refactor) |
+| T13.3 | cancel one of three in flight; restart during cancel or ACP approval | durable control/permission state yields exactly one terminal outcome or ledger-linked successor; siblings settle normally | pending (durable cancellation) |
+| T13.4 | turn-cap breach | `turn_cap_exceeded`; criteria still evaluated against produced artifacts | green (server conformance_m13: token_budget breach → turn_cap_exceeded, transcript evidence committed) |
+| T13.5 | agent asserts success, criteria fail | settled rejected (narration has no standing) | pending (criteria evaluation against delegation output) |
+| T13.6 | selected retention design | same redacted canonical `transcript_sha256`; selected §7.4 verification property is demonstrated | pending (sealed transcript path) |
+| T13.7 | hostile transcript (out-of-grant request) | recorded denial; no side effect; run continues/settles on criteria | pending (hostile tool request handling) |
 
 ### 17.3 Core Conformance — M14 (E16a, topology templates)
 
