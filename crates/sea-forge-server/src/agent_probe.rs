@@ -502,7 +502,7 @@ fn register_endpoint(
     Ok(())
 }
 
-fn resolve_policy_path(root: &Path, configured: &str) -> PathBuf {
+pub fn resolve_policy_path(root: &Path, configured: &str) -> PathBuf {
     let path = PathBuf::from(configured);
     if path.is_absolute() || path.exists() {
         path
@@ -511,7 +511,7 @@ fn resolve_policy_path(root: &Path, configured: &str) -> PathBuf {
     }
 }
 
-fn commit_view<T: Serialize>(
+pub fn commit_view<T: Serialize>(
     ledger: &LedgerStream,
     kind: &str,
     subjects: Vec<String>,

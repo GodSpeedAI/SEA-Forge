@@ -9,15 +9,12 @@ Tasks 4–8 (M12 AgentProvider seam, M13 governed delegation, M14 topology
 templates, M15 Thoth manager loop, M16 ACP + SWE_SEED). M9–M11 + CEP-0008
 adapter complete. M12 (Task 4) COMPLETE and gated (408 tests, 3 commits:
 af94ff0, c6aebb6, 4d6d22e). M13 (Task 5) in progress: slice 5.2
-(agent_task vocabulary) and slice 5.4 (delegation loop + transcript
-evidence) landed — `ItemKind::AgentTask`, `Operation::AgentTask`,
-`AuthorityAction::AgentTask`, settlement basis constants, authority
-engine wiring, planner validation, `TranscriptEvidence` +
-`DelegationTermination` types, and `sea-forge-agent::delegation` module
-with the §16.1 loop (turn caps, token budget, cancellation, credential
-redaction, deterministic transcript hash, structural summary). Next:
-slice 5.3 (durable cancellation records), slice 5.5 (hostile tool
-requests), server wiring, T13.1–T13.7.
+(agent_task vocabulary), slice 5.4 (delegation loop + transcript
+evidence), and server delegation service all landed — the full
+governed chain (intent → plan → authority → credential → delegation
+loop → transcript evidence → settlement) works end-to-end via the
+server socket. 419 tests pass. Next: slice 5.3 (durable cancellation
+records), slice 5.5 (hostile tool requests), T13 conformance tests.
 
 ## SodRule transition scope closeout (2026-07-17)
 

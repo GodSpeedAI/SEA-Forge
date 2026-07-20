@@ -19,6 +19,7 @@ use tokio::sync::{Mutex, Semaphore};
 
 pub mod agent_probe;
 pub mod config;
+pub mod delegation;
 
 pub use config::ServerConfig;
 
@@ -87,6 +88,21 @@ enum Request {
         prompt: String,
         #[serde(default)]
         model: Option<String>,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default = "default_entity")]
+        entity: String,
+        #[serde(default = "default_process")]
+        process: String,
+    },
+    Delegate {
+        endpoint: String,
+        instruction: String,
+        #[serde(default)]
+        model: Option<String>,
+        max_turns: u32,
+        #[serde(default)]
+        token_budget: Option<u64>,
         #[serde(default = "default_policy")]
         policy: String,
         #[serde(default = "default_entity")]
@@ -335,6 +351,46 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
             match result {
                 Ok(outcome) => serde_json::to_value(outcome).unwrap_or_else(
                     |_| serde_json::json!({"error":"probe response serialization failed"}),
+                ),
+                Err(error) => {
+                    serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+                }
+            }
+        }
+        Request::Delegate {
+            endpoint,
+            instruction,
+            model,
+            max_turns,
+            token_budget,
+            policy,
+            entity,
+            process,
+        } => {
+            let permit = match state.semaphore.acquire().await {
+                Ok(permit) => permit,
+                Err(_) => return serde_json::json!({"error":"server semaphore unavailable"}),
+            };
+            let config = state.config.clone();
+            let result = delegation::execute(
+                &config,
+                delegation::DelegationRequest {
+                    endpoint_id: &endpoint,
+                    instruction: &instruction,
+                    model: model.as_deref(),
+                    max_turns,
+                    token_budget,
+                    policy_path: &policy,
+                    entity: &entity,
+                    process: &process,
+                },
+                &agent_probe::EnvironmentCredentialResolver,
+            )
+            .await;
+            drop(permit);
+            match result {
+                Ok(outcome) => serde_json::to_value(outcome).unwrap_or_else(
+                    |_| serde_json::json!({"error":"delegation response serialization failed"}),
                 ),
                 Err(error) => {
                     serde_json::json!({"error": error.to_string(), "error_class": error.class()})
