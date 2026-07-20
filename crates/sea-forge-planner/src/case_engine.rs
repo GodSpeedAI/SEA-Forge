@@ -235,7 +235,12 @@ pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
         if item.item_kind == ItemKind::SandboxedTask && item.sandbox_class.is_none() {
             item.sandbox_class = Some("local".into());
         }
-        if item.item_kind != ItemKind::SandboxedTask && !item.operations.is_empty() {
+        // AgentTask items carry exactly one Operation::AgentTask (validated below).
+        if !matches!(
+            item.item_kind,
+            ItemKind::SandboxedTask | ItemKind::AgentTask
+        ) && !item.operations.is_empty()
+        {
             return Err(ForgeError::Plan {
                 class: "plan_schema_error",
                 message: format!(
@@ -330,6 +335,22 @@ pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
                     });
                 }
             }
+        }
+        // AgentTask items carry exactly one Operation::AgentTask — nothing else.
+        if item.item_kind == ItemKind::AgentTask
+            && (item.operations.len() != 1
+                || !matches!(
+                    item.operations[0],
+                    sea_forge_core::types::Operation::AgentTask { .. }
+                ))
+        {
+            return Err(ForgeError::Plan {
+                class: "plan_schema_error",
+                message: format!(
+                    "agent_task item {} must carry exactly one Operation::AgentTask",
+                    item.plan_item_id
+                ),
+            });
         }
     }
     check_satisfiability(&plan.items)

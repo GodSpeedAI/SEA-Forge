@@ -20,9 +20,12 @@ criterion landed: an additive `agent_output_must_contain` field on
 `SettlementCriteria` rejects an agent's narrated success when the final
 response lacks the required literal. T13.6 retention design landed: full
 mode persists the redacted canonical transcript artifact and a test
-recomputes its SHA-256 to match the recorded `transcript_sha256`. 424
-tests pass. Next: T13.1 agent_task → sandboxed_task chain, T13.3
-restart/sibling scheduler path, T13.7 hostile tool requests.
+recomputes its SHA-256 to match the recorded `transcript_sha256`. T13.1
+plan-acceptance half landed: the case engine accepts `agent_task` items
+and a downstream sentry gates on the agent's settlement status; full
+execution routing still pending. 428 tests pass. Next: T13.3
+restart/sibling scheduler path, T13.7 hostile tool requests, and full
+T13.1 CLI/server execution routing.
 
 ## SodRule transition scope closeout (2026-07-17)
 
