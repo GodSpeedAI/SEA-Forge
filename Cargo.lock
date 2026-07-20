@@ -1850,6 +1850,7 @@ dependencies = [
  "sea-forge-core",
  "sea-forge-extension",
  "sea-forge-ledger",
+ "sea-forge-self-model",
  "serde",
  "serde_json",
  "serde_yaml",

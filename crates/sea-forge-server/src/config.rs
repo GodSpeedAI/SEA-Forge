@@ -53,6 +53,53 @@ impl ServerConfig {
             std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
         let config: Self =
             serde_yaml::from_str(&text).map_err(|e| format!("parse {}: {e}", path.display()))?;
+        config.agent.validate().map_err(|message| {
+            format!("{}: invalid agent configuration: {message}", path.display())
+        })?;
         Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn load_rejects_invalid_agent_endpoint_with_asserted_status() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "agent:\n  endpoints:\n    - id: bad\n      kind: open_ai_compatible\n      base_url: https://example.com\n      status: probed\n",
+        )
+        .unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("evidence-derived"), "{error}");
+    }
+
+    #[test]
+    fn load_rejects_non_loopback_http_endpoint_without_test_flag() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "agent:\n  endpoints:\n    - id: bad\n      kind: open_ai_compatible\n      base_url: http://example.com\n",
+        )
+        .unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("HTTPS"), "{error}");
+    }
+
+    #[test]
+    fn load_accepts_valid_agent_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "agent:\n  endpoints:\n    - id: prod\n      kind: open_ai_compatible\n      base_url: https://api.example.com\n      credential_ref: OPENAI_API_KEY\n",
+        )
+        .unwrap();
+        let config = ServerConfig::load(&path).unwrap();
+        assert_eq!(config.agent.endpoints.len(), 1);
     }
 }

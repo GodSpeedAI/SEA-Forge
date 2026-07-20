@@ -482,8 +482,23 @@ fn register_endpoint(
         installed_at: None,
     };
     let mut registry = ExtensionRegistry::load(root)?;
+    let was_new = !registry.extensions.iter().any(|entry| {
+        entry.extension_id == descriptor.extension_id && entry.version == descriptor.version
+    });
     registry.register_immutable_runtime_adapter(&descriptor)?;
     registry.save(root, ledger, authority_ref)?;
+    // Slice 4.2: an endpoint install/change is an extension mutation that
+    // invalidates the current self-model snapshot. Mark stale only when a
+    // snapshot already exists (marking before init is an error); this never
+    // mutates an immutable snapshot file.
+    if was_new {
+        if let Ok(Some(_)) = sea_forge_self_model::store::current_snapshot(root) {
+            sea_forge_self_model::store::mark_current_stale(
+                root,
+                &format!("agent_endpoint_registered:{}", endpoint.id),
+            )?;
+        }
+    }
     Ok(())
 }
 

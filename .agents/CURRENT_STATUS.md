@@ -630,7 +630,8 @@ Cumulative gate on `full-spec` after all M9 slices:
 
 ## M12 progress (Task 4 — E14 AgentProvider seam)
 
-Base landed (commit pending): `sea-forge-agent` adapter crate with
+**M12 COMPLETE (408 tests, clippy/fmt clean, no-async-kernel green).** Base
+landed in af94ff0; gap closure in this update. `sea-forge-agent` adapter crate with
 OpenAI-compatible + Anthropic providers (object-safe `AgentProvider` via
 `BoxFuture`, no async-trait dep), `Operation::AgentProbe` + exact-action
 `AuthorityAction::AgentProbe` (binds endpoint_ref +
