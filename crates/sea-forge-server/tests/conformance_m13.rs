@@ -1,6 +1,6 @@
 use sea_forge_agent::{AgentConfig, AgentEndpointConfig, ProviderKind};
 use sea_forge_core::types::SettlementCriteria;
-use sea_forge_server::{agent_probe, delegation, ServerConfig};
+use sea_forge_server::{agent_probe, delegation, Request, ServerConfig, ServerState};
 use std::{
     fs,
     net::SocketAddr,
@@ -9,6 +9,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
+    time::Duration,
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -420,4 +421,99 @@ async fn t13_transcript_artifact_hash_verifies() {
         evidence.transcript_sha256
     );
     let _ = task.await;
+}
+
+/// T13.2: the server semaphore respects one shared cap. With
+/// `max_concurrent_runs=2` and 4 concurrent delegation requests, the stub
+/// must never observe more than 2 in-flight connections.
+#[tokio::test]
+async fn t13_2_server_semaphore_caps_concurrent_delegations() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let current = Arc::new(AtomicUsize::new(0));
+    let max_seen = Arc::new(AtomicUsize::new(0));
+    let cur = Arc::clone(&current);
+    let max = Arc::clone(&max_seen);
+    let stub_task = tokio::spawn(async move {
+        let mut handlers = vec![];
+        for _ in 0..4 {
+            let Ok((mut stream, _)) = listener.accept().await else {
+                break;
+            };
+            let cur = Arc::clone(&cur);
+            let max = Arc::clone(&max);
+            handlers.push(tokio::spawn(async move {
+                let c = cur.fetch_add(1, Ordering::SeqCst) + 1;
+                max.fetch_max(c, Ordering::SeqCst);
+                tokio::time::sleep(Duration::from_millis(80)).await;
+                let mut req = vec![0_u8; 4096];
+                let _ = stream.read(&mut req).await;
+                let body =
+                    br#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#;
+                let header = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = stream.write_all(header.as_bytes()).await;
+                let _ = stream.write_all(body).await;
+                cur.fetch_sub(1, Ordering::SeqCst);
+            }));
+        }
+        for h in handlers {
+            let _ = h.await;
+        }
+    });
+
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, false);
+    let mut ep = endpoint(address.port());
+    ep.credential_ref = None;
+    let config = ServerConfig {
+        root: root.path().to_path_buf(),
+        max_concurrent_runs: 2,
+        agent: AgentConfig {
+            endpoints: vec![ep],
+            ..AgentConfig::default()
+        },
+        ..ServerConfig::default()
+    };
+    let state = Arc::new(ServerState::new(config));
+
+    let mut handles = vec![];
+    for _ in 0..4 {
+        let state = Arc::clone(&state);
+        let policy = policy.to_string_lossy().into_owned();
+        handles.push(tokio::spawn(async move {
+            sea_forge_server::handle_request(
+                Request::Delegate {
+                    endpoint: "local-test".into(),
+                    instruction: "test".into(),
+                    run_id: None,
+                    model: None,
+                    max_turns: 1,
+                    token_budget: None,
+                    criteria: SettlementCriteria::default(),
+                    policy,
+                    entity: "operator_local".into(),
+                    process: "test".into(),
+                },
+                &state,
+            )
+            .await
+        }));
+    }
+    for handle in handles {
+        let _ = handle.await;
+    }
+    let _ = stub_task.await;
+
+    let observed = max_seen.load(Ordering::SeqCst);
+    assert!(
+        observed <= 2,
+        "semaphore exceeded cap: observed {observed} concurrent connections"
+    );
+    assert!(
+        observed >= 2,
+        "semaphore never reached cap: observed {observed} (test may need more delay)"
+    );
 }
