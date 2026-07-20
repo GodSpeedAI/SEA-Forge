@@ -294,6 +294,18 @@ pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
                         });
                     }
                 }
+                sea_forge_core::types::Operation::AgentProbe {
+                    endpoint_ref,
+                    model,
+                    prompt_sha256,
+                } => {
+                    if endpoint_ref.is_empty() || model.is_empty() || prompt_sha256.is_empty() {
+                        return Err(ForgeError::Plan {
+                            class: "plan_schema_error",
+                            message: "agent_probe requires endpoint, model, and prompt hash".into(),
+                        });
+                    }
+                }
             }
             if let sea_forge_core::types::Operation::ExecuteCommand { argv, .. } = operation {
                 if argv.is_empty() || argv.iter().any(|arg| arg.contains('\0')) {

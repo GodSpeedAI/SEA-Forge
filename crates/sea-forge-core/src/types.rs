@@ -125,8 +125,19 @@ fn default_max_instances() -> u32 {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Operation {
-    WriteFile { path: String, content_hint: String },
-    ExecuteCommand { argv: Vec<String>, cwd: String },
+    WriteFile {
+        path: String,
+        content_hint: String,
+    },
+    ExecuteCommand {
+        argv: Vec<String>,
+        cwd: String,
+    },
+    AgentProbe {
+        endpoint_ref: String,
+        model: String,
+        prompt_sha256: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -142,6 +153,21 @@ pub enum AuthorityAction {
     },
     ExternalApi {
         host: String,
+    },
+    AgentProbe {
+        endpoint_ref: String,
+        descriptor_config_sha256: String,
+        provider_kind: String,
+        scheme: String,
+        host: String,
+        port: u16,
+        path: String,
+        model: String,
+        max_request_bytes: u64,
+        max_response_bytes: u64,
+        timeout_secs: u64,
+        credential_ref: Option<String>,
+        prompt_sha256: String,
     },
     GitCommit {
         paths: Vec<String>,
@@ -170,6 +196,25 @@ impl From<&Operation> for AuthorityAction {
             Operation::ExecuteCommand { argv, cwd } => Self::ExecuteCommand {
                 argv: argv.clone(),
                 cwd: cwd.clone(),
+            },
+            Operation::AgentProbe {
+                endpoint_ref,
+                model,
+                prompt_sha256,
+            } => Self::AgentProbe {
+                endpoint_ref: endpoint_ref.clone(),
+                descriptor_config_sha256: String::new(),
+                provider_kind: String::new(),
+                scheme: String::new(),
+                host: String::new(),
+                port: 0,
+                path: String::new(),
+                model: model.clone(),
+                max_request_bytes: 0,
+                max_response_bytes: 0,
+                timeout_secs: 0,
+                credential_ref: None,
+                prompt_sha256: prompt_sha256.clone(),
             },
         }
     }
@@ -1054,6 +1099,17 @@ mod tests {
         })
         .unwrap();
         assert_eq!(value["kind"], "write_file");
+    }
+
+    #[test]
+    fn agent_probe_operation_uses_additive_tag() {
+        let value = serde_json::to_value(Operation::AgentProbe {
+            endpoint_ref: "endpoint_local".into(),
+            model: "test-model".into(),
+            prompt_sha256: "sha256:prompt".into(),
+        })
+        .unwrap();
+        assert_eq!(value["kind"], "agent_probe");
     }
     #[test]
     fn settlement_status_round_trips() {

@@ -446,6 +446,11 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                     if allowed {
                         for (index, operation) in item.operations.iter().enumerate() {
                             let granted = &authorized[index];
+                            if matches!(operation, Operation::AgentProbe { .. }) {
+                                return Err(ForgeError::Input(
+                                    "agent_probe must be dispatched by sea-forge-server".into(),
+                                ));
+                            }
                             let grant = engine.grant(
                                 &granted.decision,
                                 &granted.committed,
@@ -485,6 +490,9 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                                         &workspace,
                                         &artifacts,
                                     )?);
+                                }
+                                Operation::AgentProbe { .. } => {
+                                    unreachable!("agent_probe is rejected before execution")
                                 }
                             }
                         }

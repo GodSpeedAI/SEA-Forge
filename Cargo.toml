@@ -21,6 +21,7 @@ members = [
     "crates/sea-forge-artifact-ip",
     "crates/sea-forge-self-model",
     "crates/sea-forge-thoth",
+    "crates/sea-forge-agent",
 ]
 
 [workspace.package]
@@ -53,3 +54,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 unicode-normalization = "0.1"
 wait-timeout = "0.2"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+url = "2.5"
+zeroize = "1.8"
