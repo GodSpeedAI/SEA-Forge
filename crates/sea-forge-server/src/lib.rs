@@ -124,6 +124,8 @@ enum Request {
         max_turns: u32,
         #[serde(default)]
         token_budget: Option<u64>,
+        #[serde(default)]
+        criteria: sea_forge_core::types::SettlementCriteria,
         #[serde(default = "default_policy")]
         policy: String,
         #[serde(default = "default_entity")]
@@ -394,6 +396,7 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
             model,
             max_turns,
             token_budget,
+            criteria,
             policy,
             entity,
             process,
@@ -443,6 +446,7 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
                     model: model.as_deref(),
                     max_turns,
                     token_budget,
+                    criteria,
                     policy_path: &policy,
                     entity: &entity,
                     process: &process,

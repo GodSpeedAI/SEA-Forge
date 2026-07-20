@@ -378,6 +378,9 @@ enum AgentCommand {
         max_turns: u32,
         #[arg(long)]
         token_budget: Option<u64>,
+        /// Literal the agent's final response must contain for acceptance.
+        #[arg(long)]
+        agent_output_must_contain: Option<String>,
         #[arg(long, default_value = "sea-forge-policy.yaml")]
         policy: String,
         #[arg(long, default_value = "operator_local")]
@@ -826,6 +829,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 model,
                 max_turns,
                 token_budget,
+                agent_output_must_contain,
                 policy,
                 entity,
                 process,
@@ -837,6 +841,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 model.as_deref(),
                 max_turns,
                 token_budget,
+                agent_output_must_contain.as_deref(),
                 &policy,
                 &entity,
                 &process,

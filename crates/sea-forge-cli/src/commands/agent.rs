@@ -59,10 +59,13 @@ pub fn delegate(
     model: Option<&str>,
     max_turns: u32,
     token_budget: Option<u64>,
+    agent_output_must_contain: Option<&str>,
     policy: &str,
     entity: &str,
     process: &str,
 ) -> Result<u8, ForgeError> {
+    let criteria =
+        agent_output_must_contain.map(|needle| json!({"agent_output_must_contain": needle}));
     let response = request(
         root,
         json!({
@@ -73,6 +76,7 @@ pub fn delegate(
             "model": model,
             "max_turns": max_turns,
             "token_budget": token_budget,
+            "criteria": criteria,
             "policy": policy,
             "entity": entity,
             "process": process,

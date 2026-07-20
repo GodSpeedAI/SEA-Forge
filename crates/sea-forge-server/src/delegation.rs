@@ -35,6 +35,7 @@ pub struct DelegationRequest<'a> {
     pub model: Option<&'a str>,
     pub max_turns: u32,
     pub token_budget: Option<u64>,
+    pub criteria: SettlementCriteria,
     pub policy_path: &'a str,
     pub entity: &'a str,
     pub process: &'a str,
@@ -146,7 +147,7 @@ pub async fn execute_with_control(
             operations: vec![operation],
             entry_criteria: vec![],
             exit_criteria: vec![],
-            settlement_criteria: SettlementCriteria::default(),
+            settlement_criteria: request.criteria.clone(),
             settlement_criteria_ref: None,
             item_kind: ItemKind::AgentTask,
             sandbox_class: None,
@@ -345,22 +346,40 @@ pub async fn execute_with_control(
         vec![decision_ref.entry_ulid().into()],
     )?;
 
-    let (status, basis) = match outcome.termination {
-        DelegationTermination::Completed => (
-            SettlementStatus::Accepted,
-            vec!["authority_allow".into(), "delegation_completed".into()],
+    let (status, basis, criteria_error) = match outcome.termination {
+        DelegationTermination::Completed => match sea_forge_settlement::evaluate_agent_output(
+            outcome.final_output.as_deref().unwrap_or_default(),
+            request.criteria.agent_output_must_contain.as_deref(),
+        ) {
+            Some(false) => (
+                SettlementStatus::Rejected,
+                vec!["authority_allow".into(), "agent_output_mismatch".into()],
+                Some("agent_output_mismatch".into()),
+            ),
+            _ => (
+                SettlementStatus::Accepted,
+                vec!["authority_allow".into(), "delegation_completed".into()],
+                None,
+            ),
+        },
+        DelegationTermination::TurnCapExceeded => (
+            SettlementStatus::Rejected,
+            vec!["turn_cap_exceeded".into()],
+            None,
         ),
-        DelegationTermination::TurnCapExceeded => {
-            (SettlementStatus::Rejected, vec!["turn_cap_exceeded".into()])
+        DelegationTermination::Cancelled => {
+            (SettlementStatus::Rejected, vec!["cancelled".into()], None)
         }
-        DelegationTermination::Cancelled => (SettlementStatus::Rejected, vec!["cancelled".into()]),
         DelegationTermination::EndpointError => (
             SettlementStatus::Rejected,
             vec!["agent_endpoint_error".into()],
+            None,
         ),
-        DelegationTermination::AcpDisconnect => {
-            (SettlementStatus::Rejected, vec!["acp_disconnect".into()])
-        }
+        DelegationTermination::AcpDisconnect => (
+            SettlementStatus::Rejected,
+            vec!["acp_disconnect".into()],
+            None,
+        ),
     };
 
     let settlement = SettlementEvent {
@@ -389,7 +408,7 @@ pub async fn execute_with_control(
         termination: Some(termination_str(&outcome.termination)),
         transcript_sha256: Some(outcome.transcript_sha256),
         turns_used: outcome.turns_used,
-        error_class: outcome.error_subcode,
+        error_class: criteria_error.or(outcome.error_subcode),
     })
 }
 
