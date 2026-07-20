@@ -43,6 +43,19 @@ pub struct Usage {
 pub struct CompletionResponse {
     pub message: AgentMessage,
     pub usage: Option<Usage>,
+    /// Tool/function calls requested by the agent. Every call re-enters
+    /// authority; the delegation loop unconditionally denies them in
+    /// single-turn mode (no tool channel exists) and records a denial
+    /// entry per call (spec §10.2, T13.7).
+    #[serde(default)]
+    pub tool_calls: Vec<AgentToolCall>,
+}
+
+/// A tool/function call requested by the agent in its response.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AgentToolCall {
+    pub operation: String,
+    pub parameters: serde_json::Value,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -374,6 +387,7 @@ fn parse_openai(bytes: &[u8]) -> Result<CompletionResponse, AgentError> {
             output_tokens: usage.completion_tokens,
             total_tokens: usage.total_tokens,
         }),
+        tool_calls: Vec::new(),
     })
 }
 
@@ -396,6 +410,7 @@ fn parse_anthropic(bytes: &[u8]) -> Result<CompletionResponse, AgentError> {
             output_tokens: usage.output_tokens,
             total_tokens: None,
         }),
+        tool_calls: Vec::new(),
     })
 }
 
