@@ -42,6 +42,11 @@ Repository search and scoped Understand Anything guidance is staged for its
 own documentation commit. Next implementation gap: T13.2 mixed sandboxed and
 agent load with replayable dispatch/settlement ordering.
 
+T13.2 design approved: replace the whole-case `Request::Submit` subprocess
+path with server-owned, per-episode dispatch under the existing semaphore;
+persist dispatch and settlement ordinals and add ledger replay. Implementation
+plan: `.agents/plans/2026-07-20-m13-mixed-dispatch.md`.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None
