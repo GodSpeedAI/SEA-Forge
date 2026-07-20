@@ -322,6 +322,40 @@ pub async fn execute_with_control(
         }
     };
 
+    // Persist the redacted canonical transcript artifact in full mode.
+    // ponytail: only full retention is supported; summarized mode is
+    // intentionally not implemented because digest recomputation is not
+    // independently verifiable (spec §7.4).
+    let artifact_ref = if outcome.transcript.is_empty() {
+        None
+    } else {
+        let hex = outcome
+            .transcript_sha256
+            .strip_prefix("sha256:")
+            .unwrap_or(&outcome.transcript_sha256);
+        let artifact_path = config
+            .root
+            .join("runs")
+            .join(&run)
+            .join(format!("transcript-{hex}.jsonl"));
+        let jsonl = outcome
+            .transcript
+            .iter()
+            .filter_map(|entry| serde_json::to_string(entry).ok())
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::create_dir_all(artifact_path.parent().unwrap())
+            .map_err(|e| ForgeError::io("create transcript artifact parent", e))?;
+        std::fs::write(&artifact_path, jsonl)
+            .map_err(|e| ForgeError::io("write transcript artifact", e))?;
+        Some(
+            artifact_path
+                .strip_prefix(&config.root)
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_else(|_| format!("runs/{run}/transcript-{hex}.jsonl")),
+        )
+    };
+
     // Record transcript evidence and settle.
     let evidence = TranscriptEvidence {
         run_id: run.clone(),
@@ -330,7 +364,7 @@ pub async fn execute_with_control(
         termination: outcome.termination.clone(),
         transcript_sha256: outcome.transcript_sha256.clone(),
         summary: outcome.summary.clone(),
-        artifact_ref: None,
+        artifact_ref: artifact_ref.clone(),
         harvested_refs: vec![],
     };
     let evidence_ref = commit_view(
