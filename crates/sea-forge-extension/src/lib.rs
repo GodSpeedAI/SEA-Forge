@@ -134,6 +134,43 @@ impl ExtensionRegistry {
         Ok(())
     }
 
+    /// Register an immutable runtime adapter. A descriptor change must use a
+    /// new version; silently repointing an installed endpoint is forbidden.
+    pub fn register_immutable_runtime_adapter(
+        &mut self,
+        descriptor: &ExtensionDescriptor,
+    ) -> Result<(), ForgeError> {
+        if descriptor.kind != ExtensionKind::RuntimeAdapter {
+            return Err(ForgeError::Input(
+                "agent endpoint descriptor must be a runtime_adapter".into(),
+            ));
+        }
+        validate_descriptor(descriptor)?;
+        let hash = hash_descriptor(descriptor)?;
+        if let Some(existing) = self
+            .extensions
+            .iter()
+            .find(|entry| entry.extension_id == descriptor.extension_id)
+        {
+            if existing.version != descriptor.version || existing.descriptor_sha256 != hash {
+                return Err(ForgeError::Input(
+                    "registered runtime adapter is immutable; change requires a new version".into(),
+                ));
+            }
+            return Ok(());
+        }
+        self.extensions.push(RegistryEntry {
+            extension_id: descriptor.extension_id.clone(),
+            version: descriptor.version.clone(),
+            descriptor_sha256: hash,
+            trust_level: TrustLevel::FirstParty,
+            status: ExtensionStatus::Active,
+            authority_ref: None,
+        });
+        self.updated_at = chrono_now();
+        Ok(())
+    }
+
     /// Import an extension descriptor. Imported extensions start `disabled`.
     fn import(
         &mut self,

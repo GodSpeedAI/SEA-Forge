@@ -252,6 +252,7 @@ impl DomainForgeCandidate {
                 ..
             } => (resource_type.as_str(), resource_id.as_str()),
             AuthorityAction::ExternalApi { host } => ("external_api", host.as_str()),
+            AuthorityAction::AgentProbe { host, .. } => ("external_api", host.as_str()),
             AuthorityAction::GitCommit { .. } => ("git_commit", "repository"),
             AuthorityAction::GithubPr { .. } => ("github_pr", "pull_request"),
             AuthorityAction::Unclassified { .. } => ("unclassified", "unknown"),
@@ -1120,6 +1121,7 @@ impl AuthorityPolicyBundle {
                 rule.operation_kind.as_str(),
                 "write_file"
                     | "execute_command"
+                    | "agent_probe"
                     | "external_api"
                     | "git_commit"
                     | "github_pr"
@@ -1807,6 +1809,40 @@ impl PolicyAuthorityEngine {
                 host.clone(),
                 json!({"host":host}),
             ),
+            AuthorityAction::AgentProbe {
+                endpoint_ref,
+                descriptor_config_sha256,
+                provider_kind,
+                scheme,
+                host,
+                port,
+                path,
+                model,
+                max_request_bytes,
+                max_response_bytes,
+                timeout_secs,
+                credential_ref,
+                prompt_sha256,
+            } => (
+                "agent_probe",
+                "external_api",
+                endpoint_ref.clone(),
+                json!({
+                    "endpoint_ref": endpoint_ref,
+                    "descriptor_config_sha256": descriptor_config_sha256,
+                    "provider_kind": provider_kind,
+                    "scheme": scheme,
+                    "host": host,
+                    "port": port,
+                    "path": path,
+                    "model": model,
+                    "max_request_bytes": max_request_bytes,
+                    "max_response_bytes": max_response_bytes,
+                    "timeout_secs": timeout_secs,
+                    "credential_ref": credential_ref,
+                    "prompt_sha256": prompt_sha256,
+                }),
+            ),
             AuthorityAction::GitCommit { paths } => (
                 "git_commit",
                 "git_commit",
@@ -1979,6 +2015,18 @@ impl PolicyAuthorityEngine {
                 vec!["extend-authority-policy".into()],
             )
         } else if let Some(rule) = self.bundle.rules.iter().find(|r| {
+            if let AuthorityAction::AgentProbe { host, .. } = action {
+                if !self
+                    .bundle
+                    .policy_surfaces
+                    .external_api
+                    .allow_hosts
+                    .iter()
+                    .any(|allowed| allowed == host)
+                {
+                    return false;
+                }
+            }
             if matches_rule(r, actor, action) {
                 // For ExecuteCommand, the argv0 + environment intersection
                 // is enforced by command_allowed (§7.6 three axes).
@@ -2339,6 +2387,7 @@ fn sod_rule_matches_action(rule: &SodRule, actor_role: &str, action: &AuthorityA
         AuthorityAction::WriteFile { .. } => ("write_file", None),
         AuthorityAction::ExecuteCommand { .. } => ("execute_command", None),
         AuthorityAction::ExternalApi { .. } => ("external_api", None),
+        AuthorityAction::AgentProbe { .. } => ("agent_probe", None),
         AuthorityAction::GitCommit { .. } => ("git_commit", None),
         AuthorityAction::GithubPr { .. } => ("github_pr", None),
         AuthorityAction::Reserved {
@@ -2400,6 +2449,7 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                     _ => true,
                 }
         }
+        AuthorityAction::AgentProbe { .. } => rule.operation_kind == "agent_probe",
         _ => false,
     }
 }
@@ -2564,6 +2614,32 @@ fn malformed_action(action: &AuthorityAction) -> bool {
             argv.is_empty() || invalid_relative_path(cwd)
         }
         AuthorityAction::ExternalApi { host } => host.is_empty(),
+        AuthorityAction::AgentProbe {
+            endpoint_ref,
+            descriptor_config_sha256,
+            provider_kind,
+            scheme,
+            host,
+            path,
+            model,
+            max_request_bytes,
+            max_response_bytes,
+            timeout_secs,
+            prompt_sha256,
+            ..
+        } => {
+            endpoint_ref.is_empty()
+                || descriptor_config_sha256.is_empty()
+                || provider_kind.is_empty()
+                || scheme.is_empty()
+                || host.is_empty()
+                || path.is_empty()
+                || model.is_empty()
+                || *max_request_bytes == 0
+                || *max_response_bytes == 0
+                || *timeout_secs == 0
+                || prompt_sha256.is_empty()
+        }
         AuthorityAction::GitCommit { paths } => paths.is_empty(),
         AuthorityAction::Reserved {
             resource_type,

@@ -250,6 +250,13 @@ enum Command {
         #[arg(long, default_value = "operator_local")]
         actor: String,
     },
+    /// Governed HTTP agent connectivity (M12).
+    Agent {
+        #[command(subcommand)]
+        action: AgentCommand,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -341,6 +348,23 @@ enum EnvCommand {
     List,
     /// Show a specific EnvironmentSpec.
     Show { reference: String },
+}
+
+#[derive(Subcommand)]
+enum AgentCommand {
+    List,
+    Probe {
+        endpoint: String,
+        prompt: String,
+        #[arg(long)]
+        model: Option<String>,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: String,
+        #[arg(long, default_value = "operator_local")]
+        entity: String,
+        #[arg(long, default_value = "cli")]
+        process: String,
+    },
 }
 
 #[derive(Clone, ValueEnum)]
@@ -746,6 +770,26 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             &root,
             &actor,
         )
+        .map_err(|e| (1, e)),
+        Command::Agent { action, root } => match action {
+            AgentCommand::List => commands::agent::list(&root).map(|_| 0),
+            AgentCommand::Probe {
+                endpoint,
+                prompt,
+                model,
+                policy,
+                entity,
+                process,
+            } => commands::agent::probe(
+                &root,
+                &endpoint,
+                &prompt,
+                model.as_deref(),
+                &policy,
+                &entity,
+                &process,
+            ),
+        }
         .map_err(|e| (1, e)),
     }
 }

@@ -1,16 +1,18 @@
 # Current Status
 
-Updated: 2026-07-17
+Updated: 2026-07-20
 
 ## Objective
 
-Implement Tasks 2–3 (M10 E8/ADLC/ODI templates + M11 Thoth) from
-`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`, then fix the
-CEP-0008 flat profile divergence debt from `.agents/OBSERVED_DEBT.md`. M9
-complete. M10 COMPLETE and gated (332 tests). M11 COMPLETE and gated (351
-tests, P1-P4b, no-async-kernel). CEP-0008 adapter COMPLETE and gated (372
-tests, P1-P4b, no-async-kernel). All three tasks done. CEP-0008 and SodRule
-debt entries are resolved and removed. No commit per task instructions.
+Continue implementing `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`
+Tasks 4–8 (M12 AgentProvider seam, M13 governed delegation, M14 topology
+templates, M15 Thoth manager loop, M16 ACP + SWE_SEED). M9–M11 + CEP-0008
+adapter are complete and committed. M12 (Task 4) base is in progress:
+sea-forge-agent adapter crate, exact-action external_api authority,
+governed agent_probe service, and CLI/server wiring are landed (394 tests,
+clippy clean). Closing the remaining M12 gaps (T12.5 dependency-boundary
+gate, snapshot-stale on endpoint register, T12.6 error taxonomy, spec §5
+claim table) before the M12 cumulative gate.
 
 ## SodRule transition scope closeout (2026-07-17)
 
@@ -625,6 +627,58 @@ Cumulative gate on `full-spec` after all M9 slices:
   (sea-forge-self-model included in the inventory).
 - Tracked `.sea-forge/**`: still 0 files.
 - T9.1–T9.5 + V5 all green. M9 is code-complete and gated. Remaining: M10–M16.
+
+## M12 progress (Task 4 — E14 AgentProvider seam)
+
+Base landed (commit pending): `sea-forge-agent` adapter crate with
+OpenAI-compatible + Anthropic providers (object-safe `AgentProvider` via
+`BoxFuture`, no async-trait dep), `Operation::AgentProbe` + exact-action
+`AuthorityAction::AgentProbe` (binds endpoint_ref +
+descriptor_config_sha256 + normalized scheme/host/port/path/model/limits
++ credential_ref + prompt_sha256 so a config reload cannot repoint an
+authorized call), `external_api` surface `allow_hosts` enforcement,
+DNS-rebinding-safe client pinning (`resolve_to_addrs`), `no_proxy` +
+`redirect::Policy::none()` + HTTPS-only (explicit loopback test mode),
+private/loopback/link-local/multicast/metadata-address rejection, separate
+`secret_access` mediation before credential resolution, `Zeroizing<String>`
+credential handling, immutable `runtime_adapter` endpoint registration
+(descriptor change requires a new version), governed `agent_probe` service
+creating intent→plan→authority→evidence→settlement with typed error
+classes, and CLI `agent list|probe` over the server socket. T12.1–T12.3
+green (4 server conformance tests); provider-contract tests pin request
+shapes, paths, and auth headers for both provider kinds.
+
+Verification (worktree, pre-commit of base): `cargo fmt --all -- --check`
+clean; `cargo clippy --workspace --all-targets --all-features --locked
+-D warnings` clean; `cargo test --workspace --all-features --locked`
+**394 tests, 0 failed, 0 platform skips** (was 372 after CEP-0008; +22:
+8 agent lib + 3 provider-contract + 4 server conformance_m12 + 1
+authority m12 exact-action + 3 core/extension/case_engine AgentProbe +
+3 agent config/network tests).
+
+Dependencies (owner-approved per plan slice 0.3, confined to adapter
+crates): `reqwest 0.12` (default-features=false, features
+json+rustls-tls+stream), `url 2.5`, `zeroize 1.8`. Cargo.lock refreshed.
+
+Remaining M12 gaps (before cumulative gate):
+- T12.5 dependency-boundary gate: rewrite justfile `no-async-kernel` to an
+  explicit kernel-crate inventory (add sea-forge-domainforge,
+  sea-forge-spec-pipeline, sea-forge-cell, sea-forge-artifact-ip) and a
+  forbidden-dependency set covering async runtimes AND HTTP clients
+  (tokio, reqwest, hyper, async-std, …), excluding only approved adapter
+  crates (sea-forge-agent, sea-forge-server).
+- Slice 4.2 finish: `ServerConfig::load` must call `agent.validate()`
+  (last-known-good on invalid); endpoint registration must mark the
+  self-model snapshot stale when one exists
+  (`sea_forge_self_model::store::mark_current_stale`).
+- Slice 4.5 finish / T12.6: probe-level error-taxonomy tests for
+  unreachable/4xx/5xx/oversize/redirect/schema-invalid → rejected
+  settlement + typed `error_class` + no fallback; CLI exit code for
+  rejected probe aligned to repo convention (exit 3).
+- Streaming (spec §7.4 redaction + split-chunk sweep) is E15/M13 scope;
+  M12 probe is non-streaming (hash-only persistence ⇒ sweep trivially
+  holds). Recorded in spec §5 claim table.
+- Spec §5 claim table update + cumulative gate + this status refresh.
 
 ## Decisions
 

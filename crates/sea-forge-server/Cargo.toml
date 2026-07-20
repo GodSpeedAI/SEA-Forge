@@ -8,12 +8,20 @@ repository.workspace = true
 description = "SEA Forge concurrent case server (M3)."
 
 [dependencies]
+chrono.workspace = true
+sea-forge-agent = { path = "../sea-forge-agent", version = "0.1.0" }
+sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-extension = { path = "../sea-forge-extension", version = "0.1.0" }
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+sha2.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "process", "sync", "time", "fs", "macros"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+zeroize.workspace = true
 
 [lints]
 workspace = true

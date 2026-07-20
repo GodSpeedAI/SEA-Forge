@@ -556,6 +556,11 @@ fn run_plan_inner(
                     if allowed {
                         for (index, operation) in operations.iter().enumerate() {
                             let granted = &authorized[index];
+                            if matches!(operation, Operation::AgentProbe { .. }) {
+                                return Err(ForgeError::Input(
+                                    "agent_probe must be dispatched by sea-forge-server".into(),
+                                ));
+                            }
                             let grant = engine.grant(
                                 &granted.decision,
                                 &granted.committed,
@@ -617,6 +622,9 @@ fn run_plan_inner(
                                     } else {
                                         execution = Some(result);
                                     }
+                                }
+                                Operation::AgentProbe { .. } => {
+                                    unreachable!("agent_probe is rejected before execution")
                                 }
                             }
                         }

@@ -17,6 +17,7 @@ use tokio::net::{UnixListener, UnixStream};
 use tokio::process::Command;
 use tokio::sync::{Mutex, Semaphore};
 
+pub mod agent_probe;
 pub mod config;
 
 pub use config::ServerConfig;
@@ -79,6 +80,19 @@ enum Request {
         approval_id: String,
         #[serde(default)]
         note: Option<String>,
+    },
+    AgentList,
+    AgentProbe {
+        endpoint: String,
+        prompt: String,
+        #[serde(default)]
+        model: Option<String>,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default = "default_entity")]
+        entity: String,
+        #[serde(default = "default_process")]
+        process: String,
     },
 }
 
@@ -288,6 +302,43 @@ async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_jso
             match result {
                 Ok(output) => serde_json::json!({"ok": true, "output": output}),
                 Err(e) => serde_json::json!({"error": e}),
+            }
+        }
+        Request::AgentList => agent_probe::list(&state.config.agent),
+        Request::AgentProbe {
+            endpoint,
+            prompt,
+            model,
+            policy,
+            entity,
+            process,
+        } => {
+            let permit = match state.semaphore.acquire().await {
+                Ok(permit) => permit,
+                Err(_) => return serde_json::json!({"error":"server semaphore unavailable"}),
+            };
+            let config = state.config.clone();
+            let result = agent_probe::probe(
+                &config,
+                agent_probe::ProbeRequest {
+                    endpoint_id: &endpoint,
+                    prompt: &prompt,
+                    model: model.as_deref(),
+                    policy_path: &policy,
+                    entity: &entity,
+                    process: &process,
+                },
+                &agent_probe::EnvironmentCredentialResolver,
+            )
+            .await;
+            drop(permit);
+            match result {
+                Ok(outcome) => serde_json::to_value(outcome).unwrap_or_else(
+                    |_| serde_json::json!({"error":"probe response serialization failed"}),
+                ),
+                Err(error) => {
+                    serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+                }
             }
         }
     }

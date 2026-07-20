@@ -1,3 +1,4 @@
+use sea_forge_agent::AgentConfig;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -13,6 +14,8 @@ pub struct ServerConfig {
     pub approval_ttl_hours: u64,
     #[serde(default = "default_root")]
     pub root: PathBuf,
+    #[serde(default)]
+    pub agent: AgentConfig,
 }
 
 fn default_max_concurrent() -> usize {
@@ -36,6 +39,7 @@ impl Default for ServerConfig {
             notify_command: None,
             approval_ttl_hours: default_approval_ttl(),
             root: default_root(),
+            agent: AgentConfig::default(),
         }
     }
 }

@@ -1,8 +1,10 @@
 use sea_forge_authority::{
-    resolve_candidates, AuthorityPolicyBundle, GovernanceDisposition as D, GovernanceVerdict,
-    PolicyAuthorityEngine, ResolutionPolicy,
+    resolve_candidates, AuthorityEvaluation, AuthorityPolicyBundle, GovernanceDisposition as D,
+    GovernanceVerdict, PolicyAuthorityEngine, ResolutionPolicy,
 };
+use sea_forge_core::types::{Actor, ActorRole, AuthorityAction};
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
 fn candidate(disposition: D) -> GovernanceVerdict {
     GovernanceVerdict {
@@ -138,6 +140,110 @@ rules:
             "schema_error"
         );
     }
+}
+
+#[test]
+fn m12_agent_probe_requires_exact_endpoint_policy_and_grant_binding() {
+    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+policy_surfaces:
+  external_api:
+    mode: deny-by-default
+    allow_hosts: [127.0.0.1]
+rules:
+  - name: allow-agent-probe
+    verdict: allow
+    actor_role: operator
+    operation_kind: agent_probe
+"#,
+    )
+    .unwrap();
+    let binding = bundle.resolve_identity("operator_local", ActorRole::Operator);
+    let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+    let actor = Actor {
+        actor_id: "operator_local".into(),
+        role: ActorRole::Operator,
+    };
+    let action = AuthorityAction::AgentProbe {
+        endpoint_ref: "local-test".into(),
+        descriptor_config_sha256: "sha256:descriptor".into(),
+        provider_kind: "openai_compatible".into(),
+        scheme: "http".into(),
+        host: "127.0.0.1".into(),
+        port: 8080,
+        path: "/".into(),
+        model: "test-model".into(),
+        max_request_bytes: 1024,
+        max_response_bytes: 2048,
+        timeout_secs: 5,
+        credential_ref: Some("TEST_KEY".into()),
+        prompt_sha256: "sha256:prompt".into(),
+    };
+    let decision = engine
+        .evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding,
+            run_id: "run_agent_probe",
+            case_id: "case_agent_probe",
+            plan_item_id: "item_agent_probe",
+            sequence: 1,
+            action: &action,
+            workspace_root: Path::new("/tmp/workspace"),
+            evidence_refs: vec!["intent:agent_probe".into()],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            environment: None,
+        })
+        .unwrap();
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Allow);
+
+    let root = tempfile::tempdir().unwrap();
+    let stream =
+        sea_forge_ledger::LedgerStream::open(root.path(), "agent-probe-authority", "test").unwrap();
+    let committed = stream
+        .commit_typed("authority_decision", vec![], &decision, vec![])
+        .unwrap();
+    engine
+        .grant(&decision, &committed, &action, None)
+        .expect("exact agent probe action should mint a grant");
+
+    let substituted = match action.clone() {
+        AuthorityAction::AgentProbe {
+            endpoint_ref,
+            descriptor_config_sha256,
+            provider_kind,
+            scheme,
+            host,
+            port,
+            path,
+            max_request_bytes,
+            max_response_bytes,
+            timeout_secs,
+            credential_ref,
+            prompt_sha256,
+            ..
+        } => AuthorityAction::AgentProbe {
+            endpoint_ref,
+            descriptor_config_sha256,
+            provider_kind,
+            scheme,
+            host,
+            port,
+            path,
+            model: "different-model".into(),
+            max_request_bytes,
+            max_response_bytes,
+            timeout_secs,
+            credential_ref,
+            prompt_sha256,
+        },
+        _ => unreachable!(),
+    };
+    assert!(engine
+        .grant(&decision, &committed, &substituted, None)
+        .is_err());
 }
 
 fn expected(left: &D, right: &D) -> D {
