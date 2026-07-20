@@ -10,8 +10,12 @@
 use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::{
+    errors::ForgeError,
     ids::{case_id, random_id, run_id, valid_run_id},
-    types::{Actor, ActorRole, AuthorityAction, Verdict},
+    types::{
+        Actor, ActorRole, AuthorityAction, CasePlan, DelegationTermination, SettlementEvent,
+        SettlementStatus, TranscriptEvidence, TranscriptSummary, Verdict,
+    },
 };
 use sea_forge_ledger::LedgerStream;
 use serde::{Deserialize, Serialize};
@@ -58,14 +62,15 @@ struct DelegationHandle {
 }
 
 impl ServerState {
-    pub fn new(config: ServerConfig) -> Self {
+    pub fn new(config: ServerConfig) -> Result<Self, ForgeError> {
+        recover_cancelled_delegations(&config)?;
         let max = config.max_concurrent_runs.max(1);
-        Self {
+        Ok(Self {
             config,
             cases: Mutex::new(HashMap::new()),
             delegations: Mutex::new(HashMap::new()),
             semaphore: Semaphore::new(max),
-        }
+        })
     }
 
     /// Reload config defensively between dispatches (§8.4).
@@ -75,6 +80,122 @@ impl ServerState {
             Err(e) => Err(e),
         }
     }
+}
+
+/// Recover a cancellation whose control record committed before server loss.
+/// HTTP delegations are never resumed: recovery writes the sole terminal
+/// rejected/cancelled outcome from ledger truth.
+fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError> {
+    let ledgers = config.root.join("ledgers");
+    if !ledgers.exists() {
+        return Ok(());
+    }
+    for dir in std::fs::read_dir(&ledgers).map_err(|e| ForgeError::io("read ledgers", e))? {
+        let dir = dir.map_err(|e| ForgeError::io("read ledger entry", e))?;
+        let name = dir.file_name().to_string_lossy().into_owned();
+        if !dir
+            .file_type()
+            .map_err(|e| ForgeError::io("read ledger entry type", e))?
+            .is_dir()
+            || !name.starts_with("case-")
+        {
+            continue;
+        }
+        let ledger = LedgerStream::open(&config.root, &name, "sea-forge-server")?;
+        ledger.verify()?;
+        let entries = ledger.read_entries()?;
+        for control in entries
+            .iter()
+            .filter(|entry| entry.record_kind == "control_request")
+        {
+            let run = control
+                .payload
+                .get("run_id")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| ForgeError::Input("invalid cancellation control run_id".into()))?;
+            if entries.iter().any(|entry| {
+                entry.record_kind == "settlement"
+                    && entry
+                        .payload
+                        .get("run_id")
+                        .and_then(serde_json::Value::as_str)
+                        == Some(run)
+            }) {
+                continue;
+            }
+            let item_id = control
+                .payload
+                .get("plan_item_id")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| {
+                    ForgeError::Input("invalid cancellation control plan_item_id".into())
+                })?;
+            let plan_path = config.root.join("runs").join(run).join("plan.json");
+            let plan: CasePlan = serde_json::from_slice(
+                &std::fs::read(&plan_path)
+                    .map_err(|e| ForgeError::io("read cancelled delegation plan", e))?,
+            )?;
+            let endpoint_ref = plan
+                .items
+                .iter()
+                .find(|item| item.plan_item_id == item_id)
+                .and_then(|item| item.operations.first())
+                .and_then(|operation| match operation {
+                    sea_forge_core::types::Operation::AgentTask { endpoint_ref, .. } => {
+                        Some(endpoint_ref.as_str())
+                    }
+                    _ => None,
+                })
+                .ok_or_else(|| {
+                    ForgeError::Input("cancelled delegation plan missing agent_task".into())
+                })?;
+            let evidence = TranscriptEvidence {
+                run_id: run.into(),
+                endpoint_ref: endpoint_ref.into(),
+                turns_used: 0,
+                termination: DelegationTermination::Cancelled,
+                transcript_sha256: sea_forge_agent::transcript_sha256(&[]),
+                summary: TranscriptSummary {
+                    turn_count: 0,
+                    tool_calls: 0,
+                    final_excerpt: String::new(),
+                },
+                artifact_ref: None,
+                harvested_refs: vec![],
+            };
+            let evidence_ref = agent_probe::commit_view(
+                &ledger,
+                "agent_task_evidence",
+                vec![run.into(), item_id.into()],
+                &evidence,
+                &config
+                    .root
+                    .join("runs")
+                    .join(run)
+                    .join("transcript-evidence.json"),
+                vec![control.entry_ulid.clone()],
+            )?;
+            let settlement = SettlementEvent {
+                version: "0.2".into(),
+                settlement_id: random_id("set")?,
+                run_id: run.into(),
+                status: SettlementStatus::Rejected,
+                basis: vec!["cancelled".into()],
+                review_required: false,
+                settled_at: Utc::now().to_rfc3339(),
+                criteria_ref: None,
+            };
+            agent_probe::commit_view(
+                &ledger,
+                "settlement",
+                vec![run.into()],
+                &settlement,
+                &config.root.join("runs").join(run).join("settlement.json"),
+                vec![evidence_ref.entry_ulid().into()],
+            )?;
+        }
+    }
+    Ok(())
 }
 
 /// NDJSON request envelope.
@@ -177,7 +298,7 @@ fn default_timeout() -> u64 {
 /// Start the server.
 pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>> {
     let socket_path = config.socket_path.clone();
-    let state = Arc::new(ServerState::new(config));
+    let state = Arc::new(ServerState::new(config)?);
 
     // Remove stale socket.
     let _ = std::fs::remove_file(&socket_path);
@@ -777,7 +898,7 @@ mod cancellation_tests {
             root: root.path().to_path_buf(),
             ..ServerConfig::default()
         };
-        let state = Arc::new(ServerState::new(config));
+        let state = Arc::new(ServerState::new(config).unwrap());
         let run = run_id().unwrap();
         let case = case_id().unwrap();
         let cancel = Arc::new(AtomicBool::new(false));
