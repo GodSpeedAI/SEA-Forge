@@ -50,6 +50,48 @@ pub fn probe(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn delegate(
+    root: &Path,
+    endpoint: &str,
+    instruction: &str,
+    model: Option<&str>,
+    max_turns: u32,
+    token_budget: Option<u64>,
+    policy: &str,
+    entity: &str,
+    process: &str,
+) -> Result<u8, ForgeError> {
+    let response = request(
+        root,
+        json!({
+            "verb": "delegate",
+            "endpoint": endpoint,
+            "instruction": instruction,
+            "model": model,
+            "max_turns": max_turns,
+            "token_budget": token_budget,
+            "policy": policy,
+            "entity": entity,
+            "process": process,
+        }),
+    )?;
+    println!("{}", serde_json::to_string_pretty(&response)?);
+    if response.get("error").is_some() {
+        return Err(ForgeError::Input(
+            response["error"]
+                .as_str()
+                .unwrap_or("agent delegation failed")
+                .into(),
+        ));
+    }
+    Ok(if response["settlement"] == "accepted" {
+        0
+    } else {
+        3
+    })
+}
+
 fn request(root: &Path, request: Value) -> Result<Value, ForgeError> {
     let socket_path = root.join("server.sock");
     let mut stream = UnixStream::connect(&socket_path)

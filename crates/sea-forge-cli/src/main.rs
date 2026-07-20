@@ -365,6 +365,23 @@ enum AgentCommand {
         #[arg(long, default_value = "cli")]
         process: String,
     },
+    /// Delegate a task to an agent endpoint (M13).
+    Delegate {
+        endpoint: String,
+        instruction: String,
+        #[arg(long)]
+        model: Option<String>,
+        #[arg(long, default_value_t = 1)]
+        max_turns: u32,
+        #[arg(long)]
+        token_budget: Option<u64>,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: String,
+        #[arg(long, default_value = "operator_local")]
+        entity: String,
+        #[arg(long, default_value = "cli")]
+        process: String,
+    },
 }
 
 #[derive(Clone, ValueEnum)]
@@ -785,6 +802,26 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 &endpoint,
                 &prompt,
                 model.as_deref(),
+                &policy,
+                &entity,
+                &process,
+            ),
+            AgentCommand::Delegate {
+                endpoint,
+                instruction,
+                model,
+                max_turns,
+                token_budget,
+                policy,
+                entity,
+                process,
+            } => commands::agent::delegate(
+                &root,
+                &endpoint,
+                &instruction,
+                model.as_deref(),
+                max_turns,
+                token_budget,
                 &policy,
                 &entity,
                 &process,
