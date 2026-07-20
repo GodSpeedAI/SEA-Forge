@@ -422,7 +422,7 @@ function manager_iterate(case_id, grant, i):
 | T13.4 | turn-cap breach | `turn_cap_exceeded`; criteria still evaluated against produced artifacts | green (server conformance_m13: token_budget breach → turn_cap_exceeded, transcript evidence committed) |
 | T13.5 | agent asserts success, criteria fail | settled rejected (narration has no standing) | green (`agent_output_must_contain` literal criterion rejects missing output) |
 | T13.6 | selected retention design | same redacted canonical `transcript_sha256`; selected §7.4 verification property is demonstrated | green (full-mode redacted transcript artifact persisted; recomputed hash matches recorded `transcript_sha256`) |
-| T13.7 | hostile transcript (out-of-grant request) | recorded denial; no side effect; run continues/settles on criteria | pending (hostile tool request handling) |
+| T13.7 | hostile transcript (out-of-grant request) | recorded denial; no side effect; run continues/settles on criteria | green (`AgentToolCall` model; delegation loop records `tool_request_denied` per call, no execution, dialogue settles on criteria) |
 
 ### 17.3 Core Conformance — M14 (E16a, topology templates)
 

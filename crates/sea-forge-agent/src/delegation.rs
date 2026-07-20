@@ -203,6 +203,17 @@ pub async fn run_delegation(
                 turns += 1;
                 total_tokens += usage_tokens(&resp);
 
+                // Every tool/function call requested by the agent re-enters
+                // authority. In single-turn mode there is no tool channel,
+                // so every request is unconditionally denied and recorded
+                // (spec §10.2, T13.7). No side effect occurs.
+                for tool_call in &resp.tool_calls {
+                    transcript.push(TranscriptEntry {
+                        role: "system".into(),
+                        content: format!("tool_request_denied:{}", tool_call.operation),
+                    });
+                }
+
                 // A request arriving while the provider was in flight wins
                 // over completion; the response remains in transcript evidence.
                 if cancel() {
@@ -372,6 +383,7 @@ mod tests {
                         output_tokens: Some(20),
                         total_tokens: Some(30),
                     }),
+                    tool_calls: Vec::new(),
                 })
             })
         }
@@ -459,6 +471,7 @@ mod tests {
                             content: "response raced with cancellation".into(),
                         },
                         usage: None,
+                        tool_calls: Vec::new(),
                     })
                 })
             }
@@ -606,5 +619,73 @@ mod tests {
         let b = canonical_jsonl(&entries);
         assert_eq!(a, b);
         assert!(a.contains("\n"));
+    }
+
+    /// T13.7: an out-of-grant tool request from the agent is recorded as
+    /// denied in the transcript, produces no side effect, and the dialogue
+    /// settles normally.
+    #[tokio::test]
+    async fn hostile_tool_request_is_denied_without_side_effect() {
+        struct HostileProvider;
+        impl AgentProvider for HostileProvider {
+            fn kind(&self) -> crate::ProviderKind {
+                crate::ProviderKind::OpenAiCompatible
+            }
+            fn complete<'a>(
+                &'a self,
+                _: CompletionRequest,
+                _: Zeroizing<String>,
+            ) -> crate::provider::BoxFuture<'a, Result<CompletionResponse, AgentError>>
+            {
+                Box::pin(async {
+                    Ok(CompletionResponse {
+                        message: AgentMessage {
+                            role: MessageRole::Assistant,
+                            content: "done".into(),
+                        },
+                        usage: None,
+                        tool_calls: vec![crate::AgentToolCall {
+                            operation: "execute_command".into(),
+                            parameters: serde_json::json!({"argv": ["rm", "-rf", "/"]}),
+                        }],
+                    })
+                })
+            }
+            fn stream<'a>(
+                &'a self,
+                _: CompletionRequest,
+                _: Zeroizing<String>,
+            ) -> crate::provider::BoxFuture<'a, Result<Box<dyn crate::AgentEventStream>, AgentError>>
+            {
+                unimplemented!()
+            }
+        }
+
+        let provider = HostileProvider;
+        let config = DelegationConfig {
+            model: "test-model".into(),
+            instruction: "test".into(),
+            max_turns: 1,
+            token_budget: None,
+            max_output_tokens: None,
+        };
+        let outcome = run_delegation(&provider, Zeroizing::new("key".into()), &config, || false)
+            .await
+            .unwrap();
+
+        assert_eq!(outcome.termination, DelegationTermination::Completed);
+        assert_eq!(outcome.final_output.as_deref(), Some("done"));
+        let denial = outcome
+            .transcript
+            .iter()
+            .find(|e| e.role == "system" && e.content.starts_with("tool_request_denied:"));
+        assert!(
+            denial.is_some(),
+            "transcript must record the tool-request denial"
+        );
+        assert!(
+            denial.unwrap().content.contains("execute_command"),
+            "denial must name the refused operation"
+        );
     }
 }

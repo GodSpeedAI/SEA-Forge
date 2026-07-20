@@ -19,6 +19,7 @@ pub use delegation::{
 };
 pub use network::{prepare_client, validate_destination, NetworkPolicy};
 pub use provider::{
-    AgentError, AgentEvent, AgentEventStream, AgentMessage, AgentProvider, AnthropicProvider,
-    CompletionRequest, CompletionResponse, MessageRole, OpenAiCompatibleProvider, Usage,
+    AgentError, AgentEvent, AgentEventStream, AgentMessage, AgentProvider, AgentToolCall,
+    AnthropicProvider, CompletionRequest, CompletionResponse, MessageRole,
+    OpenAiCompatibleProvider, Usage,
 };
