@@ -517,3 +517,131 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
         "semaphore never reached cap: observed {observed} (test may need more delay)"
     );
 }
+
+/// T13.3: cancel one of three concurrent delegations; siblings settle
+/// normally. The cancelled run settles rejected with termination
+/// "cancelled"; the other two complete.
+#[tokio::test]
+async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let stub_task = tokio::spawn(async move {
+        let mut handlers = vec![];
+        for _ in 0..3 {
+            let Ok((mut stream, _)) = listener.accept().await else {
+                break;
+            };
+            handlers.push(tokio::spawn(async move {
+                // Delay so cancellation can arrive mid-flight.
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                let mut req = vec![0_u8; 4096];
+                let _ = stream.read(&mut req).await;
+                let body =
+                    br#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#;
+                let header = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = stream.write_all(header.as_bytes()).await;
+                let _ = stream.write_all(body).await;
+            }));
+        }
+        for h in handlers {
+            let _ = h.await;
+        }
+    });
+
+    let root = tempfile::tempdir().unwrap();
+    // Policy includes run_cancel so the cancellation authority succeeds.
+    let policy_path = root.path().join("policy.yaml");
+    fs::write(
+        &policy_path,
+        "version: \"0.1\"\n\
+         policy_surfaces:\n\
+         \x20 external_api:\n\
+         \x20   mode: deny-by-default\n\
+         \x20   allow_hosts: [127.0.0.1]\n\
+         rules:\n\
+         \x20 - name: allow-agent-task\n\
+         \x20   verdict: allow\n\
+         \x20   actor_role: operator\n\
+         \x20   operation_kind: agent_task\n\
+         \x20 - name: allow-cancel\n\
+         \x20   verdict: allow\n\
+         \x20   actor_role: operator\n\
+         \x20   operation_kind: run_cancel\n",
+    )
+    .unwrap();
+
+    let mut ep = endpoint(address.port());
+    ep.credential_ref = None;
+    let config = ServerConfig {
+        root: root.path().to_path_buf(),
+        max_concurrent_runs: 3,
+        agent: AgentConfig {
+            endpoints: vec![ep],
+            ..AgentConfig::default()
+        },
+        ..ServerConfig::default()
+    };
+    let state = Arc::new(ServerState::new(config));
+
+    let run_a = sea_forge_core::ids::run_id().unwrap();
+    let run_b = sea_forge_core::ids::run_id().unwrap();
+    let run_c = sea_forge_core::ids::run_id().unwrap();
+    let policy_str = policy_path.to_string_lossy().into_owned();
+
+    let mk_delegate = |rid: String| {
+        let state = Arc::clone(&state);
+        let policy = policy_str.clone();
+        tokio::spawn(async move {
+            sea_forge_server::handle_request(
+                Request::Delegate {
+                    endpoint: "local-test".into(),
+                    instruction: "test".into(),
+                    run_id: Some(rid),
+                    model: None,
+                    max_turns: 1,
+                    token_budget: None,
+                    criteria: SettlementCriteria::default(),
+                    policy,
+                    entity: "operator_local".into(),
+                    process: "test".into(),
+                },
+                &state,
+            )
+            .await
+        })
+    };
+
+    let task_a = mk_delegate(run_a.clone());
+    let task_b = mk_delegate(run_b.clone());
+    let task_c = mk_delegate(run_c.clone());
+
+    // Give the delegations time to register before cancelling.
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let cancel_result = sea_forge_server::handle_request(
+        Request::CancelDelegation {
+            run_id: run_b.clone(),
+            policy: policy_str.clone(),
+            entity: "operator_local".into(),
+            process: "test".into(),
+        },
+        &state,
+    )
+    .await;
+    assert_eq!(cancel_result["state"], "cancellation_requested");
+
+    let res_a = task_a.await.unwrap();
+    let res_b = task_b.await.unwrap();
+    let res_c = task_c.await.unwrap();
+    let _ = stub_task.await;
+
+    assert_eq!(res_a["termination"], "completed");
+    assert_eq!(res_a["settlement"], "accepted");
+    assert_eq!(res_c["termination"], "completed");
+    assert_eq!(res_c["settlement"], "accepted");
+    assert_eq!(res_b["termination"], "cancelled");
+    assert_eq!(res_b["settlement"], "rejected");
+}

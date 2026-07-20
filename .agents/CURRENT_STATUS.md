@@ -28,8 +28,11 @@ agent delegations with `max_concurrent_runs=2` never exceed 2 in-flight
 connections. T13.7 hostile tool requests landed: `AgentToolCall` type
 models tool/function calls in provider responses; the delegation loop
 unconditionally records `tool_request_denied` per call, no side effects,
-dialogue settles on criteria. 430 tests pass. Next: T13.3 restart/sibling
-scheduler path, full T13.1 CLI/server execution routing.
+dialogue settles on criteria. T13.3 cancel-one-of-three landed: three
+concurrent delegations, cancelling the middle one mid-flight settles it
+rejected/cancelled while siblings settle accepted/completed. 431 tests
+pass. Next: T13.3 restart/successor-episode, full T13.1 CLI/server
+execution routing.
 
 ## SodRule transition scope closeout (2026-07-17)
 
