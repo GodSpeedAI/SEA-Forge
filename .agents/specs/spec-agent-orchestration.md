@@ -416,7 +416,7 @@ function manager_iterate(case_id, grant, i):
 
 | # | Test | Expected | Status |
 |---|---|---|---|
-| T13.1 | two-item case: `agent_task` → sentry-gated `sandboxed_task` | chain settles end-to-end; downstream saw only settled evidence | partial: planner accepts `agent_task` + sentry gates on settlement status; full execution routing pending |
+| T13.1 | two-item case: `agent_task` → sentry-gated `sandboxed_task` | chain settles end-to-end; downstream saw only settled evidence | green (CLI routes `agent_task` through server; server settlement event unlocks downstream sandboxed task) |
 | T13.2 | 5 mixed sandboxed and agent episodes, server semaphore=2 | server-owned scheduler respects one shared cap; ledger replay reproduces ordering | partial: semaphore cap proven for concurrent agent delegations; mixed sandboxed+agent and ledger-replay ordering pending |
 | T13.3 | cancel one of three in flight; restart during cancel or ACP approval | durable control/permission state yields exactly one terminal outcome or ledger-linked successor; siblings settle normally | partial: cancel-one-of-three proven (siblings settle accepted, cancelled settles rejected); restart/successor-episode scenario pending |
 | T13.4 | turn-cap breach | `turn_cap_exceeded`; criteria still evaluated against produced artifacts | green (server conformance_m13: token_budget breach → turn_cap_exceeded, transcript evidence committed) |

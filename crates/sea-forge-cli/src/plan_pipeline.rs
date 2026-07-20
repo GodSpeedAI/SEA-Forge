@@ -515,21 +515,126 @@ fn run_plan_inner(
                         Some(&item_id),
                         json!({"instance": instance}),
                     )?;
-                    let run_id = run_ids
-                        .get(&(item_id.clone(), instance))
-                        .cloned()
-                        .ok_or_else(|| ForgeError::Internal("missing allocated episode".into()))?;
+                    let item = plan
+                        .items
+                        .iter()
+                        .find(|item| item.plan_item_id == item_id)
+                        .ok_or_else(|| ForgeError::Internal("missing plan item".into()))?;
+                    let run_id = if item.item_kind == ItemKind::AgentTask {
+                        ids::run_id()?
+                    } else {
+                        run_ids
+                            .get(&(item_id.clone(), instance))
+                            .cloned()
+                            .ok_or_else(|| {
+                                ForgeError::Internal("missing allocated episode".into())
+                            })?
+                    };
                     let run_dir = runs_dir.join(&run_id);
                     let workspace = run_dir.join("workspace");
                     let artifacts = run_dir.join("artifacts");
                     fs::create_dir_all(&workspace)
                         .and_then(|_| fs::create_dir_all(&artifacts))
                         .map_err(|error| ForgeError::io("create episode directories", error))?;
-                    let item = plan
-                        .items
-                        .iter()
-                        .find(|item| item.plan_item_id == item_id)
-                        .ok_or_else(|| ForgeError::Internal("missing plan item".into()))?;
+
+                    // Agent tasks delegate to sea-forge-server; no local
+                    // execution. Authority, transcript evidence, and
+                    // settlement are handled by the server delegation
+                    // service (spec §10.2, T13.1).
+                    if item.item_kind == ItemKind::AgentTask {
+                        let (endpoint_ref, instruction, max_turns, token_budget) =
+                            match &item.operations[0] {
+                                Operation::AgentTask {
+                                    endpoint_ref,
+                                    instruction,
+                                    max_turns,
+                                    token_budget,
+                                    ..
+                                } => (
+                                    endpoint_ref.as_str(),
+                                    instruction.as_str(),
+                                    *max_turns,
+                                    *token_budget,
+                                ),
+                                _ => unreachable!("validated by case_engine"),
+                            };
+                        let delegate_response = crate::commands::agent::request(
+                            &root,
+                            json!({
+                                "verb": "delegate",
+                                "endpoint": endpoint_ref,
+                                "instruction": instruction,
+                                "max_turns": max_turns,
+                                "token_budget": token_budget,
+                                "criteria": item.settlement_criteria,
+                                "policy": options.policy.to_string_lossy(),
+                                "entity": options.entity,
+                                "process": options.process,
+                            }),
+                        )?;
+                        let status = match delegate_response["settlement"].as_str() {
+                            Some("accepted") => SettlementStatus::Accepted,
+                            _ => SettlementStatus::Rejected,
+                        };
+                        let settlement = SettlementEvent {
+                            version: RECORD_VERSION.into(),
+                            settlement_id: ids::random_id("set")?,
+                            run_id: run_id.clone(),
+                            status: status.clone(),
+                            basis: vec!["agent_task_delegated".into()],
+                            review_required: false,
+                            settled_at: Utc::now().to_rfc3339(),
+                            criteria_ref: item.settlement_criteria_ref.clone(),
+                        };
+                        stream.commit_typed(
+                            "settlement_event",
+                            vec![
+                                case_id.clone(),
+                                run_id.clone(),
+                                settlement.settlement_id.clone(),
+                            ],
+                            &settlement,
+                            vec![],
+                        )?;
+                        write_json(&run_dir.join("settlement.json"), &settlement)?;
+                        if !case.run_ids.contains(&run_id) {
+                            case.run_ids.push(run_id);
+                        }
+                        append_event(
+                            &case_events,
+                            &stream,
+                            &mut events,
+                            TraceKind::SettlementRecorded,
+                            Some(&item_id),
+                            json!({"instance": instance, "status": settlement.status}),
+                        )?;
+                        let accepted = settlement.status == SettlementStatus::Accepted;
+                        append_event(
+                            &case_events,
+                            &stream,
+                            &mut events,
+                            if accepted {
+                                TraceKind::ItemCompleted
+                            } else {
+                                TraceKind::ItemFailed
+                            },
+                            Some(&item_id),
+                            json!({"instance": instance, "settlement": settlement.status}),
+                        )?;
+                        if accepted {
+                            append_event(
+                                &case_events,
+                                &stream,
+                                &mut events,
+                                TraceKind::MilestoneAchieved,
+                                Some(&item_id),
+                                json!({"instance": instance}),
+                            )?;
+                        }
+                        write_json(&case_dir.join("case.json"), &case)?;
+                        continue;
+                    }
+
                     let env_spec = crate::pipeline::load_item_environment(&root, item)?;
                     if let Some(spec) = &env_spec {
                         sea_forge_sandbox::environment::materialize_base(spec, &workspace)?;
