@@ -127,7 +127,7 @@ pub fn cancel(
     Ok(0)
 }
 
-fn request(root: &Path, request: Value) -> Result<Value, ForgeError> {
+pub(crate) fn request(root: &Path, request: Value) -> Result<Value, ForgeError> {
     let socket_path = root.join("server.sock");
     let mut stream = UnixStream::connect(&socket_path)
         .map_err(|error| ForgeError::io("connect to sea-forge-server", error))?;

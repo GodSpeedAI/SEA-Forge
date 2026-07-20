@@ -30,9 +30,11 @@ models tool/function calls in provider responses; the delegation loop
 unconditionally records `tool_request_denied` per call, no side effects,
 dialogue settles on criteria. T13.3 cancel-one-of-three landed: three
 concurrent delegations, cancelling the middle one mid-flight settles it
-rejected/cancelled while siblings settle accepted/completed. 431 tests
-pass. Next: T13.3 restart/successor-episode, full T13.1 CLI/server
-execution routing.
+rejected/cancelled while siblings settle accepted/completed. 432 tests
+pass. T13.1 full routing landed: an end-to-end CLI integration test starts
+the server, routes `agent_task` to it, emits `SettlementRecorded`, unlocks
+the downstream sandboxed task, and completes the case. Next: T13.3
+restart/successor-episode.
 
 ## SodRule transition scope closeout (2026-07-17)
 
