@@ -111,11 +111,14 @@ Not proven by: transcript volume, agent self-reports, or successful probes witho
 
 | Claim | Level | Required evidence | Current evidence | Gap |
 |---|---|---|---|---|
-| The server semaphore suffices as the delegation concurrency cap | Evidence-backed (design) / unproven (this use) | M13 gate: N parallel `agent_task` runs respect `max_concurrent_runs` | `max_concurrent_runs` implemented and tested for sandboxed runs (M3) | prove under mixed sandboxed + agent load |
+| AgentProvider seam confines HTTP/async to the adapter crate; every provider call is exact-action authorized | Proven (M12) | T12.1–T12.6 green; T12.5 automated boundary gate | `sea-forge-agent` crate (af94ff0, c6aebb6); `Operation::AgentProbe` + `AuthorityAction::AgentProbe` bind endpoint_ref + descriptor_config_sha256 + scheme/host/port/path/model/limits + credential_ref + prompt_sha256; `external_api` allow_hosts enforced; DNS-rebinding-safe pinning + no-proxy + no-redirect + HTTPS-only; `secret_access` mediated before credential resolution; `Zeroizing<String>`; 18-crate kernel inventory forbids tokio/reqwest/hyper/etc (just no-async-kernel green); CLI `agent list\|probe` | none |
+| Agent endpoints are declared config, not asserted status; a registry mutation marks the self-model snapshot stale | Proven (M12) | config cannot assert `probed`/`demonstrated`; descriptor change requires a version bump | `AgentEndpointConfig.status` rejected on load; immutable `runtime_adapter` registration (idempotent same-version+hash, rejects same-version hash change, versioned upgrade replaces); `register_endpoint` calls `mark_current_stale` when a snapshot exists; 4 extension + 3 server-config + 1 server-stale tests | none |
+| Endpoint failures yield typed subcodes and never fall back | Proven (M12) | T12.6: unreachable/4xx/5xx/redirect/schema-invalid/oversize settle rejected with typed `error_class`, one connection each | server conformance_m12 error-taxonomy tests (c6aebb6) | none |
+| The server semaphore suffices as the delegation concurrency cap | Evidence-backed (design) / unproven (this use) | M13 gate: N parallel `agent_task` runs respect `max_concurrent_runs` | `max_concurrent_runs` implemented and tested for sandboxed runs (M3); server acquires it for `agent_probe` (M12) | prove under mixed sandboxed + agent load |
 | Sentry chains suffice for sequential/concurrent topologies (no actor runtime needed) | Partially proven | M14 gate: both templates settle end-to-end incl. rollup | Case engine + E8 templates green (M2a–M2c); claim inherited from spec-full §5 | prove with real agent latencies and a parked-item path |
 | ACP's permission model maps losslessly onto SEA authority/approvals | Assumption (decision: adopt ACP) | T16.3: every ACP request kind exercised in a session maps to a recorded SEA decision; no unmapped grant | goose + t3code both ship working ACP endpoints (audit §5); no SEA-side mapping exists | first E17 gate; lossy mapping ⇒ narrow to allow-listed request kinds (§0.8) |
 | SWE_SEED instances are reachable as ACP-driven hosts with harvestable proofs | Partially proven | M16 gate: one SWE_SEED-harnessed host completes a delegation with proof artifacts cross-linked | SWE_SEED inspected: host projection for Claude/Codex/OpenCode/Copilot confirmed (`crates/swe-seed-core/src/adapters/`), trace/proof artifacts confirmed; no end-to-end run yet | run the M16 slice |
-| Summarized transcripts are sufficient evidence for settlement audit | Unresolved contract decision | owner chooses a design that makes the claimed verification property true | a digest alone cannot be recomputed after its input is discarded | M13 is blocked until §7.4 is resolved |
+| Summarized transcripts are verifiable for settlement audit | Resolved (owner decision 2026-07-17) | summarized mode retains a sealed, encrypted canonical transcript, verified before crypto-shredding | decision recorded in §0 "Resolved decisions"; M13 implements the sealed-transcript commitment | implement sealed-transcript path in M13 |
 
 ## 6. System Overview
 
@@ -400,14 +403,14 @@ function manager_iterate(case_id, grant, i):
 
 ### 17.1 Core Conformance — M12 (E14, AgentProvider seam)
 
-| # | Test | Expected |
-|---|---|---|
-| T12.1 | `agent probe` against local stub (both API shapes) | ordinary intent → plan → exact authority → evidence → settlement chain; schema-valid response settles accepted |
-| T12.2 | probe without `external_api` grant, then with denied `secret_access` | denied; instrumented stub proves zero connections and credential fixture proves zero secret reads |
-| T12.3 | credential redaction sweep | key absent from every record, log, error, transcript |
-| T12.4 | contract fixtures (recorded request/response per shape) | pinned request shapes match byte-for-byte |
-| T12.5 | dependency boundary | HTTP client/async absent from all kernel crates (automated check) |
-| T12.6 | endpoint error taxonomy (unreachable, 4xx, 5xx, oversize) | typed subcodes; settled rejected; no fallback attempted |
+| # | Test | Expected | Status |
+|---|---|---|---|
+| T12.1 | `agent probe` against local stub (both API shapes) | ordinary intent → plan → exact authority → evidence → settlement chain; schema-valid response settles accepted | green (server conformance_m12; provider_contract pins both shapes) |
+| T12.2 | probe without `external_api` grant, then with denied `secret_access` | denied; instrumented stub proves zero connections and credential fixture proves zero secret reads | green (two server tests assert zero connections + zero reads) |
+| T12.3 | credential redaction sweep | key absent from every record, log, error, transcript | green (sweep over persisted probe artifacts) |
+| T12.4 | contract fixtures (recorded request/response per shape) | pinned request shapes match byte-for-byte | green (provider unit + integration tests pin JSON body, path, auth headers) |
+| T12.5 | dependency boundary | HTTP client/async absent from all kernel crates (automated check) | green (`just no-async-kernel`, 18 kernel crates, 13 forbidden deps) |
+| T12.6 | endpoint error taxonomy (unreachable, 4xx, 5xx, oversize, redirect, schema-invalid) | typed subcodes; settled rejected; no fallback attempted | green (6 server tests assert typed error_class + one connection) |
 
 ### 17.2 Core Conformance — M13 (E15, governed delegation)
 
@@ -455,6 +458,8 @@ function manager_iterate(case_id, grant, i):
 
 P1–P4b and all M0–M11 gates unchanged; `cargo test --workspace` green; T12.5 dependency boundary and the source-owned-template check re-run.
 
+**M12 gate (2026-07-20) — GREEN.** `devbox run -- just context-check`, `just check` (fmt, clippy `-D warnings` workspace/all-targets/all-features, cargo-deny licenses+bans+sources), `just test` (**408 tests, 0 failed, 0 platform skips**), `just proof` (P1–P4b), and `just no-async-kernel` (18 kernel crates, 13 forbidden deps) all passed. T12.1–T12.6 green. Tracked `.sea-forge/**` still 0 files.
+
 ### 17.7 Real Integration
 
 Required once per release against one real hosted endpoint (operator-supplied credential) and one real CLI agent: skipped runs reported skipped, never passed.
@@ -471,10 +476,10 @@ Required once per release against one real hosted endpoint (operator-supplied cr
 
 ## 18. Implementation Checklist / Definition of Done
 
-- [ ] `sea-forge-agent` crate exists; HTTP/async confined to it (T12.5 automated).
-- [ ] `external_api` and `secret_access` surfaces activated deny-by-default with exact endpoint descriptor/config/destination/provider/model/limits/credential-reference boundaries.
+- [x] `sea-forge-agent` crate exists; HTTP/async confined to it (T12.5 automated). *(M12 — af94ff0, c6aebb6)*
+- [x] `external_api` and `secret_access` surfaces activated deny-by-default with exact endpoint descriptor/config/destination/provider/model/limits/credential-reference boundaries. *(M12)*
 - [ ] `agent_task` kind additive; settlement bases `cancelled`/`turn_cap_exceeded`/`agent_endpoint_error` present.
-- [ ] Owner-selected §7.4 retention/commitment design implemented; redaction-before-hash and its claimed verification property proven. M13 remains incomplete without it.
+- [ ] Owner-selected §7.4 retention/commitment design implemented; redaction-before-hash and its claimed verification property proven. M13 remains incomplete without it. *(decision recorded 2026-07-17: sealed canonical transcript; M13 implements it)*
 - [ ] Server-owned ready-item dispatch uses the existing semaphore per run episode; CLI concurrency is one; cancellation settles from durable control state, never vanishes.
 - [ ] Both source-owned topology templates install as pinned runtime copies and instantiate deterministically; source-bound sentries and all-of rollup gate proven.
 - [ ] Manager loop bounded, evidence-grounded, SoD-enforced, escalating on exhaustion.
