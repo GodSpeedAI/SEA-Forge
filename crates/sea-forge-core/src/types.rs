@@ -591,6 +591,9 @@ pub struct SettlementCriteria {
     pub required_artifacts: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stdout_must_contain: Option<String>,
+    /// Literal required in the final redacted agent response (M13).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_output_must_contain: Option<String>,
     #[serde(default)]
     pub require_approval: bool,
     /// `<env>.<name>` — combines AND with existing checks (§7.6).

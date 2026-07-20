@@ -1,4 +1,5 @@
 use sea_forge_agent::{AgentConfig, AgentEndpointConfig, ProviderKind};
+use sea_forge_core::types::SettlementCriteria;
 use sea_forge_server::{agent_probe, delegation, ServerConfig};
 use std::{
     fs,
@@ -127,6 +128,7 @@ async fn t13_delegation_completes_with_transcript_evidence() {
             model: None,
             max_turns: 3,
             token_budget: None,
+            criteria: SettlementCriteria::default(),
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
@@ -179,6 +181,7 @@ async fn t13_delegation_denied_without_agent_task_policy() {
             model: None,
             max_turns: 1,
             token_budget: None,
+            criteria: SettlementCriteria::default(),
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
@@ -209,6 +212,7 @@ async fn t13_delegation_denied_secret_access_no_credential_read() {
             model: None,
             max_turns: 1,
             token_budget: None,
+            criteria: SettlementCriteria::default(),
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
@@ -253,6 +257,7 @@ async fn t13_endpoint_error_settles_rejected_with_transcript() {
             model: None,
             max_turns: 1,
             token_budget: None,
+            criteria: SettlementCriteria::default(),
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
@@ -291,6 +296,7 @@ async fn t13_token_budget_breach_settles_turn_cap_exceeded() {
             model: None,
             max_turns: 5,
             token_budget: Some(25),
+            criteria: SettlementCriteria::default(),
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
@@ -312,5 +318,53 @@ async fn t13_token_budget_breach_settles_turn_cap_exceeded() {
     // Transcript evidence still committed despite budget breach.
     let run = root.path().join("runs").join(&outcome.run_id);
     assert!(run.join("transcript-evidence.json").is_file());
+    let _ = task.await;
+}
+
+#[tokio::test]
+async fn t13_agent_success_with_failed_output_criteria_settles_rejected() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"Task completed successfully"}}],"usage":{"total_tokens":42}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    let outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "publish proof",
+            model: None,
+            max_turns: 1,
+            token_budget: None,
+            criteria: SettlementCriteria {
+                agent_output_must_contain: Some("proof artifact committed".into()),
+                ..SettlementCriteria::default()
+            },
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(outcome.termination.as_deref(), Some("completed"));
+    assert_eq!(
+        outcome.settlement,
+        sea_forge_core::types::SettlementStatus::Rejected
+    );
+    assert_eq!(
+        outcome.error_class.as_deref(),
+        Some("agent_output_mismatch")
+    );
+    assert!(root
+        .path()
+        .join("runs")
+        .join(&outcome.run_id)
+        .join("transcript-evidence.json")
+        .is_file());
     let _ = task.await;
 }

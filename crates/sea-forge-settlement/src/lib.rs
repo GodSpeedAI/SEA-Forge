@@ -127,6 +127,24 @@ pub fn settle(
     })
 }
 
+/// Returns `None` when no agent-output criterion was declared.
+pub fn evaluate_agent_output(output: &str, required: Option<&str>) -> Option<bool> {
+    required.map(|needle| output.contains(needle))
+}
+
+#[cfg(test)]
+mod agent_output_tests {
+    use super::*;
+
+    #[test]
+    fn literal_agent_output_mismatch_rejects_narrated_success() {
+        assert_eq!(
+            evaluate_agent_output("task completed successfully", Some("artifact: accepted")),
+            Some(false)
+        );
+    }
+}
+
 /// Evaluate a batch of records against a min_pass_ratio threshold (§7.6).
 /// Pure: scores are pre-computed; this function only tallies and quarantines.
 pub fn evaluate_batch(
