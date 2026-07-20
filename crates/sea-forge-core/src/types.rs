@@ -56,6 +56,7 @@ pub enum ItemKind {
     Stage,
     TimerListener,
     UserEventListener,
+    AgentTask,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
@@ -138,6 +139,17 @@ pub enum Operation {
         model: String,
         prompt_sha256: String,
     },
+    AgentTask {
+        endpoint_ref: String,
+        instruction: String,
+        max_turns: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        token_budget: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        response_schema: Option<serde_json::Value>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        transcript_retention: Option<String>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -168,6 +180,23 @@ pub enum AuthorityAction {
         timeout_secs: u64,
         credential_ref: Option<String>,
         prompt_sha256: String,
+    },
+    AgentTask {
+        endpoint_ref: String,
+        descriptor_config_sha256: String,
+        provider_kind: String,
+        scheme: String,
+        host: String,
+        port: u16,
+        path: String,
+        model: String,
+        max_request_bytes: u64,
+        max_response_bytes: u64,
+        timeout_secs: u64,
+        credential_ref: Option<String>,
+        instruction_sha256: String,
+        max_turns: u32,
+        token_budget: Option<u64>,
     },
     GitCommit {
         paths: Vec<String>,
@@ -215,6 +244,32 @@ impl From<&Operation> for AuthorityAction {
                 timeout_secs: 0,
                 credential_ref: None,
                 prompt_sha256: prompt_sha256.clone(),
+            },
+            Operation::AgentTask {
+                endpoint_ref,
+                instruction,
+                max_turns,
+                token_budget,
+                ..
+            } => Self::AgentTask {
+                endpoint_ref: endpoint_ref.clone(),
+                descriptor_config_sha256: String::new(),
+                provider_kind: String::new(),
+                scheme: String::new(),
+                host: String::new(),
+                port: 0,
+                path: String::new(),
+                model: String::new(),
+                max_request_bytes: 0,
+                max_response_bytes: 0,
+                timeout_secs: 0,
+                credential_ref: None,
+                instruction_sha256: {
+                    use sha2::Digest;
+                    format!("sha256:{:x}", sha2::Sha256::digest(instruction.as_bytes()))
+                },
+                max_turns: *max_turns,
+                token_budget: *token_budget,
             },
         }
     }
@@ -694,6 +749,14 @@ pub enum SettlementStatus {
     Accepted,
     Rejected,
     Escalated,
+}
+
+/// Settlement basis values for agent delegation (spec-agent-orchestration §7/§10).
+pub mod delegation_basis {
+    pub const CANCELLED: &str = "cancelled";
+    pub const TURN_CAP_EXCEEDED: &str = "turn_cap_exceeded";
+    pub const AGENT_ENDPOINT_ERROR: &str = "agent_endpoint_error";
+    pub const ACP_DISCONNECT: &str = "acp_disconnect";
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SettlementEvent {

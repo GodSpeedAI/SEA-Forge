@@ -306,6 +306,21 @@ pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
                         });
                     }
                 }
+                sea_forge_core::types::Operation::AgentTask {
+                    endpoint_ref,
+                    instruction,
+                    max_turns,
+                    ..
+                } => {
+                    if endpoint_ref.is_empty() || instruction.is_empty() || *max_turns == 0 {
+                        return Err(ForgeError::Plan {
+                            class: "plan_schema_error",
+                            message:
+                                "agent_task requires endpoint_ref, instruction, and max_turns > 0"
+                                    .into(),
+                        });
+                    }
+                }
             }
             if let sea_forge_core::types::Operation::ExecuteCommand { argv, .. } = operation {
                 if argv.is_empty() || argv.iter().any(|arg| arg.contains('\0')) {
