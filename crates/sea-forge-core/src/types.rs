@@ -1337,3 +1337,46 @@ pub struct BundleManifest {
     pub templates: Vec<String>,
     pub files: Vec<BundleFile>,
 }
+
+// ---------------------------------------------------------------------------
+// E15 governed delegation — transcript evidence (spec-agent-orchestration §7.4)
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DelegationTermination {
+    Completed,
+    TurnCapExceeded,
+    Cancelled,
+    EndpointError,
+    AcpDisconnect,
+}
+
+/// Deterministic structural summary of a delegation transcript (spec §7.4).
+/// Not model-generated — derived from the message list.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TranscriptSummary {
+    pub turn_count: u32,
+    pub tool_calls: u32,
+    /// Bounded excerpt of the final assistant message.
+    #[serde(default)]
+    pub final_excerpt: String,
+}
+
+/// Audit record of one delegation dialogue (spec §7.4).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TranscriptEvidence {
+    pub run_id: String,
+    pub endpoint_ref: String,
+    pub turns_used: u32,
+    pub termination: DelegationTermination,
+    /// SHA-256 of the redacted canonical JSONL transcript.
+    pub transcript_sha256: String,
+    pub summary: TranscriptSummary,
+    /// Content-addressed artifact path in `full` retention mode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact_ref: Option<String>,
+    /// Harvested proof/trace artifact refs (E17/SWE_SEED).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub harvested_refs: Vec<String>,
+}
