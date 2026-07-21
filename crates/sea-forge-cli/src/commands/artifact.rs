@@ -339,6 +339,7 @@ fn transition_plan(
             ),
             operations: vec![],
             entry_criteria: vec![],
+            entry_criteria_mode: Default::default(),
             exit_criteria: vec![],
             settlement_criteria: SettlementCriteria {
                 require_approval: profile.requires_approval

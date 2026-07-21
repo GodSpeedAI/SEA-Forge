@@ -63,10 +63,12 @@ fn template() -> PlanTemplate {
                 max_instances: 1,
                 environment: None,
                 entry_criteria: vec![],
+                entry_criteria_mode: Default::default(),
                 exit_criteria: vec![],
                 parent_stage: None,
                 depends_on: vec![],
             }],
+            repeated: vec![],
         },
     }
 }
@@ -181,6 +183,7 @@ fn control_flow_template() -> PlanTemplate {
                     max_instances: 1,
                     environment: None,
                     entry_criteria: vec![],
+                    entry_criteria_mode: Default::default(),
                     exit_criteria: vec![],
                     parent_stage: None,
                     depends_on: vec![],
@@ -199,6 +202,7 @@ fn control_flow_template() -> PlanTemplate {
                     max_instances: 3,
                     environment: None,
                     entry_criteria: vec![],
+                    entry_criteria_mode: Default::default(),
                     exit_criteria: vec![],
                     parent_stage: Some("stage_frame".into()),
                     depends_on: vec![],
@@ -223,11 +227,13 @@ fn control_flow_template() -> PlanTemplate {
                             status: "rejected".into(),
                         }),
                     }],
+                    entry_criteria_mode: Default::default(),
                     exit_criteria: vec![],
                     parent_stage: Some("stage_frame".into()),
                     depends_on: vec![],
                 },
             ],
+            repeated: vec![],
         },
     }
 }

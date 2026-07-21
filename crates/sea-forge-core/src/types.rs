@@ -69,6 +69,17 @@ pub struct ItemMarkers {
     pub manual_activation: bool,
 }
 
+/// How an item's `entry_criteria` list combines (§7.5 E16a). `Any` (default)
+/// preserves the original OR-of-sentries behavior; `All` requires every
+/// listed sentry satisfied — used for concurrent-branch success rollups.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum EntryCriteriaMode {
+    #[default]
+    Any,
+    All,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SentryTrigger {
     pub source: String,
@@ -97,6 +108,8 @@ pub struct PlanItem {
     pub operations: Vec<Operation>,
     #[serde(default)]
     pub entry_criteria: Vec<Sentry>,
+    #[serde(default)]
+    pub entry_criteria_mode: EntryCriteriaMode,
     #[serde(default)]
     pub exit_criteria: Vec<Sentry>,
     pub settlement_criteria: SettlementCriteria,

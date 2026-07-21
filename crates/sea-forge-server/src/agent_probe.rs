@@ -155,6 +155,7 @@ pub async fn probe(
             name: "agent_probe".into(),
             operations: vec![operation],
             entry_criteria: vec![],
+            entry_criteria_mode: Default::default(),
             exit_criteria: vec![],
             settlement_criteria: SettlementCriteria::default(),
             settlement_criteria_ref: None,

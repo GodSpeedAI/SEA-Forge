@@ -204,6 +204,7 @@ pub async fn execute_with_control(
             name: "agent_task".into(),
             operations: vec![operation],
             entry_criteria: vec![],
+            entry_criteria_mode: Default::default(),
             exit_criteria: vec![],
             settlement_criteria: request.criteria.clone(),
             settlement_criteria_ref: None,
