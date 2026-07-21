@@ -970,6 +970,27 @@ async fn t13_2_mixed_episodes_share_server_cap() {
     assert!(dispatches
         .iter()
         .any(|event| event.payload["episode_kind"] == "agent_task"));
+    // T13.2 Task 4: additive persisted ordinals. Each dispatch carries a
+    // 1-based dispatch_ordinal and each settlement a settlement_ordinal;
+    // both sequences are strictly monotonic over the persisted order.
+    let dispatch_ordinals: Vec<u64> = dispatches
+        .iter()
+        .map(|event| event.payload["dispatch_ordinal"].as_u64().unwrap())
+        .collect();
+    let settlement_ordinals: Vec<u64> = settlements
+        .iter()
+        .map(|event| event.payload["settlement_ordinal"].as_u64().unwrap())
+        .collect();
+    assert_eq!(
+        dispatch_ordinals,
+        vec![1, 2, 3, 4, 5],
+        "dispatch ordinals must be 1..=5 in persisted order: {dispatch_ordinals:?}"
+    );
+    assert_eq!(
+        settlement_ordinals,
+        vec![1, 2, 3, 4, 5],
+        "settlement ordinals must be 1..=5 in persisted order: {settlement_ordinals:?}"
+    );
     assert!(max_seen.load(Ordering::SeqCst) <= 2);
     stub_task.await.unwrap();
 }

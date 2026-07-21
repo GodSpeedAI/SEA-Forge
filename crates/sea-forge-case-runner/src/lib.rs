@@ -30,8 +30,25 @@ impl CaseRunner {
         events: &mut Vec<TraceEvent>,
         kind: TraceKind,
         item_id: Option<&str>,
-        payload: serde_json::Value,
+        mut payload: serde_json::Value,
     ) -> Result<(), ForgeError> {
+        // Additive persisted ordinals (spec §17.2 T13.2): each dispatch/
+        // activation and settlement gets a 1-based monotonic ordinal derived
+        // from prior persisted events. Additive only — old readers ignore it.
+        // ponytail: O(n) scan per append; switch to a runner-held counter if
+        // a case ever accumulates thousands of dispatch/settlement events.
+        match kind {
+            TraceKind::ItemActivated => {
+                let next = Self::next_ordinal(events, TraceKind::ItemActivated, "dispatch_ordinal");
+                payload["dispatch_ordinal"] = serde_json::json!(next);
+            }
+            TraceKind::SettlementRecorded => {
+                let next =
+                    Self::next_ordinal(events, TraceKind::SettlementRecorded, "settlement_ordinal");
+                payload["settlement_ordinal"] = serde_json::json!(next);
+            }
+            _ => {}
+        }
         Self::commit_event(
             path,
             stream,
@@ -48,6 +65,16 @@ impl CaseRunner {
                 cell_id: None,
             },
         )
+    }
+
+    fn next_ordinal(events: &[TraceEvent], kind: TraceKind, key: &str) -> u64 {
+        events
+            .iter()
+            .filter(|event| event.kind == kind)
+            .filter_map(|event| event.payload.get(key).and_then(|value| value.as_u64()))
+            .max()
+            .unwrap_or(0)
+            + 1
     }
 
     pub fn commit_event(

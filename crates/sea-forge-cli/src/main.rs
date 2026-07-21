@@ -268,6 +268,12 @@ enum LedgerAction {
         ledger_id: String,
         entry_ulid: String,
     },
+    /// Reproduce the persisted dispatch/settlement order for a case
+    /// (spec §17.2 T13.2). Reads `case-events.jsonl` only; never re-executes.
+    Replay {
+        #[arg(long)]
+        case: String,
+    },
 }
 
 #[derive(Subcommand)]
