@@ -991,6 +991,35 @@ async fn t13_2_mixed_episodes_share_server_cap() {
         vec![1, 2, 3, 4, 5],
         "settlement ordinals must be 1..=5 in persisted order: {settlement_ordinals:?}"
     );
+    // Each settlement carries the run_id of the dispatch it settles, so
+    // `ledger replay --case` can correlate dispatch and settlement by run_id.
+    // Every persisted run_id appears in both an ItemActivated and a
+    // SettlementRecorded payload, with one match per dispatch.
+    let dispatch_run_ids: std::collections::HashMap<&str, &str> = dispatches
+        .iter()
+        .filter_map(|event| {
+            let run = event.payload["run_id"].as_str()?;
+            let item = event.plan_item_id.as_deref()?;
+            Some((run, item))
+        })
+        .collect();
+    assert_eq!(
+        dispatch_run_ids.len(),
+        dispatches.len(),
+        "each dispatch must carry a distinct run_id: {:?}",
+        dispatch_run_ids.keys().collect::<Vec<_>>()
+    );
+    for event in &settlements {
+        let run_id = event.payload["run_id"]
+            .as_str()
+            .expect("settlement payload carries run_id");
+        let item_id = event.plan_item_id.as_deref().unwrap();
+        assert_eq!(
+            dispatch_run_ids.get(run_id).copied(),
+            Some(item_id),
+            "settlement run_id {run_id} must correlate to a dispatch of the same item"
+        );
+    }
     assert!(max_seen.load(Ordering::SeqCst) <= 2);
     stub_task.await.unwrap();
 }

@@ -116,6 +116,20 @@ All 3 CLI M13 conformance tests, 18 server M13 conformance tests, the
 4 new ledger unit tests, fmt, and `cargo check` on CLI+server+case-runner
 pass. Commit: pending.
 
+T13.2 final whole-branch review follow-up (three fixes):
+- `sea-forge-case-runner` added to the `no-async-kernel` `kernel_crates`
+  array; `just no-async-kernel` now covers 19 kernel crates (was 18).
+- `SettlementRecorded` payload in `case_dispatch::record_completion`
+  now carries `run_id`, so `ledger replay --case` correlates dispatch
+  to settlement by run_id; `t13_2_mixed_episodes_share_server_cap`
+  extended to assert each settlement's run_id maps to a same-item
+  dispatch.
+- `SubmitPayload.intent` documented as ignored by server-owned dispatch
+  (intent-only submit is no longer supported via `Submit`); field
+  retained for deserialization compatibility.
+All 18 server M13 conformance tests, 3 CLI M13 conformance tests, fmt,
+and `just no-async-kernel` (19 crates) pass. Commit: pending.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None

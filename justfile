@@ -123,7 +123,7 @@ no-async-kernel:
         sea-forge-settlement sea-forge-capability sea-forge-extension
         sea-forge-ledger sea-forge-domainforge sea-forge-spec-pipeline
         sea-forge-cell sea-forge-artifact-ip sea-forge-self-model
-        sea-forge-thoth
+        sea-forge-thoth sea-forge-case-runner
     )
     forbidden_deps=(
         tokio async-std smol embassy executor
