@@ -68,6 +68,12 @@ mixed-load conformance path passes with `max_concurrent_runs=2`, alongside all 1
 server M13 conformance tests. `devbox run -- just context-check` passed after this
 status update. Commit: recorded in git history.
 
+Task 3 review follow-up: the dispatcher now waits on the sole shared permit,
+prioritizes recording returned active completions, converts post-dispatch errors
+into terminal rejected settlements, and drains active siblings before case
+termination. Two focused regressions plus all 15 server M13 conformance tests,
+formatting, and server check pass. Commit: pending.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None

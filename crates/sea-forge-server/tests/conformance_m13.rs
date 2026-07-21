@@ -974,6 +974,215 @@ async fn t13_2_mixed_episodes_share_server_cap() {
     stub_task.await.unwrap();
 }
 
+#[tokio::test]
+async fn t13_2_submit_waits_for_direct_delegate_permit() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let connected = Arc::new(AtomicUsize::new(0));
+    let connected_for_stub = Arc::clone(&connected);
+    let stub = tokio::spawn(async move {
+        for _ in 0..2 {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            connected_for_stub.fetch_add(1, Ordering::SeqCst);
+            let mut request = vec![0_u8; 4096];
+            let _ = stream.read(&mut request).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            let body = br#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#;
+            let header = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            stream.write_all(header.as_bytes()).await.unwrap();
+            stream.write_all(body).await.unwrap();
+        }
+    });
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = policy(root.path(), true, false);
+    let mut agent_endpoint = endpoint(address.port());
+    agent_endpoint.credential_ref = None;
+    let state = Arc::new(
+        ServerState::new(ServerConfig {
+            root: root.path().to_path_buf(),
+            max_concurrent_runs: 1,
+            agent: AgentConfig {
+                endpoints: vec![agent_endpoint],
+                ..AgentConfig::default()
+            },
+            ..ServerConfig::default()
+        })
+        .unwrap(),
+    );
+    let direct_state = Arc::clone(&state);
+    let direct_policy = policy_path.to_string_lossy().into_owned();
+    let direct = tokio::spawn(async move {
+        handle_request(
+            Request::Delegate {
+                endpoint: "local-test".into(),
+                instruction: "hold permit".into(),
+                run_id: None,
+                model: None,
+                max_turns: 1,
+                token_budget: None,
+                criteria: SettlementCriteria::default(),
+                policy: direct_policy,
+                entity: "operator_local".into(),
+                process: "test".into(),
+            },
+            &direct_state,
+        )
+        .await
+    });
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while connected.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let plan_path = root.path().join("one-agent.json");
+    fs::write(
+        &plan_path,
+        serde_json::to_vec(&CasePlan {
+            version: "0.2".into(),
+            plan_id: "plan_wait".into(),
+            case_id: "case_placeholder".into(),
+            run_id: "run_placeholder".into(),
+            intent_id: "int_wait".into(),
+            items: vec![PlanItem {
+                plan_item_id: "agent".into(),
+                name: "agent".into(),
+                operations: vec![Operation::AgentTask {
+                    endpoint_ref: "local-test".into(),
+                    instruction: "wait".into(),
+                    max_turns: 1,
+                    token_budget: None,
+                    response_schema: None,
+                    transcript_retention: None,
+                }],
+                entry_criteria: vec![],
+                exit_criteria: vec![],
+                settlement_criteria: SettlementCriteria::default(),
+                settlement_criteria_ref: None,
+                item_kind: ItemKind::AgentTask,
+                sandbox_class: None,
+                parent_stage: None,
+                markers: sea_forge_core::types::ItemMarkers {
+                    required: true,
+                    ..Default::default()
+                },
+                max_instances: 1,
+                depends_on: vec![],
+                environment: None,
+            }],
+            template_ref: None,
+            job_contract_ref: None,
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let mut submit = tokio::spawn({
+        let state = Arc::clone(&state);
+        async move { handle_request(request, &state).await }
+    });
+    let waited = tokio::time::timeout(Duration::from_millis(50), &mut submit).await;
+    if waited.is_ok() {
+        stub.abort();
+    }
+    assert!(waited.is_err());
+    assert_eq!(direct.await.unwrap()["settlement"], "accepted");
+    assert_eq!(submit.await.unwrap()["state"], "completed");
+    stub.await.unwrap();
+}
+
+#[tokio::test]
+async fn t13_2_post_dispatch_failure_settles_and_drains_siblings() {
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = policy(root.path(), true, false);
+    let state = Arc::new(
+        ServerState::new(ServerConfig {
+            root: root.path().to_path_buf(),
+            max_concurrent_runs: 2,
+            ..ServerConfig::default()
+        })
+        .unwrap(),
+    );
+    let plan_path = root.path().join("failure-plan.json");
+    fs::write(
+        &plan_path,
+        serde_json::to_vec(&CasePlan {
+            version: "0.2".into(),
+            plan_id: "plan_failure".into(),
+            case_id: "case_placeholder".into(),
+            run_id: "run_placeholder".into(),
+            intent_id: "int_failure".into(),
+            items: (0..2)
+                .map(|index| PlanItem {
+                    plan_item_id: format!("agent_{index}"),
+                    name: "agent".into(),
+                    operations: vec![Operation::AgentTask {
+                        endpoint_ref: "missing".into(),
+                        instruction: "fail after dispatch".into(),
+                        max_turns: 1,
+                        token_budget: None,
+                        response_schema: None,
+                        transcript_retention: None,
+                    }],
+                    entry_criteria: vec![],
+                    exit_criteria: vec![],
+                    settlement_criteria: SettlementCriteria::default(),
+                    settlement_criteria_ref: None,
+                    item_kind: ItemKind::AgentTask,
+                    sandbox_class: None,
+                    parent_stage: None,
+                    markers: sea_forge_core::types::ItemMarkers {
+                        required: index == 0,
+                        ..Default::default()
+                    },
+                    max_instances: 1,
+                    depends_on: vec![],
+                    environment: None,
+                })
+                .collect(),
+            template_ref: None,
+            job_contract_ref: None,
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let response = handle_request(request, &state).await;
+    assert_eq!(response["state"], "terminated", "{response}");
+    let events: Vec<TraceEvent> = fs::read_to_string(
+        root.path()
+            .join("cases")
+            .join(response["case_id"].as_str().unwrap())
+            .join("case-events.jsonl"),
+    )
+    .unwrap()
+    .lines()
+    .map(|line| serde_json::from_str(line).unwrap())
+    .collect();
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.kind == TraceKind::ItemActivated)
+            .count(),
+        2
+    );
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.kind == TraceKind::SettlementRecorded)
+            .count(),
+        2
+    );
+    assert!(events
+        .iter()
+        .filter(|event| event.kind == TraceKind::SettlementRecorded)
+        .all(|event| event.payload["status"] == "rejected"));
+}
+
 /// T13.3: after restart, a durable cancellation control settles the
 /// interrupted HTTP delegation exactly once without resuming it.
 #[test]
