@@ -47,6 +47,11 @@ path with server-owned, per-episode dispatch under the existing semaphore;
 persist dispatch and settlement ordinals and add ledger replay. Implementation
 plan: `.agents/plans/2026-07-20-m13-mixed-dispatch.md`.
 
+T13.2 Task 1 extracted synchronous case lifecycle primitives into the approved
+`sea-forge-case-runner` workspace crate; the CLI is a compatibility facade and
+focused CLI conformance plus runner check pass. Next: commit this extraction,
+then bind planned agent delegation to its case episode.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None

@@ -1,14 +1,25 @@
 use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+pub use sea_forge_case_runner::write_json;
+use sea_forge_case_runner::CaseRunner;
 use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};
 use sea_forge_ledger::{CommittedRecordRef, LedgerStream};
-use sea_forge_planner::case_engine::{next_case_actions, validate_proposal, CaseAction};
-use serde::Serialize;
+use sea_forge_planner::case_engine::{validate_proposal, CaseAction};
 use serde_json::json;
 use std::collections::{BTreeMap, HashMap};
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
 use std::path::{Path, PathBuf};
+
+pub fn append_event(
+    path: &Path,
+    stream: &LedgerStream,
+    events: &mut Vec<TraceEvent>,
+    kind: TraceKind,
+    item_id: Option<&str>,
+    payload: serde_json::Value,
+) -> Result<(), ForgeError> {
+    CaseRunner::append_event(path, stream, events, kind, item_id, payload)
+}
 
 pub struct PlanRunOptions {
     pub plan: PathBuf,
@@ -49,47 +60,6 @@ struct AuthorizedOperation {
     committed: CommittedRecordRef,
 }
 
-pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| ForgeError::io("create JSON parent", error))?;
-    }
-    fs::write(path, serde_json::to_vec_pretty(value)?)
-        .map_err(|error| ForgeError::io("write JSON", error))
-}
-
-pub fn append_event(
-    path: &Path,
-    stream: &LedgerStream,
-    events: &mut Vec<TraceEvent>,
-    kind: TraceKind,
-    item_id: Option<&str>,
-    payload: serde_json::Value,
-) -> Result<(), ForgeError> {
-    let event = TraceEvent {
-        version: RECORD_VERSION.into(),
-        event_id: ids::seq_id("cev", 6, events.len() + 1),
-        run_id: "case".into(),
-        plan_item_id: item_id.map(str::to_owned),
-        kind,
-        actor_id: "case_engine".into(),
-        timestamp: Utc::now().to_rfc3339(),
-        payload,
-        cell_id: None,
-    };
-    stream.commit_typed("case_event", vec![], &event, vec![])?;
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .map_err(|error| ForgeError::io("open case events", error))?;
-    serde_json::to_writer(&mut file, &event)?;
-    file.write_all(b"\n")
-        .and_then(|_| file.flush())
-        .map_err(|error| ForgeError::io("append case event", error))?;
-    events.push(event);
-    Ok(())
-}
-
 fn load_plan(path: &Path) -> Result<CasePlan, ForgeError> {
     let bytes = fs::read(path).map_err(|error| ForgeError::io("read plan proposal", error))?;
     serde_json::from_slice(&bytes).map_err(|error| ForgeError::Plan {
@@ -128,9 +98,7 @@ fn run_plan_inner(
     let case_id = ids::case_id()?;
     plan.case_id.clone_from(&case_id);
     let case_dir = root.join("cases").join(&case_id);
-    let runs_dir = case_dir.join("runs");
-    fs::create_dir_all(&runs_dir).map_err(|error| ForgeError::io("create case runs", error))?;
-    let case_events = case_dir.join("case-events.jsonl");
+    let (runs_dir, case_events) = CaseRunner::initialize_case(&case_dir)?;
     let stream = LedgerStream::open(&root, format!("case-{case_id}"), &options.entity)?;
     stream.commit_typed("case_plan", vec![case_id.clone()], &plan, vec![])?;
 
@@ -456,7 +424,7 @@ fn run_plan_inner(
     }
 
     loop {
-        let actions = next_case_actions(&plan.items, &events);
+        let actions = CaseRunner::next_ready_actions(&plan.items, &events);
         if actions.is_empty() {
             write_json(&case_dir.join("case.json"), &case)?;
             return Ok(PlanRunOutcome {
@@ -597,9 +565,6 @@ fn run_plan_inner(
                             vec![],
                         )?;
                         write_json(&run_dir.join("settlement.json"), &settlement)?;
-                        if !case.run_ids.contains(&run_id) {
-                            case.run_ids.push(run_id);
-                        }
                         append_event(
                             &case_events,
                             &stream,
@@ -608,29 +573,16 @@ fn run_plan_inner(
                             Some(&item_id),
                             json!({"instance": instance, "status": settlement.status}),
                         )?;
-                        let accepted = settlement.status == SettlementStatus::Accepted;
-                        append_event(
+                        CaseRunner::apply_episode_completion(
+                            &mut case,
+                            &run_id,
+                            &item_id,
+                            instance,
+                            &settlement,
                             &case_events,
                             &stream,
                             &mut events,
-                            if accepted {
-                                TraceKind::ItemCompleted
-                            } else {
-                                TraceKind::ItemFailed
-                            },
-                            Some(&item_id),
-                            json!({"instance": instance, "settlement": settlement.status}),
                         )?;
-                        if accepted {
-                            append_event(
-                                &case_events,
-                                &stream,
-                                &mut events,
-                                TraceKind::MilestoneAchieved,
-                                Some(&item_id),
-                                json!({"instance": instance}),
-                            )?;
-                        }
                         write_json(&case_dir.join("case.json"), &case)?;
                         continue;
                     }
@@ -689,22 +641,24 @@ fn run_plan_inner(
                                     if let Ok(value) = std::env::var("HOME") {
                                         env.insert("HOME".into(), value);
                                     }
-                                    let result = sea_forge_runtime::execute(
-                                        grant,
-                                        &ExecutionRequest {
-                                            plan_item_id: item_id.clone(),
-                                            operation: operation.clone(),
-                                            timeout_secs: options.timeout_secs,
-                                            env,
-                                            compensating_controls: granted
-                                                .decision
-                                                .compensating_controls
-                                                .clone(),
-                                        },
-                                        &run_id,
-                                        &workspace,
-                                        &artifacts,
-                                    )?;
+                                    let result = CaseRunner::run_sandboxed_episode(|| {
+                                        sea_forge_runtime::execute(
+                                            grant,
+                                            &ExecutionRequest {
+                                                plan_item_id: item_id.clone(),
+                                                operation: operation.clone(),
+                                                timeout_secs: options.timeout_secs,
+                                                env,
+                                                compensating_controls: granted
+                                                    .decision
+                                                    .compensating_controls
+                                                    .clone(),
+                                            },
+                                            &run_id,
+                                            &workspace,
+                                            &artifacts,
+                                        )
+                                    })?;
                                     if Some(index) == evaluator_index {
                                         let (reference, evaluator) =
                                             evaluator.as_ref().ok_or_else(|| {
@@ -790,32 +744,16 @@ fn run_plan_inner(
                             .collect::<Vec<_>>(),
                     )?;
                     write_json(&run_dir.join("settlement.json"), &settlement)?;
-                    if !case.run_ids.contains(&run_id) {
-                        case.run_ids.push(run_id);
-                    }
-                    let accepted = settlement.status == SettlementStatus::Accepted;
-                    append_event(
+                    CaseRunner::apply_episode_completion(
+                        &mut case,
+                        &run_id,
+                        &item_id,
+                        instance,
+                        &settlement,
                         &case_events,
                         &stream,
                         &mut events,
-                        if accepted {
-                            TraceKind::ItemCompleted
-                        } else {
-                            TraceKind::ItemFailed
-                        },
-                        Some(&item_id),
-                        json!({"instance": instance, "settlement": settlement.status}),
                     )?;
-                    if accepted {
-                        append_event(
-                            &case_events,
-                            &stream,
-                            &mut events,
-                            TraceKind::MilestoneAchieved,
-                            Some(&item_id),
-                            json!({"instance": instance}),
-                        )?;
-                    }
                     write_json(&case_dir.join("case.json"), &case)?;
                 }
                 CaseAction::CompleteCase => {
