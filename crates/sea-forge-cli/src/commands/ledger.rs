@@ -48,7 +48,7 @@ pub fn execute(action: LedgerAction, root: &Path) -> Result<u8, ForgeError> {
 
 /// Print the persisted dispatch/settlement order for a case (spec §17.2 T13.2).
 ///
-/// Reads `.sea-forge/cases/<case_id>/{plan.json,case-events.jsonl}` and prints
+/// Reads `.sea-forge/cases/<case_id>/case-events.jsonl` and prints
 /// one row per persisted `ItemActivated` / `SettlementRecorded` event in file
 /// order. Each row carries the additive ordinal persisted on the event
 /// payload. Never re-executes any episode; rejects missing, duplicate, or
