@@ -85,6 +85,14 @@ completion during permit wait restarts case reduction rather than processing
 stale actions. All 17 server M13 conformance tests, formatting, and server check
 pass. Commit: pending.
 
+Task 3 non-executable activation follow-up: the dispatcher now rejects
+`CaseAction::Activate` for item kinds it cannot dispatch (Stage,
+TimerListener, UserEventListener) with a typed `ForgeError::Input` before
+any side effect, instead of panicking in the activation payload. New
+`t13_2_non_executable_activation_returns_typed_error` regression; all 18
+server M13 conformance tests, formatting, and server check pass.
+Commit: pending.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None
