@@ -7,7 +7,17 @@ Updated: 2026-07-21
 Continue implementing `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`
 Tasks 4–8 (M12 AgentProvider seam, M13 governed delegation, M14 topology
 templates, M15 Thoth manager loop, M16 ACP + SWE_SEED). M9–M11 + CEP-0008
-adapter complete. M12 (Task 4) COMPLETE and gated (408 tests). M13 (Task 5) in progress:
+adapter complete. M12 (Task 4) COMPLETE and gated (408 tests). M13 (Task 5)
+COMPLETE and gated: all T13.1–T13.7 conformance rows green, including T13.2
+mixed sandboxed/agent dispatch with replayable ordinals (`sea-forge-case-runner`
+extraction, server-owned per-episode dispatcher, `sea-forge ledger replay`).
+M14 (Task 6) COMPLETE and gated (see the M14 entry below): typed deterministic
+item expansion, all-of entry-criteria rollup mode, and the built-in
+`sequential_agents@0.1.0`/`concurrent_agents@0.1.0` topology templates.
+456 workspace tests pass. Next: M15 (Task 7) Thoth manager loop.
+
+Historical M13 progress log (kept for context, superseded by "COMPLETE" above):
+T13.2 (Task 5) in progress:
 slices 5.2, 5.4, server delegation service, CLI delegate command, and
 T13.4 token-budget test all landed. 420 tests pass. The M13 conformance
 table now records T13.4 green and the remaining tests pending. Next:
@@ -129,6 +139,42 @@ T13.2 final whole-branch review follow-up (three fixes):
   retained for deserialization compatibility.
 All 18 server M13 conformance tests, 3 CLI M13 conformance tests, fmt,
 and `just no-async-kernel` (19 crates) pass. Commit: pending.
+
+## M14 topology templates (2026-07-21)
+
+Implementation plan: `.agents/plans/2026-07-21-m14-topology-templates.md`.
+M14 (Task 6 of the ADLC/Thoth orchestration plan) is COMPLETE and gated:
+
+- Additive `EntryCriteriaMode::{Any,All}` on `PlanItem`/`TemplateItem`
+  (`Any` default, byte-compatible with every pre-existing template).
+  `case_engine::entry_criteria_satisfied` now supports all-of rollup gating
+  alongside the unchanged OR-of-sentries default.
+- Typed deterministic item expansion: `TemplatePlan.repeated: Vec<RepeatedItem>`
+  expands a shared item body into N items with IDs derived from
+  `{id_prefix}_{key}`, bounded by `MAX_REPEATED_ENTRIES` (32), duplicate
+  entry keys rejected, forbidden-substitution sites (including the new
+  `TemplateOperation::AgentTask.endpoint_ref`) enforced on the shared body
+  before expansion.
+- `TemplateOperation::AgentTask` closes a real prior gap — templates could
+  not express `Operation::AgentTask` at all before this change.
+- Built-in `sequential_agents@0.1.0` (steps chained via per-entry
+  settlement-accepted sentries referencing the prior step's deterministic
+  ID) and `concurrent_agents@0.1.0` (independent branches plus a flat
+  `Milestone` rollup with `entry_criteria_mode: All`) registered through
+  the existing `store_builtin` installer, no new CLI wiring.
+- `conformance_m14.rs`: T14.1 (deterministic ×2 instantiation, chained
+  gating), T14.2 (rollup fires only when all N branches settle accepted),
+  T14.3 (one branch rejected plus an unrelated rejection never fires the
+  rollup — proves source-binding, not leakage), plus mechanism-level unit
+  tests for expansion validation and all-of semantics — 9/9 pass.
+- Stub agent endpoints in the built-in templates prove scheduler/rollup
+  behavior only; they do not upgrade the spec §5 "real agent latencies"
+  claim, which stays open for M16 real integration.
+
+456 workspace tests pass (`cargo test --workspace --offline`), fmt clean,
+`just no-async-kernel` still covers 19 kernel crates (no new crate added —
+`sea-forge-core`/`sea-forge-planner` remain sync/no-HTTP). `.agents/specs/spec-agent-orchestration.md`
+§17.3 T14.1–T14.3 rows flipped to green.
 
 ## SodRule transition scope closeout (2026-07-17)
 

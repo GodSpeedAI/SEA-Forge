@@ -115,7 +115,7 @@ Not proven by: transcript volume, agent self-reports, or successful probes witho
 | Agent endpoints are declared config, not asserted status; a registry mutation marks the self-model snapshot stale | Proven (M12) | config cannot assert `probed`/`demonstrated`; descriptor change requires a version bump | `AgentEndpointConfig.status` rejected on load; immutable `runtime_adapter` registration (idempotent same-version+hash, rejects same-version hash change, versioned upgrade replaces); `register_endpoint` calls `mark_current_stale` when a snapshot exists; 4 extension + 3 server-config + 1 server-stale tests | none |
 | Endpoint failures yield typed subcodes and never fall back | Proven (M12) | T12.6: unreachable/4xx/5xx/redirect/schema-invalid/oversize settle rejected with typed `error_class`, one connection each | server conformance_m12 error-taxonomy tests (c6aebb6) | none |
 | The server semaphore suffices as the delegation concurrency cap | Evidence-backed (design) / unproven (this use) | M13 gate: N parallel `agent_task` runs respect `max_concurrent_runs` | `max_concurrent_runs` implemented and tested for sandboxed runs (M3); server acquires it for `agent_probe` (M12) | prove under mixed sandboxed + agent load |
-| Sentry chains suffice for sequential/concurrent topologies (no actor runtime needed) | Partially proven | M14 gate: both templates settle end-to-end incl. rollup | Case engine + E8 templates green (M2a–M2c); claim inherited from spec-full §5 | prove with real agent latencies and a parked-item path |
+| Sentry chains suffice for sequential/concurrent topologies (no actor runtime needed) | Partially proven | M14 gate: both templates settle end-to-end incl. rollup | M14 code-complete: `sequential_agents@0.1.0`/`concurrent_agents@0.1.0` settle end-to-end under `entry_criteria_mode: All` and chained settlement-accepted sentries (T14.1–T14.3, `conformance_m14.rs`); a rejected branch parks the case via the existing reducer with zero new termination logic | stub agent endpoints prove scheduler/rollup mechanism only; prove with real agent latencies (M16 real integration) |
 | ACP's permission model maps losslessly onto SEA authority/approvals | Assumption (decision: adopt ACP) | T16.3: every ACP request kind exercised in a session maps to a recorded SEA decision; no unmapped grant | goose + t3code both ship working ACP endpoints (audit §5); no SEA-side mapping exists | first E17 gate; lossy mapping ⇒ narrow to allow-listed request kinds (§0.8) |
 | SWE_SEED instances are reachable as ACP-driven hosts with harvestable proofs | Partially proven | M16 gate: one SWE_SEED-harnessed host completes a delegation with proof artifacts cross-linked | SWE_SEED inspected: host projection for Claude/Codex/OpenCode/Copilot confirmed (`crates/swe-seed-core/src/adapters/`), trace/proof artifacts confirmed; no end-to-end run yet | run the M16 slice |
 | Summarized transcripts are verifiable for settlement audit | Resolved (owner decision 2026-07-17) | summarized mode retains a sealed, encrypted canonical transcript, verified before crypto-shredding | decision recorded in §0 "Resolved decisions"; M13 implements the sealed-transcript commitment | implement sealed-transcript path in M13 |
@@ -426,11 +426,16 @@ function manager_iterate(case_id, grant, i):
 
 ### 17.3 Core Conformance — M14 (E16a, topology templates)
 
-| # | Test | Expected |
-|---|---|---|
-| T14.1 | `sequential_agents@0.1.0` instantiation ×2 | deterministic identical plans with bounded typed expansion and stable IDs; chain settles in order |
-| T14.2 | `concurrent_agents@0.1.0` with rollup | explicit all-of rollup fires only when all N named branches settle successfully |
-| T14.3 | one branch rejected, plus an unrelated rejected settlement | rollup does not fire; a sentry accepts only its named source event; no partial-success leak |
+| # | Test | Expected | Status |
+|---|---|---|---|
+| T14.1 | `sequential_agents@0.1.0` instantiation ×2 | deterministic identical plans with bounded typed expansion and stable IDs; chain settles in order | green: `t14_1_sequential_agents_instantiation_is_deterministic_and_settles_in_order` |
+| T14.2 | `concurrent_agents@0.1.0` with rollup | explicit all-of rollup fires only when all N named branches settle successfully | green: `t14_2_concurrent_agents_rollup_fires_only_when_all_n_branches_settle` |
+| T14.3 | one branch rejected, plus an unrelated rejected settlement | rollup does not fire; a sentry accepts only its named source event; no partial-success leak | green: `t14_3_one_branch_rejected_plus_unrelated_rejection_rollup_never_fires` |
+
+M14 code gate passed (`crates/sea-forge-planner/tests/conformance_m14.rs`, 9/9,
+plus full workspace regression). Stub agent endpoints prove the sentry/rollup
+scheduling mechanism only — the spec §5 "real agent latencies" claim (row
+above, §5) stays open until M16 real integration.
 
 ### 17.4 Core Conformance — M15 (E16b, Thoth manager loop)
 
@@ -478,10 +483,10 @@ Required once per release against one real hosted endpoint (operator-supplied cr
 
 - [x] `sea-forge-agent` crate exists; HTTP/async confined to it (T12.5 automated). *(M12 — af94ff0, c6aebb6)*
 - [x] `external_api` and `secret_access` surfaces activated deny-by-default with exact endpoint descriptor/config/destination/provider/model/limits/credential-reference boundaries. *(M12)*
-- [ ] `agent_task` kind additive; settlement bases `cancelled`/`turn_cap_exceeded`/`agent_endpoint_error` present.
-- [ ] Owner-selected §7.4 retention/commitment design implemented; redaction-before-hash and its claimed verification property proven. M13 remains incomplete without it. *(decision recorded 2026-07-17: sealed canonical transcript; M13 implements it)*
-- [ ] Server-owned ready-item dispatch uses the existing semaphore per run episode; CLI concurrency is one; cancellation settles from durable control state, never vanishes.
-- [ ] Both source-owned topology templates install as pinned runtime copies and instantiate deterministically; source-bound sentries and all-of rollup gate proven.
+- [x] `agent_task` kind additive; settlement bases `cancelled`/`turn_cap_exceeded`/`agent_endpoint_error` present. *(M13)*
+- [x] Owner-selected §7.4 retention/commitment design implemented; redaction-before-hash and its claimed verification property proven. *(M13 — sealed canonical transcript, T13.6)*
+- [x] Server-owned ready-item dispatch uses the existing semaphore per run episode; CLI concurrency is one; cancellation settles from durable control state, never vanishes. *(M13 — T13.2, `sea-forge-case-runner` + `case_dispatch.rs`)*
+- [x] Both source-owned topology templates install as pinned runtime copies and instantiate deterministically; source-bound sentries and all-of rollup gate proven. *(M14 — T14.1–T14.3)*
 - [ ] Manager loop bounded, evidence-grounded, SoD-enforced, escalating on exhaustion.
 - [ ] ACP permission→approval mapping validated (T16.3) or scope narrowed per §0.8.
 - [ ] SWE_SEED slice green (T16.6) with proof harvest + settlement-transport correlation.

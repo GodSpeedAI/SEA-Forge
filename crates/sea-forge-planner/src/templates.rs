@@ -1,8 +1,9 @@
 use sea_forge_core::{
     errors::ForgeError,
     types::{
-        CasePlan, ItemKind, ItemMarkers, JobContract, Operation, OriginRef, OriginRefKind,
-        OriginRole, PlanItem, Sentry, SentryPredicate, SentryTrigger, SettlementCriteria,
+        CasePlan, EntryCriteriaMode, ItemKind, ItemMarkers, JobContract, Operation, OriginRef,
+        OriginRefKind, OriginRole, PlanItem, Sentry, SentryPredicate, SentryTrigger,
+        SettlementCriteria,
     },
     RECORD_VERSION,
 };
@@ -45,6 +46,41 @@ pub struct PlanTemplate {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TemplatePlan {
     pub items: Vec<TemplateItem>,
+    /// Typed deterministic item expansion (§7.5 E16a). Empty by default —
+    /// old templates are byte-compatible.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub repeated: Vec<RepeatedItem>,
+}
+
+/// A bounded hard maximum on how many items a single `RepeatedItem` group
+/// may expand to.
+pub const MAX_REPEATED_ENTRIES: usize = 32;
+
+/// One entry in a `RepeatedItem` group's typed list.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct RepeatEntry {
+    /// Stable key; the expanded item's ID is `{id_prefix}_{key}`.
+    pub key: String,
+    /// Entry-scoped parameter overrides, merged over the template's
+    /// resolved parameters for this entry's substitution pass only.
+    #[serde(default)]
+    pub params: BTreeMap<String, String>,
+    /// Extra sentries appended to the shared body's `entry_criteria` for
+    /// this entry only — e.g. a sequential chain references the prior
+    /// entry's deterministic ID here.
+    #[serde(default)]
+    pub entry_criteria: Vec<Sentry>,
+}
+
+/// Typed deterministic expansion of a shared item body into N plan items
+/// with stable, order/key-derived IDs (§7.5 E16a slice 6.1). `item`'s
+/// `plan_item_id` must be the empty-string sentinel — expansion derives the
+/// real ID from `id_prefix` + each entry's `key`.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct RepeatedItem {
+    pub id_prefix: String,
+    pub item: TemplateItem,
+    pub entries: Vec<RepeatEntry>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -69,6 +105,8 @@ pub struct TemplateItem {
     #[serde(default)]
     pub entry_criteria: Vec<Sentry>,
     #[serde(default)]
+    pub entry_criteria_mode: EntryCriteriaMode,
+    #[serde(default)]
     pub exit_criteria: Vec<Sentry>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent_stage: Option<String>,
@@ -82,50 +120,66 @@ fn default_max_instances() -> u32 {
 
 /// Operation with string values that may contain `${param}` placeholders.
 /// The `kind` and `argv[0]` fields are literal — no substitution allowed.
+/// `AgentTask.endpoint_ref` is likewise literal: it is the delegation
+/// target's identity, the same privilege class as an executable's argv[0].
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TemplateOperation {
-    WriteFile { path: String, content_hint: String },
-    ExecuteCommand { argv: Vec<String>, cwd: String },
+    WriteFile {
+        path: String,
+        content_hint: String,
+    },
+    ExecuteCommand {
+        argv: Vec<String>,
+        cwd: String,
+    },
+    AgentTask {
+        endpoint_ref: String,
+        instruction: String,
+        max_turns: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        token_budget: Option<u64>,
+    },
 }
 
-/// Validate that no `${param}` appears in a forbidden position.
-/// Forbidden: `kind` (tag), `argv[0]`, `plan_item_id`, `name`, sentry event
-/// kinds, sentry source IDs, `item_kind` (enum tag), and sandbox classes.
-fn check_substitution_sites(template: &PlanTemplate) -> Result<(), ForgeError> {
-    for item in &template.plan.items {
-        if has_param(&item.plan_item_id) || has_param(&item.name) {
+/// Validate that no `${param}` appears in a forbidden position for one item
+/// body. Forbidden: `kind` (tag), `argv[0]`, `endpoint_ref`, `plan_item_id`,
+/// `name`, sentry event kinds, sentry source IDs, `item_kind` (enum tag),
+/// and sandbox classes.
+fn check_item_substitution_sites(item: &TemplateItem) -> Result<(), ForgeError> {
+    if has_param(&item.plan_item_id) || has_param(&item.name) {
+        return Err(ForgeError::Config {
+            class: "schema_error",
+            path: std::path::PathBuf::new(),
+            message: "template parameter in ID or name is forbidden".into(),
+        });
+    }
+    if item.sandbox_class.as_deref().is_some_and(has_param) {
+        return Err(ForgeError::Config {
+            class: "schema_error",
+            path: std::path::PathBuf::new(),
+            message: "template parameter in sandbox_class is forbidden".into(),
+        });
+    }
+    for sentry in item.entry_criteria.iter().chain(&item.exit_criteria) {
+        if has_param(&sentry.on.source) {
             return Err(ForgeError::Config {
                 class: "schema_error",
                 path: std::path::PathBuf::new(),
-                message: "template parameter in ID or name is forbidden".into(),
+                message: "template parameter in sentry source is forbidden".into(),
             });
         }
-        if item.sandbox_class.as_deref().is_some_and(has_param) {
+        if has_param(&sentry.on.event) {
             return Err(ForgeError::Config {
                 class: "schema_error",
                 path: std::path::PathBuf::new(),
-                message: "template parameter in sandbox_class is forbidden".into(),
+                message: "template parameter in sentry event kind is forbidden".into(),
             });
         }
-        for sentry in item.entry_criteria.iter().chain(&item.exit_criteria) {
-            if has_param(&sentry.on.source) {
-                return Err(ForgeError::Config {
-                    class: "schema_error",
-                    path: std::path::PathBuf::new(),
-                    message: "template parameter in sentry source is forbidden".into(),
-                });
-            }
-            if has_param(&sentry.on.event) {
-                return Err(ForgeError::Config {
-                    class: "schema_error",
-                    path: std::path::PathBuf::new(),
-                    message: "template parameter in sentry event kind is forbidden".into(),
-                });
-            }
-        }
-        for op in &item.operations {
-            if let TemplateOperation::ExecuteCommand { argv, .. } = op {
+    }
+    for op in &item.operations {
+        match op {
+            TemplateOperation::ExecuteCommand { argv, .. } => {
                 if !argv.is_empty() && has_param(&argv[0]) {
                     return Err(ForgeError::Config {
                         class: "schema_error",
@@ -134,7 +188,29 @@ fn check_substitution_sites(template: &PlanTemplate) -> Result<(), ForgeError> {
                     });
                 }
             }
+            TemplateOperation::AgentTask { endpoint_ref, .. } => {
+                if has_param(endpoint_ref) {
+                    return Err(ForgeError::Config {
+                        class: "schema_error",
+                        path: std::path::PathBuf::new(),
+                        message: "template parameter in endpoint_ref is forbidden".into(),
+                    });
+                }
+            }
+            TemplateOperation::WriteFile { .. } => {}
         }
+    }
+    Ok(())
+}
+
+/// Validate substitution sites across every flat item and every repeated
+/// item's shared body.
+fn check_substitution_sites(template: &PlanTemplate) -> Result<(), ForgeError> {
+    for item in &template.plan.items {
+        check_item_substitution_sites(item)?;
+    }
+    for group in &template.plan.repeated {
+        check_item_substitution_sites(&group.item)?;
     }
     Ok(())
 }
@@ -217,6 +293,156 @@ fn substitute(s: &str, params: &BTreeMap<String, String>) -> String {
     result
 }
 
+/// Project one resolved `TemplateItem` body into a `PlanItem` with the given
+/// final ID and extra (entry-scoped) sentries appended to its shared
+/// `entry_criteria`.
+fn project_item(
+    ti: &TemplateItem,
+    plan_item_id: String,
+    resolved: &BTreeMap<String, String>,
+    extra_entry_criteria: &[Sentry],
+) -> PlanItem {
+    PlanItem {
+        plan_item_id,
+        name: ti.name.clone(),
+        operations: ti
+            .operations
+            .iter()
+            .map(|op| match op {
+                TemplateOperation::WriteFile { path, content_hint } => Operation::WriteFile {
+                    path: substitute(path, resolved),
+                    content_hint: substitute(content_hint, resolved),
+                },
+                TemplateOperation::ExecuteCommand { argv, cwd } => Operation::ExecuteCommand {
+                    argv: argv
+                        .iter()
+                        .enumerate()
+                        .map(|(i, a)| {
+                            if i == 0 {
+                                a.clone()
+                            } else {
+                                substitute(a, resolved)
+                            }
+                        })
+                        .collect(),
+                    cwd: substitute(cwd, resolved),
+                },
+                TemplateOperation::AgentTask {
+                    endpoint_ref,
+                    instruction,
+                    max_turns,
+                    token_budget,
+                } => Operation::AgentTask {
+                    endpoint_ref: endpoint_ref.clone(),
+                    instruction: substitute(instruction, resolved),
+                    max_turns: *max_turns,
+                    token_budget: *token_budget,
+                    response_schema: None,
+                    transcript_retention: None,
+                },
+            })
+            .collect(),
+        entry_criteria: ti
+            .entry_criteria
+            .iter()
+            .cloned()
+            .chain(extra_entry_criteria.iter().cloned())
+            .collect(),
+        entry_criteria_mode: ti.entry_criteria_mode,
+        exit_criteria: ti.exit_criteria.clone(),
+        settlement_criteria: SettlementCriteria {
+            require_exit_zero: ti.settlement_criteria.require_exit_zero,
+            required_artifacts: ti
+                .settlement_criteria
+                .required_artifacts
+                .iter()
+                .map(|value| substitute(value, resolved))
+                .collect(),
+            stdout_must_contain: ti
+                .settlement_criteria
+                .stdout_must_contain
+                .as_deref()
+                .map(|value| substitute(value, resolved)),
+            require_approval: ti.settlement_criteria.require_approval,
+            ..ti.settlement_criteria.clone()
+        },
+        settlement_criteria_ref: None,
+        item_kind: ti.item_kind.clone(),
+        sandbox_class: ti.sandbox_class.clone(),
+        parent_stage: ti.parent_stage.clone(),
+        markers: ti.markers.clone(),
+        max_instances: ti.max_instances,
+        depends_on: ti.depends_on.clone(),
+        environment: ti.environment.clone(),
+    }
+}
+
+fn valid_repeat_token(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
+}
+
+/// Validate and expand one `RepeatedItem` group into its final plan items.
+fn expand_repeated(
+    group: &RepeatedItem,
+    resolved: &BTreeMap<String, String>,
+) -> Result<Vec<PlanItem>, ForgeError> {
+    if !valid_repeat_token(&group.id_prefix) {
+        return Err(ForgeError::Config {
+            class: "schema_error",
+            path: PathBuf::new(),
+            message: "repeated item id_prefix must be [a-z0-9_-]+".into(),
+        });
+    }
+    if !group.item.plan_item_id.is_empty() {
+        return Err(ForgeError::Config {
+            class: "schema_error",
+            path: PathBuf::new(),
+            message: "repeated item body plan_item_id must be the empty sentinel".into(),
+        });
+    }
+    if group.entries.is_empty() || group.entries.len() > MAX_REPEATED_ENTRIES {
+        return Err(ForgeError::Config {
+            class: "schema_error",
+            path: PathBuf::new(),
+            message: format!(
+                "repeated item entries must be 1..={MAX_REPEATED_ENTRIES}, got {}",
+                group.entries.len()
+            ),
+        });
+    }
+    let mut seen_keys = std::collections::HashSet::new();
+    let mut items = Vec::with_capacity(group.entries.len());
+    for entry in &group.entries {
+        if !valid_repeat_token(&entry.key) {
+            return Err(ForgeError::Config {
+                class: "schema_error",
+                path: PathBuf::new(),
+                message: "repeated item entry key must be [a-z0-9_-]+".into(),
+            });
+        }
+        if !seen_keys.insert(entry.key.clone()) {
+            return Err(ForgeError::Config {
+                class: "schema_error",
+                path: PathBuf::new(),
+                message: format!("duplicate repeated item entry key: {}", entry.key),
+            });
+        }
+        let mut entry_resolved = resolved.clone();
+        entry_resolved.extend(entry.params.iter().map(|(k, v)| (k.clone(), v.clone())));
+        let plan_item_id = format!("{}_{}", group.id_prefix, entry.key);
+        items.push(project_item(
+            &group.item,
+            plan_item_id,
+            &entry_resolved,
+            &entry.entry_criteria,
+        ));
+    }
+    Ok(items)
+}
+
 /// Instantiate a template into a CasePlan.
 /// Same template + same params always yields an identical CasePlan.
 pub fn instantiate(
@@ -228,71 +454,15 @@ pub fn instantiate(
 ) -> Result<CasePlan, ForgeError> {
     check_substitution_sites(template)?;
     let resolved = resolve_params(template, params)?;
-    let items = template
+    let mut items: Vec<PlanItem> = template
         .plan
         .items
         .iter()
-        .map(|ti| {
-            Ok(PlanItem {
-                plan_item_id: ti.plan_item_id.clone(),
-                name: ti.name.clone(),
-                operations: ti
-                    .operations
-                    .iter()
-                    .map(|op| match op {
-                        TemplateOperation::WriteFile { path, content_hint } => {
-                            Operation::WriteFile {
-                                path: substitute(path, &resolved),
-                                content_hint: substitute(content_hint, &resolved),
-                            }
-                        }
-                        TemplateOperation::ExecuteCommand { argv, cwd } => {
-                            Operation::ExecuteCommand {
-                                argv: argv
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(i, a)| {
-                                        if i == 0 {
-                                            a.clone()
-                                        } else {
-                                            substitute(a, &resolved)
-                                        }
-                                    })
-                                    .collect(),
-                                cwd: substitute(cwd, &resolved),
-                            }
-                        }
-                    })
-                    .collect(),
-                entry_criteria: ti.entry_criteria.clone(),
-                exit_criteria: ti.exit_criteria.clone(),
-                settlement_criteria: SettlementCriteria {
-                    require_exit_zero: ti.settlement_criteria.require_exit_zero,
-                    required_artifacts: ti
-                        .settlement_criteria
-                        .required_artifacts
-                        .iter()
-                        .map(|value| substitute(value, &resolved))
-                        .collect(),
-                    stdout_must_contain: ti
-                        .settlement_criteria
-                        .stdout_must_contain
-                        .as_deref()
-                        .map(|value| substitute(value, &resolved)),
-                    require_approval: ti.settlement_criteria.require_approval,
-                    ..ti.settlement_criteria.clone()
-                },
-                settlement_criteria_ref: None,
-                item_kind: ti.item_kind.clone(),
-                sandbox_class: ti.sandbox_class.clone(),
-                parent_stage: ti.parent_stage.clone(),
-                markers: ti.markers.clone(),
-                max_instances: ti.max_instances,
-                depends_on: ti.depends_on.clone(),
-                environment: ti.environment.clone(),
-            })
-        })
-        .collect::<Result<Vec<_>, ForgeError>>()?;
+        .map(|ti| project_item(ti, ti.plan_item_id.clone(), &resolved, &[]))
+        .collect();
+    for group in &template.plan.repeated {
+        items.extend(expand_repeated(group, &resolved)?);
+    }
     Ok(CasePlan {
         version: RECORD_VERSION.into(),
         plan_id: "plan_01".into(),
@@ -397,6 +567,9 @@ pub fn store_builtin(root: &Path) -> Result<std::path::PathBuf, ForgeError> {
     // Also materialize the M10 ADLC/ODI built-ins.
     store_template(root, &adlc_case_template())?;
     store_template(root, &odi_adlc_case_template())?;
+    // Also materialize the M14 topology built-ins.
+    store_template(root, &sequential_agents_template())?;
+    store_template(root, &concurrent_agents_template())?;
     Ok(path)
 }
 
@@ -457,10 +630,12 @@ pub fn sea_model_demo_template() -> PlanTemplate {
                 max_instances: 1,
                 environment: None,
                 entry_criteria: vec![],
+                entry_criteria_mode: Default::default(),
                 exit_criteria: vec![],
                 parent_stage: None,
                 depends_on: vec![],
             }],
+            repeated: vec![],
         },
     }
 }
@@ -480,6 +655,7 @@ fn stage(id: &str, name: &str, entry: Vec<Sentry>) -> TemplateItem {
         max_instances: 1,
         environment: None,
         entry_criteria: entry,
+        entry_criteria_mode: Default::default(),
         exit_criteria: vec![],
         parent_stage: None,
         depends_on: vec![],
@@ -499,6 +675,7 @@ fn milestone(id: &str, name: &str, parent: &str) -> TemplateItem {
         max_instances: 1,
         environment: None,
         entry_criteria: vec![],
+        entry_criteria_mode: Default::default(),
         exit_criteria: vec![],
         parent_stage: Some(parent.into()),
         depends_on: vec![],
@@ -528,6 +705,7 @@ fn task(
         max_instances,
         environment: None,
         entry_criteria: entry,
+        entry_criteria_mode: Default::default(),
         exit_criteria: vec![],
         parent_stage: Some(parent.into()),
         depends_on: vec![],
@@ -661,11 +839,13 @@ pub fn adlc_case_template() -> PlanTemplate {
                     max_instances: 1,
                     environment: None,
                     entry_criteria: vec![],
+                    entry_criteria_mode: Default::default(),
                     exit_criteria: vec![],
                     parent_stage: None,
                     depends_on: vec![],
                 },
             ],
+            repeated: vec![],
         },
     }
 }
@@ -741,6 +921,145 @@ pub fn odi_adlc_case_template() -> PlanTemplate {
             domain_model_ref: Some("godspeed.adlc_odi_case".into()),
         }],
         job_contract: None,
-        plan: TemplatePlan { items },
+        plan: TemplatePlan {
+            items,
+            repeated: vec![],
+        },
+    }
+}
+
+// ── M14 (E16a §7.5): deterministic topology built-ins ──
+
+/// Shared `AgentTask` body for a repeated topology branch/step. Sentinel
+/// `plan_item_id` (`""`) — expansion derives the real ID from the group's
+/// `id_prefix` and each entry's key. `instruction` is entry-scoped
+/// (substituted per entry, not declared as a template-level parameter).
+fn agent_task_body() -> TemplateItem {
+    TemplateItem {
+        plan_item_id: "".into(),
+        name: "agent_branch".into(),
+        operations: vec![TemplateOperation::AgentTask {
+            endpoint_ref: "agent:builtin".into(),
+            instruction: "${instruction}".into(),
+            max_turns: 1,
+            token_budget: None,
+        }],
+        settlement_criteria: SettlementCriteria::default(),
+        item_kind: ItemKind::AgentTask,
+        sandbox_class: None,
+        markers: ItemMarkers::default(),
+        max_instances: 1,
+        environment: None,
+        entry_criteria: vec![],
+        entry_criteria_mode: Default::default(),
+        exit_criteria: vec![],
+        parent_stage: None,
+        depends_on: vec![],
+    }
+}
+
+fn repeated_item_id(id_prefix: &str, key: &str) -> String {
+    format!("{id_prefix}_{key}")
+}
+
+/// The built-in `sequential_agents@0.1.0` template: three `AgentTask` steps
+/// chained by settlement-accepted sentries, each step gated on the prior
+/// step's acceptance (§7.5 E16a slice 6.3, T14.1).
+pub fn sequential_agents_template() -> PlanTemplate {
+    let id_prefix = "step";
+    let keys = ["1", "2", "3"];
+    let entries = keys
+        .iter()
+        .enumerate()
+        .map(|(i, key)| RepeatEntry {
+            key: (*key).into(),
+            params: BTreeMap::from([(
+                "instruction".into(),
+                format!("perform sequential step {key}"),
+            )]),
+            entry_criteria: if i == 0 {
+                vec![]
+            } else {
+                vec![reactivation_sentry(
+                    &repeated_item_id(id_prefix, keys[i - 1]),
+                    "accepted",
+                )]
+            },
+        })
+        .collect();
+    PlanTemplate {
+        name: "sequential_agents".into(),
+        version: "0.1.0".into(),
+        description:
+            "Deterministic chain of agent-task steps, each gated on the prior step's acceptance"
+                .into(),
+        parameters: BTreeMap::new(),
+        origin_refs: vec![],
+        job_contract: None,
+        plan: TemplatePlan {
+            items: vec![],
+            repeated: vec![RepeatedItem {
+                id_prefix: id_prefix.into(),
+                item: agent_task_body(),
+                entries,
+            }],
+        },
+    }
+}
+
+/// The built-in `concurrent_agents@0.1.0` template: N independent
+/// `AgentTask` branches plus a flat rollup `Milestone` with
+/// `entry_criteria_mode: All`, naming every branch — the rollup fires only
+/// when every branch settles accepted (§7.5 E16a slice 6.3, T14.2/T14.3).
+pub fn concurrent_agents_template() -> PlanTemplate {
+    let id_prefix = "branch";
+    let keys = ["a", "b", "c"];
+    let entries: Vec<RepeatEntry> = keys
+        .iter()
+        .map(|key| RepeatEntry {
+            key: (*key).into(),
+            params: BTreeMap::from([(
+                "instruction".into(),
+                format!("perform concurrent branch {key}"),
+            )]),
+            entry_criteria: vec![],
+        })
+        .collect();
+    let rollup = TemplateItem {
+        plan_item_id: "ms_all_branches_accepted".into(),
+        name: "All Branches Accepted".into(),
+        operations: vec![],
+        settlement_criteria: SettlementCriteria::default(),
+        item_kind: ItemKind::Milestone,
+        sandbox_class: None,
+        markers: ItemMarkers::default(),
+        max_instances: 1,
+        environment: None,
+        entry_criteria: keys
+            .iter()
+            .map(|key| reactivation_sentry(&repeated_item_id(id_prefix, key), "accepted"))
+            .collect(),
+        entry_criteria_mode: EntryCriteriaMode::All,
+        exit_criteria: vec![],
+        parent_stage: None,
+        depends_on: vec![],
+    };
+    PlanTemplate {
+        name: "concurrent_agents".into(),
+        version: "0.1.0".into(),
+        description:
+            "Deterministic fan-out of independent agent-task branches with an all-of success rollup"
+                .into(),
+        parameters: BTreeMap::new(),
+        origin_refs: vec![],
+        job_contract: None,
+        plan: TemplatePlan {
+            items: vec![rollup],
+            repeated: vec![RepeatedItem {
+                id_prefix: id_prefix.into(),
+                item: agent_task_body(),
+                entries,
+            }],
+        },
     }
 }

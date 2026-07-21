@@ -26,6 +26,7 @@ fn demo_item() -> PlanItem {
         name: "generate_and_validate".into(),
         operations: vec![],
         entry_criteria: vec![],
+        entry_criteria_mode: Default::default(),
         exit_criteria: vec![],
         settlement_criteria: SettlementCriteria {
             require_exit_zero: true,
@@ -143,10 +144,12 @@ fn template_instantiation_criteria_is_deterministic_ignoring_id() {
                 max_instances: 1,
                 environment: None,
                 entry_criteria: vec![],
+                entry_criteria_mode: Default::default(),
                 exit_criteria: vec![],
                 parent_stage: None,
                 depends_on: vec![],
             }],
+            repeated: vec![],
         },
     };
     let params = BTreeMap::new();
@@ -221,10 +224,12 @@ fn template_origin_reuses_intent_and_template() {
                 max_instances: 1,
                 environment: None,
                 entry_criteria: vec![],
+                entry_criteria_mode: Default::default(),
                 exit_criteria: vec![],
                 parent_stage: None,
                 depends_on: vec![],
             }],
+            repeated: vec![],
         },
     };
     let params = BTreeMap::new();

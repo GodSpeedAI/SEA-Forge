@@ -61,6 +61,7 @@ pub fn plan(
             name: "generate_and_validate_sea_model".into(),
             operations,
             entry_criteria: vec![],
+            entry_criteria_mode: Default::default(),
             exit_criteria: vec![],
             settlement_criteria,
             settlement_criteria_ref: None,

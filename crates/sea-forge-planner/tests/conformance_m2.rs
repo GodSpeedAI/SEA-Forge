@@ -18,6 +18,7 @@ fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
         name: id.into(),
         operations: vec![],
         entry_criteria: entry,
+        entry_criteria_mode: Default::default(),
         exit_criteria: vec![],
         settlement_criteria: SettlementCriteria {
             require_exit_zero: false,
@@ -46,6 +47,7 @@ fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -
         name: id.into(),
         operations: vec![],
         entry_criteria: entry,
+        entry_criteria_mode: Default::default(),
         exit_criteria: vec![],
         settlement_criteria: SettlementCriteria {
             require_exit_zero: true,

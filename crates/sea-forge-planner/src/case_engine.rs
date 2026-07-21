@@ -68,8 +68,11 @@ fn sentry_satisfied(
     }
 }
 
-/// Check whether any of an item's entry criteria are satisfied (OR-of-sentries).
-/// An empty entry_criteria list means "available at stage activation" (always true).
+/// Check whether an item's entry criteria are satisfied. `Any` (default)
+/// is OR-of-sentries; `All` requires every listed sentry satisfied — used
+/// for concurrent-branch success rollups (§7.5 E16a). An empty
+/// entry_criteria list means "available at stage activation" (always true)
+/// regardless of mode.
 fn entry_criteria_satisfied(
     item: &PlanItem,
     events: &[TraceEvent],
@@ -78,9 +81,16 @@ fn entry_criteria_satisfied(
     if item.entry_criteria.is_empty() {
         return true;
     }
-    item.entry_criteria
-        .iter()
-        .any(|s| sentry_satisfied(s, events, workspace_files))
+    match item.entry_criteria_mode {
+        sea_forge_core::types::EntryCriteriaMode::Any => item
+            .entry_criteria
+            .iter()
+            .any(|s| sentry_satisfied(s, events, workspace_files)),
+        sea_forge_core::types::EntryCriteriaMode::All => item
+            .entry_criteria
+            .iter()
+            .all(|s| sentry_satisfied(s, events, workspace_files)),
+    }
 }
 
 /// Evaluate sentries against the trace events and return the set of item IDs
