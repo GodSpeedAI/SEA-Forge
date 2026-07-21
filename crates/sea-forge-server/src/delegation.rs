@@ -215,6 +215,7 @@ pub async fn execute_with_control(
             max_instances: 1,
             depends_on: vec![],
             environment: None,
+            proposed_by: None,
         }],
         template_ref: None,
         job_contract_ref: None,

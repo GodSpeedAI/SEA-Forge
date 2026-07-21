@@ -374,6 +374,7 @@ fn project_item(
         max_instances: ti.max_instances,
         depends_on: ti.depends_on.clone(),
         environment: ti.environment.clone(),
+        proposed_by: None,
     }
 }
 

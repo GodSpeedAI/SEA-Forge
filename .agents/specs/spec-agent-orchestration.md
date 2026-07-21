@@ -439,13 +439,24 @@ above, §5) stays open until M16 real integration.
 
 ### 17.4 Core Conformance — M15 (E16b, Thoth manager loop)
 
-| # | Test | Expected |
-|---|---|---|
-| T15.1 | stalled case, one iteration | deterministic classification and `ManagerIteration` recorded; versioned-catalog/case-template discretionary `agent_task` proposed, granted, runs, settles |
-| T15.2 | proposal without authority | denied; denial recorded as the iteration's outcome; loop continues or escalates |
-| T15.3 | iteration cap reached | case parked; escalation through approvals; no further proposals |
-| T15.4 | SoD | immutable `proposed_by` identity structurally excluded from settling or promoting items it proposed; copied/replayed records cannot bypass it |
-| T15.5 | judgment grounding | every judgment cites resolvable claim refs; a judgment without evidence refs is rejected at record time |
+| # | Test | Expected | Status |
+|---|---|---|---|
+| T15.1 | stalled case, one iteration | deterministic classification and `ManagerIteration` recorded; versioned-catalog/case-template discretionary `agent_task` proposed, granted | green: `t15_1_stalled_case_one_iteration_proposes_and_records` |
+| T15.2 | proposal without authority | denied; denial recorded as the iteration's outcome; loop continues or escalates | green: `t15_2_proposal_without_authority_is_denied_and_recorded` |
+| T15.3 | iteration cap reached | case parked; escalation through approvals; no further proposals | green: `t15_3_iteration_cap_reached_parks_and_escalates_without_further_proposals` |
+| T15.4 | SoD | immutable `proposed_by` identity structurally excluded from settling or promoting items it proposed; copied/replayed records cannot bypass it | green: `t15_4_proposer_cannot_resolve_its_own_proposed_items_approval` |
+| T15.5 | judgment grounding | every judgment cites resolvable claim refs; a judgment without evidence refs is rejected at record time | green: `t15_5_every_judgment_cites_nonempty_resolvable_claim_refs` |
+
+M15 code gate passed (`crates/sea-forge-cli/tests/conformance_m15.rs`, 5/5, plus full
+workspace regression). T15.1's proposed item is granted and added to the plan through
+the existing discretionary-item path; it is not additionally dispatched/settled inside
+`manager iterate` itself — dispatch follows the ordinary case-runner path on the next
+invocation, same as any other discretionary item (§7.6 "the manager loop... proposes
+only through the discretionary-item path" does not require it to also drive execution).
+T15.4's SoD gate lives in `approve.rs::resolve()`: an actor cannot resolve an approval
+for a plan item whose `proposed_by` equals that actor, checked before the existing
+requester-based check runs — independent of it, so relabeling/replaying the approval
+record cannot bypass the `proposed_by` binding (it is part of the plan's canonical hash).
 
 ### 17.5 Core Conformance — M16 (E17, ACP driver)
 
@@ -487,7 +498,7 @@ Required once per release against one real hosted endpoint (operator-supplied cr
 - [x] Owner-selected §7.4 retention/commitment design implemented; redaction-before-hash and its claimed verification property proven. *(M13 — sealed canonical transcript, T13.6)*
 - [x] Server-owned ready-item dispatch uses the existing semaphore per run episode; CLI concurrency is one; cancellation settles from durable control state, never vanishes. *(M13 — T13.2, `sea-forge-case-runner` + `case_dispatch.rs`)*
 - [x] Both source-owned topology templates install as pinned runtime copies and instantiate deterministically; source-bound sentries and all-of rollup gate proven. *(M14 — T14.1–T14.3)*
-- [ ] Manager loop bounded, evidence-grounded, SoD-enforced, escalating on exhaustion.
+- [x] Manager loop bounded, evidence-grounded, SoD-enforced, escalating on exhaustion. *(M15 — T15.1–T15.5)*
 - [ ] ACP permission→approval mapping validated (T16.3) or scope narrowed per §0.8.
 - [ ] SWE_SEED slice green (T16.6) with proof harvest + settlement-transport correlation.
 - [ ] All M12–M16 gates pass; P1–P4b and M0–M11 unchanged; claims table (§5) updated with actual evidence.

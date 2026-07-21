@@ -286,6 +286,11 @@ enum CaseCommand {
         #[arg(long)]
         item: PathBuf,
     },
+    ManagerIterate {
+        case_id: String,
+        #[arg(long, default_value_t = 8)]
+        max_iterations: u32,
+    },
 }
 
 #[derive(Subcommand)]
@@ -589,6 +594,16 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 CaseCommand::AddTask { case_id, item } => {
                     commands::case::add_task(&root, &policy, &actor, &case_id, &item)
                 }
+                CaseCommand::ManagerIterate {
+                    case_id,
+                    max_iterations,
+                } => commands::manager::iterate(commands::manager::ManagerIterateOptions {
+                    root: &root,
+                    policy: &policy,
+                    actor: &actor,
+                    case_id: &case_id,
+                    max_iterations,
+                }),
             }
             .map_err(|error| (1, error))
         }

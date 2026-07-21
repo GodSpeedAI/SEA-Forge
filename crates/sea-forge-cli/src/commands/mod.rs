@@ -7,6 +7,7 @@ pub mod env;
 pub mod federation;
 pub mod inspect;
 pub mod ledger;
+pub mod manager;
 pub mod mediated;
 pub mod memory;
 pub mod migrate;

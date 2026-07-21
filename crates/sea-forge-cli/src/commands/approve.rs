@@ -87,6 +87,26 @@ fn resolve(
                 .trim_matches('"')
         )));
     }
+    // SoD (§10.3, T15.4): the actor who proposed a discretionary item
+    // cannot resolve settlement approval over that same item. `proposed_by`
+    // is part of the plan's canonical hash — relabeling, copying, or
+    // replaying the record cannot remove the binding.
+    let (_, plan, _) = super::case::load_case_plan(root, case_id)?;
+    if let Some(item) = plan
+        .items
+        .iter()
+        .find(|item| item.plan_item_id == latest.plan_item_id)
+    {
+        if item.proposed_by.as_deref() == Some(actor) {
+            return Err(ForgeError::Plan {
+                class: "sod_violation",
+                message: format!(
+                    "actor '{actor}' cannot resolve an approval for item '{}' it proposed",
+                    item.plan_item_id
+                ),
+            });
+        }
+    }
     let decision: AuthorityDecision = entries
         .iter()
         .find(|entry| {

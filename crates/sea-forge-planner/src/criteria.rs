@@ -328,6 +328,7 @@ mod tests {
             max_instances: 1,
             depends_on: vec![],
             environment: None,
+            proposed_by: None,
         }
     }
 

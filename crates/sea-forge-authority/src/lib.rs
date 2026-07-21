@@ -1151,6 +1151,7 @@ impl AuthorityPolicyBundle {
                     | "case_reopen"
                     | "case_terminate"
                     | "discretionary_task_add"
+                    | "manager_iteration"
                     | "identity_minting"
                     | "artifact_transition"
                     | "attestation"
@@ -2763,6 +2764,7 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "case_reopen",
                 "case_terminate",
                 "discretionary_task_add",
+                "manager_iteration",
                 "policy_mutation",
                 "evidence_mutation",
                 "identity_minting",

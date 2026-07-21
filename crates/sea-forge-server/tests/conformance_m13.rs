@@ -907,6 +907,7 @@ async fn t13_2_mixed_episodes_share_server_cap() {
                     max_instances: 1,
                     depends_on: vec![],
                     environment: None,
+                    proposed_by: None,
                 })
                 .collect(),
             template_ref: None,
@@ -1125,6 +1126,7 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
                 max_instances: 1,
                 depends_on: vec![],
                 environment: None,
+                proposed_by: None,
             }],
             template_ref: None,
             job_contract_ref: None,
@@ -1195,6 +1197,7 @@ async fn t13_2_post_dispatch_failure_settles_and_drains_siblings() {
                     max_instances: 1,
                     depends_on: vec![],
                     environment: None,
+                    proposed_by: None,
                 })
                 .collect(),
             template_ref: None,
@@ -1306,6 +1309,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
                     max_instances: 1,
                     depends_on: vec![],
                     environment: None,
+                    proposed_by: None,
                 },
                 PlanItem {
                     plan_item_id: "human".into(),
@@ -1323,6 +1327,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
                     max_instances: 1,
                     depends_on: vec![],
                     environment: None,
+                    proposed_by: None,
                 },
             ],
             template_ref: None,
@@ -1438,6 +1443,7 @@ async fn t13_2_permit_completion_rederives_before_stale_action() {
                     max_instances: 1,
                     depends_on: vec![],
                     environment: None,
+                    proposed_by: None,
                 })
                 .collect(),
             template_ref: None,
@@ -1518,6 +1524,7 @@ async fn t13_2_non_executable_activation_returns_typed_error() {
                 max_instances: 1,
                 depends_on: vec![],
                 environment: None,
+                proposed_by: None,
             }],
             template_ref: None,
             job_contract_ref: None,
@@ -1581,6 +1588,7 @@ fn t13_3_restart_after_durable_cancellation_settles_once() {
             max_instances: 1,
             depends_on: vec![],
             environment: None,
+            proposed_by: None,
         }],
         template_ref: None,
         job_contract_ref: None,

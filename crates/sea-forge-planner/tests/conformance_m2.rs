@@ -38,6 +38,7 @@ fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
         max_instances: 1,
         depends_on: vec![],
         environment: None,
+        proposed_by: None,
     }
 }
 
@@ -67,6 +68,7 @@ fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -
         max_instances,
         depends_on: vec![],
         environment: None,
+        proposed_by: None,
     }
 }
 
