@@ -61,6 +61,22 @@ struct DelegationHandle {
     requested: Arc<AtomicBool>,
 }
 
+#[derive(Serialize)]
+struct RecoveredDelegationEvidence<'a> {
+    #[serde(flatten)]
+    evidence: &'a TranscriptEvidence,
+    case_id: &'a str,
+    item_id: &'a str,
+}
+
+#[derive(Serialize)]
+struct RecoveredDelegationSettlement<'a> {
+    #[serde(flatten)]
+    settlement: &'a SettlementEvent,
+    case_id: &'a str,
+    item_id: &'a str,
+}
+
 impl ServerState {
     pub fn new(config: ServerConfig) -> Result<Self, ForgeError> {
         recover_cancelled_delegations(&config)?;
@@ -130,11 +146,21 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
                 .ok_or_else(|| {
                     ForgeError::Input("invalid cancellation control plan_item_id".into())
                 })?;
+            let case_id = control
+                .payload
+                .get("case_id")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| ForgeError::Input("invalid cancellation control case_id".into()))?;
             let plan_path = config.root.join("runs").join(run).join("plan.json");
             let plan: CasePlan = serde_json::from_slice(
                 &std::fs::read(&plan_path)
                     .map_err(|e| ForgeError::io("read cancelled delegation plan", e))?,
             )?;
+            if plan.case_id != case_id || plan.run_id != run {
+                return Err(ForgeError::Input(
+                    "cancelled delegation control does not match plan identity".into(),
+                ));
+            }
             let endpoint_ref = plan
                 .items
                 .iter()
@@ -166,8 +192,12 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
             let evidence_ref = agent_probe::commit_view(
                 &ledger,
                 "agent_task_evidence",
-                vec![run.into(), item_id.into()],
-                &evidence,
+                vec![case_id.into(), run.into(), item_id.into()],
+                &RecoveredDelegationEvidence {
+                    evidence: &evidence,
+                    case_id,
+                    item_id,
+                },
                 &config
                     .root
                     .join("runs")
@@ -188,8 +218,12 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
             agent_probe::commit_view(
                 &ledger,
                 "settlement",
-                vec![run.into()],
-                &settlement,
+                vec![case_id.into(), run.into(), item_id.into()],
+                &RecoveredDelegationSettlement {
+                    settlement: &settlement,
+                    case_id,
+                    item_id,
+                },
                 &config.root.join("runs").join(run).join("settlement.json"),
                 vec![evidence_ref.entry_ulid().into()],
             )?;

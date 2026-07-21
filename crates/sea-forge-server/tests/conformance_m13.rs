@@ -479,6 +479,66 @@ async fn planned_agent_episode_uses_case_context() {
     let _ = task.await;
 }
 
+#[tokio::test]
+async fn planned_agent_rejection_uses_case_context_once() {
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), false, true);
+    let (res, _reads) = resolver();
+    let submitted_case_id = sea_forge_core::ids::case_id().unwrap();
+    let dispatched_run_id = sea_forge_core::ids::run_id().unwrap();
+
+    delegation::execute_with_control(
+        &config(root.path(), endpoint(1)),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "reject the planned episode",
+            model: None,
+            max_turns: 1,
+            token_budget: None,
+            criteria: SettlementCriteria::default(),
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+        },
+        &res,
+        delegation::DelegationEpisodeContext::planned(
+            &submitted_case_id,
+            "agent",
+            &dispatched_run_id,
+        ),
+        || false,
+    )
+    .await
+    .unwrap();
+
+    let ledger = sea_forge_ledger::LedgerStream::open(
+        root.path(),
+        format!("case-{submitted_case_id}"),
+        "test",
+    )
+    .unwrap();
+    let settlements: Vec<_> = ledger
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .filter(|entry| {
+            entry.record_kind == "settlement" && entry.payload["run_id"] == dispatched_run_id
+        })
+        .collect();
+    assert_eq!(
+        settlements.len(),
+        1,
+        "one terminal settlement for the episode"
+    );
+    let [settlement] = settlements.as_slice() else {
+        panic!("expected one terminal settlement");
+    };
+    assert_eq!(settlement.payload["case_id"], submitted_case_id);
+    assert_eq!(settlement.payload["item_id"], "agent");
+    assert_eq!(settlement.payload["run_id"], dispatched_run_id);
+    assert_eq!(settlement.payload["status"], "rejected");
+}
+
 /// T13.2: the server semaphore respects one shared cap. With
 /// `max_concurrent_runs=2` and 4 concurrent delegation requests, the stub
 /// must never observe more than 2 in-flight connections.
@@ -752,6 +812,14 @@ fn t13_3_restart_after_durable_cancellation_settles_once() {
         sea_forge_ledger::LedgerStream::open(root.path(), format!("case-{case}"), "test").unwrap();
     ledger
         .commit_typed(
+            "settlement",
+            vec!["unrelated".into()],
+            &serde_json::json!({"run_id": "run_unrelated", "status": "accepted"}),
+            vec![],
+        )
+        .unwrap();
+    ledger
+        .commit_typed(
             "control_request",
             vec![case.clone(), run.clone(), "agent".into()],
             &serde_json::json!({
@@ -778,11 +846,30 @@ fn t13_3_restart_after_durable_cancellation_settles_once() {
         .filter(|entry| entry.record_kind == "settlement" && entry.payload["run_id"] == run)
         .collect();
     assert_eq!(settlements.len(), 1, "exactly one terminal settlement");
-    assert_eq!(settlements[0].payload["status"], "rejected");
+    let [settlement] = settlements.as_slice() else {
+        panic!("expected one terminal settlement");
+    };
+    assert_eq!(settlement.payload["case_id"], case);
+    assert_eq!(settlement.payload["item_id"], "agent");
+    assert_eq!(settlement.payload["run_id"], run);
+    assert_eq!(settlement.payload["status"], "rejected");
     assert_eq!(
-        settlements[0].payload["basis"],
+        settlement.payload["basis"],
         serde_json::json!(["cancelled"])
     );
+    let evidence: Vec<_> = entries
+        .iter()
+        .filter(|entry| {
+            entry.record_kind == "agent_task_evidence" && entry.payload["run_id"] == run
+        })
+        .collect();
+    assert_eq!(evidence.len(), 1, "one recovery evidence record");
+    let [evidence] = evidence.as_slice() else {
+        panic!("expected one recovery evidence record");
+    };
+    assert_eq!(evidence.payload["case_id"], case);
+    assert_eq!(evidence.payload["item_id"], "agent");
+    assert_eq!(evidence.payload["run_id"], run);
     assert!(run_dir.join("transcript-evidence.json").is_file());
 
     // A second restart sees the terminal settlement and does not append one.
