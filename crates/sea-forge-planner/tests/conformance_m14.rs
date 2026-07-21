@@ -184,6 +184,7 @@ fn t14_0_any_of_legacy_behavior_unchanged() {
         depends_on: vec![],
         environment: None,
         entry_criteria_mode: EntryCriteriaMode::Any,
+        proposed_by: None,
     }];
     let ws = std::collections::HashSet::new();
     let activated = evaluate_sentries(&items, &[settlement_event("a", "accepted")], &ws);
@@ -227,6 +228,7 @@ fn t14_0_all_of_waits_for_every_named_source() {
         depends_on: vec![],
         environment: None,
         entry_criteria_mode: EntryCriteriaMode::All,
+        proposed_by: None,
     }];
     let ws = std::collections::HashSet::new();
     let only_a = evaluate_sentries(&items, &[settlement_event("a", "accepted")], &ws);

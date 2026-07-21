@@ -14,7 +14,12 @@ extraction, server-owned per-episode dispatcher, `sea-forge ledger replay`).
 M14 (Task 6) COMPLETE and gated (see the M14 entry below): typed deterministic
 item expansion, all-of entry-criteria rollup mode, and the built-in
 `sequential_agents@0.1.0`/`concurrent_agents@0.1.0` topology templates.
-456 workspace tests pass. Next: M15 (Task 7) Thoth manager loop.
+M15 (Task 7) COMPLETE and gated (see the M15 entry below): deterministic
+manager-loop judgment (satisfied/blocked/progressing/stalled), `ManagerIteration`
+ledger record, discretionary `agent_task` proposal through the existing
+add-task path, iteration-cap park+escalate through the existing approval
+mechanism, and a structural SoD gate on approval resolution.
+465 workspace tests pass. Next: M16 (Task 8) ACP driver + SWE_SEED integration.
 
 Historical M13 progress log (kept for context, superseded by "COMPLETE" above):
 T13.2 (Task 5) in progress:
@@ -175,6 +180,67 @@ M14 (Task 6 of the ADLC/Thoth orchestration plan) is COMPLETE and gated:
 `just no-async-kernel` still covers 19 kernel crates (no new crate added —
 `sea-forge-core`/`sea-forge-planner` remain sync/no-HTTP). `.agents/specs/spec-agent-orchestration.md`
 §17.3 T14.1–T14.3 rows flipped to green.
+
+## M15 Thoth manager loop (2026-07-21)
+
+Implementation plan: `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`
+Task 7. M15 (E16b) is COMPLETE and gated:
+
+- `ManagerJudgment`/`ManagerAction`/`ManagerIteration` additive types on
+  `sea-forge-core`; `sea_forge_thoth::manager::judge` is a pure, IO-free
+  function classifying `satisfied | blocked | progressing | stalled`
+  deterministically from caller-supplied facts (§9.5's rule table exactly —
+  completed beats blocked beats ready-work/settlement-progress beats
+  stalled), mirroring `engine.rs`'s existing `SnapshotView`-driven pattern
+  rather than adding a new crate dependency.
+- `crates/sea-forge-cli/src/commands/manager.rs` (`case manager-iterate`
+  subcommand): builds the view from `next_case_actions` plus a
+  `replay_case` scan for items already `Enabled`/`Active` from a prior
+  tick (an item transitions out of `next_case_actions`'s output once
+  enabled, but per §9.5 "active or enabled" still counts as progressing —
+  a real gap the first test pass caught); tracks settlement progress via
+  a `settlement_events_observed` counter compared against the prior
+  iteration's recorded count; commits one `ManagerIteration` ledger record
+  per invocation (`record_kind: "manager_iteration"`, same `case-<id>`
+  ledger stream as everything else about the case).
+- Additive `PlanItem.proposed_by: Option<String>` — part of the plan's
+  canonical hash, so relabeling/replaying a proposed item cannot strip the
+  provenance. `case.rs::add_task` refactored into a thin file-reading
+  wrapper around a new `propose_item(root, policy, actor, case_id, item)`,
+  reused directly by the manager loop for in-memory synthesized items
+  (`item_kind: agent_task`, `proposed_by: Some(actor)`) — no new mutation
+  path, no duplicated authority/ledger-commit logic.
+- Denied proposals (T15.2) are caught and recorded as the iteration's
+  `granted: false` outcome, never a hard error — matches §7.6 "recorded
+  to the ledger whether or not the proposal is granted."
+- Iteration-cap exhaustion (T15.3) is a guard *before* judging (per §16.2's
+  pseudocode) — no `ManagerIteration` record for the cap-exceeded call
+  itself, reuses the exact `ApprovalRequest` + `CaseState::AwaitingApproval`
+  pattern `plan_pipeline.rs` already uses for settlement escalation.
+- SoD (T15.4): `approve.rs::resolve()` gained a `proposed_by`-based check,
+  independent of and prior to the existing requester-based check — an
+  actor cannot resolve an approval for a plan item it proposed.
+- Two real, previously-latent authority-layer gaps found and fixed along
+  the way (both are additive allowlist entries, not behavior changes for
+  existing kinds): `sea-forge-authority`'s `PolicyRule.operation_kind`
+  validation allowlist and its separate `malformed_action` `RESERVED`
+  allowlist were both missing `manager_iteration` — every `Reserved`
+  resource_type needs an entry in *both* lists or every policy decision
+  for it defaults to hard deny regardless of matching rules. This also
+  means `discretionary_task_add` (M10, `case add-task`) was reachable via
+  CLI for the first time here — nothing else in the workspace exercised
+  it end-to-end before this milestone.
+- `crates/sea-forge-cli/tests/conformance_m15.rs`: T15.1–T15.5, all
+  subprocess-driven through the real `sea-forge` binary (`run --plan`,
+  `case manager-iterate`, `approve`) rather than in-process calls, since
+  `sea-forge-cli` is bin-only (no `lib.rs`) — 5/5 pass.
+
+465 workspace tests pass (`cargo test --workspace --offline`), fmt clean,
+`just no-async-kernel` still covers 19 kernel crates (`sea-forge-cli`/
+`sea-forge-authority` are not kernel crates). `.agents/specs/spec-agent-orchestration.md`
+§17.4 T15.1–T15.5 rows flipped to green; the "Manager loop bounded,
+evidence-grounded, SoD-enforced, escalating on exhaustion" checklist item
+closed.
 
 ## SodRule transition scope closeout (2026-07-17)
 

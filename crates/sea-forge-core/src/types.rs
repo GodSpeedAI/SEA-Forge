@@ -130,6 +130,12 @@ pub struct PlanItem {
     /// Optional environment reference `name@version` (§7.6).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<String>,
+    /// Immutable proposer identity when a discretionary item was proposed
+    /// by the Thoth manager loop rather than a human (§7.6, §10.3). Part of
+    /// the plan's canonical hash — cannot be relabeled after the fact.
+    /// Enables SoD: the proposer cannot resolve approvals over its own item.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proposed_by: Option<String>,
 }
 
 fn default_max_instances() -> u32 {
@@ -794,6 +800,57 @@ pub enum ApprovalStatus {
     Approved,
     Rejected,
     Expired,
+}
+
+// === M15: Thoth manager loop (E16b) ===
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ManagerJudgment {
+    Satisfied,
+    Progressing,
+    Stalled,
+    Blocked,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ManagerAction {
+    /// No action taken this iteration (satisfied, or already progressing).
+    Noop,
+    ProposeItem,
+    Escalate,
+}
+
+/// One auditable step of the Thoth manager loop (§7.6). Recorded to the
+/// ledger whether or not a proposal is granted — a denied proposal is an
+/// outcome, not an error.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ManagerIteration {
+    pub version: String,
+    pub case_id: String,
+    pub iteration: u32,
+    /// Case-file version consulted for this judgment.
+    pub snapshot_case_version: String,
+    /// Ledger head (append_ordinal of the last entry) consulted.
+    pub snapshot_ledger_head: u64,
+    /// Count of `settlement_recorded` case events observed at this
+    /// iteration — compared against the prior iteration's count to detect
+    /// "new settlement progress since the prior iteration" (§9.5).
+    pub settlement_events_observed: u32,
+    pub proposal_source_ref: String,
+    pub proposal_source_sha256: String,
+    pub judgment: ManagerJudgment,
+    /// Refs (plan item IDs or `case:<id>`) that ground the judgment —
+    /// never free-form narration. Must be non-empty and must resolve.
+    pub rationale_claim_refs: Vec<String>,
+    pub action: ManagerAction,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proposed_item_ref: Option<String>,
+    /// Set only when `action == ProposeItem`: whether authority granted it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub granted: Option<bool>,
+    pub recorded_at: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

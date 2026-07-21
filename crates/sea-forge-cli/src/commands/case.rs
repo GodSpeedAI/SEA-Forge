@@ -112,9 +112,23 @@ pub fn add_task(
     case_id: &str,
     item_path: &Path,
 ) -> Result<u8, ForgeError> {
+    let item: PlanItem = read_json(item_path)?;
+    propose_item(root, policy, actor, case_id, item)
+}
+
+/// Append a discretionary item to a case's plan through the standard
+/// authorized mutation path (§7.6, M15 slice 7.3) — the same path `add_task`
+/// uses for a file-supplied item, reusable with an in-memory item (e.g. one
+/// synthesized by the Thoth manager loop with `proposed_by` set).
+pub fn propose_item(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    item: PlanItem,
+) -> Result<u8, ForgeError> {
     let (_, plan_path, _) = paths(root, case_id);
     let mut plan: CasePlan = read_json(&plan_path)?;
-    let item: PlanItem = read_json(item_path)?;
     plan.items.push(item.clone());
     validate_proposal(&mut plan)?;
     super::mediated::authorize_read(

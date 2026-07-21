@@ -358,6 +358,7 @@ fn transition_plan(
             max_instances: 1,
             depends_on: vec![],
             environment: Some(environment.into()),
+            proposed_by: None,
         }],
     })
 }
