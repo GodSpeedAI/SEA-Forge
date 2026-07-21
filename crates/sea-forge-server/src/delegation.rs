@@ -61,6 +61,23 @@ struct DelegationSettlement<'a> {
     item_id: &'a str,
 }
 
+#[derive(Serialize)]
+struct DelegationTranscriptEvidence<'a> {
+    #[serde(flatten)]
+    evidence: &'a TranscriptEvidence,
+    case_id: &'a str,
+    item_id: &'a str,
+}
+
+#[derive(Serialize)]
+struct DelegationRejectionEvidence<'a> {
+    endpoint_ref: &'a str,
+    termination: &'a str,
+    case_id: &'a str,
+    item_id: &'a str,
+    run_id: &'a str,
+}
+
 /// Identity allocated for one delegation episode.
 pub struct DelegationEpisodeContext<'a> {
     case_id: &'a str,
@@ -417,8 +434,12 @@ pub async fn execute_with_control(
     let evidence_ref = commit_view(
         &ledger,
         "agent_task_evidence",
-        vec![run.into(), item.into()],
-        &evidence,
+        vec![case.into(), run.into(), item.into()],
+        &DelegationTranscriptEvidence {
+            evidence: &evidence,
+            case_id: case,
+            item_id: item,
+        },
         &config
             .root
             .join("runs")
@@ -554,11 +575,17 @@ fn finish_rejected(
     error_class: impl Into<String>,
 ) -> Result<DelegationResult, ForgeError> {
     let error_class = error_class.into();
-    let evidence = json!({"endpoint_ref": endpoint, "termination": &error_class});
+    let evidence = DelegationRejectionEvidence {
+        endpoint_ref: endpoint,
+        termination: &error_class,
+        case_id: case,
+        item_id: item,
+        run_id: run,
+    };
     let evidence_ref = commit_view(
         ledger,
         "agent_task_evidence",
-        vec![run.into(), item.into()],
+        vec![case.into(), run.into(), item.into()],
         &evidence,
         &root.join("runs").join(run).join("transcript-evidence.json"),
         vec![authority_ref.into()],
