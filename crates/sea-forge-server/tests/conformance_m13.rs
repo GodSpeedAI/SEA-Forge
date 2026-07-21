@@ -1,6 +1,10 @@
 use sea_forge_agent::{AgentConfig, AgentEndpointConfig, ProviderKind};
-use sea_forge_core::types::SettlementCriteria;
-use sea_forge_server::{agent_probe, delegation, Request, ServerConfig, ServerState};
+use sea_forge_core::types::{
+    CasePlan, ItemKind, Operation, PlanItem, SettlementCriteria, TraceEvent, TraceKind,
+};
+use sea_forge_server::{
+    agent_probe, delegation, handle_request, Request, ServerConfig, ServerState,
+};
 use std::{
     fs,
     net::SocketAddr,
@@ -780,6 +784,194 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
     assert_eq!(res_c["settlement"], "accepted");
     assert_eq!(res_b["termination"], "cancelled");
     assert_eq!(res_b["settlement"], "rejected");
+}
+
+/// T13.2: `submit` dispatches each ready episode under the server's one shared
+/// concurrency cap, then derives further work only from completed episodes.
+#[tokio::test]
+async fn t13_2_mixed_episodes_share_server_cap() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let current = Arc::new(AtomicUsize::new(0));
+    let max_seen = Arc::new(AtomicUsize::new(0));
+    let current_for_stub = Arc::clone(&current);
+    let max_for_stub = Arc::clone(&max_seen);
+    let stub_task = tokio::spawn(async move {
+        let mut handlers = vec![];
+        for _ in 0..3 {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let current = Arc::clone(&current_for_stub);
+            let max_seen = Arc::clone(&max_for_stub);
+            handlers.push(tokio::spawn(async move {
+                let in_flight = current.fetch_add(1, Ordering::SeqCst) + 1;
+                max_seen.fetch_max(in_flight, Ordering::SeqCst);
+                let mut request = vec![0_u8; 4096];
+                let _ = stream.read(&mut request).await;
+                tokio::time::sleep(Duration::from_millis(75)).await;
+                let body =
+                    br#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#;
+                let header = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                stream.write_all(header.as_bytes()).await.unwrap();
+                stream.write_all(body).await.unwrap();
+                current.fetch_sub(1, Ordering::SeqCst);
+            }));
+        }
+        for handler in handlers {
+            handler.await.unwrap();
+        }
+    });
+
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = root.path().join("policy.yaml");
+    fs::write(
+        &policy_path,
+        "version: \"0.1\"\n\
+         policy_surfaces:\n\
+         \x20 external_api:\n\
+         \x20   mode: deny-by-default\n\
+         \x20   allow_hosts: [127.0.0.1]\n\
+         rules:\n\
+         \x20 - name: allow-agent-task\n\
+         \x20   verdict: allow\n\
+         \x20   actor_role: operator\n\
+         \x20   operation_kind: agent_task\n\
+         \x20 - name: allow-command\n\
+         \x20   verdict: allow\n\
+         \x20   actor_role: operator\n\
+         \x20   operation_kind: execute_command\n\
+         \x20   argv0: sh\n\
+         \x20   sandbox_class: jail\n",
+    )
+    .unwrap();
+    let mut agent_endpoint = endpoint(address.port());
+    agent_endpoint.credential_ref = None;
+    let state = Arc::new(
+        ServerState::new(ServerConfig {
+            root: root.path().to_path_buf(),
+            max_concurrent_runs: 2,
+            agent: AgentConfig {
+                endpoints: vec![agent_endpoint],
+                ..AgentConfig::default()
+            },
+            ..ServerConfig::default()
+        })
+        .unwrap(),
+    );
+    let plan_path = root.path().join("mixed-plan.json");
+    fs::write(
+        &plan_path,
+        serde_json::to_vec_pretty(&CasePlan {
+            version: "0.2".into(),
+            plan_id: "plan_mixed".into(),
+            case_id: "case_placeholder".into(),
+            run_id: "run_placeholder".into(),
+            intent_id: "int_mixed".into(),
+            items: (0..5)
+                .map(|index| PlanItem {
+                    plan_item_id: format!("item_{index}"),
+                    name: format!("item_{index}"),
+                    operations: if index % 2 == 0 {
+                        vec![Operation::AgentTask {
+                            endpoint_ref: "local-test".into(),
+                            instruction: "complete".into(),
+                            max_turns: 1,
+                            token_budget: None,
+                            response_schema: None,
+                            transcript_retention: None,
+                        }]
+                    } else {
+                        vec![Operation::ExecuteCommand {
+                            argv: vec!["sh".into(), "-c".into(), "sleep 0.075".into()],
+                            cwd: ".".into(),
+                        }]
+                    },
+                    entry_criteria: vec![],
+                    exit_criteria: vec![],
+                    settlement_criteria: SettlementCriteria::default(),
+                    settlement_criteria_ref: None,
+                    item_kind: if index % 2 == 0 {
+                        ItemKind::AgentTask
+                    } else {
+                        ItemKind::SandboxedTask
+                    },
+                    sandbox_class: None,
+                    parent_stage: None,
+                    markers: sea_forge_core::types::ItemMarkers {
+                        required: index % 2 == 0,
+                        ..Default::default()
+                    },
+                    max_instances: 1,
+                    depends_on: vec![],
+                    environment: None,
+                })
+                .collect(),
+            template_ref: None,
+            job_contract_ref: None,
+        })
+        .unwrap(),
+    )
+    .unwrap();
+
+    let request: Request = serde_json::from_value(serde_json::json!({
+        "verb": "submit",
+        "plan": plan_path,
+        "policy": policy_path,
+        "entity": "operator_local",
+        "process": "test",
+        "timeout": 5,
+    }))
+    .unwrap();
+    let response = handle_request(request, &state).await;
+
+    assert_eq!(response["state"], "completed", "{response}");
+    let case_id = response["case_id"].as_str().unwrap();
+    let events: Vec<TraceEvent> = fs::read_to_string(
+        root.path()
+            .join("cases")
+            .join(case_id)
+            .join("case-events.jsonl"),
+    )
+    .unwrap()
+    .lines()
+    .map(|line| serde_json::from_str(line).unwrap())
+    .collect();
+    let dispatches: Vec<_> = events
+        .iter()
+        .filter(|event| event.kind == TraceKind::ItemActivated)
+        .collect();
+    let settlements: Vec<_> = events
+        .iter()
+        .filter(|event| event.kind == TraceKind::SettlementRecorded)
+        .collect();
+    assert_eq!(dispatches.len(), 5);
+    assert_eq!(settlements.len(), 5);
+    let mut unsettled = 0_u32;
+    let mut max_unsettled = 0_u32;
+    for event in &events {
+        match event.kind {
+            TraceKind::ItemActivated => {
+                unsettled += 1;
+                max_unsettled = max_unsettled.max(unsettled);
+            }
+            TraceKind::SettlementRecorded => unsettled -= 1,
+            _ => {}
+        }
+    }
+    assert!(
+        max_unsettled <= 2,
+        "observed {max_unsettled} unsettled dispatches"
+    );
+    assert!(dispatches
+        .iter()
+        .any(|event| event.payload["episode_kind"] == "sandboxed_task"));
+    assert!(dispatches
+        .iter()
+        .any(|event| event.payload["episode_kind"] == "agent_task"));
+    assert!(max_seen.load(Ordering::SeqCst) <= 2);
+    stub_task.await.unwrap();
 }
 
 /// T13.3: after restart, a durable cancellation control settles the

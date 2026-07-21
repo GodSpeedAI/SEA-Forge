@@ -60,6 +60,14 @@ settlement despite unrelated prior settlement records. The final Task 2 review
 fix also serializes planned case/item/run identity in normal and rejected
 delegation evidence; planned success and rejection conformance assertions pass.
 
+Task 3 dispatcher landed: `Request::Submit` now creates the case in-server and
+dispatches sandboxed and agent episodes under the existing `ServerState.semaphore`.
+Each dispatch is committed before its episode starts; a completed episode is
+settled and applied before the reducer derives more ready work. T13.2's five-item
+mixed-load conformance path passes with `max_concurrent_runs=2`, alongside all 13
+server M13 conformance tests. `devbox run -- just context-check` passed after this
+status update. Commit: recorded in git history.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None
