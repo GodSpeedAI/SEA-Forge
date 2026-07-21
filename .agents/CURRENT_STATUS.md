@@ -52,8 +52,8 @@ delegation episode context (Task 2), server-owned per-episode dispatcher under
 the sole shared semaphore with dispatched-failure settlement, human-task
 drain, and stale-action re-derivation (Task 3), and additive
 dispatch/settlement ordinals plus `sea-forge ledger replay --case` (Task 4).
-CLI and server conformance pass. Next: full workspace proof, final
-whole-branch review, and graph refresh.
+CLI and server conformance pass. Task 4 review nit fixed (replay rustdoc).
+Next: full workspace proof, final whole-branch review, and graph refresh.
 
 T13.2 Task 1 extracted synchronous case lifecycle primitives into the approved
 `sea-forge-case-runner` workspace crate; the CLI is a compatibility facade and
