@@ -53,7 +53,10 @@ focused CLI conformance plus runner check pass. Task 2 binds delegation to an
 episode context: planned settlements now retain their submitted case/item/run,
 while direct `Request::Delegate` continues to create its standalone context.
 Focused planned-context and cancellation regressions pass. Next: add the
-server-owned episode dispatcher.
+server-owned episode dispatcher. Task 2 review follow-up preserves planned
+case/item/run identity in restart-recovered evidence and settlement, validates
+the cancellation control against the persisted plan, and proves one target
+settlement despite unrelated prior settlement records.
 
 ## SodRule transition scope closeout (2026-07-17)
 
