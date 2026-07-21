@@ -13,6 +13,8 @@ sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+tokio = { version = "1", features = ["io-util", "process", "rt", "sync", "time", "macros"] }
+tracing.workspace = true
 url.workspace = true
 zeroize.workspace = true
 
@@ -20,4 +22,4 @@ zeroize.workspace = true
 workspace = true
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt", "net", "io-util"] }
+tempfile.workspace = true
