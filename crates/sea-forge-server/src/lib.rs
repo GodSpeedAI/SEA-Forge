@@ -32,6 +32,7 @@ use tokio::process::Command;
 use tokio::sync::{Mutex, Semaphore};
 
 pub mod agent_probe;
+pub mod case_dispatch;
 pub mod config;
 pub mod delegation;
 
@@ -51,7 +52,7 @@ pub struct ServerState {
     pub config: ServerConfig,
     pub cases: Mutex<HashMap<String, CaseEntry>>,
     delegations: Mutex<HashMap<String, DelegationHandle>>,
-    pub semaphore: Semaphore,
+    pub semaphore: Arc<Semaphore>,
 }
 
 #[derive(Clone)]
@@ -85,7 +86,7 @@ impl ServerState {
             config,
             cases: Mutex::new(HashMap::new()),
             delegations: Mutex::new(HashMap::new()),
-            semaphore: Semaphore::new(max),
+            semaphore: Arc::new(Semaphore::new(max)),
         })
     }
 
@@ -390,15 +391,6 @@ async fn handle_connection(
 pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_json::Value {
     match request {
         Request::Submit { payload } => {
-            let plan = match payload.plan.as_deref() {
-                Some(p) => p.to_string(),
-                None => match payload.intent.as_deref() {
-                    Some(i) => i.to_string(),
-                    None => {
-                        return serde_json::json!({"error": "plan or intent required"});
-                    }
-                },
-            };
             // Reload config defensively (§8.4).
             if let Ok(new_config) = state.reload_config() {
                 tracing::info!("config reloaded successfully");
@@ -407,24 +399,8 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 tracing::warn!("invalid config reload — keeping last-known-good");
             }
 
-            let permit = state.semaphore.acquire().await;
-            let root = state.config.root.clone();
-            let policy = payload.policy.clone();
-            let entity = payload.entity.clone();
-            let process = payload.process.clone();
-            let timeout = payload.timeout;
-            let has_plan = payload.plan.is_some();
-
-            // Dispatch in a blocking task via subprocess.
-            let result = tokio::task::spawn_blocking(move || {
-                dispatch_run(&root, &policy, &entity, &process, timeout, &plan, has_plan)
-            })
-            .await;
-
-            drop(permit);
-
-            match result {
-                Ok(Ok(output)) => {
+            match case_dispatch::submit(payload, state).await {
+                Ok(output) => {
                     let case_id = output.case_id;
                     let entry = CaseEntry {
                         case_id: case_id.clone(),
@@ -451,8 +427,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                         "exit_code": output.exit_code,
                     })
                 }
-                Ok(Err(e)) => serde_json::json!({"error": e.to_string()}),
-                Err(e) => serde_json::json!({"error": format!("dispatch panic: {e}")}),
+                Err(e) => serde_json::json!({"error": e.to_string()}),
             }
         }
         Request::Status { case_id } => {
@@ -781,93 +756,6 @@ struct DispatchOutcome {
     case_id: String,
     state: &'static str,
     exit_code: u8,
-}
-
-fn dispatch_run(
-    root: &Path,
-    policy: &str,
-    entity: &str,
-    process: &str,
-    timeout: u64,
-    input: &str,
-    has_plan: bool,
-) -> Result<DispatchOutcome, String> {
-    use std::process::{Command, Stdio};
-    let exe = std::env::current_exe()
-        .map_err(|e| format!("resolve exe: {e}"))?
-        .to_string_lossy()
-        .into_owned();
-
-    // ponytail: if the server binary is sea-forge-server, find the sea-forge
-    // binary in the same directory. If the server is embedded in sea-forge,
-    // use current_exe directly.
-    let cli_exe = {
-        let p = std::path::PathBuf::from(&exe);
-        let dir = p.parent().unwrap_or(std::path::Path::new("."));
-        let cli = dir.join("sea-forge");
-        if cli.exists() {
-            cli.to_string_lossy().into_owned()
-        } else {
-            exe.clone()
-        }
-    };
-
-    let mut cmd = Command::new(&cli_exe);
-    cmd.arg("run")
-        .arg("--root")
-        .arg(root)
-        .arg("--policy")
-        .arg(policy)
-        .arg("--entity")
-        .arg(entity)
-        .arg("--process")
-        .arg(process)
-        .arg("--timeout")
-        .arg(timeout.to_string())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-
-    if has_plan {
-        cmd.arg("--plan").arg(input);
-    } else {
-        cmd.arg(input);
-    }
-
-    let output = cmd
-        .output()
-        .map_err(|e| format!("spawn sea-forge run: {e}"))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let exit_code = output.status.code().unwrap_or(1) as u8;
-
-    let case_id = stdout
-        .lines()
-        .find_map(|line| line.strip_prefix("case_id="))
-        .unwrap_or_default()
-        .to_string();
-    let state = stdout
-        .lines()
-        .find_map(|line| line.strip_prefix("case_state="))
-        .unwrap_or("active")
-        .to_string();
-
-    let static_state: &'static str = match state.as_str() {
-        "completed" => "completed",
-        "terminated" => "terminated",
-        "awaiting_approval" => "awaiting_approval",
-        _ => "active",
-    };
-
-    if !stderr.is_empty() && exit_code > 4 {
-        tracing::warn!("run stderr: {stderr}");
-    }
-
-    Ok(DispatchOutcome {
-        case_id,
-        state: static_state,
-        exit_code,
-    })
 }
 
 async fn run_cli(_root: &Path, args: &[&str], note: Option<&str>) -> Result<String, String> {
