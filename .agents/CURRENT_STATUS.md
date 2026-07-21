@@ -74,6 +74,11 @@ into terminal rejected settlements, and drains active siblings before case
 termination. Two focused regressions plus all 15 server M13 conformance tests,
 formatting, and server check pass. Commit: pending.
 
+Task 3 human-task review follow-up: ready human tasks now persist their normal
+activation event and drain already-dispatched episodes to terminal settlement
+before `Submit` returns active. All 16 server M13 conformance tests, formatting,
+and server check pass. Commit: pending.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None

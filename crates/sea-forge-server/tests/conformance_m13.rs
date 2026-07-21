@@ -1183,6 +1183,126 @@ async fn t13_2_post_dispatch_failure_settles_and_drains_siblings() {
         .all(|event| event.payload["status"] == "rejected"));
 }
 
+#[tokio::test]
+async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let stub = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut request = vec![0_u8; 4096];
+        let _ = stream.read(&mut request).await;
+        let body = br#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#;
+        let header = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        );
+        stream.write_all(header.as_bytes()).await.unwrap();
+        stream.write_all(body).await.unwrap();
+    });
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = policy(root.path(), true, false);
+    let mut agent_endpoint = endpoint(address.port());
+    agent_endpoint.credential_ref = None;
+    let state = Arc::new(
+        ServerState::new(ServerConfig {
+            root: root.path().to_path_buf(),
+            max_concurrent_runs: 2,
+            agent: AgentConfig {
+                endpoints: vec![agent_endpoint],
+                ..AgentConfig::default()
+            },
+            ..ServerConfig::default()
+        })
+        .unwrap(),
+    );
+    let plan_path = root.path().join("agent-and-human.json");
+    fs::write(
+        &plan_path,
+        serde_json::to_vec(&CasePlan {
+            version: "0.2".into(),
+            plan_id: "plan_human".into(),
+            case_id: "case_placeholder".into(),
+            run_id: "run_placeholder".into(),
+            intent_id: "int_human".into(),
+            items: vec![
+                PlanItem {
+                    plan_item_id: "agent".into(),
+                    name: "agent".into(),
+                    operations: vec![Operation::AgentTask {
+                        endpoint_ref: "local-test".into(),
+                        instruction: "complete".into(),
+                        max_turns: 1,
+                        token_budget: None,
+                        response_schema: None,
+                        transcript_retention: None,
+                    }],
+                    entry_criteria: vec![],
+                    exit_criteria: vec![],
+                    settlement_criteria: SettlementCriteria::default(),
+                    settlement_criteria_ref: None,
+                    item_kind: ItemKind::AgentTask,
+                    sandbox_class: None,
+                    parent_stage: None,
+                    markers: sea_forge_core::types::ItemMarkers {
+                        required: true,
+                        ..Default::default()
+                    },
+                    max_instances: 1,
+                    depends_on: vec![],
+                    environment: None,
+                },
+                PlanItem {
+                    plan_item_id: "human".into(),
+                    name: "human".into(),
+                    operations: vec![],
+                    entry_criteria: vec![],
+                    exit_criteria: vec![],
+                    settlement_criteria: SettlementCriteria::default(),
+                    settlement_criteria_ref: None,
+                    item_kind: ItemKind::HumanTask,
+                    sandbox_class: None,
+                    parent_stage: None,
+                    markers: Default::default(),
+                    max_instances: 1,
+                    depends_on: vec![],
+                    environment: None,
+                },
+            ],
+            template_ref: None,
+            job_contract_ref: None,
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let response = handle_request(request, &state).await;
+    assert_eq!(response["state"], "active");
+    let events: Vec<TraceEvent> = fs::read_to_string(
+        root.path()
+            .join("cases")
+            .join(response["case_id"].as_str().unwrap())
+            .join("case-events.jsonl"),
+    )
+    .unwrap()
+    .lines()
+    .map(|line| serde_json::from_str(line).unwrap())
+    .collect();
+    assert!(events
+        .iter()
+        .any(|event| event.plan_item_id.as_deref() == Some("human")
+            && event.kind == TraceKind::ItemActivated
+            && event.payload["human_task"] == true));
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.plan_item_id.as_deref() == Some("agent")
+                && event.kind == TraceKind::SettlementRecorded)
+            .count(),
+        1
+    );
+    stub.await.unwrap();
+}
+
 /// T13.3: after restart, a durable cancellation control settles the
 /// interrupted HTTP delegation exactly once without resuming it.
 #[test]

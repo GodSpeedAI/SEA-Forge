@@ -181,12 +181,34 @@ pub(crate) async fn submit(
                         exit_code: 3,
                     });
                 }
-                CaseAction::ParkHumanTask(_) => {
+                CaseAction::ParkHumanTask(item_id) => {
+                    CaseRunner::append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::ItemActivated,
+                        Some(&item_id),
+                        serde_json::json!({"human_task": true}),
+                    )?;
+                    while let Some(completion) = active.join_next().await {
+                        let completion = completion.map_err(|error| {
+                            ForgeError::Internal(format!("episode task panic: {error}"))
+                        })?;
+                        record_completion(
+                            &stream,
+                            &case_id,
+                            &case_events,
+                            &mut events,
+                            &mut case,
+                            completion,
+                        )?;
+                    }
+                    write_json(&case_dir.join("case.json"), &case)?;
                     return Ok(DispatchOutcome {
                         case_id,
                         state: "active",
                         exit_code: 5,
-                    })
+                    });
                 }
                 CaseAction::Activate(item_id) => {
                     let permit = if active.is_empty() {
