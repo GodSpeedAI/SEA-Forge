@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-07-20
+Updated: 2026-07-21
 
 ## Objective
 
@@ -100,6 +100,21 @@ any side effect, instead of panicking in the activation payload. New
 `t13_2_non_executable_activation_returns_typed_error` regression; all 18
 server M13 conformance tests, formatting, and server check pass.
 Commit: pending.
+
+Task 4 review follow-up: dropped the completion-theater reducer invocation
+in `commands::ledger::replay_case` that silently swallowed plan-load and
+reducer errors (replay now trusts `case-events.jsonl`); added three
+focused unit tests for `validate_ordinals` rejection paths (missing
+dispatch_ordinal on ItemActivated, duplicate equal dispatch_ordinal,
+non-monotonic lower settlement_ordinal) plus an accepts-monotonic
+control, each asserting `ForgeError::Input`; spec-agent-orchestration.md
+T13.2 status row flipped from "partial" to green, citing
+`t13_2_mixed_episodes_share_server_cap`, `t13_2_replay_matches_persisted_order`,
+and `sea-forge ledger replay --case`, with a note that replay applies
+only to cases created after the additive ordinal change (no migration).
+All 3 CLI M13 conformance tests, 18 server M13 conformance tests, the
+4 new ledger unit tests, fmt, and `cargo check` on CLI+server+case-runner
+pass. Commit: pending.
 
 ## SodRule transition scope closeout (2026-07-17)
 

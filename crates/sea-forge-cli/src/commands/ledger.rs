@@ -1,6 +1,6 @@
 use crate::LedgerAction;
 use sea_forge_core::errors::ForgeError;
-use sea_forge_core::types::{CasePlan, TraceEvent, TraceKind};
+use sea_forge_core::types::{TraceEvent, TraceKind};
 use sea_forge_ledger::types::LedgerStream;
 use std::fs;
 use std::path::Path;
@@ -75,14 +75,6 @@ fn replay_case(root: &Path, case_id: &str) -> Result<u8, ForgeError> {
         events.push(event);
     }
 
-    // Defensive: the persisted plan must load and the reducer must process the
-    // event sequence without panic. The projection itself is not printed.
-    if let Ok(plan_bytes) = fs::read(case_dir.join("plan.json")) {
-        if let Ok(plan) = serde_json::from_slice::<CasePlan>(&plan_bytes) {
-            let _ = sea_forge_planner::case_engine::replay_case(&plan.items, &events);
-        }
-    }
-
     validate_ordinals(&events)?;
 
     for event in &events {
@@ -155,4 +147,105 @@ fn validate_ordinals(events: &[TraceEvent]) -> Result<(), ForgeError> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_forge_core::types::TraceEvent;
+
+    fn event(kind: TraceKind, item_id: &str, payload: serde_json::Value) -> TraceEvent {
+        TraceEvent {
+            version: "0.2".into(),
+            event_id: format!("cev_{item_id}"),
+            run_id: "case".into(),
+            plan_item_id: Some(item_id.into()),
+            kind,
+            actor_id: "test".into(),
+            timestamp: "2026-07-21T00:00:00Z".into(),
+            payload,
+            cell_id: None,
+        }
+    }
+
+    fn assert_input_error<T: std::fmt::Debug>(result: Result<T, ForgeError>) {
+        match result {
+            Err(ForgeError::Input(_)) => {}
+            other => panic!("expected ForgeError::Input, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_ordinals_rejects_missing_dispatch_ordinal() {
+        // ItemActivated event with no dispatch_ordinal in its payload.
+        let events = vec![event(
+            TraceKind::ItemActivated,
+            "item_1",
+            serde_json::json!({ "run_id": "case" }),
+        )];
+        assert_input_error(validate_ordinals(&events));
+    }
+
+    #[test]
+    fn validate_ordinals_rejects_duplicate_dispatch_ordinal() {
+        // Two dispatches carrying the same ordinal.
+        let events = vec![
+            event(
+                TraceKind::ItemActivated,
+                "item_1",
+                serde_json::json!({ "dispatch_ordinal": 1 }),
+            ),
+            event(
+                TraceKind::ItemActivated,
+                "item_2",
+                serde_json::json!({ "dispatch_ordinal": 1 }),
+            ),
+        ];
+        assert_input_error(validate_ordinals(&events));
+    }
+
+    #[test]
+    fn validate_ordinals_rejects_non_monotonic_settlement_ordinal() {
+        // Settlements going backwards: 2 then 1.
+        let events = vec![
+            event(
+                TraceKind::SettlementRecorded,
+                "item_1",
+                serde_json::json!({ "settlement_ordinal": 2 }),
+            ),
+            event(
+                TraceKind::SettlementRecorded,
+                "item_2",
+                serde_json::json!({ "settlement_ordinal": 1 }),
+            ),
+        ];
+        assert_input_error(validate_ordinals(&events));
+    }
+
+    #[test]
+    fn validate_ordinals_accepts_monotonic_sequence() {
+        let events = vec![
+            event(
+                TraceKind::ItemActivated,
+                "item_1",
+                serde_json::json!({ "dispatch_ordinal": 1 }),
+            ),
+            event(
+                TraceKind::ItemActivated,
+                "item_2",
+                serde_json::json!({ "dispatch_ordinal": 2 }),
+            ),
+            event(
+                TraceKind::SettlementRecorded,
+                "item_1",
+                serde_json::json!({ "settlement_ordinal": 1 }),
+            ),
+            event(
+                TraceKind::SettlementRecorded,
+                "item_2",
+                serde_json::json!({ "settlement_ordinal": 2 }),
+            ),
+        ];
+        assert!(validate_ordinals(&events).is_ok());
+    }
 }
