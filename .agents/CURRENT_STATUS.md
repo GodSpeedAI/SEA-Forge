@@ -45,7 +45,15 @@ agent load with replayable dispatch/settlement ordering.
 T13.2 design approved: replace the whole-case `Request::Submit` subprocess
 path with server-owned, per-episode dispatch under the existing semaphore;
 persist dispatch and settlement ordinals and add ledger replay. Implementation
-plan: `.agents/plans/2026-07-20-m13-mixed-dispatch.md`.
+ plan: `.agents/plans/2026-07-20-m13-mixed-dispatch.md`.
+
+T13.2 implementation complete through Task 4: case-runner extraction (Task 1),
+delegation episode context (Task 2), server-owned per-episode dispatcher under
+the sole shared semaphore with dispatched-failure settlement, human-task
+drain, and stale-action re-derivation (Task 3), and additive
+dispatch/settlement ordinals plus `sea-forge ledger replay --case` (Task 4).
+CLI and server conformance pass. Next: full workspace proof, final
+whole-branch review, and graph refresh.
 
 T13.2 Task 1 extracted synchronous case lifecycle primitives into the approved
 `sea-forge-case-runner` workspace crate; the CLI is a compatibility facade and
