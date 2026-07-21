@@ -10,6 +10,7 @@ description = "SEA Forge one-shot CLI: run, validate, inspect, recall."
 [dependencies]
 clap.workspace = true
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-case-runner = { path = "../sea-forge-case-runner", version = "0.1.0" }
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
 sea-forge-capability = { path = "../sea-forge-capability", version = "0.1.0" }
 sea-forge-domain = { path = "../sea-forge-domain", version = "0.1.0" }

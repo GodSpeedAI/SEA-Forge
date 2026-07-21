@@ -20,6 +20,77 @@ fn wait_for_socket(path: &Path, timeout: Duration) -> bool {
     false
 }
 
+/// Task 1: the public serial plan facade remains complete after its lifecycle
+/// primitives move into the shared case runner.
+#[test]
+fn serial_plan_facade_completes_through_case_runner() {
+    let root = tempfile::tempdir().unwrap();
+    let root_path = root.path().canonicalize().unwrap();
+    let policy = root_path.join("policy.yaml");
+    let plan = root_path.join("plan.json");
+
+    fs::write(
+        &policy,
+        "version: \"0.1\"\n\
+         rules:\n\
+         \x20 - name: allow-write\n\
+         \x20   verdict: allow\n\
+         \x20   actor_role: operator\n\
+         \x20   operation_kind: write_file\n\
+         \x20   path_prefix: \"\"\n",
+    )
+    .unwrap();
+    fs::write(
+        &plan,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "version": "0.2",
+            "plan_id": "plan_01",
+            "case_id": "case_proposal",
+            "run_id": "run_proposal",
+            "intent_id": "int_proposal",
+            "items": [{
+                "plan_item_id": "write",
+                "name": "sandboxed_task",
+                "operations": [{"kind": "write_file", "path": "output.txt", "content_hint": "done"}],
+                "entry_criteria": [],
+                "exit_criteria": [],
+                "settlement_criteria": {},
+                "item_kind": "sandboxed_task",
+                "sandbox_class": "local",
+                "parent_stage": null,
+                "markers": {"required": true, "repetition": false, "manual_activation": false},
+                "max_instances": 1,
+                "depends_on": []
+            }],
+            "template_ref": null,
+            "job_contract_ref": null
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--plan",
+            plan.to_str().unwrap(),
+            "--root",
+            root_path.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "sea-forge run --plan failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("case_state=completed"));
+}
+
 /// T13.1: the plan pipeline routes an `agent_task` item to the running
 /// sea-forge-server, which executes the delegation and settles. The CLI
 /// emits `SettlementRecorded` and `ItemCompleted` as for any other item.

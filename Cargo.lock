@@ -1665,6 +1665,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sea-forge-case-runner"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-authority",
+ "sea-forge-core",
+ "sea-forge-ledger",
+ "sea-forge-planner",
+ "sea-forge-sandbox",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "sea-forge-cell"
 version = "0.1.0"
 dependencies = [
@@ -1686,6 +1700,7 @@ dependencies = [
  "sea-forge-artifact-ip",
  "sea-forge-authority",
  "sea-forge-capability",
+ "sea-forge-case-runner",
  "sea-forge-cell",
  "sea-forge-core",
  "sea-forge-domain",

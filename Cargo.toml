@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/sea-forge-core",
     "crates/sea-forge-cli",
+    "crates/sea-forge-case-runner",
     "crates/sea-forge-domain",
     "crates/sea-forge-authority",
     "crates/sea-forge-planner",
