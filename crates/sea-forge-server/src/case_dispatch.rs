@@ -100,7 +100,7 @@ pub(crate) async fn submit(
                 .join_next()
                 .await
                 .ok_or_else(|| ForgeError::Internal("missing active episode".into()))?
-                .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))??;
+                .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))?;
             record_completion(
                 &stream,
                 &case_id,
@@ -150,6 +150,19 @@ pub(crate) async fn submit(
                     });
                 }
                 CaseAction::TerminateCase { blocking_item } => {
+                    while let Some(completion) = active.join_next().await {
+                        let completion = completion.map_err(|error| {
+                            ForgeError::Internal(format!("episode task panic: {error}"))
+                        })?;
+                        record_completion(
+                            &stream,
+                            &case_id,
+                            &case_events,
+                            &mut events,
+                            &mut case,
+                            completion,
+                        )?;
+                    }
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
                     case.closed_at = Some(Utc::now().to_rfc3339());
@@ -176,8 +189,24 @@ pub(crate) async fn submit(
                     })
                 }
                 CaseAction::Activate(item_id) => {
-                    let Ok(permit) = state.semaphore.clone().try_acquire_owned() else {
-                        break;
+                    let permit = if active.is_empty() {
+                        state.semaphore.clone().acquire_owned().await.map_err(|_| {
+                            ForgeError::Internal("server semaphore unavailable".into())
+                        })?
+                    } else {
+                        tokio::select! {
+                            biased;
+                            completion = active.join_next() => {
+                                let completion = completion
+                                    .ok_or_else(|| ForgeError::Internal("missing active episode".into()))?
+                                    .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))?;
+                                record_completion(&stream, &case_id, &case_events, &mut events, &mut case, completion)?;
+                                write_json(&case_dir.join("case.json"), &case)?;
+                                continue;
+                            }
+                            permit = state.semaphore.clone().acquire_owned() => permit
+                                .map_err(|_| ForgeError::Internal("server semaphore unavailable".into()))?,
+                        }
                     };
                     let projection = replay_case(&plan.items, &events);
                     let instance = projection
@@ -218,7 +247,8 @@ pub(crate) async fn submit(
                     let run_for_task = run_id.clone();
                     active.spawn(async move {
                         let _permit = permit;
-                        let settlement = match item.item_kind {
+                        let criteria_ref = item.settlement_criteria_ref.clone();
+                        let result = match item.item_kind {
                             ItemKind::AgentTask => {
                                 execute_agent(
                                     &config,
@@ -229,7 +259,7 @@ pub(crate) async fn submit(
                                     &case_for_task,
                                     &run_id,
                                 )
-                                .await?
+                                .await
                             }
                             ItemKind::SandboxedTask => tokio::task::spawn_blocking(move || {
                                 execute_sandbox(
@@ -247,19 +277,27 @@ pub(crate) async fn submit(
                             .await
                             .map_err(|e| {
                                 ForgeError::Internal(format!("sandbox episode panic: {e}"))
-                            })??,
-                            _ => {
-                                return Err(ForgeError::Input(
-                                    "unsupported executable plan item".into(),
-                                ))
-                            }
+                            })
+                            .and_then(|result| result),
+                            _ => Err(ForgeError::Input("unsupported executable plan item".into())),
                         };
-                        Ok::<_, ForgeError>(Completion {
+                        let settlement = result.unwrap_or_else(|error| SettlementEvent {
+                            version: RECORD_VERSION.into(),
+                            settlement_id: ids::random_id("set")
+                                .unwrap_or_else(|_| "set_dispatch_error".into()),
+                            run_id: run_id.clone(),
+                            status: SettlementStatus::Rejected,
+                            basis: vec!["episode_dispatch_error".into(), error.class().into()],
+                            review_required: false,
+                            settled_at: Utc::now().to_rfc3339(),
+                            criteria_ref,
+                        });
+                        Completion {
                             item_id,
                             instance,
                             run_id,
                             settlement,
-                        })
+                        }
                     });
                     dispatched = true;
                 }
@@ -271,7 +309,7 @@ pub(crate) async fn submit(
                 .join_next()
                 .await
                 .ok_or_else(|| ForgeError::Internal("missing active episode".into()))?
-                .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))??;
+                .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))?;
             record_completion(
                 &stream,
                 &case_id,
