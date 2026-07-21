@@ -1419,6 +1419,75 @@ async fn t13_2_permit_completion_rederives_before_stale_action() {
     );
 }
 
+#[tokio::test]
+async fn t13_2_non_executable_activation_returns_typed_error() {
+    // The case engine emits CaseAction::Activate for any non-Milestone,
+    // non-HumanTask item without manual_activation, including ItemKind::Stage.
+    // The dispatcher must not panic; it returns a typed Input error instead.
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = policy(root.path(), false, false);
+    let state = Arc::new(
+        ServerState::new(ServerConfig {
+            root: root.path().to_path_buf(),
+            max_concurrent_runs: 2,
+            ..ServerConfig::default()
+        })
+        .unwrap(),
+    );
+    let plan_path = root.path().join("stage-item.json");
+    fs::write(
+        &plan_path,
+        serde_json::to_vec(&CasePlan {
+            version: "0.2".into(),
+            plan_id: "plan_stage".into(),
+            case_id: "case_placeholder".into(),
+            run_id: "run_placeholder".into(),
+            intent_id: "int_stage".into(),
+            items: vec![PlanItem {
+                plan_item_id: "stage".into(),
+                name: "stage".into(),
+                operations: vec![],
+                entry_criteria: vec![],
+                exit_criteria: vec![],
+                settlement_criteria: SettlementCriteria::default(),
+                settlement_criteria_ref: None,
+                item_kind: ItemKind::Stage,
+                sandbox_class: None,
+                parent_stage: None,
+                markers: sea_forge_core::types::ItemMarkers {
+                    required: true,
+                    ..Default::default()
+                },
+                max_instances: 1,
+                depends_on: vec![],
+                environment: None,
+            }],
+            template_ref: None,
+            job_contract_ref: None,
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({
+        "verb": "submit",
+        "plan": plan_path,
+        "policy": policy_path,
+        "entity": "operator_local",
+        "process": "test",
+        "timeout": 5
+    }))
+    .unwrap();
+    let response = handle_request(request, &state).await;
+    assert!(response.get("error").is_some(), "{response}");
+    assert!(
+        response["error"]
+            .as_str()
+            .unwrap()
+            .contains("non_executable"),
+        "{response}"
+    );
+}
+
 /// T13.3: after restart, a durable cancellation control settles the
 /// interrupted HTTP delegation exactly once without resuming it.
 #[test]

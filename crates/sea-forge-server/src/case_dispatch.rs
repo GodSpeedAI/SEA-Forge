@@ -194,6 +194,26 @@ pub(crate) async fn submit(
                     park_human = true;
                 }
                 CaseAction::Activate(item_id) => {
+                    let item = plan
+                        .items
+                        .iter()
+                        .find(|item| item.plan_item_id == item_id)
+                        .ok_or_else(|| ForgeError::Internal("missing plan item".into()))?
+                        .clone();
+                    // The case engine emits Activate for any non-Milestone,
+                    // non-HumanTask item without manual_activation, including
+                    // Stage/TimerListener/UserEventListener. Only SandboxedTask
+                    // and AgentTask have dispatch semantics; reject the rest
+                    // with a typed error before any permit or side effect.
+                    if !matches!(
+                        item.item_kind,
+                        ItemKind::SandboxedTask | ItemKind::AgentTask
+                    ) {
+                        return Err(ForgeError::Input(format!(
+                            "non_executable item kind cannot be dispatched: {:?}",
+                            item.item_kind
+                        )));
+                    }
                     let permit = if active.is_empty() {
                         state.semaphore.clone().acquire_owned().await.map_err(|_| {
                             ForgeError::Internal("server semaphore unavailable".into())
@@ -219,12 +239,6 @@ pub(crate) async fn submit(
                         .iter()
                         .find(|state| state.item_id == item_id)
                         .map_or(1, |state| state.instances + 1);
-                    let item = plan
-                        .items
-                        .iter()
-                        .find(|item| item.plan_item_id == item_id)
-                        .ok_or_else(|| ForgeError::Internal("missing plan item".into()))?
-                        .clone();
                     let run_id = ids::run_id()?;
                     CaseRunner::append_event(
                         &case_events,
@@ -238,7 +252,9 @@ pub(crate) async fn submit(
                             "episode_kind": match item.item_kind {
                                 ItemKind::SandboxedTask => "sandboxed_task",
                                 ItemKind::AgentTask => "agent_task",
-                                _ => unreachable!("only executable items are dispatched"),
+                                // Validated above; the wildcard is exhaustive
+                                // for the remaining variants and never selects.
+                                _ => "non_executable",
                             },
                         }),
                     )?;
