@@ -53,12 +53,54 @@ pub struct DelegationResult {
     pub error_class: Option<String>,
 }
 
+#[derive(Serialize)]
+struct DelegationSettlement<'a> {
+    #[serde(flatten)]
+    settlement: &'a SettlementEvent,
+    case_id: &'a str,
+    item_id: &'a str,
+}
+
+/// Identity allocated for one delegation episode.
+pub struct DelegationEpisodeContext<'a> {
+    case_id: &'a str,
+    item_id: &'a str,
+    run_id: &'a str,
+}
+
+impl<'a> DelegationEpisodeContext<'a> {
+    pub fn standalone(case_id: &'a str, run_id: &'a str) -> Self {
+        Self {
+            case_id,
+            item_id: "item_agent_task",
+            run_id,
+        }
+    }
+
+    pub fn planned(case_id: &'a str, item_id: &'a str, run_id: &'a str) -> Self {
+        Self {
+            case_id,
+            item_id,
+            run_id,
+        }
+    }
+}
+
 pub async fn execute(
     config: &ServerConfig,
     request: DelegationRequest<'_>,
     resolver: &dyn CredentialResolver,
 ) -> Result<DelegationResult, ForgeError> {
-    execute_with_control(config, request, resolver, None, None, || false).await
+    let case = case_id()?;
+    let run = run_id()?;
+    execute_with_control(
+        config,
+        request,
+        resolver,
+        DelegationEpisodeContext::standalone(&case, &run),
+        || false,
+    )
+    .await
 }
 
 /// Execute a delegation with a caller-owned run identity and cancellation projection.
@@ -66,8 +108,7 @@ pub async fn execute_with_control(
     config: &ServerConfig,
     request: DelegationRequest<'_>,
     resolver: &dyn CredentialResolver,
-    requested_run_id: Option<&str>,
-    requested_case_id: Option<&str>,
+    episode: DelegationEpisodeContext<'_>,
     cancel: impl Fn() -> bool + Send + Sync + 'static,
 ) -> Result<DelegationResult, ForgeError> {
     let endpoint_id = request.endpoint_id;
@@ -104,9 +145,9 @@ pub async fn execute_with_control(
         ));
     }
 
-    let run = requested_run_id.map(str::to_owned).unwrap_or(run_id()?);
-    let case = requested_case_id.map(str::to_owned).unwrap_or(case_id()?);
-    let item = "item_agent_task";
+    let run = episode.run_id;
+    let case = episode.case_id;
+    let item = episode.item_id;
     let ledger = LedgerStream::open(&config.root, format!("case-{case}"), "sea-forge-agent")?;
 
     // Intent → plan → authority chain.
@@ -120,7 +161,7 @@ pub async fn execute_with_control(
     let intent_ref = commit_view(
         &ledger,
         "intent",
-        vec![case.clone(), run.clone()],
+        vec![case.into(), run.into()],
         &intent,
         &config.root.join("runs").join(&run).join("intent.json"),
         vec![],
@@ -138,8 +179,8 @@ pub async fn execute_with_control(
     let plan = CasePlan {
         version: "0.2".into(),
         plan_id: random_id("plan")?,
-        case_id: case.clone(),
-        run_id: run.clone(),
+        case_id: case.into(),
+        run_id: run.into(),
         intent_id: intent.intent_id.clone(),
         items: vec![PlanItem {
             plan_item_id: item.into(),
@@ -163,7 +204,7 @@ pub async fn execute_with_control(
     let plan_ref = commit_view(
         &ledger,
         "plan",
-        vec![case.clone(), run.clone()],
+        vec![case.into(), run.into()],
         &plan,
         &config.root.join("runs").join(&run).join("plan.json"),
         vec![intent_ref.entry_ulid().into()],
@@ -188,8 +229,8 @@ pub async fn execute_with_control(
     let decision = engine.evaluate(AuthorityEvaluation {
         actor: &actor,
         binding,
-        run_id: &run,
-        case_id: &case,
+        run_id: run,
+        case_id: case,
         plan_item_id: item,
         sequence: 1,
         action: &action,
@@ -204,7 +245,7 @@ pub async fn execute_with_control(
     let decision_ref = commit_view(
         &ledger,
         "authority_decision",
-        vec![run.clone(), item.into()],
+        vec![run.into(), item.into()],
         &decision,
         &config.root.join("runs").join(&run).join("authority.json"),
         vec![intent_ref.entry_ulid().into(), plan_ref.entry_ulid().into()],
@@ -214,14 +255,16 @@ pub async fn execute_with_control(
         return finish_rejected(
             &ledger,
             &config.root,
-            &run,
+            case,
+            item,
+            run,
             endpoint_id,
             decision_ref.entry_ulid(),
             "authority_denied",
         );
     }
     let grant = engine.grant(&decision, &decision_ref, &action, None)?;
-    grant.authorize(&action, &run, item, &config.root)?;
+    grant.authorize(&action, run, item, &config.root)?;
 
     // Credential resolution via secret_access authority.
     let credential = match snapshot.credential_ref.as_deref() {
@@ -235,8 +278,8 @@ pub async fn execute_with_control(
             let secret_decision = engine.evaluate(AuthorityEvaluation {
                 actor: &actor,
                 binding: secret_binding,
-                run_id: &run,
-                case_id: &case,
+                run_id: run,
+                case_id: case,
                 plan_item_id: item,
                 sequence: 2,
                 action: &secret_action,
@@ -251,7 +294,7 @@ pub async fn execute_with_control(
             let secret_ref = commit_view(
                 &ledger,
                 "authority_decision",
-                vec![run.clone(), item.into(), "secret_access".into()],
+                vec![run.into(), item.into(), "secret_access".into()],
                 &secret_decision,
                 &config
                     .root
@@ -264,14 +307,16 @@ pub async fn execute_with_control(
                 return finish_rejected(
                     &ledger,
                     &config.root,
-                    &run,
+                    case,
+                    item,
+                    run,
                     endpoint_id,
                     secret_ref.entry_ulid(),
                     "secret_access_denied",
                 );
             }
             let secret_grant = engine.grant(&secret_decision, &secret_ref, &secret_action, None)?;
-            secret_grant.authorize(&secret_action, &run, item, &config.root)?;
+            secret_grant.authorize(&secret_action, run, item, &config.root)?;
             resolver.resolve(reference)?
         }
         None => Zeroizing::new(String::new()),
@@ -314,7 +359,9 @@ pub async fn execute_with_control(
             return finish_rejected(
                 &ledger,
                 &config.root,
-                &run,
+                case,
+                item,
+                run,
                 endpoint_id,
                 decision_ref.entry_ulid(),
                 "unsupported_kind_error",
@@ -336,7 +383,7 @@ pub async fn execute_with_control(
         let artifact_path = config
             .root
             .join("runs")
-            .join(&run)
+            .join(run)
             .join(format!("transcript-{hex}.jsonl"));
         let jsonl = outcome
             .transcript
@@ -358,7 +405,7 @@ pub async fn execute_with_control(
 
     // Record transcript evidence and settle.
     let evidence = TranscriptEvidence {
-        run_id: run.clone(),
+        run_id: run.into(),
         endpoint_ref: endpoint_id.into(),
         turns_used: outcome.turns_used,
         termination: outcome.termination.clone(),
@@ -370,7 +417,7 @@ pub async fn execute_with_control(
     let evidence_ref = commit_view(
         &ledger,
         "agent_task_evidence",
-        vec![run.clone(), item.into()],
+        vec![run.into(), item.into()],
         &evidence,
         &config
             .root
@@ -419,7 +466,7 @@ pub async fn execute_with_control(
     let settlement = SettlementEvent {
         version: "0.2".into(),
         settlement_id: random_id("set")?,
-        run_id: run.clone(),
+        run_id: run.into(),
         status: status.clone(),
         basis,
         review_required: false,
@@ -429,15 +476,19 @@ pub async fn execute_with_control(
     commit_view(
         &ledger,
         "settlement",
-        vec![run.clone()],
-        &settlement,
+        vec![run.into(), item.into()],
+        &DelegationSettlement {
+            settlement: &settlement,
+            case_id: case,
+            item_id: item,
+        },
         &config.root.join("runs").join(&run).join("settlement.json"),
         vec![evidence_ref.entry_ulid().into()],
     )?;
 
     Ok(DelegationResult {
         endpoint: endpoint_id.into(),
-        run_id: run,
+        run_id: run.into(),
         settlement: status,
         termination: Some(termination_str(&outcome.termination)),
         transcript_sha256: Some(outcome.transcript_sha256),
@@ -495,6 +546,8 @@ fn action_for_delegation(
 fn finish_rejected(
     ledger: &LedgerStream,
     root: &Path,
+    case: &str,
+    item: &str,
     run: &str,
     endpoint: &str,
     authority_ref: &str,
@@ -505,7 +558,7 @@ fn finish_rejected(
     let evidence_ref = commit_view(
         ledger,
         "agent_task_evidence",
-        vec![run.into()],
+        vec![run.into(), item.into()],
         &evidence,
         &root.join("runs").join(run).join("transcript-evidence.json"),
         vec![authority_ref.into()],
@@ -523,8 +576,12 @@ fn finish_rejected(
     commit_view(
         ledger,
         "settlement",
-        vec![run.into()],
-        &settlement,
+        vec![run.into(), item.into()],
+        &DelegationSettlement {
+            settlement: &settlement,
+            case_id: case,
+            item_id: item,
+        },
         &root.join("runs").join(run).join("settlement.json"),
         vec![evidence_ref.entry_ulid().into()],
     )?;
