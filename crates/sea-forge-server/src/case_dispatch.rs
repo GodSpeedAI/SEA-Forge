@@ -389,7 +389,11 @@ fn record_completion(
         events,
         TraceKind::SettlementRecorded,
         Some(&completion.item_id),
-        serde_json::json!({"instance": completion.instance, "status": completion.settlement.status}),
+        serde_json::json!({
+            "instance": completion.instance,
+            "run_id": completion.run_id,
+            "status": completion.settlement.status,
+        }),
     )?;
     CaseRunner::apply_episode_completion(
         case,

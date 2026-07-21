@@ -303,6 +303,10 @@ pub enum Request {
 
 #[derive(Deserialize)]
 pub struct SubmitPayload {
+    /// Server-owned dispatch (case_dispatch::submit) requires `plan` and
+    /// ignores `intent`; intent-only submit is no longer supported via this
+    /// endpoint. The field is retained for deserialization compatibility with
+    /// older clients but has no effect on the dispatch path.
     #[serde(default)]
     intent: Option<String>,
     #[serde(default)]
