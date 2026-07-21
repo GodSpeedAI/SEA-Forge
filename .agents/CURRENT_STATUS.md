@@ -79,6 +79,12 @@ activation event and drain already-dispatched episodes to terminal settlement
 before `Submit` returns active. All 16 server M13 conformance tests, formatting,
 and server check pass. Commit: pending.
 
+Task 3 final review follow-up: human holds now process every equally-ready
+executable action in either plan order before draining settlements, and a
+completion during permit wait restarts case reduction rather than processing
+stale actions. All 17 server M13 conformance tests, formatting, and server check
+pass. Commit: pending.
+
 ## SodRule transition scope closeout (2026-07-17)
 
 - Added additive `SodRule.transition_kind: Option<String>` with omitted-None

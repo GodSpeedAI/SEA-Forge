@@ -1188,16 +1188,18 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
     let address = listener.local_addr().unwrap();
     let stub = tokio::spawn(async move {
-        let (mut stream, _) = listener.accept().await.unwrap();
-        let mut request = vec![0_u8; 4096];
-        let _ = stream.read(&mut request).await;
-        let body = br#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#;
-        let header = format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-            body.len()
-        );
-        stream.write_all(header.as_bytes()).await.unwrap();
-        stream.write_all(body).await.unwrap();
+        for _ in 0..2 {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = vec![0_u8; 4096];
+            let _ = stream.read(&mut request).await;
+            let body = br#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#;
+            let header = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            stream.write_all(header.as_bytes()).await.unwrap();
+            stream.write_all(body).await.unwrap();
+        }
     });
     let root = tempfile::tempdir().unwrap();
     let policy_path = policy(root.path(), true, false);
@@ -1300,7 +1302,121 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
             .count(),
         1
     );
+    let mut reversed: CasePlan = serde_json::from_slice(&fs::read(&plan_path).unwrap()).unwrap();
+    reversed.items.reverse();
+    let reversed_path = root.path().join("human-and-agent.json");
+    fs::write(&reversed_path, serde_json::to_vec(&reversed).unwrap()).unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":reversed_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let response = handle_request(request, &state).await;
+    assert_eq!(response["state"], "active");
+    let events: Vec<TraceEvent> = fs::read_to_string(
+        root.path()
+            .join("cases")
+            .join(response["case_id"].as_str().unwrap())
+            .join("case-events.jsonl"),
+    )
+    .unwrap()
+    .lines()
+    .map(|line| serde_json::from_str(line).unwrap())
+    .collect();
+    assert!(events
+        .iter()
+        .any(|event| event.plan_item_id.as_deref() == Some("human")
+            && event.kind == TraceKind::ItemActivated
+            && event.payload["human_task"] == true));
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.plan_item_id.as_deref() == Some("agent")
+                && event.kind == TraceKind::SettlementRecorded)
+            .count(),
+        1
+    );
     stub.await.unwrap();
+}
+
+#[tokio::test]
+async fn t13_2_permit_completion_rederives_before_stale_action() {
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = policy(root.path(), true, false);
+    let state = Arc::new(
+        ServerState::new(ServerConfig {
+            root: root.path().to_path_buf(),
+            max_concurrent_runs: 1,
+            ..ServerConfig::default()
+        })
+        .unwrap(),
+    );
+    let plan_path = root.path().join("stale-actions.json");
+    fs::write(
+        &plan_path,
+        serde_json::to_vec(&CasePlan {
+            version: "0.2".into(),
+            plan_id: "plan_stale".into(),
+            case_id: "case_placeholder".into(),
+            run_id: "run_placeholder".into(),
+            intent_id: "int_stale".into(),
+            items: (0..2)
+                .map(|index| PlanItem {
+                    plan_item_id: format!("agent_{index}"),
+                    name: "agent".into(),
+                    operations: vec![Operation::AgentTask {
+                        endpoint_ref: "missing".into(),
+                        instruction: "reject".into(),
+                        max_turns: 1,
+                        token_budget: None,
+                        response_schema: None,
+                        transcript_retention: None,
+                    }],
+                    entry_criteria: vec![],
+                    exit_criteria: vec![],
+                    settlement_criteria: SettlementCriteria::default(),
+                    settlement_criteria_ref: None,
+                    item_kind: ItemKind::AgentTask,
+                    sandbox_class: None,
+                    parent_stage: None,
+                    markers: sea_forge_core::types::ItemMarkers {
+                        required: true,
+                        ..Default::default()
+                    },
+                    max_instances: 1,
+                    depends_on: vec![],
+                    environment: None,
+                })
+                .collect(),
+            template_ref: None,
+            job_contract_ref: None,
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let response = handle_request(request, &state).await;
+    assert_eq!(response["state"], "terminated", "{response}");
+    let events: Vec<TraceEvent> = fs::read_to_string(
+        root.path()
+            .join("cases")
+            .join(response["case_id"].as_str().unwrap())
+            .join("case-events.jsonl"),
+    )
+    .unwrap()
+    .lines()
+    .map(|line| serde_json::from_str(line).unwrap())
+    .collect();
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.kind == TraceKind::ItemActivated)
+            .count(),
+        1
+    );
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.kind == TraceKind::SettlementRecorded)
+            .count(),
+        1
+    );
 }
 
 /// T13.3: after restart, a durable cancellation control settles the

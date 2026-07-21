@@ -86,7 +86,7 @@ pub(crate) async fn submit(
     )?;
     let mut active = JoinSet::new();
 
-    loop {
+    'dispatch: loop {
         let actions = CaseRunner::next_ready_actions(&plan.items, &events);
         if actions.is_empty() {
             if active.is_empty() {
@@ -113,6 +113,7 @@ pub(crate) async fn submit(
             continue;
         }
         let mut dispatched = false;
+        let mut park_human = false;
         for action in actions {
             match action {
                 CaseAction::Enable(item) => CaseRunner::append_event(
@@ -190,25 +191,7 @@ pub(crate) async fn submit(
                         Some(&item_id),
                         serde_json::json!({"human_task": true}),
                     )?;
-                    while let Some(completion) = active.join_next().await {
-                        let completion = completion.map_err(|error| {
-                            ForgeError::Internal(format!("episode task panic: {error}"))
-                        })?;
-                        record_completion(
-                            &stream,
-                            &case_id,
-                            &case_events,
-                            &mut events,
-                            &mut case,
-                            completion,
-                        )?;
-                    }
-                    write_json(&case_dir.join("case.json"), &case)?;
-                    return Ok(DispatchOutcome {
-                        case_id,
-                        state: "active",
-                        exit_code: 5,
-                    });
+                    park_human = true;
                 }
                 CaseAction::Activate(item_id) => {
                     let permit = if active.is_empty() {
@@ -224,7 +207,7 @@ pub(crate) async fn submit(
                                     .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))?;
                                 record_completion(&stream, &case_id, &case_events, &mut events, &mut case, completion)?;
                                 write_json(&case_dir.join("case.json"), &case)?;
-                                continue;
+                                continue 'dispatch;
                             }
                             permit = state.semaphore.clone().acquire_owned() => permit
                                 .map_err(|_| ForgeError::Internal("server semaphore unavailable".into()))?,
@@ -324,6 +307,27 @@ pub(crate) async fn submit(
                     dispatched = true;
                 }
             }
+        }
+        if park_human {
+            while let Some(completion) = active.join_next().await {
+                let completion = completion.map_err(|error| {
+                    ForgeError::Internal(format!("episode task panic: {error}"))
+                })?;
+                record_completion(
+                    &stream,
+                    &case_id,
+                    &case_events,
+                    &mut events,
+                    &mut case,
+                    completion,
+                )?;
+            }
+            write_json(&case_dir.join("case.json"), &case)?;
+            return Ok(DispatchOutcome {
+                case_id,
+                state: "active",
+                exit_code: 5,
+            });
         }
         if dispatched {
             // Apply exactly one returned completion before looking at persisted state again.
