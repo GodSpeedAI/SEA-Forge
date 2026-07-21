@@ -4,9 +4,8 @@ Updated: 2026-07-21
 
 ## Objective
 
-Continue implementing `.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`
-Tasks 4–8 (M12 AgentProvider seam, M13 governed delegation, M14 topology
-templates, M15 Thoth manager loop, M16 ACP + SWE_SEED). M9–M11 + CEP-0008
+M9–M16 code-complete implementation of
+`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`. M9–M11 + CEP-0008
 adapter complete. M12 (Task 4) COMPLETE and gated (408 tests). M13 (Task 5)
 COMPLETE and gated: all T13.1–T13.7 conformance rows green, including T13.2
 mixed sandboxed/agent dispatch with replayable ordinals (`sea-forge-case-runner`
@@ -18,8 +17,14 @@ M15 (Task 7) COMPLETE and gated (see the M15 entry below): deterministic
 manager-loop judgment (satisfied/blocked/progressing/stalled), `ManagerIteration`
 ledger record, discretionary `agent_task` proposal through the existing
 add-task path, iteration-cap park+escalate through the existing approval
-mechanism, and a structural SoD gate on approval resolution.
-465 workspace tests pass. Next: M16 (Task 8) ACP driver + SWE_SEED integration.
+mechanism, and a structural SoD gate on approval resolution. M16 ACP portable
+coverage is green: ACP v1 session driver, durable permission records/approvals,
+planned-run cancellation, Landlock jail support, bounded transport/transcript,
+continuation recovery, and SWE_SEED proof harvesting. Remaining M16 work:
+ingest/reconcile a later `SweSeedTransport` declaration rather than only
+snapshot declarations available at episode settlement. Real ACP/SWE_SEED-host
+release tests are also intentionally ignored until operator configuration is
+available. Next: finish declaration reconciliation or supply release evidence.
 
 Historical M13 progress log (kept for context, superseded by "COMPLETE" above):
 T13.2 (Task 5) in progress:
@@ -132,6 +137,7 @@ All 3 CLI M13 conformance tests, 18 server M13 conformance tests, the
 pass. Commit: pending.
 
 T13.2 final whole-branch review follow-up (three fixes):
+
 - `sea-forge-case-runner` added to the `no-async-kernel` `kernel_crates`
   array; `just no-async-kernel` now covers 19 kernel crates (was 18).
 - `SettlementRecorded` payload in `case_dispatch::record_completion`
@@ -241,6 +247,44 @@ Task 7. M15 (E16b) is COMPLETE and gated:
 §17.4 T15.1–T15.5 rows flipped to green; the "Manager loop bounded,
 evidence-grounded, SoD-enforced, escalating on exhaustion" checklist item
 closed.
+
+## M16 ACP + SWE_SEED (2026-07-21, partial)
+
+ACP code gate is complete; SWE_SEED proof harvesting is complete; declaration
+reconciliation and real-host evidence remain:
+
+- `sea-forge-agent::acp` speaks ACP v1 JSON-RPC/NDJSON with official
+  `mcpServers`, `prompt`, `sessionUpdate`, stop-reason, and capability-gated
+  `session/load` shapes. Spawn uses tokenized argv, an explicit minimal env,
+  shell rejection, process-group cleanup, bounded stderr drain, bounded input
+  lines, and bounded cumulative transcript.
+- ACP permissions commit exact hashed request data, an authority decision, a
+  durable `permission_request`, and (when escalated) an ordinary
+  `approval_request`. Broker wake-up only causes a ledger reload; permission
+  allow requires an independently committed approved resolution and the
+  existing `grant_after_approval` exact-action validation. Deny/timeout stays
+  inside the session. Duplicate wake-ups are rejected.
+- Server-dispatched agent tasks now register cancellation handles too. Restart
+  recovery turns orphaned ACP approval episodes into one rejected
+  `acp_disconnect` settlement with a continuation record; successor episodes
+  call capability-gated `session/load` under the same key.
+- `sandbox_class: jail` ACP children are spawned on a Landlock-restricted
+  thread; portable proof denies an outside `/tmp` write while allowing the run
+  workspace, and rejects a session-mode escalation.
+- SWE_SEED config requires an explicit repo+commit pair. Commit verification,
+  safe `.agent-harness` traversal, symlink/type/count/size/hash validation,
+  run-bound harvested refs, and a `swe_seed_correlation` ledger record are
+  portable-tested. M4a declarations are resolved by immutable run ID when
+  present. This is not yet a reconciliation path for declarations arriving
+  after episode settlement; real SWE_SEED/transport evidence remains a release
+  gate.
+- `crates/sea-forge-server/tests/conformance_m16.rs`: 12 portable tests pass;
+  two real-host tests are ignored and reported skipped by design.
+
+Verification: isolated full workspace `cargo test --workspace --all-features
+--locked` passed (the normal target had corrupted incremental linker objects
+after an interrupted build; no source artifact was deleted). Focused ACP,
+M12, M13, M16 tests and clippy all passed.
 
 ## SodRule transition scope closeout (2026-07-17)
 
@@ -777,6 +821,7 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 ## Task 0.1 — Baseline re-run (2026-07-16)
 
 Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
+
 - `devbox run -- just context-check` — passed.
 - `devbox run -- just check` — passed (fmt-check, clippy `-D warnings`
   workspace/all-targets/all-features, typecheck, security). cargo-deny emitted
@@ -844,6 +889,7 @@ Cumulative gate on `b351c95`, branch `full-spec`, fresh worktree:
 ## M9 gate (2026-07-17) — GREEN
 
 Cumulative gate on `full-spec` after all M9 slices:
+
 - `devbox run -- just context-check` — passed.
 - `devbox run -- just check` — passed (fmt, clippy `-D warnings`
   workspace/all-targets/all-features, typecheck, security).
@@ -882,7 +928,8 @@ OpenAI-compatible + Anthropic providers (object-safe `AgentProvider` via
 `BoxFuture`, no async-trait dep), `Operation::AgentProbe` + exact-action
 `AuthorityAction::AgentProbe` (binds endpoint_ref +
 descriptor_config_sha256 + normalized scheme/host/port/path/model/limits
-+ credential_ref + prompt_sha256 so a config reload cannot repoint an
+
+- credential_ref + prompt_sha256 so a config reload cannot repoint an
 authorized call), `external_api` surface `allow_hosts` enforcement,
 DNS-rebinding-safe client pinning (`resolve_to_addrs`), `no_proxy` +
 `redirect::Policy::none()` + HTTPS-only (explicit loopback test mode),
@@ -908,6 +955,7 @@ crates): `reqwest 0.12` (default-features=false, features
 json+rustls-tls+stream), `url 2.5`, `zeroize 1.8`. Cargo.lock refreshed.
 
 Remaining M12 gaps (before cumulative gate):
+
 - T12.5 dependency-boundary gate: rewrite justfile `no-async-kernel` to an
   explicit kernel-crate inventory (add sea-forge-domainforge,
   sea-forge-spec-pipeline, sea-forge-cell, sea-forge-artifact-ip) and a

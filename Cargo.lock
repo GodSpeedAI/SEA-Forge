@@ -1870,6 +1870,7 @@ dependencies = [
  "sea-forge-ledger",
  "sea-forge-planner",
  "sea-forge-runtime",
+ "sea-forge-sandbox",
  "sea-forge-self-model",
  "sea-forge-settlement",
  "serde",

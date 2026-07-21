@@ -103,6 +103,7 @@ impl CaseRunner {
         execute()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn apply_episode_completion(
         case: &mut Case,
         run_id: &str,
