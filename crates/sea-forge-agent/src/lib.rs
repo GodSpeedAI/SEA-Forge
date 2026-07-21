@@ -1,15 +1,22 @@
 #![forbid(unsafe_code)]
 
-//! Governed HTTP provider adapters for OpenAI-compatible and Anthropic APIs.
+//! Governed agent provider adapters.
 //!
-//! This crate owns transport only. Authority, credential authorization,
-//! evidence, and settlement remain outside the adapter boundary.
+//! Two HTTP shapes (OpenAI-compatible, Anthropic) plus an ACP driver for
+//! CLI-resident agents (spec-agent-orchestration §10.4). This crate owns
+//! transport only. Authority, credential authorization, evidence, and
+//! settlement remain outside the adapter boundary.
 
+pub mod acp;
 mod config;
 mod delegation;
 mod network;
 mod provider;
 
+pub use acp::{
+    deny_once, AcpOutcome, AcpPermissionMediator, AcpPermissionRequest, AcpSession, AcpSpawn,
+    AcpTermination, DenyAllMediator, PermissionDecision, ACP_PROTOCOL_VERSION,
+};
 pub use config::{
     AgentConfig, AgentEndpointConfig, EndpointSnapshot, EndpointStatus, ProviderKind,
 };
