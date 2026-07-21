@@ -19,7 +19,7 @@ use std::process::Stdio;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time;
@@ -30,16 +30,7 @@ pub const ACP_PROTOCOL_VERSION: u32 = 1;
 /// Tool-call kinds ACP surfaces in `session/request_permission` (schema v1).
 /// Anything not in this set is unmapped and MUST be denied (spec §10.4, T16.3).
 pub const KNOWN_TOOL_KINDS: &[&str] = &[
-    "read",
-    "edit",
-    "delete",
-    "move",
-    "search",
-    "execute",
-    "think",
-    "fetch",
-    "switch_mode",
-    "other",
+    "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "other",
 ];
 
 /// Permission-option kinds the agent offers; the selected one encodes our grant
@@ -165,6 +156,8 @@ pub struct AcpSpawn {
     pub argv: Vec<String>,
     pub env: Vec<(String, String)>,
     pub cwd: Option<std::path::PathBuf>,
+    pub max_response_bytes: usize,
+    pub max_transcript_bytes: usize,
 }
 
 /// A live ACP session over a transport. Drop closes the writer task; the child
@@ -176,10 +169,45 @@ pub struct AcpSession {
     incoming_rx: Option<mpsc::Receiver<Incoming>>,
     pending: Arc<Mutex<HashMap<u64, oneshot::Sender<RpcResult>>>>,
     prompt_in_flight: Arc<AtomicU64>,
+    session_cwd: Option<std::path::PathBuf>,
+    max_response_bytes: usize,
+    max_transcript_bytes: usize,
+    #[allow(dead_code)]
+    process_group: ProcessGroupGuard,
     /// Held for liveness: the child's `kill_on_drop` reaps its process tree
     /// when the session drops. Never read directly.
     #[allow(dead_code)]
-    child: Option<Child>,
+    child: Option<ChildGuard>,
+}
+
+#[allow(dead_code)]
+enum ChildGuard {
+    Tokio(Child),
+    Std(StdChildGuard),
+}
+
+struct StdChildGuard(std::process::Child);
+
+impl Drop for StdChildGuard {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+struct ProcessGroupGuard(Option<u32>);
+
+impl Drop for ProcessGroupGuard {
+    fn drop(&mut self) {
+        #[cfg(unix)]
+        if let Some(id) = self.0 {
+            let group = format!("-{id}");
+            let _ = std::process::Command::new("/bin/kill")
+                .args(["-KILL", "--", &group])
+                .env_clear()
+                .status();
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -188,6 +216,7 @@ enum Incoming {
     Notification(RpcNotification),
     /// Response to the in-flight `session/prompt` request (stop_reason carried).
     PromptResponse(Value),
+    Oversize,
     Closed,
 }
 
@@ -266,6 +295,7 @@ impl AcpSession {
         if spawn.argv.is_empty() {
             return Err("acp argv must be non-empty".into());
         }
+        let session_cwd = spawn.cwd.clone();
         let mut cmd = Command::new(&spawn.argv[0]);
         cmd.args(&spawn.argv[1..]);
         cmd.env_clear();
@@ -281,6 +311,8 @@ impl AcpSession {
         // ponytail: process-group kill on drop reaps the child and any
         // descendants it spawned; matches spec §14 "no untracked child".
         cmd.kill_on_drop(true);
+        #[cfg(unix)]
+        cmd.process_group(0);
         let mut child = cmd.spawn().map_err(|e| format!("acp spawn failed: {e}"))?;
         let stdout = child
             .stdout
@@ -290,16 +322,20 @@ impl AcpSession {
             .stdin
             .take()
             .ok_or_else(|| "acp child stdin unavailable".to_string())?;
-        // Surface stderr through tracing for operator visibility; never block.
+        // Drain untrusted stderr without logging or unbounded allocation.
         if let Some(stderr) = child.stderr.take() {
-            tokio::spawn(async move {
-                let mut reader = BufReader::new(stderr).lines();
-                while let Ok(Some(line)) = reader.next_line().await {
-                    tracing::debug!(target: "sea_forge_agent::acp", "agent stderr: {line}");
-                }
-            });
+            drain_stderr(stderr);
         }
-        let session = Self::over_streams(Box::new(stdout), Box::new(stdin), Some(child));
+        let process_group = child.id();
+        let session = Self::over_streams(
+            Box::new(stdout),
+            Box::new(stdin),
+            Some(ChildGuard::Tokio(child)),
+            session_cwd,
+            process_group,
+            spawn.max_response_bytes,
+            spawn.max_transcript_bytes,
+        );
         Ok((session, std::path::PathBuf::from(&spawn.argv[0])))
     }
 
@@ -309,7 +345,11 @@ impl AcpSession {
     fn over_streams(
         read: Box<dyn tokio::io::AsyncRead + Unpin + Send>,
         write: Box<dyn tokio::io::AsyncWrite + Unpin + Send>,
-        child: Option<Child>,
+        child: Option<ChildGuard>,
+        session_cwd: Option<std::path::PathBuf>,
+        process_group: Option<u32>,
+        max_response_bytes: usize,
+        max_transcript_bytes: usize,
     ) -> Self {
         let next_id = Arc::new(AtomicU64::new(1));
         let pending: Arc<Mutex<HashMap<u64, oneshot::Sender<RpcResult>>>> =
@@ -338,14 +378,15 @@ impl AcpSession {
             let incoming_tx = incoming_tx.clone();
             async move {
                 let mut reader = BufReader::new(read);
-                let mut line = String::new();
                 loop {
-                    line.clear();
-                    match reader.read_line(&mut line).await {
-                        Ok(0) => break,
-                        Ok(_) => {}
-                        Err(_) => break,
-                    }
+                    let line = match read_bounded_line(&mut reader, max_response_bytes).await {
+                        Ok(Some(line)) => line,
+                        Ok(None) => break,
+                        Err(()) => {
+                            let _ = incoming_tx.send(Incoming::Oversize).await;
+                            break;
+                        }
+                    };
                     let trimmed = line.trim();
                     if trimmed.is_empty() {
                         continue;
@@ -440,8 +481,41 @@ impl AcpSession {
             incoming_rx: Some(incoming_rx),
             pending,
             prompt_in_flight,
+            session_cwd,
+            max_response_bytes,
+            max_transcript_bytes,
+            process_group: ProcessGroupGuard(process_group),
             child,
         }
+    }
+
+    /// Construct a session from a child spawned by the jail adapter.
+    pub fn from_std_child(
+        child: std::process::Child,
+        stdin: std::process::ChildStdin,
+        stdout: std::process::ChildStdout,
+        stderr: std::process::ChildStderr,
+        cwd: std::path::PathBuf,
+        max_response_bytes: usize,
+        max_transcript_bytes: usize,
+    ) -> Result<Self, String> {
+        let process_group = Some(child.id());
+        let stdin = tokio::process::ChildStdin::from_std(stdin)
+            .map_err(|error| format!("adopt jailed ACP stdin: {error}"))?;
+        let stdout = tokio::process::ChildStdout::from_std(stdout)
+            .map_err(|error| format!("adopt jailed ACP stdout: {error}"))?;
+        let stderr = tokio::process::ChildStderr::from_std(stderr)
+            .map_err(|error| format!("adopt jailed ACP stderr: {error}"))?;
+        drain_stderr(stderr);
+        Ok(Self::over_streams(
+            Box::new(stdout),
+            Box::new(stdin),
+            Some(ChildGuard::Std(StdChildGuard(child))),
+            Some(cwd),
+            process_group,
+            max_response_bytes,
+            max_transcript_bytes,
+        ))
     }
 
     async fn request(&self, method: &str, params: Value) -> Result<Value, RpcError> {
@@ -487,15 +561,55 @@ impl AcpSession {
     /// accumulated output (ACP turn accounting is coarse; we count one turn
     /// per prompt dispatch and rely on stop_reason for the rest).
     pub async fn run_episode(
-        mut self,
+        self,
         instruction: &str,
         max_turns: u32,
         per_turn_timeout: Duration,
         cancel: impl Fn() -> bool + Send + Sync + 'static,
         mediator: &dyn AcpPermissionMediator,
     ) -> AcpOutcome {
+        self.run_episode_with_continuation(
+            instruction,
+            max_turns,
+            per_turn_timeout,
+            cancel,
+            mediator,
+            None,
+        )
+        .await
+    }
+
+    /// Run an episode, loading an existing ACP session when a durable
+    /// continuation key is supplied by the caller.
+    pub async fn run_episode_with_continuation(
+        mut self,
+        instruction: &str,
+        max_turns: u32,
+        per_turn_timeout: Duration,
+        cancel: impl Fn() -> bool + Send + Sync + 'static,
+        mediator: &dyn AcpPermissionMediator,
+        continuation_key: Option<&str>,
+    ) -> AcpOutcome {
         let mut transcript: Vec<(String, String)> = Vec::new();
-        transcript.push(("user".into(), instruction.to_string()));
+        let mut transcript_bytes = 0usize;
+        if !append_transcript(
+            &mut transcript,
+            &mut transcript_bytes,
+            self.max_transcript_bytes,
+            "user",
+            instruction,
+        ) {
+            return self
+                .terminate(
+                    AcpTermination::EndpointError,
+                    0,
+                    None,
+                    transcript,
+                    continuation_key.map(str::to_owned),
+                    Vec::new(),
+                )
+                .await;
+        }
         let mut unmapped: Vec<String> = Vec::new();
 
         // Handshake.
@@ -504,21 +618,22 @@ impl AcpSession {
             "clientCapabilities": {},
             "clientInfo": {"name": "sea-forge", "version": env!("CARGO_PKG_VERSION")},
         });
-        let init = match self.request("initialize", init_params).await {
-            Ok(v) => v,
-            Err(_) => {
-                return self
-                    .terminate(
-                        AcpTermination::EndpointError,
-                        0,
-                        None,
-                        transcript,
-                        None,
-                        unmapped,
-                    )
-                    .await;
-            }
-        };
+        let init =
+            match time::timeout(per_turn_timeout, self.request("initialize", init_params)).await {
+                Ok(Ok(v)) => v,
+                Ok(Err(_)) | Err(_) => {
+                    return self
+                        .terminate(
+                            AcpTermination::EndpointError,
+                            0,
+                            None,
+                            transcript,
+                            None,
+                            unmapped,
+                        )
+                        .await;
+                }
+            };
         let agent_protocol = init
             .get("protocolVersion")
             .and_then(Value::as_u64)
@@ -536,48 +651,78 @@ impl AcpSession {
                 )
                 .await;
         }
+        let load_session = init
+            .get("agentCapabilities")
+            .and_then(|capabilities| capabilities.get("loadSession"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        if continuation_key.is_some() && !load_session {
+            return self
+                .terminate(
+                    AcpTermination::EndpointError,
+                    0,
+                    None,
+                    transcript,
+                    continuation_key.map(str::to_owned),
+                    unmapped,
+                )
+                .await;
+        }
 
-        let cwd = std::env::current_dir()
-            .ok()
+        let cwd = self
+            .session_cwd
+            .clone()
+            .or_else(|| std::env::current_dir().ok())
             .and_then(|p| p.to_str().map(str::to_owned))
             .unwrap_or_default();
-        let new_params = serde_json::json!({
-            "cwd": cwd,
-            "includePartialMessages": false,
-        });
-        let new_result = match self.request("session/new", new_params).await {
-            Ok(v) => v,
-            Err(_) => {
-                return self
-                    .terminate(
-                        AcpTermination::EndpointError,
-                        0,
-                        None,
-                        transcript,
-                        None,
-                        unmapped,
-                    )
-                    .await;
-            }
+        let (method, params) = if let Some(key) = continuation_key {
+            (
+                "session/load",
+                serde_json::json!({
+                    "sessionId": key,
+                    "cwd": cwd,
+                    "mcpServers": [],
+                }),
+            )
+        } else {
+            (
+                "session/new",
+                serde_json::json!({
+                    "cwd": cwd,
+                    "mcpServers": [],
+                }),
+            )
         };
-        let session_id = new_result
-            .get("sessionId")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string();
+        let session_result =
+            match time::timeout(per_turn_timeout, self.request(method, params)).await {
+                Ok(Ok(v)) => v,
+                Ok(Err(_)) | Err(_) => {
+                    return self
+                        .terminate(
+                            AcpTermination::EndpointError,
+                            0,
+                            None,
+                            transcript,
+                            continuation_key.map(str::to_owned),
+                            unmapped,
+                        )
+                        .await;
+                }
+            };
+        let session_id = continuation_key.map(str::to_owned).unwrap_or_else(|| {
+            session_result
+                .get("sessionId")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string()
+        });
 
         // Prompt dispatch. Mark the prompt id in-flight so the reader task
         // forwards its response as an Incoming::PromptResponse rather than
         // resolving a oneshot; the pump coordinates via the channel.
         let prompt_params = serde_json::json!({
             "sessionId": session_id,
-            "context": {
-                "messages": [{
-                    "role": {"type": "user"},
-                    "content": [{"type": "text", "text": instruction}],
-                }],
-            },
-            "includePartialMessages": false,
+            "prompt": [{"type": "text", "text": instruction}],
         });
         let prompt_id = self.next_id.fetch_add(1, Ordering::SeqCst);
         self.prompt_in_flight.store(prompt_id, Ordering::SeqCst);
@@ -601,6 +746,8 @@ impl AcpSession {
         // Pump: await prompt-response interleaved with notifications/requests.
         let mut assistant = String::new();
         let mut turns_used = 0u32;
+        let mut assistant_bytes = 0usize;
+        let mut tool_calls: HashMap<String, Value> = HashMap::new();
         #[allow(unused_assignments)]
         let mut terminal = AcpTermination::Completed;
         let mut incoming = self.incoming_rx.take().expect("incoming_rx present");
@@ -636,10 +783,10 @@ impl AcpSession {
                     let stop = result
                         .get("stopReason")
                         .and_then(Value::as_str)
-                        .unwrap_or("end_of_turn");
+                        .unwrap_or("end_turn");
                     match stop {
-                        "end_of_turn" | "" => terminal = AcpTermination::Completed,
-                        "max_turns" | "max_comp_requests" => {
+                        "end_turn" | "" => terminal = AcpTermination::Completed,
+                        "max_tokens" | "max_turn_requests" => {
                             terminal = AcpTermination::TurnCapExceeded
                         }
                         "cancelled" => terminal = AcpTermination::Cancelled,
@@ -656,11 +803,36 @@ impl AcpSession {
                     terminal = AcpTermination::Disconnect;
                     break;
                 }
+                Incoming::Oversize => {
+                    terminal = AcpTermination::EndpointError;
+                    break;
+                }
                 Incoming::Notification(note) => {
                     if note.method == "session/update" {
+                        remember_tool_call(&note.params, &mut tool_calls);
                         if let Some(text) = extract_agent_text(&note.params) {
+                            if assistant_bytes.saturating_add(text.len()) > self.max_response_bytes
+                            {
+                                terminal = AcpTermination::EndpointError;
+                                self.notify(
+                                    "session/cancel",
+                                    serde_json::json!({"sessionId": session_id}),
+                                )
+                                .await;
+                                break;
+                            }
+                            assistant_bytes += text.len();
                             assistant.push_str(&text);
-                            transcript.push(("assistant".into(), text));
+                            if !append_transcript(
+                                &mut transcript,
+                                &mut transcript_bytes,
+                                self.max_transcript_bytes,
+                                "assistant",
+                                &text,
+                            ) {
+                                terminal = AcpTermination::EndpointError;
+                                break;
+                            }
                             turns_used = turns_used.saturating_add(1);
                             if turns_used >= max_turns {
                                 terminal = AcpTermination::TurnCapExceeded;
@@ -675,8 +847,11 @@ impl AcpSession {
                         }
                     }
                 }
-                Incoming::AgentRequest(req) => {
+                Incoming::AgentRequest(mut req) => {
                     // Every agent request is mediated; unknown methods deny.
+                    if req.method == "session/request_permission" {
+                        enrich_permission_request(&mut req.params, &tool_calls);
+                    }
                     let response = self
                         .handle_agent_request(
                             &req,
@@ -684,6 +859,8 @@ impl AcpSession {
                             mediator,
                             &mut unmapped,
                             &mut transcript,
+                            &mut transcript_bytes,
+                            self.max_transcript_bytes,
                         )
                         .await;
                     if let Some(w) = &self.writer_tx {
@@ -708,6 +885,7 @@ impl AcpSession {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn handle_agent_request(
         &self,
         req: &RpcRequest,
@@ -715,6 +893,8 @@ impl AcpSession {
         mediator: &dyn AcpPermissionMediator,
         unmapped: &mut Vec<String>,
         transcript: &mut Vec<(String, String)>,
+        transcript_bytes: &mut usize,
+        max_transcript_bytes: usize,
     ) -> String {
         match req.method.as_str() {
             "session/request_permission" => {
@@ -724,27 +904,51 @@ impl AcpSession {
                 };
                 if !KNOWN_TOOL_KINDS.contains(&parsed.tool_kind.as_str()) {
                     unmapped.push(parsed.tool_kind.clone());
+                    let _ = mediator.mediate(parsed.clone()).await;
                     let deny = deny_once(&parsed);
-                    transcript.push((
-                        "system".into(),
-                        format!("acp_permission_denied_unmapped:{}", parsed.tool_kind),
-                    ));
+                    if !append_transcript(
+                        transcript,
+                        transcript_bytes,
+                        max_transcript_bytes,
+                        "system",
+                        &format!("acp_permission_denied_unmapped:{}", parsed.tool_kind),
+                    ) {
+                        return error_line(req.id, ERR_INVALID_PARAMS, "transcript limit exceeded");
+                    }
                     return permission_response(req.id, &deny, &parsed);
                 }
                 let decision = mediator.mediate(parsed.clone()).await;
                 match &decision {
                     PermissionDecision::Allow { option_id } => {
-                        transcript.push((
-                            "system".into(),
-                            format!("acp_permission_allowed:{}", parsed.tool_kind),
-                        ));
+                        if !append_transcript(
+                            transcript,
+                            transcript_bytes,
+                            max_transcript_bytes,
+                            "system",
+                            &format!("acp_permission_allowed:{}", parsed.tool_kind),
+                        ) {
+                            return error_line(
+                                req.id,
+                                ERR_INVALID_PARAMS,
+                                "transcript limit exceeded",
+                            );
+                        }
                         let _ = option_id;
                     }
                     PermissionDecision::Deny { option_id } => {
-                        transcript.push((
-                            "system".into(),
-                            format!("acp_permission_denied:{}", parsed.tool_kind),
-                        ));
+                        if !append_transcript(
+                            transcript,
+                            transcript_bytes,
+                            max_transcript_bytes,
+                            "system",
+                            &format!("acp_permission_denied:{}", parsed.tool_kind),
+                        ) {
+                            return error_line(
+                                req.id,
+                                ERR_INVALID_PARAMS,
+                                "transcript limit exceeded",
+                            );
+                        }
                         let _ = option_id;
                     }
                 }
@@ -758,10 +962,15 @@ impl AcpSession {
             | "terminal/wait_for_exit"
             | "terminal/kill"
             | "terminal/release" => {
-                transcript.push((
-                    "system".into(),
-                    format!("acp_method_unsupported:{}", req.method),
-                ));
+                if !append_transcript(
+                    transcript,
+                    transcript_bytes,
+                    max_transcript_bytes,
+                    "system",
+                    &format!("acp_method_unsupported:{}", req.method),
+                ) {
+                    return error_line(req.id, ERR_INVALID_PARAMS, "transcript limit exceeded");
+                }
                 error_line(
                     req.id,
                     ERR_METHOD_NOT_FOUND,
@@ -769,10 +978,15 @@ impl AcpSession {
                 )
             }
             _ => {
-                transcript.push((
-                    "system".into(),
-                    format!("acp_method_unknown:{}", req.method),
-                ));
+                if !append_transcript(
+                    transcript,
+                    transcript_bytes,
+                    max_transcript_bytes,
+                    "system",
+                    &format!("acp_method_unknown:{}", req.method),
+                ) {
+                    return error_line(req.id, ERR_INVALID_PARAMS, "transcript limit exceeded");
+                }
                 error_line(req.id, ERR_METHOD_NOT_FOUND, "unknown method")
             }
         }
@@ -803,6 +1017,95 @@ impl AcpSession {
 // reaps its process tree when the session is dropped; the writer task ends when
 // `writer_tx` drops; the reader task ends when the read transport closes.
 // Keeping AcpSession moveable lets `run_episode` consume `self` into `terminate`.
+
+fn drain_stderr(mut stderr: impl tokio::io::AsyncRead + Unpin + Send + 'static) {
+    tokio::spawn(async move {
+        let mut buffer = [0u8; 4096];
+        loop {
+            match stderr.read(&mut buffer).await {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {}
+            }
+        }
+    });
+}
+
+async fn read_bounded_line<R: AsyncBufRead + Unpin>(
+    reader: &mut R,
+    max_bytes: usize,
+) -> Result<Option<String>, ()> {
+    let mut line = Vec::new();
+    loop {
+        let buffer = reader.fill_buf().await.map_err(|_| ())?;
+        if buffer.is_empty() {
+            if line.is_empty() {
+                return Ok(None);
+            }
+            return String::from_utf8(line).map(Some).map_err(|_| ());
+        }
+        let newline = buffer.iter().position(|byte| *byte == b'\n');
+        let consumed = newline.map_or(buffer.len(), |index| index + 1);
+        if line.len().saturating_add(consumed) > max_bytes {
+            return Err(());
+        }
+        line.extend_from_slice(&buffer[..consumed]);
+        reader.consume(consumed);
+        if newline.is_some() {
+            return String::from_utf8(line).map(Some).map_err(|_| ());
+        }
+    }
+}
+
+fn append_transcript(
+    transcript: &mut Vec<(String, String)>,
+    total_bytes: &mut usize,
+    max_bytes: usize,
+    role: &str,
+    content: &str,
+) -> bool {
+    let entry_bytes = role.len().saturating_add(content.len());
+    if total_bytes.saturating_add(entry_bytes) > max_bytes {
+        return false;
+    }
+    *total_bytes += entry_bytes;
+    transcript.push((role.into(), content.into()));
+    true
+}
+
+fn remember_tool_call(params: &Value, calls: &mut HashMap<String, Value>) {
+    let Some(update) = params.get("update") else {
+        return;
+    };
+    if update["sessionUpdate"].as_str() != Some("tool_call") {
+        return;
+    }
+    if let Some(id) = update["toolCallId"].as_str() {
+        calls.insert(id.to_string(), update.clone());
+    }
+}
+
+fn enrich_permission_request(params: &mut Value, calls: &HashMap<String, Value>) {
+    let Some(tool_call) = params.get_mut("toolCall").and_then(Value::as_object_mut) else {
+        return;
+    };
+    let Some(id) = tool_call
+        .get("toolCallId")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+    else {
+        return;
+    };
+    let Some(known) = calls.get(&id).and_then(Value::as_object) else {
+        return;
+    };
+    for key in ["title", "kind", "locations", "rawInput"] {
+        if !tool_call.contains_key(key) {
+            if let Some(value) = known.get(key) {
+                tool_call.insert(key.into(), value.clone());
+            }
+        }
+    }
+}
 
 fn parse_permission_request(
     params: &Value,
@@ -875,10 +1178,11 @@ fn permission_response(
 /// Pull assistant-visible text out of a `session/update` notification.
 fn extract_agent_text(params: &Value) -> Option<String> {
     let update = params.get("update").or(Some(params))?;
-    let kind = update.get("type").and_then(Value::as_str)?;
+    let kind = update.get("sessionUpdate").and_then(Value::as_str)?;
     match kind {
         "agent_message_chunk" => update
             .get("content")
+            .and_then(|content| content.get("text"))
             .and_then(Value::as_str)
             .map(str::to_owned),
         "tool_call" => {
@@ -994,7 +1298,15 @@ mod tests {
                 }
             }
         });
-        let session = AcpSession::over_streams(Box::new(ac_read), Box::new(ca_write), None);
+        let session = AcpSession::over_streams(
+            Box::new(ac_read),
+            Box::new(ca_write),
+            None,
+            None,
+            None,
+            4 * 1024 * 1024,
+            8 * 1024 * 1024,
+        );
         (session, done_tx)
     }
 
@@ -1004,8 +1316,8 @@ mod tests {
             serde_json::json!({"protocolVersion": ACP_PROTOCOL_VERSION}),
             serde_json::json!({"sessionId": "sess-1"}),
             // On session/prompt: emit an agent_message_chunk notification, then respond.
-            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-1","update":{"type":"agent_message_chunk","content":"hello world"}}}),
-            serde_json::json!({"stopReason":"end_of_turn"}),
+            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"hello world"}}}}),
+            serde_json::json!({"stopReason":"end_turn"}),
         ];
         let (session, _done) = fixture_agent(script).await;
         let outcome = session
@@ -1038,8 +1350,8 @@ mod tests {
                     {"optionId":"r1","name":"Deny once","kind":"reject_once"}
                 ]
             }}),
-            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-2","update":{"type":"agent_message_chunk","content":"after-perm"}}}),
-            serde_json::json!({"stopReason":"end_of_turn"}),
+            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-2","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"after-perm"}}}}),
+            serde_json::json!({"stopReason":"end_turn"}),
         ];
         let (session, _done) = fixture_agent(script).await;
         let outcome = session
@@ -1074,8 +1386,8 @@ mod tests {
                     {"optionId":"r1","kind":"reject_once"}
                 ]
             }}),
-            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-3","update":{"type":"agent_message_chunk","content":"done"}}}),
-            serde_json::json!({"stopReason":"end_of_turn"}),
+            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-3","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"done"}}}}),
+            serde_json::json!({"stopReason":"end_turn"}),
         ];
         let (session, _done) = fixture_agent(script).await;
         let outcome = session
@@ -1119,7 +1431,7 @@ mod tests {
         let script = vec![
             serde_json::json!({"protocolVersion": ACP_PROTOCOL_VERSION}),
             serde_json::json!({"sessionId": "sess-4"}),
-            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-4","update":{"type":"agent_message_chunk","content":"partial"}}}),
+            serde_json::json!({"method":"session/update","params":{"sessionId":"sess-4","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"partial"}}}}),
         ];
         let (session, _done) = fixture_agent(script).await;
         let outcome = session
@@ -1135,6 +1447,8 @@ mod tests {
             argv: vec![],
             env: vec![],
             cwd: None,
+            max_response_bytes: 1024,
+            max_transcript_bytes: 2048,
         })
         .err()
         .unwrap();
@@ -1149,7 +1463,15 @@ mod tests {
         // Close the agent write side immediately.
         ac_write.shutdown().await.ok();
         drop(ac_write);
-        let session = AcpSession::over_streams(Box::new(ac_read), Box::new(ca_write), None);
+        let session = AcpSession::over_streams(
+            Box::new(ac_read),
+            Box::new(ca_write),
+            None,
+            None,
+            None,
+            4 * 1024 * 1024,
+            8 * 1024 * 1024,
+        );
         let outcome = session
             .run_episode(
                 "task",
@@ -1174,6 +1496,16 @@ mod tests {
         for k in KNOWN_OPTION_KINDS {
             assert!(!k.is_empty());
         }
+    }
+
+    #[tokio::test]
+    async fn oversized_ndjson_line_is_rejected_before_parse() {
+        let (mut writer, reader) = duplex(64);
+        tokio::spawn(async move {
+            writer.write_all(b"0123456789\n").await.unwrap();
+        });
+        let mut reader = BufReader::new(reader);
+        assert_eq!(read_bounded_line(&mut reader, 8).await, Err(()));
     }
 
     #[allow(dead_code)]

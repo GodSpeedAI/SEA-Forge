@@ -264,6 +264,8 @@ pub(crate) async fn submit(
                     let process = payload.process.clone();
                     let timeout = payload.timeout;
                     let root = root.clone();
+                    let permission_broker = state.permission_broker.clone();
+                    let state_for_task = Arc::clone(state);
                     let case_for_task = case_id.clone();
                     let run_for_task = run_id.clone();
                     active.spawn(async move {
@@ -271,16 +273,28 @@ pub(crate) async fn submit(
                         let criteria_ref = item.settlement_criteria_ref.clone();
                         let result = match item.item_kind {
                             ItemKind::AgentTask => {
-                                execute_agent(
-                                    &config,
-                                    &item,
-                                    &policy,
-                                    &entity,
-                                    &process,
-                                    &case_for_task,
-                                    &run_id,
-                                )
-                                .await
+                                let cancel = state_for_task
+                                    .begin_planned_delegation(case_for_task.clone(), run_id.clone())
+                                    .await;
+                                let result = match cancel {
+                                    Ok(cancel) => {
+                                        execute_agent(
+                                            &config,
+                                            &item,
+                                            &policy,
+                                            &entity,
+                                            &process,
+                                            &case_for_task,
+                                            &run_id,
+                                            permission_broker,
+                                            cancel,
+                                        )
+                                        .await
+                                    }
+                                    Err(error) => Err(error),
+                                };
+                                state_for_task.end_delegation(&run_id).await;
+                                result
                             }
                             ItemKind::SandboxedTask => tokio::task::spawn_blocking(move || {
                                 execute_sandbox(
@@ -408,6 +422,7 @@ fn record_completion(
     .map(|_| ())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn execute_agent(
     config: &crate::ServerConfig,
     item: &sea_forge_core::types::PlanItem,
@@ -416,6 +431,8 @@ async fn execute_agent(
     process: &str,
     case_id: &str,
     run_id: &str,
+    permission_broker: delegation::AcpApprovalBroker,
+    cancel: Arc<std::sync::atomic::AtomicBool>,
 ) -> Result<SettlementEvent, ForgeError> {
     let Operation::AgentTask {
         endpoint_ref,
@@ -429,7 +446,7 @@ async fn execute_agent(
             "agent task missing agent operation".into(),
         ));
     };
-    let outcome = delegation::execute_with_control(
+    let outcome = delegation::execute_with_permission_broker(
         config,
         delegation::DelegationRequest {
             endpoint_id: endpoint_ref,
@@ -444,7 +461,8 @@ async fn execute_agent(
         },
         &agent_probe::EnvironmentCredentialResolver,
         delegation::DelegationEpisodeContext::planned(case_id, &item.plan_item_id, run_id),
-        || false,
+        move || cancel.load(std::sync::atomic::Ordering::SeqCst),
+        Some(permission_broker),
     )
     .await?;
     Ok(SettlementEvent {
@@ -459,6 +477,7 @@ async fn execute_agent(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn execute_sandbox(
     config: &crate::ServerConfig,
     item: &sea_forge_core::types::PlanItem,

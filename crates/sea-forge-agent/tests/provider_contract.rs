@@ -15,6 +15,8 @@ fn endpoint(kind: ProviderKind, base_url: String) -> EndpointSnapshot {
         id: "local-test".into(),
         kind,
         base_url: Url::parse(&base_url).unwrap(),
+        argv: vec![],
+        env: vec![],
         credential_ref: Some("TEST_CREDENTIAL".into()),
         model: "test-model".into(),
         descriptor_config_sha256: "sha256:descriptor".into(),

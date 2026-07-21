@@ -19,6 +19,7 @@ sea-forge-self-model = { path = "../sea-forge-self-model", version = "0.1.0" }
 sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.1.0" }
 sea-forge-planner = { path = "../sea-forge-planner", version = "0.1.0" }
 sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.1.0" }
+sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true

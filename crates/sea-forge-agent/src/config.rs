@@ -25,6 +25,14 @@ pub struct AgentEndpointConfig {
     pub id: String,
     pub kind: ProviderKind,
     pub base_url: Option<String>,
+    /// Tokenized argv for `acp`-kind endpoints (spec §7.1: required for ACP,
+    /// never shell-invoked). Empty/absent for HTTP kinds.
+    #[serde(default)]
+    pub argv: Vec<String>,
+    /// Minimal explicit environment passed to the ACP child (KEY=VALUE). The
+    /// parent environment is never inherited (spec §15).
+    #[serde(default)]
+    pub env: Vec<String>,
     #[serde(default)]
     pub credential_ref: Option<String>,
     #[serde(default)]
@@ -82,6 +90,10 @@ pub struct EndpointSnapshot {
     pub id: String,
     pub kind: ProviderKind,
     pub base_url: Url,
+    /// Tokenized argv for ACP endpoints (empty for HTTP kinds).
+    pub argv: Vec<String>,
+    /// Minimal explicit env for the ACP child (empty for HTTP kinds).
+    pub env: Vec<String>,
     pub credential_ref: Option<String>,
     pub model: String,
     pub descriptor_config_sha256: String,
@@ -129,7 +141,46 @@ impl AgentEndpointConfig {
         }
         match self.kind {
             ProviderKind::Acp => {
-                return Err("unsupported_kind_error: acp is reserved for M16".into());
+                if self.argv.is_empty() || self.argv[0].is_empty() {
+                    return Err(format!(
+                        "endpoint '{}' of kind acp requires a non-empty argv[0]",
+                        self.id
+                    ));
+                }
+                let executable = self.argv[0]
+                    .rsplit(['/', '\\'])
+                    .next()
+                    .unwrap_or(&self.argv[0])
+                    .to_ascii_lowercase();
+                if matches!(
+                    executable.as_str(),
+                    "sh" | "bash"
+                        | "dash"
+                        | "zsh"
+                        | "fish"
+                        | "cmd"
+                        | "cmd.exe"
+                        | "powershell"
+                        | "powershell.exe"
+                        | "pwsh"
+                        | "pwsh.exe"
+                ) {
+                    return Err(format!(
+                        "endpoint '{}' ACP argv[0] may not be a shell",
+                        self.id
+                    ));
+                }
+                // Minimal explicit env: each entry must be KEY=VALUE.
+                for entry in &self.env {
+                    if entry.is_empty() || !entry.contains('=') {
+                        return Err(format!(
+                            "endpoint '{}' env entry must be KEY=VALUE",
+                            self.id
+                        ));
+                    }
+                }
+                // base_url optional for ACP; if absent we synthesize an
+                // acp:// descriptor during snapshot (no network meaning).
             }
             ProviderKind::OpenAiCompatible | ProviderKind::Anthropic => {
                 let raw = self
@@ -167,8 +218,17 @@ impl AgentEndpointConfig {
 
     pub fn snapshot(&self) -> Result<EndpointSnapshot, String> {
         self.validate(&std::collections::BTreeSet::new())?;
-        let base_url = Url::parse(self.base_url.as_deref().unwrap_or_default())
-            .map_err(|e| format!("invalid endpoint URL: {e}"))?;
+        let base_url = match self.kind {
+            ProviderKind::Acp => {
+                // Synthetic descriptor: acp://argv/<argv0-basename>. Carries no
+                // network meaning — ACP is a child process, not an HTTP call.
+                let argv0 = self.argv[0].rsplit('/').next().unwrap_or(&self.argv[0]);
+                Url::parse(&format!("acp://argv/{argv0}"))
+                    .map_err(|e| format!("invalid synthesized acp URL: {e}"))?
+            }
+            _ => Url::parse(self.base_url.as_deref().unwrap_or_default())
+                .map_err(|e| format!("invalid endpoint URL: {e}"))?,
+        };
         let model = self
             .default_model
             .clone()
@@ -178,6 +238,8 @@ impl AgentEndpointConfig {
             id: self.id.clone(),
             kind: self.kind.clone(),
             base_url,
+            argv: self.argv.clone(),
+            env: self.env.clone(),
             credential_ref: self.credential_ref.clone(),
             model,
             descriptor_config_sha256,
@@ -218,6 +280,8 @@ mod tests {
             id: "local-test".into(),
             kind,
             base_url: Some("http://127.0.0.1:8080/".into()),
+            argv: vec!["/usr/bin/false".into()],
+            env: vec![],
             credential_ref: Some("OPENAI_API_KEY".into()),
             default_model: Some("test-model".into()),
             allow_loopback_test: true,
@@ -251,8 +315,37 @@ mod tests {
     }
 
     #[test]
-    fn acp_is_recognized_but_not_implemented_in_m12() {
-        let error = endpoint(ProviderKind::Acp).snapshot().unwrap_err();
-        assert!(error.contains("unsupported_kind_error"));
+    fn acp_endpoint_requires_argv_and_synthesizes_descriptor_url() {
+        let mut endpoint = endpoint(ProviderKind::Acp);
+        // Missing argv rejected.
+        endpoint.argv = vec![];
+        let err = endpoint.snapshot().unwrap_err();
+        assert!(err.contains("argv"), "{err}");
+
+        // Valid argv snapshots with a synthetic acp:// descriptor URL.
+        endpoint.argv = vec!["/usr/bin/goose".into(), "acp".into()];
+        let snap = endpoint.snapshot().unwrap();
+        assert_eq!(snap.base_url.scheme(), "acp");
+        assert_eq!(snap.base_url.host_str(), Some("argv"));
+        assert_eq!(snap.argv, vec!["/usr/bin/goose".to_string(), "acp".into()]);
+    }
+
+    #[test]
+    fn acp_env_entries_must_be_key_value() {
+        let mut endpoint = endpoint(ProviderKind::Acp);
+        endpoint.argv = vec!["/usr/bin/goose".into()];
+        endpoint.env = vec!["NOEQUALS".into()];
+        let err = endpoint.snapshot().unwrap_err();
+        assert!(err.contains("KEY=VALUE"), "{err}");
+        endpoint.env = vec!["PATH=/usr/bin".into()];
+        assert!(endpoint.snapshot().is_ok());
+    }
+
+    #[test]
+    fn acp_endpoint_rejects_shell_argv0() {
+        let mut endpoint = endpoint(ProviderKind::Acp);
+        endpoint.argv = vec!["/bin/sh".into(), "-c".into(), "agent".into()];
+        let err = endpoint.snapshot().unwrap_err();
+        assert!(err.contains("may not be a shell"), "{err}");
     }
 }

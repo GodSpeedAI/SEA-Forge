@@ -52,6 +52,7 @@ pub struct ServerState {
     pub config: ServerConfig,
     pub cases: Mutex<HashMap<String, CaseEntry>>,
     delegations: Mutex<HashMap<String, DelegationHandle>>,
+    pub(crate) permission_broker: delegation::AcpApprovalBroker,
     pub semaphore: Arc<Semaphore>,
 }
 
@@ -78,6 +79,17 @@ struct RecoveredDelegationSettlement<'a> {
     item_id: &'a str,
 }
 
+#[derive(Serialize)]
+struct RecoveredAcpSession<'a> {
+    version: &'static str,
+    case_id: &'a str,
+    run_id: &'a str,
+    plan_item_id: &'a str,
+    endpoint_ref: &'a str,
+    continuation_key: &'a str,
+    protocol_version: u32,
+}
+
 impl ServerState {
     pub fn new(config: ServerConfig) -> Result<Self, ForgeError> {
         recover_cancelled_delegations(&config)?;
@@ -86,6 +98,7 @@ impl ServerState {
             config,
             cases: Mutex::new(HashMap::new()),
             delegations: Mutex::new(HashMap::new()),
+            permission_broker: delegation::AcpApprovalBroker::default(),
             semaphore: Arc::new(Semaphore::new(max)),
         })
     }
@@ -96,6 +109,33 @@ impl ServerState {
             Ok(new_config) => Ok(new_config),
             Err(e) => Err(e),
         }
+    }
+
+    pub(crate) async fn begin_planned_delegation(
+        &self,
+        case_id: String,
+        run_id: String,
+    ) -> Result<Arc<AtomicBool>, ForgeError> {
+        let cancel = Arc::new(AtomicBool::new(false));
+        let handle = DelegationHandle {
+            case_id,
+            cancel: Arc::clone(&cancel),
+            requested: Arc::new(AtomicBool::new(false)),
+        };
+        if self
+            .delegations
+            .lock()
+            .await
+            .insert(run_id, handle)
+            .is_some()
+        {
+            return Err(ForgeError::Input("delegation run_id already active".into()));
+        }
+        Ok(cancel)
+    }
+
+    pub(crate) async fn end_delegation(&self, run_id: &str) {
+        self.delegations.lock().await.remove(run_id);
     }
 }
 
@@ -121,6 +161,11 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
         let ledger = LedgerStream::open(&config.root, &name, "sea-forge-server")?;
         ledger.verify()?;
         let entries = ledger.read_entries()?;
+        let mut terminal_runs: std::collections::HashSet<String> = entries
+            .iter()
+            .filter(|entry| entry.record_kind == "settlement")
+            .filter_map(|entry| entry.payload["run_id"].as_str().map(str::to_owned))
+            .collect();
         for control in entries
             .iter()
             .filter(|entry| entry.record_kind == "control_request")
@@ -130,14 +175,7 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
                 .get("run_id")
                 .and_then(serde_json::Value::as_str)
                 .ok_or_else(|| ForgeError::Input("invalid cancellation control run_id".into()))?;
-            if entries.iter().any(|entry| {
-                entry.record_kind == "settlement"
-                    && entry
-                        .payload
-                        .get("run_id")
-                        .and_then(serde_json::Value::as_str)
-                        == Some(run)
-            }) {
+            if terminal_runs.contains(run) {
                 continue;
             }
             let item_id = control
@@ -228,6 +266,122 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
                 &config.root.join("runs").join(run).join("settlement.json"),
                 vec![evidence_ref.entry_ulid().into()],
             )?;
+            terminal_runs.insert(run.into());
+        }
+
+        for permission in entries
+            .iter()
+            .filter(|entry| entry.record_kind == "permission_request")
+        {
+            let run = permission.payload["run_id"]
+                .as_str()
+                .ok_or_else(|| ForgeError::Input("invalid ACP permission run_id".into()))?;
+            if terminal_runs.contains(run) {
+                continue;
+            }
+            let case_id = permission.payload["case_id"]
+                .as_str()
+                .ok_or_else(|| ForgeError::Input("invalid ACP permission case_id".into()))?;
+            let item_id = permission.payload["plan_item_id"]
+                .as_str()
+                .ok_or_else(|| ForgeError::Input("invalid ACP permission item_id".into()))?;
+            let continuation_key = permission.payload["session_id"]
+                .as_str()
+                .ok_or_else(|| ForgeError::Input("invalid ACP permission session_id".into()))?;
+            let plan_path = config.root.join("runs").join(run).join("plan.json");
+            let plan: CasePlan = serde_json::from_slice(
+                &std::fs::read(&plan_path)
+                    .map_err(|error| ForgeError::io("read orphaned ACP plan", error))?,
+            )?;
+            if plan.case_id != case_id || plan.run_id != run {
+                return Err(ForgeError::Input(
+                    "orphaned ACP permission does not match plan identity".into(),
+                ));
+            }
+            let endpoint_ref = plan
+                .items
+                .iter()
+                .find(|item| item.plan_item_id == item_id)
+                .and_then(|item| item.operations.first())
+                .and_then(|operation| match operation {
+                    sea_forge_core::types::Operation::AgentTask { endpoint_ref, .. } => {
+                        Some(endpoint_ref.as_str())
+                    }
+                    _ => None,
+                })
+                .ok_or_else(|| ForgeError::Input("orphaned ACP plan missing agent task".into()))?;
+            let session_ref = agent_probe::commit_view(
+                &ledger,
+                "acp_session",
+                vec![case_id.into(), run.into(), item_id.into()],
+                &RecoveredAcpSession {
+                    version: "0.2",
+                    case_id,
+                    run_id: run,
+                    plan_item_id: item_id,
+                    endpoint_ref,
+                    continuation_key,
+                    protocol_version: sea_forge_agent::ACP_PROTOCOL_VERSION,
+                },
+                &config.root.join("runs").join(run).join("acp-session.json"),
+                vec![permission.entry_ulid.clone()],
+            )?;
+            let evidence = TranscriptEvidence {
+                run_id: run.into(),
+                endpoint_ref: endpoint_ref.into(),
+                turns_used: 0,
+                termination: DelegationTermination::AcpDisconnect,
+                transcript_sha256: sea_forge_agent::transcript_sha256(&[]),
+                summary: TranscriptSummary {
+                    turn_count: 0,
+                    tool_calls: 0,
+                    final_excerpt: String::new(),
+                },
+                artifact_ref: None,
+                harvested_refs: vec![],
+            };
+            let evidence_ref = agent_probe::commit_view(
+                &ledger,
+                "agent_task_evidence",
+                vec![case_id.into(), run.into(), item_id.into()],
+                &RecoveredDelegationEvidence {
+                    evidence: &evidence,
+                    case_id,
+                    item_id,
+                },
+                &config
+                    .root
+                    .join("runs")
+                    .join(run)
+                    .join("transcript-evidence.json"),
+                vec![
+                    permission.entry_ulid.clone(),
+                    session_ref.entry_ulid().into(),
+                ],
+            )?;
+            let settlement = SettlementEvent {
+                version: "0.2".into(),
+                settlement_id: random_id("set")?,
+                run_id: run.into(),
+                status: SettlementStatus::Rejected,
+                basis: vec!["acp_disconnect".into()],
+                review_required: false,
+                settled_at: Utc::now().to_rfc3339(),
+                criteria_ref: None,
+            };
+            agent_probe::commit_view(
+                &ledger,
+                "settlement",
+                vec![case_id.into(), run.into(), item_id.into()],
+                &RecoveredDelegationSettlement {
+                    settlement: &settlement,
+                    case_id,
+                    item_id,
+                },
+                &config.root.join("runs").join(run).join("settlement.json"),
+                vec![evidence_ref.entry_ulid().into()],
+            )?;
+            terminal_runs.insert(run.into());
         }
     }
     Ok(())
@@ -460,7 +614,10 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             )
             .await;
             match result {
-                Ok(output) => serde_json::json!({"ok": true, "output": output}),
+                Ok(output) => {
+                    let _ = state.permission_broker.resolve(&approval_id).await;
+                    serde_json::json!({"ok": true, "output": output})
+                }
                 Err(e) => serde_json::json!({"error": e}),
             }
         }
@@ -483,7 +640,10 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             )
             .await;
             match result {
-                Ok(output) => serde_json::json!({"ok": true, "output": output}),
+                Ok(output) => {
+                    let _ = state.permission_broker.resolve(&approval_id).await;
+                    serde_json::json!({"ok": true, "output": output})
+                }
                 Err(e) => serde_json::json!({"error": e}),
             }
         }
@@ -573,7 +733,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             let run_for_execution = delegation_run_id.clone();
             let case_for_execution = delegation_case_id.clone();
             let cancel_for_execution = Arc::clone(&cancel);
-            let result = delegation::execute_with_control(
+            let result = delegation::execute_with_permission_broker(
                 &config,
                 delegation::DelegationRequest {
                     endpoint_id: &endpoint,
@@ -592,6 +752,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                     &run_for_execution,
                 ),
                 move || cancel_for_execution.load(Ordering::SeqCst),
+                Some(state.permission_broker.clone()),
             )
             .await;
             state.delegations.lock().await.remove(&delegation_run_id);

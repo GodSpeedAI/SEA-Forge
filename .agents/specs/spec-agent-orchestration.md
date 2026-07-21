@@ -460,15 +460,15 @@ record cannot bypass the `proposed_by` binding (it is part of the plan's canonic
 
 ### 17.5 Core Conformance — M16 (E17, ACP driver)
 
-| # | Test | Expected |
-|---|---|---|
-| T16.1 | ACP session vs local goose (or equivalent ACP server), read-only task, jail grant | task completes; transcript evidence committed |
-| T16.2 | ACP permission request | surfaced as SEA approval; grant and deny both exercised and recorded; deny leaves session alive |
-| T16.3 | permission-mapping fidelity sweep | every request kind observed maps to a recorded decision; unmapped kind ⇒ typed denial (this gate is the ACP-adoption validation; lossy ⇒ §0.8 narrowing) |
-| T16.4 | sandbox posture | session runs under the run's `SandboxClass`; escalation attempt refused |
-| T16.5 | disconnect + resume | first episode rejected with partial transcript; resumed episode linked by `continuation_key` |
-| T16.6 | SWE_SEED end-to-end | delegation to an SWE_SEED-projected host; route/proof artifacts harvested and cross-linked; `SweSeedTransport` declaration correlated to the run |
-| T16.7 | protocol/version rejection | unsupported or malformed ACP request kind is denied before action; no lossy fallback |
+| # | Test | Expected | Status |
+|---|---|---|---|
+| T16.1 | ACP session vs local goose (or equivalent ACP server), read-only task, jail grant | task completes; transcript evidence committed | green portable equivalent (`conformance_m16` scripted ACP v1 fixture); real compatible-host test ignored/skipped pending operator argv/env |
+| T16.2 | ACP permission request | surfaced as SEA approval; grant and deny both exercised and recorded; deny leaves session alive | green (`t16_2_permission_allow_and_deny_are_recorded_and_session_survives`, durable-resolution wake, timeout, duplicate-resolution, restart recovery) |
+| T16.3 | permission-mapping fidelity sweep | every request kind observed maps to a recorded decision; unmapped kind ⇒ typed denial (this gate is the ACP-adoption validation; lossy ⇒ §0.8 narrowing) | green portable ACP v1 fixture sweep; unknown kind has a recorded `deny_unmapped` decision |
+| T16.4 | sandbox posture | session runs under the run's `SandboxClass`; escalation attempt refused | green (`jail` Landlock child rejects `/tmp` write, permits workspace write, and refuses `session/set_mode`) |
+| T16.5 | disconnect + resume | first episode rejected with partial transcript; resumed episode linked by `continuation_key` | green (`session/load` capability-gated successor episode, durable continuation record, restart recovery) |
+| T16.6 | SWE_SEED end-to-end | delegation to an SWE_SEED-projected host; route/proof artifacts harvested and cross-linked; `SweSeedTransport` declaration correlated to the run | portable harvest green; current record snapshots declarations available at settlement, but later declaration reconciliation and real host proof remain pending |
+| T16.7 | protocol/version rejection | unsupported or malformed ACP request kind is denied before action; no lossy fallback | green (`t16_7_unsupported_protocol_version_rejects_before_prompt`) |
 
 ### 17.6 Regression (every milestone)
 
@@ -499,6 +499,6 @@ Required once per release against one real hosted endpoint (operator-supplied cr
 - [x] Server-owned ready-item dispatch uses the existing semaphore per run episode; CLI concurrency is one; cancellation settles from durable control state, never vanishes. *(M13 — T13.2, `sea-forge-case-runner` + `case_dispatch.rs`)*
 - [x] Both source-owned topology templates install as pinned runtime copies and instantiate deterministically; source-bound sentries and all-of rollup gate proven. *(M14 — T14.1–T14.3)*
 - [x] Manager loop bounded, evidence-grounded, SoD-enforced, escalating on exhaustion. *(M15 — T15.1–T15.5)*
-- [ ] ACP permission→approval mapping validated (T16.3) or scope narrowed per §0.8.
-- [ ] SWE_SEED slice green (T16.6) with proof harvest + settlement-transport correlation.
-- [ ] All M12–M16 gates pass; P1–P4b and M0–M11 unchanged; claims table (§5) updated with actual evidence.
+- [x] ACP permission→approval mapping validated (T16.3) or scope narrowed per §0.8. *(M16 portable fixture)*
+- [ ] SWE_SEED slice green (T16.6): hash-validated proof harvest exists, but must reconcile a later run-bound `SweSeedTransport` declaration; real host evidence remains release-gated.
+- [ ] All M12–M16 gates pass: M16 T16.6 declaration reconciliation remains; P1–P4b and M0–M11 are unchanged.

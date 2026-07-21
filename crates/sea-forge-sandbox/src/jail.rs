@@ -3,6 +3,108 @@ use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, Exec
 
 pub struct JailSandbox;
 
+/// Interactive child spawned after Landlock restriction. The caller owns the
+/// stdio pipes and child lifecycle; no shell is involved.
+pub struct InteractiveJailChild {
+    pub child: std::process::Child,
+    pub stdin: std::process::ChildStdin,
+    pub stdout: std::process::ChildStdout,
+    pub stderr: std::process::ChildStderr,
+}
+
+/// Restrict the current thread with the same Landlock posture as `JailSandbox`
+/// and spawn an interactive child whose stdio remains connected to the caller.
+/// Call this from a dedicated thread: Landlock restriction is irreversible for
+/// that thread and inherited by the spawned child.
+pub fn spawn_interactive(
+    workspace_root: &std::path::Path,
+    artifacts_root: &std::path::Path,
+    argv: &[String],
+    cwd: &std::path::Path,
+    env: &[(String, String)],
+) -> Result<InteractiveJailChild, SandboxError> {
+    #[cfg(target_os = "linux")]
+    {
+        use landlock::{
+            path_beneath_rules, Access, AccessFs, Ruleset, RulesetAttr, RulesetCreatedAttr,
+            RulesetStatus, ABI,
+        };
+        use std::{os::unix::process::CommandExt, process::Stdio};
+
+        fn map_err<E: std::fmt::Display>(error: E) -> SandboxError {
+            SandboxError::new("jail_unavailable", error.to_string())
+        }
+        if argv.is_empty() {
+            return Err(SandboxError::new("input_error", "ACP argv is empty"));
+        }
+        std::fs::create_dir_all(workspace_root).map_err(map_err)?;
+        std::fs::create_dir_all(artifacts_root).map_err(map_err)?;
+        let abi = ABI::V1;
+        let status = Ruleset::default()
+            .handle_access(AccessFs::from_all(abi))
+            .map_err(map_err)?
+            .create()
+            .map_err(map_err)?
+            .add_rules(path_beneath_rules(
+                [workspace_root, artifacts_root],
+                AccessFs::from_all(abi),
+            ))
+            .map_err(map_err)?
+            .add_rules(path_beneath_rules(
+                [std::path::Path::new("/")],
+                AccessFs::from_read(abi),
+            ))
+            .map_err(map_err)?
+            .restrict_self()
+            .map_err(map_err)?;
+        if status.ruleset == RulesetStatus::NotEnforced {
+            return Err(SandboxError::new(
+                "jail_unavailable",
+                "Landlock restrictions are not enforced by this kernel",
+            ));
+        }
+        let mut command = std::process::Command::new(&argv[0]);
+        command
+            .args(&argv[1..])
+            .current_dir(cwd)
+            .env_clear()
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .process_group(0);
+        for (key, value) in env {
+            command.env(key, value);
+        }
+        let mut child = command.spawn().map_err(map_err)?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| SandboxError::new("jail_unavailable", "child stdin unavailable"))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| SandboxError::new("jail_unavailable", "child stdout unavailable"))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| SandboxError::new("jail_unavailable", "child stderr unavailable"))?;
+        Ok(InteractiveJailChild {
+            child,
+            stdin,
+            stdout,
+            stderr,
+        })
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (workspace_root, artifacts_root, argv, cwd, env);
+        Err(SandboxError::new(
+            "unsupported_sandbox_class_error",
+            "interactive jail is unavailable on this platform",
+        ))
+    }
+}
+
 impl JailSandbox {
     pub fn new() -> Result<Self, SandboxError> {
         #[cfg(target_os = "linux")]

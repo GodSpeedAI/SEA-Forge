@@ -31,6 +31,8 @@ fn endpoint(port: u16) -> AgentEndpointConfig {
         id: "local-test".into(),
         kind: ProviderKind::OpenAiCompatible,
         base_url: Some(format!("http://127.0.0.1:{port}/")),
+        argv: vec![],
+        env: vec![],
         credential_ref: Some("TEST_CREDENTIAL".into()),
         default_model: Some("test-model".into()),
         allow_loopback_test: true,
