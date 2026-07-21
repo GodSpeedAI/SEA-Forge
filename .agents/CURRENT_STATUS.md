@@ -56,7 +56,9 @@ Focused planned-context and cancellation regressions pass. Next: add the
 server-owned episode dispatcher. Task 2 review follow-up preserves planned
 case/item/run identity in restart-recovered evidence and settlement, validates
 the cancellation control against the persisted plan, and proves one target
-settlement despite unrelated prior settlement records.
+settlement despite unrelated prior settlement records. The final Task 2 review
+fix also serializes planned case/item/run identity in normal and rejected
+delegation evidence; planned success and rejection conformance assertions pass.
 
 ## SodRule transition scope closeout (2026-07-17)
 

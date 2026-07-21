@@ -465,16 +465,26 @@ async fn planned_agent_episode_uses_case_context() {
         "test",
     )
     .unwrap();
-    let settlement_payload = &ledger
-        .read_entries()
-        .unwrap()
-        .into_iter()
+    let entries = ledger.read_entries().unwrap();
+    let settlement_payload = &entries
+        .iter()
         .find(|entry| entry.record_kind == "settlement")
         .unwrap()
         .payload;
     assert_eq!(settlement_payload["case_id"], submitted_case_id);
     assert_eq!(settlement_payload["item_id"], "agent");
     assert_eq!(settlement_payload["run_id"], dispatched_run_id);
+    let evidence_payload = &entries
+        .iter()
+        .find(|entry| {
+            entry.record_kind == "agent_task_evidence"
+                && entry.payload["run_id"] == dispatched_run_id
+        })
+        .unwrap()
+        .payload;
+    assert_eq!(evidence_payload["case_id"], submitted_case_id);
+    assert_eq!(evidence_payload["item_id"], "agent");
+    assert_eq!(evidence_payload["run_id"], dispatched_run_id);
 
     let _ = task.await;
 }
@@ -517,10 +527,9 @@ async fn planned_agent_rejection_uses_case_context_once() {
         "test",
     )
     .unwrap();
-    let settlements: Vec<_> = ledger
-        .read_entries()
-        .unwrap()
-        .into_iter()
+    let entries = ledger.read_entries().unwrap();
+    let settlements: Vec<_> = entries
+        .iter()
         .filter(|entry| {
             entry.record_kind == "settlement" && entry.payload["run_id"] == dispatched_run_id
         })
@@ -537,6 +546,17 @@ async fn planned_agent_rejection_uses_case_context_once() {
     assert_eq!(settlement.payload["item_id"], "agent");
     assert_eq!(settlement.payload["run_id"], dispatched_run_id);
     assert_eq!(settlement.payload["status"], "rejected");
+    let evidence_payload = &entries
+        .iter()
+        .find(|entry| {
+            entry.record_kind == "agent_task_evidence"
+                && entry.payload["run_id"] == dispatched_run_id
+        })
+        .unwrap()
+        .payload;
+    assert_eq!(evidence_payload["case_id"], submitted_case_id);
+    assert_eq!(evidence_payload["item_id"], "agent");
+    assert_eq!(evidence_payload["run_id"], dispatched_run_id);
 }
 
 /// T13.2: the server semaphore respects one shared cap. With
