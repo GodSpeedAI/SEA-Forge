@@ -423,6 +423,62 @@ async fn t13_transcript_artifact_hash_verifies() {
     let _ = task.await;
 }
 
+#[tokio::test]
+async fn planned_agent_episode_uses_case_context() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"planned episode complete"}}],"usage":{"total_tokens":1}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    let submitted_case_id = sea_forge_core::ids::case_id().unwrap();
+    let dispatched_run_id = sea_forge_core::ids::run_id().unwrap();
+
+    delegation::execute_with_control(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "complete the planned episode",
+            model: None,
+            max_turns: 1,
+            token_budget: None,
+            criteria: SettlementCriteria::default(),
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+        },
+        &res,
+        delegation::DelegationEpisodeContext::planned(
+            &submitted_case_id,
+            "agent",
+            &dispatched_run_id,
+        ),
+        || false,
+    )
+    .await
+    .unwrap();
+
+    let ledger = sea_forge_ledger::LedgerStream::open(
+        root.path(),
+        format!("case-{submitted_case_id}"),
+        "test",
+    )
+    .unwrap();
+    let settlement_payload = &ledger
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .find(|entry| entry.record_kind == "settlement")
+        .unwrap()
+        .payload;
+    assert_eq!(settlement_payload["case_id"], submitted_case_id);
+    assert_eq!(settlement_payload["item_id"], "agent");
+    assert_eq!(settlement_payload["run_id"], dispatched_run_id);
+
+    let _ = task.await;
+}
+
 /// T13.2: the server semaphore respects one shared cap. With
 /// `max_concurrent_runs=2` and 4 concurrent delegation requests, the stub
 /// must never observe more than 2 in-flight connections.

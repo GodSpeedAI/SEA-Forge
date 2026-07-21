@@ -574,8 +574,10 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                     process: &process,
                 },
                 &agent_probe::EnvironmentCredentialResolver,
-                Some(&run_for_execution),
-                Some(&case_for_execution),
+                delegation::DelegationEpisodeContext::standalone(
+                    &case_for_execution,
+                    &run_for_execution,
+                ),
                 move || cancel_for_execution.load(Ordering::SeqCst),
             )
             .await;
