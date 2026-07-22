@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KY53K67921AV7EXMRSPPXA7T",
+  "strategy": "manual-commit",
+  "branch": "full-spec",
+  "checkpoints_count": 2,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".agents/plans/2026-07-22-spec-audit-remediation.md",
+    ".agents/reports/2026-07-22-spec-implementation-audit-independent-validation.md",
+    ".agents/reports/2026-07-22-spec-implementation-audit.md",
+    ".githooks/post-commit",
+    ".githooks/pre-push",
+    ".gitignore"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 24796,
+    "cache_creation_tokens": 219923,
+    "cache_read_tokens": 2439865,
+    "output_tokens": 27284,
+    "api_call_count": 30
+  }
+}

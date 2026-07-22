@@ -1,0 +1,78 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KY53K67921AV7EXMRSPPXA7T",
+  "session_id": "8a5dac9a-bd98-4991-ae68-08123a6283c3",
+  "strategy": "manual-commit",
+  "created_at": "2026-07-22T14:27:53.311733929Z",
+  "branch": "full-spec",
+  "checkpoints_count": 2,
+  "save_step_count": 2,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".agents/plans/2026-07-22-spec-audit-remediation.md",
+    ".agents/reports/2026-07-22-spec-implementation-audit-independent-validation.md",
+    ".agents/reports/2026-07-22-spec-implementation-audit.md",
+    ".githooks/post-commit",
+    ".githooks/pre-push",
+    ".gitignore"
+  ],
+  "agent": "Claude Code",
+  "model": "",
+  "turn_id": "2a9ad321517a",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 24796,
+    "cache_creation_tokens": 219923,
+    "cache_read_tokens": 2439865,
+    "output_tokens": 27284,
+    "api_call_count": 30
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-07-22T14:27:53.290454173Z",
+    "agent_lines": 695,
+    "agent_removed": 2,
+    "human_added": 116,
+    "human_modified": 186,
+    "human_removed": 0,
+    "total_committed": 997,
+    "total_lines_changed": 999,
+    "agent_percentage": 69.76976976976978,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 1112,
+      "user_lines_removed": 671,
+      "agent_lines_added": 6460,
+      "agent_lines_removed": 1,
+      "user_added_per_file": {
+        ".claude/scheduled_tasks.lock": 1,
+        ".claude/settings.local.json": 17,
+        ".githooks/commit-msg": 4,
+        ".githooks/post-commit": 8,
+        ".githooks/post-commit.pre-entire": 110,
+        ".githooks/post-rewrite": 4,
+        ".githooks/pre-push": 9,
+        ".githooks/pre-push.pre-entire": 27,
+        ".githooks/prepare-commit-msg": 3,
+        ".logs/subtask2.log": 929
+      },
+      "user_removed_per_file": {
+        ".githooks/post-commit": 109,
+        ".githooks/pre-push": 26,
+        ".logs/subtask2.log": 536
+      }
+    }
+  ]
+}
