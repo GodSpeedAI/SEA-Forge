@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 ## Objective
 
@@ -304,6 +304,8 @@ M12, M13, M16 tests and clippy all passed.
 
 ## Worktree State
 
+2026-07-22 audit work added `.agents/reports/2026-07-22-spec-implementation-audit.md` only. It identifies specification conformance gaps without modifying product code.
+
 On branch `full-spec` at `b351c95`. The M0–M8 implementation and closeout are
 committed. Current worktree changes are the untracked, revised M9–M16 plan and
 updates to this status, `OPEN_QUESTIONS.md`, and the two companion M9–M16
@@ -334,6 +336,8 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 289 tests). Remaining open debt: SodRule transition_kind scoping (.agents/OBSERVED_DEBT.md).
 
 ## Changed Files
+
+- `.agents/reports/2026-07-22-spec-implementation-audit.md` — executable-code and test-evidence audit of all four `spec-*.md` specifications.
 
 - `spec/CEP-0008-semantic-envelope.md` — authoritative CEP-0008 source copied
   from `/home/sprime01/projects/cep/spec/` to support the SemanticEnvelope
@@ -427,6 +431,8 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Completed
 
+- Audited all four `spec-*.md` documents against source and executable tests; the report identifies conformance blockers in every specification and does not use documentation as evidence.
+
 - Copied the authoritative CEP-0008 Semantic Envelope specification into the
   repository; its text matches the source, apart from adding the conventional
   trailing newline.
@@ -472,6 +478,9 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   quarantining incomplete tails. CLI `ledger verify|prove` subcommands added.
 
 ## Verification
+
+- 2026-07-22 audit: `devbox run -- just check` passed; focused conformance suites and `just proof` passed as recorded in `.agents/reports/2026-07-22-spec-implementation-audit.md`.
+- 2026-07-22 audit: `devbox run -- just test` failed twice with a suite-context `SIGSEGV` before `sea-forge-cli` main-unit test output. Its isolated binary test passed (5 tests); the fault remains unresolved.
 
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
@@ -717,6 +726,9 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   truth; a hostile edited approval-resolution payload now fails closed.
 
 ## Remaining
+
+- Triage the reproducible suite-context `sea-forge-cli` test-binary `SIGSEGV` before claiming the workspace test gate green.
+- Address the conformance blockers enumerated in `.agents/reports/2026-07-22-spec-implementation-audit.md` before declaring any of the four specifications coherent.
 
 - Commit Tasks 16–17 when requested.
 - Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
