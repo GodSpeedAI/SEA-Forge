@@ -1,6 +1,10 @@
 # Rust build output
 /target/
 
+# Windows Mark-of-the-Web / NTFS alternate-data-stream metadata
+# (created when files are copied from Windows; never commit these)
+*:Zone.Identifier
+
 # Devbox / Nix
 /.devbox/
 /.direnv/
