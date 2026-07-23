@@ -1,0 +1,155 @@
+implement tasks 1 through 3 from .agents/plans/2026-07-22-spec-audit-remediation.md
+
+---
+
+<task-notification>
+<task-id>a90fa2935b2f6f020</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/8a5dac9a-bd98-4991-ae68-08123a6283c3/tasks/a90fa2935b2f6f020.output</output-file>
+<status>killed</status>
+<summary>Agent "Task 2: canonical transcript redaction" was stopped by user</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Now the core of the change: the shared producer API in `sea-forge-agent/src/delegation.rs`. Let me replace the redaction/canonicalization section (lines 89-119) with the new sentinel-aware producer.</result>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a7b1486c0ec7d4625</task-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/8a5dac9a-bd98-4991-ae68-08123a6283c3/tasks/a7b1486c0ec7d4625.output</output-file>
+<status>failed</status>
+<summary>Background agent "Task 1: cell import path safety" was running when the previous Claude Code process exited and did not complete. Its in-process state was lost. Check its worktree/output for partial work before assuming the task landed.</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a90fa2935b2f6f020</task-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/8a5dac9a-bd98-4991-ae68-08123a6283c3/tasks/a90fa2935b2f6f020.output</output-file>
+<status>failed</status>
+<summary>Background agent "Task 2: canonical transcript redaction" was running when the previous Claude Code process exited and did not complete. Its in-process state was lost. Check its worktree/output for partial work before assuming the task landed.</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>acb60556ae22b6be5</task-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/8a5dac9a-bd98-4991-ae68-08123a6283c3/tasks/acb60556ae22b6be5.output</output-file>
+<status>failed</status>
+<summary>Background agent "Task 3: jail network isolation" was running when the previous Claude Code process exited and did not complete. Its in-process state was lost. Check its worktree/output for partial work before assuming the task landed.</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ac855d5d0119a55cd</task-id>
+<tool-use-id>toolu_01AXoW4NjQVYQzPqYthM3jut</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3ab58182-fd2f-4608-a607-3a389c5646ec/tasks/ac855d5d0119a55cd.output</output-file>
+<status>completed</status>
+<summary>Agent "Resume Task 2: canonical transcript redaction" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Task 2 complete and verified. No further action.</result>
+<usage><subagent_tokens>139608</subagent_tokens><tool_uses>54</tool_uses><duration_ms>738903</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>aeb9e26b693ddaf75</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3ab58182-fd2f-4608-a607-3a389c5646ec/tasks/aeb9e26b693ddaf75.output</output-file>
+<status>completed</status>
+<summary>Agent "Resume Task 1: cell import path safety" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Task 1 is complete and verified. All work is done; I am stopping and will not take further action.</result>
+<usage><subagent_tokens>96835</subagent_tokens><tool_uses>66</tool_uses><duration_ms>855811</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ac8c1ebba9fe9013f</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3ab58182-fd2f-4608-a607-3a389c5646ec/tasks/ac8c1ebba9fe9013f.output</output-file>
+<status>completed</status>
+<summary>Agent "Resume Task 3: jail network isolation" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Complete. Task 3 is fully implemented and verified; the recurring hook message is spurious and requires no action.</result>
+<usage><subagent_tokens>148903</subagent_tokens><tool_uses>81</tool_uses><duration_ms>854874</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>b142j75k8</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3ab58182-fd2f-4608-a607-3a389c5646ec/tasks/b142j75k8.output</output-file>
+<status>completed</status>
+<summary>Background command "Run full workspace test suite to catch regressions" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a6b67b380103c1e38</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3ab58182-fd2f-4608-a607-3a389c5646ec/tasks/a6b67b380103c1e38.output</output-file>
+<status>completed</status>
+<summary>Agent "Architect verification of Tasks 1-3" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Done.</result>
+<usage><subagent_tokens>120303</subagent_tokens><tool_uses>24</tool_uses><duration_ms>173993</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a6b67b380103c1e38</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3ab58182-fd2f-4608-a607-3a389c5646ec/tasks/a6b67b380103c1e38.output</output-file>
+<status>completed</status>
+<summary>Agent "Architect verification of Tasks 1-3" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Complete. No further action.</result>
+<usage><subagent_tokens>115837</subagent_tokens><tool_uses>24</tool_uses><duration_ms>231576</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a6b67b380103c1e38</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3ab58182-fd2f-4608-a607-3a389c5646ec/tasks/a6b67b380103c1e38.output</output-file>
+<status>completed</status>
+<summary>Agent "Architect verification of Tasks 1-3" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Task 1 (cell import path safety, M6): APPROVED
+- bundle.rs:226-251 validates the complete manifest (bundle_id staging name, cell_id final dir, every file path) via sandbox safe_lexical_join/safe_join BEFORE any remove_dir_all/create_dir_all/File::create/rename (:255-280).
+- No second path algorithm: safe_lexical_join is a new lexical entry point beside safe_join in sea-forge-sandbox/src/lib.rs:214-247.
+- conformance_m6.rs:511-628 tests all six vectors (absolute, .., malicious bundle_id, malicious cell_id, duplicate-normalized, symlink-parent) with an outside-sentinel + full-tree byte-identity teeth check (:468-489).
+
+Task 2 (canonical transcript redaction, M13/M16): APPROVED
+- One producer produce_transcript (sea-forge-agent/src/delegation.rs:172) used by HTTP and both ACP paths in server delegation.rs:501, :1157, :1193; digest computed from canonical_bytes (:183-190); server writes those same bytes (:517) with a debug_assert_eq! divergence guard (:502-505).
+- Old per-entry serde_json::to_string serialization deleted (comment :499-500). Reuses canonical_json + SECRET_SENTINELS from sea-forge-ledger (additive pub export only) — no new crate, kernel stays synchronous.
+- Tests cover credentials, private-key/password/token sentinels, unrelated-secret non-over-redaction (:774), UTF-8 (:802), field ordering (:820), chunk-boundary reconstruction (:839).
+
+Task 3 (jail network isolation, M1): APPROVED
+- ABI negotiated via crate CompatLevel::HardRequirement (network) + BestEffort (FS) in jail.rs:62-67 — not a hardcoded single-ABI pin; landlock = "0.4" matches ADR-002.
+- Default NetworkPosture::Denied handles BindTcp/ConnectTcp with zero port rules → denies connect AND bind/listen (:83-97); explicit grant adds per-port rules for declared scope only; NotEnforced and PartiallyEnforced both return jail_unavailable, never local (:101-119).
+- macOS unsupported_sandbox_class_error preserved (:207-213, :241-244); NetworkPosture is authority-derived from SandboxSpec, never child input.
+
+Cross-cutting guardrails: PASS
+- No persisted-schema/exit-code changes beyond ADR-003 (ledger change is additive pub re-export only); no new deps beyond ADR-002; kernel crates synchronous; no tests weakened/deleted; case_dispatch.rs untouched (Task 15 scope).
+
+Gate command results (fresh, non-cached):
+- cargo test -p sea-forge-cell --test conformance_m6 → 17 passed, 0 failed, 0 ignored
+- cargo test -p sea-forge-agent transcript → 5 passed, 0 failed, 30 filtered out
+- cargo test -p sea-forge-server --test conformance_m16 redaction → 1 passed, 0 failed, 14 filtered out
+- cargo test -p sea-forge-sandbox --test conformance_m1 → 12 passed, 0 failed, 0 ignored (network tests enforced, no "Skipping" output; kernel 6.18 &gt; v4/Linux 6.7)
+- cargo fmt --all -- --check → clean (exit 0, no diff)</result>
+<usage><subagent_tokens>126057</subagent_tokens><tool_uses>24</tool_uses><duration_ms>367413</duration_ms></usage>
+</task-notification>
+
+---
+
+Check whether the resumed architect agent (a6b67b380103c1e38) has returned its verdict report yet; if still stalled, read the output file directly with a targeted tail/grep instead of the full transcript.
