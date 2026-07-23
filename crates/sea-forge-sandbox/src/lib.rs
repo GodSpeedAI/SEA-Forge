@@ -45,10 +45,57 @@ impl std::str::FromStr for SandboxClass {
     }
 }
 
+/// Outbound/listening network posture a jail-class run is permitted.
+///
+/// Derived from authority/policy (the grant's `network` boundary), never from
+/// child-controlled input. The default is [`NetworkPosture::Denied`]: a jail
+/// run may not open outbound TCP connections or bind/listen on TCP sockets.
+///
+/// Scope note: enforcement is TCP-only (Landlock v4+ `AccessNet::{BindTcp,
+/// ConnectTcp}`). UDP and raw sockets are an explicitly documented, out-of-scope
+/// gap — Landlock has no coverage for them through ABI v6 (see
+/// `docs/decisions/ADR-002-audit-remediation-dependencies.md` §2).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum NetworkPosture {
+    /// No outbound TCP connect and no TCP bind/listen (default, fail-closed).
+    #[default]
+    Denied,
+    /// Explicit grant: only the listed TCP ports may be bound and connected to.
+    /// An empty port list is equivalent to [`NetworkPosture::Denied`] and is
+    /// normalized to it at construction time.
+    AllowTcpPorts(Vec<u16>),
+}
+
+impl NetworkPosture {
+    /// Build a posture from an authority-derived set of granted TCP ports.
+    /// An empty grant collapses to [`NetworkPosture::Denied`] so that "no ports
+    /// granted" and "network denied" are the same fail-closed state.
+    pub fn from_granted_ports(ports: impl IntoIterator<Item = u16>) -> Self {
+        let mut ports: Vec<u16> = ports.into_iter().collect();
+        ports.sort_unstable();
+        ports.dedup();
+        if ports.is_empty() {
+            NetworkPosture::Denied
+        } else {
+            NetworkPosture::AllowTcpPorts(ports)
+        }
+    }
+
+    /// TCP ports this posture explicitly grants (empty when denied).
+    pub fn granted_ports(&self) -> &[u16] {
+        match self {
+            NetworkPosture::Denied => &[],
+            NetworkPosture::AllowTcpPorts(ports) => ports,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct SandboxSpec {
     pub workspace_root: PathBuf,
     pub artifacts_root: PathBuf,
+    /// Authority-derived network posture. Defaults to [`NetworkPosture::Denied`].
+    pub network: NetworkPosture,
 }
 
 #[derive(Clone, Debug)]
@@ -126,9 +173,13 @@ pub fn validate_relative_path(path: &str) -> Result<(), ForgeError> {
     let value = Path::new(path);
     if value.is_absolute()
         || path.is_empty()
+        // `@` is permitted: it is a safe, non-traversal character used in this
+        // workspace's legitimate template filenames (`name@version.yaml`) and
+        // cannot form an escape (that still requires `..`, `/`, or an
+        // absolute/prefix component, all rejected below).
         || !path
             .chars()
-            .all(|c| c.is_ascii_alphanumeric() || "._/-".contains(c))
+            .all(|c| c.is_ascii_alphanumeric() || "._/-@".contains(c))
         || value.components().any(|c| {
             matches!(
                 c,
@@ -142,6 +193,59 @@ pub fn validate_relative_path(path: &str) -> Result<(), ForgeError> {
     }
     Ok(())
 }
+
+/// Purely lexical safe join for paths that may not exist yet.
+///
+/// Unlike [`safe_join`], this performs no filesystem access: it does not
+/// canonicalize `root`, create parents, or inspect symlinks. It is the correct
+/// primitive for validating an untrusted, manifest-controlled path *before* the
+/// first filesystem mutation (e.g. before a staging subtree is created).
+///
+/// It rejects any path that [`validate_relative_path`] rejects (absolute paths,
+/// `..`, root/prefix components, non `[A-Za-z0-9._/-]` characters). In addition
+/// it rejects ambiguous spellings — empty segments (from `a//b` or a trailing
+/// `/`) and `.` segments (from `a/./b`) — so every accepted input has exactly
+/// one canonical, unambiguous rendering. Callers relying on this for
+/// duplicate-detection get a single normalized form per logical destination.
+///
+/// The returned path is `root` joined with the validated, normalized relative
+/// path. Symlink-parent escapes are NOT covered here (they require filesystem
+/// inspection); use [`safe_join`] for the final write once parents exist.
+pub fn safe_lexical_join(root: &Path, rel: &str) -> Result<PathBuf, ForgeError> {
+    validate_relative_path(rel)?;
+    let relative = Path::new(rel);
+    let mut normalized = PathBuf::new();
+    for component in relative.components() {
+        match component {
+            Component::Normal(name) => normalized.push(name),
+            Component::CurDir => {
+                return Err(ForgeError::UnsafePath(format!(
+                    "ambiguous relative path (`.` segment): {rel}"
+                )))
+            }
+            // `validate_relative_path` already rejects these, but stay total.
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(ForgeError::UnsafePath(format!(
+                    "unsafe relative path: {rel}"
+                )))
+            }
+        }
+    }
+    // An empty segment (e.g. `a//b`, `a/`, or `/`) collapses under `components()`
+    // above; detect it via the raw spelling so `a//b` and `a/b` cannot alias.
+    if rel != "." && (rel.contains("//") || rel.ends_with('/') || rel.starts_with('/')) {
+        return Err(ForgeError::UnsafePath(format!(
+            "ambiguous relative path (empty segment): {rel}"
+        )));
+    }
+    if normalized.as_os_str().is_empty() {
+        return Err(ForgeError::UnsafePath(format!(
+            "empty relative path: {rel}"
+        )));
+    }
+    Ok(root.join(normalized))
+}
+
 pub fn safe_join(root: &Path, rel: &str) -> Result<PathBuf, ForgeError> {
     validate_relative_path(rel)?;
     fs::create_dir_all(root).map_err(|e| ForgeError::io("create workspace", e))?;

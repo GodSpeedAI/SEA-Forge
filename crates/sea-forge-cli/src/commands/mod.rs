@@ -11,6 +11,7 @@ pub mod manager;
 pub mod mediated;
 pub mod memory;
 pub mod migrate;
+pub mod project;
 pub mod recall;
 pub mod resume;
 pub mod run;

@@ -28,6 +28,36 @@
 - Match surrounding code style; locate the relevant idioms here: [PLACEHOLDER: dirs/files that show the pattern to mirror].
 - [PLACEHOLDER: any source-of-truth-is-X rule, e.g. "the corpus/fixtures are the spec — change expected files deliberately, in the same commit as the code that justifies them."]
 
+### Dependency graph
+
+<!-- Include an ASCII task dependency graph showing task ordering, prerequisites, and parallel/dependent tracks. Example structure below: -->
+
+```text
+Task 0 baseline + approvals
+  ├─ Task 1 cell import path safety
+  ├─ Task 2 canonical transcript/redaction primitive
+  ├─ Task 3 jail network isolation
+  ├─ Task 4 minimum command/lifecycle compatibility
+  ├─ Task 5 DomainForge source-set boundary
+  ├─ Task 6 memory authority scope
+  ├─ Task 7 SQLite FTS + stale detection
+  │    └─ Task 8 recall compatibility + governed evidence (also Task 6)
+  └─ Task 9 spec-stage prerequisites
+       └─ Task 10A ordinary governed M5 case path (also Tasks 5 and 8)
+            └─ Task 10B M5 CLI/project/projection integration
+                 └─ Task 11 ledgered self-model + real realization inputs
+                 └─ Task 12 ODI provenance production wiring
+                      └─ Task 13 Thoth query/disclosure semantics
+                           └─ Task 13B Thoth authorship SoD
+                                └─ Task 14A real Thoth joins + mediated service
+                                     └─ Task 14B CLI/server ask adapters
+                                ├─ Task 15 delegation settlement/schema fidelity
+Task 2 ─────────────────────────└─ Task 16 transcript retention/storage
+Tasks 14B-16 ───────────────────── Task 17 endpoint/topology/manager grants
+Tasks 11,15 ────────────────────── Task 18 SWE_SEED reconciliation
+Tasks 1-18 (including lettered tasks) ─ Task 19 final conformance and handoff
+```
+
 ### Global verification gates (must stay green after EVERY task)
 <!-- List the cheapest commands that prove the whole system still works. These get re-run constantly. -->
 ```bash
@@ -114,6 +144,7 @@
 <!--  [ ] Every task has a Gate that exits 0 and a teeth-check.     -->
 <!--  [ ] Every file reference is file:line, not vibes.            -->
 <!--  [ ] Dependencies between tasks stated; independent ones flagged. -->
+<!--  [ ] Dependency graph updated to reflect task ordering & prerequisites. -->
 <!--  [ ] CORE_PRINCIPLE + Guardrails come from the source doc, quoted. -->
 <!--  [ ] Pre-existing/unrelated work is isolated, not smuggled in.  -->
 <!--  [ ] A cold agent could start at Task 1 with zero prior context. -->

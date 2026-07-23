@@ -1,11 +1,13 @@
 #![forbid(unsafe_code)]
 
 use chrono::Utc;
+use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};
 use sea_forge_ledger::LedgerStream;
-use sea_forge_planner::case_engine::{next_case_actions, CaseAction};
+use sea_forge_planner::case_engine::{next_case_actions, replay_case, CaseAction};
 use serde::Serialize;
 use serde_json::json;
+use std::collections::BTreeMap;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -142,6 +144,408 @@ impl CaseRunner {
         }
         Ok(accepted)
     }
+}
+
+/// Outcome of driving a stage `CasePlan` to completion or a blocking point
+/// (spec-audit-remediation Task 10A).
+pub struct StageCaseOutcome {
+    pub case: Case,
+    pub stages: Vec<SpecPipelineStage>,
+    pub events: Vec<TraceEvent>,
+    /// `"completed"`, `"terminated"`, or `"active"` (blocked/no ready action).
+    pub state: &'static str,
+}
+
+/// Run a single stage episode: validate Task 9's prerequisite chain, deny
+/// generated-zone edits before authority (§10.7, `generated_zone_direct_edit`),
+/// then evaluate authority, execute under the granted sandbox, and settle —
+/// mirroring the ordinary sandboxed-task episode pattern used elsewhere in
+/// the workspace (no second authority/execution path for spec-pipeline
+/// stages). Updates `stages[stage_index].status` in place and quarantines it
+/// (via `sea_forge_spec_pipeline::quarantine_stage`) on any denial.
+#[allow(clippy::too_many_arguments)]
+fn run_stage_episode(
+    stages: &mut [SpecPipelineStage],
+    stage_index: usize,
+    item: &PlanItem,
+    policy_path: &Path,
+    entity: &str,
+    case_id: &str,
+    run_id: &str,
+    root: &Path,
+    stream: &LedgerStream,
+) -> Result<SettlementEvent, ForgeError> {
+    if let Err(error) = sea_forge_spec_pipeline::validate_stage_prerequisites(stages, stage_index) {
+        let reason = error.to_string();
+        sea_forge_spec_pipeline::quarantine_stage(&mut stages[stage_index], &reason)?;
+        return Ok(SettlementEvent {
+            version: RECORD_VERSION.into(),
+            settlement_id: ids::random_id("set")?,
+            run_id: run_id.into(),
+            status: SettlementStatus::Rejected,
+            basis: vec!["prerequisite_invalid".into()],
+            review_required: false,
+            settled_at: Utc::now().to_rfc3339(),
+            criteria_ref: item.settlement_criteria_ref.clone(),
+        });
+    }
+
+    // Generated-zone outputs (src/gen, AST, IR, manifests, generated semantic
+    // fixtures) MUST be read-only to operators (§10.7). Only the pipeline's
+    // own generator-kind stages may legitimately produce them; any other
+    // stage kind declaring a generated-zone output is a denied
+    // `run_spec_pipeline` operation, basis `generated_zone_direct_edit`,
+    // rejected before authority is ever consulted.
+    const GENERATOR_KINDS: &[StageKind] = &[
+        StageKind::Ast,
+        StageKind::Ir,
+        StageKind::Manifest,
+        StageKind::GeneratedContract,
+        StageKind::SemanticFixture,
+    ];
+    if !GENERATOR_KINDS.contains(&stages[stage_index].kind) {
+        let direct_edit = stages[stage_index]
+            .outputs
+            .iter()
+            .any(|output| sea_forge_spec_pipeline::is_generated_zone(&output.path));
+        if direct_edit {
+            sea_forge_spec_pipeline::quarantine_stage(
+                &mut stages[stage_index],
+                "generated_zone_direct_edit",
+            )?;
+            return Ok(SettlementEvent {
+                version: RECORD_VERSION.into(),
+                settlement_id: ids::random_id("set")?,
+                run_id: run_id.into(),
+                status: SettlementStatus::Rejected,
+                basis: vec!["generated_zone_direct_edit".into()],
+                review_required: false,
+                settled_at: Utc::now().to_rfc3339(),
+                criteria_ref: item.settlement_criteria_ref.clone(),
+            });
+        }
+    }
+
+    let operation = item
+        .operations
+        .first()
+        .ok_or_else(|| ForgeError::Input("stage episode missing operation".into()))?
+        .clone();
+    let workspace = root
+        .join("cases")
+        .join(case_id)
+        .join("runs")
+        .join(run_id)
+        .join("workspace");
+    let artifacts = workspace.parent().unwrap().join("artifacts");
+    fs::create_dir_all(&workspace).map_err(|e| ForgeError::io("create workspace", e))?;
+    fs::create_dir_all(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
+
+    let bundle = AuthorityPolicyBundle::load(policy_path)?;
+    let engine = PolicyAuthorityEngine::new(bundle.clone())?;
+    let actor = Actor {
+        actor_id: entity.into(),
+        role: ActorRole::Operator,
+    };
+    let action = AuthorityAction::from(&operation);
+    let decision = engine.evaluate(AuthorityEvaluation {
+        actor: &actor,
+        binding: bundle.resolve_identity(entity, ActorRole::Operator),
+        run_id,
+        case_id,
+        plan_item_id: &item.plan_item_id,
+        sequence: 1,
+        action: &action,
+        workspace_root: &workspace,
+        evidence_refs: vec![],
+        artifacts_root: Some(&artifacts),
+        timeout_secs: Some(600),
+        env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
+        domainforge_candidate: None,
+        environment: None,
+    })?;
+    let decision_ref = stream.commit_typed(
+        "authority_decision",
+        vec![run_id.into(), item.plan_item_id.clone()],
+        &decision,
+        vec![],
+    )?;
+    let execution = if decision.verdict == Verdict::Allow {
+        let grant = engine.grant(&decision, &decision_ref, &action, None)?;
+        sea_forge_runtime::execute(
+            grant,
+            &ExecutionRequest {
+                plan_item_id: item.plan_item_id.clone(),
+                operation,
+                timeout_secs: 600,
+                env: BTreeMap::from([
+                    (
+                        String::from("PATH"),
+                        std::env::var("PATH").unwrap_or_default(),
+                    ),
+                    (
+                        String::from("HOME"),
+                        std::env::var("HOME").unwrap_or_default(),
+                    ),
+                ]),
+                compensating_controls: decision.compensating_controls.clone(),
+            },
+            run_id,
+            &workspace,
+            &artifacts,
+        )?
+    } else {
+        ExecutionResult {
+            status: ExecutionStatus::SpawnFailed,
+            exit_code: None,
+            stdout_path: String::new(),
+            stderr_path: String::new(),
+            started_at: Utc::now().to_rfc3339(),
+            finished_at: Utc::now().to_rfc3339(),
+        }
+    };
+    let accepted = decision.verdict == Verdict::Allow
+        && execution.status == ExecutionStatus::Completed
+        && execution.exit_code == Some(0);
+    stages[stage_index].status = if accepted {
+        StageStatus::Accepted
+    } else {
+        StageStatus::Rejected
+    };
+    if !accepted {
+        sea_forge_spec_pipeline::quarantine_stage(
+            &mut stages[stage_index],
+            if decision.verdict == Verdict::Allow {
+                "stage_execution_failed"
+            } else {
+                "authority_denied"
+            },
+        )?;
+    }
+    Ok(SettlementEvent {
+        version: RECORD_VERSION.into(),
+        settlement_id: ids::random_id("set")?,
+        run_id: run_id.into(),
+        status: if accepted {
+            SettlementStatus::Accepted
+        } else {
+            SettlementStatus::Rejected
+        },
+        basis: vec![if accepted {
+            "execution_completed".into()
+        } else if decision.verdict == Verdict::Allow {
+            // Authority allowed but the run did not accept (nonzero exit,
+            // spawn failure, etc.) — mirror quarantine_stage's basis so the
+            // settlement record distinguishes execution failure from denial.
+            "stage_execution_failed".into()
+        } else {
+            "authority_denied".into()
+        }],
+        review_required: false,
+        settled_at: Utc::now().to_rfc3339(),
+        criteria_ref: item.settlement_criteria_ref.clone(),
+    })
+}
+
+/// Drive a stage `CasePlan` (from `sea_forge_planner::stage_case_plan`) to
+/// completion as an ordinary governed case: every stage activation, quarantine,
+/// and settlement is an existing case/authority/ledger record, not a separate
+/// spec-pipeline scheduler (Task 10A). `stages` must be in the same order and
+/// carry the same `stage_id`s as `plan.items[*].plan_item_id`.
+pub fn run_stage_case(
+    root: &Path,
+    policy_path: &Path,
+    entity: &str,
+    plan: &CasePlan,
+    mut stages: Vec<SpecPipelineStage>,
+) -> Result<StageCaseOutcome, ForgeError> {
+    let case_id = plan.case_id.clone();
+    let case_dir = root.join("cases").join(&case_id);
+    let (_runs_dir, case_events) = CaseRunner::initialize_case(&case_dir)?;
+    let stream = LedgerStream::open(root, format!("case-{case_id}"), entity)?;
+    stream.commit_typed("case_plan", vec![case_id.clone()], plan, vec![])?;
+
+    let mut case = Case {
+        version: RECORD_VERSION.into(),
+        case_id: case_id.clone(),
+        intent: Intent {
+            intent_id: plan.intent_id.clone(),
+            summary: format!("Execute spec pipeline for case {case_id}"),
+            actor_id: entity.into(),
+            process_id: "spec_pipeline".into(),
+            created_at: Utc::now().to_rfc3339(),
+        },
+        state: CaseState::Active,
+        plan_ref: plan.plan_id.clone(),
+        run_ids: vec![],
+        stages: plan
+            .items
+            .iter()
+            .map(|item| item.plan_item_id.clone())
+            .collect(),
+        close_reason: None,
+        created_at: Utc::now().to_rfc3339(),
+        closed_at: None,
+    };
+    write_json(&case_dir.join("case.json"), &case)?;
+    write_json(&case_dir.join("plan.json"), plan)?;
+
+    let mut events = vec![];
+    CaseRunner::append_event(
+        &case_events,
+        &stream,
+        &mut events,
+        TraceKind::CaseCreated,
+        None,
+        json!({"case_id": case_id}),
+    )?;
+
+    let state = loop {
+        let actions = CaseRunner::next_ready_actions(&plan.items, &events);
+        if actions.is_empty() {
+            break "active";
+        }
+        let mut terminal = None;
+        for action in actions {
+            match action {
+                CaseAction::Enable(item_id) => {
+                    CaseRunner::append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::ItemEnabled,
+                        Some(&item_id),
+                        json!({}),
+                    )?;
+                }
+                CaseAction::CompleteCase => {
+                    case.state = CaseState::Completed;
+                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    CaseRunner::append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::CaseClosed,
+                        None,
+                        json!({}),
+                    )?;
+                    terminal = Some("completed");
+                }
+                CaseAction::TerminateCase { blocking_item } => {
+                    case.state = CaseState::Terminated;
+                    case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
+                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    CaseRunner::append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::CaseTerminated,
+                        None,
+                        json!({"blocking_item": blocking_item}),
+                    )?;
+                    terminal = Some("terminated");
+                }
+                CaseAction::AchieveMilestone(item_id) => {
+                    CaseRunner::append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::MilestoneAchieved,
+                        Some(&item_id),
+                        json!({}),
+                    )?;
+                }
+                CaseAction::ParkHumanTask(item_id) => {
+                    return Err(ForgeError::Input(format!(
+                        "spec_pipeline_error: stage {item_id} cannot be a human task"
+                    )));
+                }
+                CaseAction::Activate(item_id) => {
+                    let item = plan
+                        .items
+                        .iter()
+                        .find(|item| item.plan_item_id == item_id)
+                        .ok_or_else(|| ForgeError::Internal("missing plan item".into()))?
+                        .clone();
+                    let stage_index = stages
+                        .iter()
+                        .position(|stage| stage.stage_id == item_id)
+                        .ok_or_else(|| {
+                            ForgeError::Internal(format!("missing stage for item {item_id}"))
+                        })?;
+                    let projection = replay_case(&plan.items, &events);
+                    let instance = projection
+                        .items
+                        .iter()
+                        .find(|state| state.item_id == item_id)
+                        .map_or(1, |state| state.instances + 1);
+                    let episode_run_id = ids::run_id()?;
+                    CaseRunner::append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::ItemActivated,
+                        Some(&item_id),
+                        json!({"instance": instance, "run_id": episode_run_id}),
+                    )?;
+                    let settlement = run_stage_episode(
+                        &mut stages,
+                        stage_index,
+                        &item,
+                        policy_path,
+                        entity,
+                        &case_id,
+                        &episode_run_id,
+                        root,
+                        &stream,
+                    )?;
+                    stream.commit_typed(
+                        "settlement_event",
+                        vec![
+                            case_id.clone(),
+                            episode_run_id.clone(),
+                            settlement.settlement_id.clone(),
+                        ],
+                        &settlement,
+                        vec![],
+                    )?;
+                    CaseRunner::append_event(
+                        &case_events,
+                        &stream,
+                        &mut events,
+                        TraceKind::SettlementRecorded,
+                        Some(&item_id),
+                        json!({
+                            "instance": instance,
+                            "run_id": episode_run_id,
+                            "status": settlement.status,
+                        }),
+                    )?;
+                    CaseRunner::apply_episode_completion(
+                        &mut case,
+                        &episode_run_id,
+                        &item_id,
+                        instance,
+                        &settlement,
+                        &case_events,
+                        &stream,
+                        &mut events,
+                    )?;
+                }
+            }
+        }
+        write_json(&case_dir.join("case.json"), &case)?;
+        if let Some(terminal) = terminal {
+            break terminal;
+        }
+    };
+
+    Ok(StageCaseOutcome {
+        case,
+        stages,
+        events,
+        state,
+    })
 }
 
 pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {

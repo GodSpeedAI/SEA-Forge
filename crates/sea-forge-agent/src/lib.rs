@@ -21,8 +21,8 @@ pub use config::{
     AgentConfig, AgentEndpointConfig, EndpointSnapshot, EndpointStatus, ProviderKind,
 };
 pub use delegation::{
-    run_delegation, transcript_sha256, DelegationConfig, DelegationOutcome, TranscriptEntry,
-    TranscriptSummaryInput,
+    produce_transcript, run_delegation, transcript_sha256, DelegationConfig, DelegationOutcome,
+    RedactedTranscript, TranscriptEntry, TranscriptSummaryInput,
 };
 pub use network::{prepare_client, validate_destination, NetworkPolicy};
 pub use provider::{

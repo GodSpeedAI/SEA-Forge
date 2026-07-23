@@ -6,6 +6,7 @@ use sea_forge_core::{
     ids,
     types::{BundleFile, BundleManifest},
 };
+use sea_forge_sandbox::{safe_join, safe_lexical_join};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::{self, File};
@@ -216,16 +217,63 @@ pub fn import(root: &Path, bundle: &Path) -> Result<BundleManifest, ForgeError> 
             format!("bundle contains entries not in manifest: {extra:?}"),
         ));
     }
-    // All verified — stage to a temp dir, then rename into place atomically.
-    let staging = root
-        .join(".sea-forge/imported")
-        .join(format!(".staging-{}", manifest.bundle_id));
+    // All content is hash-valid but the manifest-controlled *paths* are still
+    // untrusted input. Fail closed: validate every path that will be joined
+    // into the filesystem (staging dir name from `bundle_id`, final dir name
+    // from `cell_id`, and each archived file path) BEFORE the first mutation.
+    // A single hostile path aborts the whole import with `bundle_integrity_error`
+    // and leaves the import root and anything outside it byte-identical.
+    //
+    // Establish the trusted import-root hierarchy beneath the canonical root:
+    // `.sea-forge` and `imported` must each be a real directory (created if
+    // absent), never a symlink whose target escapes root. A pre-existing
+    // symlink at either level is an import-time escape vector and fails
+    // closed with `bundle_integrity_error` before any per-entry write. All
+    // later staging/final paths derive from the canonical `imported_root`,
+    // so they inherit the trusted root rather than trusting lexical joins
+    // over untrusted parent segments.
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|e| ForgeError::io("canonicalize import root", e))?;
+    let sea_forge_dir = ensure_trusted_dir(&canonical_root, ".sea-forge")
+        .map_err(|e| tamper_error(bundle, format!("unsafe .sea-forge: {e}")))?;
+    let imported_root = ensure_trusted_dir(&sea_forge_dir, "imported")
+        .map_err(|e| tamper_error(bundle, format!("unsafe imported root: {e}")))?;
+    // The `bundle_id`/`cell_id` are single directory-name segments joined under
+    // `imported/`; reuse the canonical lexical validator (the staging/final
+    // subtree may not exist yet). `safe_lexical_join` rejects absolute paths,
+    // `..`, root/prefix components, and ambiguous spellings.
+    let staging_name = format!(".staging-{}", manifest.bundle_id);
+    let staging = safe_lexical_join(&imported_root, &staging_name)
+        .map_err(|e| tamper_error(bundle, format!("unsafe bundle_id path: {e}")))?;
+    let final_dir = safe_lexical_join(&imported_root, &manifest.cell_id)
+        .map_err(|e| tamper_error(bundle, format!("unsafe cell_id path: {e}")))?;
+    // Each manifest file path is lexically validated relative to staging, and —
+    // once the final dir's parents exist on disk — checked with `safe_join`
+    // against the final dir so a pre-existing symlink parent (a re-import trap)
+    // cannot let a write escape the trust root.
+    for (arc, _data) in &verified {
+        safe_lexical_join(&staging, arc)
+            .map_err(|e| tamper_error(bundle, format!("unsafe manifest path: {e}")))?;
+        // Filesystem-level symlink-parent escape check against the final dir,
+        // which may already exist from a prior import. `safe_join` canonicalizes
+        // and inspects symlinks; it only creates parents under the final dir,
+        // never outside it, and never touches the sentinel.
+        if final_dir.exists() {
+            safe_join(&final_dir, arc)
+                .map_err(|e| tamper_error(bundle, format!("unsafe manifest path: {e}")))?;
+        }
+    }
+
+    // Paths are proven safe — stage to a temp dir, then rename into place
+    // atomically.
     if staging.exists() {
         fs::remove_dir_all(&staging).map_err(|e| ForgeError::io("clear stale staging", e))?;
     }
     fs::create_dir_all(&staging).map_err(|e| ForgeError::io("create staging", e))?;
     for (arc, data) in &verified {
-        let dest = staging.join(arc);
+        let dest = safe_lexical_join(&staging, arc)
+            .map_err(|e| tamper_error(bundle, format!("unsafe manifest path: {e}")))?;
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent).map_err(|e| ForgeError::io("create arc parent", e))?;
         }
@@ -234,7 +282,6 @@ pub fn import(root: &Path, bundle: &Path) -> Result<BundleManifest, ForgeError> 
         f.write_all(data)
             .map_err(|e| ForgeError::io("write staged file", e))?;
     }
-    let final_dir = root.join(".sea-forge/imported").join(&manifest.cell_id);
     // If the final dir already exists (re-import), keep it; atomic guarantee is
     // about not leaving partial NEW imports behind.
     if final_dir.exists() {
@@ -311,6 +358,34 @@ fn tamper_error(bundle: &Path, message: String) -> ForgeError {
         class: "bundle_integrity_error",
         path: bundle.to_path_buf(),
         message,
+    }
+}
+
+/// Validate one directory segment beneath a trusted canonical parent: if the
+/// segment exists it must be a real directory whose canonical path stays
+/// beneath `parent` (never a symlink). If absent, the lexical path is
+/// returned unchanged — creation is deferred to the staging step so a
+/// rejected import leaves zero filesystem side effects. Used to harden
+/// `.sea-forge` and `imported` against pre-existing symlink escapes at
+/// import time.
+fn ensure_trusted_dir(parent: &Path, name: &str) -> Result<PathBuf, ForgeError> {
+    let candidate = parent.join(name);
+    match fs::symlink_metadata(&candidate) {
+        Ok(md) if md.file_type().is_symlink() => {
+            Err(ForgeError::UnsafePath(format!("{name} is a symlink")))
+        }
+        Ok(md) if !md.is_dir() => Err(ForgeError::UnsafePath(format!("{name} is not a directory"))),
+        Ok(_) => {
+            let canonical = candidate
+                .canonicalize()
+                .map_err(|e| ForgeError::io(format!("canonicalize {name}"), e))?;
+            if !canonical.starts_with(parent) {
+                return Err(ForgeError::UnsafePath(format!("{name} escapes trust root")));
+            }
+            Ok(canonical)
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(candidate),
+        Err(e) => Err(ForgeError::io(format!("inspect {name}"), e)),
     }
 }
 

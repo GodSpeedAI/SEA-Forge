@@ -492,6 +492,17 @@ pub async fn execute_with_permission_broker(
     let artifact_ref = if outcome.transcript.is_empty() {
         None
     } else {
+        // Single producer: re-run the shared redactor/canonicalizer over the
+        // (already-redacted) entries so the artifact bytes are the EXACT bytes
+        // the digest commits to. `produce_transcript` is idempotent on
+        // pre-redacted input; the sentinel corpus is applied once more as
+        // defense in depth. This replaces the old divergent per-entry
+        // `serde_json::to_string` serialization for both HTTP and ACP.
+        let produced = sea_forge_agent::produce_transcript(&outcome.transcript, &[]);
+        debug_assert_eq!(
+            produced.sha256, outcome.transcript_sha256,
+            "artifact bytes diverge from committed transcript digest"
+        );
         let hex = outcome
             .transcript_sha256
             .strip_prefix("sha256:")
@@ -501,15 +512,9 @@ pub async fn execute_with_permission_broker(
             .join("runs")
             .join(run)
             .join(format!("transcript-{hex}.jsonl"));
-        let jsonl = outcome
-            .transcript
-            .iter()
-            .filter_map(|entry| serde_json::to_string(entry).ok())
-            .collect::<Vec<_>>()
-            .join("\n");
         std::fs::create_dir_all(artifact_path.parent().unwrap())
             .map_err(|e| ForgeError::io("create transcript artifact parent", e))?;
-        std::fs::write(&artifact_path, jsonl)
+        std::fs::write(&artifact_path, &produced.canonical_bytes)
             .map_err(|e| ForgeError::io("write transcript artifact", e))?;
         Some(
             artifact_path
@@ -916,12 +921,16 @@ async fn run_acp_episode(
             let env = spawn.env.clone();
             let (sender, receiver) = std::sync::mpsc::channel();
             std::thread::spawn(move || {
+                // Jail-class ACP agents default to network denial (fail-closed).
+                // No scoped egress grant is plumbed to this path yet; the jail
+                // must not open ungranted outbound/listening TCP sockets.
                 let result = sea_forge_sandbox::jail::spawn_interactive(
                     &workspace_for_jail,
                     &artifacts,
                     &argv,
                     &workspace_for_jail,
                     &env,
+                    &sea_forge_sandbox::NetworkPosture::Denied,
                 );
                 let _ = sender.send(result);
             });
@@ -1133,7 +1142,7 @@ fn latest_disconnected_continuation(
 fn acp_outcome_to_delegation(
     outcome: sea_forge_agent::AcpOutcome,
 ) -> sea_forge_agent::DelegationOutcome {
-    let entries: Vec<sea_forge_agent::TranscriptEntry> = outcome
+    let raw_entries: Vec<sea_forge_agent::TranscriptEntry> = outcome
         .transcript
         .iter()
         .map(|(role, content)| sea_forge_agent::TranscriptEntry {
@@ -1141,7 +1150,13 @@ fn acp_outcome_to_delegation(
             content: content.clone(),
         })
         .collect();
-    let sha = sea_forge_agent::transcript_sha256(&entries);
+    // Route ACP through the SAME shared producer as HTTP: redact against the
+    // sentinel corpus, canonicalize, and hash the exact canonical bytes BEFORE
+    // any summary or artifact is derived. Previously ACP transcripts reached
+    // hashing/storage with no redaction at all.
+    let produced = sea_forge_agent::produce_transcript(&raw_entries, &[]);
+    let entries = produced.entries;
+    let sha = produced.sha256;
     let tool_calls = entries.iter().filter(|e| e.role == "tool").count() as u32;
     let final_excerpt = entries
         .iter()
@@ -1151,7 +1166,12 @@ fn acp_outcome_to_delegation(
             if e.content.len() <= 200 {
                 e.content.clone()
             } else {
-                format!("{}...", &e.content[..200])
+                // Respect char boundaries when truncating redacted UTF-8.
+                let mut end = 200;
+                while !e.content.is_char_boundary(end) {
+                    end -= 1;
+                }
+                format!("{}...", &e.content[..end])
             }
         })
         .unwrap_or_default();
@@ -1167,10 +1187,24 @@ fn acp_outcome_to_delegation(
         sea_forge_agent::AcpTermination::EndpointError => Some("acp_spawn_error".into()),
         _ => None,
     };
+    // The final output flows into the settlement result; redact it through the
+    // same corpus so a sentinel cannot leak via the result surface either.
+    let final_output = outcome.final_output.map(|text| {
+        sea_forge_agent::produce_transcript(
+            &[sea_forge_agent::TranscriptEntry {
+                role: "assistant".into(),
+                content: text,
+            }],
+            &[],
+        )
+        .entries
+        .swap_remove(0)
+        .content
+    });
     sea_forge_agent::DelegationOutcome {
         termination,
         turns_used: outcome.turns_used,
-        final_output: outcome.final_output,
+        final_output,
         transcript_sha256: sha,
         summary: TranscriptSummary {
             turn_count: outcome.turns_used,

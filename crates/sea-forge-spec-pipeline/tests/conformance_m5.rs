@@ -58,6 +58,7 @@ fn make_stage_with_io(
                 path: p.to_string(),
                 sha256: h.to_string(),
                 generated: false,
+                ..Default::default()
             })
             .collect(),
         outputs: outputs
@@ -66,6 +67,7 @@ fn make_stage_with_io(
                 path: p.to_string(),
                 sha256: h.to_string(),
                 generated: true,
+                ..Default::default()
             })
             .collect(),
         command: None,
@@ -346,6 +348,319 @@ fn pipeline_processing_quarantines_rejected_stages() {
     assert!(run.stages[1].quarantine_ref.is_some());
 
     // Classification should be authority-only (no generated outputs).
+    assert_eq!(run.proof_classification, ProofClassification::AuthorityOnly);
+}
+
+// ── 11. Stage prerequisite validation (Task 9) ──
+
+fn full_stage_file(
+    path: &str,
+    sha256: &str,
+    schema: &str,
+    model_ref: &str,
+    dfv: &str,
+) -> StageFile {
+    StageFile {
+        path: path.into(),
+        sha256: sha256.into(),
+        generated: true,
+        schema_ref: Some(schema.into()),
+        domain_model_ref: Some(model_ref.into()),
+        domainforge_version: Some(dfv.into()),
+    }
+}
+
+fn matching_input(output: &StageFile) -> StageFile {
+    StageFile {
+        generated: false,
+        ..output.clone()
+    }
+}
+
+#[test]
+fn valid_predecessor_chain_passes() {
+    let sea_output = full_stage_file(
+        "sea/model.sea",
+        "sha256:aaa",
+        "sea.v1",
+        "model:aaa",
+        "0.13.0",
+    );
+    let stages = vec![
+        SpecPipelineStage {
+            stage_id: "stage_sea".into(),
+            kind: StageKind::Sea,
+            inputs: vec![],
+            outputs: vec![sea_output.clone()],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+        SpecPipelineStage {
+            stage_id: "stage_ast".into(),
+            kind: StageKind::Ast,
+            inputs: vec![matching_input(&sea_output)],
+            outputs: vec![],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+    ];
+    assert!(validate_stage_prerequisites(&stages, 1).is_ok());
+}
+
+#[test]
+fn missing_predecessor_without_self_verification_is_rejected() {
+    let stages = vec![SpecPipelineStage {
+        stage_id: "stage_ast".into(),
+        kind: StageKind::Ast,
+        inputs: vec![StageFile {
+            path: "sea/model.sea".into(),
+            sha256: "sha256:aaa".into(),
+            ..Default::default()
+        }],
+        outputs: vec![],
+        command: None,
+        status: StageStatus::Accepted,
+        quarantine_ref: None,
+        settlement_basis: vec![],
+    }];
+    assert!(validate_stage_prerequisites(&stages, 0).is_err());
+}
+
+#[test]
+fn externally_supplied_self_verified_input_passes_with_no_local_predecessor() {
+    let stages = vec![SpecPipelineStage {
+        stage_id: "stage_ast".into(),
+        kind: StageKind::Ast,
+        inputs: vec![full_stage_file(
+            "sea/model.sea",
+            "sha256:aaa",
+            "sea.v1",
+            "model:aaa",
+            "0.13.0",
+        )],
+        outputs: vec![],
+        command: None,
+        status: StageStatus::Accepted,
+        quarantine_ref: None,
+        settlement_basis: vec![],
+    }];
+    assert!(validate_stage_prerequisites(&stages, 0).is_ok());
+}
+
+fn chain_with_predecessor_status(status: StageStatus) -> Vec<SpecPipelineStage> {
+    let sea_output = full_stage_file(
+        "sea/model.sea",
+        "sha256:aaa",
+        "sea.v1",
+        "model:aaa",
+        "0.13.0",
+    );
+    vec![
+        SpecPipelineStage {
+            stage_id: "stage_sea".into(),
+            kind: StageKind::Sea,
+            inputs: vec![],
+            outputs: vec![sea_output.clone()],
+            command: None,
+            status,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+        SpecPipelineStage {
+            stage_id: "stage_ast".into(),
+            kind: StageKind::Ast,
+            inputs: vec![matching_input(&sea_output)],
+            outputs: vec![],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+    ]
+}
+
+#[test]
+fn skipped_predecessor_is_rejected() {
+    let stages = chain_with_predecessor_status(StageStatus::Skipped);
+    assert!(validate_stage_prerequisites(&stages, 1).is_err());
+}
+
+#[test]
+fn rejected_predecessor_is_rejected() {
+    let stages = chain_with_predecessor_status(StageStatus::Rejected);
+    assert!(validate_stage_prerequisites(&stages, 1).is_err());
+}
+
+#[test]
+fn quarantined_predecessor_is_rejected() {
+    let stages = chain_with_predecessor_status(StageStatus::Quarantined);
+    assert!(validate_stage_prerequisites(&stages, 1).is_err());
+}
+
+#[test]
+fn unhashed_input_is_rejected() {
+    let stages = vec![SpecPipelineStage {
+        stage_id: "stage_ast".into(),
+        kind: StageKind::Ast,
+        inputs: vec![StageFile {
+            path: "sea/model.sea".into(),
+            sha256: String::new(),
+            schema_ref: Some("sea.v1".into()),
+            ..Default::default()
+        }],
+        outputs: vec![],
+        command: None,
+        status: StageStatus::Accepted,
+        quarantine_ref: None,
+        settlement_basis: vec![],
+    }];
+    let error = validate_stage_prerequisites(&stages, 0).unwrap_err();
+    assert!(error.to_string().contains("unhashed"));
+}
+
+#[test]
+fn schema_mismatched_predecessor_is_rejected() {
+    let sea_output = full_stage_file(
+        "sea/model.sea",
+        "sha256:aaa",
+        "sea.v1",
+        "model:aaa",
+        "0.13.0",
+    );
+    let mut bad_input = matching_input(&sea_output);
+    bad_input.schema_ref = Some("sea.v2".into());
+    let stages = vec![
+        SpecPipelineStage {
+            stage_id: "stage_sea".into(),
+            kind: StageKind::Sea,
+            inputs: vec![],
+            outputs: vec![sea_output],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+        SpecPipelineStage {
+            stage_id: "stage_ast".into(),
+            kind: StageKind::Ast,
+            inputs: vec![bad_input],
+            outputs: vec![],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+    ];
+    let error = validate_stage_prerequisites(&stages, 1).unwrap_err();
+    assert!(error.to_string().contains("schema mismatch"));
+}
+
+#[test]
+fn model_mismatched_predecessor_is_rejected() {
+    let sea_output = full_stage_file(
+        "sea/model.sea",
+        "sha256:aaa",
+        "sea.v1",
+        "model:aaa",
+        "0.13.0",
+    );
+    let mut bad_input = matching_input(&sea_output);
+    bad_input.domain_model_ref = Some("model:drifted".into());
+    let stages = vec![
+        SpecPipelineStage {
+            stage_id: "stage_sea".into(),
+            kind: StageKind::Sea,
+            inputs: vec![],
+            outputs: vec![sea_output],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+        SpecPipelineStage {
+            stage_id: "stage_ast".into(),
+            kind: StageKind::Ast,
+            inputs: vec![bad_input],
+            outputs: vec![],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+    ];
+    let error = validate_stage_prerequisites(&stages, 1).unwrap_err();
+    assert!(error.to_string().contains("domain model mismatch"));
+}
+
+#[test]
+fn version_mismatched_predecessor_is_rejected() {
+    let sea_output = full_stage_file(
+        "sea/model.sea",
+        "sha256:aaa",
+        "sea.v1",
+        "model:aaa",
+        "0.13.0",
+    );
+    let mut bad_input = matching_input(&sea_output);
+    bad_input.domainforge_version = Some("0.14.0".into());
+    let stages = vec![
+        SpecPipelineStage {
+            stage_id: "stage_sea".into(),
+            kind: StageKind::Sea,
+            inputs: vec![],
+            outputs: vec![sea_output],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+        SpecPipelineStage {
+            stage_id: "stage_ast".into(),
+            kind: StageKind::Ast,
+            inputs: vec![bad_input],
+            outputs: vec![],
+            command: None,
+            status: StageStatus::Accepted,
+            quarantine_ref: None,
+            settlement_basis: vec![],
+        },
+    ];
+    let error = validate_stage_prerequisites(&stages, 1).unwrap_err();
+    assert!(error.to_string().contains("DomainForge version mismatch"));
+}
+
+#[test]
+fn process_pipeline_quarantines_accepted_stage_with_invalid_predecessor_chain() {
+    let mut stages = chain_with_predecessor_status(StageStatus::Rejected);
+    // The SEA stage's own Rejected status is quarantined by process_pipeline's
+    // existing rejected-stage handling; the AST stage self-reports Accepted,
+    // but its input traces back to a non-accepted predecessor, so it must be
+    // quarantined too rather than counted toward classification.
+    let mut run = SpecPipelineRun {
+        version: "0.1".into(),
+        pipeline_id: "pipe_009".into(),
+        case_id: "case_009".into(),
+        run_id: "run_009".into(),
+        context_id: None,
+        domain_model_ref: None,
+        route: PipelineRoute::FullSpecToRuntime,
+        authority_refs: vec![],
+        evidence_refs: vec![],
+        settlement_ref: None,
+        stages: std::mem::take(&mut stages),
+        proof_classification: ProofClassification::AuthorityOnly,
+    };
+    process_pipeline(&mut run).unwrap();
+    assert_eq!(run.stages[0].status, StageStatus::Quarantined);
+    assert_eq!(
+        run.stages[1].status,
+        StageStatus::Quarantined,
+        "a downstream stage must not remain Accepted when its predecessor chain is invalid"
+    );
     assert_eq!(run.proof_classification, ProofClassification::AuthorityOnly);
 }
 

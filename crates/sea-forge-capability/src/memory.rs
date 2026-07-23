@@ -5,7 +5,6 @@ use std::{
     path::Path,
 };
 
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use sea_forge_core::{
@@ -171,85 +170,137 @@ pub fn recall_memory(
         })
         .take(limit)
         .collect();
-    // Return most-recently-confirmed first.
-    results.sort_by(|a, b| b.last_confirmed_at.cmp(&a.last_confirmed_at));
+    // Return most-recently-confirmed first; tie-break on memory_id ascending
+    // so the fallback path matches `query_index` byte-for-byte (§10.5).
+    results.sort_by(|a, b| {
+        b.last_confirmed_at
+            .cmp(&a.last_confirmed_at)
+            .then_with(|| a.memory_id.cmp(&b.memory_id))
+    });
     Ok(results)
 }
 
-// ── Scope enforcement ──
+// ── Index (rebuildable SQLite FTS5 projection) ──
+// §6.3/§10.5 select SQLite FTS explicitly. `items.jsonl` stays authoritative;
+// this index is a disposable acceleration structure proven fresh by a source
+// digest, never trusted merely because it deserializes.
 
-/// Check if a memory_scope rule allows the requester to access the given entity's items.
-/// Returns false when no explicit cross-entity rule exists.
-pub fn scope_allows(rule_scope: &str, requester_entity: &str, item_entity: &str) -> bool {
-    if rule_scope == "any" {
-        return true;
-    }
-    if rule_scope == "own" {
-        return requester_entity == item_entity;
-    }
-    if let Some(target) = rule_scope.strip_prefix("entity:") {
-        return target == item_entity;
-    }
-    false
+fn source_commitment(items_path: &Path) -> Result<String, ForgeError> {
+    let bytes = std::fs::read(items_path).map_err(|e| ForgeError::io("read memory items", e))?;
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
-// ── Index (pure rebuildable projection) ──
-// ponytail: JSON inverted index instead of rusqlite/SQLite. The spec (§6.3, §10.5)
-// names rusqlite as the implementation choice; a JSON projection achieves the same
-// outcome (rebuildable, fallback-equivalent) without a C compilation dependency.
-// Switch to rusqlite if the linear scan becomes a measured bottleneck.
-
-#[derive(Serialize, Deserialize)]
-struct MemoryIndex {
-    version: String,
-    rebuilt_at: String,
-    entries: Vec<MemoryIndexEntry>,
+fn sqlite_error(context: &str, error: rusqlite::Error) -> ForgeError {
+    ForgeError::Internal(format!("memory index {context}: {error}"))
 }
 
-#[derive(Serialize, Deserialize)]
-struct MemoryIndexEntry {
-    memory_id: String,
-    dedup_key: String,
-    statement: String,
-    entity_id: String,
-    process_id: String,
-    kind: String,
-}
-
+/// Rebuild `index_path` from `items_path` into a fresh SQLite FTS5 database,
+/// writing to a temporary file and renaming into place only after an integrity
+/// check passes, so a crash mid-rebuild never leaves a half-written index.
 pub fn rebuild_index(items_path: &Path, index_path: &Path, now: &str) -> Result<(), ForgeError> {
     let items = load_memory_items(items_path)?;
-    let entries: Vec<MemoryIndexEntry> = items
-        .iter()
-        .map(|item| MemoryIndexEntry {
-            memory_id: item.memory_id.clone(),
-            dedup_key: item.dedup_key.clone(),
-            statement: item.statement.clone(),
-            entity_id: item.attribution.entity_id.clone(),
-            process_id: item.attribution.process_id.clone(),
-            kind: serde_json::to_string(&item.kind).unwrap_or_default(),
-        })
-        .collect();
-    let index = MemoryIndex {
-        version: RECORD_VERSION.into(),
-        rebuilt_at: now.to_string(),
-        entries,
-    };
+    let source_sha256 = source_commitment(items_path)?;
     if let Some(parent) = index_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| ForgeError::io("create index dir", e))?;
     }
-    let encoded = serde_json::to_vec_pretty(&index)?;
-    std::fs::write(index_path, encoded).map_err(|e| ForgeError::io("write memory index", e))
+    let tmp_path = index_path.with_extension("sqlite.tmp");
+    let _ = std::fs::remove_file(&tmp_path);
+    {
+        let mut conn =
+            rusqlite::Connection::open(&tmp_path).map_err(|e| sqlite_error("open", e))?;
+        conn.execute_batch(
+            "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+             CREATE VIRTUAL TABLE memory_fts USING fts5(
+                 memory_id UNINDEXED,
+                 statement,
+                 entity_id UNINDEXED,
+                 process_id UNINDEXED,
+                 kind UNINDEXED,
+                 last_confirmed_at UNINDEXED
+             );",
+        )
+        .map_err(|e| sqlite_error("schema", e))?;
+        let tx = conn.transaction().map_err(|e| sqlite_error("begin", e))?;
+        {
+            let mut stmt = tx
+                .prepare(
+                    "INSERT INTO memory_fts \
+                     (memory_id, statement, entity_id, process_id, kind, last_confirmed_at) \
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                )
+                .map_err(|e| sqlite_error("prepare insert", e))?;
+            for item in &items {
+                let kind = serde_json::to_string(&item.kind).unwrap_or_default();
+                stmt.execute(rusqlite::params![
+                    item.memory_id,
+                    item.statement,
+                    item.attribution.entity_id,
+                    item.attribution.process_id,
+                    kind,
+                    item.last_confirmed_at,
+                ])
+                .map_err(|e| sqlite_error("insert row", e))?;
+            }
+            tx.execute(
+                "INSERT INTO meta (key, value) VALUES \
+                 ('version', ?1), ('rebuilt_at', ?2), ('source_sha256', ?3), ('count', ?4)",
+                rusqlite::params![RECORD_VERSION, now, source_sha256, items.len().to_string()],
+            )
+            .map_err(|e| sqlite_error("write meta", e))?;
+        }
+        tx.commit().map_err(|e| sqlite_error("commit", e))?;
+        let check: String = conn
+            .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+            .map_err(|e| sqlite_error("integrity_check", e))?;
+        if check != "ok" {
+            return Err(ForgeError::Internal(format!(
+                "memory index integrity_check failed: {check}"
+            )));
+        }
+    }
+    std::fs::rename(&tmp_path, index_path).map_err(|e| ForgeError::io("rename memory index", e))
 }
 
-/// Query the index. Returns None if the index is missing, stale, or unreadable,
-/// causing the caller to fall back to the linear scan.
+/// Query the index. Returns `None` if the index is missing, corrupt, or stale
+/// relative to `items_path`'s current source digest, causing the caller to
+/// fall back to the linear scan. When present and fresh, applies the exact
+/// same substring/scope filter as the linear scan (rather than FTS5 `MATCH`
+/// token semantics) so indexed and fallback results are always identical.
 pub fn query_index(
     index_path: &Path,
     items_path: &Path,
     query: &MemoryRecallQuery<'_>,
 ) -> Option<Vec<MemoryItem>> {
-    let index_bytes = std::fs::read(index_path).ok()?;
-    let index: MemoryIndex = serde_json::from_slice(&index_bytes).ok()?;
+    let conn = rusqlite::Connection::open_with_flags(
+        index_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .ok()?;
+    let check: String = conn
+        .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+        .ok()?;
+    if check != "ok" {
+        return None;
+    }
+    let stored_sha256: String = conn
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'source_sha256'",
+            [],
+            |row| row.get(0),
+        )
+        .ok()?;
+    let current_sha256 = source_commitment(items_path).ok()?;
+    if stored_sha256 != current_sha256 {
+        return None;
+    }
+    let mut stmt = conn.prepare("SELECT memory_id FROM memory_fts").ok()?;
+    let indexed_ids: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .ok()?
+        .collect::<Result<_, _>>()
+        .ok()?;
     let items = load_memory_items(items_path).ok()?;
     let by_id: HashMap<String, MemoryItem> = items
         .into_iter()
@@ -257,10 +308,9 @@ pub fn query_index(
         .collect();
     let needle = query.query.to_lowercase();
     let limit = query.limit.min(MAX_RECALL_LIMIT);
-    let mut results: Vec<MemoryItem> = index
-        .entries
+    let mut results: Vec<MemoryItem> = indexed_ids
         .iter()
-        .filter_map(|entry| by_id.get(&entry.memory_id).cloned())
+        .filter_map(|id| by_id.get(id).cloned())
         .filter(|item| {
             item.statement.to_lowercase().contains(&needle)
                 && query
@@ -273,7 +323,11 @@ pub fn query_index(
         })
         .take(limit)
         .collect();
-    results.sort_by(|a, b| b.last_confirmed_at.cmp(&a.last_confirmed_at));
+    results.sort_by(|a, b| {
+        b.last_confirmed_at
+            .cmp(&a.last_confirmed_at)
+            .then_with(|| a.memory_id.cmp(&b.memory_id))
+    });
     Some(results)
 }
 

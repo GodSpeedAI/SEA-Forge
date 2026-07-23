@@ -714,7 +714,7 @@ fn task(
 }
 
 /// Source-bound reactivation sentry: fires when `src` settles with `status`.
-fn reactivation_sentry(src: &str, status: &str) -> Sentry {
+pub(crate) fn reactivation_sentry(src: &str, status: &str) -> Sentry {
     Sentry {
         on: SentryTrigger {
             source: src.into(),

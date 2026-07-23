@@ -132,7 +132,7 @@ fn integrity_policy(
                 {"name": "allow-self-validate", "verdict": "allow", "actor_role": "operator", "operation_kind": "execute_command", "argv0": "sea-forge"},
                 {"name": "allow-model-read", "verdict": "allow", "actor_role": "operator", "operation_kind": "validate_model"},
                 {"name": "allow-inspect", "verdict": "allow", "actor_role": "operator", "operation_kind": "inspect_run"},
-                {"name": "allow-recall", "verdict": "allow", "actor_role": "operator", "operation_kind": "recall_memory"}
+                {"name": "allow-recall", "verdict": "allow", "actor_role": "operator", "operation_kind": "recall_memory", "memory_scope": "any"}
             ]
         }),
     ).unwrap();
@@ -200,14 +200,19 @@ fn required_integrity_checkpoint_precedes_command_start_and_witness_outage_halts
                 assert!(String::from_utf8(inspect.stdout)
                     .unwrap()
                     .contains("legacy_digest_only"));
+                // Assurance is exposed through the governed memory-recall
+                // evidence/log path (Task 8), not by mutating the
+                // compatibility capability-envelope JSON.
                 let recall = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
                     .args([
                         "recall",
-                        "generate",
+                        "attempt",
                         "--root",
                         root.to_str().unwrap(),
                         "--policy",
                         policy.to_str().unwrap(),
+                        "--kind",
+                        "outcome",
                     ])
                     .output()
                     .unwrap();
@@ -216,10 +221,10 @@ fn required_integrity_checkpoint_precedes_command_start_and_witness_outage_halts
                     "recall stderr: {}",
                     String::from_utf8_lossy(&recall.stderr)
                 );
-                let recall_stdout = String::from_utf8(recall.stdout).unwrap();
+                let recall_stderr = String::from_utf8(recall.stderr).unwrap();
                 assert!(
-                    recall_stdout.contains("externally_verified"),
-                    "recall stdout: {recall_stdout}"
+                    recall_stderr.contains("externally_verified"),
+                    "recall stderr: {recall_stderr}"
                 );
             }
         } else {
@@ -420,6 +425,18 @@ fn intent_to_settlement_produces_complete_accepted_run() {
     }
     let plan_record: sea_forge_core::types::CasePlan =
         serde_json::from_slice(&fs::read(run.join("plan.json")).unwrap()).unwrap();
+    let validate_op = plan_record.items[0]
+        .operations
+        .iter()
+        .find_map(|op| match op {
+            sea_forge_core::types::Operation::ExecuteCommand { argv, .. } => Some(argv),
+            _ => None,
+        })
+        .expect("demo plan must include execute_command validate");
+    assert_eq!(
+        validate_op.as_slice(),
+        [env!("CARGO_BIN_EXE_sea-forge"), "validate", "model.sea"]
+    );
     assert_eq!(
         envelope["plan_ref"].as_str().unwrap(),
         plan_record.plan_id.to_string()
@@ -839,46 +856,145 @@ fn repeated_runs_have_stable_artifact_identity_and_recall_is_read_only() {
     fs::remove_dir_all(parent).unwrap();
 }
 
+// ── Task 8: compatibility capability recall is byte-for-structure and read-only ──
+
+#[test]
+fn compat_capability_recall_is_byte_for_structure_and_read_only() {
+    let parent = temp_root("compat-recall");
+    let root = parent.join("state");
+    let policy = policy(&parent, "  - name: allow-model-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self-validate\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n");
+    let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "run",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--entity",
+            "team_a",
+            "--process",
+            "agent_1",
+            "--intent",
+            "Generate and validate a simple DomainForge .sea model",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "run stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stored_lines: Vec<serde_json::Value> = fs::read_to_string(root.join("capabilities.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert!(
+        !stored_lines.is_empty(),
+        "run must record at least one capability envelope"
+    );
+    let before = fs::read(root.join("capabilities.jsonl")).unwrap();
+
+    let recall = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "recall",
+            "generate",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(
+        recall.status.code(),
+        Some(0),
+        "recall stderr: {}",
+        String::from_utf8_lossy(&recall.stderr)
+    );
+
+    assert_eq!(
+        before,
+        fs::read(root.join("capabilities.jsonl")).unwrap(),
+        "compatibility recall must never mutate capabilities.jsonl"
+    );
+
+    let printed: Vec<serde_json::Value> = String::from_utf8(recall.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert!(
+        !printed.is_empty(),
+        "recall must match the run's own envelope"
+    );
+    for envelope in &printed {
+        assert!(
+            envelope.as_object().unwrap().get("assurance").is_none(),
+            "compatibility recall must never inject an assurance field: {envelope}"
+        );
+        assert!(
+            stored_lines.contains(envelope),
+            "printed envelope must equal a stored capabilities.jsonl envelope \
+             byte-for-structure, with no added or removed fields: {envelope}"
+        );
+    }
+    fs::remove_dir_all(parent).unwrap();
+}
+
 #[test]
 fn validator_accepts_only_the_stub_contract() {
     let parent = temp_root("validate");
-    let authority_policy = policy(&parent, "  []\n");
-    let authority_root = parent.join("state");
     let valid = parent.join("valid.sea");
     fs::write(
         &valid,
         r#"{"domain":"demo","entities":[{"name":"Sample"}]}"#,
     )
     .unwrap();
+    let mut before: Vec<_> = fs::read_dir(&parent)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    before.sort();
     let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
-        .args([
-            "validate",
-            valid.to_str().unwrap(),
-            "--root",
-            authority_root.to_str().unwrap(),
-            "--policy",
-            authority_policy.to_str().unwrap(),
-        ])
+        .args(["validate", valid.to_str().unwrap()])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"sea-forge: model valid\n");
+    // Config-free: no .sea-forge state, no policy/root required.
+    assert!(!parent.join(".sea-forge").exists());
+    assert!(!valid.parent().unwrap().join(".sea-forge").exists());
+    let mut after: Vec<_> = fs::read_dir(&parent)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    after.sort();
+    assert_eq!(before, after, "validate must not create or mutate state");
     let invalid = parent.join("invalid.sea");
     fs::write(&invalid, r#"{"domain":"demo","entities":[]}"#).unwrap();
-    assert_eq!(
-        Command::new(env!("CARGO_BIN_EXE_sea-forge"))
-            .args([
-                "validate",
-                invalid.to_str().unwrap(),
-                "--root",
-                authority_root.to_str().unwrap(),
-                "--policy",
-                authority_policy.to_str().unwrap(),
-            ])
-            .status()
-            .unwrap()
-            .code(),
-        Some(1)
+    let invalid_output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args(["validate", invalid.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(invalid_output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&invalid_output.stderr).contains("sea-forge: model invalid:"));
+    assert!(!parent.join(".sea-forge").exists());
+    // Policy/root flags are rejected — the hidden validator is config-free.
+    let with_policy = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
+        .args([
+            "validate",
+            valid.to_str().unwrap(),
+            "--policy",
+            parent.join("missing-policy.yaml").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !with_policy.status.success(),
+        "validate must not accept --policy"
     );
     fs::remove_dir_all(parent).unwrap();
 }

@@ -125,6 +125,16 @@ fn acp_fixture_child() {
                     }));
                     return;
                 }
+                if mode == "secret" {
+                    // Emit a chunk carrying full plaintext sentinels so the ACP
+                    // transcript path must redact them before hashing/storage.
+                    finish_prompt(
+                        prompt_id.unwrap(),
+                        session_id,
+                        "leaking password=hunter2 and API_KEY=sk-live-abc123 done",
+                    );
+                    continue;
+                }
                 write_rpc(json!({
                     "jsonrpc": "2.0",
                     "method": "session/update",
@@ -567,6 +577,54 @@ async fn t16_4_minimal_env_workspace_cwd_and_escalation_refused() {
     assert!(entries(root.path(), &case)
         .iter()
         .any(|e| e.record_kind == "permission_request"));
+}
+
+/// Sentinel-aware transcript redaction on the ACP path: plaintext secrets in
+/// agent output must be absent from the stored transcript artifact, its hash's
+/// source bytes, the committed evidence records, and the settlement result.
+/// This is the ACP analogue of the HTTP redaction guarantee — both flow through
+/// the same `produce_transcript` choke point.
+#[tokio::test]
+async fn t16_7_acp_transcript_redaction_scrubs_sentinels_before_hash_and_storage() {
+    let root = tempfile::tempdir().unwrap();
+    write_policy(root.path(), true);
+    let config = server_config(root.path(), "read", "secret");
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+
+    // The stored artifact (the exact bytes the digest commits to) is clean.
+    let sha = result.transcript_sha256.as_deref().unwrap();
+    let artifact = std::fs::read_to_string(root.path().join("runs").join(&run).join(format!(
+        "transcript-{}.jsonl",
+        sha.trim_start_matches("sha256:")
+    )))
+    .unwrap();
+    let lower = artifact.to_lowercase();
+    assert!(
+        !lower.contains("password") && !lower.contains("api_key"),
+        "sentinel leaked in transcript artifact: {artifact}"
+    );
+    // Re-hashing the stored bytes reproduces the committed digest exactly.
+    let rehash = format!(
+        "sha256:{:x}",
+        <sha2::Sha256 as sha2::Digest>::digest(artifact.as_bytes())
+    );
+    assert_eq!(rehash, sha, "stored artifact bytes diverge from digest");
+
+    // Committed evidence/summary records carry no sentinel either.
+    let records = entries(root.path(), &case);
+    for entry in &records {
+        let payload = entry.payload.to_string().to_lowercase();
+        assert!(
+            !payload.contains("password") && !payload.contains("api_key"),
+            "sentinel leaked in {} payload",
+            entry.record_kind
+        );
+    }
+    assert!(records
+        .iter()
+        .any(|e| e.record_kind == "agent_task_evidence"));
 }
 
 #[tokio::test]

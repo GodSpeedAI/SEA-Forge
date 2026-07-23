@@ -629,7 +629,7 @@ fn m0_secret_sentinel_rejected_in_payload() {
     let result = stream.append(
         "secret_attempt",
         vec![],
-        serde_json::json!({"api_key": "sk-1234567890abcdef"}),
+        serde_json::json!({"api_key": "sk-1234567890abcdef"}), // gitleaks:allow
         vec![],
     );
     assert!(result.is_err(), "secret sentinel must be rejected");

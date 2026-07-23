@@ -92,11 +92,40 @@ pub struct ActionGrant {
     boundaries: BTreeMap<String, Vec<String>>,
     compensating_controls: Vec<String>,
     expires_at: chrono::DateTime<Utc>,
+    memory_scope: Option<String>,
 }
 
 impl ActionGrant {
     pub fn sandbox_class(&self) -> &str {
         &self.sandbox_class
+    }
+
+    /// The matched `memory_scope` boundary from the authorizing rule, if this
+    /// grant authorizes a `recall_memory` action. The recall executor applies
+    /// this filter without rereading policy.
+    pub fn memory_scope(&self) -> Option<&str> {
+        self.memory_scope.as_deref()
+    }
+
+    /// Authority-derived TCP ports this grant permits a jail-class run to bind
+    /// and connect to, projected from the `network` boundary dimension.
+    ///
+    /// Absent or empty means "no network" (fail-closed default): a jail run may
+    /// not open outbound TCP connections or bind/listen on TCP sockets. Values
+    /// that do not parse as a `u16` TCP port are ignored, so a malformed policy
+    /// value can only ever *narrow* the granted scope, never widen it. This is
+    /// derived from policy/authority, never from child-controlled input.
+    pub fn network_tcp_ports(&self) -> Vec<u16> {
+        let mut ports: Vec<u16> = self
+            .boundaries
+            .get("network")
+            .into_iter()
+            .flatten()
+            .filter_map(|value| value.parse::<u16>().ok())
+            .collect();
+        ports.sort_unstable();
+        ports.dedup();
+        ports
     }
 
     pub fn authorize(
@@ -1769,6 +1798,13 @@ impl PolicyAuthorityEngine {
             boundaries: decision.boundary_constraints.clone(),
             compensating_controls: decision.compensating_controls.clone(),
             expires_at,
+            memory_scope: decision.matched_rule.as_deref().and_then(|name| {
+                self.bundle
+                    .rules
+                    .iter()
+                    .find(|r| r.name == name)
+                    .and_then(|r| r.memory_scope.clone())
+            }),
         })
     }
 
@@ -2033,10 +2069,14 @@ impl PolicyAuthorityEngine {
             )
         } else if self.bundle.version == "0.1"
             && matches!(
-                action,
-                AuthorityAction::Reserved { resource_type, .. }
-                    if matches!(resource_type.as_str(), "recall_memory" | "inspect_run" | "validate_model")
+                resource_type,
+                "recall_memory" | "inspect_run" | "validate_model"
             )
+            && !self
+                .bundle
+                .rules
+                .iter()
+                .any(|r| r.operation_kind == resource_type)
         {
             (
                 Verdict::Allow,
@@ -2501,6 +2541,7 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                     "approval_resolution" => {
                         matches_approval_resolution_parameters(parameters, actor)
                     }
+                    "recall_memory" => matches_memory_scope(rule, parameters),
                     _ => true,
                 }
         }
@@ -2533,6 +2574,32 @@ fn matches_approval_resolution_parameters(parameters: &Value, actor: &Actor) -> 
 
 fn parameter_str<'a>(parameters: &'a Value, name: &str) -> Option<&'a str> {
     parameters.get(name).and_then(Value::as_str)
+}
+
+/// Check if a `memory_scope` rule value allows recalling the target entity.
+///
+/// - `"any"`: any entity.
+/// - `"own"`: only when the requester's entity matches the target.
+/// - `"entity:<id>"`: only the named entity.
+///
+/// Returns `false` for unknown scope values (default deny).
+pub fn scope_allows(rule_scope: &str, requester_entity: &str, target_entity: &str) -> bool {
+    match rule_scope {
+        "any" => true,
+        "own" => !target_entity.is_empty() && requester_entity == target_entity,
+        s => s
+            .strip_prefix("entity:")
+            .is_some_and(|id| id == target_entity),
+    }
+}
+
+fn matches_memory_scope(rule: &PolicyRule, parameters: &Value) -> bool {
+    let Some(scope) = &rule.memory_scope else {
+        return false;
+    };
+    let target = parameter_str(parameters, "entity_id").unwrap_or("");
+    let requester = parameter_str(parameters, "requester_entity").unwrap_or("");
+    scope_allows(scope, requester, target)
 }
 
 fn matches_transition_parameters(rule: &PolicyRule, parameters: &Value) -> bool {

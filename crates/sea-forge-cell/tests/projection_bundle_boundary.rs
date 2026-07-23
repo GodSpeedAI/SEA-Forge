@@ -35,6 +35,7 @@ fn projection_record(kind: ProjectionKind) -> ProjectionRecord {
             path: "self-model/kg/model.ttl".into(),
             sha256: "sha256:out".into(),
             generated: true,
+            ..Default::default()
         }],
         quarantine_refs: vec![],
         validation: ProjectionValidation {

@@ -278,7 +278,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         let executable =
             env::current_exe().map_err(|e| ForgeError::io("resolve current executable", e))?;
         let executable = executable.to_string_lossy().into_owned();
-        let plan = planner::plan(&intent, &case_id, &run_id, &executable, &root)?;
+        let plan = planner::plan(&intent, &case_id, &run_id, &executable)?;
         let authority_stream =
             LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
         let mut criteria_map: BTreeMap<String, SettlementCriteriaRecord> = BTreeMap::new();
@@ -298,7 +298,6 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             criteria_map.insert(record.criteria_id.clone(), record);
         }
         planner::verify_plan_criteria(&plan, &criteria_map)?;
-        write_json(&run_dir.join("plan.json"), &plan)?;
         let item = plan
             .items
             .first()
@@ -352,7 +351,9 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             JsonlTraceRecorder::create(&run_dir.join("trace.jsonl"), &run_id, &intent.actor_id)?;
         trace.append(TraceKind::CaseCreated, None, json!({"case_id":case_id}))?;
         trace.append(TraceKind::RunStarted, None, json!({}))?;
-        write_json(&run_dir.join("plan.json"), &plan)?;
+        // Minimum lifecycle: plan.json is written exactly once after run_started
+        // and before plan_created. create_new makes a second write fail closed.
+        write_json_new(&run_dir.join("plan.json"), &plan)?;
         trace.append(
             TraceKind::PlanCreated,
             Some(item.plan_item_id.clone()),

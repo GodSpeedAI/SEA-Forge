@@ -55,6 +55,7 @@ fn build(
             path: full.clone(),
             sha256: hash,
             generated: true,
+            ..Default::default()
         });
         outputs.insert(full, content);
     }

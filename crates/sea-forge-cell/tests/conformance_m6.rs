@@ -363,6 +363,391 @@ fn read_manifest_inspects_bundle() {
     assert_eq!(manifest.run_ids.len(), 2);
 }
 
+// ---------------------------------------------------------------------------
+// Task 1 — cell import paths must fail closed (M6 security, spec-full §7.4/§14.8)
+//
+// Hash validity does NOT imply path safety: an archive can pass every sha256
+// check while its manifest names adversarial destinations. These tests build
+// bundles whose per-file hashes/sizes are internally consistent (so integrity
+// verification passes) but whose paths / ids are hostile, then assert the
+// import rejects with `bundle_integrity_error` and mutates nothing outside
+// `<root>/.sea-forge/imported/`.
+// ---------------------------------------------------------------------------
+
+/// Build a tar bundle from a fully attacker-controlled manifest plus matching
+/// entry bytes. Hashes and sizes are computed to be self-consistent so the
+/// integrity pass succeeds and path validation is what must reject. Also
+/// verifies that every entry name in the resulting archive matches its
+/// manifest `files[].path` value verbatim (no `entry.bin` substitution).
+fn build_hash_valid_bundle(
+    schema_version: &str,
+    bundle_id: &str,
+    cell_id: &str,
+    files: &[(&str, &[u8])],
+) -> Vec<u8> {
+    let manifest_files: Vec<serde_json::Value> = files
+        .iter()
+        .map(|(path, data)| {
+            serde_json::json!({
+                "path": path,
+                "sha256": sha256_hex(data),
+                "size": data.len(),
+            })
+        })
+        .collect();
+    let manifest = serde_json::json!({
+        "schema_version": schema_version,
+        "bundle_id": bundle_id,
+        "cell_id": cell_id,
+        "created_at": "2026-07-15T00:00:00Z",
+        "run_ids": [],
+        "templates": [],
+        "files": manifest_files,
+    });
+    let mut buf = Vec::new();
+    {
+        let mut builder = tar::Builder::new(&mut buf);
+        builder.mode(tar::HeaderMode::Deterministic);
+        append_raw(
+            &mut builder,
+            "manifest.json",
+            &serde_json::to_vec_pretty(&manifest).unwrap(),
+        );
+        for (path, data) in files {
+            append_raw(&mut builder, path, data);
+        }
+        builder.finish().unwrap();
+    }
+    // Verify every generated entry name matches its manifest files[].path
+    // verbatim — guards against any silent `entry.bin` substitution that
+    // would make the bundle unimportable and hide the real hostile name.
+    let mut archive = tar::Archive::new(&buf[..]);
+    let mut entry_names: Vec<String> = archive
+        .entries()
+        .expect("read back built archive")
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            let header_name = e.path().ok()?.to_string_lossy().into_owned();
+            // Skip GNU longname extension carrier entries; their header name
+            // is `././@LongLink` and they carry the real name out-of-band.
+            if header_name.starts_with("././@LongLink") {
+                return None;
+            }
+            Some(header_name)
+        })
+        .filter(|name| name != "manifest.json")
+        .collect();
+    entry_names.sort();
+    let mut expected: Vec<String> = files.iter().map(|(p, _)| (*p).to_string()).collect();
+    expected.sort();
+    assert_eq!(
+        entry_names, expected,
+        "built archive entry names must match manifest paths verbatim"
+    );
+    buf
+}
+
+/// Append a tar entry using a raw path, bypassing higher-level sanitizing so a
+/// hostile `path` string is preserved verbatim in the archive. Writes the
+/// path bytes directly into the GNU header name field, bypassing tar-rs's
+/// `set_path`/`append_data` validation (which rejects absolute and `..`
+/// paths) so the manifest and the archive carry the same hostile name and the
+/// import's path-validation is what must reject.
+fn append_raw(builder: &mut tar::Builder<&mut Vec<u8>>, path: &str, data: &[u8]) {
+    let mut hdr = tar::Header::new_gnu();
+    hdr.set_size(data.len() as u64);
+    hdr.set_mode(0o644);
+    let path_bytes = path.as_bytes();
+    // ponytail: the test corpus of hostile paths is ≤100 bytes (the standard
+    // name field). A >100-byte hostile name would need a hand-written GNU
+    // @LongLink entry; add it if a fixture ever requires one.
+    assert!(
+        path_bytes.len() <= 100,
+        "append_raw fixture paths must fit the 100-byte name field: {path:?}"
+    );
+    let gnu = hdr.as_gnu_mut().expect("header is GNU-backed");
+    for (i, b) in path_bytes.iter().enumerate() {
+        gnu.name[i] = *b;
+    }
+    hdr.set_cksum();
+    builder.append(&hdr, data).expect("append raw header");
+}
+
+/// Snapshot every path under `dir` with its bytes, for before/after diffing.
+fn snapshot_tree(dir: &Path) -> std::collections::BTreeMap<String, Vec<u8>> {
+    let mut out = std::collections::BTreeMap::new();
+    fn walk(base: &Path, dir: &Path, out: &mut std::collections::BTreeMap<String, Vec<u8>>) {
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let rel = path
+                .strip_prefix(base)
+                .unwrap()
+                .to_string_lossy()
+                .into_owned();
+            if path.is_dir() {
+                out.insert(format!("{rel}/"), Vec::new());
+                walk(base, &path, out);
+            } else {
+                out.insert(rel, fs::read(&path).unwrap_or_default());
+            }
+        }
+    }
+    walk(dir, dir, &mut out);
+    out
+}
+
+/// Assert an import attempt was rejected and left zero side effects outside the
+/// import staging area: the whole root tree and an outside sentinel are
+/// byte-identical before and after.
+fn assert_rejected_no_side_effects(dst: &Path, sentinel: &Path, bundle: &Path) {
+    let sentinel_before = fs::read(sentinel).unwrap();
+    let tree_before = snapshot_tree(dst);
+
+    let err = cell::import(dst, bundle).expect_err("hostile bundle must be rejected");
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("bundle_integrity_error"),
+        "expected bundle_integrity_error, got: {msg}"
+    );
+
+    let sentinel_after = fs::read(sentinel).unwrap();
+    assert_eq!(
+        sentinel_before, sentinel_after,
+        "outside sentinel must be byte-identical after rejected import"
+    );
+    let tree_after = snapshot_tree(dst);
+    assert_eq!(
+        tree_before, tree_after,
+        "import root tree must be byte-identical after rejected import"
+    );
+}
+
+/// Create an isolated destination root plus an outside sentinel that adversarial
+/// `..` traversal would target if path safety failed.
+///
+/// The import root is a `root/` subdirectory of a fresh tempdir, and the
+/// sentinel lives one level above it (in the tempdir itself). This keeps the
+/// exact `../` escape geometry — the sentinel is in the parent of the import
+/// root — while giving every test its own private sentinel path so parallel
+/// tests cannot race on a shared file in the system temp directory.
+fn dst_with_outside_sentinel() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("root");
+    fs::create_dir_all(&root).unwrap();
+    // The sentinel lives in the parent of the import root; a `../` escape from
+    // `.sea-forge/imported/<cell>/` would climb toward it.
+    let sentinel = dir.path().join("sea_forge_outside_sentinel.txt");
+    fs::write(&sentinel, b"do-not-touch").unwrap();
+    (dir, root, sentinel)
+}
+
+/// Absolute manifest path must be rejected before any write.
+#[test]
+fn traversal_absolute_path_rejected() {
+    let (_dir, root, sentinel) = dst_with_outside_sentinel();
+    let bundle_path = root.join("abs.tar");
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "bundle_deadbeef",
+        "cell_deadbeef",
+        &[("/etc/sea_forge_pwned", b"pwned")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+    assert_rejected_no_side_effects(&root, &sentinel, &bundle_path);
+}
+
+/// `..` traversal in a manifest file path must be rejected.
+#[test]
+fn traversal_parent_escape_path_rejected() {
+    let (_dir, root, sentinel) = dst_with_outside_sentinel();
+    let bundle_path = root.join("dotdot.tar");
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "bundle_deadbeef",
+        "cell_deadbeef",
+        &[("../../../sea_forge_outside_sentinel.txt", b"clobbered")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+    assert_rejected_no_side_effects(&root, &sentinel, &bundle_path);
+}
+
+/// A malicious `bundle_id` (used to name the staging dir) must be rejected.
+#[test]
+fn traversal_malicious_bundle_id_rejected() {
+    let (_dir, root, sentinel) = dst_with_outside_sentinel();
+    let bundle_path = root.join("badbundle.tar");
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "../../../etc/sea_forge_bundle_escape",
+        "cell_deadbeef",
+        &[("runs/run_x/plan.json", b"{}")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+    assert_rejected_no_side_effects(&root, &sentinel, &bundle_path);
+}
+
+/// A malicious `cell_id` (used to name the final import dir) must be rejected.
+#[test]
+fn traversal_malicious_cell_id_rejected() {
+    let (_dir, root, sentinel) = dst_with_outside_sentinel();
+    let bundle_path = root.join("badcell.tar");
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "bundle_deadbeef",
+        "../../../etc/sea_forge_cell_escape",
+        &[("runs/run_x/plan.json", b"{}")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+    assert_rejected_no_side_effects(&root, &sentinel, &bundle_path);
+}
+
+/// Two manifest entries that normalize to the same destination are ambiguous
+/// and must be rejected (no last-writer-wins smuggling).
+#[test]
+fn traversal_duplicate_normalized_paths_rejected() {
+    let (_dir, root, sentinel) = dst_with_outside_sentinel();
+    let bundle_path = root.join("dupe.tar");
+    // `runs/a/f.json` and `runs/a//f.json` and `runs/a/./f.json` all name the
+    // same on-disk file; the ambiguous spellings must be rejected outright.
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "bundle_deadbeef",
+        "cell_deadbeef",
+        &[("runs/a/f.json", b"one"), ("runs/a//f.json", b"two")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+    assert_rejected_no_side_effects(&root, &sentinel, &bundle_path);
+}
+
+/// Symlink-parent escape: a pre-existing symlink under the import area whose
+/// target is outside the root must not let a manifest path write through it.
+#[test]
+fn traversal_symlink_parent_escape_rejected() {
+    let (_dir, root, sentinel) = dst_with_outside_sentinel();
+    // Precreate the imported dir and a symlink that points outside the root.
+    let cell_id = "cell_deadbeef";
+    let imported = root.join(".sea-forge/imported").join(cell_id);
+    fs::create_dir_all(&imported).unwrap();
+    let outside_dir = _dir.path().join("sea_forge_escape_target");
+    fs::create_dir_all(&outside_dir).unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&outside_dir, imported.join("link")).unwrap();
+    #[cfg(not(unix))]
+    return; // symlink escape is a unix-specific vector here
+
+    let bundle_path = root.join("symlink.tar");
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "bundle_deadbeef",
+        cell_id,
+        &[("link/escaped.txt", b"escaped")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+
+    // The import removes the prior final dir (re-import), so the symlink lives
+    // in staging semantics; regardless, no file may be written through it and
+    // the outside target must stay empty.
+    let sentinel_before = fs::read(&sentinel).unwrap();
+    let result = cell::import(&root, &bundle_path);
+    assert!(result.is_err(), "symlink-parent escape must be rejected");
+    assert!(
+        format!("{:?}", result.unwrap_err()).contains("bundle_integrity_error"),
+        "symlink escape must report bundle_integrity_error"
+    );
+    assert!(
+        fs::read_dir(&outside_dir).unwrap().next().is_none(),
+        "no file may be written through an escaping symlink"
+    );
+    assert_eq!(sentinel_before, fs::read(&sentinel).unwrap());
+}
+
+/// The `imported` directory itself must not be a symlink pointing outside
+/// root. If a hostile pre-existing symlink sits at
+/// `<root>/.sea-forge/imported`, the import must fail closed with
+/// `bundle_integrity_error` and write nothing — neither into the symlink's
+/// target nor anywhere else outside the canonical root.
+#[test]
+fn traversal_imported_root_symlink_rejected() {
+    let (dir, root, sentinel) = dst_with_outside_sentinel();
+    let outside_target = dir.path().join("sea_forge_imported_escape_target");
+    fs::create_dir_all(&outside_target).unwrap();
+    // Pre-create `.sea-forge` as a real dir, then plant `imported` as a
+    // symlink whose target is outside the import root.
+    fs::create_dir_all(root.join(".sea-forge")).unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&outside_target, root.join(".sea-forge/imported")).unwrap();
+    #[cfg(not(unix))]
+    return; // symlink escape is a unix-specific vector here
+
+    let bundle_path = root.join("imported_symlink.tar");
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "bundle_deadbeef",
+        "cell_deadbeef",
+        &[("runs/run_x/plan.json", b"{}")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+
+    let sentinel_before = fs::read(&sentinel).unwrap();
+    let outside_before = snapshot_tree(&outside_target);
+    let err =
+        cell::import(&root, &bundle_path).expect_err("imported-root symlink must be rejected");
+    assert!(
+        format!("{err:?}").contains("bundle_integrity_error"),
+        "imported-root symlink must report bundle_integrity_error: {err:?}"
+    );
+    assert_eq!(
+        sentinel_before,
+        fs::read(&sentinel).unwrap(),
+        "outside sentinel must be byte-identical"
+    );
+    assert_eq!(
+        outside_before,
+        snapshot_tree(&outside_target),
+        "nothing may be written through the escaping imported symlink"
+    );
+}
+
+/// Same vector at the `.sea-forge` level: if `.sea-forge` itself is a symlink
+/// to outside the root, the import must reject with `bundle_integrity_error`
+/// before any write reaches the symlink's target.
+#[test]
+fn traversal_sea_forge_root_symlink_rejected() {
+    let (dir, root, sentinel) = dst_with_outside_sentinel();
+    let outside_target = dir.path().join("sea_forge_seaforge_escape_target");
+    fs::create_dir_all(&outside_target).unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&outside_target, root.join(".sea-forge")).unwrap();
+    #[cfg(not(unix))]
+    return;
+
+    let bundle_path = root.join("seaforge_symlink.tar");
+    let bytes = build_hash_valid_bundle(
+        "cell.v1",
+        "bundle_deadbeef",
+        "cell_deadbeef",
+        &[("runs/run_x/plan.json", b"{}")],
+    );
+    fs::write(&bundle_path, &bytes).unwrap();
+
+    let sentinel_before = fs::read(&sentinel).unwrap();
+    let outside_before = snapshot_tree(&outside_target);
+    let err = cell::import(&root, &bundle_path).expect_err(".sea-forge symlink must be rejected");
+    assert!(
+        format!("{err:?}").contains("bundle_integrity_error"),
+        ".sea-forge symlink must report bundle_integrity_error: {err:?}"
+    );
+    assert_eq!(sentinel_before, fs::read(&sentinel).unwrap());
+    assert_eq!(
+        outside_before,
+        snapshot_tree(&outside_target),
+        "nothing may be written through the escaping .sea-forge symlink"
+    );
+}
+
 // Test of template adopt (test 4 from plan).
 fn seed_template(src: &Path, name: &str, version: &str, body: &str) {
     let p = src
