@@ -3,7 +3,7 @@
   "checkpoint_id": "01KY7SYM1M4HWQ34PJQEASJAW0",
   "strategy": "manual-commit",
   "branch": "full-spec",
-  "checkpoints_count": 17,
+  "checkpoints_count": 19,
   "files_touched": [
     ".agents/CURRENT_STATUS.md",
     ".agents/plans/DEV_PLAN_TEMPLATE.md",
@@ -61,7 +61,8 @@
     "crates/sea-forge-spec-pipeline/src/lib.rs",
     "crates/sea-forge-spec-pipeline/tests/conformance_m5.rs",
     "deny.toml",
-    "docs/decisions/ADR-002-audit-remediation-dependencies.md"
+    "docs/decisions/ADR-002-audit-remediation-dependencies.md",
+    "docs/decisions/ADR-003-audit-remediation-contracts.md"
   ],
   "sessions": [
     {
@@ -91,13 +92,20 @@
       "compact_transcript": "/3/transcript.jsonl",
       "content_hash": "/3/content_hash.txt",
       "prompt": "/3/prompt.txt"
+    },
+    {
+      "metadata": "/4/metadata.json",
+      "transcript": "/4/full.jsonl",
+      "compact_transcript": "/4/transcript.jsonl",
+      "content_hash": "/4/content_hash.txt",
+      "prompt": "/4/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 171656,
-    "cache_creation_tokens": 2865092,
-    "cache_read_tokens": 105586550,
-    "output_tokens": 339225,
-    "api_call_count": 437
+    "input_tokens": 199322,
+    "cache_creation_tokens": 3512504,
+    "cache_read_tokens": 133770348,
+    "output_tokens": 427481,
+    "api_call_count": 559
   }
 }

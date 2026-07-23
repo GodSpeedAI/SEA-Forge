@@ -1,0 +1,9 @@
+implement task 0 from .agents/plans/2026-07-22-spec-audit-remediation.md when determining the versions and features don't relay on your training data as it may be stale use context7 or search the internet to ensure you have up to date info
+
+---
+
+continue
+
+---
+
+Check on background gate run b0zlg7rs9 for Task 0 of the spec-audit-remediation plan; if green, record exact test counts in CURRENT_STATUS.md and report Task 0 complete.

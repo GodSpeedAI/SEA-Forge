@@ -1,0 +1,73 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KY7SYM1M4HWQ34PJQEASJAW0",
+  "session_id": "e7bf2227-023d-4a18-93cf-0a9f9217c738",
+  "strategy": "manual-commit",
+  "created_at": "2026-07-23T15:37:06.29021649Z",
+  "branch": "full-spec",
+  "checkpoints_count": 2,
+  "save_step_count": 2,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".gitleaksignore",
+    "crates/sea-forge-ledger/src/types.rs",
+    "crates/sea-forge-ledger/tests/conformance_m0_ledger.rs",
+    "docs/decisions/ADR-002-audit-remediation-dependencies.md",
+    "docs/decisions/ADR-003-audit-remediation-contracts.md"
+  ],
+  "agent": "Claude Code",
+  "model": "",
+  "turn_id": "23e8989d5320",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 27666,
+    "cache_creation_tokens": 647412,
+    "cache_read_tokens": 28183798,
+    "output_tokens": 88256,
+    "api_call_count": 122
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-07-23T15:37:06.070592795Z",
+    "agent_lines": 662,
+    "agent_removed": 4,
+    "human_added": 18494,
+    "human_modified": 30,
+    "human_removed": 0,
+    "total_committed": 19186,
+    "total_lines_changed": 20260,
+    "agent_percentage": 3.2872655478775914,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1355,
+      "user_lines_removed": 536,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".logs/subtask2.log": 1355
+      },
+      "user_removed_per_file": {
+        ".logs/subtask2.log": 536
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1857,
+      "agent_lines_removed": 538
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1857,
+      "agent_lines_removed": 538
+    }
+  ]
+}
