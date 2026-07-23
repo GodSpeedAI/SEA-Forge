@@ -1,0 +1,23 @@
+implement task 7 and 8 from .agents/plans/2026-07-22-spec-audit-remediation.md
+
+---
+
+<task-notification>
+<task-id>bmdx1dn86</task-id>
+<tool-use-id>toolu_01RbPQdZWVF3MCzn118W3eZy</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/19dc7ff0-af8d-4848-b788-78694f405a92/tasks/bmdx1dn86.output</output-file>
+<status>completed</status>
+<summary>Background command "cargo test --workspace --all-features --locked 2&gt;&amp;1 | tail -150" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+Check on the background workspace test run for Task 7/8 (sea-rs recall/memory work) and report results.
+
+---
+
+fix the pre-exisiting fails you found
+
+---
+
+continue
