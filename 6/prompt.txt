@@ -1,0 +1,1 @@
+i began implementing task 4 from .agents/plans/2026-07-22-spec-audit-remediation.md, review what i've done already then complete the implementation
