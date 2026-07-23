@@ -7,7 +7,10 @@
 
 #![forbid(unsafe_code)]
 
-use domainforge_core::application::{resolve_application_graph, ApplicationDiagnostic};
+use domainforge_core::application::envelope::{CanonicalImportEdge, CanonicalModuleRef};
+use domainforge_core::application::{
+    resolve_application_graph, resolve_semantic_envelope, ApplicationDiagnostic,
+};
 use domainforge_core::parser::parse_source;
 use domainforge_core::policy::Severity;
 use sea_forge_core::errors::ForgeError;
@@ -15,7 +18,7 @@ use sea_forge_core::types::ProjectionKind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 /// A source file in a `SeaSourceSet`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -195,8 +198,10 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
         )));
     }
 
-    // ── Resolve imports and build the graph in one pass via the pinned
-    // library's in-memory source-map API ──
+    // ── Resolve imports and enforce the canonical closure depth before graph
+    // construction. The semantic envelope exposes DomainForge's own resolved
+    // import graph, so SEA Forge neither reimplements namespace/relative/std
+    // resolution nor trusts an authored import spelling. ──
     let sources: BTreeMap<String, String> = source_set
         .files
         .iter()
@@ -204,6 +209,17 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
         .collect();
     let sources_json =
         serde_json::to_string(&sources).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+    let envelope = resolve_semantic_envelope(&source_set.entry_uri, &sources_json)
+        .map_err(|diags| domain_model_error(format_diagnostics(&diags)))?;
+    let import_depth =
+        max_import_depth(&envelope.envelope.modules, &envelope.envelope.import_graph)?;
+    if import_depth > MAX_IMPORT_DEPTH {
+        return Err(domain_model_error(format!(
+            "import depth {import_depth} exceeds limit {MAX_IMPORT_DEPTH}"
+        )));
+    }
+
+    // The existing graph adapter remains the DomainModel source of truth.
     let graph = resolve_application_graph(&source_set.entry_uri, &sources_json)
         .map_err(|diags| domain_model_error(format_diagnostics(&diags)))?;
 
@@ -291,7 +307,69 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
 }
 
 fn domain_model_error(message: String) -> ForgeError {
-    ForgeError::Internal(format!("domain_model_error: {message}"))
+    ForgeError::Plan {
+        class: "domain_model_error",
+        message,
+    }
+}
+
+/// Return the longest resolved import path from the unique closure root,
+/// measured in edges. DomainForge emits only entry-reachable modules after it
+/// has normalized relative paths and rejected cycles, so the sole module with
+/// no inbound edge is the canonical entry even when the caller supplied an
+/// alternate spelling such as `./entry.sea`.
+fn max_import_depth(
+    modules: &[CanonicalModuleRef],
+    edges: &[CanonicalImportEdge],
+) -> Result<usize, ForgeError> {
+    let mut children: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut imported = BTreeSet::new();
+    for edge in edges {
+        children
+            .entry(edge.importer.clone())
+            .or_default()
+            .push(edge.imported.clone());
+        imported.insert(edge.imported.as_str());
+    }
+    let roots: Vec<&str> = modules
+        .iter()
+        .map(|module| module.logical_id.as_str())
+        .filter(|module| !imported.contains(module))
+        .collect();
+    let [entry] = roots.as_slice() else {
+        return Err(domain_model_error(format!(
+            "resolved import graph must have one root, found {}",
+            roots.len()
+        )));
+    };
+
+    fn visit(
+        module: &str,
+        children: &BTreeMap<String, Vec<String>>,
+        depths: &mut BTreeMap<String, usize>,
+        visiting: &mut BTreeSet<String>,
+    ) -> Result<usize, ForgeError> {
+        if let Some(depth) = depths.get(module) {
+            return Ok(*depth);
+        }
+        if !visiting.insert(module.to_owned()) {
+            return Err(domain_model_error(format!(
+                "resolved import graph contains cycle at {module}"
+            )));
+        }
+
+        let mut depth = 0;
+        if let Some(imports) = children.get(module) {
+            for imported in imports {
+                depth = depth.max(visit(imported, children, depths, visiting)? + 1);
+            }
+        }
+        visiting.remove(module);
+        depths.insert(module.to_owned(), depth);
+        Ok(depth)
+    }
+
+    visit(entry, &children, &mut BTreeMap::new(), &mut BTreeSet::new())
 }
 
 /// Recursively count every AST node in a parsed module: each top-level

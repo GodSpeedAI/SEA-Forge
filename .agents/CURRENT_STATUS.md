@@ -5,10 +5,20 @@ Updated: 2026-07-23
 > **2026-07-23 review remediation landed** (commit 47608a0): addressed 30/32
 > full-spec review findings across `sea-forge-cell`, `sea-forge-case-runner`,
 > `sea-forge-agent`, `sea-forge-capability`, `sea-forge-domainforge`, and the
-> frontend spec/ADR/CURRENT_STATUS docs. Two deferred with reasons (#6
-> ForgeError classification conflicts with a conformance gate; #16
-> MAX_IMPORT_DEPTH needs upstream domainforge-core support). fmt + clippy
-> `-D warnings` + `test --workspace --all-features --locked` all green.
+> frontend spec/ADR/CURRENT_STATUS docs. **Follow-up resolution:** review
+> findings #6 and #16 are now implemented on branch
+> `fix/domain-model-validation`: `load_validate` reports the documented
+> `ForgeError::Plan { class: "domain_model_error" }`, post-start
+> `ForgeError::Run` failures retain their existing `internal_error` trace
+> class, and `MAX_IMPORT_DEPTH=16` is enforced
+> from DomainForge's existing public canonical semantic-envelope import
+> graph (no DomainForge API or release change). The depth traversal derives
+> the unique zero-inbound canonical closure root, so normalized entry spellings
+> such as `./entry.sea` cannot bypass the limit. `devbox run -- just
+> context-check`, `check`, and `test` are green; the two configured real-host
+> release tests remain intentionally ignored. fmt + clippy `-D warnings` +
+> `test --workspace --all-features --locked` were green for the original
+> 30/32 remediation.
 > **Gitleaks fix:** added `.gitleaks.toml` (path allowlist for `.entire/`
 > and numbered checkpoint transcript dirs) + inline `// gitleaks:allow`
 > on test-fixture lines to stop false-positive regeneration under new
