@@ -1,0 +1,22 @@
+# Gitleaks configuration for SEA Forge.
+#
+# Extends the default gitleaks ruleset. The only addition is a path
+# allowlist for `.entire/metadata/` — these are rebuildable session
+# artifacts (gitignored, not tracked) that exist only in prior git
+# history and contain simulated/fake tokens used to exercise the
+# redaction pipeline. They are not real credentials and are documented
+# as benign in `.agents/CURRENT_STATUS.md`. Source-tree test fixtures
+# carry inline `// gitleaks:allow` comments instead.
+title = "SEA Forge"
+
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''\.entire/metadata/.*''',
+  # Entire CLI checkpoint transcript artifacts at the repo root (numbered
+  # session dirs). Gitignored now but remain in prior history; contain
+  # simulated/fake tokens from redaction-pipeline test sessions.
+  '''^[0-9]+/(full|transcript)\.jsonl$''',
+]
