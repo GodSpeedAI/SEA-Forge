@@ -1,0 +1,61 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KY7SYM1M4HWQ34PJQEASJAW0",
+  "strategy": "manual-commit",
+  "branch": "full-spec",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".agents/plans/DEV_PLAN_TEMPLATE.md",
+    ".agents/specs/DESIGN-spec-mapping.md",
+    ".agents/specs/DESIGN.md",
+    ".gitleaksignore",
+    ".serena/project.yml",
+    "Cargo.lock",
+    "crates/sea-forge-agent/Cargo.toml",
+    "crates/sea-forge-agent/src/delegation.rs",
+    "crates/sea-forge-agent/src/lib.rs",
+    "crates/sea-forge-authority/src/lib.rs",
+    "crates/sea-forge-authority/tests/conformance_m0_authority.rs",
+    "crates/sea-forge-capability/src/memory.rs",
+    "crates/sea-forge-capability/tests/conformance_m4b.rs",
+    "crates/sea-forge-cell/Cargo.toml",
+    "crates/sea-forge-cell/src/bundle.rs",
+    "crates/sea-forge-cell/tests/conformance_m6.rs",
+    "crates/sea-forge-cli/src/commands/validate.rs",
+    "crates/sea-forge-cli/src/main.rs",
+    "crates/sea-forge-cli/src/pipeline.rs",
+    "crates/sea-forge-cli/tests/lifecycle.rs",
+    "crates/sea-forge-domainforge/Cargo.toml",
+    "crates/sea-forge-domainforge/src/lib.rs",
+    "crates/sea-forge-domainforge/tests/conformance_m0_domainforge.rs",
+    "crates/sea-forge-ledger/src/lib.rs",
+    "crates/sea-forge-ledger/src/types.rs",
+    "crates/sea-forge-ledger/tests/conformance_m0_ledger.rs",
+    "crates/sea-forge-planner/src/lib.rs",
+    "crates/sea-forge-runtime/src/lib.rs",
+    "crates/sea-forge-sandbox/Cargo.toml",
+    "crates/sea-forge-sandbox/src/jail.rs",
+    "crates/sea-forge-sandbox/src/lib.rs",
+    "crates/sea-forge-sandbox/tests/conformance_m1.rs",
+    "crates/sea-forge-server/src/delegation.rs",
+    "crates/sea-forge-server/tests/conformance_m16.rs",
+    "deny.toml"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 25520,
+    "cache_creation_tokens": 151145,
+    "cache_read_tokens": 6294788,
+    "output_tokens": 29015,
+    "api_call_count": 49
+  }
+}
