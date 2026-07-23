@@ -1,13 +1,12 @@
-use sea_forge_core::{errors::ForgeError, types::AuthorityAction};
+use sea_forge_core::errors::ForgeError;
 use std::{fs, path::Path};
-pub fn execute(path: &Path, root: &Path, policy: Option<&Path>) -> Result<u8, ForgeError> {
-    let action = AuthorityAction::Reserved {
-        resource_type: "validate_model".into(),
-        resource_id: path.to_string_lossy().into_owned(),
-        parameters: serde_json::json!({}),
-    };
-    let policy = policy.ok_or_else(|| ForgeError::Input("validate requires --policy".into()))?;
-    super::mediated::authorize_read(root, policy, "operator_local", &action)?;
+
+/// Config-free shape validator for the stub `.sea` contract (minimum §11.1).
+///
+/// Reads the file, checks domain/entities shape, prints exact success/failure
+/// lines, and exits 0/1. Creates no state under `.sea-forge` and requires no
+/// policy or root.
+pub fn execute(path: &Path) -> Result<u8, ForgeError> {
     match fs::read(path)
         .map_err(|e| e.to_string())
         .and_then(|bytes| {
@@ -25,6 +24,33 @@ pub fn execute(path: &Path, root: &Path, policy: Option<&Path>) -> Result<u8, Fo
         }
     }
 }
+
+/// Config-free M5 stage acceptance gate (spec-audit-remediation Task 10B):
+/// reads `path`, verifies its SHA-256 equals `expected_sha256`, and exits
+/// 0/1. Creates no `.sea-forge` state, requires no policy or root — the
+/// same minimum-kernel shape as `execute` above.
+pub fn execute_stage_check(path: &Path, expected_sha256: &str) -> Result<u8, ForgeError> {
+    match fs::read(path) {
+        Ok(bytes) => {
+            let actual = sea_forge_evidence::sha256_bytes(&bytes);
+            let expected = expected_sha256
+                .strip_prefix("sha256:")
+                .unwrap_or(expected_sha256);
+            if actual == expected {
+                println!("sea-forge: stage valid");
+                Ok(0)
+            } else {
+                eprintln!("sea-forge: stage invalid: sha256 mismatch");
+                Ok(1)
+            }
+        }
+        Err(error) => {
+            eprintln!("sea-forge: stage invalid: {error}");
+            Ok(1)
+        }
+    }
+}
+
 fn validate(value: serde_json::Value) -> Result<(), String> {
     let domain = value
         .get("domain")

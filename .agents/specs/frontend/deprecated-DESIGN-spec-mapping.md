@@ -24,7 +24,7 @@ authority-checked operation that leaves evidence — nothing else is clickable.
 | Trace | trace.jsonl / ledger entries; `sea-forge watch` | ✅ |
 | Capability | `CapabilityRecord` (§7.3) | ⚠️ design had no ladder; `attempted<demonstrated<proven<metabolized`, confidence, coverage, recovery, contraction reasons — added ✎ |
 | Actor / Resource / Action | `CanonicalActionRequest` fields | ✅ |
-| Notification | server events: `awaiting_approval`, `run_finished`, `run_failed` (§10.3) | ⚠️ design bans mechanic notifications — map `run_finished` → "Settlement declared", `run_failed` → "Settlement rejected" |
+| Notification | server events: `awaiting_approval`, `run_finished`, `run_failed` (§10.3) | ⚠️ `run_finished`/`run_failed` are **run-termination** notifications only; they MUST NOT be mapped to settlement outcomes. Settlement stays `pending`/`evaluating` until its own immutable criteria and evidence are assessed, independent of execution termination (§1) |
 | Decision / choice architecture (3 options) | **No backing.** SEA Forge never ranks affordances | ❌ owner is GodSpeed-Agent (routing) — external feed, noted ✎ |
 | Payment pill | **Non-goal** §2.4: "CognitiveOS owns pricing and path valuation"; SEA Forge MAY record observed cost/burden evidence only | ❌ external feed or fall back to `orchestration_burden` — noted ✎ |
 | Affordance / Situation | Not spec entities. Nearest: enabled/available PlanItems (affordance-ish), case state + sentry status (situation-ish) | ⚠️ mapped in nav note ✎ |
@@ -68,7 +68,7 @@ authority-checked operation that leaves evidence — nothing else is clickable.
 | Case Detail | case.json, case-events.jsonl, stage/plan-item tree with sentry satisfaction, milestones, discretionary add-task |
 | Settlement Queue | pending approvals + enabled human tasks + awaiting_approval cases — the actual "decisions pending" set |
 | Settlement Detail | SettlementEvent + declarations, criteria (declared-before-execution timestamp!), evidence manifest, strength |
-| Approvals & Tasks | approvals.jsonl (TTL countdown), `approve|reject`, `task complete` |
+| Approvals & Tasks | approvals.jsonl (TTL countdown), `approve|reject`,`task complete` |
 | Evidence | per-run evidence + quarantine browsers |
 | Capabilities | capability list/show, ladder, confidence, variation coverage, `require_proven` denials |
 | Policies | policy bundle snapshots (hash-addressed), surfaces, SoD rules, opaque constraints |

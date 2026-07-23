@@ -25,6 +25,8 @@ sea-forge-cell = { path = "../sea-forge-cell", version = "0.1.0" }
 sea-forge-artifact-ip = { path = "../sea-forge-artifact-ip", version = "0.1.0" }
 sea-forge-self-model = { path = "../sea-forge-self-model", version = "0.1.0" }
 sea-forge-thoth = { path = "../sea-forge-thoth", version = "0.1.0" }
+sea-forge-domainforge = { path = "../sea-forge-domainforge", version = "0.1.0" }
+sea-forge-spec-pipeline = { path = "../sea-forge-spec-pipeline", version = "0.1.0" }
 chrono.workspace = true
 serde.workspace = true
 tracing.workspace = true
@@ -35,8 +37,6 @@ serde_yaml.workspace = true
 [dev-dependencies]
 serde_json.workspace = true
 tempfile.workspace = true
-sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.1.0" }
-sea-forge-domainforge = { path = "../sea-forge-domainforge", version = "0.1.0" }
 
 [[bin]]
 name = "sea-forge"

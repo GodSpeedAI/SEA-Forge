@@ -383,8 +383,11 @@ fn witness_receipt_canonical_bytes(receipt: &WitnessReceipt) -> Result<Vec<u8>, 
     canonical_json(&value)
 }
 
-const SECRET_SENTINELS: &[&str] = &[
-    "-----begin private key-----",
+/// Plaintext secret sentinels rejected by the ledger redaction policy
+/// (spec-full §7.0c). Exposed so the transcript redactor in `sea-forge-agent`
+/// redacts against the exact same corpus rather than a divergent copy.
+pub const SECRET_SENTINELS: &[&str] = &[
+    "-----begin private key-----", // gitleaks:allow
     "-----begin rsa private key-----",
     "-----begin ec private key-----",
     "-----begin openssh private key-----",

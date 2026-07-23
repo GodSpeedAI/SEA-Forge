@@ -13,9 +13,14 @@ sea-forge-planner = { path = "../sea-forge-planner", version = "0.1.0" }
 sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
 sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
+sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.1.0" }
+sea-forge-spec-pipeline = { path = "../sea-forge-spec-pipeline", version = "0.1.0" }
 chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

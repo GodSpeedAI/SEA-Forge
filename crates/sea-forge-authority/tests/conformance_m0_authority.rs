@@ -465,3 +465,169 @@ fn domainforge_authority_is_model_semantic() {
         sea_forge_domainforge::CandidateDisposition::Deny
     );
 }
+
+// ── Task 6: memory_scope authority binding (M4b) ──
+
+fn recall_action(entity_id: &str, requester_entity: &str) -> AuthorityAction {
+    AuthorityAction::Reserved {
+        resource_type: "recall_memory".into(),
+        resource_id: "memory".into(),
+        parameters: serde_json::json!({
+            "entity_id": entity_id,
+            "requester_entity": requester_entity,
+            "kinds": ["fact"],
+            "limit": 10
+        }),
+    }
+}
+
+fn recall_bundle(memory_scope: &str) -> AuthorityPolicyBundle {
+    serde_yaml::from_str(&format!(
+        r#"version: "0.1"
+rules:
+  - name: recall-scoped
+    verdict: allow
+    actor_role: operator
+    operation_kind: recall_memory
+    memory_scope: {memory_scope}
+"#
+    ))
+    .unwrap()
+}
+
+fn evaluate_recall(
+    bundle: AuthorityPolicyBundle,
+    action: &AuthorityAction,
+) -> sea_forge_core::types::AuthorityDecision {
+    let binding = bundle.resolve_identity("operator_local", ActorRole::Operator);
+    let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+    let actor = Actor {
+        actor_id: "operator_local".into(),
+        role: ActorRole::Operator,
+    };
+    engine
+        .evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding,
+            run_id: "run_recall",
+            case_id: "case_recall",
+            plan_item_id: "item_recall",
+            sequence: 1,
+            action,
+            workspace_root: Path::new("/tmp/workspace"),
+            evidence_refs: vec!["intent:recall".into()],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            environment: None,
+        })
+        .unwrap()
+}
+
+#[test]
+fn memory_scope_own_allows_same_entity() {
+    let decision = evaluate_recall(recall_bundle("own"), &recall_action("entity_a", "entity_a"));
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Allow);
+}
+
+#[test]
+fn memory_scope_own_denies_cross_entity() {
+    let decision = evaluate_recall(recall_bundle("own"), &recall_action("entity_b", "entity_a"));
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Deny);
+}
+
+#[test]
+fn memory_scope_entity_allows_named_entity() {
+    let decision = evaluate_recall(
+        recall_bundle("entity:entity_b"),
+        &recall_action("entity_b", "entity_a"),
+    );
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Allow);
+}
+
+#[test]
+fn memory_scope_entity_denies_other_entity() {
+    let decision = evaluate_recall(
+        recall_bundle("entity:entity_b"),
+        &recall_action("entity_c", "entity_a"),
+    );
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Deny);
+}
+
+#[test]
+fn memory_scope_any_allows_all() {
+    let decision = evaluate_recall(recall_bundle("any"), &recall_action("entity_z", "entity_a"));
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Allow);
+}
+
+#[test]
+fn memory_scope_missing_denies() {
+    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+rules:
+  - name: recall-no-scope
+    verdict: allow
+    actor_role: operator
+    operation_kind: recall_memory
+"#,
+    )
+    .unwrap();
+    let decision = evaluate_recall(bundle, &recall_action("entity_a", "entity_a"));
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Deny);
+}
+
+#[test]
+fn memory_scope_hash_changes_with_target() {
+    let bundle = recall_bundle("own");
+    let d1 = evaluate_recall(bundle.clone(), &recall_action("entity_a", "entity_a"));
+    let d2 = evaluate_recall(bundle, &recall_action("entity_b", "entity_a"));
+    assert_ne!(
+        d1.determinism.action_request_hash, d2.determinism.action_request_hash,
+        "action hash must change when target entity changes"
+    );
+}
+
+#[test]
+fn memory_scope_grant_carries_boundary() {
+    let bundle = recall_bundle("entity:entity_a");
+    let binding = bundle.resolve_identity("operator_local", ActorRole::Operator);
+    let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+    let action = recall_action("entity_a", "entity_a");
+    let actor = Actor {
+        actor_id: "operator_local".into(),
+        role: ActorRole::Operator,
+    };
+    let decision = engine
+        .evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding,
+            run_id: "run_recall",
+            case_id: "case_recall",
+            plan_item_id: "item_recall",
+            sequence: 1,
+            action: &action,
+            workspace_root: Path::new("/tmp/workspace"),
+            evidence_refs: vec!["intent:recall".into()],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            environment: None,
+        })
+        .unwrap();
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Allow);
+
+    let root = tempfile::tempdir().unwrap();
+    let stream =
+        sea_forge_ledger::LedgerStream::open(root.path(), "recall-authority", "test").unwrap();
+    let committed = stream
+        .commit_typed("authority_decision", vec![], &decision, vec![])
+        .unwrap();
+    let grant = engine.grant(&decision, &committed, &action, None).unwrap();
+    assert_eq!(
+        grant.memory_scope(),
+        Some("entity:entity_a"),
+        "grant must carry the matched memory_scope boundary"
+    );
+}

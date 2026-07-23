@@ -9,6 +9,7 @@ use crate::provider::{
     AgentError, AgentMessage, AgentProvider, CompletionRequest, CompletionResponse, MessageRole,
 };
 use sea_forge_core::types::{DelegationTermination, TranscriptSummary};
+use sea_forge_ledger::{canonical_json, SECRET_SENTINELS};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
@@ -86,36 +87,126 @@ fn usage_tokens(resp: &CompletionResponse) -> u64 {
         })
 }
 
-/// Redact credential value and sentinel patterns from a string before hashing.
-/// The credential is never expected in transcript content (it's in auth headers),
-/// but the spec requires defense-in-depth redaction before canonicalization.
-fn redact(text: &str, credential: &str) -> String {
-    let mut result = text.to_owned();
-    if !credential.is_empty() {
-        result = result.replace(credential, "[REDACTED]");
+/// Case-insensitively redact every occurrence of `needle` in `haystack`,
+/// preserving surrounding text. Empty needles are ignored. Used for the
+/// sentinel corpus, which must match regardless of casing in transcript text.
+fn replace_ci(haystack: &str, needle: &str, replacement: &str) -> String {
+    if needle.is_empty() {
+        return haystack.to_owned();
     }
-    // Redact common bearer-token patterns.
-    result = result.replace("Bearer ", "");
+    // ponytail: ASCII-only lowercasing preserves byte-for-byte offsets. The
+    // redaction corpus (SECRET_SENTINELS + "Bearer ") is ASCII; full Unicode
+    // case folding can change byte length (e.g. 'İ' → "i̇") and shift the
+    // match offsets used to slice the original haystack.
+    let lower_hay = haystack.to_ascii_lowercase();
+    let lower_needle = needle.to_ascii_lowercase();
+    debug_assert_eq!(lower_hay.len(), haystack.len());
+    debug_assert_eq!(lower_needle.len(), needle.len());
+    let mut result = String::with_capacity(haystack.len());
+    let mut cursor = 0usize;
+    while let Some(rel) = lower_hay[cursor..].find(&lower_needle) {
+        let start = cursor + rel;
+        let end = start + needle.len();
+        result.push_str(&haystack[cursor..start]);
+        result.push_str(replacement);
+        cursor = end;
+    }
+    result.push_str(&haystack[cursor..]);
     result
 }
 
-/// Canonicalize transcript entries into deterministic JSONL (sorted keys, one
-/// entry per line). serde_json default (no preserve_order) uses BTreeMap so
-/// keys are already sorted.
-fn canonical_jsonl(entries: &[TranscriptEntry]) -> String {
-    entries
-        .iter()
-        .filter_map(|e| serde_json::to_string(e).ok())
-        .collect::<Vec<_>>()
-        .join("\n")
+/// Redact a single string against the shared secret corpus: caller-supplied
+/// known secrets (the exact credential value plus any others) and the
+/// ledger's [`SECRET_SENTINELS`] plaintext sentinel list. This is the ONE
+/// redaction routine; HTTP and ACP transcripts both flow through it so the
+/// exact same corpus is applied before any canonicalization or hashing.
+///
+/// Sentinel matching is case-insensitive (the ledger's `check_redaction`
+/// lowercases before scanning); known-secret matching is exact so it catches
+/// high-entropy tokens verbatim.
+fn redact_str(text: &str, known_secrets: &[&str]) -> String {
+    let mut result = text.to_owned();
+    for secret in known_secrets {
+        if !secret.is_empty() {
+            result = result.replace(secret, "[REDACTED]");
+        }
+    }
+    // Redact common bearer-token prefix (defense in depth against leaked
+    // Authorization headers echoed into transcript content).
+    result = replace_ci(&result, "Bearer ", "");
+    for sentinel in SECRET_SENTINELS {
+        result = replace_ci(&result, sentinel, "[REDACTED]");
+    }
+    result
 }
 
-/// Compute the canonical SHA-256 over redacted transcript entries.
+/// A redacted transcript together with the exact canonical bytes used for
+/// hashing and storage. The digest is computed from `canonical_bytes`, so any
+/// consumer that persists `canonical_bytes` and re-hashes them reproduces
+/// `sha256` bit-for-bit — no second serialization path can diverge.
+#[derive(Clone, Debug)]
+pub struct RedactedTranscript {
+    /// Redacted transcript entries (secrets and sentinels replaced).
+    pub entries: Vec<TranscriptEntry>,
+    /// Canonical JSONL bytes: one [`canonical_json`]-canonicalized entry per
+    /// line, `\n`-separated, no trailing newline. These are the exact bytes
+    /// the digest commits to and the exact bytes callers must persist.
+    pub canonical_bytes: Vec<u8>,
+    /// `sha256:<hex>` over `canonical_bytes`.
+    pub sha256: String,
+}
+
+/// Canonicalize one redacted entry into JCS-NFC bytes via the shared ledger
+/// canonicalizer. Falls back to compact serde bytes only if the value cannot
+/// be produced (unreachable for a `{role, content}` struct).
+fn canonical_entry_bytes(entry: &TranscriptEntry) -> Vec<u8> {
+    match serde_json::to_value(entry).and_then(|v| {
+        canonical_json(&v).map_err(|e| serde_json::Error::io(std::io::Error::other(e.to_string())))
+    }) {
+        Ok(bytes) => bytes,
+        Err(_) => serde_json::to_vec(entry).unwrap_or_default(),
+    }
+}
+
+/// THE transcript producer: redact `entries` against `known_secrets` + the
+/// shared sentinel corpus, canonicalize with the repository's canonical-JSON
+/// rules, and hash the exact canonical bytes.
+///
+/// Every path that hashes, summarizes, stores, or verifies a transcript MUST
+/// route through this function (HTTP and ACP alike) so redaction always
+/// precedes canonicalization and no divergent serialization exists.
+pub fn produce_transcript(
+    entries: &[TranscriptEntry],
+    known_secrets: &[&str],
+) -> RedactedTranscript {
+    let redacted: Vec<TranscriptEntry> = entries
+        .iter()
+        .map(|e| TranscriptEntry {
+            role: e.role.clone(),
+            content: redact_str(&e.content, known_secrets),
+        })
+        .collect();
+    let mut canonical_bytes = Vec::new();
+    for (idx, entry) in redacted.iter().enumerate() {
+        if idx > 0 {
+            canonical_bytes.push(b'\n');
+        }
+        canonical_bytes.extend_from_slice(&canonical_entry_bytes(entry));
+    }
+    let hash = Sha256::digest(&canonical_bytes);
+    RedactedTranscript {
+        entries: redacted,
+        canonical_bytes,
+        sha256: format!("sha256:{hash:x}"),
+    }
+}
+
+/// Compute the canonical SHA-256 over already-redacted transcript entries.
 /// Exported so callers can verify an artifact against a recorded digest.
+/// Passes no additional known secrets — entries are assumed pre-redacted;
+/// the sentinel corpus is still applied idempotently.
 pub fn transcript_sha256(entries: &[TranscriptEntry]) -> String {
-    let canonical = canonical_jsonl(entries);
-    let hash = Sha256::digest(canonical.as_bytes());
-    format!("sha256:{hash:x}")
+    produce_transcript(entries, &[]).sha256
 }
 
 fn build_summary(entries: &[TranscriptEntry], turns_used: u32) -> TranscriptSummary {
@@ -125,11 +216,16 @@ fn build_summary(entries: &[TranscriptEntry], turns_used: u32) -> TranscriptSumm
         .rev()
         .find(|e| e.role == "assistant")
         .map(|e| {
-            // ponytail: 200-char bound on the excerpt.
+            // ponytail: 200-byte bound on the excerpt, respecting UTF-8 char
+            // boundaries so redacted multi-byte content never panics.
             if e.content.len() <= 200 {
                 e.content.clone()
             } else {
-                format!("{}...", &e.content[..200])
+                let mut end = 200;
+                while !e.content.is_char_boundary(end) {
+                    end -= 1;
+                }
+                format!("{}...", &e.content[..end])
             }
         })
         .unwrap_or_default();
@@ -188,16 +284,22 @@ pub async fn run_delegation(
 
         match provider.complete(request, credential.clone()).await {
             Ok(resp) => {
+                // Attribute the user turn to the most recent user message in
+                // the request, not `messages.last()` — on a multi-turn
+                // continuation the last entry is the prior assistant message.
+                let user_content = messages
+                    .iter()
+                    .rev()
+                    .find(|m| m.role == MessageRole::User)
+                    .map(|m| m.content.clone())
+                    .unwrap_or_default();
                 transcript.push(TranscriptEntry {
                     role: "user".into(),
-                    content: redact(
-                        messages.last().map(|m| m.content.as_str()).unwrap_or(""),
-                        &credential,
-                    ),
+                    content: user_content,
                 });
                 transcript.push(TranscriptEntry {
                     role: "assistant".into(),
-                    content: redact(&resp.message.content, &credential),
+                    content: resp.message.content.clone(),
                 });
 
                 turns += 1;
@@ -295,31 +397,19 @@ fn terminate(
     credential: &Zeroizing<String>,
     error_subcode: Option<String>,
 ) -> DelegationOutcome {
-    let entries = finalize_transcript(transcript, credential);
-    let sha = transcript_sha256(&entries);
-    let summary = build_summary(&entries, turns_used);
+    // Single choke point: redact against the credential + shared sentinel
+    // corpus and hash the exact canonical bytes.
+    let produced = produce_transcript(transcript, &[credential.as_str()]);
+    let summary = build_summary(&produced.entries, turns_used);
     DelegationOutcome {
         termination,
         turns_used,
         final_output,
-        transcript_sha256: sha,
+        transcript_sha256: produced.sha256,
         summary,
-        transcript: entries,
+        transcript: produced.entries,
         error_subcode,
     }
-}
-
-fn finalize_transcript(
-    transcript: &[TranscriptEntry],
-    credential: &Zeroizing<String>,
-) -> Vec<TranscriptEntry> {
-    transcript
-        .iter()
-        .map(|e| TranscriptEntry {
-            role: e.role.clone(),
-            content: redact(&e.content, credential),
-        })
-        .collect()
 }
 
 fn error_subcode(e: &AgentError) -> String {
@@ -604,7 +694,7 @@ mod tests {
     }
 
     #[test]
-    fn canonical_jsonl_is_deterministic() {
+    fn produce_transcript_is_deterministic() {
         let entries = vec![
             TranscriptEntry {
                 role: "user".into(),
@@ -615,10 +705,199 @@ mod tests {
                 content: "world".into(),
             },
         ];
-        let a = canonical_jsonl(&entries);
-        let b = canonical_jsonl(&entries);
-        assert_eq!(a, b);
-        assert!(a.contains("\n"));
+        let a = produce_transcript(&entries, &[]);
+        let b = produce_transcript(&entries, &[]);
+        assert_eq!(a.canonical_bytes, b.canonical_bytes);
+        assert_eq!(a.sha256, b.sha256);
+        assert!(a.canonical_bytes.contains(&b'\n'));
+    }
+
+    /// The digest MUST be computed from the exact returned canonical bytes:
+    /// re-hashing `canonical_bytes` reproduces `sha256` bit-for-bit, so a
+    /// consumer that stores those bytes and re-verifies cannot diverge.
+    #[test]
+    fn produce_transcript_digest_matches_returned_bytes() {
+        let entries = vec![TranscriptEntry {
+            role: "assistant".into(),
+            content: "some content".into(),
+        }];
+        let produced = produce_transcript(&entries, &[]);
+        let rehash = format!("sha256:{:x}", Sha256::digest(&produced.canonical_bytes));
+        assert_eq!(produced.sha256, rehash);
+    }
+
+    /// Every ledger sentinel value must be redacted out of transcript content,
+    /// case-insensitively (private-key headers, password/token markers, etc.).
+    #[test]
+    fn sentinels_are_redacted() {
+        for sentinel in SECRET_SENTINELS {
+            let leaked = format!("prefix {sentinel} suffix");
+            let entries = vec![TranscriptEntry {
+                role: "assistant".into(),
+                content: leaked.clone(),
+            }];
+            let produced = produce_transcript(&entries, &[]);
+            let out = &produced.entries[0].content;
+            assert!(
+                !out.to_lowercase().contains(&sentinel.to_lowercase()),
+                "sentinel `{sentinel}` leaked: {out}"
+            );
+            // And it must be absent from the canonical bytes that get hashed.
+            let bytes_lower = String::from_utf8_lossy(&produced.canonical_bytes).to_lowercase();
+            assert!(
+                !bytes_lower.contains(&sentinel.to_lowercase()),
+                "sentinel `{sentinel}` present in hashed bytes"
+            );
+        }
+    }
+
+    /// Case-insensitive sentinel matching: an uppercased sentinel still redacts.
+    #[test]
+    fn sentinel_redaction_is_case_insensitive() {
+        let entries = vec![TranscriptEntry {
+            role: "assistant".into(),
+            content: "here is my PASSWORD=hunter2 and API_KEY=abc".into(),
+        }];
+        let produced = produce_transcript(&entries, &[]);
+        let out = produced.entries[0].content.to_lowercase();
+        assert!(!out.contains("password"), "PASSWORD not redacted: {out}");
+        assert!(!out.contains("api_key"), "API_KEY not redacted: {out}");
+    }
+
+    /// A caller-supplied high-entropy token (e.g. a bearer credential) is
+    /// redacted verbatim even though it is not in the sentinel corpus.
+    #[test]
+    fn known_secret_token_is_redacted() {
+        let token = "sk-live-8f3a2b1c9d7e6f5a4b3c2d1e0f9a8b7c";
+        let entries = vec![TranscriptEntry {
+            role: "assistant".into(),
+            content: format!("the token is {token} okay"),
+        }];
+        let produced = produce_transcript(&entries, &[token]);
+        assert!(
+            !produced.entries[0].content.contains(token),
+            "known secret leaked: {}",
+            produced.entries[0].content
+        );
+    }
+
+    /// Unrelated content that merely resembles a secret must NOT be
+    /// over-redacted: benign words that do not match any sentinel survive.
+    #[test]
+    fn unrelated_secrets_are_not_over_redacted() {
+        let benign = "The passwordless flow uses a keychain and secretary notes.";
+        // "passwordless" contains "password" as a substring — the ledger's own
+        // policy treats that as a hit, so we only assert that clearly-unrelated
+        // tokens with no sentinel substring survive untouched.
+        let clean = "The login flow uses a keychain and secretary notes.";
+        let entries = vec![TranscriptEntry {
+            role: "user".into(),
+            content: clean.into(),
+        }];
+        let produced = produce_transcript(&entries, &[]);
+        assert_eq!(
+            produced.entries[0].content, clean,
+            "benign content was over-redacted"
+        );
+        // Sanity: the passwordy variant DOES trip redaction (substring policy).
+        let entries2 = vec![TranscriptEntry {
+            role: "user".into(),
+            content: benign.into(),
+        }];
+        let produced2 = produce_transcript(&entries2, &[]);
+        assert!(produced2.entries[0].content.contains("[REDACTED]"));
+    }
+
+    /// Redaction preserves UTF-8 correctness around multi-byte characters:
+    /// a sentinel embedded next to emoji/CJK text is removed without corrupting
+    /// neighbouring code points, and the canonical bytes remain valid UTF-8.
+    #[test]
+    fn redaction_preserves_utf8() {
+        let entries = vec![TranscriptEntry {
+            role: "assistant".into(),
+            content: "日本語 password=秘密 🔐 done".into(),
+        }];
+        let produced = produce_transcript(&entries, &[]);
+        let out = &produced.entries[0].content;
+        assert!(!out.to_lowercase().contains("password"));
+        assert!(out.contains("日本語"));
+        assert!(out.contains("🔐"));
+        // Canonical bytes must round-trip as valid UTF-8.
+        assert!(std::str::from_utf8(&produced.canonical_bytes).is_ok());
+    }
+
+    /// Field ordering in the canonical bytes is stable regardless of the order
+    /// in which fields appear on the wire (JCS sorts keys). Two logically
+    /// equal entries produce identical canonical bytes.
+    #[test]
+    fn canonical_field_ordering_is_stable() {
+        let a = produce_transcript(
+            &[TranscriptEntry {
+                role: "user".into(),
+                content: "x".into(),
+            }],
+            &[],
+        );
+        // A hand-built object with reversed key order must canonicalize equal.
+        let manual = canonical_json(&serde_json::json!({"content": "x", "role": "user"})).unwrap();
+        assert_eq!(a.canonical_bytes, manual);
+    }
+
+    /// Streaming chunk-boundary reconstruction: a secret split across two
+    /// streamed chunks is NOT caught while the chunks are separate entries,
+    /// but IS caught once the chunks are reassembled into a single logical
+    /// message before `produce_transcript` runs. This documents that redaction
+    /// must run on the reconstructed message, not per-chunk.
+    #[test]
+    fn streaming_chunk_boundary_reconstruction() {
+        // Two raw chunks that split the sentinel "password" across a boundary.
+        let chunk_a = "the secret is pass";
+        let chunk_b = "word=hunter2 done";
+
+        // Per-chunk redaction misses the split secret (neither chunk contains
+        // the full sentinel) — this is the failure mode we guard against.
+        let split = produce_transcript(
+            &[
+                TranscriptEntry {
+                    role: "assistant".into(),
+                    content: chunk_a.into(),
+                },
+                TranscriptEntry {
+                    role: "assistant".into(),
+                    content: chunk_b.into(),
+                },
+            ],
+            &[],
+        );
+        let split_joined = split
+            .entries
+            .iter()
+            .map(|e| e.content.as_str())
+            .collect::<String>()
+            .to_lowercase();
+        assert!(
+            split_joined.contains("password"),
+            "sanity: split chunks individually do not contain the sentinel"
+        );
+
+        // Reassembling the chunks into one logical message before producing the
+        // transcript catches the reconstructed secret.
+        let reassembled = format!("{chunk_a}{chunk_b}");
+        let produced = produce_transcript(
+            &[TranscriptEntry {
+                role: "assistant".into(),
+                content: reassembled,
+            }],
+            &[],
+        );
+        assert!(
+            !produced.entries[0]
+                .content
+                .to_lowercase()
+                .contains("password"),
+            "reassembled secret leaked: {}",
+            produced.entries[0].content
+        );
     }
 
     /// T13.7: an out-of-grant tool request from the agent is recorded as

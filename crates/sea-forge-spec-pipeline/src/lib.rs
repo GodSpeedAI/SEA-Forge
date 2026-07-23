@@ -97,40 +97,139 @@ pub fn validate_stage_order(stages: &[SpecPipelineStage]) -> Result<(), ForgeErr
 
 // ── Proof classification ──
 
+/// Kinds that must form an unbroken accepted prefix (per `CANONICAL_ORDER`)
+/// before classification may rise above `authority-only`. `SemanticFixture`
+/// is intentionally excluded: it is evidentiary, not every model produces
+/// one, and requiring it would over-constrain routes that never claim it.
+const REQUIRED_FOR_GENERATED_CONTRACT: &[StageKind] = &[
+    StageKind::Adr,
+    StageKind::Prd,
+    StageKind::Sds,
+    StageKind::Sea,
+    StageKind::Ast,
+    StageKind::Ir,
+    StageKind::Manifest,
+    StageKind::GeneratedContract,
+];
+
+const REQUIRED_FOR_FOCUSED_SLICE: &[StageKind] = &[
+    StageKind::LastMileAdapter,
+    StageKind::RuntimeWiring,
+    StageKind::AcceptanceProof,
+];
+
+fn all_accepted(stages: &[SpecPipelineStage], kinds: &[StageKind]) -> bool {
+    kinds.iter().all(|kind| {
+        stages
+            .iter()
+            .any(|s| &s.kind == kind && s.status == StageStatus::Accepted)
+    })
+}
+
 /// Compute the proof classification ceiling based on accepted stages.
 ///
-/// - `authority-only`: no generated outputs claimed.
-/// - `generated-contract`: regeneration passed, no runtime path.
-/// - `focused-slice` or stronger: last_mile + runtime + acceptance all accepted.
+/// A classification only counts once its ENTIRE required canonical-order
+/// prefix is present and accepted (§10.7) — a stage cannot borrow the
+/// classification of a predecessor that is absent, skipped, rejected, or
+/// quarantined. This prevents a sparse, out-of-context slice of stages from
+/// claiming a stronger classification than its actual proof chain supports.
+///
+/// - `authority-only`: no generated outputs claimed, or the required prefix
+///   is incomplete.
+/// - `generated-contract`: the full ADR..GeneratedContract prefix is accepted.
+/// - `focused-slice`: the generated-contract prefix plus last_mile + runtime
+///   + acceptance are all accepted.
 pub fn compute_proof_classification(stages: &[SpecPipelineStage]) -> ProofClassification {
-    let has_generated = stages.iter().any(|s| {
-        s.status == StageStatus::Accepted
-            && matches!(
-                s.kind,
-                StageKind::GeneratedContract
-                    | StageKind::Ast
-                    | StageKind::Ir
-                    | StageKind::Manifest
-                    | StageKind::SemanticFixture
-            )
-    });
-    let has_last_mile = stages
-        .iter()
-        .any(|s| s.status == StageStatus::Accepted && s.kind == StageKind::LastMileAdapter);
-    let has_runtime = stages
-        .iter()
-        .any(|s| s.status == StageStatus::Accepted && s.kind == StageKind::RuntimeWiring);
-    let has_acceptance = stages
-        .iter()
-        .any(|s| s.status == StageStatus::Accepted && s.kind == StageKind::AcceptanceProof);
+    let has_generated = all_accepted(stages, REQUIRED_FOR_GENERATED_CONTRACT);
+    let has_focused_slice = has_generated && all_accepted(stages, REQUIRED_FOR_FOCUSED_SLICE);
 
-    if has_last_mile && has_runtime && has_acceptance {
+    if has_focused_slice {
         ProofClassification::FocusedSlice
     } else if has_generated {
         ProofClassification::GeneratedContract
     } else {
         ProofClassification::AuthorityOnly
     }
+}
+
+// ── Stage prerequisite validation (M5 Task 9) ──
+
+/// Validate that a stage's declared input files resolve to a verified
+/// predecessor: either a stage earlier in `stages` whose matching-path
+/// output is `Accepted` with an identical hash/schema/domain-model-ref/
+/// DomainForge version, or a fully self-verified externally supplied file
+/// (its own hash and schema are present, so it does not depend on a local
+/// predecessor's status to be trusted).
+///
+/// This replaces trusting array position/ordering alone: ordering only
+/// proves stages appear in canonical sequence, not that a later stage's
+/// claimed input actually is the verified output of an accepted, matching
+/// predecessor. Call this before activating a stage (Task 10A) or as part
+/// of whole-run processing (`process_pipeline`).
+pub fn validate_stage_prerequisites(
+    stages: &[SpecPipelineStage],
+    stage_index: usize,
+) -> Result<(), ForgeError> {
+    let stage = &stages[stage_index];
+    for input in &stage.inputs {
+        if input.sha256.is_empty() {
+            return Err(ForgeError::Input(format!(
+                "spec_pipeline_prerequisite_error: stage {} input {} is unhashed",
+                stage.stage_id, input.path
+            )));
+        }
+        let predecessor = stages[..stage_index]
+            .iter()
+            .find(|p| p.outputs.iter().any(|o| o.path == input.path));
+        match predecessor {
+            Some(predecessor) => {
+                let output = predecessor
+                    .outputs
+                    .iter()
+                    .find(|o| o.path == input.path)
+                    .expect("matched above");
+                if predecessor.status != StageStatus::Accepted {
+                    return Err(ForgeError::Input(format!(
+                        "spec_pipeline_prerequisite_error: predecessor stage {} for input {} is not accepted (status: {:?})",
+                        predecessor.stage_id, input.path, predecessor.status
+                    )));
+                }
+                if output.sha256 != input.sha256 {
+                    return Err(ForgeError::Input(format!(
+                        "spec_pipeline_prerequisite_error: predecessor hash mismatch for input {}",
+                        input.path
+                    )));
+                }
+                if output.schema_ref != input.schema_ref {
+                    return Err(ForgeError::Input(format!(
+                        "spec_pipeline_prerequisite_error: predecessor schema mismatch for input {}",
+                        input.path
+                    )));
+                }
+                if output.domain_model_ref != input.domain_model_ref {
+                    return Err(ForgeError::Input(format!(
+                        "spec_pipeline_prerequisite_error: predecessor domain model mismatch for input {}",
+                        input.path
+                    )));
+                }
+                if output.domainforge_version != input.domainforge_version {
+                    return Err(ForgeError::Input(format!(
+                        "spec_pipeline_prerequisite_error: predecessor DomainForge version mismatch for input {}",
+                        input.path
+                    )));
+                }
+            }
+            None => {
+                if input.schema_ref.is_none() {
+                    return Err(ForgeError::Input(format!(
+                        "spec_pipeline_prerequisite_error: externally supplied input {} has no verified schema",
+                        input.path
+                    )));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 // ── Quarantine ──
@@ -227,6 +326,7 @@ pub fn build_projection_record(
             path: path.clone(),
             sha256: sha,
             generated: true,
+            ..Default::default()
         });
     }
     output_refs.sort_by(|a, b| a.path.cmp(&b.path));
@@ -265,14 +365,24 @@ pub fn build_projection_record(
     })
 }
 
-/// Process a pipeline run: validate ordering, quarantine failed stages,
-/// compute classification.
+/// Process a pipeline run: validate ordering, quarantine failed or
+/// prerequisite-invalid stages, compute classification.
+///
+/// A stage whose declared status is `Accepted` but whose input chain does
+/// not verify against its predecessors (Task 9) is quarantined here too —
+/// an executor's self-reported success cannot outrun the proof chain.
 pub fn process_pipeline(run: &mut SpecPipelineRun) -> Result<(), ForgeError> {
     validate_stage_order(&run.stages)?;
 
-    for stage in &mut run.stages {
-        if stage.status == StageStatus::Rejected {
-            quarantine_stage(stage, "stage_output_validation_failed")?;
+    for index in 0..run.stages.len() {
+        if run.stages[index].status == StageStatus::Rejected {
+            quarantine_stage(&mut run.stages[index], "stage_output_validation_failed")?;
+            continue;
+        }
+        if run.stages[index].status == StageStatus::Accepted {
+            if let Err(error) = validate_stage_prerequisites(&run.stages, index) {
+                quarantine_stage(&mut run.stages[index], &error.to_string())?;
+            }
         }
     }
 
@@ -343,26 +453,55 @@ mod tests {
         assert_ne!(hash1, hash2, "chain hash must change when a stage changes");
     }
 
+    fn full_prefix_stages(extra: &[StageKind]) -> Vec<SpecPipelineStage> {
+        let mut stages: Vec<SpecPipelineStage> = REQUIRED_FOR_GENERATED_CONTRACT
+            .iter()
+            .map(|kind| make_stage(kind.clone(), StageStatus::Accepted))
+            .collect();
+        stages.extend(
+            extra
+                .iter()
+                .map(|kind| make_stage(kind.clone(), StageStatus::Accepted)),
+        );
+        stages
+    }
+
     #[test]
     fn classification_ceiling_without_last_mile() {
-        let stages = vec![
-            make_stage(StageKind::Adr, StageStatus::Accepted),
-            make_stage(StageKind::GeneratedContract, StageStatus::Accepted),
-        ];
+        let stages = full_prefix_stages(&[]);
         let classification = compute_proof_classification(&stages);
         assert_eq!(classification, ProofClassification::GeneratedContract);
     }
 
     #[test]
     fn classification_reaches_focused_slice() {
-        let stages = vec![
+        let stages = full_prefix_stages(&[
+            StageKind::LastMileAdapter,
+            StageKind::RuntimeWiring,
+            StageKind::AcceptanceProof,
+        ]);
+        let classification = compute_proof_classification(&stages);
+        assert_eq!(classification, ProofClassification::FocusedSlice);
+    }
+
+    #[test]
+    fn classification_ceiling_requires_full_prefix_before_focused_slice() {
+        // A sparse stage list containing ONLY the last four canonical kinds
+        // must NOT reach focused-slice: the earlier ADR..Manifest prefix is
+        // absent, so the proof chain behind it is unverified. This is the
+        // audited defect (a fixture granting focused-slice classification
+        // without earlier stages present).
+        let sparse = vec![
             make_stage(StageKind::GeneratedContract, StageStatus::Accepted),
             make_stage(StageKind::LastMileAdapter, StageStatus::Accepted),
             make_stage(StageKind::RuntimeWiring, StageStatus::Accepted),
             make_stage(StageKind::AcceptanceProof, StageStatus::Accepted),
         ];
-        let classification = compute_proof_classification(&stages);
-        assert_eq!(classification, ProofClassification::FocusedSlice);
+        assert_eq!(
+            compute_proof_classification(&sparse),
+            ProofClassification::AuthorityOnly,
+            "classification must not exceed authority-only when the earlier canonical prefix is missing"
+        );
     }
 
     #[test]
@@ -379,11 +518,13 @@ mod tests {
             path: "out.json".into(),
             sha256: "sha256:abc".into(),
             generated: true,
+            ..Default::default()
         }];
         let b = vec![StageFile {
             path: "out.json".into(),
             sha256: "sha256:abc".into(),
             generated: true,
+            ..Default::default()
         }];
         assert!(verify_byte_identity(&a, &b).unwrap());
 
@@ -391,6 +532,7 @@ mod tests {
             path: "out.json".into(),
             sha256: "sha256:xyz".into(),
             generated: true,
+            ..Default::default()
         }];
         assert!(!verify_byte_identity(&a, &c).unwrap());
     }

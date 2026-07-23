@@ -7,14 +7,15 @@
 
 #![forbid(unsafe_code)]
 
-use domainforge_core::parser::{parse_to_graph_with_options, ParseOptions};
+use domainforge_core::application::{resolve_application_graph, ApplicationDiagnostic};
+use domainforge_core::parser::parse_source;
 use domainforge_core::policy::Severity;
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::ProjectionKind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 /// A source file in a `SeaSourceSet`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -80,6 +81,16 @@ pub struct DomainForgeTrace {
 pub const ADAPTER_DESCRIPTOR_SHA256: &str =
     "sha256:0000000000000000000000000000000000000000000000000000000000000001";
 
+// ── Finite limits (spec-full §7.0a) ──
+
+pub const MAX_SOURCE_COUNT: usize = 64;
+pub const MAX_AGGREGATE_BYTES: usize = 1_048_576; // 1 MiB
+pub const MAX_IMPORT_DEPTH: usize = 16;
+pub const MAX_AST_NODES: usize = 10_000;
+
+/// The pinned DomainForge version this adapter expects.
+pub const EXPECTED_DOMAINFORGE_VERSION: &str = "0.15.0";
+
 fn sha256_hex(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
@@ -95,32 +106,108 @@ fn sha256_json(value: &Value) -> Result<String, ForgeError> {
 
 /// Load and validate a `SeaSourceSet` through `domainforge-core`.
 ///
-/// Returns a `DomainModel` on success, or `domain_model_error` on any parse,
-/// validation, or source-hash failure. No side effects.
+/// Verifies every source URI/hash, resolves imports from the supplied set,
+/// enforces finite limits, and rejects unsupported DomainForge versions before
+/// returning a `DomainModelRef`. No side effects.
+//
+// Import resolution and graph construction go through domainforge-core's
+// public `application::resolve_application_graph` (0.15.0+), which takes the
+// whole source set as an in-memory JSON map of uri -> content plus the entry
+// uri. It resolves namespace/std/relative imports, detects cycles, checks
+// named-import exports, and merges every reachable module's declarations into
+// one graph — all without touching the filesystem or a CLI.
 pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeError> {
-    // Find the entry source.
-    let entry = source_set
-        .files
-        .iter()
-        .find(|f| f.uri == source_set.entry_uri)
-        .ok_or_else(|| ForgeError::Input("entry source not found in source set".into()))?;
-
-    // Verify source hash matches declared hash.
-    let computed_hash = sha256_content(&entry.content);
-    if computed_hash != entry.sha256 {
-        return Err(ForgeError::Internal(format!(
-            "domain_model_error: source hash drift for {entry_uri}: declared={declared} computed={computed_hash}",
-            entry_uri = entry.uri,
-            declared = entry.sha256,
+    // ── Version check ──
+    if domainforge_core::VERSION != EXPECTED_DOMAINFORGE_VERSION {
+        return Err(domain_model_error(format!(
+            "unsupported DomainForge version: expected={EXPECTED_DOMAINFORGE_VERSION} linked={}",
+            domainforge_core::VERSION
         )));
     }
 
-    // Parse through domainforge-core.
-    let options = ParseOptions::default();
-    let graph = parse_to_graph_with_options(&entry.content, &options)
-        .map_err(|e| ForgeError::Internal(format!("domain_model_error: parse failed: {e}")))?;
+    // ── Finite limits: source count ──
+    if source_set.files.len() > MAX_SOURCE_COUNT {
+        return Err(domain_model_error(format!(
+            "source count {} exceeds limit {MAX_SOURCE_COUNT}",
+            source_set.files.len()
+        )));
+    }
 
-    // Validate the graph.
+    // ── URI validation + duplicate detection + aggregate bytes ──
+    let mut seen_uris = HashSet::new();
+    let mut total_bytes = 0usize;
+    for file in &source_set.files {
+        if file.uri.is_empty() {
+            return Err(domain_model_error("source URI must not be empty".into()));
+        }
+        if file.uri.starts_with('/') {
+            return Err(domain_model_error(format!(
+                "absolute URI rejected: {}",
+                file.uri
+            )));
+        }
+        if file.uri.split('/').any(|component| component == "..") {
+            return Err(domain_model_error(format!(
+                "traversal URI rejected: {}",
+                file.uri
+            )));
+        }
+        if !seen_uris.insert(&file.uri) {
+            return Err(domain_model_error(format!(
+                "duplicate source URI: {}",
+                file.uri
+            )));
+        }
+        total_bytes += file.content.len();
+    }
+    if total_bytes > MAX_AGGREGATE_BYTES {
+        return Err(domain_model_error(format!(
+            "aggregate bytes {total_bytes} exceeds limit {MAX_AGGREGATE_BYTES}"
+        )));
+    }
+
+    // ── Hash verification for ALL files (not just entry) ──
+    for file in &source_set.files {
+        let computed = sha256_content(&file.content);
+        if computed != file.sha256 {
+            return Err(domain_model_error(format!(
+                "source hash drift for {}: declared={} computed={computed}",
+                file.uri, file.sha256
+            )));
+        }
+    }
+
+    // ── Parse every file in-memory to enforce the AST node budget ──
+    // Count every AST node recursively (top-level declarations, nested
+    // declarations inside `export`, struct/record/enum bodies, operation
+    // clauses, mapping/projection rule lists, and policy/metric expression
+    // trees) so a model with few top-level declarations but deeply nested
+    // expressions cannot slip past MAX_AST_NODES.
+    let mut total_ast_nodes = 0usize;
+    for file in &source_set.files {
+        let ast = parse_source(&file.content)
+            .map_err(|e| domain_model_error(format!("parse failed for {}: {e}", file.uri)))?;
+        total_ast_nodes += count_ast_nodes(&ast);
+    }
+    if total_ast_nodes > MAX_AST_NODES {
+        return Err(domain_model_error(format!(
+            "AST node count {total_ast_nodes} exceeds limit {MAX_AST_NODES}"
+        )));
+    }
+
+    // ── Resolve imports and build the graph in one pass via the pinned
+    // library's in-memory source-map API ──
+    let sources: BTreeMap<String, String> = source_set
+        .files
+        .iter()
+        .map(|f| (f.uri.clone(), f.content.clone()))
+        .collect();
+    let sources_json =
+        serde_json::to_string(&sources).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+    let graph = resolve_application_graph(&source_set.entry_uri, &sources_json)
+        .map_err(|diags| domain_model_error(format_diagnostics(&diags)))?;
+
+    // ── Semantic validation ──
     let validation = graph.validate();
     if validation.error_count > 0 {
         let errors: Vec<String> = validation
@@ -129,13 +216,13 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
             .filter(|v| v.severity == Severity::Error)
             .map(|v| format!("{}: {}", v.policy_name, v.message))
             .collect();
-        return Err(ForgeError::Internal(format!(
-            "domain_model_error: semantic validation failed: {}",
+        return Err(domain_model_error(format!(
+            "semantic validation failed: {}",
             errors.join("; ")
         )));
     }
 
-    // Build source_refs (sorted).
+    // ── Build source_refs (sorted, all verified files) ──
     let mut source_refs: Vec<SourceRef> = source_set
         .files
         .iter()
@@ -146,14 +233,21 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
         .collect();
     source_refs.sort();
 
-    // Build parse_options_sha256.
+    // ── Build parse_options_sha256 (includes version + limits) ──
     let parse_options_value = serde_json::json!({
         "namespace_registry": null,
         "entry_path": source_set.entry_uri,
+        "domainforge_version": domainforge_core::VERSION,
+        "limits": {
+            "max_source_count": MAX_SOURCE_COUNT,
+            "max_aggregate_bytes": MAX_AGGREGATE_BYTES,
+            "max_import_depth": MAX_IMPORT_DEPTH,
+            "max_ast_nodes": MAX_AST_NODES,
+        }
     });
     let parse_options_sha256 = sha256_json(&parse_options_value)?;
 
-    // Build semantic_model_sha256 over the canonical 4-tuple.
+    // ── Build semantic_model_sha256 over the canonical 4-tuple ──
     let canonical_tuple = serde_json::json!({
         "domainforge_version": domainforge_core::VERSION,
         "adapter_descriptor_sha256": ADAPTER_DESCRIPTOR_SHA256,
@@ -162,7 +256,7 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
     });
     let semantic_model_sha256 = sha256_json(&canonical_tuple)?;
 
-    // Extract concept refs from the graph (sorted).
+    // ── Extract concept refs from the graph (sorted) ──
     let mut concept_refs: Vec<String> = graph
         .all_entities()
         .iter()
@@ -194,6 +288,117 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
     };
 
     Ok(DomainModel { graph, model_ref })
+}
+
+fn domain_model_error(message: String) -> ForgeError {
+    ForgeError::Internal(format!("domain_model_error: {message}"))
+}
+
+/// Recursively count every AST node in a parsed module: each top-level
+/// declaration, each nested declaration inside `export`, every field in a
+/// record/entity body, every enum member and operation clause, every mapping
+/// and projection rule, and every node in a policy/metric expression tree.
+/// Leaves count as 1; containers count themselves plus their children. Used
+/// by the AST node budget so nesting depth, not just declaration count,
+/// determines cost.
+fn count_ast_nodes(ast: &domainforge_core::parser::ast::Ast) -> usize {
+    ast.declarations
+        .iter()
+        .map(|spanned| count_ast_node(&spanned.node))
+        .sum::<usize>()
+        + ast.metadata.imports.len()
+}
+
+fn count_ast_node(node: &domainforge_core::parser::ast::AstNode) -> usize {
+    use domainforge_core::parser::ast::AstNode;
+    let base = 1usize;
+    match node {
+        AstNode::Export(inner) => base + count_ast_node(&inner.node),
+        AstNode::Entity { body, .. } => base + body.as_ref().map(|b| b.fields.len()).unwrap_or(0),
+        AstNode::Record(decl) => base + decl.fields.len(),
+        AstNode::Enum(decl) => base + decl.members.len(),
+        AstNode::Operation(decl) => base + decl.clauses.len(),
+        AstNode::Policy { expression, .. } | AstNode::Metric { expression, .. } => {
+            base + count_expression_nodes(expression)
+        }
+        AstNode::Instance { fields, .. } => base + fields.len(),
+        AstNode::MappingDecl { rules, .. } => base + rules.len(),
+        AstNode::ProjectionDecl { overrides, .. } => base + overrides.len(),
+        _ => base,
+    }
+}
+
+fn count_expression_nodes(expr: &domainforge_core::policy::Expression) -> usize {
+    use domainforge_core::policy::Expression;
+    let base = 1usize;
+    match expr {
+        Expression::Binary { left, right, .. } => {
+            base + count_expression_nodes(left) + count_expression_nodes(right)
+        }
+        Expression::Unary { operand, .. } | Expression::Cast { operand, .. } => {
+            base + count_expression_nodes(operand)
+        }
+        Expression::GroupBy {
+            collection,
+            filter,
+            key,
+            condition,
+            ..
+        } => {
+            base + count_expression_nodes(collection)
+                + filter
+                    .as_ref()
+                    .map(|f| count_expression_nodes(f))
+                    .unwrap_or(0)
+                + count_expression_nodes(key)
+                + count_expression_nodes(condition)
+        }
+        Expression::Quantifier {
+            collection,
+            condition,
+            ..
+        } => base + count_expression_nodes(collection) + count_expression_nodes(condition),
+        Expression::Aggregation {
+            collection, filter, ..
+        } => {
+            base + count_expression_nodes(collection)
+                + filter
+                    .as_ref()
+                    .map(|f| count_expression_nodes(f))
+                    .unwrap_or(0)
+        }
+        Expression::AggregationComprehension {
+            collection,
+            predicate,
+            projection,
+            ..
+        } => {
+            base + count_expression_nodes(collection)
+                + count_expression_nodes(predicate)
+                + count_expression_nodes(projection)
+        }
+        _ => base,
+    }
+}
+
+/// Render `resolve_application_graph`'s diagnostics as one adapter-facing
+/// message. Reason slugs are translated to the wording SEA Forge callers and
+/// tests key on ("unresolved import", "circular import", ...).
+fn format_diagnostics(diags: &[ApplicationDiagnostic]) -> String {
+    diags
+        .iter()
+        .map(|d| {
+            let prefix = match d.context.reason.as_deref() {
+                Some("unresolved_specifier") => "unresolved import",
+                Some("import_cycle") => "circular import",
+                Some("not_exported") | Some("unresolved_alias") => "import error",
+                Some("symbol_collision") => "duplicate declaration",
+                _ => "import resolution error",
+            };
+            format!("{prefix}: {}", d.message)
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
 }
 
 /// Normalize a DomainForge authority decision to a SEA Forge candidate disposition.

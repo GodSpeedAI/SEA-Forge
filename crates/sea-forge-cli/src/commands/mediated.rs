@@ -289,22 +289,3 @@ fn verified_assurance(
 pub fn assurance(root: &Path, policy_path: &Path, actor_id: &str) -> Result<String, ForgeError> {
     verified_assurance(root, policy_path, actor_id).map(|(label, _)| label)
 }
-
-pub fn record_assurance<T: serde::Serialize>(
-    root: &Path,
-    policy_path: &Path,
-    actor_id: &str,
-    record_kind: &str,
-    record: &T,
-) -> Result<String, ForgeError> {
-    let (label, checkpoint_hash) = verified_assurance(root, policy_path, actor_id)?;
-    let Some(checkpoint_hash) = checkpoint_hash else {
-        return Ok("legacy_digest_only".into());
-    };
-    let manager = LedgerManager::new(root)?;
-    if manager.global_checkpoint_covers_record(&checkpoint_hash, record_kind, record)? {
-        Ok(label)
-    } else {
-        Ok("legacy_digest_only".into())
-    }
-}

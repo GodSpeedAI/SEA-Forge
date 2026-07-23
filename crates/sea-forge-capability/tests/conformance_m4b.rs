@@ -1,6 +1,6 @@
 use sea_forge_capability::memory::{
-    append_memory_items, compute_dedup_key, extract_from_envelope, rebuild_index, recall_memory,
-    recall_with_fallback, scope_allows, MemoryRecallQuery,
+    append_memory_items, compute_dedup_key, extract_from_envelope, query_index, rebuild_index,
+    recall_memory, recall_with_fallback, MemoryRecallQuery,
 };
 use sea_forge_core::types::*;
 use tempfile::TempDir;
@@ -144,26 +144,9 @@ fn own_scope_recall_returns_only_requester_items() {
     assert!(own_results[0].memory_id.starts_with("mem_"));
 }
 
-// ── 3. Cross-entity denial: scope_allows rejects without explicit rule ──
-
-#[test]
-fn cross_entity_recall_denied_without_explicit_rule() {
-    // scope_allows("own", ...) denies cross-entity access.
-    assert!(!scope_allows("own", "entity_a", "entity_b"));
-
-    // scope_allows("entity:<id>", ...) allows access to the named entity.
-    assert!(scope_allows("entity:entity_b", "entity_a", "entity_b"));
-    assert!(!scope_allows("entity:entity_b", "entity_a", "entity_c"));
-
-    // scope_allows("any", ...) allows all.
-    assert!(scope_allows("any", "entity_a", "entity_b"));
-
-    // own scope allows same-entity.
-    assert!(scope_allows("own", "entity_a", "entity_a"));
-
-    // Unknown scope denies.
-    assert!(!scope_allows("garbage", "entity_a", "entity_b"));
-}
+// ── 3. Cross-entity scope enforcement moved to authority (Task 6) ──
+// scope_allows now lives in sea-forge-authority and is tested in
+// conformance_m0_authority.rs::memory_scope_*.
 
 // ── 4. Index-delete ⇒ identical recall results via fallback scan ──
 
@@ -185,7 +168,7 @@ fn index_delete_yields_identical_recall_via_fallback() {
     }
 
     let items_path = dir.path().join("memory/items.jsonl");
-    let index_path = dir.path().join("memory/index.json");
+    let index_path = dir.path().join("memory/index.sqlite");
 
     // Build the index.
     rebuild_index(&items_path, &index_path, "2026-07-14T00:00:00Z").unwrap();
@@ -372,4 +355,383 @@ fn kind_filter_returns_only_matching_kind() {
     )
     .unwrap();
     assert_eq!(decisions.len(), 0, "no decision items exists");
+}
+
+// ── 9. Task 7: rebuild produces a real SQLite FTS5 projection ──
+
+fn seed_items(dir: &TempDir, count: usize) -> (std::path::PathBuf, std::path::PathBuf) {
+    for i in 0..count {
+        let entity = if i % 2 == 0 { "entity_a" } else { "entity_b" };
+        let env = make_envelope(
+            &format!("run_{i:03}"),
+            entity,
+            &format!("cap_{i}"),
+            SettlementStatus::Accepted,
+        );
+        let items = extract_from_envelope(&env, &format!("2026-07-14T{i:02}:00:00Z"));
+        write_items(dir, &items);
+    }
+    (
+        dir.path().join("memory/items.jsonl"),
+        dir.path().join("memory/index.sqlite"),
+    )
+}
+
+#[test]
+fn rebuild_writes_queryable_fts5_schema_and_source_commitment() {
+    let dir = TempDir::new().unwrap();
+    let (items_path, index_path) = seed_items(&dir, 4);
+
+    rebuild_index(&items_path, &index_path, "2026-07-14T09:00:00Z").unwrap();
+    assert!(index_path.is_file(), "sqlite index file created");
+
+    let conn = rusqlite::Connection::open(&index_path).unwrap();
+    let table_kind: String = conn
+        .query_row(
+            "SELECT type FROM sqlite_master WHERE name = 'memory_fts'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(table_kind, "table", "memory_fts must be a real FTS5 table");
+    let sql: String = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE name = 'memory_fts'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert!(
+        sql.contains("fts5"),
+        "index schema must use the fts5 module, got: {sql}"
+    );
+    let row_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM memory_fts", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(row_count, 4, "one indexed row per deduplicated item");
+    let stored_sha256: String = conn
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'source_sha256'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let source_bytes = std::fs::read(&items_path).unwrap();
+    let mut hasher = sha2::Sha256::new();
+    use sha2::Digest;
+    hasher.update(&source_bytes);
+    assert_eq!(
+        stored_sha256,
+        format!("{:x}", hasher.finalize()),
+        "meta must commit to the exact items.jsonl source digest"
+    );
+}
+
+// ── 10. Task 7: FTS index and linear scan return identical results ──
+
+#[test]
+fn fts_index_query_is_result_equivalent_to_linear_scan_including_mid_word_substrings() {
+    let dir = TempDir::new().unwrap();
+    let (items_path, index_path) = seed_items(&dir, 6);
+    rebuild_index(&items_path, &index_path, "2026-07-14T09:00:00Z").unwrap();
+
+    // "ap_2" is a mid-token substring (not a word boundary for an FTS5
+    // tokenizer), which is exactly the case where naive MATCH-based
+    // filtering would diverge from linear `contains`.
+    for query in ["attempt", "ap_2", "cap_"] {
+        let indexed = query_index(
+            &index_path,
+            &items_path,
+            &MemoryRecallQuery {
+                query,
+                entity_id: None,
+                process_id: None,
+                kinds: None,
+                limit: 50,
+            },
+        )
+        .expect("fresh index must serve the query");
+        let scanned = recall_memory(
+            &items_path,
+            MemoryRecallQuery {
+                query,
+                entity_id: None,
+                process_id: None,
+                kinds: None,
+                limit: 50,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            indexed.iter().map(|i| &i.memory_id).collect::<Vec<_>>(),
+            scanned.iter().map(|i| &i.memory_id).collect::<Vec<_>>(),
+            "index and linear scan must return identical ordered IDs for query {query:?}"
+        );
+    }
+}
+
+/// Timestamp tie-break: when multiple matching items share the same
+/// `last_confirmed_at`, both the FTS index path and the linear-scan fallback
+/// must agree on order by ascending `memory_id`. Guards against a divergent
+/// sort (e.g. one path stable, the other not) producing different IDs at the
+/// same timestamp. Does not change the distinct-timestamp cases above.
+#[test]
+fn fts_index_and_linear_scan_agree_on_timestamp_tie_break() {
+    let dir = TempDir::new().unwrap();
+    // Build three items that all (a) match the query "tie_cap" and (b) share
+    // the same last_confirmed_at, so memory_id ascending is the only
+    // remaining ordering signal.
+    let shared_ts = "2026-07-14T12:00:00Z";
+    let items: Vec<MemoryItem> = ["tie_cap_one", "tie_cap_two", "tie_cap_three"]
+        .into_iter()
+        .flat_map(|cap| {
+            let env = make_envelope(
+                &format!("run_tie_{}", cap),
+                "entity_a",
+                cap,
+                SettlementStatus::Accepted,
+            );
+            extract_from_envelope(&env, shared_ts)
+        })
+        .collect();
+    write_items(&dir, &items);
+
+    let items_path = dir.path().join("memory/items.jsonl");
+    let index_path = dir.path().join("memory/index.sqlite");
+    rebuild_index(&items_path, &index_path, "2026-07-14T13:00:00Z").unwrap();
+
+    let query = MemoryRecallQuery {
+        query: "tie_cap",
+        entity_id: None,
+        process_id: None,
+        kinds: None,
+        limit: 50,
+    };
+    let indexed = query_index(&index_path, &items_path, &query)
+        .expect("fresh index must serve the tie-break query");
+    let scanned = recall_memory(&items_path, query).unwrap();
+
+    assert!(
+        indexed.len() == scanned.len() && !indexed.is_empty(),
+        "both paths must return the same non-empty set of tie-break items"
+    );
+    assert_eq!(
+        indexed.iter().map(|i| &i.memory_id).collect::<Vec<_>>(),
+        scanned.iter().map(|i| &i.memory_id).collect::<Vec<_>>(),
+        "ordered memory IDs must match between indexed and fallback paths on timestamp ties"
+    );
+    // Sanity: the shared tie-break is memory_id ascending.
+    let ids: Vec<&String> = indexed.iter().map(|i| &i.memory_id).collect();
+    let mut sorted = ids.clone();
+    sorted.sort();
+    assert_eq!(ids, sorted, "tie-break must be memory_id ascending");
+}
+
+// ── 11. Task 7: appending an item makes the index stale ⇒ fallback ──
+
+#[test]
+fn appended_item_forces_stale_index_to_fall_back() {
+    let dir = TempDir::new().unwrap();
+    let (items_path, index_path) = seed_items(&dir, 2);
+    rebuild_index(&items_path, &index_path, "2026-07-14T09:00:00Z").unwrap();
+
+    assert!(
+        query_index(
+            &index_path,
+            &items_path,
+            &MemoryRecallQuery {
+                query: "attempt",
+                entity_id: None,
+                process_id: None,
+                kinds: None,
+                limit: 50,
+            },
+        )
+        .is_some(),
+        "index is fresh immediately after rebuild"
+    );
+
+    // Append a new item without rebuilding the index.
+    let env = make_envelope("run_999", "entity_c", "cap_new", SettlementStatus::Accepted);
+    let items = extract_from_envelope(&env, "2026-07-14T23:00:00Z");
+    write_items(&dir, &items);
+
+    assert!(
+        query_index(
+            &index_path,
+            &items_path,
+            &MemoryRecallQuery {
+                query: "attempt",
+                entity_id: None,
+                process_id: None,
+                kinds: None,
+                limit: 50,
+            },
+        )
+        .is_none(),
+        "stale index (source digest mismatch) must signal fallback, not silently succeed"
+    );
+
+    // recall_with_fallback must still surface the new item via linear scan.
+    let results = recall_with_fallback(
+        &items_path,
+        &index_path,
+        MemoryRecallQuery {
+            query: "attempt",
+            entity_id: Some("entity_c"),
+            process_id: None,
+            kinds: None,
+            limit: 50,
+        },
+    )
+    .unwrap();
+    assert_eq!(results.len(), 1, "fallback scan sees the appended item");
+}
+
+// ── 12. Task 7: missing index falls back with no side effects ──
+
+#[test]
+fn missing_index_falls_back_without_creating_a_file() {
+    let dir = TempDir::new().unwrap();
+    let (items_path, index_path) = seed_items(&dir, 2);
+    assert!(!index_path.exists());
+
+    let result = query_index(
+        &index_path,
+        &items_path,
+        &MemoryRecallQuery {
+            query: "attempt",
+            entity_id: None,
+            process_id: None,
+            kinds: None,
+            limit: 50,
+        },
+    );
+    assert!(result.is_none(), "missing index falls back");
+    assert!(
+        !index_path.exists(),
+        "querying a missing index must not create one as a side effect"
+    );
+}
+
+// ── 13. Task 7: truncated/corrupt DB falls back, never panics ──
+
+#[test]
+fn corrupt_index_falls_back_without_panicking() {
+    let dir = TempDir::new().unwrap();
+    let (items_path, index_path) = seed_items(&dir, 2);
+    rebuild_index(&items_path, &index_path, "2026-07-14T09:00:00Z").unwrap();
+
+    // Truncate the valid database to a handful of header bytes.
+    let bytes = std::fs::read(&index_path).unwrap();
+    std::fs::write(&index_path, &bytes[..16.min(bytes.len())]).unwrap();
+
+    let result = query_index(
+        &index_path,
+        &items_path,
+        &MemoryRecallQuery {
+            query: "attempt",
+            entity_id: None,
+            process_id: None,
+            kinds: None,
+            limit: 50,
+        },
+    );
+    assert!(result.is_none(), "truncated database must fall back");
+
+    // Also cover non-SQLite garbage bytes.
+    std::fs::write(&index_path, b"not a sqlite database at all").unwrap();
+    let result = query_index(
+        &index_path,
+        &items_path,
+        &MemoryRecallQuery {
+            query: "attempt",
+            entity_id: None,
+            process_id: None,
+            kinds: None,
+            limit: 50,
+        },
+    );
+    assert!(result.is_none(), "garbage bytes must fall back, not panic");
+}
+
+// ── 14. Task 7: tampered source-digest commitment is detected as stale ──
+
+#[test]
+fn tampered_source_digest_is_detected_as_stale() {
+    let dir = TempDir::new().unwrap();
+    let (items_path, index_path) = seed_items(&dir, 2);
+    rebuild_index(&items_path, &index_path, "2026-07-14T09:00:00Z").unwrap();
+
+    {
+        let conn = rusqlite::Connection::open(&index_path).unwrap();
+        conn.execute(
+            "UPDATE meta SET value = 'deadbeef' WHERE key = 'source_sha256'",
+            [],
+        )
+        .unwrap();
+    }
+
+    let result = query_index(
+        &index_path,
+        &items_path,
+        &MemoryRecallQuery {
+            query: "attempt",
+            entity_id: None,
+            process_id: None,
+            kinds: None,
+            limit: 50,
+        },
+    );
+    assert!(
+        result.is_none(),
+        "a source digest that no longer matches items.jsonl must never be trusted"
+    );
+}
+
+// ── 15. Task 7: index results are deterministically ordered, including ties ──
+
+#[test]
+fn indexed_results_are_deterministically_ordered_on_timestamp_ties() {
+    let dir = TempDir::new().unwrap();
+    // Same last_confirmed_at for every item forces the ordering to depend on
+    // the documented tie-break (memory_id), not on SQLite/HashMap iteration
+    // order.
+    for i in 0..5 {
+        let env = make_envelope(
+            &format!("run_{i:03}"),
+            "entity_a",
+            &format!("cap_{i}"),
+            SettlementStatus::Accepted,
+        );
+        let items = extract_from_envelope(&env, "2026-07-14T00:00:00Z");
+        write_items(&dir, &items);
+    }
+    let items_path = dir.path().join("memory/items.jsonl");
+    let index_path = dir.path().join("memory/index.sqlite");
+    rebuild_index(&items_path, &index_path, "2026-07-14T09:00:00Z").unwrap();
+
+    let query = MemoryRecallQuery {
+        query: "attempt",
+        entity_id: None,
+        process_id: None,
+        kinds: None,
+        limit: 50,
+    };
+    let first = query_index(&index_path, &items_path, &query).unwrap();
+    for _ in 0..3 {
+        let repeat = query_index(&index_path, &items_path, &query).unwrap();
+        assert_eq!(
+            first.iter().map(|i| &i.memory_id).collect::<Vec<_>>(),
+            repeat.iter().map(|i| &i.memory_id).collect::<Vec<_>>(),
+            "repeated queries against the same index must return the same order"
+        );
+    }
+    let mut sorted_ids: Vec<&String> = first.iter().map(|i| &i.memory_id).collect();
+    sorted_ids.sort();
+    assert_eq!(
+        first.iter().map(|i| &i.memory_id).collect::<Vec<_>>(),
+        sorted_ids,
+        "ties break deterministically by memory_id"
+    );
 }

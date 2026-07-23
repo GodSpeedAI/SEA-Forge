@@ -17,7 +17,7 @@ sha2.workspace = true
 wait-timeout.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-landlock = "0.3"
+landlock = "0.4"
 
 [dev-dependencies]
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }

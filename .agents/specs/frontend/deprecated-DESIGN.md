@@ -1,3 +1,13 @@
+> **DEPRECATED — NON-NORMATIVE.** This document is retained for historical
+> reference only and is **not** an active specification. The canonical design
+> system is [`DESIGN.md`](./DESIGN.md); the canonical spec mapping is
+> [`DESIGN-spec-mapping.md`](./DESIGN-spec-mapping.md). In particular, any
+> guidance here about an "accept settlement" control or an accept *action* is
+> superseded: settlement is computed from predeclared criteria
+> (`spec-minimum.md` §1, "manufactured settlement is the primary threat"),
+> never accepted via a UI button. Do not interpret anything below as an
+> active contract.
+
 # Settlement Design System
 
 > Category: Developer Tools

@@ -1,5 +1,124 @@
-use crate::{ExecutionSandbox, RelPath, SandboxClass, SandboxError, SandboxHandle, SandboxSpec};
+use crate::{
+    ExecutionSandbox, NetworkPosture, RelPath, SandboxClass, SandboxError, SandboxHandle,
+    SandboxSpec,
+};
 use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
+
+/// Landlock ABI that first introduced network (TCP bind/connect) restriction.
+///
+/// The jail requests this ABI for the network dimension under a *hard* posture
+/// requirement (see [`apply_landlock`]): on a kernel that predates it the setup
+/// fails closed with `jail_unavailable` rather than silently degrading to an
+/// unenforced (effectively `local`) posture. The filesystem dimension keeps the
+/// crate's default best-effort negotiation so filesystem confinement still
+/// works on kernels between the FS-only (v1) and network (v4) ABIs.
+#[cfg(target_os = "linux")]
+const JAIL_NET_ABI: landlock::ABI = landlock::ABI::V4;
+
+/// Apply the jail's Landlock posture to the current thread: read-write on
+/// `workspace_root`/`artifacts_root`, read-only on the rest of the filesystem,
+/// and TCP network restriction per `network`.
+///
+/// ABI negotiation: filesystem access is handled best-effort at [`JAIL_NET_ABI`]
+/// (degrades gracefully on older kernels, matching the pre-existing v1 posture),
+/// while the network access right is handled under
+/// [`CompatLevel::HardRequirement`](landlock::CompatLevel::HardRequirement) so a
+/// kernel without network support makes setup fail rather than leak network. We
+/// do not pin a second hardcoded ABI constant for degradation — the crate's own
+/// `Compatible`/best-effort machinery handles older filesystem kernels.
+///
+/// Network semantics (TCP only; UDP/raw sockets are an out-of-scope documented
+/// gap — Landlock has no coverage through ABI v6):
+/// - [`NetworkPosture::Denied`]: handle `BindTcp`/`ConnectTcp` with **no** port
+///   rules, denying every outbound connect and every bind/listen.
+/// - [`NetworkPosture::AllowTcpPorts`]: add one [`NetPort`](landlock::NetPort)
+///   rule per granted port for both bind and connect; all other ports stay
+///   denied.
+#[cfg(target_os = "linux")]
+fn apply_landlock(
+    workspace_root: &std::path::Path,
+    artifacts_root: &std::path::Path,
+    network: &NetworkPosture,
+) -> Result<(), SandboxError> {
+    use landlock::{
+        path_beneath_rules, Access, AccessFs, AccessNet, CompatLevel, Compatible, NetPort, Ruleset,
+        RulesetAttr, RulesetCreatedAttr, RulesetStatus,
+    };
+
+    fn map_err<E: std::fmt::Display>(error: E) -> SandboxError {
+        SandboxError::new("jail_unavailable", error.to_string())
+    }
+
+    // Filesystem rights at the network-capable ABI, degrading best-effort on
+    // older kernels. Network rights are a hard requirement so we never silently
+    // run without the requested network confinement.
+    let fs_all = AccessFs::from_all(JAIL_NET_ABI);
+    let fs_read = AccessFs::from_read(JAIL_NET_ABI);
+    let net_all = AccessNet::from_all(JAIL_NET_ABI);
+
+    let created = Ruleset::default()
+        // Network first, under a hard requirement: on a pre-v4 kernel this
+        // errors instead of degrading, giving fail-closed setup.
+        .set_compatibility(CompatLevel::HardRequirement)
+        .handle_access(net_all)
+        .map_err(map_err)?
+        // Filesystem best-effort so FS confinement still works on kernels
+        // between the FS-only and network ABIs.
+        .set_compatibility(CompatLevel::BestEffort)
+        .handle_access(fs_all)
+        .map_err(map_err)?
+        .create()
+        .map_err(map_err)?
+        // Read-write for workspace and artifacts.
+        .add_rules(path_beneath_rules([workspace_root, artifacts_root], fs_all))
+        .map_err(map_err)?
+        // Read-only for the rest of the filesystem so the child can load its
+        // interpreter and libraries.
+        .add_rules(path_beneath_rules([std::path::Path::new("/")], fs_read))
+        .map_err(map_err)?;
+
+    // Add per-port TCP grants for an explicit network posture. Default denial
+    // adds no port rules, so handling BindTcp/ConnectTcp with an empty rule set
+    // denies all bind/listen and all outbound connects.
+    let created = match network {
+        NetworkPosture::Denied => created,
+        NetworkPosture::AllowTcpPorts(ports) => {
+            let mut created = created;
+            for port in ports {
+                created = created
+                    .add_rule(NetPort::new(
+                        *port,
+                        AccessNet::BindTcp | AccessNet::ConnectTcp,
+                    ))
+                    .map_err(map_err)?;
+            }
+            created
+        }
+    };
+
+    let status = created.restrict_self().map_err(map_err)?;
+
+    if status.ruleset == RulesetStatus::NotEnforced {
+        return Err(SandboxError::new(
+            "jail_unavailable",
+            "Landlock restrictions are not enforced by this kernel",
+        ));
+    }
+    // A partially-enforced ruleset means at least one requested access right was
+    // dropped by the running kernel. Because the network right is the only one
+    // requested under a hard requirement (the FS rights are best-effort and
+    // predate the network ABI, so they never degrade on a kernel new enough to
+    // support any Landlock at all), any partial enforcement here would mean the
+    // network confinement is not fully in force — fail closed rather than run a
+    // jail whose network posture cannot be guaranteed.
+    if status.ruleset == RulesetStatus::PartiallyEnforced {
+        return Err(SandboxError::new(
+            "jail_unavailable",
+            "Landlock network restriction is not fully enforced by this kernel",
+        ));
+    }
+    Ok(())
+}
 
 pub struct JailSandbox;
 
@@ -22,13 +141,10 @@ pub fn spawn_interactive(
     argv: &[String],
     cwd: &std::path::Path,
     env: &[(String, String)],
+    network: &NetworkPosture,
 ) -> Result<InteractiveJailChild, SandboxError> {
     #[cfg(target_os = "linux")]
     {
-        use landlock::{
-            path_beneath_rules, Access, AccessFs, Ruleset, RulesetAttr, RulesetCreatedAttr,
-            RulesetStatus, ABI,
-        };
         use std::{os::unix::process::CommandExt, process::Stdio};
 
         fn map_err<E: std::fmt::Display>(error: E) -> SandboxError {
@@ -39,30 +155,7 @@ pub fn spawn_interactive(
         }
         std::fs::create_dir_all(workspace_root).map_err(map_err)?;
         std::fs::create_dir_all(artifacts_root).map_err(map_err)?;
-        let abi = ABI::V1;
-        let status = Ruleset::default()
-            .handle_access(AccessFs::from_all(abi))
-            .map_err(map_err)?
-            .create()
-            .map_err(map_err)?
-            .add_rules(path_beneath_rules(
-                [workspace_root, artifacts_root],
-                AccessFs::from_all(abi),
-            ))
-            .map_err(map_err)?
-            .add_rules(path_beneath_rules(
-                [std::path::Path::new("/")],
-                AccessFs::from_read(abi),
-            ))
-            .map_err(map_err)?
-            .restrict_self()
-            .map_err(map_err)?;
-        if status.ruleset == RulesetStatus::NotEnforced {
-            return Err(SandboxError::new(
-                "jail_unavailable",
-                "Landlock restrictions are not enforced by this kernel",
-            ));
-        }
+        apply_landlock(workspace_root, artifacts_root, network)?;
         let mut command = std::process::Command::new(&argv[0]);
         command
             .args(&argv[1..])
@@ -97,7 +190,7 @@ pub fn spawn_interactive(
     }
     #[cfg(not(target_os = "linux"))]
     {
-        let _ = (workspace_root, artifacts_root, argv, cwd, env);
+        let _ = (workspace_root, artifacts_root, argv, cwd, env, network);
         Err(SandboxError::new(
             "unsupported_sandbox_class_error",
             "interactive jail is unavailable on this platform",
@@ -203,6 +296,7 @@ fn execute_linux(
 
     let workspace_root = h.spec.workspace_root.clone();
     let artifacts_root = h.spec.artifacts_root.clone();
+    let network = h.spec.network.clone();
     let argv: Vec<String> = argv.clone();
     let env: Vec<(String, String)> = req
         .env
@@ -220,6 +314,7 @@ fn execute_linux(
         let result = run_jailed(
             &workspace_root,
             &artifacts_root,
+            &network,
             &argv,
             &cwd,
             &env,
@@ -250,6 +345,7 @@ fn execute_linux(
 fn run_jailed(
     workspace_root: &std::path::Path,
     artifacts_root: &std::path::Path,
+    network: &NetworkPosture,
     argv: &[String],
     cwd: &std::path::Path,
     env: &[(String, String)],
@@ -257,10 +353,6 @@ fn run_jailed(
     stdout: std::fs::File,
     stderr: std::fs::File,
 ) -> Result<ExecutionResult, SandboxError> {
-    use landlock::{
-        path_beneath_rules, Access, AccessFs, Ruleset, RulesetAttr, RulesetCreatedAttr,
-        RulesetStatus, ABI,
-    };
     use std::{
         os::unix::process::CommandExt,
         process::{Command, Stdio},
@@ -272,34 +364,10 @@ fn run_jailed(
         SandboxError::new("jail_unavailable", e.to_string())
     }
 
-    let abi = ABI::V1;
-    let status = Ruleset::default()
-        .handle_access(AccessFs::from_all(abi))
-        .map_err(map_err)?
-        .create()
-        .map_err(map_err)?
-        // Read-write for workspace and artifacts.
-        .add_rules(path_beneath_rules(
-            [workspace_root, artifacts_root],
-            AccessFs::from_all(abi),
-        ))
-        .map_err(map_err)?
-        // Read-only for the rest of the filesystem so the child can load
-        // its interpreter and libraries.
-        .add_rules(path_beneath_rules(
-            [std::path::Path::new("/")],
-            AccessFs::from_read(abi),
-        ))
-        .map_err(map_err)?
-        .restrict_self()
-        .map_err(map_err)?;
-
-    if status.ruleset == RulesetStatus::NotEnforced {
-        return Err(SandboxError::new(
-            "jail_unavailable",
-            "Landlock restrictions are not enforced by this kernel",
-        ));
-    }
+    // Apply filesystem + network Landlock confinement to this thread (inherited
+    // by the child). Fails closed with `jail_unavailable` when the requested
+    // posture cannot be enforced — never a silent fallback to `local`.
+    apply_landlock(workspace_root, artifacts_root, network)?;
 
     let mut command = Command::new(&argv[0]);
     command

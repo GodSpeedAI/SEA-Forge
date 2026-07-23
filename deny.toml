@@ -38,7 +38,7 @@ confidence-threshold = 0.8
 # Explicitly approved, exact-version exception.
 #
 # Dependency path:
-# domainforge-core 0.13.0 -> xxhash-rust 0.8.16
+# domainforge-core 0.15.0 -> xxhash-rust 0.8.16
 #
 # BSL-1.0 is the Boost Software License 1.0. This exception applies only
 # to xxhash-rust 0.8.16; upgrading the crate requires another review.

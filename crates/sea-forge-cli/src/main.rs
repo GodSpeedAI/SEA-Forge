@@ -46,13 +46,14 @@ enum Command {
         root: PathBuf,
     },
     #[command(hide = true)]
-    Validate {
-        file: PathBuf,
-        #[arg(long)]
-        root: Option<PathBuf>,
-        #[arg(long)]
-        policy: Option<PathBuf>,
-    },
+    Validate { file: PathBuf },
+    /// Hidden self-hosted M5 stage acceptance gate: reads `file`, verifies its
+    /// SHA-256 equals `sha256`, and exits 0/1. Config-free, like `validate`;
+    /// exists so a spec-pipeline stage's `ExecuteCommand` can only ever
+    /// re-invoke this exact binary (the workspace-wide trusted-argv0
+    /// invariant), never an arbitrary external command.
+    #[command(hide = true)]
+    StageCheck { file: PathBuf, sha256: String },
     #[command(hide = true)]
     InternalTestSleep { seconds: u64 },
     #[command(hide = true)]
@@ -103,6 +104,20 @@ enum Command {
         key_dir: Option<PathBuf>,
         #[arg(long, default_value = "migration")]
         key_id: String,
+    },
+    /// Run a spec-to-code pipeline (M5, §10.7) as ordinary governed case
+    /// episodes, then independently settle CALM/RDF ProjectionRecords from
+    /// the same validated DomainForge model.
+    Project {
+        entry: PathBuf,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long, default_value = "sea-forge-policy.yaml")]
+        policy: PathBuf,
+        #[arg(long, default_value = "operator_local")]
+        entity: String,
+        #[arg(long, default_values_t = ["calm".to_string(), "rdf".to_string()])]
+        projection: Vec<String>,
     },
     Case {
         #[command(subcommand)]
@@ -459,14 +474,11 @@ fn main() -> ExitCode {
 }
 fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
     match cli.command {
-        Command::Validate { file, root, policy } => {
-            let authority_root = root.unwrap_or_else(|| {
-                file.parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .join(".sea-forge")
-            });
-            commands::validate::execute(&file, &authority_root, policy.as_deref())
-                .map_err(|error| (1, error))
+        Command::Validate { file } => {
+            commands::validate::execute(&file).map_err(|error| (1, error))
+        }
+        Command::StageCheck { file, sha256 } => {
+            commands::validate::execute_stage_check(&file, &sha256).map_err(|error| (1, error))
         }
         Command::InternalTestSleep { seconds } => {
             std::thread::sleep(std::time::Duration::from_secs(seconds));
@@ -580,6 +592,33 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             key_id: &key_id,
         })
         .map_err(|e| (1, e)),
+        Command::Project {
+            entry,
+            root,
+            policy,
+            entity,
+            projection,
+        } => {
+            let projections = projection
+                .iter()
+                .map(|kind| {
+                    serde_json::from_value(serde_json::Value::String(kind.clone())).map_err(|_| {
+                        sea_forge_core::ForgeError::Input(format!(
+                            "unknown projection kind: {kind}"
+                        ))
+                    })
+                })
+                .collect::<Result<Vec<sea_forge_core::types::ProjectionKind>, _>>()
+                .map_err(|e| (2, e))?;
+            commands::project::execute(commands::project::ProjectOptions {
+                entry: &entry,
+                root: &root,
+                policy: &policy,
+                entity: &entity,
+                projections: &projections,
+            })
+            .map_err(|e| (1, e))
+        }
         Command::Case {
             action,
             root,

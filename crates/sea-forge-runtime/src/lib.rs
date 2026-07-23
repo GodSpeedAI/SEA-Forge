@@ -1,7 +1,7 @@
 use sea_forge_core::{errors::ForgeError, types::*};
 #[cfg(test)]
 use sea_forge_sandbox::ExecutionSandbox;
-use sea_forge_sandbox::{select_sandbox, SandboxClass, SandboxSpec};
+use sea_forge_sandbox::{select_sandbox, NetworkPosture, SandboxClass, SandboxSpec};
 use std::path::Path;
 
 pub fn execute(
@@ -20,6 +20,11 @@ pub fn execute(
                 path: workspace.into(),
                 message: e.to_string(),
             })?;
+    // Derive the network posture from authority (the grant's `network`
+    // boundary) before the grant is consumed by `authorize_execution`. Never
+    // from child-controlled request input.
+    let network = NetworkPosture::from_granted_ports(grant.network_tcp_ports());
+
     grant.authorize_execution(
         &sea_forge_core::types::AuthorityAction::from(&request.operation),
         sea_forge_authority::ExecutionGrantContext {
@@ -43,6 +48,7 @@ pub fn execute(
     let spec = SandboxSpec {
         workspace_root: workspace.to_path_buf(),
         artifacts_root: artifacts.to_path_buf(),
+        network,
     };
     let handle = sandbox.prepare(&spec).map_err(|e| ForgeError::Config {
         class: e.class,
@@ -71,6 +77,7 @@ fn execute_authorized(
     let spec = SandboxSpec {
         workspace_root: workspace.to_path_buf(),
         artifacts_root: artifacts.to_path_buf(),
+        network: NetworkPosture::default(),
     };
     let handle = sandbox.prepare(&spec)?;
     let result = sandbox.execute(&handle, request)?;

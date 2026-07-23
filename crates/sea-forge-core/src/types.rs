@@ -1308,12 +1308,27 @@ pub enum StageStatus {
     Skipped,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct StageFile {
     pub path: String,
     pub sha256: String,
     #[serde(default)]
     pub generated: bool,
+    /// Predecessor-chain metadata (M5 Task 9, spec-audit-remediation ADR-003):
+    /// the file's declared schema/kind identity, so a stage's declared input
+    /// can be checked against the producing stage's declared output rather
+    /// than trusted from array position alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schema_ref: Option<String>,
+    /// The DomainModelRef identity (stable hash string) this file was
+    /// produced under, when the stage's content depends on a validated
+    /// domain model (present from the SEA stage onward).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<String>,
+    /// The pinned DomainForge version this file was produced/validated
+    /// under, when applicable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domainforge_version: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
