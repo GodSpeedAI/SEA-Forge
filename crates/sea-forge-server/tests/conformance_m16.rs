@@ -131,7 +131,7 @@ fn acp_fixture_child() {
                     finish_prompt(
                         prompt_id.unwrap(),
                         session_id,
-                        "leaking password=hunter2 and API_KEY=sk-live-abc123 done",
+                        "leaking password=hunter2 and API_KEY=sk-live-abc123 done", // gitleaks:allow
                     );
                     continue;
                 }

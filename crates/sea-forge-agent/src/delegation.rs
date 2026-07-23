@@ -768,7 +768,7 @@ mod tests {
     /// redacted verbatim even though it is not in the sentinel corpus.
     #[test]
     fn known_secret_token_is_redacted() {
-        let token = "sk-live-8f3a2b1c9d7e6f5a4b3c2d1e0f9a8b7c";
+        let token = "sk-live-8f3a2b1c9d7e6f5a4b3c2d1e0f9a8b7c"; // gitleaks:allow
         let entries = vec![TranscriptEntry {
             role: "assistant".into(),
             content: format!("the token is {token} okay"),

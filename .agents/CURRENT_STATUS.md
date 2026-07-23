@@ -9,6 +9,10 @@ Updated: 2026-07-23
 > ForgeError classification conflicts with a conformance gate; #16
 > MAX_IMPORT_DEPTH needs upstream domainforge-core support). fmt + clippy
 > `-D warnings` + `test --workspace --all-features --locked` all green.
+> **Gitleaks fix:** added `.gitleaks.toml` (path allowlist for `.entire/`
+> and numbered checkpoint transcript dirs) + inline `// gitleaks:allow`
+> on test-fixture lines to stop false-positive regeneration under new
+> commit hashes; `gitleaks detect` now reports "no leaks found".
 
 ## Objective
 
