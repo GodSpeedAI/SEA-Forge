@@ -1,0 +1,103 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KYB3WPFAQPZFTPSQP4WDC018",
+  "session_id": "b5e9bb31-bdf5-4195-83c1-f376270e5f27",
+  "strategy": "manual-commit",
+  "created_at": "2026-07-24T22:28:29.338318602Z",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "save_step_count": 3,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".agents/skills/building-sea-forge-workbench/reference/repository-integration.md"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "6b61690201c5",
+  "checkpoint_transcript_start": 897,
+  "transcript_lines_at_start": 897,
+  "compact_transcript_start": 116,
+  "token_usage": {
+    "input_tokens": 26093,
+    "cache_creation_tokens": 207847,
+    "cache_read_tokens": 2273016,
+    "output_tokens": 17010,
+    "api_call_count": 23
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-claude-code-writing-clearly-and-concisely-2026-07-24T21:16:25.70466111Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "writing-clearly-and-concisely"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "5602df052368",
+      "timestamp": "2026-07-24T21:16:25.70466111Z",
+      "native": {
+        "command": "/writing-clearly-and-concisely"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/writing-clearly-and-concisely",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-07-24T22:28:29.063370278Z",
+    "agent_lines": 0,
+    "agent_removed": 1,
+    "human_added": 24,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 24,
+    "total_lines_changed": 25,
+    "agent_percentage": 4,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 536,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_removed_per_file": {
+        ".logs/subtask2.log": 536
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1,
+      "agent_lines_removed": 537
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1,
+      "agent_lines_removed": 537
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 12,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1,
+      "agent_lines_removed": 537,
+      "user_added_per_file": {
+        ".agents/CURRENT_STATUS.md": 12
+      }
+    }
+  ]
+}

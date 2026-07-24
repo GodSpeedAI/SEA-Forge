@@ -1,0 +1,1612 @@
+follow the instructions in .tmp/cr.md
+
+---
+
+/writing-clearly-and-concisely
+
+---
+
+for the following, when you review the frontend package (step 4.3), there are some stale paths and filename references that you should update as you work. # Create the SEA Forge Workbench Implementation Skill and Repository-Grounded Development Plan
+
+You are working inside the SEA Forge repository.
+
+Your task is to:
+
+1. inspect the actual repository;
+2. inspect the complete frontend specification package at `.agents/specs/frontend/`;
+3. create a reusable Agent Skill under `.agents/skills/` for implementing and wiring the SEA Forge Workbench frontend, desktop host, API, events, and Thoth interaction layer;
+4. create a repository-grounded development plan under `.agents/plans/` using `.agents/plans/DEV_PLAN_TEMPLATE.md`.
+
+Do not implement production frontend or backend code during this task.
+
+The outputs must enable later coding agents to implement the Workbench incrementally, with minimal architectural invention and without weakening SEA Forge’s authority, evidence, settlement, or integrity boundaries.
+
+---
+
+## 1. Required outputs
+
+Create:
+
+```text
+.agents/skills/building-sea-forge-workbench/
+.agents/plans/sea-forge-workbench-frontend-api-implementation.md
+```
+
+Use a different plan filename only when the repository has a clear established naming convention that requires it. State the final path in your completion report.
+
+The skill directory should contain at least:
+
+```text
+.agents/skills/building-sea-forge-workbench/
+├── SKILL.md
+├── reference/
+│   ├── source-map.md
+│   ├── repository-integration.md
+│   ├── stack-and-dependencies.md
+│   ├── implementation-workflow.md
+│   ├── api-and-event-contracts.md
+│   ├── design-and-ux-contract.md
+│   ├── thoth-interaction-contract.md
+│   └── testing-and-settlement.md
+├── scripts/
+│   └── validate-skill.py
+└── evals/
+    └── evaluations.md
+```
+
+You may adjust the structure after repository inspection, but preserve:
+
+* a concise `SKILL.md`;
+* progressive disclosure;
+* direct, one-level-deep references;
+* deterministic validation;
+* at least three concrete evaluations;
+* a repository-grounded implementation plan.
+
+Do not create deeply nested reference chains.
+
+---
+
+## 2. Locked technology decisions
+
+The implementation skill and plan must treat the following as decided architecture unless the existing repository contains a direct, documented conflict.
+
+### Desktop shell
+
+```text
+Tauri 2
+```
+
+Tauri owns:
+
+* native desktop packaging;
+* operating-system integration;
+* Unix-socket or local transport access;
+* file dialogs;
+* local draft persistence APIs;
+* request correlation;
+* event-channel bridging;
+* reconnect behavior;
+* content streaming.
+
+The WebView renderer must not connect directly to the SEA Forge Unix socket.
+
+### Frontend runtime and package management
+
+```text
+Bun
+```
+
+Bun is the canonical frontend:
+
+* package manager;
+* lockfile owner;
+* script runner;
+* development runtime;
+* test runner where compatible.
+
+Use:
+
+```text
+bun.lock
+bunfig.toml
+packageManager: bun@<exact-version>
+```
+
+Do not make Node the normal frontend runtime.
+
+Do not package Bun into the shipped Tauri application unless a separately justified sidecar requires it.
+
+The production desktop application should normally ship:
+
+```text
+Tauri Rust binary
++ operating-system WebView
++ compiled frontend assets
+```
+
+If an upstream development tool requires Node compatibility:
+
+1. prove the incompatibility;
+2. isolate the Node-dependent command;
+3. document it as a temporary tooling exception;
+4. do not make Node part of the product runtime;
+5. include a removal or replacement path in the plan.
+
+If the repository currently uses another JavaScript package manager, do not silently migrate unrelated workspaces. Determine whether the frontend can use a bounded Bun workspace or whether a deliberate repository-wide migration is required.
+
+### Renderer
+
+```text
+React 19
+TypeScript
+Vite
+```
+
+Use Vite as the renderer build system.
+
+Do not introduce Next.js, server-side rendering, or another renderer framework unless existing repository architecture makes replacement clearly more expensive than adaptation.
+
+### Design-system substrate
+
+```text
+@astryxdesign/core
+@astryxdesign/theme-neutral
+@astryxdesign/cli
+@stylexjs/stylex as required peer dependency
+```
+
+SEA Forge owns the design system.
+
+Astryx supplies:
+
+* accessible React primitives;
+* common interaction components;
+* layout patterns;
+* component documentation;
+* agent-readable CLI support;
+* theming infrastructure.
+
+Astryx does not own:
+
+* SEA Forge semantic state vocabulary;
+* domain state machines;
+* product navigation;
+* governed actions;
+* settlement meaning;
+* capability meaning;
+* canonical visual tokens.
+
+Use:
+
+```text
+Astryx precompiled CSS
++ SEA Forge custom Astryx theme
++ CSS Modules for bespoke domain components
+```
+
+Do not adopt StyleX authoring for SEA Forge components unless a later implementation task demonstrates a concrete advantage.
+
+Do not use:
+
+```text
+Tailwind
+shadcn
+a second universal component primitive system
+generic dashboard templates as product architecture
+```
+
+Pin exact Astryx versions because it is beta.
+
+### Routing and source-backed views
+
+```text
+@tanstack/react-router
+@tanstack/react-query
+```
+
+TanStack Router owns:
+
+* typed routes;
+* route parameters;
+* validated search state;
+* URL-addressable projection and filter state.
+
+TanStack Query owns source-backed inspection views such as:
+
+```text
+readiness.get
+case.get_overview
+case.get_horizon
+run.get
+settlement.get
+capability.get
+```
+
+TanStack Query does not own canonical mutation semantics.
+
+Protected commands require the SEA Forge Workbench Protocol command client.
+
+### Workflow and interaction state
+
+```text
+xstate
+@xstate/react
+```
+
+Use XState for workflows with explicit lifecycle and recovery semantics, including:
+
+* preflight and commit;
+* stale preflight;
+* submission ambiguity;
+* cancellation;
+* retry;
+* event reconnect;
+* agent permission;
+* settlement declaration;
+* evidence verification;
+* artifact transitions.
+
+Do not add Redux.
+
+Do not add Zustand globally unless a concrete state problem remains after Router, Query, XState, and local React state are applied.
+
+### Forms and schemas
+
+```text
+react-hook-form
+ajv
+@hookform/resolvers where useful
+```
+
+Preferred contract flow:
+
+```text
+canonical Rust types
+→ generated JSON Schema
+→ generated TypeScript
+→ AJV client hints
+→ server validation and preflight remain authoritative
+```
+
+Do not create a second handwritten canonical domain schema in Zod.
+
+Zod may be used narrowly for route search state or local presentation preferences when justified.
+
+### Dense data and large collections
+
+Use:
+
+```text
+Astryx Table by default
+@tanstack/react-table for advanced tables
+@tanstack/react-virtual for large collections
+```
+
+Use advanced table infrastructure only where needed for:
+
+* virtualized rows;
+* compound filters;
+* nested rows;
+* pinned columns;
+* criterion matrices;
+* evidence matrices;
+* capability coverage;
+* large audit and timeline views.
+
+### Thoth interaction layer
+
+Use an explicit adapter boundary:
+
+```text
+ThothInteractionPort
+├── DirectAgUiAdapter
+└── CopilotKitAdapter
+```
+
+The direct AG-UI adapter is the canonical open-protocol fallback.
+
+The CopilotKit adapter may be implemented first for development convenience, but removal of CopilotKit must not require rewriting:
+
+* Thoth;
+* SEA Forge APIs;
+* Workbench route state;
+* canonical messages;
+* approval state;
+* settlement state;
+* capability state.
+
+Use only open-source, locally runnable CopilotKit functionality.
+
+Explicitly prohibit:
+
+```text
+Copilot Cloud
+enterprise-only CopilotKit features
+proprietary hosted runtimes
+proprietary component catalogs
+CopilotKit-owned persistence
+CopilotKit authentication as SEA Forge identity
+CopilotKit shared state as canonical state
+CopilotKit human-in-the-loop response as approval authority
+arbitrary generated React or HTML
+```
+
+CopilotKit may assist with:
+
+* AG-UI communication;
+* stream assembly;
+* temporary Thoth presentation state;
+* clarification interaction;
+* rendering registered SEA Forge result components.
+
+CopilotKit may not own:
+
+* case state;
+* authority decisions;
+* approval results;
+* execution truth;
+* settlement truth;
+* capability state;
+* integrity state;
+* canonical evidence.
+
+All generative UI must resolve to a registered SEA Forge component union such as:
+
+```ts
+type ThothRenderable =
+  | {kind: "grounded-answer"; props: GroundedAnswerProps}
+  | {kind: "evidence-list"; props: EvidenceListProps}
+  | {kind: "action-paths"; props: ActionPathsProps}
+  | {kind: "approval-proposal"; props: ApprovalProposalProps}
+  | {kind: "clarification"; props: ClarificationProps};
+```
+
+### Protocol ownership
+
+Preserve these boundaries:
+
+| Protocol   | Responsibility                               |
+| ---------- | -------------------------------------------- |
+| SFWP       | Workbench and governed SEA Forge system      |
+| AG-UI      | Thoth agent and in-application interaction   |
+| CopilotKit | Optional React adapter for AG-UI             |
+| ACP        | SEA Forge and delegated execution agents     |
+| AHP        | Optional future multi-client session adapter |
+
+Neither CopilotKit, AG-UI, ACP, nor AHP replaces SFWP.
+
+### Testing
+
+Use:
+
+```text
+Vitest
+React Testing Library
+Storybook
+Playwright
+axe-core
+```
+
+Include Tauri/Rust integration tests for:
+
+* commands;
+* channels;
+* reconnect;
+* request recovery;
+* packaging;
+* desktop permissions.
+
+---
+
+## 3. Deferred decisions
+
+Do not make these decisions without repository evidence and a task-specific spike:
+
+```text
+CodeMirror 6 versus Monaco
+xyflow or another graph projection library
+SQLite versus versioned local files for draft storage
+AHP host integration
+OpenTelemetry renderer instrumentation
+advanced charting
+```
+
+The plan should place each decision at the milestone where it becomes necessary.
+
+For each deferred decision, define:
+
+* decision trigger;
+* required evidence;
+* candidate options;
+* acceptance criteria;
+* cost of delay;
+* reversibility.
+
+---
+
+## 4. Inspect before writing
+
+Before creating either output, inspect the following in order.
+
+### 4.1 Repository instructions
+
+Locate and read:
+
+* root `AGENTS.md`;
+* all nested `AGENTS.md` files applicable to frontend, server, API, desktop host, and testing directories;
+* contribution instructions;
+* architecture decision records;
+* workspace manifests;
+* build and test documentation;
+* existing skills;
+* existing specifications;
+* existing plans.
+
+Follow the most local applicable instructions.
+
+### 4.2 Development plan template
+
+Read:
+
+```text
+.agents/plans/DEV_PLAN_TEMPLATE.md
+```
+
+Use its exact required:
+
+* structure;
+* field names;
+* ordering;
+* task format;
+* acceptance format;
+* evidence conventions.
+
+Do not approximate the template from memory.
+
+If this prompt and the template differ structurally, preserve the template and express this prompt’s requirements inside it.
+
+### 4.3 Frontend package
+
+Inventory every file under:
+
+```text
+.agents/specs/frontend/
+```
+
+Read the package in this order:
+
+1. `README.md`
+2. `context-provenance.md`
+3. `DESIGN.md`
+4. `DESIGN-spec-mapping.md`
+5. `MOCKUP-BRIEF.md`
+6. `sea-forge-governed-workbench-ux-epic-v0.1.md`
+7. `sea-forge-gui-atomic-design-breakdown-v0.1.md`
+8. `sea-forge-gui-view-flow-transition-spec-v0.1.md`
+9. `sea-forge-primary-path-screen-wireframe-interaction-spec-v0.1.md`
+10. `sea-forge-workbench-frontend-architecture-component-contract-v0.1.md`
+11. `sea-forge-workbench-api-spec-v0.1.md`
+12. `sea-forge-workbench-api-method-catalog-v0.1.yaml`
+13. `build-plant-prompt.md`
+14. `ui_kits/DESIGN-HANDOFF.md`
+15. `ui_kits/DESIGN-MANIFEST.json`
+16. `ui_kits/app/README.md`
+17. `ui_kits/app/index.html`
+18. `ui_kits/app/styles.css`
+19. `ui_kits/app/app.js`
+20. `ui_kits/app/components.js`
+21. files under `ui_kits/app/components/`
+22. `css.txt`
+23. the existing `.agents/specs/frontend/SKILL.md`
+
+The existing frontend `SKILL.md` is a design-system skill and source document.
+
+Do not:
+
+* overwrite it;
+* move it;
+* treat it as the production implementation skill requested here.
+
+### 4.4 Agent-skill best practices
+
+Review:
+
+```text
+https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+```
+
+Apply its current guidance, including:
+
+* concise skill body;
+* precise trigger description;
+* progressive disclosure;
+* direct references;
+* deterministic scripts where useful;
+* evaluations;
+* feedback loops;
+* avoiding duplication of large source documents.
+
+### 4.5 Repository substrate
+
+Inspect the actual codebase for:
+
+* current frontend or desktop application;
+* Tauri version or existing desktop host;
+* React and TypeScript version;
+* Bun configuration;
+* JavaScript workspace structure;
+* existing package manager and lockfiles;
+* server binaries;
+* Unix-socket, NDJSON, WebSocket, HTTP, or other transport code;
+* request and response enums;
+* event envelopes and cursors;
+* request IDs;
+* idempotency;
+* operation-status recovery;
+* canonical Rust types;
+* Serde and schema generation;
+* TypeScript generation;
+* read models and projections;
+* identity and sponsor propagation;
+* authority ownership;
+* approval ownership;
+* ACP integration;
+* Thoth implementation;
+* evidence ownership;
+* settlement ownership;
+* capability ownership;
+* integrity ownership;
+* test fixtures;
+* packaging and release tooling.
+
+Do not choose an implementation merely because a specification uses it as an example.
+
+---
+
+## 5. Source hierarchy
+
+Use this precedence when sources disagree:
+
+1. actual canonical repository invariants and current implementation;
+2. applicable `AGENTS.md` and architecture decisions;
+3. canonical SEA Forge kernel and rewrite specifications;
+4. `sea-forge-workbench-api-spec-v0.1.md`;
+5. `sea-forge-workbench-frontend-architecture-component-contract-v0.1.md`;
+6. view-flow and wireframe specifications;
+7. UX epic and atomic design breakdown;
+8. `DESIGN.md`, mapping, and mockup brief;
+9. OpenDesign static kit and generated handoff metadata.
+
+The static kit is a visual and interaction reference.
+
+It is not:
+
+* backend truth;
+* production architecture;
+* a canonical state model;
+* an API contract;
+* a source of authoritative records.
+
+Do not let prototype JavaScript become accidental application architecture.
+
+---
+
+## 6. Resolve package inconsistencies explicitly
+
+Inspect and document at minimum:
+
+* references to `colors_and_type.css` when the package contains `css.txt` and `ui_kits/app/styles.css`;
+* references to absent `preview/` files;
+* references to absent `context/provenance.md` versus available `context-provenance.md`;
+* references to absent asset or font directories;
+* `DESIGN-MANIFEST.json` classifying component HTML snippets as screens;
+* whether `ui_kits/app/index.html` is a Readiness reference rather than a generic launcher;
+* whether generated manifest and handoff content conflicts with actual file contents.
+
+Do not silently carry stale references into the new skill.
+
+Do not modify the source package during this task unless repository instructions explicitly require it.
+
+Record corrections in:
+
+```text
+reference/source-map.md
+```
+
+and in the implementation plan.
+
+---
+
+## 7. Core architecture invariants
+
+The skill and plan must preserve:
+
+```text
+navigation ≠ mutation
+draft ≠ proposal
+proposal ≠ committed plan
+preflight allow ≠ execution authority
+approval ≠ successful execution
+execution state ≠ settlement state
+agent dialogue ≠ termination
+agent termination ≠ settlement
+settlement acceptance ≠ capability promotion
+derived view ≠ source truth
+event delivery ≠ source truth
+imported record ≠ local authority
+unknown ≠ unavailable
+restricted ≠ empty
+denial ≠ application failure
+retry ≠ replay
+```
+
+The frontend may own:
+
+* navigation;
+* reversible local drafts;
+* presentation preferences;
+* filtering;
+* sorting;
+* keyboard interaction;
+* formatting;
+* non-authoritative completeness hints;
+* cached views with explicit freshness;
+* pending request presentation.
+
+The frontend must not independently own:
+
+* authority evaluation;
+* identity or sponsor resolution;
+* sentry activation;
+* canonical case reduction;
+* execution truth;
+* settlement evaluation;
+* declaration standing;
+* capability promotion;
+* integrity verification;
+* agent permission grants;
+* artifact maturity;
+* federation adoption;
+* canonical record mutation.
+
+The normal frontend path must not directly edit `.sea-forge/` files.
+
+---
+
+## 8. Tauri bridge contract
+
+The skill and plan must distinguish three bridge mechanisms.
+
+### Tauri commands
+
+Use for:
+
+* SFWP inspection queries;
+* protected command submission;
+* request-status lookup;
+* file selection;
+* local draft operations;
+* bounded content requests.
+
+### Tauri channels
+
+Use for:
+
+* ordered SFWP event streams;
+* log streams;
+* agent output;
+* transcript streams;
+* evidence content;
+* long-running operation progress.
+
+### Lightweight Tauri events
+
+Use only for low-volume presentation notifications where ordering and replay are not authoritative.
+
+The Rust host owns:
+
+```text
+socket connection
+protocol negotiation
+request correlation
+request-status recovery
+event cursor
+event-gap recovery
+stream integrity
+local file boundaries
+desktop permissions
+```
+
+The renderer receives a narrow typed bridge.
+
+Do not expose a generic command such as:
+
+```text
+invoke_backend(method, arbitrary_json)
+```
+
+when generated typed commands are feasible.
+
+---
+
+## 9. Astryx integration rules
+
+Create a SEA Forge-owned design architecture such as:
+
+```text
+packages/
+  sea-forge-ui-tokens/
+  sea-forge-astryx-theme/
+  sea-forge-ui-primitives/
+  sea-forge-ui-components/
+  sea-forge-ui-patterns/
+```
+
+Adjust paths to repository conventions.
+
+### Canonical tokens
+
+SEA Forge semantic tokens remain the source of truth.
+
+Generate or maintain projections such as:
+
+```text
+sea-forge.tokens.css
+sea-forge.astryx-theme.css
+token documentation
+Storybook token fixtures
+```
+
+Do not collapse semantic distinctions into generic:
+
+```text
+success
+warning
+error
+```
+
+Preserve tokens such as:
+
+```text
+authority_allowed
+authority_denied
+authority_escalated
+execution_running
+execution_succeeded
+settlement_evaluating
+settlement_accepted
+settlement_rejected
+integrity_failed
+evidence_quarantined
+```
+
+### Component hierarchy
+
+Use Astryx directly for generic components when appropriate.
+
+Create SEA Forge-owned semantic components for:
+
+```text
+GovernedStatusPill
+DualStateIndicator
+SourceFreshnessBadge
+IntegrityIndicator
+ProtectedActionButton
+WhyStatePanel
+EvidenceDrawer
+AuthorityBoundaryPanel
+AvailabilityLadder
+```
+
+Create SEA Forge-owned domain organisms for:
+
+```text
+ReadinessConsole
+CaseCreationWorkbench
+PlanPreflightPanel
+CaseHorizonBoard
+ExecutionConsole
+AgentTaskConsole
+ApprovalDecisionPanel
+CriterionSettlementMatrix
+CapabilityPromotionPanel
+IntegrityInspector
+```
+
+### Swizzling policy
+
+Use this order:
+
+```text
+compose
+→ theme
+→ supported override
+→ swizzle only when required
+```
+
+Every swizzled component must record:
+
+* Astryx package version;
+* original component;
+* reason for ownership;
+* behavior changed;
+* accessibility tests;
+* upgrade responsibility.
+
+Do not patch `node_modules`.
+
+---
+
+## 10. CopilotKit and AG-UI rules
+
+Create a SEA Forge-owned interface similar to:
+
+```ts
+interface ThothInteractionPort {
+  connect(session: ThothSessionRef): Promise<void>;
+
+  ask(
+    question: ThothQuestionDraft
+  ): Promise<RequestRef>;
+
+  respondToClarification(
+    requestId: string,
+    response: unknown
+  ): Promise<void>;
+
+  subscribe(
+    listener: (event: ThothInteractionEvent) => void
+  ): Unsubscribe;
+
+  disconnect(): Promise<void>;
+}
+```
+
+The exact type names must be grounded in the repository.
+
+### Direct adapter
+
+`DirectAgUiAdapter` must remain a viable implementation path using open protocol contracts without proprietary CopilotKit services.
+
+### CopilotKit adapter
+
+`CopilotKitAdapter` may use open-source CopilotKit packages, but must translate through `ThothInteractionPort`.
+
+It must not leak CopilotKit types into:
+
+* canonical SEA Forge crates;
+* SFWP types;
+* Thoth question or answer records;
+* authority types;
+* settlement types;
+* capability types.
+
+### Human interaction
+
+CopilotKit human-in-the-loop interactions may collect:
+
+* clarification;
+* selection;
+* draft edits;
+* lawful interpretation choices.
+
+For a real governed approval:
+
+```text
+CopilotKit renders the request
+→ user selects a response
+→ SFWP approval.decide
+→ SEA Forge checks identity, standing, expiry, and separation of duty
+→ authoritative result returns
+→ UI updates from source-backed state
+```
+
+The CopilotKit callback itself does not grant approval.
+
+---
+
+## 11. The implementation skill
+
+Create a reusable skill named:
+
+```yaml
+name: building-sea-forge-workbench
+```
+
+Use this description unless repository conventions justify a clearer equivalent:
+
+```yaml
+description: Builds and wires repository-grounded SEA Forge Workbench vertical slices using Tauri, Bun, React, Astryx, SFWP, AG-UI, and governed event synchronization. Use when implementing or reviewing Workbench routes, components, view models, desktop bridges, API queries and commands, Thoth interaction adapters, live events, evidence, settlement, or frontend/backend integration.
+```
+
+The description must:
+
+* be third-person;
+* state what the skill does;
+* state when it should be invoked;
+* remain under 1,024 characters;
+* use only lowercase letters, numbers, and hyphens in the name.
+
+### `SKILL.md`
+
+Keep the body under 500 lines.
+
+Include:
+
+1. purpose;
+2. trigger conditions;
+3. non-goals;
+4. locked stack;
+5. source hierarchy;
+6. task-class routing;
+7. mandatory repository inspection;
+8. vertical-slice workflow;
+9. API grounding workflow;
+10. design fidelity workflow;
+11. Thoth adapter workflow;
+12. validation loop;
+13. completion report contract;
+14. direct links to all reference files;
+15. two or three concrete examples.
+
+The skill must route agents to relevant sources rather than tell them to load every frontend specification for every task.
+
+---
+
+## 12. Required skill references
+
+### `reference/source-map.md`
+
+Include:
+
+* every frontend package file;
+* purpose;
+* when to read it;
+* normative versus reference status;
+* known stale references;
+* actual styling sources;
+* prototype limitations.
+
+### `reference/repository-integration.md`
+
+Include repository-grounded:
+
+* workspace topology;
+* frontend location;
+* Tauri host location;
+* server location;
+* transport location;
+* canonical owners;
+* generated contracts;
+* test locations;
+* build commands;
+* missing seams.
+
+Mark unsupported claims:
+
+```text
+UNKNOWN — repository evidence not found
+```
+
+### `reference/stack-and-dependencies.md`
+
+Include:
+
+* locked stack;
+* exact dependency responsibilities;
+* package-manager policy;
+* Tauri bridge policy;
+* Astryx integration;
+* CopilotKit adapter boundary;
+* excluded dependencies;
+* deferred decisions;
+* compatibility risks.
+
+### `reference/implementation-workflow.md`
+
+Include:
+
+* vertical-slice procedure;
+* repository evidence requirements;
+* route/controller/view-model/component order;
+* local draft versus canonical state;
+* dependency direction;
+* definition of done;
+* debt-prevention rules.
+
+### `reference/api-and-event-contracts.md`
+
+Include a concise map of:
+
+* actual transport;
+* target SFWP semantics;
+* request and response mapping;
+* protected commands;
+* expected digests;
+* idempotency;
+* request-status recovery;
+* event cursor;
+* gap recovery;
+* content access;
+* governed outcomes;
+* errors.
+
+Do not duplicate the full API specification.
+
+### `reference/design-and-ux-contract.md`
+
+Include:
+
+* source priority;
+* Astryx role;
+* SEA Forge token ownership;
+* shell;
+* page families;
+* semantic components;
+* domain organisms;
+* responsive contract;
+* accessibility;
+* visual-regression expectations.
+
+### `reference/thoth-interaction-contract.md`
+
+Include:
+
+* SFWP, AG-UI, CopilotKit, ACP, and AHP boundaries;
+* `ThothInteractionPort`;
+* direct AG-UI adapter;
+* CopilotKit adapter;
+* allowed temporary state;
+* prohibited canonical state;
+* registered rendering union;
+* approval and clarification behavior;
+* no proprietary dependency rule.
+
+### `reference/testing-and-settlement.md`
+
+Include:
+
+* Rust bridge tests;
+* contract tests;
+* state-machine tests;
+* component tests;
+* accessibility tests;
+* Storybook fixtures;
+* route integration tests;
+* desktop end-to-end tests;
+* packaging tests;
+* settlement evidence required for completion.
+
+---
+
+## 13. Implementation workflow
+
+The skill must require this loop:
+
+```text
+1. Identify the user-visible settlement.
+2. Inspect current repository implementation.
+3. Load only relevant source contracts.
+4. Map target concepts to actual types and modules.
+5. Classify each capability.
+6. Select the smallest coherent vertical slice.
+7. Implement missing server/query/command/event support only where genuinely absent.
+8. Generate or adapt typed frontend contracts.
+9. Implement Tauri bridge.
+10. Implement view model and XState machine where needed.
+11. Implement route and Astryx-based components.
+12. Wire source-backed queries and events.
+13. Add failure and recovery handling.
+14. Add tests.
+15. Validate visual fidelity and accessibility.
+16. Run repository checks.
+17. Report evidence, limitations, and next spendable path.
+```
+
+Use classifications:
+
+```text
+EXISTS
+PARTIAL
+MISSING
+CONFLICTS
+UNKNOWN
+NOT REQUIRED
+```
+
+Every important implementation decision must cite:
+
+* repository path;
+* symbol or type;
+* existing test;
+* ownership boundary.
+
+---
+
+## 14. API rules
+
+Treat:
+
+```text
+.agents/specs/frontend/sea-forge-workbench-api-spec-v0.1.md
+```
+
+as the target semantic API, not proof that the code already implements it.
+
+Map each target method:
+
+```text
+target method
+→ existing request/service/type
+→ existing event/read model
+→ reuse / adapt / merge / add / reject
+```
+
+Preserve interaction classes:
+
+```text
+inspect
+evaluate
+propose
+command
+decide
+verify
+subscribe
+```
+
+Preserve:
+
+* separate queries, commands, and events;
+* one user intent per method;
+* request IDs;
+* stale preconditions;
+* expected digests;
+* status recovery after transport ambiguity;
+* source metadata;
+* freshness metadata;
+* integrity metadata;
+* evidence references;
+* durable cursors;
+* event-gap recovery;
+* retry as a new episode;
+* disclosure before retrieval;
+* no silent provider fallback;
+* no secrets in API frames.
+
+Do not introduce:
+
+```text
+GraphQL as the primary API
+generic REST mutation
+generic success responses
+one status field for all domains
+direct file access for renderer convenience
+```
+
+---
+
+## 15. Design and UX rules
+
+Require:
+
+* one current governed focus per screen;
+* one dominant lawful action;
+* exact state-domain labels;
+* execution and settlement shown separately;
+* agent dialogue, termination, and settlement shown separately;
+* source and freshness visible or one action away;
+* disabled-action reasons;
+* evidence and provenance access;
+* dense rows, tables, matrices, and drawers;
+* semantic tokens;
+* keyboard access;
+* visible focus;
+* reduced motion;
+* non-color status cues;
+* useful responsive behavior.
+
+Do not:
+
+* create generic giant-card dashboards;
+* build a consumer-chat-first agent interface;
+* fabricate pricing, confidence, authority, evidence, commands, or options;
+* treat OpenDesign data as backend truth;
+* create routes for component snippets because a manifest calls them screens;
+* copy prototype JavaScript state management into production;
+* allow Astryx stock patterns to override SEA Forge domain meaning.
+
+---
+
+## 16. Deterministic validator
+
+Create:
+
+```text
+scripts/validate-skill.py
+```
+
+Validate at least:
+
+* `SKILL.md` exists;
+* valid YAML frontmatter;
+* name and description requirements;
+* body under 500 lines;
+* direct references exist;
+* no backslash paths;
+* no references deeper than one level;
+* all required reference files exist;
+* at least three evaluations exist;
+* no stale package references were copied;
+* no machine-specific absolute paths;
+* locked dependencies are represented;
+* excluded dependencies are not recommended;
+* CopilotKit is behind an adapter;
+* Bun is canonical;
+* Astryx is a substrate rather than semantic owner.
+
+Return nonzero on failure and print actionable errors.
+
+Use only Python standard-library dependencies unless the repository already provides a justified alternative.
+
+Run the validator before completion.
+
+---
+
+## 17. Evaluations
+
+Create at least four evaluations.
+
+### Evaluation 1 — Readiness vertical slice
+
+Expected behavior:
+
+* inspects actual readiness contracts;
+* uses Tauri command/query bridge;
+* uses Astryx primitives and SEA Forge semantic components;
+* preserves operation-sensitive readiness;
+* does not use fake backend state;
+* includes freshness and integrity;
+* adds tests.
+
+### Evaluation 2 — Case preflight and commit
+
+Expected behavior:
+
+* finds existing request and digest types;
+* separates draft, preflight, and commit;
+* handles stale state;
+* handles ambiguous submission;
+* does not invent a generic mutation API;
+* tests no duplicate commit.
+
+### Evaluation 3 — Agent permission denial
+
+Expected behavior:
+
+* uses the existing ACP and approval owners;
+* keeps permission denial separate from cancellation;
+* keeps dialogue, termination, and settlement separate;
+* routes UI interaction through `ThothInteractionPort` or SFWP as appropriate;
+* avoids CopilotKit canonical state;
+* tests no silent fallback.
+
+### Evaluation 4 — Replace CopilotKit adapter
+
+Prompt a coding agent to replace or disable the CopilotKit adapter while retaining direct AG-UI behavior.
+
+Expected behavior:
+
+* no Thoth canonical types change;
+* no Workbench routes change;
+* no SFWP contracts change;
+* no settlement or approval behavior changes;
+* registered SEA Forge render components remain usable.
+
+---
+
+## 18. The implementation plan
+
+Create the plan using:
+
+```text
+.agents/plans/DEV_PLAN_TEMPLATE.md
+```
+
+Do not implement the plan.
+
+The plan must be grounded in actual repository paths and symbols.
+
+### Plan objective
+
+Cover:
+
+* Tauri desktop application;
+* Bun workspace and scripts;
+* React/Vite renderer;
+* Astryx integration and SEA Forge theme;
+* application shell;
+* route architecture;
+* semantic components;
+* source-backed view models;
+* SFWP bridge;
+* typed query, command, and event contracts;
+* Thoth interaction port;
+* direct AG-UI adapter;
+* optional CopilotKit adapter;
+* readiness;
+* case authoring and preflight;
+* case overview and horizon;
+* execution;
+* agent delegation;
+* approvals;
+* human tasks;
+* settlement;
+* capability;
+* evidence;
+* integrity;
+* accessibility;
+* packaging;
+* end-to-end proof.
+
+### Vertical milestone sequence
+
+Adjust only when repository evidence supports a better sequence:
+
+```text
+Milestone 1 — Repository grounding and compatibility map
+Milestone 2 — Tauri, Bun, React 19, and Astryx shell proof
+Milestone 3 — SFWP transport, request recovery, and event continuity
+Milestone 4 — Application shell and semantic design foundations
+Milestone 5 — Readiness vertical slice
+Milestone 6 — Case authoring, validation, preflight, and commit
+Milestone 7 — Case overview and horizon
+Milestone 8 — Command execution and settlement handoff
+Milestone 9 — Thoth interaction port and direct AG-UI adapter
+Milestone 10 — Optional OSS CopilotKit adapter
+Milestone 11 — Agent delegation, ACP permissions, and transcript evidence
+Milestone 12 — Settlement and recovery
+Milestone 13 — Capability, memory, evidence, and integrity
+Milestone 14 — Packaging, accessibility, and end-to-end proof
+```
+
+Every milestone must produce a usable, tested settlement.
+
+### Dependency compatibility proof
+
+The plan must include an early proof of:
+
+```text
+Tauri 2
++ Bun
++ React 19
++ Vite
++ Astryx
++ custom SEA Forge theme
++ TanStack Router
++ TanStack Query
++ XState
+```
+
+The CopilotKit compatibility proof must be separate and replaceable.
+
+Do not make the entire Workbench dependent on the CopilotKit proof succeeding.
+
+### Task requirements
+
+Each task must include the fields required by the template and at minimum:
+
+* stable task ID;
+* goal;
+* user-visible settlement;
+* repository evidence;
+* exact files or modules;
+* existing substrate reused;
+* missing capability;
+* dependencies;
+* implementation steps;
+* tests;
+* acceptance criteria;
+* failure modes;
+* debt-prevention notes;
+* artifacts produced.
+
+Do not renumber existing IDs in later revisions. Use hierarchical insertion.
+
+### Capability-delta classification
+
+Inspect and classify at minimum:
+
+```text
+Tauri host
+Bun workspace
+React/Vite renderer
+Astryx compatibility
+SEA Forge theme
+application shell
+routing
+server transport
+protocol negotiation
+request IDs
+request-status recovery
+idempotency
+query contracts
+protected commands
+event subscriptions
+durable cursor
+event-gap recovery
+generated frontend types
+readiness
+case entry
+draft validation
+preflight
+atomic commit
+case overview
+case horizon
+run detail
+cancellation
+retry lineage
+agent-run detail
+ACP permissions
+Thoth interaction port
+direct AG-UI adapter
+CopilotKit adapter
+transcript access
+SWE_SEED proof
+settlement detail
+settlement declarations
+capability detail
+evidence access
+integrity inspection
+Storybook fixtures
+accessibility testing
+desktop end-to-end testing
+packaging and release
+```
+
+Use:
+
+```text
+EXISTS
+PARTIAL
+MISSING
+CONFLICTS
+UNKNOWN
+NOT REQUIRED
+```
+
+### Required proof scenarios
+
+The plan must include executable proof for:
+
+1. happy command path;
+2. execution succeeds but settlement rejects;
+3. approval escalation;
+4. agent permission denial without cancellation;
+5. integrity halt;
+6. ambiguous commit recovered without duplication;
+7. stale preflight;
+8. event gap and authoritative recovery;
+9. disclosure denial before retrieval;
+10. capability remains conservative after insufficient evidence;
+11. CopilotKit adapter removal does not alter canonical behavior;
+12. Bun is not required in the shipped desktop runtime.
+
+---
+
+## 19. Prohibited shortcuts
+
+The plan and skill must prohibit:
+
+* renderer mutation of canonical files;
+* frontend-owned lifecycle truth;
+* frontend authority or settlement logic;
+* duplicate handwritten canonical enums when generation is feasible;
+* broad retrieval followed by client redaction;
+* optimistic approval;
+* optimistic cancellation completion;
+* optimistic settlement;
+* optimistic integrity;
+* optimistic capability;
+* silent provider fallback;
+* silent event loss;
+* retry after transport ambiguity without status recovery;
+* generic status or success contracts;
+* speculative backend endpoints;
+* direct renderer Unix-socket access;
+* direct renderer SQL;
+* GraphQL as primary API;
+* Tailwind;
+* shadcn;
+* Redux;
+* Copilot Cloud;
+* enterprise-only CopilotKit features;
+* CopilotKit-owned persistence;
+* CopilotKit as application-state owner;
+* CopilotKit as approval authority;
+* arbitrary generated UI;
+* framework selection without repository evidence;
+* treating the static Readiness kit as a complete application;
+* flattening domain modules into generic cards;
+* changing SEA Forge semantics to simplify UI implementation.
+
+---
+
+## 20. Quality review
+
+Before finalizing:
+
+1. run `scripts/validate-skill.py`;
+2. verify `SKILL.md` is under 500 lines;
+3. verify all references are one level deep;
+4. verify the description is discoverable and third-person;
+5. verify the skill does not duplicate source specifications;
+6. verify stale package references are documented;
+7. verify the plan follows `DEV_PLAN_TEMPLATE.md` exactly;
+8. verify every plan task cites real repository paths or is marked unknown;
+9. verify no production code was changed;
+10. verify at least four evaluations exist;
+11. verify milestones are vertical settlements;
+12. verify frontend, desktop host, API, events, evidence, and settlement are integrated;
+13. verify Bun is canonical;
+14. verify Astryx remains below the SEA Forge semantic design system;
+15. verify CopilotKit is optional and replaceable;
+16. verify direct AG-UI remains viable;
+17. verify no proprietary CopilotKit service is required.
+
+Revise and rerun validation until all checks pass.
+
+---
+
+## 21. Final response
+
+End with a concise report containing:
+
+* skill path;
+* plan path;
+* skill name and trigger description;
+* files created;
+* frontend, Tauri, and server substrate discovered;
+* current package-manager state;
+* source-package inconsistencies resolved;
+* target API decisions preserved;
+* Astryx integration strategy;
+* CopilotKit adapter boundary;
+* highest-risk integration boundary;
+* first plan task;
+* validator command and result;
+* confirmation that no production implementation was performed.
+
+Do not merely describe the outputs.
+
+Create the skill and plan in the repository.
+
+---
+
+implement task 1 from .agents/plans/2026-07-24-sea-forge-workbench-frontend-api-implementation.md using the following skill: .agents/skills/building-sea-forge-workbench/SKILL.md
+
+---
+
+<task-notification>
+<task-id>a887214f9e260f77b</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3f167003-5bb6-475b-8986-ecb2fa0cc1dd/tasks/a887214f9e260f77b.output</output-file>
+<status>completed</status>
+<summary>Agent "Ground system/request/operation/events/readiness methods" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>(No action taken — this is a repeated harness notification about a prior agent lifecycle event, unrelated to any pending work. The research deliverable was already completed and reported. Ending turn.)</result>
+<usage><subagent_tokens>62880</subagent_tokens><tool_uses>10</tool_uses><duration_ms>89806</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a773eca8f87095ba4</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-sprime01-projects-sea-rs/3f167003-5bb6-475b-8986-ecb2fa0cc1dd/tasks/a773eca8f87095ba4.output</output-file>
+<status>completed</status>
+<summary>Agent "Ground cell/self_model methods" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Stopping here. The grounding report is complete and was delivered in full in my earlier response — no additional research or output is pending on my end.</result>
+<usage><subagent_tokens>67346</subagent_tokens><tool_uses>14</tool_uses><duration_ms>105730</duration_ms></usage>
+</task-notification>
