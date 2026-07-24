@@ -2,6 +2,23 @@
 
 Updated: 2026-07-24
 
+> **2026-07-24 Workbench implementation skill + plan created (no production
+> code).** New reusable skill `.agents/skills/building-sea-forge-workbench/`
+> (SKILL.md + 8 reference files + deterministic `scripts/validate-skill.py`,
+> passing, teeth-checked + 4 evaluations) and repository-grounded plan
+> `.agents/plans/2026-07-24-sea-forge-workbench-frontend-api-implementation.md`
+> (14 vertical-settlement tasks, capability-delta table, 12 proof scenarios).
+> Grounding findings: server = Unix-socket NDJSON `verb`-tagged enum
+> (`sea-forge-server/src/lib.rs:396`); no JS workspace/Tauri/schema-gen
+> anywhere; SFWP envelopes, request recovery, and `events.subscribe` (cursor
+> = ledger `entry_ulid`) are additive work. Frontend spec package staleness
+> fixed in place: `css.txt` → `colors_and_type.css` (matches all refs),
+> absent `preview/`, `assets/README.md`, `context/provenance.md` references
+> corrected in README/SKILL/DESIGN/app README; generated
+> `ui_kits/DESIGN-MANIFEST.json` screen-misclassification documented (not
+> hand-edited) in the skill's `reference/source-map.md`. Next step: plan
+> Task 1 (SFWP method-grounding report).
+
 > **2026-07-24 spec-audit-remediation Task 19 portable closeout complete**
 > (`.agents/plans/2026-07-22-spec-audit-remediation.md`): every focused gate
 > from Tasks 1–18 was re-run in dependency order against `ca11dc2`; all
@@ -1294,6 +1311,10 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   `SEA_FORGE_REAL_SWE_SEED_COMMIT` are supplied.
 - Run the Seatbelt network conformance case on macOS. None of these skipped
   release/platform checks is claimed by the portable Task 19 closeout.
+- `.agents/plans/TODO.md` defines the stronger evidence required before the
+  three claims can move from unproved to proven: a jailed real ACP host, a
+  real SWE_SEED host plus correlated authority declaration, and an implemented
+  macOS Seatbelt backend with non-skipping conformance tests.
 
 ## Tasks 1–4 Specification Reconciliation
 

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEA Forge · Readiness Workbench</title>
+  <link rel="stylesheet" href="../../colors_and_type.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="alternate" type="text/html" href="components/GovernedFocusHeader.html" title="Governed Focus Header component">
+  <link rel="alternate" type="text/html" href="components/ReadinessConditionTable.html" title="Readiness Condition Table component">
+  <link rel="alternate" type="text/html" href="components/EvidenceDrawer.html" title="Evidence Drawer component">
+  <script>
+    document.documentElement.classList.add("motion-enabled");
+  </script>
+  <style>
+    /* Portable review anchor; full source-backed implementation is in styles.css. */
+    .app-shell { isolation: isolate; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to governed focus</a>
+  <div class="app-shell" data-od-id="application-shell">
+    <header class="global-bar" data-od-id="global-context-bar">
+      <div class="product-cell">
+        <span class="product-mark" aria-hidden="true">SF</span>
+        <div><strong>SEA Forge</strong><span>Cell context</span></div>
+      </div>
+      <div class="global-context">
+        <button class="context-chip" type="button" aria-label="Active actor and role"><span>Actor</span><strong>Operator · Sponsor</strong></button>
+        <button class="context-chip" type="button" aria-label="Active policy"><span>Policy</span><strong>Loaded</strong></button>
+        <button class="context-chip" type="button" aria-label="Integrity state"><span class="state-dot state-dot--ready"></span><strong>Integrity verified</strong></button>
+      </div>
+      <div class="global-actions">
+        <button class="icon-button" id="searchButton" type="button" aria-label="Open command search" title="Search (/)">
+          <span aria-hidden="true">⌕</span>
+        </button>
+        <button class="attention-button" type="button" aria-label="Open approval inbox">
+          <span>Inbox</span><strong>1 approval</strong>
+        </button>
+        <button class="active-work" type="button"><span class="state-dot state-dot--running"></span><span>Active work</span><strong>None running</strong></button>
+      </div>
+    </header>
+
+    <nav class="primary-nav" aria-label="Primary navigation" data-od-id="primary-navigation">
+      <div class="nav-section-label">Operate</div>
+      <button class="nav-item nav-item--active" type="button" data-route="Readiness" aria-current="page"><span aria-hidden="true">◈</span><span>Readiness</span><kbd>R</kbd></button>
+      <button class="nav-item" type="button" data-route="Thoth"><span aria-hidden="true">◇</span><span>Thoth</span></button>
+      <button class="nav-item" type="button" data-route="Assets"><span aria-hidden="true">▱</span><span>Assets</span></button>
+      <button class="nav-item" type="button" data-route="Domain Models"><span aria-hidden="true">⌘</span><span>Domain Models</span></button>
+      <button class="nav-item" type="button" data-route="Cases"><span aria-hidden="true">▤</span><span>Cases</span></button>
+      <button class="nav-item" type="button" data-route="Inbox"><span aria-hidden="true">▾</span><span>Inbox</span><span class="nav-count">1</span></button>
+      <button class="nav-item" type="button" data-route="Operations"><span aria-hidden="true">▶</span><span>Operations</span></button>
+      <div class="nav-section-label">Inspect</div>
+      <button class="nav-item" type="button" data-route="Evidence"><span aria-hidden="true">◎</span><span>Evidence</span></button>
+      <button class="nav-item" type="button" data-route="Memory"><span aria-hidden="true">≋</span><span>Memory</span></button>
+      <button class="nav-item" type="button" data-route="Capabilities"><span aria-hidden="true">△</span><span>Capabilities</span></button>
+      <button class="nav-item" type="button" data-route="Artifacts"><span aria-hidden="true">□</span><span>Artifacts</span></button>
+      <button class="nav-item" type="button" data-route="Federation"><span aria-hidden="true">⌁</span><span>Federation</span></button>
+      <div class="nav-spacer"></div>
+      <button class="nav-item" type="button" data-route="Administration"><span aria-hidden="true">⚙</span><span>Administration</span></button>
+    </nav>
+
+    <main id="main-content" class="main-workspace" tabindex="-1" data-od-id="readiness-workspace">
+      <div class="journey-ribbon" aria-label="Governed journey">
+        <strong>Readiness</strong><span>Authority</span><span>Domain</span><span>Draft</span><span>Preflight</span><span>Execution</span><span>Evidence</span><span>Settlement</span>
+      </div>
+
+      <section class="governed-focus" aria-labelledby="readiness-title" data-od-id="readiness-governed-focus">
+        <div class="focus-copy">
+          <div class="title-line">
+            <h1 id="readiness-title">Readiness Overview</h1>
+            <span id="readinessPill" class="status-pill status-pill--degraded"><span aria-hidden="true">▲</span>Readiness degraded</span>
+          </div>
+          <p id="readinessReason">Core local execution is available. External agent delegation requires endpoint verification.</p>
+          <div class="focus-meta">
+            <button class="freshness-badge" id="freshnessButton" type="button"><span class="state-dot state-dot--ready"></span>Source current · verified from copied specifications</button>
+            <span class="machine-value">Projection: readiness / intended operation</span>
+          </div>
+        </div>
+        <div class="focus-actions">
+          <button class="button button--secondary" id="inspectReasonButton" type="button">Why this state</button>
+          <button class="button button--primary" id="runChecksButton" type="button">Run checks</button>
+        </div>
+      </section>
+
+      <div class="content-grid">
+        <div class="content-primary">
+          <section class="panel operation-selector" aria-labelledby="operation-title" data-od-id="intended-work-selector">
+            <div class="section-header">
+              <div><p class="section-kicker">Operation-sensitive readiness</p><h2 id="operation-title">What do you intend to do?</h2></div>
+              <kbd>I</kbd>
+            </div>
+            <div class="segmented-control" role="radiogroup" aria-label="Intended operation">
+              <button class="segment" type="button" role="radio" aria-checked="false" data-operation="local">Run local governed work</button>
+              <button class="segment segment--active" type="button" role="radio" aria-checked="true" data-operation="agent">Delegate to external agent</button>
+              <button class="segment" type="button" role="radio" aria-checked="false" data-operation="federation">Import governed bundle</button>
+            </div>
+            <p id="operationExplanation" class="operation-explanation">This path needs a verified endpoint and an allowed authority boundary before commitment.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="foundations-title" data-od-id="critical-foundations">
+            <div class="section-header">
+              <div><p class="section-kicker">Required conditions</p><h2 id="foundations-title">Critical foundations</h2></div>
+              <span class="section-summary">4 verified · 1 limitation</span>
+            </div>
+            <div class="condition-table" role="table" aria-label="Critical foundations">
+              <div class="condition-row condition-row--header" role="row"><span role="columnheader">Foundation</span><span role="columnheader">State</span><span role="columnheader">Reason</span><span role="columnheader">Source</span></div>
+              <button class="condition-row" type="button" role="row" data-evidence="integrity"><span role="cell"><strong>Cell integrity</strong><small>Ledger and local state</small></span><span role="cell"><span class="status-pill status-pill--ready">Integrity verified</span></span><span role="cell">Required integrity checks pass.</span><span role="cell" class="machine-value">DESIGN.md</span></button>
+              <button class="condition-row" type="button" role="row" data-evidence="identity"><span role="cell"><strong>Actor context</strong><small>Identity and sponsorship</small></span><span role="cell"><span class="status-pill status-pill--ready">Authority allowed</span></span><span role="cell">Operator and sponsor are visible.</span><span role="cell" class="machine-value">UX epic §2</span></button>
+              <button class="condition-row condition-row--attention" type="button" role="row" data-evidence="endpoint"><span role="cell"><strong>Agent endpoint</strong><small>External delegation</small></span><span role="cell"><span class="status-pill status-pill--degraded">Readiness degraded</span></span><span role="cell">Endpoint verification has not been recorded.</span><span role="cell" class="machine-value">Atomic §4.4</span></button>
+              <button class="condition-row" type="button" role="row" data-evidence="policy"><span role="cell"><strong>Policy bundle</strong><small>Active governance rules</small></span><span role="cell"><span class="status-pill status-pill--ready">Source current</span></span><span role="cell">Current policy source is loaded.</span><span role="cell" class="machine-value">Flow §2.1</span></button>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="capabilities-title" data-od-id="operational-capabilities">
+            <div class="section-header">
+              <div><p class="section-kicker">Current affordances</p><h2 id="capabilities-title">Operational capabilities</h2></div>
+              <button class="text-button" type="button">Inspect all capabilities</button>
+            </div>
+            <div class="capability-list">
+              <div class="capability-row"><div><strong>Local governed execution</strong><span>Spendable for this actor and policy context</span></div><span class="status-pill status-pill--ready">Capability proven</span><button class="row-action" type="button">Inspect</button></div>
+              <div class="capability-row"><div><strong>External agent delegation</strong><span>Limited by endpoint verification</span></div><span class="status-pill status-pill--degraded">Capability degraded</span><button class="row-action" type="button">Repair path</button></div>
+              <div class="capability-row"><div><strong>Federation import</strong><span>Available for signed, compatible bundles</span></div><span class="status-pill status-pill--ready">Readiness ready</span><button class="row-action" type="button">Inspect</button></div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="attention-rail" aria-labelledby="attention-title" data-od-id="current-affordance-rail">
+          <section class="panel panel--attention">
+            <p class="section-kicker">Current limitation</p>
+            <h2 id="attention-title">Endpoint verification required</h2>
+            <p>A source-backed endpoint probe must complete before external delegation becomes spendable.</p>
+            <dl class="key-values">
+              <div><dt>Affects</dt><dd>Agent task start</dd></div>
+              <div><dt>Authority</dt><dd>Operator may probe</dd></div>
+              <div><dt>Settlement</dt><dd>Not yet applicable</dd></div>
+            </dl>
+            <button class="button button--attention" type="button">Open endpoint probe</button>
+          </section>
+          <section class="panel action-panel">
+            <p class="section-kicker">Next lawful action</p>
+            <h2>Create case</h2>
+            <p id="createCaseReason">Unavailable for this operation until endpoint verification is recorded.</p>
+            <button class="button button--disabled" id="createCaseButton" type="button" disabled aria-describedby="createCaseReason">Create case</button>
+          </section>
+          <section class="panel recent-panel">
+            <div class="section-header"><h2>Recent invalidations</h2><span class="status-pill status-pill--neutral">None</span></div>
+            <p>No verified state has been invalidated in this projection.</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <aside class="evidence-drawer" data-od-id="evidence-drawer" aria-label="Context and evidence">
+      <div class="drawer-header">
+        <div><p class="section-kicker">Context / Evidence</p><h2 id="drawerTitle">Why readiness is degraded</h2></div>
+        <button class="icon-button" id="closeDrawerButton" type="button" aria-label="Close evidence drawer">×</button>
+      </div>
+      <div class="drawer-tabs" role="tablist" aria-label="Evidence views">
+        <button type="button" role="tab" aria-selected="true" data-tab="why">Why</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="evidence">Evidence</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="provenance">Provenance</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="record">Record</button>
+      </div>
+      <div id="drawerContent" class="drawer-content" role="tabpanel" tabindex="0"></div>
+    </aside>
+
+    <footer class="connection-bar" data-od-id="connection-state-bar">
+      <span><span class="state-dot state-dot--ready"></span>Source projection current</span>
+      <span class="machine-value">Keyboard: R run checks · I intended work · B blocker · E evidence</span>
+    </footer>
+  </div>
+  <div id="liveRegion" class="sr-only" aria-live="polite"></div>
+  <script src="components.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

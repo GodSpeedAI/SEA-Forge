@@ -3,6 +3,20 @@
 > Category: Developer Tools  
 > A dark, high-density workbench for governed agentic operations. Every surface makes state, authority, evidence, and the next lawful action visible. Meaning first; decoration never.
 
+## Product Context
+
+SEA Forge is a governed cognition and execution environment for operators, sponsors, reviewers, and automated actors. Its interface must preserve the distinctions between navigation and mutation, draft and committed work, approval and execution, execution and settlement, agent termination and settlement, and settlement and capability.
+
+The canonical journey is:
+
+```text
+readiness → identity and authority → domain meaning → case draft → preflight
+→ committed case → horizon → governed execution → evidence → settlement
+→ capability and artifact maturity
+```
+
+This package is grounded in the copied SEA Forge UX epic, atomic breakdown, view-flow specification, primary-path wireframes, frontend architecture contract, mockup brief, and semantic mapping. Source provenance is recorded in `context-provenance.md`.
+
 ## Visual Theme & Atmosphere
 
 SEA Forge is a **mission-control workbench for governed cognition**, not a generic project dashboard and not a chat application.
@@ -667,6 +681,10 @@ Do not use indefinitely looping attention pulses for ordinary warnings.
 }
 ```
 
+## Motion
+
+Motion communicates a governed transition, never ambient activity. Use the shared `--motion-enter`, `--motion-exit`, and `--ease-governed` tokens. State focus, drawers, and newly arrived attention items may transition once; logs, background refreshes, and accepted settlements update immediately. Ordinary warnings never pulse. Reduced-motion preferences collapse all transitions to near-zero duration.
+
 ### Iconography
 
 Use Lucide-style line icons:
@@ -898,6 +916,26 @@ Do not use:
 - Do not invent CLI commands, record types, or backend states.
 - Do not hide blocked or unavailable paths without explaining what is missing.
 - Do not imply that a draft has been committed.
+
+## Voice
+
+Write with calm operational precision. Name the state domain, explain why it is true, and identify the next lawful path. Prefer short declarative sentences:
+
+- “Execution completed. Settlement evaluation continues.”
+- “Commit blocked: policy bundle changed.”
+- “No path is currently spendable. Approval APR-07 is pending.”
+- “This timebox was missed. What should change?”
+
+Avoid celebration, blame, vague confidence, and generic success language. Never use “Congratulations,” “Great job,” “Mission accomplished,” or “Something went wrong” when a specific governed reason is available.
+
+## Anti-patterns
+
+- Generic dashboards, card soup, marketing heroes, chat-first agent views, and ornamental data visualizations.
+- Color-only status, generic `SUCCESS` badges, or any green treatment that collapses execution, settlement, integrity, and authority into one meaning.
+- Hidden disabled paths, blind batch approval, unsupported recommendations, invented scores, invented CLI commands, or fabricated evidence.
+- Oversized typography, radii above 8px, decorative glow, glassmorphism, gradients, deep shadow stacks, and animated background updates.
+- Draft views that imply commitment, execution output presented as settlement truth, or agent termination presented as success.
+- Small essential text using `--fg-tertiary`; use `--fg-secondary` unless the text qualifies as large.
 
 ## Responsive Behavior
 
