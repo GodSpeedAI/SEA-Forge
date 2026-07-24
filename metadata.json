@@ -3,7 +3,7 @@
   "checkpoint_id": "01KYAPKGZ2GXF9VGHQP45P2B7Y",
   "strategy": "manual-commit",
   "branch": "full-spec",
-  "checkpoints_count": 15,
+  "checkpoints_count": 16,
   "files_touched": [
     ".agents/CURRENT_STATUS.md",
     "Cargo.lock",
@@ -79,13 +79,20 @@
       "compact_transcript": "/2/transcript.jsonl",
       "content_hash": "/2/content_hash.txt",
       "prompt": "/2/prompt.txt"
+    },
+    {
+      "metadata": "/3/metadata.json",
+      "transcript": "/3/full.jsonl",
+      "compact_transcript": "/3/transcript.jsonl",
+      "content_hash": "/3/content_hash.txt",
+      "prompt": "/3/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 308623,
-    "cache_creation_tokens": 4645135,
-    "cache_read_tokens": 256429881,
-    "output_tokens": 710459,
-    "api_call_count": 974
+    "input_tokens": 341196,
+    "cache_creation_tokens": 4772943,
+    "cache_read_tokens": 261703034,
+    "output_tokens": 737609,
+    "api_call_count": 1030
   }
 }
