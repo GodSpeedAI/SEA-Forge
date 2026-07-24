@@ -881,10 +881,10 @@ remain synchronous).
 On 2026-07-24, `full-spec` was merged into `main` as `74dc8ab` after a
 fast-forward update from `origin/main`. The integrated tree passed
 `devbox run -- just ci`; publication is pending the pre-push context gate after
-this final status refresh. The remaining unstaged documentation correction is
-the `prove_entry` source-line reference in the Workbench repository map; it
-tracks the current ledger source and is intentionally included in the pending
-handoff commit.
+  this final status refresh. The final Workbench grounding report and its two
+  out-of-scope debt entries are intentionally included in the pending handoff
+  commit, along with the current `prove_entry` source-line reference in the
+  Workbench repository map.
 
 On branch `full-spec` at `ca11dc2` before the Task 19 documentation closeout.
 The worktree was clean at Task 19 start. Task 19's changes are limited to the
@@ -917,6 +917,9 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 - Merge handoff: this status refresh records the `main` integration and the
   current source reference in
   `.agents/skills/building-sea-forge-workbench/reference/repository-integration.md`.
+  `.agents/reports/2026-07-24-sfwp-grounding.md` records the completed
+  18-family Workbench method-grounding map; `.agents/OBSERVED_DEBT.md` captures
+  its two deferred findings without changing production behavior.
 
 - Task 19 closeout: `.agents/plans/2026-07-22-spec-audit-remediation.md`
   corrects the Task 9 zero-match focused filter and records final acceptance;
