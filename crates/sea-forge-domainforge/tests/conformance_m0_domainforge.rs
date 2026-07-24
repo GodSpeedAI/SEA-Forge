@@ -1,5 +1,7 @@
+use sea_forge_core::ForgeError;
 use sea_forge_domainforge::{
     load_validate, normalize_authority, CandidateDisposition, SeaSourceSet, SourceFile,
+    MAX_IMPORT_DEPTH,
 };
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -233,6 +235,66 @@ fn aggregate_bytes_limit_exceeded() {
     );
 }
 
+fn linear_import_chain(depth: usize) -> SeaSourceSet {
+    let mut files = Vec::with_capacity(depth + 1);
+    for index in 0..=depth {
+        let uri = if index == 0 {
+            "entry.sea".to_string()
+        } else {
+            format!("module{index}.sea")
+        };
+        let content = if index == depth {
+            format!("@namespace \"ns{index}\"\nexport Entity \"E{index}\"\n")
+        } else {
+            format!(
+                "@namespace \"ns{index}\"\nimport {{ E{} }} from \"./module{}.sea\"\nexport Entity \"E{index}\"\n",
+                index + 1,
+                index + 1,
+            )
+        };
+        files.push(source_file(&uri, &content));
+    }
+    SeaSourceSet {
+        entry_uri: "entry.sea".into(),
+        files,
+    }
+}
+
+#[test]
+fn import_depth_limit_accepts_the_bound_and_rejects_the_next_edge() {
+    assert!(
+        load_validate(&linear_import_chain(MAX_IMPORT_DEPTH)).is_ok(),
+        "an import closure exactly at MAX_IMPORT_DEPTH must be valid"
+    );
+
+    let error = load_validate(&linear_import_chain(MAX_IMPORT_DEPTH + 1)).unwrap_err();
+    assert_eq!(error.class(), "domain_model_error");
+    assert!(
+        error
+            .to_string()
+            .contains("import depth 17 exceeds limit 16"),
+        "expected an explicit import-depth validation error: {error}"
+    );
+}
+
+#[test]
+fn import_depth_limit_uses_domainforge_normalized_entry_id() {
+    let mut source_set = linear_import_chain(MAX_IMPORT_DEPTH + 1);
+    // DomainForge normalizes the entry logical path before resolution. The
+    // adapter must calculate depth from that canonical closure, not from this
+    // raw spelling.
+    source_set.entry_uri = "./entry.sea".into();
+
+    let error = load_validate(&source_set).unwrap_err();
+    assert_eq!(error.class(), "domain_model_error");
+    assert!(
+        error
+            .to_string()
+            .contains("import depth 17 exceeds limit 16"),
+        "a normalized entry URI must not bypass the depth limit: {error}"
+    );
+}
+
 #[test]
 fn unsupported_version_is_guarded() {
     // The adapter const must match the linked library version (proves the
@@ -247,18 +309,19 @@ fn unsupported_version_is_guarded() {
 
 #[test]
 fn no_source_error_reaches_planning_or_authority() {
-    // Every failure path returns ForgeError::Internal with "domain_model_error",
-    // never a raw parse error, panic, or ForgeError variant that bypasses
-    // the pipeline's error gate.
+    // Domain-model validation is a typed planning error: it blocks planning
+    // and authority before side effects without being reported as internal.
     let mut ss = multi_file_set();
     ss.files.retain(|f| f.uri != "base.sea");
-    let result = load_validate(&ss);
-    assert!(result.is_err());
-    let err = result.unwrap_err().to_string();
-    assert!(
-        err.starts_with("domain_model_error"),
-        "all source/version errors must be domain_model_error: {err}"
-    );
+    let error = load_validate(&ss).unwrap_err();
+    assert_eq!(error.class(), "domain_model_error");
+    assert!(matches!(
+        error,
+        ForgeError::Plan {
+            class: "domain_model_error",
+            ..
+        }
+    ));
 }
 
 #[test]
