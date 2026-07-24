@@ -111,14 +111,14 @@ Not proven by: transcript volume, agent self-reports, or successful probes witho
 
 | Claim | Level | Required evidence | Current evidence | Gap |
 |---|---|---|---|---|
-| AgentProvider seam confines HTTP/async to the adapter crate; every provider call is exact-action authorized | Proven (M12) | T12.1–T12.6 green; T12.5 automated boundary gate | `sea-forge-agent` crate (af94ff0, c6aebb6); `Operation::AgentProbe` + `AuthorityAction::AgentProbe` bind endpoint_ref + descriptor_config_sha256 + scheme/host/port/path/model/limits + credential_ref + prompt_sha256; `external_api` allow_hosts enforced; DNS-rebinding-safe pinning + no-proxy + no-redirect + HTTPS-only; `secret_access` mediated before credential resolution; `Zeroizing<String>`; 18-crate kernel inventory forbids tokio/reqwest/hyper/etc (just no-async-kernel green); CLI `agent list\|probe` | none |
+| AgentProvider seam confines HTTP/async to the adapter crate; every provider call is exact-action authorized | Proven (M12) | T12.1–T12.6 green; T12.5 automated boundary gate | `sea-forge-agent` crate (af94ff0, c6aebb6); `Operation::AgentProbe` + `AuthorityAction::AgentProbe` bind endpoint_ref + descriptor_config_sha256 + scheme/host/port/path/model/limits + credential_ref + prompt_sha256; `external_api` allow_hosts enforced; DNS-rebinding-safe pinning + no-proxy + no-redirect + HTTPS-only; `secret_access` mediated before credential resolution; `Zeroizing<String>`; 19-crate kernel inventory forbids tokio/reqwest/hyper/etc (`just no-async-kernel` green on 2026-07-24); CLI `agent list\|probe` | none |
 | Agent endpoints are declared config, not asserted status; a registry mutation marks the self-model snapshot stale | Proven (M12) | config cannot assert `probed`/`demonstrated`; descriptor change requires a version bump | `AgentEndpointConfig.status` rejected on load; immutable `runtime_adapter` registration (idempotent same-version+hash, rejects same-version hash change, versioned upgrade replaces); `register_endpoint` calls `mark_current_stale` when a snapshot exists; 4 extension + 3 server-config + 1 server-stale tests | none |
 | Endpoint failures yield typed subcodes and never fall back | Proven (M12) | T12.6: unreachable/4xx/5xx/redirect/schema-invalid/oversize settle rejected with typed `error_class`, one connection each | server conformance_m12 error-taxonomy tests (c6aebb6) | none |
-| The server semaphore suffices as the delegation concurrency cap | Evidence-backed (design) / unproven (this use) | M13 gate: N parallel `agent_task` runs respect `max_concurrent_runs` | `max_concurrent_runs` implemented and tested for sandboxed runs (M3); server acquires it for `agent_probe` (M12) | prove under mixed sandboxed + agent load |
+| The server semaphore suffices as the delegation concurrency cap | Proven (portable M13) | M13 gate: N parallel `agent_task` runs respect `max_concurrent_runs` | `t13_2_server_semaphore_caps_concurrent_delegations` and `t13_2_mixed_episodes_share_server_cap` prove agent-only and mixed sandboxed/agent load under the shared cap; ledger replay reproduces persisted ordering | none |
 | Sentry chains suffice for sequential/concurrent topologies (no actor runtime needed) | Partially proven | M14 gate: both templates settle end-to-end incl. rollup | M14 code-complete: `sequential_agents@0.1.0`/`concurrent_agents@0.1.0` settle end-to-end under `entry_criteria_mode: All` and chained settlement-accepted sentries (T14.1–T14.3, `conformance_m14.rs`); a rejected branch parks the case via the existing reducer with zero new termination logic | stub agent endpoints prove scheduler/rollup mechanism only; prove with real agent latencies (M16 real integration) |
-| ACP's permission model maps losslessly onto SEA authority/approvals | Assumption (decision: adopt ACP) | T16.3: every ACP request kind exercised in a session maps to a recorded SEA decision; no unmapped grant | goose + t3code both ship working ACP endpoints (audit §5); no SEA-side mapping exists | first E17 gate; lossy mapping ⇒ narrow to allow-listed request kinds (§0.8) |
-| SWE_SEED instances are reachable as ACP-driven hosts with harvestable proofs | Partially proven | M16 gate: one SWE_SEED-harnessed host completes a delegation with proof artifacts cross-linked | SWE_SEED inspected: host projection for Claude/Codex/OpenCode/Copilot confirmed (`crates/swe-seed-core/src/adapters/`), trace/proof artifacts confirmed; no end-to-end run yet | run the M16 slice |
-| Summarized transcripts are verifiable for settlement audit | Resolved (owner decision 2026-07-17) | summarized mode retains a sealed, encrypted canonical transcript, verified before crypto-shredding | decision recorded in §0 "Resolved decisions"; M13 implements the sealed-transcript commitment | implement sealed-transcript path in M13 |
+| ACP's permission model maps losslessly onto SEA authority/approvals | Proven for the portable ACP v1 fixture | T16.3: every ACP request kind exercised in a session maps to a recorded SEA decision; no unmapped grant | `known_kinds_are_exhaustive_per_schema_v1`, `t16_3_every_v1_tool_kind_maps_and_unknown_kind_denies`, and durable allow/deny approval tests are green | exercise the same mapping against a configured real ACP host once per release |
+| SWE_SEED instances are reachable as ACP-driven hosts with harvestable proofs | Partially proven | M16 gate: one SWE_SEED-harnessed host completes a delegation with proof artifacts cross-linked | portable harvest, commit-mismatch rejection, production `CommandSweSeedTransport` ingress, and immediate/startup/read-time late-declaration reconciliation are green and run-correlated | configured real SWE_SEED-projected ACP host release test remains unrun |
+| Summarized transcripts are verifiable for settlement audit | Proven (portable M13) | summarized mode retains a sealed, encrypted canonical transcript, verified before crypto-shredding | full/summarized modes share redacted canonical bytes and digest; sealed round-trip, tamper, missing key/ciphertext, restart, and crypto-shred tests are green | none |
 
 ## 6. System Overview
 
@@ -409,7 +409,7 @@ function manager_iterate(case_id, grant, i):
 | T12.2 | probe without `external_api` grant, then with denied `secret_access` | denied; instrumented stub proves zero connections and credential fixture proves zero secret reads | green (two server tests assert zero connections + zero reads) |
 | T12.3 | credential redaction sweep | key absent from every record, log, error, transcript | green (sweep over persisted probe artifacts) |
 | T12.4 | contract fixtures (recorded request/response per shape) | pinned request shapes match byte-for-byte | green (provider unit + integration tests pin JSON body, path, auth headers) |
-| T12.5 | dependency boundary | HTTP client/async absent from all kernel crates (automated check) | green (`just no-async-kernel`, 18 kernel crates, 13 forbidden deps) |
+| T12.5 | dependency boundary | HTTP client/async absent from all kernel crates (automated check) | green (`just no-async-kernel`, 19 kernel crates on 2026-07-24) |
 | T12.6 | endpoint error taxonomy (unreachable, 4xx, 5xx, oversize, redirect, schema-invalid) | typed subcodes; settled rejected; no fallback attempted | green (6 server tests assert typed error_class + one connection) |
 
 ### 17.2 Core Conformance — M13 (E15, governed delegation)
@@ -432,7 +432,7 @@ function manager_iterate(case_id, grant, i):
 | T14.2 | `concurrent_agents@0.1.0` with rollup | explicit all-of rollup fires only when all N named branches settle successfully | green: `t14_2_concurrent_agents_rollup_fires_only_when_all_n_branches_settle` |
 | T14.3 | one branch rejected, plus an unrelated rejected settlement | rollup does not fire; a sentry accepts only its named source event; no partial-success leak | green: `t14_3_one_branch_rejected_plus_unrelated_rejection_rollup_never_fires` |
 
-M14 code gate passed (`crates/sea-forge-planner/tests/conformance_m14.rs`, 9/9,
+M14 code gate passed (`crates/sea-forge-planner/tests/conformance_m14.rs`, 12/12,
 plus full workspace regression). Stub agent endpoints prove the sentry/rollup
 scheduling mechanism only — the spec §5 "real agent latencies" claim (row
 above, §5) stays open until M16 real integration.
@@ -447,7 +447,7 @@ above, §5) stays open until M16 real integration.
 | T15.4 | SoD | immutable `proposed_by` identity structurally excluded from settling or promoting items it proposed; copied/replayed records cannot bypass it | green: `t15_4_proposer_cannot_resolve_its_own_proposed_items_approval` |
 | T15.5 | judgment grounding | every judgment cites resolvable claim refs; a judgment without evidence refs is rejected at record time | green: `t15_5_every_judgment_cites_nonempty_resolvable_claim_refs` |
 
-M15 code gate passed (`crates/sea-forge-cli/tests/conformance_m15.rs`, 5/5, plus full
+M15 code gate passed (`crates/sea-forge-cli/tests/conformance_m15.rs`, 10/10, plus full
 workspace regression). T15.1's proposed item is granted and added to the plan through
 the existing discretionary-item path; it is not additionally dispatched/settled inside
 `manager iterate` itself — dispatch follows the ordinary case-runner path on the next
@@ -467,7 +467,7 @@ record cannot bypass the `proposed_by` binding (it is part of the plan's canonic
 | T16.3 | permission-mapping fidelity sweep | every request kind observed maps to a recorded decision; unmapped kind ⇒ typed denial (this gate is the ACP-adoption validation; lossy ⇒ §0.8 narrowing) | green portable ACP v1 fixture sweep; unknown kind has a recorded `deny_unmapped` decision |
 | T16.4 | sandbox posture | session runs under the run's `SandboxClass`; escalation attempt refused | green (`jail` Landlock child rejects `/tmp` write, permits workspace write, and refuses `session/set_mode`) |
 | T16.5 | disconnect + resume | first episode rejected with partial transcript; resumed episode linked by `continuation_key` | green (`session/load` capability-gated successor episode, durable continuation record, restart recovery) |
-| T16.6 | SWE_SEED end-to-end | delegation to an SWE_SEED-projected host; route/proof artifacts harvested and cross-linked; `SweSeedTransport` declaration correlated to the run | portable harvest green; current record snapshots declarations available at settlement, but later declaration reconciliation and real host proof remain pending |
+| T16.6 | SWE_SEED end-to-end | delegation to an SWE_SEED-projected host; route/proof artifacts harvested and cross-linked; `SweSeedTransport` declaration correlated to the run | portable harvest and late declaration reconciliation green (immediate production ingress, startup, and read-time triggers; exact run/verifier/hash matching; idempotent rebuild); real projected-host release proof remains skipped pending operator configuration |
 | T16.7 | protocol/version rejection | unsupported or malformed ACP request kind is denied before action; no lossy fallback | green (`t16_7_unsupported_protocol_version_rejects_before_prompt`) |
 
 ### 17.6 Regression (every milestone)
@@ -475,6 +475,14 @@ record cannot bypass the `proposed_by` binding (it is part of the plan's canonic
 P1–P4b and all M0–M11 gates unchanged; `cargo test --workspace` green; T12.5 dependency boundary and the source-owned-template check re-run.
 
 **M12 gate (2026-07-20) — GREEN.** `devbox run -- just context-check`, `just check` (fmt, clippy `-D warnings` workspace/all-targets/all-features, cargo-deny licenses+bans+sources), `just test` (**408 tests, 0 failed, 0 platform skips**), `just proof` (P1–P4b), and `just no-async-kernel` (18 kernel crates, 13 forbidden deps) all passed. T12.1–T12.6 green. Tracked `.sea-forge/**` still 0 files.
+
+**Task 19 cumulative portable gate (2026-07-24) — GREEN.** Every focused
+Task 1–18 gate passed after correcting Task 9's stale zero-match filter from
+`prerequisite` to `predecessor`. The workspace all-features suite,
+minimum P1–P4b, and the 19-crate no-async/HTTP boundary passed. The real ACP
+and real SWE_SEED tests remain ignored because operator host configuration is
+absent; the Seatbelt network case was skipped on Linux. These release/platform
+claims remain unproved.
 
 ### 17.7 Real Integration
 
@@ -500,5 +508,5 @@ Required once per release against one real hosted endpoint (operator-supplied cr
 - [x] Both source-owned topology templates install as pinned runtime copies and instantiate deterministically; source-bound sentries and all-of rollup gate proven. *(M14 — T14.1–T14.3)*
 - [x] Manager loop bounded, evidence-grounded, SoD-enforced, escalating on exhaustion. *(M15 — T15.1–T15.5)*
 - [x] ACP permission→approval mapping validated (T16.3) or scope narrowed per §0.8. *(M16 portable fixture)*
-- [ ] SWE_SEED slice green (T16.6): hash-validated proof harvest exists, but must reconcile a later run-bound `SweSeedTransport` declaration; real host evidence remains release-gated.
-- [ ] All M12–M16 gates pass: M16 T16.6 declaration reconciliation remains; P1–P4b and M0–M11 are unchanged.
+- [x] SWE_SEED portable slice green (T16.6): hash-validated proof harvest and later run-bound `SweSeedTransport` declaration reconciliation pass; real host evidence remains release-gated.
+- [x] All portable M12–M16 gates pass; P1–P4b and M0–M11 remain green. Real-host release gates are explicitly excluded and unproved.
