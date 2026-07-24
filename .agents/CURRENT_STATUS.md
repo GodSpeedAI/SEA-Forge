@@ -878,6 +878,14 @@ remain synchronous).
 
 ## Worktree State
 
+On 2026-07-24, `full-spec` was merged into `main` as `74dc8ab` after a
+fast-forward update from `origin/main`. The integrated tree passed
+`devbox run -- just ci`; publication is pending the pre-push context gate after
+this final status refresh. The remaining unstaged documentation correction is
+the `prove_entry` source-line reference in the Workbench repository map; it
+tracks the current ledger source and is intentionally included in the pending
+handoff commit.
+
 On branch `full-spec` at `ca11dc2` before the Task 19 documentation closeout.
 The worktree was clean at Task 19 start. Task 19's changes are limited to the
 remediation plan's corrected Task 9 test filter and Task 19 status/spec/debt
@@ -905,6 +913,10 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 289 tests). Remaining open debt: SodRule transition_kind scoping (.agents/OBSERVED_DEBT.md).
 
 ## Changed Files
+
+- Merge handoff: this status refresh records the `main` integration and the
+  current source reference in
+  `.agents/skills/building-sea-forge-workbench/reference/repository-integration.md`.
 
 - Task 19 closeout: `.agents/plans/2026-07-22-spec-audit-remediation.md`
   corrects the Task 9 zero-match focused filter and records final acceptance;

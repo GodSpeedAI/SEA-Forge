@@ -52,7 +52,7 @@ found` for any server-side request-correlation store.
 | Canonical record types (cases, plans, criteria, settlement, approvals, authority, trace) | `crates/sea-forge-core/src/types.rs` (~1500 lines; serde snake_case) |
 | Typed errors with machine classes (`ForgeError`, `.class()`) | `crates/sea-forge-core/src/errors.rs` |
 | Authority fabric (default deny, one engine) | `crates/sea-forge-authority/` |
-| Append-only ledger, ULID entries, MMR proofs | `crates/sea-forge-ledger/src/types.rs:206` (`entry_ulid`), `:915` (`prove_entry`) — the natural durable event cursor |
+| Append-only ledger, ULID entries, MMR proofs | `crates/sea-forge-ledger/src/types.rs:206` (`entry_ulid`), `:916` (`prove_entry`) — the natural durable event cursor |
 | Settlement evaluation + declarations | `crates/sea-forge-settlement/` |
 | Capability promotion | `crates/sea-forge-capability/` |
 | Evidence | `crates/sea-forge-evidence/` |
