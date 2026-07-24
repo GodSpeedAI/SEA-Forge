@@ -2,6 +2,28 @@
 
 Updated: 2026-07-24
 
+> **2026-07-24 Workbench plan Task 1 (repository grounding and compatibility
+> map) complete.** `.agents/reports/2026-07-24-sfwp-grounding.md` grounds all
+> 74 target SFWP methods across the 18 catalog families Task 1 names (system,
+> request, operation, events, cell, readiness, self_model, case, run,
+> agent_run, approval, thoth, settlement, capability, evidence, integrity,
+> memory, artifact) against direct repository evidence (four parallel
+> research passes, every row `file:line` cited). Verdicts: 14 reuse, 27 adapt,
+> 3 merge, 30 add, 0 reject — no target method conflicts with a kernel
+> invariant in this pass. Gate (`grep -cE` verdict-row count ≥ 40) passes at
+> 75. Notable findings: `case`/`run` families have rich backing logic
+> (`case_engine` item states, `TraceEvent` replay, `DelegationResult`) that is
+> almost entirely unwired to any server verb; `case.propose_replan`/
+> `commit_replan` are wholly missing; the 2026-07-22 audit's "Thoth `ask`
+> bypasses governance" finding appears stale (`service::ask` already commits
+> ledger records) and is filed in `.agents/OBSERVED_DEBT.md` for
+> re-verification, alongside a `cell.migrate`/federation-bundle naming-
+> collision caution for later tasks. `repository-integration.md` re-verified
+> against the current tree; one line-number drift corrected
+> (`prove_entry:915` → `:916`). No production/kernel code touched. Next step:
+> plan Task 2 (workspace/stack proof: Tauri 2 + Bun + React 19 + Vite +
+> Astryx).
+
 > **2026-07-24 Workbench implementation skill + plan created (no production
 > code).** New reusable skill `.agents/skills/building-sea-forge-workbench/`
 > (SKILL.md + 8 reference files + deterministic `scripts/validate-skill.py`,
