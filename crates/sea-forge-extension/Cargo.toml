@@ -1,0 +1,24 @@
+[package]
+name = "sea-forge-extension"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SEA Forge extension descriptor and registry contracts."
+
+[dependencies]
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
+sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+serde_yaml.workspace = true
+
+[lints]
+workspace = true

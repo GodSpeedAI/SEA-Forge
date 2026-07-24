@@ -108,6 +108,43 @@ context-check:
 test:
     cargo test --workspace --all-features --locked
 
+# Dependency-boundary gate (spec-full §6.1, spec-agent-orchestration G1/T12.5).
+# Kernel crates MUST stay synchronous: no async runtime and no HTTP client.
+# Only the approved adapter/runtime crates (sea-forge-agent, sea-forge-server)
+# may pull async or HTTP deps. Async runtimes: tokio, async-std, smol, embassy.
+# HTTP clients: reqwest, hyper, ureq, isahc, surf, attohttpc, minreq.
+[group('quality')]
+no-async-kernel:
+    #!/usr/bin/env bash
+    {{set}}
+    kernel_crates=(
+        sea-forge-core sea-forge-domain sea-forge-authority sea-forge-planner
+        sea-forge-sandbox sea-forge-runtime sea-forge-trace sea-forge-evidence
+        sea-forge-settlement sea-forge-capability sea-forge-extension
+        sea-forge-ledger sea-forge-domainforge sea-forge-spec-pipeline
+        sea-forge-cell sea-forge-artifact-ip sea-forge-self-model
+        sea-forge-thoth sea-forge-case-runner
+    )
+    forbidden_deps=(
+        tokio async-std smol embassy executor
+        reqwest hyper ureq isahc surf attohttpc minreq actix-http awc
+    )
+    status=0
+    for crate in "${kernel_crates[@]}"; do
+        for dep in "${forbidden_deps[@]}"; do
+            if output=$(cargo tree -i "$dep" -p "$crate" --locked 2>&1) \
+                && echo "$output" | grep -q "^$dep "; then
+                echo "fail: kernel crate $crate depends on $dep" >&2
+                status=1
+            fi
+        done
+    done
+    if [ "$status" -ne 0 ]; then
+        echo "fail: forbidden async/HTTP dependency in a kernel crate" >&2
+        exit 1
+    fi
+    echo "ok: no async runtime or HTTP client in ${#kernel_crates[@]} kernel crates"
+
 # Canonical clean, deterministic, noninteractive CI verification.
 # GitHub Actions invokes this (or its documented constituent recipes when
 # parallelized). Local `just ci` is equivalent to the union of required jobs.
@@ -121,6 +158,7 @@ ci:
     just typecheck
     just security
     just test
+    just no-async-kernel
     just build
     echo "[ci] all gates green"
 

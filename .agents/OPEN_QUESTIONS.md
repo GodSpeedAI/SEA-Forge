@@ -4,7 +4,11 @@ Only choices that cannot be resolved from the repository or authoritative
 research belong here. Include a recommendation and the trade-off. Remove the
 entry when decided.
 
-No open questions.
+<!-- Resolved 2026-07-17: summarized-transcript verification.
+Decision (owner-accepted): summarized mode retains a sealed, encrypted canonical
+transcript, verifies before crypto-shredding, exposes only the deterministic
+summary. Recorded canonically in spec-agent-orchestration.md "Resolved decisions"
+and in .agents/CURRENT_STATUS.md. Gates M13 (TranscriptEvidence). -->
 
 <!-- Entry format:
 ## Question: Decision needed

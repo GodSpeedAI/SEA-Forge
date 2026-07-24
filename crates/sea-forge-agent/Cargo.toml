@@ -1,0 +1,26 @@
+[package]
+name = "sea-forge-agent"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Governed HTTP agent provider adapters."
+
+[dependencies]
+reqwest.workspace = true
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tokio = { version = "1", features = ["io-util", "process", "rt", "sync", "time", "macros"] }
+tracing.workspace = true
+url.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

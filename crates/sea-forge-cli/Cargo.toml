@@ -10,12 +10,34 @@ description = "SEA Forge one-shot CLI: run, validate, inspect, recall."
 [dependencies]
 clap.workspace = true
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
-serde_json.workspace = true
+sea-forge-case-runner = { path = "../sea-forge-case-runner", version = "0.1.0" }
+sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
+sea-forge-capability = { path = "../sea-forge-capability", version = "0.1.0" }
+sea-forge-domain = { path = "../sea-forge-domain", version = "0.1.0" }
+sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.1.0" }
+sea-forge-planner = { path = "../sea-forge-planner", version = "0.1.0" }
+sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.1.0" }
+sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
+sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.1.0" }
+sea-forge-trace = { path = "../sea-forge-trace", version = "0.1.0" }
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
+sea-forge-cell = { path = "../sea-forge-cell", version = "0.1.0" }
+sea-forge-artifact-ip = { path = "../sea-forge-artifact-ip", version = "0.1.0" }
+sea-forge-self-model = { path = "../sea-forge-self-model", version = "0.1.0" }
+sea-forge-thoth = { path = "../sea-forge-thoth", version = "0.1.0" }
+sea-forge-domainforge = { path = "../sea-forge-domainforge", version = "0.1.0" }
+sea-forge-spec-pipeline = { path = "../sea-forge-spec-pipeline", version = "0.1.0" }
+sea-forge-extension = { path = "../sea-forge-extension", version = "0.1.0" }
+chrono.workspace = true
+serde.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+tempfile.workspace = true
 
 [[bin]]
 name = "sea-forge"

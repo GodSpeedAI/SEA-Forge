@@ -15,6 +15,7 @@ pub struct Intent {
 #[serde(rename_all = "snake_case")]
 pub enum CaseState {
     Active,
+    AwaitingApproval,
     Completed,
     Terminated,
 }
@@ -26,11 +27,13 @@ pub struct Case {
     pub state: CaseState,
     pub plan_ref: String,
     pub run_ids: Vec<String>,
+    #[serde(default)]
+    pub stages: Vec<String>,
     pub close_reason: Option<String>,
     pub created_at: String,
     pub closed_at: Option<String>,
 }
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CasePlan {
     pub version: String,
     pub plan_id: String,
@@ -38,21 +41,134 @@ pub struct CasePlan {
     pub run_id: String,
     pub intent_id: String,
     pub items: Vec<PlanItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_ref: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
 }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ItemKind {
+    #[default]
+    SandboxedTask,
+    HumanTask,
+    Milestone,
+    Stage,
+    TimerListener,
+    UserEventListener,
+    AgentTask,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct ItemMarkers {
+    #[serde(default)]
+    pub required: bool,
+    #[serde(default)]
+    pub repetition: bool,
+    #[serde(default)]
+    pub manual_activation: bool,
+}
+
+/// How an item's `entry_criteria` list combines (§7.5 E16a). `Any` (default)
+/// preserves the original OR-of-sentries behavior; `All` requires every
+/// listed sentry satisfied — used for concurrent-branch success rollups.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum EntryCriteriaMode {
+    #[default]
+    Any,
+    All,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SentryTrigger {
+    pub source: String,
+    pub event: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SentryPredicate {
+    ArtifactExists { path: String },
+    SettlementStatus { status: String },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Sentry {
+    pub on: SentryTrigger,
+    #[serde(rename = "if", default, skip_serializing_if = "Option::is_none")]
+    pub if_predicate: Option<SentryPredicate>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PlanItem {
     pub plan_item_id: String,
     pub name: String,
+    #[serde(default)]
     pub operations: Vec<Operation>,
-    pub entry_criteria: Vec<String>,
+    #[serde(default)]
+    pub entry_criteria: Vec<Sentry>,
+    #[serde(default)]
+    pub entry_criteria_mode: EntryCriteriaMode,
+    #[serde(default)]
+    pub exit_criteria: Vec<Sentry>,
     pub settlement_criteria: SettlementCriteria,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement_criteria_ref: Option<String>,
+    #[serde(default)]
+    pub item_kind: ItemKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox_class: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_stage: Option<String>,
+    #[serde(default)]
+    pub markers: ItemMarkers,
+    #[serde(default = "default_max_instances")]
+    pub max_instances: u32,
+    #[serde(default)]
+    pub depends_on: Vec<String>,
+    /// Optional environment reference `name@version` (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<String>,
+    /// Immutable proposer identity when a discretionary item was proposed
+    /// by the Thoth manager loop rather than a human (§7.6, §10.3). Part of
+    /// the plan's canonical hash — cannot be relabeled after the fact.
+    /// Enables SoD: the proposer cannot resolve approvals over its own item.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proposed_by: Option<String>,
+}
+
+fn default_max_instances() -> u32 {
+    1
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Operation {
-    WriteFile { path: String, content_hint: String },
-    ExecuteCommand { argv: Vec<String>, cwd: String },
+    WriteFile {
+        path: String,
+        content_hint: String,
+    },
+    ExecuteCommand {
+        argv: Vec<String>,
+        cwd: String,
+    },
+    AgentProbe {
+        endpoint_ref: String,
+        model: String,
+        prompt_sha256: String,
+    },
+    AgentTask {
+        endpoint_ref: String,
+        instruction: String,
+        max_turns: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        token_budget: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        response_schema: Option<serde_json::Value>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        transcript_retention: Option<String>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -68,6 +184,38 @@ pub enum AuthorityAction {
     },
     ExternalApi {
         host: String,
+    },
+    AgentProbe {
+        endpoint_ref: String,
+        descriptor_config_sha256: String,
+        provider_kind: String,
+        scheme: String,
+        host: String,
+        port: u16,
+        path: String,
+        model: String,
+        max_request_bytes: u64,
+        max_response_bytes: u64,
+        timeout_secs: u64,
+        credential_ref: Option<String>,
+        prompt_sha256: String,
+    },
+    AgentTask {
+        endpoint_ref: String,
+        descriptor_config_sha256: String,
+        provider_kind: String,
+        scheme: String,
+        host: String,
+        port: u16,
+        path: String,
+        model: String,
+        max_request_bytes: u64,
+        max_response_bytes: u64,
+        timeout_secs: u64,
+        credential_ref: Option<String>,
+        instruction_sha256: String,
+        max_turns: u32,
+        token_budget: Option<u64>,
     },
     GitCommit {
         paths: Vec<String>,
@@ -97,6 +245,51 @@ impl From<&Operation> for AuthorityAction {
                 argv: argv.clone(),
                 cwd: cwd.clone(),
             },
+            Operation::AgentProbe {
+                endpoint_ref,
+                model,
+                prompt_sha256,
+            } => Self::AgentProbe {
+                endpoint_ref: endpoint_ref.clone(),
+                descriptor_config_sha256: String::new(),
+                provider_kind: String::new(),
+                scheme: String::new(),
+                host: String::new(),
+                port: 0,
+                path: String::new(),
+                model: model.clone(),
+                max_request_bytes: 0,
+                max_response_bytes: 0,
+                timeout_secs: 0,
+                credential_ref: None,
+                prompt_sha256: prompt_sha256.clone(),
+            },
+            Operation::AgentTask {
+                endpoint_ref,
+                instruction,
+                max_turns,
+                token_budget,
+                ..
+            } => Self::AgentTask {
+                endpoint_ref: endpoint_ref.clone(),
+                descriptor_config_sha256: String::new(),
+                provider_kind: String::new(),
+                scheme: String::new(),
+                host: String::new(),
+                port: 0,
+                path: String::new(),
+                model: String::new(),
+                max_request_bytes: 0,
+                max_response_bytes: 0,
+                timeout_secs: 0,
+                credential_ref: None,
+                instruction_sha256: {
+                    use sha2::Digest;
+                    format!("sha256:{:x}", sha2::Sha256::digest(instruction.as_bytes()))
+                },
+                max_turns: *max_turns,
+                token_budget: *token_budget,
+            },
         }
     }
 }
@@ -106,7 +299,22 @@ impl From<&Operation> for AuthorityAction {
 pub enum ActorRole {
     Operator,
     Agent,
+    Service,
     System,
+    #[serde(rename = "R-DS")]
+    DataSteward,
+    #[serde(rename = "R-AG")]
+    AgentGovernor,
+    #[serde(rename = "R-LC")]
+    LifecycleCustodian,
+    #[serde(rename = "R-SO")]
+    SecurityOfficer,
+    #[serde(rename = "R-RM")]
+    RiskManager,
+    #[serde(rename = "R-DEV")]
+    Developer,
+    #[serde(rename = "R-AA")]
+    AutomatedAgent,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Actor {
@@ -130,11 +338,23 @@ pub enum BindingResolution {
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IdentityBinding {
+    #[serde(default)]
+    pub identity_id: Option<String>,
     pub principal: String,
+    #[serde(default)]
+    pub roles: Vec<ActorRole>,
     pub actor_type: ActorType,
     pub binding_resolution: BindingResolution,
     pub identity_binding_source: String,
+    #[serde(default)]
+    pub source: Option<String>,
     pub sponsor: Option<String>,
+    #[serde(default)]
+    pub issued_at: Option<String>,
+    #[serde(default)]
+    pub expires_at: Option<String>,
+    #[serde(default)]
+    pub identity_binding_hash: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -178,6 +398,31 @@ pub struct AuditRecord {
     pub reason: String,
     pub evidence_refs: Vec<String>,
     pub recorded_at: String,
+    #[serde(default)]
+    pub decision_id: Option<String>,
+    #[serde(default)]
+    pub case_id: Option<String>,
+    #[serde(default)]
+    pub run_id: Option<String>,
+    #[serde(default)]
+    pub policy_bundle_hash: Option<String>,
+    #[serde(default)]
+    pub action_request_hash: Option<String>,
+    #[serde(default)]
+    pub identity_binding_hash: Option<String>,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct GovernanceVerdictRecord {
+    pub engine: String,
+    pub disposition: NormalizedDisposition,
+    pub subject: String,
+    pub reason: String,
+    pub evidence_refs: Vec<String>,
+    pub recorded_at: String,
+    #[serde(default)]
+    pub boundary_constraints: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    pub compensating_controls: Vec<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthorityDecision {
@@ -201,6 +446,22 @@ pub struct AuthorityDecision {
     pub action_request: AuthorityRequest,
     pub audit_record: AuditRecord,
     pub decided_at: String,
+    #[serde(default)]
+    pub candidate_verdicts: Vec<GovernanceVerdictRecord>,
+    #[serde(default)]
+    pub winning_source: Option<String>,
+    #[serde(default)]
+    pub precedence_reason: Option<String>,
+    #[serde(default)]
+    pub sandbox_class_granted: Option<String>,
+    #[serde(default)]
+    pub approval_request_id: Option<String>,
+    #[serde(default)]
+    pub opaque_constraint_id: Option<String>,
+    #[serde(default)]
+    pub boundary_constraints: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    pub compensating_controls: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -209,6 +470,8 @@ pub struct ExecutionRequest {
     pub operation: Operation,
     pub timeout_secs: u64,
     pub env: BTreeMap<String, String>,
+    #[serde(default)]
+    pub compensating_controls: Vec<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -216,6 +479,7 @@ pub enum ExecutionStatus {
     Completed,
     SpawnFailed,
     TimedOut,
+    SandboxViolation,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ExecutionResult {
@@ -243,6 +507,17 @@ pub enum TraceKind {
     RunFinished,
     CaseClosed,
     InternalError,
+    MilestoneAchieved,
+    PlanMutated,
+    CaseFileItemAdded,
+    ItemEnabled,
+    ItemActivated,
+    ItemCompleted,
+    ItemFailed,
+    ItemTerminated,
+    HumanTaskCompleted,
+    CaseReopened,
+    CaseTerminated,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct TraceEvent {
@@ -254,6 +529,9 @@ pub struct TraceEvent {
     pub actor_id: String,
     pub timestamp: String,
     pub payload: Value,
+    /// Federation origin (spec-full §7.4). Absent = local legacy, valid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -306,6 +584,7 @@ pub enum EvidenceKind {
     Artifact,
     AuthorityDecision,
     ExecutionResult,
+    Recall,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct EvidenceRecord {
@@ -318,21 +597,173 @@ pub struct EvidenceRecord {
     pub source_event_id: String,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub metadata: BTreeMap<String, Value>,
+    /// Federation origin (spec-full §7.4). Absent = local legacy, valid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+pub struct SettlementCriteria {
+    #[serde(default)]
+    pub require_exit_zero: bool,
+    #[serde(default)]
+    pub required_artifacts: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stdout_must_contain: Option<String>,
+    /// Literal required in the final redacted agent response (M13).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_output_must_contain: Option<String>,
+    #[serde(default)]
+    pub require_approval: bool,
+    /// `<env>.<name>` — combines AND with existing checks (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evaluator: Option<String>,
+    /// Workspace-relative JSONL path for batch settlement (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub records: Option<String>,
+    /// `<env>.<name>` applied per-record in batch mode (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub per_record_evaluator: Option<String>,
+    /// Pass ratio in `0.0..=1.0` for batch acceptance (§7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_pass_ratio: Option<f64>,
+}
+
+/// Origin reference for a job or settlement criterion.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct OriginRef {
+    pub kind: OriginRefKind,
+    pub reference: String,
+    pub sha256: String,
+    pub role: OriginRole,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence_refs: Vec<String>,
+    /// M10 (E12 §7.5): typed model reference required for `DesiredOutcome`
+    /// kind; absent for all legacy kinds. Names the validated seed/client model
+    /// that contains the desired-outcome concept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SettlementCriteria {
-    pub require_exit_zero: bool,
-    pub required_artifacts: Vec<String>,
-    pub stdout_must_contain: Option<String>,
+#[serde(rename_all = "snake_case")]
+pub enum OriginRefKind {
+    Intent,
+    PlanTemplate,
+    SpecPipelineStage,
+    PolicyRequirement,
+    Issue,
+    ExternalRequirement,
+    JobContract,
+    ImplementationDefined,
+    /// M10 (E12 §7.5): reference to a Desired Outcome Criterion entity in a
+    /// validated seed/client model. Old readers fail cleanly on serde Err for
+    /// this variant; they are structurally shielded because `desired_outcome`
+    /// refs only appear in new ADLC/ODI template-derived criteria records.
+    DesiredOutcome,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OriginRole {
+    DesiredResult,
+    Constraint,
+    AcceptanceSource,
+    DerivationInput,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CriteriaDerivation {
+    pub method: DerivationMethod,
+    pub actor_ref: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub producer_ref: Option<String>,
+    pub rationale: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DerivationMethod {
+    Manual,
+    DeterministicPlanner,
+    PlanTemplate,
+    SpecPipeline,
+    Imported,
+    ImplementationDefined,
+}
+
+/// Dedicated job contract, used only when no existing canonical record expresses
+/// the requirement with sufficient provenance.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct JobContract {
+    pub version: String,
+    pub job_contract_id: String,
+    pub direction_kind: DirectionKind,
+    pub statement: String,
+    pub origin_refs: Vec<OriginRef>,
+    pub declared_by: String,
+    pub declared_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approved_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supersedes_ref: Option<String>,
+    pub job_contract_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DirectionKind {
+    Jtbd,
+    Requirement,
+    Goal,
+    Problem,
+    Constraint,
+    ImplementationDefined,
+}
+
+/// Ledgered settlement-criteria record with attributable origin and derivation.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SettlementCriteriaRecord {
+    pub version: String,
+    pub criteria_id: String,
+    pub criteria: SettlementCriteria,
+    pub origin_refs: Vec<OriginRef>,
+    pub derivation: CriteriaDerivation,
+    pub declared_at: String,
+    pub criteria_sha256: String,
+    pub criteria_record_hash: String,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct SettlementClaim {
     pub run_id: String,
     pub plan_item_id: String,
+    pub criteria_ref: Option<String>,
     pub criteria: SettlementCriteria,
     pub execution: Option<ExecutionResult>,
     pub authority_verdicts: Vec<Verdict>,
+    /// Evaluator scores keyed by `<env>.<name>`; recorded in the settlement
+    /// basis as evidence (§10.6) — never standing.
+    pub evaluator_scores: BTreeMap<String, f64>,
+    /// Pre-computed batch evaluation result (if batch criteria set).
+    pub batch: Option<BatchEvaluationResult>,
+}
+
+/// Result of batch evaluation over a JSONL records file (§7.6).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BatchEvaluationResult {
+    pub total: usize,
+    pub passed: usize,
+    pub pass_ratio: f64,
+    pub min_pass_ratio: f64,
+    pub failures: Vec<BatchFailure>,
+}
+
+/// A failing record in batch evaluation, written to quarantine (§7.6).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BatchFailure {
+    pub record: Value,
+    pub score: f64,
+    pub evidence_ref: String,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -340,6 +771,14 @@ pub enum SettlementStatus {
     Accepted,
     Rejected,
     Escalated,
+}
+
+/// Settlement basis values for agent delegation (spec-agent-orchestration §7/§10).
+pub mod delegation_basis {
+    pub const CANCELLED: &str = "cancelled";
+    pub const TURN_CAP_EXCEEDED: &str = "turn_cap_exceeded";
+    pub const AGENT_ENDPOINT_ERROR: &str = "agent_endpoint_error";
+    pub const ACP_DISCONNECT: &str = "acp_disconnect";
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SettlementEvent {
@@ -350,6 +789,309 @@ pub struct SettlementEvent {
     pub basis: Vec<String>,
     pub review_required: bool,
     pub settled_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_ref: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ApprovalStatus {
+    Pending,
+    Approved,
+    Rejected,
+    Expired,
+}
+
+// === M15: Thoth manager loop (E16b) ===
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ManagerJudgment {
+    Satisfied,
+    Progressing,
+    Stalled,
+    Blocked,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ManagerAction {
+    /// No action taken this iteration (satisfied, or already progressing).
+    Noop,
+    ProposeItem,
+    Escalate,
+}
+
+/// One auditable step of the Thoth manager loop (§7.6). Recorded to the
+/// ledger whether or not a proposal is granted — a denied proposal is an
+/// outcome, not an error.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ManagerIteration {
+    pub version: String,
+    pub case_id: String,
+    pub iteration: u32,
+    /// Case-file version consulted for this judgment.
+    pub snapshot_case_version: String,
+    /// Ledger head (append_ordinal of the last entry) consulted.
+    pub snapshot_ledger_head: u64,
+    /// Count of `settlement_recorded` case events observed at this
+    /// iteration — compared against the prior iteration's count to detect
+    /// "new settlement progress since the prior iteration" (§9.5).
+    pub settlement_events_observed: u32,
+    pub proposal_source_ref: String,
+    pub proposal_source_sha256: String,
+    pub judgment: ManagerJudgment,
+    /// Refs (plan item IDs or `case:<id>`) that ground the judgment —
+    /// never free-form narration. Must be non-empty and must resolve.
+    pub rationale_claim_refs: Vec<String>,
+    pub action: ManagerAction,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proposed_item_ref: Option<String>,
+    /// Set only when `action == ProposeItem`: whether authority granted it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub granted: Option<bool>,
+    pub recorded_at: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ApprovalRequest {
+    pub version: String,
+    pub approval_id: String,
+    pub run_id: String,
+    pub case_id: String,
+    pub decision_id: String,
+    pub plan_item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_ref: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_record_hash: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
+    pub requested_at: String,
+    pub expires_at: String,
+    pub status: ApprovalStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+// === M4a: Settlement Declarations ===
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SettlementStrength {
+    Local,
+    Strong,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DeclarationStatus {
+    Accepted,
+    Rejected,
+    Escalated,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Declarer {
+    pub actor_id: String,
+    pub authority_ref: String,
+    pub role: String,
+    pub standing_basis: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DeclarationIndependence {
+    pub acting_entity_id: String,
+    pub independent: bool,
+    pub basis: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DeclarationReliability {
+    pub feedback_delay_ms: u64,
+    pub attribution_confidence: String,
+    pub gaming_exposure: String,
+    pub hidden_debt_blindness: String,
+    pub weight: String,
+    pub basis: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SettlementDeclarationRequest {
+    pub settlement_ref: String,
+    pub run_id: String,
+    pub case_id: String,
+    pub plan_item_id: String,
+    pub claim_manifest_sha256: String,
+    pub criteria_ref: String,
+    pub criteria_sha256: String,
+    pub criteria_record_hash: String,
+    pub criteria_declared_at: String,
+    pub execution_started_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
+    pub origin_refs: Vec<OriginRef>,
+    pub verifier_ref: String,
+    pub verifier_sha256: String,
+    pub acting_entity_id: String,
+    pub requested_strength: SettlementStrength,
+    pub declarer: Declarer,
+    pub variation_tags: BTreeMap<String, String>,
+    pub disruption_tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_burden: Option<String>,
+    pub source_evidence_refs: Vec<String>,
+    /// Immutable Thoth-claim authorship, when the underlying claim being
+    /// settled was Thoth-authored (spec-adlc-thoth §7.3, §10.3). Checked
+    /// against `declarer.actor_id` before acceptance (T13B).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authored_by: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SettlementDeclaration {
+    pub version: String,
+    pub declaration_id: String,
+    pub settlement_ref: String,
+    pub run_id: String,
+    pub case_id: String,
+    pub plan_item_id: String,
+    pub claim_manifest_sha256: String,
+    pub status: DeclarationStatus,
+    pub strength: SettlementStrength,
+    pub qualifies_for_capability: bool,
+    pub criteria_ref: String,
+    pub criteria_sha256: String,
+    pub criteria_record_hash: String,
+    pub criteria_declared_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_contract_ref: Option<String>,
+    pub origin_refs: Vec<OriginRef>,
+    pub verifier_ref: String,
+    pub verifier_sha256: String,
+    pub verification_evidence_refs: Vec<String>,
+    pub declarer: Declarer,
+    pub independence: DeclarationIndependence,
+    pub reliability: DeclarationReliability,
+    pub variation_tags: BTreeMap<String, String>,
+    pub disruption_tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_burden: Option<String>,
+    pub issued_at: String,
+    pub source_evidence_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter_attestation_ref: Option<String>,
+    /// Immutable Thoth-claim authorship, carried through from the request
+    /// and included in `declaration_hash` (spec-adlc-thoth §7.3, §10.3,
+    /// T11.7/T13B). Re-checked independently at capability-promotion time
+    /// against `declarer.actor_id` — copied or replayed records that skip
+    /// `declare()` still fail this re-check.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authored_by: Option<String>,
+    pub declaration_hash: String,
+}
+
+// === M4a: Capability Records ===
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CapabilityStatus {
+    Attempted,
+    Demonstrated,
+    Proven,
+    Metabolized,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct CapabilityCounts {
+    #[serde(default)]
+    pub accepted: u64,
+    #[serde(default)]
+    pub rejected: u64,
+    #[serde(default)]
+    pub escalated: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityQualifying {
+    pub declaration_count: u64,
+    pub total_weight: String,
+    pub accepted_weight: String,
+    pub regression_weight: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityVariation {
+    pub required_dimensions: Vec<String>,
+    pub covered_values: BTreeMap<String, Vec<String>>,
+    pub coverage_ratio: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityRecovery {
+    pub required_disruptions: Vec<String>,
+    pub recovered_disruptions: Vec<String>,
+    pub recovery_ratio: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityOrchestration {
+    pub baseline_burden: Option<String>,
+    pub current_burden: Option<String>,
+    pub reduction: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityEvidenceSampleItem {
+    pub run_id: String,
+    pub settlement_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub declaration_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityPromotionPolicy {
+    pub version: String,
+    pub name: String,
+    pub capability_pattern: String,
+    pub policy_sha256: String,
+    pub min_declarations: u64,
+    pub min_total_weight: String,
+    pub min_reliability_weight: String,
+    pub max_regression_weight: String,
+    pub required_variation_dimensions: Vec<String>,
+    pub min_distinct_values_per_dimension: u64,
+    pub required_disruptions: Vec<String>,
+    pub require_burden_reduction: bool,
+    pub min_confidence: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityRecord {
+    pub version: String,
+    pub capability_name: String,
+    pub first_seen: String,
+    pub last_seen: String,
+    pub counts: CapabilityCounts,
+    pub status: CapabilityStatus,
+    pub promotion_policy_ref: String,
+    pub promotion_policy_sha256: String,
+    pub qualifying: CapabilityQualifying,
+    pub variation: CapabilityVariation,
+    pub recovery: CapabilityRecovery,
+    pub orchestration: CapabilityOrchestration,
+    pub confidence: String,
+    pub contraction_reasons: Vec<String>,
+    pub evidence_sample: Vec<CapabilityEvidenceSampleItem>,
+    pub rebuilt_at: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -376,6 +1118,8 @@ pub struct SemanticEnvelope {
     pub case_ref: String,
     pub intent: Intent,
     pub plan_ref: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_ref: Option<String>,
     pub authority_decisions: Vec<String>,
     pub evidence_refs: Vec<String>,
     pub settlement_ref: String,
@@ -384,6 +1128,37 @@ pub struct SemanticEnvelope {
     pub artifact_refs: Vec<ArtifactRef>,
     pub extension_refs: Vec<String>,
     pub projection_refs: Vec<ProjectionRef>,
+    /// Federation origin (spec-full §7.4). Absent = local legacy, valid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryKind {
+    Fact,
+    Decision,
+    Outcome,
+    Preference,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct MemoryItemProvenance {
+    pub run_ids: Vec<String>,
+    pub evidence_refs: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MemoryItem {
+    pub version: String,
+    pub memory_id: String,
+    pub kind: MemoryKind,
+    pub statement: String,
+    pub attribution: Attribution,
+    pub provenance: MemoryItemProvenance,
+    pub dedup_key: String,
+    pub created_at: String,
+    pub last_confirmed_at: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -419,7 +1194,7 @@ pub struct ExtensionDescriptor {
     pub deterministic: bool,
     pub installed_at: Option<String>,
 }
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectionKind {
     Sea,
@@ -433,6 +1208,13 @@ pub enum ProjectionKind {
     MemoryIndex,
     CapitalRecord,
     ImplementationDefined,
+    // M9 (E11) self-model projections. Appended so existing variants' Ord ranks
+    // are unchanged. Persisted ONLY under the `self_model_projection` ledger
+    // record_kind and `.sea-forge/self-model/`; old readers filter on
+    // record_kind and never deserialize these variants. See
+    // tests/projection_kind_boundary.rs for the isolation proof.
+    Kg,
+    SelfModelSnapshot,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -466,6 +1248,17 @@ mod tests {
         .unwrap();
         assert_eq!(value["kind"], "write_file");
     }
+
+    #[test]
+    fn agent_probe_operation_uses_additive_tag() {
+        let value = serde_json::to_value(Operation::AgentProbe {
+            endpoint_ref: "endpoint_local".into(),
+            model: "test-model".into(),
+            prompt_sha256: "sha256:prompt".into(),
+        })
+        .unwrap();
+        assert_eq!(value["kind"], "agent_probe");
+    }
     #[test]
     fn settlement_status_round_trips() {
         let value = serde_json::to_string(&SettlementStatus::Escalated).unwrap();
@@ -475,4 +1268,240 @@ mod tests {
             SettlementStatus::Escalated
         );
     }
+}
+
+// ── M5: Spec-to-code pipeline + DomainForge projections (§7.8, §7.0b) ──
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PipelineRoute {
+    SpecAuthoring,
+    GeneratorAuthoring,
+    Regeneration,
+    LastMile,
+    FullSpecToRuntime,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ProofClassification {
+    AuthorityOnly,
+    GeneratedContract,
+    FocusedSlice,
+    LiveDevProof,
+    ReleaseGateProof,
+    EnterpriseShippable,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StageKind {
+    Adr,
+    Prd,
+    Sds,
+    Sea,
+    Ast,
+    Ir,
+    Manifest,
+    GeneratedContract,
+    SemanticFixture,
+    LastMileAdapter,
+    RuntimeWiring,
+    AcceptanceProof,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StageStatus {
+    Pending,
+    Accepted,
+    Rejected,
+    Quarantined,
+    Skipped,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct StageFile {
+    pub path: String,
+    pub sha256: String,
+    #[serde(default)]
+    pub generated: bool,
+    /// Predecessor-chain metadata (M5 Task 9, spec-audit-remediation ADR-003):
+    /// the file's declared schema/kind identity, so a stage's declared input
+    /// can be checked against the producing stage's declared output rather
+    /// than trusted from array position alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schema_ref: Option<String>,
+    /// The DomainModelRef identity (stable hash string) this file was
+    /// produced under, when the stage's content depends on a validated
+    /// domain model (present from the SEA stage onward).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<String>,
+    /// The pinned DomainForge version this file was produced/validated
+    /// under, when applicable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domainforge_version: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SpecPipelineStage {
+    pub stage_id: String,
+    pub kind: StageKind,
+    #[serde(default)]
+    pub inputs: Vec<StageFile>,
+    #[serde(default)]
+    pub outputs: Vec<StageFile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<Vec<String>>,
+    pub status: StageStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quarantine_ref: Option<String>,
+    #[serde(default)]
+    pub settlement_basis: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SpecPipelineRun {
+    pub version: String,
+    pub pipeline_id: String,
+    pub case_id: String,
+    pub run_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<crate::types::Value>,
+    pub route: PipelineRoute,
+    #[serde(default)]
+    pub authority_refs: Vec<String>,
+    #[serde(default)]
+    pub evidence_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement_ref: Option<String>,
+    pub stages: Vec<SpecPipelineStage>,
+    pub proof_classification: ProofClassification,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ProjectionRecord {
+    pub projection_id: String,
+    pub projection_kind: ProjectionKind,
+    pub adapter_ref: String,
+    pub case_id: String,
+    pub run_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain_model_ref: Option<Value>,
+    pub source_refs: Vec<String>,
+    pub input_hash: String,
+    pub output_refs: Vec<StageFile>,
+    #[serde(default)]
+    pub quarantine_refs: Vec<String>,
+    pub validation: ProjectionValidation,
+    #[serde(default)]
+    pub authority_refs: Vec<String>,
+    #[serde(default)]
+    pub evidence_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement_ref: Option<String>,
+    pub created_at: String,
+    pub rebuild_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ProjectionValidation {
+    pub status: ProjectionStatus,
+    pub validator_ref: String,
+    #[serde(default)]
+    pub basis: Vec<String>,
+}
+
+// ── M6: SeaCell federation bundles (§7.4) ──
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BundleFile {
+    /// Path relative to bundle root (e.g. `runs/<run_id>/plan.json`).
+    pub path: String,
+    pub sha256: String,
+    pub size: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BundleManifest {
+    pub schema_version: String,
+    pub bundle_id: String,
+    /// Exporter cell id (`cell_<8 hex>`).
+    pub cell_id: String,
+    pub created_at: String,
+    pub run_ids: Vec<String>,
+    /// Template references carried by the bundle (e.g. `name@version`).
+    #[serde(default)]
+    pub templates: Vec<String>,
+    pub files: Vec<BundleFile>,
+}
+
+// ---------------------------------------------------------------------------
+// E15 governed delegation — transcript evidence (spec-agent-orchestration §7.4)
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DelegationTermination {
+    Completed,
+    TurnCapExceeded,
+    Cancelled,
+    EndpointError,
+    AcpDisconnect,
+}
+
+/// Deterministic structural summary of a delegation transcript (spec §7.4).
+/// Not model-generated — derived from the message list.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TranscriptSummary {
+    pub turn_count: u32,
+    pub tool_calls: u32,
+    /// Bounded excerpt of the final assistant message.
+    #[serde(default)]
+    pub final_excerpt: String,
+}
+
+/// Audit record of one delegation dialogue (spec §7.4).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TranscriptEvidence {
+    pub run_id: String,
+    pub endpoint_ref: String,
+    pub turns_used: u32,
+    pub termination: DelegationTermination,
+    /// SHA-256 of the redacted canonical JSONL transcript.
+    pub transcript_sha256: String,
+    pub summary: TranscriptSummary,
+    /// Content-addressed artifact path in `full` retention mode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact_ref: Option<String>,
+    /// Harvested proof/trace artifact refs (E17/SWE_SEED).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub harvested_refs: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Separation of duties: Thoth claim authorship (spec-adlc-thoth §10.3, §15).
+// ---------------------------------------------------------------------------
+
+/// The actor that authored a claim cannot settle or promote that same claim.
+/// Compares immutable `authored_by` provenance against the acting identity —
+/// re-labeling, copying, or replaying a claim cannot remove the binding,
+/// since `authored_by` travels with the record it was set on (T11.7, T13B).
+pub fn validate_claim_authorship_sod(
+    authored_by: Option<&str>,
+    actor_id: &str,
+) -> Result<(), crate::errors::ForgeError> {
+    if let Some(author) = authored_by {
+        if author == actor_id {
+            return Err(crate::errors::ForgeError::Plan {
+                class: "sod_violation",
+                message: format!(
+                    "actor '{actor_id}' cannot settle or promote a claim it authored ('{author}')"
+                ),
+            });
+        }
+    }
+    Ok(())
 }
