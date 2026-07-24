@@ -1,0 +1,120 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KYB1WWWD37BJTJM83Q0F8XBN",
+  "session_id": "b5e9bb31-bdf5-4195-83c1-f376270e5f27",
+  "strategy": "manual-commit",
+  "created_at": "2026-07-24T21:53:32.009844975Z",
+  "branch": "full-spec",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".agents/plans/2026-07-24-sea-forge-workbench-frontend-api-implementation.md",
+    ".agents/skills/building-sea-forge-workbench/SKILL.md",
+    ".agents/skills/building-sea-forge-workbench/evals/evaluations.md",
+    ".agents/skills/building-sea-forge-workbench/reference/api-and-event-contracts.md",
+    ".agents/skills/building-sea-forge-workbench/reference/design-and-ux-contract.md",
+    ".agents/skills/building-sea-forge-workbench/reference/implementation-workflow.md",
+    ".agents/skills/building-sea-forge-workbench/reference/repository-integration.md",
+    ".agents/skills/building-sea-forge-workbench/reference/source-map.md",
+    ".agents/skills/building-sea-forge-workbench/reference/stack-and-dependencies.md",
+    ".agents/skills/building-sea-forge-workbench/reference/testing-and-settlement.md",
+    ".agents/skills/building-sea-forge-workbench/reference/thoth-interaction-contract.md",
+    ".agents/skills/building-sea-forge-workbench/scripts/validate-skill.py",
+    ".agents/specs/frontend/DESIGN.md",
+    ".agents/specs/frontend/README.md",
+    ".agents/specs/frontend/SKILL.md",
+    ".agents/specs/frontend/colors_and_type.css",
+    ".agents/specs/frontend/deprecated-DESIGN-spec-mapping.md",
+    ".agents/specs/frontend/deprecated-DESIGN.md",
+    ".agents/specs/frontend/ui_kits/app/README.md"
+  ],
+  "agent": "Claude Code",
+  "model": "",
+  "turn_id": "aa92c7047bb2",
+  "checkpoint_transcript_start": 504,
+  "transcript_lines_at_start": 504,
+  "compact_transcript_start": 59,
+  "token_usage": {
+    "input_tokens": 1361,
+    "cache_creation_tokens": 382465,
+    "cache_read_tokens": 7345761,
+    "output_tokens": 73624,
+    "api_call_count": 39
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-claude-code-writing-clearly-and-concisely-2026-07-24T21:16:25.70466111Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "writing-clearly-and-concisely"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "5602df052368",
+      "timestamp": "2026-07-24T21:16:25.70466111Z",
+      "native": {
+        "command": "/writing-clearly-and-concisely"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/writing-clearly-and-concisely",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-07-24T21:53:31.614487187Z",
+    "agent_lines": 1495,
+    "agent_removed": 21,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 612,
+    "total_committed": 1495,
+    "total_lines_changed": 2128,
+    "agent_percentage": 71.2406015037594,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 5272,
+      "user_lines_removed": 1148,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".agents/CURRENT_STATUS.md": 4,
+        ".agents/plans/TODO.md": 159,
+        ".agents/specs/frontend/DESIGN.md": 38,
+        ".agents/specs/frontend/README.md": 76,
+        ".agents/specs/frontend/SKILL.md": 74,
+        ".agents/specs/frontend/context-provenance.md": 27,
+        ".agents/specs/frontend/css.txt": 148,
+        ".agents/specs/frontend/sea-forge-workbench-api-method-catalog-v0.1.yaml": 752,
+        ".agents/specs/frontend/sea-forge-workbench-api-spec-v0.1.md": 2287,
+        ".agents/specs/frontend/ui_kits/DESIGN-HANDOFF.md": 91,
+        ".agents/specs/frontend/ui_kits/DESIGN-MANIFEST.json": 201,
+        ".agents/specs/frontend/ui_kits/app/README.md": 45,
+        ".agents/specs/frontend/ui_kits/app/app.js": 44,
+        ".agents/specs/frontend/ui_kits/app/components.js": 14,
+        ".agents/specs/frontend/ui_kits/app/components/EvidenceDrawer.html": 22,
+        ".agents/specs/frontend/ui_kits/app/components/GovernedFocusHeader.html": 23,
+        ".agents/specs/frontend/ui_kits/app/components/ReadinessConditionTable.html": 23,
+        ".agents/specs/frontend/ui_kits/app/index.html": 177,
+        ".agents/specs/frontend/ui_kits/app/styles.css": 1067
+      },
+      "user_removed_per_file": {
+        ".agents/specs/frontend/deprecated-DESIGN-spec-mapping.md": 93,
+        ".agents/specs/frontend/deprecated-DESIGN.md": 519,
+        ".logs/subtask2.log": 536
+      }
+    }
+  ]
+}
