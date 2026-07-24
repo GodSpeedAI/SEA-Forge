@@ -118,14 +118,62 @@ fn run_plan_inner(
     };
     let binding = bundle.resolve_identity(&actor.actor_id, actor.role.clone());
 
+    // Real desired-outcome resolver over Task 11's validated self-model seed
+    // (audit remediation Task 12) — never the fail-closed NoModelResolver
+    // wrapper for externally supplied plans.
+    let (desired_outcome_resolver, seed_domain_model_ref, seed_model_sha256) =
+        crate::pipeline::seed_desired_outcome_resolver()?;
+
+    // A submitted plan naming a known built-in template derives its criteria
+    // from that template (desired-outcome provenance included) rather than
+    // intent-only provenance; materializing it through the source-owned
+    // installer (`store_builtin`) and loading the pinned, tamper-evident copy
+    // (`load_pinned`) is the same path any other consumer of that template
+    // would take (Task 12 audit remediation step 3).
+    let built_in_template = match plan.template_ref.as_deref() {
+        Some(reference) if sea_forge_planner::is_built_in_template_ref(reference) => {
+            sea_forge_planner::store_builtin(
+                &root,
+                &seed_domain_model_ref,
+                &seed_model_sha256,
+                sea_forge_planner::DEFAULT_TOPOLOGY_ENDPOINT_REF,
+            )?;
+            Some(sea_forge_planner::load_pinned(&root, reference)?)
+        }
+        _ => None,
+    };
+
     // Derive and commit settlement criteria records for every settling item.
     let mut criteria_map: BTreeMap<String, SettlementCriteriaRecord> = BTreeMap::new();
     let declared_at = Utc::now().to_rfc3339();
     for item in &mut plan.items {
-        let mut record =
-            sea_forge_planner::derive_from_intent(&intent, item, &options.entity, &declared_at)?;
+        let mut record = if let Some(template) = &built_in_template {
+            sea_forge_planner::derive_from_template(
+                template,
+                item,
+                &intent,
+                &options.entity,
+                &declared_at,
+            )?
+        } else {
+            sea_forge_planner::derive_from_intent(&intent, item, &options.entity, &declared_at)?
+        };
         if !options.origin_evidence_refs.is_empty() {
-            record.origin_refs[0]
+            // `derive_from_template` sorts `origin_refs` by `reference`, so the
+            // Intent origin is not reliably at index 0 once a template is in
+            // play; look it up by kind instead.
+            let origin = record
+                .origin_refs
+                .iter_mut()
+                .find(|o| o.kind == OriginRefKind::Intent)
+                .ok_or_else(|| ForgeError::Plan {
+                    class: "criteria_origin_missing",
+                    message: format!(
+                        "cannot attach origin_evidence_refs: no Intent origin found in criteria {}",
+                        record.criteria_id
+                    ),
+                })?;
+            origin
                 .evidence_refs
                 .clone_from(&options.origin_evidence_refs);
             record.criteria_record_hash = sea_forge_planner::compute_record_hash(&record)?;
@@ -140,7 +188,11 @@ fn run_plan_inner(
         item.settlement_criteria_ref = Some(record.criteria_id.clone());
         criteria_map.insert(record.criteria_id.clone(), record);
     }
-    sea_forge_planner::verify_plan_criteria(&plan, &criteria_map)?;
+    sea_forge_planner::verify_plan_criteria_with_resolver(
+        &plan,
+        &criteria_map,
+        &desired_outcome_resolver,
+    )?;
 
     // Allocate every potential episode and decide every operation before activation.
     let mut run_ids = HashMap::<(String, u32), String>::new();

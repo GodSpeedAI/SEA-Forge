@@ -1,6 +1,6 @@
 use sea_forge_agent::{AgentConfig, AgentEndpointConfig, ProviderKind};
 use sea_forge_core::types::{
-    CasePlan, ItemKind, Operation, PlanItem, SettlementCriteria, TraceEvent, TraceKind,
+    CasePlan, ItemKind, ItemMarkers, Operation, PlanItem, SettlementCriteria, TraceEvent, TraceKind,
 };
 use sea_forge_server::{
     agent_probe, delegation, handle_request, Request, ServerConfig, ServerState,
@@ -46,6 +46,7 @@ fn endpoint(port: u16) -> AgentEndpointConfig {
         max_response_bytes: 16_384,
         timeout_secs: 5,
         status: None,
+        transcript_retention: None,
     }
 }
 
@@ -139,6 +140,7 @@ async fn t13_delegation_completes_with_transcript_evidence() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
     )
@@ -192,6 +194,7 @@ async fn t13_delegation_denied_without_agent_task_policy() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
     )
@@ -223,6 +226,7 @@ async fn t13_delegation_denied_secret_access_no_credential_read() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
     )
@@ -268,6 +272,7 @@ async fn t13_endpoint_error_settles_rejected_with_transcript() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
     )
@@ -307,6 +312,7 @@ async fn t13_token_budget_breach_settles_turn_cap_exceeded() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
     )
@@ -352,6 +358,7 @@ async fn t13_agent_success_with_failed_output_criteria_settles_rejected() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
     )
@@ -397,6 +404,8 @@ async fn t13_transcript_artifact_hash_verifies() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            transcript_retention: sea_forge_agent::TranscriptRetentionMode::Full,
+            ..Default::default()
         },
         &res,
     )
@@ -429,6 +438,531 @@ async fn t13_transcript_artifact_hash_verifies() {
     let _ = task.await;
 }
 
+/// M13 T15 step 2/5: a schema-valid final output settles accepted and
+/// becomes a named evidence field (schema hash + validity, never the raw
+/// payload).
+#[tokio::test]
+async fn t15_schema_valid_response_settles_accepted_with_named_evidence() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"{\"status\":\"accepted\"}"}}],"usage":{"total_tokens":1}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    let schema = serde_json::json!({
+        "type": "object",
+        "required": ["status"],
+        "properties": {"status": {"type": "string", "enum": ["accepted"]}}
+    });
+    let outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "report status",
+            max_turns: 1,
+            response_schema: Some(&schema),
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+            ..Default::default()
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        outcome.settlement,
+        sea_forge_core::types::SettlementStatus::Accepted
+    );
+    assert!(outcome.basis.iter().any(|b| b == "response_schema_valid"));
+    let run = root.path().join("runs").join(&outcome.run_id);
+    let evidence_path = run.join("response-schema-evidence.json");
+    assert!(
+        evidence_path.is_file(),
+        "named response_schema evidence must be persisted"
+    );
+    let evidence: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&evidence_path).unwrap()).unwrap();
+    assert_eq!(evidence["valid"], true);
+    let _ = task.await;
+}
+
+/// M13 T15 step 5: a schema-invalid final output settles rejected with a
+/// typed `schema_invalid` basis, and the named evidence never carries the
+/// raw non-conforming payload.
+#[tokio::test]
+async fn t15_schema_invalid_response_settles_rejected_without_payload_leak() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"{\"status\":\"unleaked-marker-12345\"}"}}],"usage":{"total_tokens":1}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    let schema = serde_json::json!({
+        "type": "object",
+        "required": ["status"],
+        "properties": {"status": {"type": "string", "enum": ["accepted"]}}
+    });
+    let outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "report status",
+            max_turns: 1,
+            response_schema: Some(&schema),
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+            ..Default::default()
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        outcome.settlement,
+        sea_forge_core::types::SettlementStatus::Rejected
+    );
+    assert_eq!(outcome.error_class.as_deref(), Some("schema_invalid"));
+    assert!(outcome.basis.iter().any(|b| b == "schema_invalid"));
+    let run = root.path().join("runs").join(&outcome.run_id);
+    let evidence_path = run.join("response-schema-evidence.json");
+    let evidence_text = fs::read_to_string(&evidence_path).unwrap();
+    let evidence: serde_json::Value = serde_json::from_str(&evidence_text).unwrap();
+    assert_eq!(evidence["valid"], false);
+    assert!(
+        !evidence_text.contains("unleaked-marker-12345"),
+        "schema evidence must not leak the raw non-conforming payload"
+    );
+    let _ = task.await;
+}
+
+/// M13 T15 step 3: cap termination accepts or rejects solely by criteria —
+/// a turn-cap-exhausted episode whose available final output satisfies the
+/// declared criteria settles accepted, but `turn_cap_exceeded` always stays
+/// in the basis so how it terminated is never hidden.
+#[tokio::test]
+async fn t15_turn_cap_exceeded_with_satisfied_criteria_accepts_and_retains_basis() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"proof artifact committed"}}],"usage":{"total_tokens":42}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    let outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "publish proof",
+            max_turns: 5,
+            token_budget: Some(25),
+            criteria: SettlementCriteria {
+                agent_output_must_contain: Some("proof artifact committed".into()),
+                ..SettlementCriteria::default()
+            },
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+            ..Default::default()
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(outcome.termination.as_deref(), Some("turn_cap_exceeded"));
+    assert_eq!(
+        outcome.settlement,
+        sea_forge_core::types::SettlementStatus::Accepted
+    );
+    assert!(
+        outcome.basis.iter().any(|b| b == "turn_cap_exceeded"),
+        "must retain turn_cap_exceeded in basis even when accepted: {:?}",
+        outcome.basis
+    );
+    let _ = task.await;
+}
+
+/// M13 T15 step 4: case dispatch must reuse the exact basis delegation
+/// already committed instead of constructing a synthetic
+/// `["delegation_completed"]` basis that hides the real termination/
+/// criteria outcome from the case-level completion record.
+#[tokio::test]
+async fn t15_case_dispatch_settlement_reuses_real_basis_not_synthetic() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"done, but no proof artifact"}}],"usage":{"total_tokens":1}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = policy(root.path(), true, true);
+    // Case dispatch resolves credentials via the real environment resolver
+    // (unlike the fixture `CountingResolver` used by direct-delegation
+    // tests); an endpoint with no credential_ref skips that resolution
+    // entirely so this test exercises settlement basis reuse, not secret
+    // handling.
+    let mut ep = endpoint(address.port());
+    ep.credential_ref = None;
+    let plan = CasePlan {
+        version: "0.2".into(),
+        plan_id: "plan_t15".into(),
+        case_id: "case_t15".into(),
+        run_id: "run_t15".into(),
+        intent_id: "int_t15".into(),
+        items: vec![PlanItem {
+            plan_item_id: "agent".into(),
+            name: "agent_task".into(),
+            operations: vec![Operation::AgentTask {
+                endpoint_ref: "local-test".into(),
+                instruction: "publish proof".into(),
+                max_turns: 1,
+                token_budget: None,
+                response_schema: None,
+                transcript_retention: None,
+            }],
+            entry_criteria: vec![],
+            entry_criteria_mode: Default::default(),
+            exit_criteria: vec![],
+            settlement_criteria: SettlementCriteria {
+                agent_output_must_contain: Some("proof artifact committed".into()),
+                ..SettlementCriteria::default()
+            },
+            settlement_criteria_ref: None,
+            item_kind: ItemKind::AgentTask,
+            sandbox_class: None,
+            parent_stage: None,
+            markers: ItemMarkers {
+                required: true,
+                ..ItemMarkers::default()
+            },
+            max_instances: 1,
+            depends_on: vec![],
+            environment: None,
+            proposed_by: None,
+        }],
+        template_ref: None,
+        job_contract_ref: None,
+    };
+    let plan_path = root.path().join("plan.json");
+    fs::write(&plan_path, serde_json::to_vec(&plan).unwrap()).unwrap();
+
+    let state = std::sync::Arc::new(ServerState::new(config(root.path(), ep)).unwrap());
+    let request: Request = serde_json::from_str(&format!(
+        r#"{{"verb":"submit","plan":{:?},"policy":{:?},"entity":"operator_local","process":"test"}}"#,
+        plan_path.to_str().unwrap(),
+        policy_path.to_str().unwrap(),
+    ))
+    .unwrap();
+    let response = handle_request(request, &state).await;
+    let case_id = response["case_id"].as_str().unwrap().to_string();
+
+    let ledger =
+        sea_forge_ledger::LedgerStream::open(root.path(), format!("case-{case_id}"), "test")
+            .unwrap();
+    let entries = ledger.read_entries().unwrap();
+    let completion = entries
+        .iter()
+        .find(|entry| entry.record_kind == "settlement_event")
+        .expect("case dispatch must record a settlement_event completion");
+    assert_eq!(completion.payload["status"], "rejected");
+    assert_ne!(
+        completion.payload["basis"],
+        serde_json::json!(["delegation_completed"]),
+        "case-level completion must reuse the real delegation basis, not a synthetic one"
+    );
+    assert_eq!(
+        completion.payload["basis"],
+        serde_json::json!([
+            "authority_allow",
+            "delegation_completed",
+            "agent_output_mismatch"
+        ])
+    );
+    let _ = task.await;
+}
+
+/// M13 T16 step 2: one transcript, both retention modes — the committed
+/// redacted digest must be identical regardless of mode, full mode must
+/// store a public plaintext artifact (still redacted), and summarized mode
+/// must store a sealed ciphertext artifact that never exposes the plaintext.
+#[tokio::test]
+async fn t16_redaction_digest_identical_across_full_and_summarized_modes() {
+    let response = r#"{"choices":[{"message":{"content":"secret test-secret leaked? no: redacted-check"}}],"usage":{"total_tokens":1}}"#;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+
+    let (address, _connections, task) = stub(response).await;
+    let (res, _reads) = resolver();
+    let full_outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "report",
+            max_turns: 1,
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+            transcript_retention: sea_forge_agent::TranscriptRetentionMode::Full,
+            ..Default::default()
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+    let _ = task.await;
+
+    let (address2, _connections2, task2) = stub(response).await;
+    let (res2, _reads2) = resolver();
+    let summarized_outcome = delegation::execute(
+        &config(root.path(), endpoint(address2.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "report",
+            max_turns: 1,
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+            transcript_retention: sea_forge_agent::TranscriptRetentionMode::Summarized,
+            ..Default::default()
+        },
+        &res2,
+    )
+    .await
+    .unwrap();
+    let _ = task2.await;
+
+    assert_eq!(
+        full_outcome.transcript_sha256, summarized_outcome.transcript_sha256,
+        "the same redacted transcript must hash identically regardless of retention mode"
+    );
+    assert_eq!(
+        summarized_outcome.settlement,
+        sea_forge_core::types::SettlementStatus::Accepted,
+        "a normal seal must verify and never block settlement"
+    );
+
+    let full_hex = full_outcome
+        .transcript_sha256
+        .as_deref()
+        .unwrap()
+        .trim_start_matches("sha256:")
+        .to_string();
+    let full_artifact = root
+        .path()
+        .join("runs")
+        .join(&full_outcome.run_id)
+        .join(format!("transcript-{full_hex}.jsonl"));
+    assert!(
+        full_artifact.is_file(),
+        "full mode stores a public plaintext artifact"
+    );
+    let full_text = fs::read_to_string(&full_artifact).unwrap();
+    assert!(
+        !full_text.contains("test-secret"),
+        "the credential must be redacted even in full (public) mode"
+    );
+
+    let summarized_hex = summarized_outcome
+        .transcript_sha256
+        .as_deref()
+        .unwrap()
+        .trim_start_matches("sha256:")
+        .to_string();
+    let sealed_artifact = root
+        .path()
+        .join("runs")
+        .join(&summarized_outcome.run_id)
+        .join(format!("transcript-{summarized_hex}.sealed"));
+    assert!(
+        sealed_artifact.is_file(),
+        "summarized mode stores a sealed ciphertext artifact, not plaintext"
+    );
+    let raw = fs::read(&sealed_artifact).unwrap();
+    assert!(
+        std::str::from_utf8(&raw).is_err()
+            || !std::str::from_utf8(&raw)
+                .unwrap()
+                .contains("redacted-check"),
+        "sealed artifact must never expose the plaintext transcript content"
+    );
+}
+
+/// M13 T16 step 3: case dispatch resolves retention through the full
+/// precedence chain — plan item override outranks endpoint config, which
+/// outranks the global `[agent]` default, which outranks the built-in
+/// summarized default.
+#[tokio::test]
+async fn t16_case_dispatch_retention_precedence_item_endpoint_global_default() {
+    async fn dispatch_and_get_artifact_extension(
+        item_override: Option<&str>,
+        endpoint_override: Option<sea_forge_agent::TranscriptRetentionMode>,
+        global_default: sea_forge_agent::TranscriptRetentionMode,
+    ) -> String {
+        let (address, _connections, task) = stub(
+            r#"{"choices":[{"message":{"content":"proof artifact committed"}}],"usage":{"total_tokens":1}}"#,
+        )
+        .await;
+        let root = tempfile::tempdir().unwrap();
+        let policy_path = policy(root.path(), true, true);
+        let mut ep = endpoint(address.port());
+        ep.credential_ref = None;
+        ep.transcript_retention = endpoint_override;
+        let plan = CasePlan {
+            version: "0.2".into(),
+            plan_id: "plan_t16".into(),
+            case_id: "case_t16".into(),
+            run_id: "run_t16".into(),
+            intent_id: "int_t16".into(),
+            items: vec![PlanItem {
+                plan_item_id: "agent".into(),
+                name: "agent_task".into(),
+                operations: vec![Operation::AgentTask {
+                    endpoint_ref: "local-test".into(),
+                    instruction: "publish proof".into(),
+                    max_turns: 1,
+                    token_budget: None,
+                    response_schema: None,
+                    transcript_retention: item_override.map(str::to_string),
+                }],
+                entry_criteria: vec![],
+                entry_criteria_mode: Default::default(),
+                exit_criteria: vec![],
+                settlement_criteria: SettlementCriteria {
+                    agent_output_must_contain: Some("proof artifact committed".into()),
+                    ..SettlementCriteria::default()
+                },
+                settlement_criteria_ref: None,
+                item_kind: ItemKind::AgentTask,
+                sandbox_class: None,
+                parent_stage: None,
+                markers: ItemMarkers {
+                    required: true,
+                    ..ItemMarkers::default()
+                },
+                max_instances: 1,
+                depends_on: vec![],
+                environment: None,
+                proposed_by: None,
+            }],
+            template_ref: None,
+            job_contract_ref: None,
+        };
+        let plan_path = root.path().join("plan.json");
+        fs::write(&plan_path, serde_json::to_vec(&plan).unwrap()).unwrap();
+
+        let mut config = config(root.path(), ep);
+        config.agent.transcript_retention = global_default;
+        let state = std::sync::Arc::new(ServerState::new(config).unwrap());
+        let request: Request = serde_json::from_str(&format!(
+            r#"{{"verb":"submit","plan":{:?},"policy":{:?},"entity":"operator_local","process":"test"}}"#,
+            plan_path.to_str().unwrap(),
+            policy_path.to_str().unwrap(),
+        ))
+        .unwrap();
+        let response = handle_request(request, &state).await;
+        let case_id = response["case_id"].as_str().unwrap().to_string();
+
+        let ledger =
+            sea_forge_ledger::LedgerStream::open(root.path(), format!("case-{case_id}"), "test")
+                .unwrap();
+        let entries = ledger.read_entries().unwrap();
+        let evidence = entries
+            .iter()
+            .find(|entry| entry.record_kind == "agent_task_evidence")
+            .expect("agent_task_evidence must be committed");
+        let artifact_ref = evidence.payload["artifact_ref"]
+            .as_str()
+            .expect("artifact_ref must be present")
+            .to_string();
+        let _ = task.await;
+        artifact_ref
+            .rsplit('.')
+            .next()
+            .expect("artifact_ref must have an extension")
+            .to_string()
+    }
+
+    use sea_forge_agent::TranscriptRetentionMode::{Full, Summarized};
+
+    // No override anywhere: summarized default.
+    assert_eq!(
+        dispatch_and_get_artifact_extension(None, None, Summarized).await,
+        "sealed"
+    );
+    // Global default promotes to full with no endpoint/item override.
+    assert_eq!(
+        dispatch_and_get_artifact_extension(None, None, Full).await,
+        "jsonl"
+    );
+    // Endpoint config outranks the (summarized) global default.
+    assert_eq!(
+        dispatch_and_get_artifact_extension(None, Some(Full), Summarized).await,
+        "jsonl"
+    );
+    // Plan-item override outranks both endpoint (full) and global (full).
+    assert_eq!(
+        dispatch_and_get_artifact_extension(Some("summarized"), Some(Full), Full).await,
+        "sealed"
+    );
+}
+
+/// M13 T16 step 5: a sealed-transcript verification failure settles rejected
+/// with a typed basis — it never degrades to a summary-only success. The
+/// pure crypto tamper/wrong-key/missing-key/missing-ciphertext/restart/
+/// no-plaintext-marker cases are unit-tested directly in
+/// `transcript_seal.rs`; this proves the integration point (the settlement
+/// result) itself fails closed.
+#[tokio::test]
+async fn t16_sealed_verification_failure_settles_rejected_never_summary_only_success() {
+    let (address, _connections, task) = stub(
+        r#"{"choices":[{"message":{"content":"proof artifact committed"}}],"usage":{"total_tokens":1}}"#,
+    )
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let policy = policy(root.path(), true, true);
+    let (res, _reads) = resolver();
+    // Force `seal_transcript` to fail: `.sea-forge/sealed` exists as a
+    // *file*, so its `create_dir_all` for the key directory cannot succeed.
+    fs::create_dir_all(root.path().join(".sea-forge")).unwrap();
+    fs::write(root.path().join(".sea-forge").join("sealed"), b"not a dir").unwrap();
+
+    let outcome = delegation::execute(
+        &config(root.path(), endpoint(address.port())),
+        delegation::DelegationRequest {
+            endpoint_id: "local-test",
+            instruction: "publish proof",
+            max_turns: 1,
+            policy_path: policy.to_str().unwrap(),
+            entity: "operator_local",
+            process: "test",
+            transcript_retention: sea_forge_agent::TranscriptRetentionMode::Summarized,
+            ..Default::default()
+        },
+        &res,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        outcome.settlement,
+        sea_forge_core::types::SettlementStatus::Rejected,
+        "a sealed-verification failure must settle rejected, never summary-only success"
+    );
+    assert_eq!(
+        outcome.error_class.as_deref(),
+        Some("sealed_verification_failed")
+    );
+    assert!(outcome
+        .basis
+        .iter()
+        .any(|b| b == "sealed_verification_failed"));
+    let _ = task.await;
+}
+
 #[tokio::test]
 async fn planned_agent_episode_uses_case_context() {
     let (address, _connections, task) = stub(
@@ -453,6 +987,7 @@ async fn planned_agent_episode_uses_case_context() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
         delegation::DelegationEpisodeContext::planned(
@@ -515,6 +1050,7 @@ async fn planned_agent_rejection_uses_case_context_once() {
             policy_path: policy.to_str().unwrap(),
             entity: "operator_local",
             process: "test",
+            ..Default::default()
         },
         &res,
         delegation::DelegationEpisodeContext::planned(

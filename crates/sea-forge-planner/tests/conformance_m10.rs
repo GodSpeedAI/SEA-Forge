@@ -89,7 +89,7 @@ fn t10_2_simulation_rejection_reactivates_design() {
 /// ref or model ref changes.
 #[test]
 fn t10_3_odi_adlc_case_carries_desired_outcome_refs() {
-    let tmpl = odi_adlc_case_template();
+    let tmpl = odi_adlc_case_template("godspeed.adlc_odi_case", "sha256:seed-model-test-hash");
     // Template-level origin_refs include a desired_outcome ref.
     let do_refs: Vec<_> = tmpl
         .origin_refs
@@ -105,6 +105,15 @@ fn t10_3_odi_adlc_case_carries_desired_outcome_refs() {
             r.domain_model_ref.is_some(),
             "desired_outcome ref must have domain_model_ref"
         );
+        // Task 12 audit remediation: the caller-supplied seed values flow
+        // through unchanged; no fabricated placeholder remains.
+        assert_eq!(
+            r.domain_model_ref.as_deref(),
+            Some("godspeed.adlc_odi_case")
+        );
+        assert_eq!(r.sha256, "sha256:seed-model-test-hash");
+        assert_ne!(r.sha256, "sha256:placeholder");
+        assert_ne!(r.reference, "outcome:primary");
     }
     // Instantiation preserves origin_refs (via criteria derivation later).
     let plan = instantiate(&tmpl, &BTreeMap::new(), "c", "r", "i").unwrap();

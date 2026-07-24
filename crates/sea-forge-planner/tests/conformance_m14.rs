@@ -245,10 +245,51 @@ fn t14_0_all_of_waits_for_every_named_source() {
 }
 
 #[test]
+fn t17_0_topology_builtins_reject_colon_endpoint_ref() {
+    let err = sequential_agents_template("agent:builtin").unwrap_err();
+    assert_eq!(err.class(), "schema_error");
+    let err = concurrent_agents_template("agent:default").unwrap_err();
+    assert_eq!(err.class(), "schema_error");
+}
+
+#[test]
+fn t17_0_topology_builtins_reject_empty_and_oversized_endpoint_ref() {
+    assert_eq!(
+        sequential_agents_template("").unwrap_err().class(),
+        "schema_error"
+    );
+    let too_long = "a".repeat(65);
+    assert_eq!(
+        sequential_agents_template(&too_long).unwrap_err().class(),
+        "schema_error"
+    );
+}
+
+#[test]
+fn t17_0_topology_builtins_bind_the_caller_supplied_endpoint_ref() {
+    let plan = instantiate(
+        &sequential_agents_template("real_endpoint_1").unwrap(),
+        &BTreeMap::new(),
+        "case_1",
+        "run_1",
+        "intent_1",
+    )
+    .unwrap();
+    for item in &plan.items {
+        let sea_core_ops = &item.operations;
+        assert!(sea_core_ops.iter().any(|op| matches!(
+            op,
+            sea_forge_core::types::Operation::AgentTask { endpoint_ref, .. }
+                if endpoint_ref == "real_endpoint_1"
+        )));
+    }
+}
+
+#[test]
 fn t14_1_sequential_agents_instantiation_is_deterministic_and_settles_in_order() {
     let params = BTreeMap::new();
     let a = instantiate(
-        &sequential_agents_template(),
+        &sequential_agents_template("agent_default").unwrap(),
         &params,
         "case_1",
         "run_1",
@@ -256,7 +297,7 @@ fn t14_1_sequential_agents_instantiation_is_deterministic_and_settles_in_order()
     )
     .unwrap();
     let b = instantiate(
-        &sequential_agents_template(),
+        &sequential_agents_template("agent_default").unwrap(),
         &params,
         "case_1",
         "run_1",
@@ -283,7 +324,7 @@ fn t14_1_sequential_agents_instantiation_is_deterministic_and_settles_in_order()
 #[test]
 fn t14_2_concurrent_agents_rollup_fires_only_when_all_n_branches_settle() {
     let plan = instantiate(
-        &concurrent_agents_template(),
+        &concurrent_agents_template("agent_default").unwrap(),
         &BTreeMap::new(),
         "case_1",
         "run_1",
@@ -326,7 +367,7 @@ fn t14_2_concurrent_agents_rollup_fires_only_when_all_n_branches_settle() {
 #[test]
 fn t14_3_one_branch_rejected_plus_unrelated_rejection_rollup_never_fires() {
     let plan = instantiate(
-        &concurrent_agents_template(),
+        &concurrent_agents_template("agent_default").unwrap(),
         &BTreeMap::new(),
         "case_1",
         "run_1",

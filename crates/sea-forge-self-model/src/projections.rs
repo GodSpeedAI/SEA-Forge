@@ -36,6 +36,7 @@ fn deterministic_projection_id(kind_label: &str, snapshot_hash: &str) -> String 
     format!("proj_{kind_label}_{}", &digest[..prefix])
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build(
     kind_label: &str,
     kind: ProjectionKind,
@@ -44,6 +45,9 @@ fn build(
     input_hash: &str,
     snapshot: &SelfModelSnapshot,
     created_at: &str,
+    authority_refs: Vec<String>,
+    evidence_refs: Vec<String>,
+    settlement_ref: Option<String>,
 ) -> Result<SelfModelProjection, ForgeError> {
     // Re-key outputs under self-model/<kind_label>/ and build output_refs.
     let mut outputs: BTreeMap<String, String> = BTreeMap::new();
@@ -69,6 +73,20 @@ fn build(
     });
     let rebuild_hash = canonical_sha256(&rebuild_input)?;
 
+    // A projection cannot be Accepted without validation evidence and
+    // settlement (Task 11 audit remediation): absent either ref, it is
+    // Quarantined rather than silently trusted.
+    let status = if evidence_refs.is_empty() || settlement_ref.is_none() {
+        ProjectionStatus::Quarantined
+    } else {
+        ProjectionStatus::Accepted
+    };
+    let basis = if status == ProjectionStatus::Accepted {
+        vec!["deterministic_rebuild".into()]
+    } else {
+        vec!["missing_validation_evidence_or_settlement".into()]
+    };
+
     let record = ProjectionRecord {
         projection_id: deterministic_projection_id(kind_label, &snapshot.snapshot_hash),
         projection_kind: kind,
@@ -81,13 +99,13 @@ fn build(
         output_refs,
         quarantine_refs: vec![],
         validation: ProjectionValidation {
-            status: ProjectionStatus::Accepted,
+            status,
             validator_ref: "sea-forge-self-model".into(),
-            basis: vec!["deterministic_rebuild".into()],
+            basis,
         },
-        authority_refs: vec![],
-        evidence_refs: vec![],
-        settlement_ref: None,
+        authority_refs,
+        evidence_refs,
+        settlement_ref,
         created_at: created_at.into(),
         rebuild_hash,
     };
@@ -100,6 +118,9 @@ pub fn project_self(
     composed: &ComposedModel,
     snapshot: &SelfModelSnapshot,
     created_at: &str,
+    authority_refs: Vec<String>,
+    evidence_refs: Vec<String>,
+    settlement_ref: Option<String>,
 ) -> Result<Vec<SelfModelProjection>, ForgeError> {
     use sea_forge_domainforge::project;
     let source_refs: Vec<String> = composed
@@ -129,6 +150,9 @@ pub fn project_self(
             &model_input_hash,
             snapshot,
             created_at,
+            authority_refs.clone(),
+            evidence_refs.clone(),
+            settlement_ref.clone(),
         )?,
         build(
             "calm",
@@ -138,6 +162,9 @@ pub fn project_self(
             &model_input_hash,
             snapshot,
             created_at,
+            authority_refs.clone(),
+            evidence_refs.clone(),
+            settlement_ref.clone(),
         )?,
         build(
             "self_model_snapshot",
@@ -147,6 +174,9 @@ pub fn project_self(
             &snapshot.snapshot_hash,
             snapshot,
             created_at,
+            authority_refs,
+            evidence_refs,
+            settlement_ref,
         )?,
     ])
 }

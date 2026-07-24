@@ -16,16 +16,19 @@ use sea_forge_core::{
     errors::ForgeError,
     ids::{self, case_id, random_id, run_id},
     types::{
-        Actor, ActorRole, ApprovalRequest, ApprovalStatus, AuthorityAction, CasePlan,
+        Actor, ActorRole, ApprovalRequest, ApprovalStatus, AuthorityAction, CasePlan, Declarer,
         DelegationTermination, Intent, ItemKind, Operation, PlanItem, SettlementCriteria,
-        SettlementEvent, SettlementStatus, TranscriptEvidence, TranscriptSummary, Verdict,
+        SettlementCriteriaRecord, SettlementDeclarationRequest, SettlementEvent, SettlementStatus,
+        SettlementStrength, TranscriptEvidence, TranscriptSummary, Verdict,
     },
     RECORD_VERSION,
 };
 use sea_forge_ledger::LedgerStream;
+use sea_forge_settlement::SettlementAuthority as _;
 use serde::Serialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
@@ -33,7 +36,7 @@ use tokio::sync::{oneshot, Mutex as AsyncMutex};
 use zeroize::Zeroizing;
 
 /// Governed delegation request.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DelegationRequest<'a> {
     pub endpoint_id: &'a str,
     pub instruction: &'a str,
@@ -44,6 +47,13 @@ pub struct DelegationRequest<'a> {
     pub policy_path: &'a str,
     pub entity: &'a str,
     pub process: &'a str,
+    /// Optional JSON Schema (M13 T15, spec §7.3): a schema-valid final
+    /// output becomes a named evidence field and can accept an otherwise
+    /// cap-terminated episode; a schema-invalid one never accepts.
+    pub response_schema: Option<&'a serde_json::Value>,
+    /// Effective retention mode, already resolved through the full
+    /// precedence chain by the caller (M13 T16, spec §8.1).
+    pub transcript_retention: sea_forge_agent::TranscriptRetentionMode,
 }
 
 #[derive(Clone, Default)]
@@ -82,6 +92,11 @@ pub struct DelegationResult {
     /// ACP session id linking successor episodes after a disconnect (E17).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub continuation_key: Option<String>,
+    /// The exact basis of the committed `SettlementEvent` (M13 T15). Callers
+    /// that record their own completion (e.g. case dispatch) must reuse this
+    /// rather than construct a synthetic basis.
+    #[serde(default)]
+    pub basis: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -109,6 +124,20 @@ struct DelegationRejectionEvidence<'a> {
     run_id: &'a str,
 }
 
+/// Named evidence for `response_schema` validation (M13 T15, spec §7.3).
+/// Records only the schema's own hash and a validity flag, never the raw
+/// agent output, so a schema-invalid response never leaks its
+/// non-conforming payload through this record.
+#[derive(Serialize)]
+struct ResponseSchemaEvidence<'a> {
+    version: &'static str,
+    case_id: &'a str,
+    run_id: &'a str,
+    item_id: &'a str,
+    schema_sha256: &'a str,
+    valid: bool,
+}
+
 #[derive(Serialize)]
 struct AcpSessionRecord<'a> {
     version: &'static str,
@@ -118,16 +147,6 @@ struct AcpSessionRecord<'a> {
     endpoint_ref: &'a str,
     continuation_key: &'a str,
     protocol_version: u32,
-}
-
-#[derive(Serialize)]
-struct SweSeedCorrelation<'a> {
-    version: &'static str,
-    case_id: &'a str,
-    run_id: &'a str,
-    plan_item_id: &'a str,
-    harvested_refs: &'a [String],
-    declaration_ids: Vec<String>,
 }
 
 /// Identity allocated for one delegation episode.
@@ -259,8 +278,14 @@ pub async fn execute_with_permission_broker(
         instruction: instruction.into(),
         max_turns: request.max_turns,
         token_budget: request.token_budget,
-        response_schema: None,
-        transcript_retention: None,
+        response_schema: request.response_schema.cloned(),
+        transcript_retention: Some(
+            match request.transcript_retention {
+                sea_forge_agent::TranscriptRetentionMode::Full => "full",
+                sea_forge_agent::TranscriptRetentionMode::Summarized => "summarized",
+            }
+            .into(),
+        ),
     };
     let mut plan_item = PlanItem {
         plan_item_id: item.into(),
@@ -384,6 +409,11 @@ pub async fn execute_with_permission_broker(
 
     // Provider dispatch. ACP is a child-process executor with no ambient
     // credential; HTTP kinds resolve a credential via secret_access first.
+    // Captured before dispatch for the SWE_SEED declaration request (M16
+    // T18): `check_integrity` requires `criteria_declared_at <=
+    // execution_started_at`, and `criteria.declared_at` was set above,
+    // strictly before this point.
+    let execution_started_at = Utc::now().to_rfc3339();
     let mut continuation_key: Option<String> = None;
     let mut harvested_refs: Vec<String> = Vec::new();
     let outcome: sea_forge_agent::DelegationOutcome = if snapshot.kind == ProviderKind::Acp {
@@ -485,12 +515,14 @@ pub async fn execute_with_permission_broker(
         .await?
     };
 
-    // Persist the redacted canonical transcript artifact in full mode.
-    // ponytail: only full retention is supported; summarized mode is
-    // intentionally not implemented because digest recomputation is not
-    // independently verifiable (spec §7.4).
-    let artifact_ref = if outcome.transcript.is_empty() {
-        None
+    // Persist the redacted canonical transcript. Full mode stores it as a
+    // public plaintext artifact; summarized mode seals it with
+    // XChaCha20Poly1305 (ADR-002) and verifies the seal by decrypting it
+    // immediately — a verification failure is captured here and forces the
+    // settlement rejected below rather than degrading to a summary-only
+    // success (M13 T16 step 4/5, spec §7.4).
+    let (artifact_ref, sealed_verification_error) = if outcome.transcript.is_empty() {
+        (None, None)
     } else {
         // Single producer: re-run the shared redactor/canonicalizer over the
         // (already-redacted) entries so the artifact bytes are the EXACT bytes
@@ -507,21 +539,54 @@ pub async fn execute_with_permission_broker(
             .transcript_sha256
             .strip_prefix("sha256:")
             .unwrap_or(&outcome.transcript_sha256);
-        let artifact_path = config
-            .root
-            .join("runs")
-            .join(run)
-            .join(format!("transcript-{hex}.jsonl"));
-        std::fs::create_dir_all(artifact_path.parent().unwrap())
-            .map_err(|e| ForgeError::io("create transcript artifact parent", e))?;
-        std::fs::write(&artifact_path, &produced.canonical_bytes)
-            .map_err(|e| ForgeError::io("write transcript artifact", e))?;
-        Some(
-            artifact_path
-                .strip_prefix(&config.root)
+        let relative = |path: &Path| -> String {
+            path.strip_prefix(&config.root)
                 .map(|p| p.to_string_lossy().into_owned())
-                .unwrap_or_else(|_| format!("runs/{run}/transcript-{hex}.jsonl")),
-        )
+                .unwrap_or_else(|_| path.to_string_lossy().into_owned())
+        };
+        match request.transcript_retention {
+            sea_forge_agent::TranscriptRetentionMode::Full => {
+                let artifact_path = config
+                    .root
+                    .join("runs")
+                    .join(run)
+                    .join(format!("transcript-{hex}.jsonl"));
+                std::fs::create_dir_all(artifact_path.parent().unwrap())
+                    .map_err(|e| ForgeError::io("create transcript artifact parent", e))?;
+                std::fs::write(&artifact_path, &produced.canonical_bytes)
+                    .map_err(|e| ForgeError::io("write transcript artifact", e))?;
+                (Some(relative(&artifact_path)), None)
+            }
+            sea_forge_agent::TranscriptRetentionMode::Summarized => {
+                let ciphertext_path = config
+                    .root
+                    .join("runs")
+                    .join(run)
+                    .join(format!("transcript-{hex}.sealed"));
+                match crate::transcript_seal::seal_transcript(
+                    &config.root,
+                    run,
+                    &ciphertext_path,
+                    &produced.canonical_bytes,
+                )
+                .and_then(|sealed| {
+                    crate::transcript_seal::verify_sealed_transcript(
+                        &sealed,
+                        &outcome.transcript_sha256,
+                    )
+                    .map(|()| sealed)
+                }) {
+                    Ok(sealed) => (Some(relative(&sealed.ciphertext_path)), None),
+                    Err(_) => (
+                        ciphertext_path
+                            .try_exists()
+                            .unwrap_or(false)
+                            .then(|| relative(&ciphertext_path)),
+                        Some("sealed_verification_failed".to_string()),
+                    ),
+                }
+            }
+        }
     };
 
     // Record transcript evidence and settle.
@@ -571,66 +636,150 @@ pub async fn execute_with_permission_broker(
             .join("transcript-evidence.json"),
         evidence_parents,
     )?;
-    let settlement_parents = if evidence.harvested_refs.is_empty() {
-        vec![evidence_ref.entry_ulid().into()]
-    } else {
-        let declaration_ids = swe_seed_declarations_for_run(&config.root, run)?;
-        let correlation_ref = commit_view(
-            &ledger,
-            "swe_seed_correlation",
-            vec![case.into(), run.into(), item.into()],
-            &SweSeedCorrelation {
-                version: "0.2",
-                case_id: case,
-                run_id: run,
-                plan_item_id: item,
-                harvested_refs: &evidence.harvested_refs,
-                declaration_ids,
-            },
-            &config
-                .root
-                .join("runs")
-                .join(run)
-                .join("swe-seed-correlation.json"),
-            vec![evidence_ref.entry_ulid().into()],
-        )?;
-        vec![correlation_ref.entry_ulid().into()]
+
+    // Schema-valid final output becomes a named evidence field (spec §7.3).
+    // The evidence records only the schema's own hash and a validity flag —
+    // never the raw agent output — so a schema-invalid response never leaks
+    // its non-conforming payload through this record (M13 T15 step 5).
+    let schema_result = request.response_schema.map(|schema| {
+        sea_forge_settlement::validate_response_schema(
+            schema,
+            outcome.final_output.as_deref().unwrap_or_default(),
+        )
+    });
+    let schema_evidence_ref = match request.response_schema {
+        Some(schema) => {
+            let schema_sha256 = format!(
+                "sha256:{:x}",
+                Sha256::digest(serde_json::to_vec(schema).unwrap_or_default())
+            );
+            Some(commit_view(
+                &ledger,
+                "response_schema_evidence",
+                vec![case.into(), run.into(), item.into()],
+                &ResponseSchemaEvidence {
+                    version: "0.2",
+                    case_id: case,
+                    run_id: run,
+                    item_id: item,
+                    schema_sha256: &schema_sha256,
+                    valid: schema_result == Some(true),
+                },
+                &config
+                    .root
+                    .join("runs")
+                    .join(run)
+                    .join("response-schema-evidence.json"),
+                vec![evidence_ref.entry_ulid().into()],
+            )?)
+        }
+        None => None,
     };
 
-    let (status, basis, criteria_error) = match outcome.termination {
-        DelegationTermination::Completed => match sea_forge_settlement::evaluate_agent_output(
-            outcome.final_output.as_deref().unwrap_or_default(),
-            request.criteria.agent_output_must_contain.as_deref(),
-        ) {
-            Some(false) => (
+    // Correlation is owned by the shared, idempotent reconciler (M16 T18):
+    // it re-reads the case ledger this `agent_task_evidence` was just
+    // committed to and joins it against whatever declarations already
+    // exist (usually none yet — the production declaration ingress below
+    // runs after settlement). The same reconciler runs again at server
+    // startup and at read time, so a declaration that arrives later still
+    // correlates without mutating this settlement.
+    let mut settlement_parents = if evidence.harvested_refs.is_empty() {
+        vec![evidence_ref.entry_ulid().into()]
+    } else {
+        let outcomes =
+            crate::swe_seed_reconciliation::reconcile_swe_seed_declarations(&config.root, case)?;
+        let correlation_ref = outcomes
+            .into_iter()
+            .find(|outcome| outcome.run_id == run)
+            .map(|outcome| outcome.committed)
+            .ok_or_else(|| {
+                ForgeError::Internal("swe_seed correlation was not produced for this run".into())
+            })?;
+        vec![correlation_ref.entry_ulid().into()]
+    };
+    if let Some(schema_ref) = &schema_evidence_ref {
+        settlement_parents.push(schema_ref.entry_ulid().into());
+    }
+
+    // Completion and cap-exhaustion share one evaluation: a schema-invalid
+    // response never accepts; otherwise the declared agent-output literal
+    // (when present) decides. `turn_cap_exceeded` always stays in the basis
+    // so an accepted cap-terminated episode is still honestly labeled as one
+    // (M13 T15 step 3 — cap termination accepts or rejects solely by
+    // criteria, it never forces rejection nor hides how it terminated).
+    let evaluate_output_criteria =
+        |mut basis: Vec<String>| -> (SettlementStatus, Vec<String>, Option<String>) {
+            if schema_result == Some(false) {
+                basis.push("schema_invalid".into());
+                return (
+                    SettlementStatus::Rejected,
+                    basis,
+                    Some("schema_invalid".into()),
+                );
+            }
+            match sea_forge_settlement::evaluate_agent_output(
+                outcome.final_output.as_deref().unwrap_or_default(),
+                request.criteria.agent_output_must_contain.as_deref(),
+            ) {
+                Some(false) => {
+                    basis.push("agent_output_mismatch".into());
+                    (
+                        SettlementStatus::Rejected,
+                        basis,
+                        Some("agent_output_mismatch".into()),
+                    )
+                }
+                _ => {
+                    if schema_result == Some(true) {
+                        basis.push("response_schema_valid".into());
+                    }
+                    (SettlementStatus::Accepted, basis, None)
+                }
+            }
+        };
+
+    let (status, basis, criteria_error) = if let Some(error_class) = &sealed_verification_error {
+        // A failed seal-verification is a settlement-blocking failure on its
+        // own, independent of termination/criteria — never degrade to a
+        // summary-only success (M13 T16 step 5).
+        (
+            SettlementStatus::Rejected,
+            vec![error_class.clone()],
+            Some(error_class.clone()),
+        )
+    } else {
+        match outcome.termination {
+            DelegationTermination::Completed => evaluate_output_criteria(vec![
+                "authority_allow".into(),
+                "delegation_completed".into(),
+            ]),
+            DelegationTermination::TurnCapExceeded => {
+                let has_criteria = request.criteria.agent_output_must_contain.is_some()
+                    || request.response_schema.is_some();
+                if has_criteria {
+                    evaluate_output_criteria(vec!["turn_cap_exceeded".into()])
+                } else {
+                    (
+                        SettlementStatus::Rejected,
+                        vec!["turn_cap_exceeded".into()],
+                        None,
+                    )
+                }
+            }
+            DelegationTermination::Cancelled => {
+                (SettlementStatus::Rejected, vec!["cancelled".into()], None)
+            }
+            DelegationTermination::EndpointError => (
                 SettlementStatus::Rejected,
-                vec!["authority_allow".into(), "agent_output_mismatch".into()],
-                Some("agent_output_mismatch".into()),
-            ),
-            _ => (
-                SettlementStatus::Accepted,
-                vec!["authority_allow".into(), "delegation_completed".into()],
+                vec!["agent_endpoint_error".into()],
                 None,
             ),
-        },
-        DelegationTermination::TurnCapExceeded => (
-            SettlementStatus::Rejected,
-            vec!["turn_cap_exceeded".into()],
-            None,
-        ),
-        DelegationTermination::Cancelled => {
-            (SettlementStatus::Rejected, vec!["cancelled".into()], None)
+            DelegationTermination::AcpDisconnect => (
+                SettlementStatus::Rejected,
+                vec!["acp_disconnect".into()],
+                None,
+            ),
         }
-        DelegationTermination::EndpointError => (
-            SettlementStatus::Rejected,
-            vec!["agent_endpoint_error".into()],
-            None,
-        ),
-        DelegationTermination::AcpDisconnect => (
-            SettlementStatus::Rejected,
-            vec!["acp_disconnect".into()],
-            None,
-        ),
     };
 
     let settlement = SettlementEvent {
@@ -638,7 +787,7 @@ pub async fn execute_with_permission_broker(
         settlement_id: random_id("set")?,
         run_id: run.into(),
         status: status.clone(),
-        basis,
+        basis: basis.clone(),
         review_required: false,
         settled_at: Utc::now().to_rfc3339(),
         criteria_ref: None,
@@ -656,6 +805,38 @@ pub async fn execute_with_permission_broker(
         settlement_parents,
     )?;
 
+    // Production SWE_SEED declaration ingress (M16 T18). Best-effort and
+    // strictly after settlement: a settlement authority outage must never
+    // mutate the settlement already committed above. An out-of-process
+    // declaration (or a retried submission) still reconciles later via
+    // `swe_seed_reconciliation::reconcile_all_cases` at server startup or
+    // `verify_swe_seed_completion` at read time.
+    if !evidence.harvested_refs.is_empty() {
+        if let Err(error) = submit_swe_seed_declaration(
+            &config.root,
+            request.policy_path,
+            request.entity,
+            case,
+            run,
+            item,
+            &criteria,
+            &evidence,
+            evidence_ref.entry_ulid(),
+            &settlement.settlement_id,
+            &execution_started_at,
+        )
+        .await
+        {
+            tracing::warn!(
+                event = "swe_seed_declaration_submit_failed",
+                case_id = case,
+                run_id = run,
+                error = %error,
+                "SWE_SEED declaration submission did not complete; a later out-of-process declaration will still reconcile"
+            );
+        }
+    }
+
     Ok(DelegationResult {
         endpoint: endpoint_id.into(),
         run_id: run.into(),
@@ -665,20 +846,113 @@ pub async fn execute_with_permission_broker(
         turns_used: outcome.turns_used,
         error_class: criteria_error.or(outcome.error_subcode),
         continuation_key,
+        basis,
     })
 }
 
-fn swe_seed_declarations_for_run(root: &Path, run: &str) -> Result<Vec<String>, ForgeError> {
-    let primary = root.join("declarations.jsonl");
-    let fallback = root.join("settlement").join("declarations.jsonl");
-    let path = if primary.exists() { primary } else { fallback };
-    let declarations = sea_forge_settlement::load_declarations(&path)?;
-    Ok(declarations
-        .into_iter()
-        .filter(|declaration| declaration.run_id == run)
-        .filter(|declaration| declaration.verifier_ref.contains("swe_seed"))
-        .map(|declaration| declaration.declaration_id)
-        .collect())
+/// Production SWE_SEED declaration ingress (M16 T18, spec-agent-orchestration
+/// §12.3). Constructs the declaration request only from what is already
+/// persisted — the committed settlement criteria and transcript evidence —
+/// and calls the configured strong settlement authority through
+/// `spawn_blocking` (the transport is a real, timeout-bounded subprocess
+/// call). No local fallback: an unavailable authority surfaces as
+/// `settlement_authority_unavailable` and this function returns without
+/// declaring anything.
+#[allow(clippy::too_many_arguments)]
+async fn submit_swe_seed_declaration(
+    root: &Path,
+    policy_path: &str,
+    entity: &str,
+    case: &str,
+    run: &str,
+    item: &str,
+    criteria: &SettlementCriteriaRecord,
+    evidence: &TranscriptEvidence,
+    evidence_entry_ulid: &str,
+    settlement_id: &str,
+    execution_started_at: &str,
+) -> Result<(), ForgeError> {
+    let policy = resolve_policy_path(root, policy_path);
+    let bundle = AuthorityPolicyBundle::load(&policy)?;
+    let descriptor = bundle.strong_settlement_authority()?.clone();
+    let declarer_role = descriptor
+        .permitted_declarer_roles
+        .first()
+        .cloned()
+        .ok_or_else(|| ForgeError::Config {
+            class: "settlement_authority_config_error",
+            path: policy.clone(),
+            message: "strong settlement authority declares no permitted role".into(),
+        })?;
+
+    let claim_manifest_sha256 = crate::swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
+        case,
+        run,
+        item,
+        settlement_id,
+        &evidence.transcript_sha256,
+        &evidence.harvested_refs,
+    )?;
+    let verifier_sha256 = format!(
+        "sha256:{:x}",
+        Sha256::digest(evidence.harvested_refs.join(",").as_bytes())
+    );
+    let mut source_evidence_refs = evidence.harvested_refs.clone();
+    source_evidence_refs.push(evidence_entry_ulid.into());
+
+    let request = SettlementDeclarationRequest {
+        settlement_ref: settlement_id.into(),
+        run_id: run.into(),
+        case_id: case.into(),
+        plan_item_id: item.into(),
+        claim_manifest_sha256,
+        criteria_ref: criteria.criteria_id.clone(),
+        criteria_sha256: criteria.criteria_sha256.clone(),
+        criteria_record_hash: criteria.criteria_record_hash.clone(),
+        criteria_declared_at: criteria.declared_at.clone(),
+        execution_started_at: execution_started_at.into(),
+        job_contract_ref: None,
+        origin_refs: criteria.origin_refs.clone(),
+        verifier_ref: "swe_seed_harness".into(),
+        verifier_sha256,
+        acting_entity_id: entity.into(),
+        requested_strength: SettlementStrength::Strong,
+        declarer: Declarer {
+            actor_id: descriptor.declarer_actor_id.clone(),
+            authority_ref: descriptor.authority_ref.clone(),
+            role: declarer_role,
+            standing_basis: descriptor.standing_basis.clone(),
+        },
+        variation_tags: BTreeMap::new(),
+        disruption_tags: vec![],
+        orchestration_burden: None,
+        source_evidence_refs,
+        authored_by: None,
+    };
+
+    let declaration = tokio::task::spawn_blocking(
+        move || -> Result<sea_forge_core::types::SettlementDeclaration, ForgeError> {
+            let transport = sea_forge_settlement::CommandSweSeedTransport::new(
+                descriptor.command.clone(),
+                descriptor.timeout_secs,
+            )?;
+            let authority = sea_forge_settlement::SweSeedSettlementAuthority::new(
+                transport,
+                &request.acting_entity_id,
+            )
+            .with_adapter_ref(&descriptor.authority_ref);
+            authority.declare(&request)
+        },
+    )
+    .await
+    .map_err(|error| ForgeError::Internal(format!("swe_seed declare task panic: {error}")))??;
+
+    crate::swe_seed_reconciliation::append_and_reconcile_swe_seed_declaration(
+        root,
+        entity,
+        &declaration,
+    )?;
+    Ok(())
 }
 
 fn termination_str(t: &DelegationTermination) -> String {
@@ -785,6 +1059,7 @@ fn finish_rejected(
         turns_used: 0,
         error_class: Some(error_class),
         continuation_key: None,
+        basis: settlement.basis,
     })
 }
 

@@ -247,6 +247,7 @@ impl SettlementAuthority for LocalSettlementAuthority {
             issued_at: Utc::now().to_rfc3339(),
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: None,
+            authored_by: req.authored_by.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -529,6 +530,7 @@ impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> 
             issued_at: Utc::now().to_rfc3339(),
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: Some(swe_resp.attestation_ref),
+            authored_by: req.authored_by.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -538,6 +540,12 @@ impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> 
 
 /// Integrity checks shared by all adapters (spec §7.2.1).
 fn check_integrity(req: &SettlementDeclarationRequest) -> Result<(), ForgeError> {
+    // SoD boundary (spec-adlc-thoth §10.3, T13B): the actor that authored the
+    // claim being settled cannot itself be the declarer.
+    sea_forge_core::types::validate_claim_authorship_sod(
+        req.authored_by.as_deref(),
+        &req.declarer.actor_id,
+    )?;
     if req.criteria_declared_at > req.execution_started_at {
         return Err(ForgeError::Plan {
             class: "settlement_integrity_error",
@@ -629,5 +637,99 @@ mod tests {
         let v = parse_fixed(&w).unwrap();
         // 0.95 * 0.20 * 0.90 = 0.171 → 171000
         assert!(v < 200_000, "expected weight < 0.2, got {w}");
+    }
+
+    struct CannedSweSeedTransport;
+
+    impl SweSeedTransport for CannedSweSeedTransport {
+        fn submit(
+            &self,
+            _req: &SettlementDeclarationRequest,
+        ) -> Result<SweSeedResponse, ForgeError> {
+            Ok(SweSeedResponse {
+                attestation_ref: "attestation:test".into(),
+                attribution_confidence: "1.000000".into(),
+                gaming_exposure: "0.000000".into(),
+                hidden_debt_blindness: "0.000000".into(),
+                feedback_delay_ms: 0,
+            })
+        }
+    }
+
+    fn swe_seed_declaration_request() -> SettlementDeclarationRequest {
+        SettlementDeclarationRequest {
+            settlement_ref: "set_x".into(),
+            run_id: "run_x".into(),
+            case_id: "case_x".into(),
+            plan_item_id: "item_x".into(),
+            claim_manifest_sha256: "sha256:claim".into(),
+            criteria_ref: "crit_x".into(),
+            criteria_sha256: "sha256:crit".into(),
+            criteria_record_hash: "sha256:crit-record".into(),
+            criteria_declared_at: "2026-01-01T00:00:00Z".into(),
+            execution_started_at: "2026-01-01T00:00:01Z".into(),
+            job_contract_ref: None,
+            origin_refs: vec![OriginRef {
+                kind: OriginRefKind::Intent,
+                reference: "int_x".into(),
+                sha256: "sha256:intent".into(),
+                role: OriginRole::DesiredResult,
+                evidence_refs: vec![],
+                domain_model_ref: None,
+            }],
+            verifier_ref: "swe_seed_harness".into(),
+            verifier_sha256: "sha256:verifier".into(),
+            acting_entity_id: "operator_local".into(),
+            requested_strength: SettlementStrength::Strong,
+            declarer: Declarer {
+                actor_id: "swe_seed_verifier".into(),
+                authority_ref: "swe_seed_test".into(),
+                role: "R-AA".into(),
+                standing_basis: "test".into(),
+            },
+            variation_tags: Default::default(),
+            disruption_tags: vec![],
+            orchestration_burden: None,
+            source_evidence_refs: vec!["evi_x".into()],
+            authored_by: None,
+        }
+    }
+
+    /// Two independent `declare()` calls for the exact same underlying claim
+    /// (same case/run/claim-manifest/declarer/settlement/plan-item) mint two
+    /// different `declaration_id`s — `declare()` itself has no memory of
+    /// prior calls. The append-time idempotency key in
+    /// `append_declaration_ledgered_once` is keyed on the claim's identity,
+    /// not the minted id, so appending the second one must conflict rather
+    /// than silently duplicate the same logical declaration in the ledger
+    /// (spec-agent-orchestration M16 T18: "matching declarations appear
+    /// exactly once").
+    #[test]
+    fn swe_seed_duplicate_declare_for_same_claim_conflicts_on_append() {
+        let dir = tempfile::tempdir().unwrap();
+        let authority = SweSeedSettlementAuthority::new(CannedSweSeedTransport, "operator_local")
+            .with_adapter_ref("swe_seed_test");
+        let request = swe_seed_declaration_request();
+        let first = authority.declare(&request).unwrap();
+        let second = authority.declare(&request).unwrap();
+        assert_ne!(first.declaration_id, second.declaration_id);
+
+        append_declaration_ledgered_once(
+            dir.path(),
+            &dir.path().join("declarations.jsonl"),
+            "test",
+            &first,
+        )
+        .unwrap();
+        let conflict = append_declaration_ledgered_once(
+            dir.path(),
+            &dir.path().join("declarations.jsonl"),
+            "test",
+            &second,
+        );
+        assert!(
+            conflict.is_err(),
+            "a second declaration for the same claim must not append as a distinct record"
+        );
     }
 }

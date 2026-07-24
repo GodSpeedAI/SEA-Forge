@@ -110,6 +110,24 @@ fn manager_iterate(
     actor: &str,
     max_iterations: u32,
 ) -> std::process::Output {
+    manager_iterate_with_endpoint(
+        root,
+        policy,
+        case_id,
+        actor,
+        max_iterations,
+        "agent_default",
+    )
+}
+
+fn manager_iterate_with_endpoint(
+    root: &Path,
+    policy: &Path,
+    case_id: &str,
+    actor: &str,
+    max_iterations: u32,
+    endpoint: &str,
+) -> std::process::Output {
     Command::new(cli())
         .args([
             "case",
@@ -123,6 +141,35 @@ fn manager_iterate(
             case_id,
             "--max-iterations",
             &max_iterations.to_string(),
+            "--endpoint",
+            endpoint,
+        ])
+        .output()
+        .unwrap()
+}
+
+/// No `--max-iterations` flag at all — exercises clap's built-in
+/// `default_value_t = 8` ("config default" in Task 17's step 4 wording), as
+/// distinct from a caller explicitly requesting a value.
+fn manager_iterate_default_cap(
+    root: &Path,
+    policy: &Path,
+    case_id: &str,
+    actor: &str,
+) -> std::process::Output {
+    Command::new(cli())
+        .args([
+            "case",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+            "--actor",
+            actor,
+            "manager-iterate",
+            case_id,
+            "--endpoint",
+            "agent_default",
         ])
         .output()
         .unwrap()
@@ -157,6 +204,26 @@ fn approval_records(root: &Path, case_id: &str) -> Vec<serde_json::Value> {
         .collect()
 }
 
+/// Authority decisions are committed to the shared `authority-reads` stream
+/// (not the per-case stream) — see `mediated::authorize_with_bundle_callback`.
+fn manager_iteration_authority_decisions(root: &Path) -> Vec<serde_json::Value> {
+    let entries_path = root
+        .join("ledgers")
+        .join("authority-reads")
+        .join("entries.jsonl");
+    fs::read_to_string(entries_path)
+        .unwrap()
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .filter(|entry| entry["record_kind"] == "authority_decision")
+        .map(|entry| entry["payload"].clone())
+        .filter(|payload| {
+            payload["action_request"]["action"]["resource_type"] == "manager_iteration"
+        })
+        .collect()
+}
+
 fn read_case(root: &Path, case_id: &str) -> serde_json::Value {
     serde_json::from_slice(&fs::read(root.join("cases").join(case_id).join("case.json")).unwrap())
         .unwrap()
@@ -171,6 +238,16 @@ const MANAGER_POLICY: &str = "  - name: allow-manager-read\n    verdict: allow\n
 const PROPOSE_ALLOW: &str = "  - name: allow-propose\n    verdict: allow\n    actor_role: operator\n    operation_kind: discretionary_task_add\n";
 const PROPOSE_DENY: &str = "  - name: deny-propose\n    verdict: deny\n    actor_role: operator\n    operation_kind: discretionary_task_add\n";
 const WRITE_ALLOW: &str = "  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n";
+
+/// A `manager_iteration` allow rule carrying an authority-granted
+/// `max_manager_iterations` boundary (spec §16.2: "Iteration count is a
+/// grant boundary") — the grant always wins over a larger caller/config
+/// request (audit remediation Task 17 step 4).
+fn manager_policy_with_cap(cap: u32) -> String {
+    format!(
+        "  - name: allow-manager-read\n    verdict: allow\n    actor_role: operator\n    operation_kind: manager_iteration\n    boundary_constraints:\n      max_manager_iterations: [\"{cap}\"]\n"
+    )
+}
 
 #[test]
 fn t15_1_stalled_case_one_iteration_proposes_and_records() {
@@ -452,4 +529,164 @@ fn t15_5_every_judgment_cites_nonempty_resolvable_claim_refs() {
             .any(|r| r.as_str().unwrap().contains("enabled_task")),
         "rationale refs must resolve to the real item that grounds the judgment, refs={refs:?}"
     );
+}
+
+/// Task 17 step 5: caller requests far more iterations than the authority
+/// grant allows — the grant's `max_manager_iterations` boundary always wins.
+#[test]
+fn t17_1_caller_above_grant_effective_cap_is_the_grant() {
+    let root = temp_root("t17-1");
+    let policy = write_policy(
+        &root,
+        &format!("{WRITE_ALLOW}{}{PROPOSE_ALLOW}", manager_policy_with_cap(2)),
+    );
+    let plan = write_plan(&root, &stalled_plan_json());
+    let case_id = bootstrap_case(&root, &policy, &plan, "operator_runner");
+
+    let first = manager_iterate(&root, &policy, &case_id, "thoth", 100);
+    assert!(first.status.success());
+    let second = manager_iterate(&root, &policy, &case_id, "thoth", 100);
+    assert!(second.status.success());
+    assert_eq!(manager_iteration_records(&root, &case_id).len(), 2);
+
+    let third = manager_iterate(&root, &policy, &case_id, "thoth", 100);
+    assert_eq!(
+        third.status.code(),
+        Some(5),
+        "the grant's cap of 2 must govern even though the caller requested 100:\nstderr: {}",
+        String::from_utf8_lossy(&third.stderr)
+    );
+    assert_eq!(
+        manager_iteration_records(&root, &case_id).len(),
+        2,
+        "cap-reached escalation must not itself add a ManagerIteration record"
+    );
+    let case = read_case(&root, &case_id);
+    assert_eq!(case["state"], "awaiting_approval");
+}
+
+/// Task 17 step 5: the caller omits `--max-iterations` entirely (clap's
+/// built-in default of 8 applies) — the grant still wins over that default.
+#[test]
+fn t17_2_config_default_above_grant_effective_cap_is_the_grant() {
+    let root = temp_root("t17-2");
+    let policy = write_policy(
+        &root,
+        &format!("{WRITE_ALLOW}{}{PROPOSE_ALLOW}", manager_policy_with_cap(2)),
+    );
+    let plan = write_plan(&root, &stalled_plan_json());
+    let case_id = bootstrap_case(&root, &policy, &plan, "operator_runner");
+
+    let first = manager_iterate_default_cap(&root, &policy, &case_id, "thoth");
+    assert!(first.status.success());
+    let second = manager_iterate_default_cap(&root, &policy, &case_id, "thoth");
+    assert!(second.status.success());
+    assert_eq!(manager_iteration_records(&root, &case_id).len(), 2);
+
+    let third = manager_iterate_default_cap(&root, &policy, &case_id, "thoth");
+    assert_eq!(
+        third.status.code(),
+        Some(5),
+        "the grant's cap of 2 must govern even though the default requested 8:\nstderr: {}",
+        String::from_utf8_lossy(&third.stderr)
+    );
+    assert_eq!(manager_iteration_records(&root, &case_id).len(), 2);
+}
+
+/// Task 17 step 4: the requested `max_manager_iterations` is bound into the
+/// canonical manager authority action/decision, so differing requests
+/// produce differing ledgered decision content (never a hidden/unrecorded
+/// value).
+#[test]
+fn t17_3_authority_decision_hash_changes_with_requested_max_iterations() {
+    let root = temp_root("t17-3");
+    let policy = write_policy(
+        &root,
+        &format!("{WRITE_ALLOW}{MANAGER_POLICY}{PROPOSE_ALLOW}"),
+    );
+    let plan = write_plan(&root, &stalled_plan_json());
+    let case_id = bootstrap_case(&root, &policy, &plan, "operator_runner");
+
+    let first = manager_iterate(&root, &policy, &case_id, "thoth", 8);
+    assert!(first.status.success());
+    let second = manager_iterate(&root, &policy, &case_id, "thoth", 9);
+    assert!(second.status.success());
+
+    let decisions = manager_iteration_authority_decisions(&root);
+    assert_eq!(decisions.len(), 2);
+    assert_eq!(
+        decisions[0]["action_request"]["action"]["parameters"]["max_manager_iterations"],
+        8
+    );
+    assert_eq!(
+        decisions[1]["action_request"]["action"]["parameters"]["max_manager_iterations"],
+        9
+    );
+    assert_ne!(
+        decisions[0]["determinism"]["action_request_hash"],
+        decisions[1]["determinism"]["action_request_hash"],
+        "differing requested max_manager_iterations must change the ledgered decision hash"
+    );
+}
+
+/// Task 17 step 5: iterating exactly up to the granted cap succeeds every
+/// time; the very next iteration (cap + 1) parks and escalates.
+#[test]
+fn t17_4_exact_exhaustion_at_grant_cap_settles_then_parks() {
+    let root = temp_root("t17-4");
+    let policy = write_policy(
+        &root,
+        &format!("{WRITE_ALLOW}{}{PROPOSE_ALLOW}", manager_policy_with_cap(3)),
+    );
+    let plan = write_plan(&root, &stalled_plan_json());
+    let case_id = bootstrap_case(&root, &policy, &plan, "operator_runner");
+
+    for expected_iteration in 1..=3u32 {
+        let output = manager_iterate(&root, &policy, &case_id, "thoth", 3);
+        assert!(
+            output.status.success(),
+            "iteration {expected_iteration} (at or under the cap) must succeed:\nstderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let records = manager_iteration_records(&root, &case_id);
+        assert_eq!(records.len(), expected_iteration as usize);
+        assert_eq!(records.last().unwrap()["iteration"], expected_iteration);
+    }
+
+    let over_cap = manager_iterate(&root, &policy, &case_id, "thoth", 3);
+    assert_eq!(over_cap.status.code(), Some(5));
+    assert_eq!(manager_iteration_records(&root, &case_id).len(), 3);
+    assert_eq!(read_case(&root, &case_id)["state"], "awaiting_approval");
+}
+
+/// Task 17 step 5: once parked at the cap, repeated calls never add another
+/// proposal or ManagerIteration record — the park is durable, not one-shot.
+#[test]
+fn t17_5_no_further_proposal_after_cap_park() {
+    let root = temp_root("t17-5");
+    let policy = write_policy(
+        &root,
+        &format!("{WRITE_ALLOW}{}{PROPOSE_ALLOW}", manager_policy_with_cap(1)),
+    );
+    let plan = write_plan(&root, &stalled_plan_json());
+    let case_id = bootstrap_case(&root, &policy, &plan, "operator_runner");
+
+    let first = manager_iterate(&root, &policy, &case_id, "thoth", 1);
+    assert!(first.status.success());
+    assert_eq!(manager_iteration_records(&root, &case_id).len(), 1);
+
+    for attempt in 0..3 {
+        let output = manager_iterate(&root, &policy, &case_id, "thoth", 1);
+        assert_eq!(
+            output.status.code(),
+            Some(5),
+            "post-park attempt {attempt} must keep escalating, not resume proposing"
+        );
+        assert_eq!(
+            manager_iteration_records(&root, &case_id).len(),
+            1,
+            "no further ManagerIteration record after the park (attempt {attempt})"
+        );
+    }
+    assert_eq!(read_case(&root, &case_id)["state"], "awaiting_approval");
 }

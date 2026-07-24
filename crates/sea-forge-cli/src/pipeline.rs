@@ -86,6 +86,33 @@ pub struct RunOutcome {
     pub execution: Option<ExecutionResult>,
     pub settlement: SettlementEvent,
 }
+/// The domain_model_ref label ADLC/ODI templates use to identify the
+/// methodology seed model (matches the built-in bundled seed's namespace).
+pub const ADLC_ODI_SEED_DOMAIN_MODEL_REF: &str = "godspeed.adlc_odi_case";
+
+/// Construct a real `DesiredOutcomeResolver` over Task 11's validated,
+/// bundled self-model seed — never a fabricated hash/concept set (Task 12
+/// audit remediation). Returns the resolver plus the seed's domain_model_ref
+/// label and verified hash for callers that also need to materialize a
+/// built-in template with real provenance (`store_builtin`).
+pub fn seed_desired_outcome_resolver(
+) -> Result<(planner::SeedModelResolver, String, String), ForgeError> {
+    let models = sea_forge_self_model::bundled();
+    let composed = sea_forge_self_model::load_composed(&models)?;
+    let seed_ref = composed.seed_model_ref();
+    let resolver = planner::SeedModelResolver {
+        domain_model_ref: ADLC_ODI_SEED_DOMAIN_MODEL_REF.into(),
+        model_sha256: seed_ref.semantic_model_sha256.clone(),
+        concept_refs: seed_ref.concept_refs.clone(),
+        desired_outcome_concept_refs: vec!["Desired Outcome Criterion".into()],
+    };
+    Ok((
+        resolver,
+        ADLC_ODI_SEED_DOMAIN_MODEL_REF.into(),
+        seed_ref.semantic_model_sha256.clone(),
+    ))
+}
+
 fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
     let bytes = serde_json::to_vec_pretty(value)?;
     fs::write(path, bytes).map_err(|e| ForgeError::io(format!("write {}", path.display()), e))
@@ -297,7 +324,12 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             item.settlement_criteria_ref = Some(record.criteria_id.clone());
             criteria_map.insert(record.criteria_id.clone(), record);
         }
-        planner::verify_plan_criteria(&plan, &criteria_map)?;
+        let (desired_outcome_resolver, _, _) = seed_desired_outcome_resolver()?;
+        planner::verify_plan_criteria_with_resolver(
+            &plan,
+            &criteria_map,
+            &desired_outcome_resolver,
+        )?;
         let item = plan
             .items
             .first()

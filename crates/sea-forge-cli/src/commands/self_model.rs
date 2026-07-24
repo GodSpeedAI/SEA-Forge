@@ -7,9 +7,11 @@
 //! wired (the store consumes evidenced probe results, never running commands).
 
 use sea_forge_core::errors::ForgeError;
+use sea_forge_extension::{ExtensionRegistry, ExtensionStatus};
 use sea_forge_self_model::{
     store,
     store::{read_cell_realization, RebuildInputs},
+    ExtensionState,
 };
 use std::path::Path;
 
@@ -25,6 +27,59 @@ fn default_cell_id(root: &Path) -> Result<String, ForgeError> {
     Ok("cell_local".into())
 }
 
+/// Real active-extension state from the installation's own extension registry
+/// (`.sea-forge/extensions/registry.json`), replacing the caller-supplied
+/// empty vec (Task 11 audit remediation). An absent registry is a fresh
+/// installation with zero extensions, not an error.
+fn active_extensions_from_registry(root: &Path) -> Result<Vec<ExtensionState>, ForgeError> {
+    let registry = ExtensionRegistry::load(&root.join(".sea-forge"))?;
+    Ok(registry
+        .extensions
+        .into_iter()
+        .map(|entry| ExtensionState {
+            descriptor_ref: format!("{}@{}", entry.extension_id, entry.version),
+            status: match entry.status {
+                ExtensionStatus::Active => "active",
+                ExtensionStatus::Disabled => "disabled",
+                ExtensionStatus::Quarantined => "quarantined",
+                ExtensionStatus::Superseded => "superseded",
+            }
+            .to_string(),
+        })
+        .collect())
+}
+
+/// Real sandbox classes this host can currently construct, replacing the
+/// caller-supplied hardcoded `["local"]` (Task 11 audit remediation). `local`
+/// is always available; other classes are probed by attempting construction.
+fn real_sandbox_classes_available() -> Vec<String> {
+    use sea_forge_sandbox::{select_sandbox, SandboxClass};
+    [
+        SandboxClass::Local,
+        SandboxClass::Jail,
+        SandboxClass::Microvm,
+    ]
+    .into_iter()
+    .filter(|class| select_sandbox(*class).is_ok())
+    .map(|class| class.to_string())
+    .collect()
+}
+
+/// Real, non-placeholder commitment over the demonstrated-capability surface
+/// (`.sea-forge/capabilities.jsonl`), replacing the fixed
+/// `sha256:capability-projection` CLI default literal (Task 11 audit
+/// remediation). An absent or empty file hashes to a well-defined, still-real
+/// "no capability data yet" digest rather than a fabricated placeholder.
+fn real_capability_projection_sha256(root: &Path) -> Result<String, ForgeError> {
+    let path = root.join(".sea-forge").join("capabilities.jsonl");
+    let envelopes = if path.exists() {
+        sea_forge_capability::load_envelopes(&path)?
+    } else {
+        vec![]
+    };
+    sea_forge_self_model::canonical_sha256(&envelopes)
+}
+
 /// `sea-forge self-model validate` — verify bundled models, validate the
 /// composed model, verify the current snapshot + persisted projections. Exit 0/1.
 pub fn validate(root: &Path) -> Result<u8, ForgeError> {
@@ -36,16 +91,24 @@ pub fn validate(root: &Path) -> Result<u8, ForgeError> {
 /// `sea-forge self-model rebuild [--probe]` — init-or-upgrade, then build a new
 /// snapshot from the release realization + cell realization. `--probe` is
 /// accepted but probe execution is deferred to the sandbox layer (no-op here).
-pub fn rebuild(root: &Path, _probe: bool, capability_hash: &str) -> Result<u8, ForgeError> {
+/// Inputs come from verified installation state (extension registry, sandbox
+/// availability, demonstrated-capability envelopes) rather than caller-supplied
+/// placeholders (Task 11 audit remediation).
+pub fn rebuild(root: &Path, _probe: bool, actor_id: &str) -> Result<u8, ForgeError> {
     let cell_id = default_cell_id(root)?;
+    let active_extensions = active_extensions_from_registry(root)?;
+    let capability_hash = real_capability_projection_sha256(root)?;
+    let sandbox_classes_available = real_sandbox_classes_available();
+    let created_at = now_iso();
     let inputs = RebuildInputs {
         cell_id: &cell_id,
-        active_extensions: vec![],
+        active_extensions,
         environments_present: vec![],
         probes: vec![],
-        sandbox_classes_available: vec!["local".into()],
-        created_at: &now_iso(),
-        capability_projection_sha256: capability_hash,
+        sandbox_classes_available,
+        created_at: &created_at,
+        capability_projection_sha256: &capability_hash,
+        actor_id,
     };
     let snapshot = store::rebuild(root, &inputs)?;
     println!("snapshot_id={}", snapshot.snapshot_id);

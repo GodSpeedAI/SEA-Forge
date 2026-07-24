@@ -28,6 +28,7 @@ sea-forge-self-model = { path = "../sea-forge-self-model", version = "0.1.0" }
 sea-forge-thoth = { path = "../sea-forge-thoth", version = "0.1.0" }
 sea-forge-domainforge = { path = "../sea-forge-domainforge", version = "0.1.0" }
 sea-forge-spec-pipeline = { path = "../sea-forge-spec-pipeline", version = "0.1.0" }
+sea-forge-extension = { path = "../sea-forge-extension", version = "0.1.0" }
 chrono.workspace = true
 serde.workspace = true
 tracing.workspace = true

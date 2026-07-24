@@ -19,6 +19,47 @@ pub enum EndpointStatus {
     Demonstrated,
 }
 
+/// Transcript retention mode (M13 T16, spec §7.4/§8.2). Resolution precedence
+/// is plan item → endpoint → global `[agent]` config → this default.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum TranscriptRetentionMode {
+    #[default]
+    Summarized,
+    Full,
+}
+
+impl TranscriptRetentionMode {
+    /// Parse a plan-item override string (`Operation::AgentTask.transcript_retention`).
+    /// Returns `None` for any value other than the two declared modes — the
+    /// caller turns that into a typed `schema_error`, never a silent default.
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "summarized" => Some(Self::Summarized),
+            "full" => Some(Self::Full),
+            _ => None,
+        }
+    }
+
+    /// Resolve the effective mode from the full precedence chain (spec
+    /// §8.1): plan item override → endpoint config → global `[agent]`
+    /// config → this type's default. An invalid item override is a typed
+    /// error, never a silent fallback to a lower precedence level.
+    pub fn resolve(
+        item_override: Option<&str>,
+        endpoint: Option<&AgentEndpointConfig>,
+        agent_config: &AgentConfig,
+    ) -> Result<Self, String> {
+        if let Some(value) = item_override {
+            return Self::parse(value)
+                .ok_or_else(|| format!("invalid transcript_retention override: {value}"));
+        }
+        Ok(endpoint
+            .and_then(|e| e.transcript_retention)
+            .unwrap_or(agent_config.transcript_retention))
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct AgentEndpointConfig {
@@ -47,6 +88,10 @@ pub struct AgentEndpointConfig {
     pub timeout_secs: u64,
     #[serde(default)]
     pub status: Option<EndpointStatus>,
+    /// Endpoint-level retention override (M13 T16). `None` defers to the
+    /// global `[agent]` config default.
+    #[serde(default)]
+    pub transcript_retention: Option<TranscriptRetentionMode>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -60,6 +105,11 @@ pub struct AgentConfig {
     pub max_response_bytes: usize,
     #[serde(default = "default_timeout_secs")]
     pub timeout_secs: u64,
+    /// Global retention default (spec §8.2 `agent.transcript_retention`).
+    /// Lowest-precedence level, overridden by endpoint config and then by a
+    /// per-plan-item override.
+    #[serde(default)]
+    pub transcript_retention: TranscriptRetentionMode,
 }
 
 impl Default for AgentConfig {
@@ -69,6 +119,7 @@ impl Default for AgentConfig {
             max_request_bytes: default_max_request_bytes(),
             max_response_bytes: default_max_response_bytes(),
             timeout_secs: default_timeout_secs(),
+            transcript_retention: TranscriptRetentionMode::default(),
         }
     }
 }
@@ -289,6 +340,7 @@ mod tests {
             max_response_bytes: 2048,
             timeout_secs: 5,
             status: None,
+            transcript_retention: None,
         }
     }
 
@@ -300,6 +352,82 @@ mod tests {
             .snapshot()
             .unwrap_err()
             .contains("evidence-derived"));
+    }
+
+    #[test]
+    fn retention_precedence_item_beats_endpoint_beats_global_beats_default() {
+        let mut agent_config = AgentConfig::default();
+        assert_eq!(
+            TranscriptRetentionMode::resolve(None, None, &agent_config).unwrap(),
+            TranscriptRetentionMode::Summarized,
+            "no override anywhere resolves to the summarized default"
+        );
+
+        agent_config.transcript_retention = TranscriptRetentionMode::Full;
+        assert_eq!(
+            TranscriptRetentionMode::resolve(None, None, &agent_config).unwrap(),
+            TranscriptRetentionMode::Full,
+            "global config overrides the default"
+        );
+
+        let mut ep = endpoint(ProviderKind::OpenAiCompatible);
+        ep.transcript_retention = Some(TranscriptRetentionMode::Summarized);
+        assert_eq!(
+            TranscriptRetentionMode::resolve(None, Some(&ep), &agent_config).unwrap(),
+            TranscriptRetentionMode::Summarized,
+            "endpoint config overrides the global default"
+        );
+
+        assert_eq!(
+            TranscriptRetentionMode::resolve(Some("full"), Some(&ep), &agent_config).unwrap(),
+            TranscriptRetentionMode::Full,
+            "plan-item override outranks endpoint and global config"
+        );
+    }
+
+    #[test]
+    fn retention_invalid_item_override_is_a_typed_error_not_a_silent_default() {
+        let agent_config = AgentConfig::default();
+        let error =
+            TranscriptRetentionMode::resolve(Some("bogus"), None, &agent_config).unwrap_err();
+        assert!(error.contains("invalid transcript_retention override"));
+    }
+
+    /// Version-skew: an old reader that only knows `summarized`/`full` must
+    /// fail closed (typed `Err`, never silently coerce) on any future value,
+    /// including the empty string.
+    #[test]
+    fn retention_parse_rejects_unknown_and_empty_values() {
+        assert_eq!(
+            TranscriptRetentionMode::parse("summarized"),
+            Some(TranscriptRetentionMode::Summarized)
+        );
+        assert_eq!(
+            TranscriptRetentionMode::parse("full"),
+            Some(TranscriptRetentionMode::Full)
+        );
+        assert_eq!(TranscriptRetentionMode::parse("archived"), None);
+        assert_eq!(TranscriptRetentionMode::parse(""), None);
+    }
+
+    /// Version-skew: old serialized config (no `transcript_retention` key at
+    /// all) must deserialize cleanly to the summarized default rather than
+    /// failing to parse.
+    #[test]
+    fn retention_field_defaults_when_absent_from_serialized_config() {
+        let config: AgentConfig = serde_json::from_str("{}").unwrap();
+        assert_eq!(
+            config.transcript_retention,
+            TranscriptRetentionMode::Summarized
+        );
+
+        let endpoint_json = serde_json::json!({
+            "id": "e1",
+            "kind": "open_ai_compatible",
+            "base_url": "https://example.com",
+        });
+        let endpoint: AgentEndpointConfig = serde_json::from_value(endpoint_json).unwrap();
+        assert_eq!(endpoint.transcript_retention, None);
     }
 
     #[test]

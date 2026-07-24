@@ -1,8 +1,12 @@
 use chrono::Utc;
 use sea_forge_agent::{acp::KNOWN_TOOL_KINDS, AgentConfig, AgentEndpointConfig, ProviderKind};
 use sea_forge_core::{
-    ids::{case_id, run_id},
-    types::{ApprovalRequest, ApprovalStatus, SettlementCriteria, SettlementStatus},
+    ids::{case_id, random_id, run_id},
+    types::{
+        ApprovalRequest, ApprovalStatus, DeclarationIndependence, DeclarationReliability,
+        DeclarationStatus, Declarer, SettlementCriteria, SettlementDeclaration, SettlementStatus,
+        SettlementStrength,
+    },
 };
 use sea_forge_ledger::LedgerStream;
 use sea_forge_server::{
@@ -10,7 +14,7 @@ use sea_forge_server::{
     delegation::{
         self, AcpApprovalBroker, DelegationEpisodeContext, DelegationRequest, DelegationResult,
     },
-    ServerConfig, ServerState,
+    swe_seed_reconciliation, ServerConfig, ServerState,
 };
 use serde_json::{json, Value};
 use std::io::{BufRead, Write};
@@ -210,6 +214,40 @@ fn write_policy(root: &Path, allow_permission: bool) {
     .unwrap();
 }
 
+/// Locate the real `sea-forge` CLI binary next to this test binary
+/// (`target/<profile>/deps/<this> -> target/<profile>/sea-forge`). Task 18's
+/// production SWE_SEED declaration ingress talks to a real, timeout-bounded
+/// subprocess transport (`CommandSweSeedTransport`) — proving it end to end
+/// means driving the actual configured `command`, not an in-process fake.
+/// `sea-forge-cli`'s existing hidden `internal-test-swe-seed` subcommand
+/// (used by the M8 artifact-transition tests for the identical purpose) is
+/// reused rather than duplicating a second stdin/stdout test double here.
+fn locate_sea_forge_cli_bin() -> String {
+    let exe = std::env::current_exe().expect("current_exe");
+    let candidate = exe
+        .parent()
+        .and_then(Path::parent)
+        .map(|dir| dir.join("sea-forge"))
+        .expect("test binary must live under target/<profile>/deps");
+    assert!(
+        candidate.exists(),
+        "sea-forge CLI binary not found at {}; run `cargo build -p sea-forge-cli` first",
+        candidate.display()
+    );
+    candidate.to_string_lossy().into_owned()
+}
+
+fn write_policy_with_swe_seed_authority(root: &Path) {
+    let bin = locate_sea_forge_cli_bin();
+    std::fs::write(
+        root.join("policy.yaml"),
+        format!(
+            "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [argv]\nsettlement_authorities:\n  - authority_ref: swe_seed_test\n    adapter: swe_seed\n    command: [\"{bin}\", \"internal-test-swe-seed\"]\n    timeout_secs: 10\n    trust_anchor_ref: test-anchor\n    declarer_actor_id: swe_seed_verifier\n    permitted_declarer_roles: [R-AA]\n    standing_basis: test-attested-verifier\n    may_issue_strong: true\nrules:\n  - name: allow-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n  - name: allow-acp-permission\n    verdict: allow\n    actor_role: operator\n    operation_kind: sandbox_execution\n"
+        ),
+    )
+    .unwrap();
+}
+
 fn write_escalating_policy(root: &Path) {
     std::fs::write(
         root.join("policy.yaml"),
@@ -263,6 +301,7 @@ fn server_config(root: &Path, tool_kind: &str, mode: &str) -> ServerConfig {
         max_response_bytes: 16_384,
         timeout_secs: 3,
         status: None,
+        transcript_retention: None,
     });
     ServerConfig {
         root: root.to_path_buf(),
@@ -285,6 +324,12 @@ async fn execute_fixture(config: &ServerConfig, case: &str) -> (String, Delegati
             policy_path: "policy.yaml",
             entity: "operator_local",
             process: "conformance_m16",
+            // These M16 tests assert on the plaintext transcript artifact's
+            // exact bytes (hash verification, redaction scrubbing) — a full
+            // mode concern, orthogonal to the M13 T16 retention-precedence
+            // tests in conformance_m13.rs.
+            transcript_retention: sea_forge_agent::TranscriptRetentionMode::Full,
+            ..Default::default()
         },
         &EnvironmentCredentialResolver,
         DelegationEpisodeContext::planned(case, "item_acp", &run),
@@ -369,6 +414,7 @@ async fn t16_2_escalated_permission_suspends_and_resolves_same_session() {
                     policy_path: "policy.yaml",
                     entity: "operator_local",
                     process: "conformance_m16",
+                    ..Default::default()
                 },
                 &EnvironmentCredentialResolver,
                 DelegationEpisodeContext::planned(&case_for_task, "item_acp", &run_for_task),
@@ -441,6 +487,7 @@ async fn t16_2_escalated_permission_timeout_denies_and_session_continues() {
             policy_path: "policy.yaml",
             entity: "operator_local",
             process: "conformance_m16",
+            ..Default::default()
         },
         &EnvironmentCredentialResolver,
         DelegationEpisodeContext::planned(&case, "item_acp", &run),
@@ -481,6 +528,7 @@ async fn t16_2_server_restart_rejects_orphaned_approval_episode_once() {
                 policy_path: "policy.yaml",
                 entity: "operator_local",
                 process: "conformance_m16",
+                ..Default::default()
             },
             &EnvironmentCredentialResolver,
             DelegationEpisodeContext::planned(&case_for_task, "item_acp", &run_for_task),
@@ -702,6 +750,232 @@ async fn t16_6_portable_swe_seed_artifacts_are_hashed_and_run_correlated() {
     assert_eq!(correlation.payload["harvested_refs"], json!(refs));
 }
 
+/// Latest matching record for `kind`/`run` — several kinds (notably
+/// `swe_seed_correlation`) are append-only and re-committed as their
+/// underlying state changes, so callers that want current truth must not
+/// take the first match.
+fn find_run_field<'a>(
+    records: &'a [sea_forge_ledger::LedgerEntry],
+    kind: &str,
+    run: &str,
+) -> &'a Value {
+    &records
+        .iter()
+        .rev()
+        .find(|entry| entry.record_kind == kind && entry.payload["run_id"] == run)
+        .unwrap_or_else(|| panic!("no {kind} record for run {run}"))
+        .payload
+}
+
+/// Build a `SettlementDeclaration` that binds exactly to one run's harvested
+/// SWE_SEED evidence — the claim manifest hash must be recomputed identically
+/// to what `swe_seed_reconciliation` expects, or reconciliation must (by
+/// design) refuse to correlate it.
+fn matching_swe_seed_declaration(
+    case: &str,
+    run: &str,
+    records: &[sea_forge_ledger::LedgerEntry],
+) -> SettlementDeclaration {
+    let evidence = find_run_field(records, "agent_task_evidence", run);
+    let settlement = find_run_field(records, "settlement", run);
+    let harvested_refs: Vec<String> = evidence["harvested_refs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+    let claim_manifest_sha256 = swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
+        case,
+        run,
+        "item_acp",
+        settlement["settlement_id"].as_str().unwrap(),
+        evidence["transcript_sha256"].as_str().unwrap(),
+        &harvested_refs,
+    )
+    .unwrap();
+    let mut decl = SettlementDeclaration {
+        version: "0.2".into(),
+        declaration_id: random_id("sdec").unwrap(),
+        settlement_ref: settlement["settlement_id"].as_str().unwrap().into(),
+        run_id: run.into(),
+        case_id: case.into(),
+        plan_item_id: "item_acp".into(),
+        claim_manifest_sha256,
+        status: DeclarationStatus::Accepted,
+        strength: SettlementStrength::Strong,
+        qualifies_for_capability: true,
+        criteria_ref: "crit_out_of_band".into(),
+        criteria_sha256: "sha256:crit".into(),
+        criteria_record_hash: "sha256:crit-record".into(),
+        criteria_declared_at: Utc::now().to_rfc3339(),
+        job_contract_ref: None,
+        origin_refs: vec![],
+        verifier_ref: "swe_seed_harness".into(),
+        verifier_sha256: "sha256:verifier".into(),
+        verification_evidence_refs: vec![],
+        declarer: Declarer {
+            actor_id: "swe_seed_verifier".into(),
+            authority_ref: "swe_seed_test".into(),
+            role: "R-AA".into(),
+            standing_basis: "test-attested-verifier".into(),
+        },
+        independence: DeclarationIndependence {
+            acting_entity_id: "operator_local".into(),
+            independent: true,
+            basis: "swe_seed_independent_verification".into(),
+        },
+        reliability: DeclarationReliability {
+            feedback_delay_ms: 0,
+            attribution_confidence: "1.000000".into(),
+            gaming_exposure: "0.000000".into(),
+            hidden_debt_blindness: "0.000000".into(),
+            weight: "1.000000".into(),
+            basis: "test".into(),
+        },
+        variation_tags: Default::default(),
+        disruption_tags: vec![],
+        orchestration_burden: None,
+        issued_at: Utc::now().to_rfc3339(),
+        source_evidence_refs: harvested_refs,
+        adapter_attestation_ref: None,
+        authored_by: None,
+        declaration_hash: String::new(),
+    };
+    decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
+    decl
+}
+
+/// Task 18, trigger 1: the server's own production ingress
+/// (`delegation::submit_swe_seed_declaration`) declares against the real
+/// configured `CommandSweSeedTransport` immediately after settlement, and
+/// the declaration correlates in the same call — no separate reconciliation
+/// step is needed for the ordinary path.
+#[tokio::test]
+async fn t16_8_server_owned_swe_seed_declaration_correlates_immediately() {
+    let root = tempfile::tempdir().unwrap();
+    write_policy_with_swe_seed_authority(root.path());
+    let config = server_config(root.path(), "read", "swe_seed");
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+
+    let records = entries(root.path(), &case);
+    let declaration = records
+        .iter()
+        .find(|entry| entry.record_kind == "settlement_declaration")
+        .unwrap_or_else(|| panic!("no settlement_declaration record; records: {records:#?}"));
+    assert_eq!(declaration.payload["run_id"], run);
+    assert_eq!(declaration.payload["status"], "accepted");
+    let declaration_id = declaration.payload["declaration_id"].as_str().unwrap();
+
+    let correlation = find_run_field(&records, "swe_seed_correlation", &run);
+    assert_eq!(
+        correlation["declaration_ids"],
+        json!([declaration_id]),
+        "immediate correlation must name the just-declared id"
+    );
+
+    let completion =
+        swe_seed_reconciliation::verify_swe_seed_completion(root.path(), &run).unwrap();
+    assert!(completion.harvested);
+    assert_eq!(completion.declaration_ids, vec![declaration_id.to_string()]);
+}
+
+/// Task 18, trigger 2 (startup): a declaration appended directly through
+/// `append_declaration_ledgered_once` — bypassing the server and the
+/// reconciler entirely, as an out-of-process actor would — is joined the
+/// next time a server starts, before it accepts new work.
+#[tokio::test]
+async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
+    let root = tempfile::tempdir().unwrap();
+    write_policy(root.path(), true);
+    // No `settlement_authorities` configured: production submission fails
+    // closed (`settlement_authority_unavailable`) and leaves no declaration —
+    // this is the "declaration-before-artifact does not correlate" half of
+    // T18, distinguished from a genuinely absent declaration only by the
+    // manual append below.
+    let config = server_config(root.path(), "read", "swe_seed");
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+    let records = entries(root.path(), &case);
+    assert!(
+        find_run_field(&records, "swe_seed_correlation", &run)["declaration_ids"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "no settlement authority is configured yet; nothing should be declared"
+    );
+
+    let decl = matching_swe_seed_declaration(&case, &run, &records);
+    sea_forge_settlement::append_declaration_ledgered_once(
+        root.path(),
+        &root.path().join("declarations.jsonl"),
+        "out_of_process_operator",
+        &decl,
+    )
+    .unwrap();
+    // Server absent: nothing has reconciled this yet.
+    let stale = find_run_field(&entries(root.path(), &case), "swe_seed_correlation", &run).clone();
+    assert!(stale["declaration_ids"].as_array().unwrap().is_empty());
+
+    ServerState::new(config).unwrap();
+
+    let reconciled = entries(root.path(), &case);
+    let correlation = find_run_field(&reconciled, "swe_seed_correlation", &run);
+    assert_eq!(
+        correlation["declaration_ids"],
+        json!([decl.declaration_id]),
+        "server startup must reconcile the out-of-process declaration"
+    );
+    let view: Value = serde_json::from_str(
+        &std::fs::read_to_string(
+            root.path()
+                .join("runs")
+                .join(&run)
+                .join("swe-seed-correlation.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(view["declaration_ids"], json!([decl.declaration_id]));
+}
+
+/// Task 18, trigger 3 (read time): the same late, out-of-process declaration
+/// reconciles when `verify_swe_seed_completion` is called directly, with no
+/// server restart in between.
+#[tokio::test]
+async fn t16_8_late_swe_seed_declaration_reconciles_at_read_time() {
+    let root = tempfile::tempdir().unwrap();
+    write_policy(root.path(), true);
+    let config = server_config(root.path(), "read", "swe_seed");
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+
+    let decl = matching_swe_seed_declaration(&case, &run, &entries(root.path(), &case));
+    sea_forge_settlement::append_declaration_ledgered_once(
+        root.path(),
+        &root.path().join("declarations.jsonl"),
+        "out_of_process_operator",
+        &decl,
+    )
+    .unwrap();
+
+    let completion =
+        swe_seed_reconciliation::verify_swe_seed_completion(root.path(), &run).unwrap();
+    assert!(completion.harvested);
+    assert_eq!(
+        completion.declaration_ids,
+        vec![decl.declaration_id.clone()]
+    );
+    // The read-time check must have materialized the correlation too, not
+    // just returned an ephemeral computed answer.
+    let reconciled = entries(root.path(), &case);
+    let correlation = find_run_field(&reconciled, "swe_seed_correlation", &run);
+    assert_eq!(correlation["declaration_ids"], json!([decl.declaration_id]));
+}
+
 #[tokio::test]
 async fn t16_6_swe_seed_commit_mismatch_rejects_but_preserves_transcript() {
     let (root, case, _, result) = run_fixture("read", "swe_seed_bad_commit", true).await;
@@ -758,6 +1032,7 @@ fn real_config(root: &Path, extra_env: Vec<String>) -> ServerConfig {
         max_response_bytes: 4_194_304,
         timeout_secs: 60,
         status: None,
+        transcript_retention: None,
     });
     ServerConfig {
         root: root.to_path_buf(),
