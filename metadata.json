@@ -3,7 +3,7 @@
   "checkpoint_id": "01KYB1WWWD37BJTJM83Q0F8XBN",
   "strategy": "manual-commit",
   "branch": "full-spec",
-  "checkpoints_count": 4,
+  "checkpoints_count": 6,
   "files_touched": [
     ".agents/CURRENT_STATUS.md",
     ".agents/plans/2026-07-24-sea-forge-workbench-frontend-api-implementation.md",
@@ -53,13 +53,20 @@
       "compact_transcript": "/1/transcript.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "compact_transcript": "/2/transcript.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": "/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 518187,
+    "input_tokens": 597458,
     "cache_creation_tokens": 382465,
-    "cache_read_tokens": 19800929,
-    "output_tokens": 111151,
-    "api_call_count": 154
+    "cache_read_tokens": 20178785,
+    "output_tokens": 113080,
+    "api_call_count": 163
   }
 }
