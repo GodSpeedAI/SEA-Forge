@@ -35,6 +35,8 @@ pub mod agent_probe;
 pub mod case_dispatch;
 pub mod config;
 pub mod delegation;
+pub mod swe_seed_reconciliation;
+mod transcript_seal;
 
 pub use config::ServerConfig;
 
@@ -93,6 +95,10 @@ struct RecoveredAcpSession<'a> {
 impl ServerState {
     pub fn new(config: ServerConfig) -> Result<Self, ForgeError> {
         recover_cancelled_delegations(&config)?;
+        // A SWE_SEED declaration may have been appended directly (out of
+        // process) while the server was absent; join it against any
+        // harvested evidence before this server accepts new work (M16 T18).
+        swe_seed_reconciliation::reconcile_all_cases(&config.root)?;
         let max = config.max_concurrent_runs.max(1);
         Ok(Self {
             config,
@@ -453,6 +459,21 @@ pub enum Request {
         #[serde(default = "default_process")]
         process: String,
     },
+    /// Thoth self-disclosure ask (M11 T14B). Dispatches to the same
+    /// `sea_forge_thoth::service::ask` the CLI adapter calls, via
+    /// `spawn_blocking` — one shared governance path, no server-side answer
+    /// engine. Added additively per ADR-003; an old server rejects this tag
+    /// cleanly (unknown enum variant), never silently misrouting it.
+    Ask {
+        kind: String,
+        subject: String,
+        #[serde(default = "default_purpose")]
+        purpose: String,
+        #[serde(default)]
+        case: Option<String>,
+        #[serde(default = "default_entity")]
+        actor: String,
+    },
 }
 
 #[derive(Deserialize)]
@@ -486,6 +507,9 @@ fn default_process() -> String {
 }
 fn default_timeout() -> u64 {
     60
+}
+fn default_purpose() -> String {
+    "planning".into()
 }
 
 /// Start the server.
@@ -745,6 +769,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                     policy_path: &policy,
                     entity: &entity,
                     process: &process,
+                    ..Default::default()
                 },
                 &agent_probe::EnvironmentCredentialResolver,
                 delegation::DelegationEpisodeContext::standalone(
@@ -772,6 +797,39 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             entity,
             process,
         } => cancel_delegation(state, &run_id, &policy, &entity, &process).await,
+        Request::Ask {
+            kind,
+            subject,
+            purpose,
+            case,
+            actor,
+        } => {
+            let Some(question_kind) = sea_forge_thoth::protocol::parse_question_kind(&kind) else {
+                return serde_json::json!({"error": format!("unknown question kind: {kind}")});
+            };
+            let root = state.config.root.clone();
+            let result = tokio::task::spawn_blocking(move || {
+                sea_forge_thoth::service::ask(
+                    &root,
+                    &actor,
+                    question_kind,
+                    &subject,
+                    &purpose,
+                    case.as_deref(),
+                )
+            })
+            .await
+            .map_err(|e| ForgeError::Internal(format!("ask task panic: {e}")))
+            .and_then(|result| result);
+            match result {
+                Ok(answer) => serde_json::to_value(answer).unwrap_or_else(
+                    |_| serde_json::json!({"error": "answer serialization failed"}),
+                ),
+                Err(error) => {
+                    serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+                }
+            }
+        }
     }
 }
 

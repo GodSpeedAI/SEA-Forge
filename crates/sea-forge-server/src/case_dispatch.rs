@@ -439,13 +439,23 @@ async fn execute_agent(
         instruction,
         max_turns,
         token_budget,
-        ..
+        response_schema,
+        transcript_retention,
     } = &item.operations[0]
     else {
         return Err(ForgeError::Input(
             "agent task missing agent operation".into(),
         ));
     };
+    // Resolve retention once, here, through the full precedence chain (spec
+    // §8.1: plan item → endpoint → global → summarized default) and pass the
+    // typed mode into delegation (M13 T16 step 3).
+    let resolved_retention = sea_forge_agent::TranscriptRetentionMode::resolve(
+        transcript_retention.as_deref(),
+        config.agent.endpoint(endpoint_ref),
+        &config.agent,
+    )
+    .map_err(ForgeError::Input)?;
     let outcome = delegation::execute_with_permission_broker(
         config,
         delegation::DelegationRequest {
@@ -458,6 +468,8 @@ async fn execute_agent(
             policy_path: policy,
             entity,
             process,
+            response_schema: response_schema.as_ref(),
+            transcript_retention: resolved_retention,
         },
         &agent_probe::EnvironmentCredentialResolver,
         delegation::DelegationEpisodeContext::planned(case_id, &item.plan_item_id, run_id),
@@ -470,7 +482,11 @@ async fn execute_agent(
         settlement_id: ids::random_id("set")?,
         run_id: run_id.into(),
         status: outcome.settlement,
-        basis: vec!["delegation_completed".into()],
+        // Reuse the exact basis delegation already committed (M13 T15) —
+        // never reconstruct a synthetic one that hides how the episode
+        // actually terminated (cancelled/turn-capped/endpoint error/
+        // criteria mismatch).
+        basis: outcome.basis,
         review_required: false,
         settled_at: Utc::now().to_rfc3339(),
         criteria_ref: item.settlement_criteria_ref.clone(),

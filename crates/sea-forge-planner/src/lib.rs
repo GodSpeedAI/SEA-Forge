@@ -9,10 +9,12 @@ pub use criteria::{
     compute_criteria_sha256, compute_record_hash, derive_from_intent, derive_from_template,
     verify_desired_outcome_refs, verify_item_criteria, verify_plan_criteria,
     verify_plan_criteria_with_resolver, CriteriaLookup, DesiredOutcomeResolver, NoModelResolver,
+    SeedModelResolver,
 };
 pub use templates::{
-    adlc_case_template, instantiate, load, load_pinned, odi_adlc_case_template,
-    sea_model_demo_template, store_builtin, PlanTemplate,
+    adlc_case_template, instantiate, is_built_in_template_ref, load, load_pinned,
+    odi_adlc_case_template, sea_model_demo_template, store_builtin, PlanTemplate,
+    DEFAULT_TOPOLOGY_ENDPOINT_REF,
 };
 
 pub const DEMO_MODEL: &str = r#"{"domain": "demo", "entities": [{"name": "Sample"}]}"#;

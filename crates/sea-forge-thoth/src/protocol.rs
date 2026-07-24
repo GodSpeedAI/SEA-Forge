@@ -54,6 +54,26 @@ pub enum ClaimClass {
     PolicyThresholds,
 }
 
+/// Map a claim class to its policy-surface string name (§8.2). Total: every
+/// variant has a name. Shared by the CLI ask adapter and the Thoth service so
+/// both derive identical policy-surface lookups (T14A/T14B).
+pub fn claim_class_to_surface_str(c: &ClaimClass) -> &'static str {
+    match c {
+        ClaimClass::Identity => "identity",
+        ClaimClass::Architecture => "architecture",
+        ClaimClass::DeclaredCapability => "declared_capability",
+        ClaimClass::InstalledCapability => "installed_capability",
+        ClaimClass::DemonstratedCapability => "demonstrated_capability",
+        ClaimClass::AuthorityRequirements => "authority_requirements",
+        ClaimClass::EnvironmentStatus => "environment_status",
+        ClaimClass::FailureCondition => "failure_condition",
+        ClaimClass::SecurityImplementation => "security_implementation",
+        ClaimClass::CustomerPrivate => "customer_private",
+        ClaimClass::CredentialBearing => "credential_bearing",
+        ClaimClass::PolicyThresholds => "policy_thresholds",
+    }
+}
+
 /// The four high-risk classes that require explicit_high_risk: true and a
 /// compensating control (§8.2).
 pub fn is_high_risk(class: &ClaimClass) -> bool {
@@ -107,6 +127,24 @@ pub enum QuestionKind {
     AskEvidenceForClaim,
     AskAvailableAffordances,
     AskWhyDenied,
+}
+
+/// Parse the CLI/server wire string form of a question kind. Shared by both
+/// ingresses (T14B) so an unknown-kind input is rejected identically
+/// regardless of which adapter received it.
+pub fn parse_question_kind(s: &str) -> Option<QuestionKind> {
+    match s {
+        "ask_capability" => Some(QuestionKind::AskCapability),
+        "ask_operation_requirements" => Some(QuestionKind::AskOperationRequirements),
+        "ask_authority_requirements" => Some(QuestionKind::AskAuthorityRequirements),
+        "ask_projection_support" => Some(QuestionKind::AskProjectionSupport),
+        "ask_environment_status" => Some(QuestionKind::AskEnvironmentStatus),
+        "ask_failure_explanation" => Some(QuestionKind::AskFailureExplanation),
+        "ask_evidence_for_claim" => Some(QuestionKind::AskEvidenceForClaim),
+        "ask_available_affordances" => Some(QuestionKind::AskAvailableAffordances),
+        "ask_why_denied" => Some(QuestionKind::AskWhyDenied),
+        _ => None,
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

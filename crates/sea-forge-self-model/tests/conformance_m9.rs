@@ -204,8 +204,27 @@ fn t93_projections_rebuild_deterministically_and_reject_drift() {
     )
     .unwrap();
 
-    let p1 = project_self(&composed, &snap, "2026-07-16T00:00:00Z").unwrap();
-    let p2 = project_self(&composed, &snap, "2026-07-16T00:01:00Z").unwrap();
+    let authority_refs = vec!["authority_decision:test".to_string()];
+    let evidence_refs = vec!["evidence:test".to_string()];
+    let settlement_ref = Some("settlement:test".to_string());
+    let p1 = project_self(
+        &composed,
+        &snap,
+        "2026-07-16T00:00:00Z",
+        authority_refs.clone(),
+        evidence_refs.clone(),
+        settlement_ref.clone(),
+    )
+    .unwrap();
+    let p2 = project_self(
+        &composed,
+        &snap,
+        "2026-07-16T00:01:00Z",
+        authority_refs,
+        evidence_refs,
+        settlement_ref,
+    )
+    .unwrap();
 
     assert_eq!(p1.len(), 3, "KG, CALM, self_model_snapshot");
     let kinds: Vec<_> = p1
@@ -234,6 +253,14 @@ fn t93_projections_rebuild_deterministically_and_reject_drift() {
         assert!(!a.record.rebuild_hash.is_empty());
         assert_eq!(a.record.adapter_ref, "sea-forge-self-model");
         verify_projection(&a.record).unwrap();
+        // Task 11: governance refs are populated and the projection is Accepted.
+        assert!(!a.record.authority_refs.is_empty());
+        assert!(!a.record.evidence_refs.is_empty());
+        assert!(a.record.settlement_ref.is_some());
+        assert_eq!(
+            a.record.validation.status,
+            sea_forge_core::types::ProjectionStatus::Accepted
+        );
     }
 
     // A pre-generated projection whose rebuild_hash drifts is rejected, not trusted.
@@ -262,6 +289,7 @@ fn t94_extension_disable_rebuild_keeps_prior_snapshot() {
         sandbox_classes_available: vec!["local".into()],
         created_at: "2026-07-16T00:00:00Z",
         capability_projection_sha256: "sha256:cap1",
+        actor_id: "operator_test",
     };
     let snap1 = store::ensure_init(root.path(), &inputs_active).unwrap();
     assert!(!store::is_stale(root.path()).unwrap());

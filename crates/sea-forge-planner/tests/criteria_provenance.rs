@@ -444,6 +444,79 @@ fn m10_unresolved_desired_outcome_ref_is_criteria_provenance_error() {
     assert!(error.to_string().contains("unresolved"));
 }
 
+// ── Task 12 (audit remediation): SeedModelResolver over a real validated model ──
+
+use sea_forge_planner::SeedModelResolver;
+
+fn seed_resolver() -> SeedModelResolver {
+    SeedModelResolver {
+        domain_model_ref: "godspeed.adlc_odi_case".into(),
+        model_sha256: "sha256:real-seed-hash".into(),
+        concept_refs: vec!["Desired Outcome Criterion".into(), "Job To Be Done".into()],
+        desired_outcome_concept_refs: vec!["Desired Outcome Criterion".into()],
+    }
+}
+
+#[test]
+fn m10_seed_resolver_accepts_valid_desired_outcome() {
+    let record =
+        desired_outcome_record("Desired Outcome Criterion", Some("godspeed.adlc_odi_case"));
+    // Fix up the sha256 the resolver actually checks against.
+    let mut record = record;
+    record.origin_refs.last_mut().unwrap().sha256 = "sha256:real-seed-hash".into();
+    assert!(verify_desired_outcome_refs(&record, &seed_resolver()).is_ok());
+}
+
+#[test]
+fn m10_seed_resolver_rejects_missing_domain_model_ref() {
+    let record = desired_outcome_record("Desired Outcome Criterion", None);
+    let error = verify_desired_outcome_refs(&record, &seed_resolver()).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+    assert!(error.to_string().contains("domain_model_ref"));
+}
+
+#[test]
+fn m10_seed_resolver_rejects_wrong_class_concept() {
+    // "Job To Be Done" is a real concept in the model but is not a Desired
+    // Outcome Criterion — the resolver must distinguish known-but-wrong-class
+    // from entirely-unknown.
+    let mut record = desired_outcome_record("Job To Be Done", Some("godspeed.adlc_odi_case"));
+    record.origin_refs.last_mut().unwrap().sha256 = "sha256:real-seed-hash".into();
+    let error = verify_desired_outcome_refs(&record, &seed_resolver()).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+    assert!(error
+        .to_string()
+        .contains("not a Desired Outcome Criterion"));
+}
+
+#[test]
+fn m10_seed_resolver_rejects_unknown_concept() {
+    let mut record = desired_outcome_record("Nonexistent Concept", Some("godspeed.adlc_odi_case"));
+    record.origin_refs.last_mut().unwrap().sha256 = "sha256:real-seed-hash".into();
+    let error = verify_desired_outcome_refs(&record, &seed_resolver()).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+    assert!(error.to_string().contains("not a known concept"));
+}
+
+#[test]
+fn m10_seed_resolver_rejects_model_hash_drift() {
+    let mut record =
+        desired_outcome_record("Desired Outcome Criterion", Some("godspeed.adlc_odi_case"));
+    record.origin_refs.last_mut().unwrap().sha256 = "sha256:drifted".into();
+    let error = verify_desired_outcome_refs(&record, &seed_resolver()).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+    assert!(error.to_string().contains("hash drift"));
+}
+
+#[test]
+fn m10_seed_resolver_rejects_unrecognized_domain_model_ref() {
+    let mut record = desired_outcome_record("Desired Outcome Criterion", Some("some.other.model"));
+    record.origin_refs.last_mut().unwrap().sha256 = "sha256:real-seed-hash".into();
+    let error = verify_desired_outcome_refs(&record, &seed_resolver()).unwrap_err();
+    assert_eq!(error.class(), "criteria_provenance_error");
+    assert!(error.to_string().contains("does not match"));
+}
+
 #[test]
 fn m10_desired_outcome_hash_changes_when_ref_or_model_changes() {
     let r1 = desired_outcome_record("outcome:A", Some("model_v1"));

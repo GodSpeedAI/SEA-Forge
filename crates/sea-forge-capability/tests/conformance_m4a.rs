@@ -3,8 +3,8 @@ use std::fs;
 use std::path::Path;
 
 use sea_forge_capability::promotion::{
-    build_capability_record, default_v02_policy, parse_fixed, rebuild_capability, require_proven,
-    save_policy,
+    build_capability_record, declaration_qualifies, default_v02_policy, parse_fixed,
+    rebuild_capability, require_proven, save_policy,
 };
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::*;
@@ -145,6 +145,7 @@ fn make_decl_req(
         disruption_tags: disruptions.into_iter().map(String::from).collect(),
         orchestration_burden: burden.map(String::from),
         source_evidence_refs: vec!["evd_0001".into()],
+        authored_by: None,
     }
 }
 
@@ -926,4 +927,114 @@ fn m4a_policy_change_contraction() {
 
     let record2 = rebuild_capability(root.path(), CAP, &policy2).unwrap();
     assert_ne!(record2.status, CapabilityStatus::Proven);
+}
+
+// ── Task 13B: Thoth-authored claim SoD at the capability-promotion boundary ──
+//
+// These declarations are constructed directly (bypassing `declare()`
+// entirely) to prove the promotion boundary re-checks authorship
+// independently — a copied or replayed declaration record that never went
+// through settlement's own accept-time check still cannot qualify.
+
+fn qualifying_declaration(declarer_id: &str, authored_by: Option<&str>) -> SettlementDeclaration {
+    SettlementDeclaration {
+        version: "0.2".into(),
+        declaration_id: "decl_thoth_sod".into(),
+        settlement_ref: "set_thoth_sod".into(),
+        run_id: "run_thoth_sod".into(),
+        case_id: "case_thoth_sod".into(),
+        plan_item_id: CAP.into(),
+        claim_manifest_sha256: "sha256:claim-manifest".into(),
+        status: DeclarationStatus::Accepted,
+        strength: SettlementStrength::Strong,
+        qualifies_for_capability: true,
+        criteria_ref: "crit_thoth_sod".into(),
+        criteria_sha256: "sha256:criteria".into(),
+        criteria_record_hash: "sha256:criteria-record".into(),
+        criteria_declared_at: "2026-07-13T00:00:00Z".into(),
+        job_contract_ref: None,
+        origin_refs: vec![OriginRef {
+            kind: OriginRefKind::Intent,
+            reference: "int_thoth_sod".into(),
+            sha256: "sha256:origin".into(),
+            role: OriginRole::DesiredResult,
+            evidence_refs: vec![],
+            domain_model_ref: None,
+        }],
+        verifier_ref: "swe_seed@1".into(),
+        verifier_sha256: "sha256:verifier".into(),
+        verification_evidence_refs: vec!["evi_gate".into()],
+        declarer: Declarer {
+            actor_id: declarer_id.into(),
+            authority_ref: "swe_seed".into(),
+            role: "R-AA".into(),
+            standing_basis: "external_verification".into(),
+        },
+        independence: DeclarationIndependence {
+            acting_entity_id: "entity_acting".into(),
+            independent: true,
+            basis: "external_declarer_differs_from_actor".into(),
+        },
+        reliability: DeclarationReliability {
+            feedback_delay_ms: 0,
+            attribution_confidence: "1.000000".into(),
+            gaming_exposure: "0.000000".into(),
+            hidden_debt_blindness: "0.000000".into(),
+            weight: "1.000000".into(),
+            basis: "swe_seed_adapter".into(),
+        },
+        variation_tags: BTreeMap::new(),
+        disruption_tags: vec![],
+        orchestration_burden: None,
+        issued_at: "2026-07-14T00:00:00Z".into(),
+        source_evidence_refs: vec!["evi_gate".into()],
+        adapter_attestation_ref: Some("attestation:swe-seed:1".into()),
+        authored_by: authored_by.map(String::from),
+        declaration_hash: String::new(),
+    }
+}
+
+#[test]
+fn thoth_sod_same_author_cannot_qualify_for_promotion() {
+    let policy = default_v02_policy();
+    let decl = qualifying_declaration("thoth", Some("thoth"));
+    assert!(!declaration_qualifies(&decl, &policy));
+}
+
+#[test]
+fn thoth_sod_different_author_can_qualify_for_promotion() {
+    let policy = default_v02_policy();
+    let decl = qualifying_declaration("operator", Some("thoth"));
+    assert!(declaration_qualifies(&decl, &policy));
+}
+
+#[test]
+fn thoth_sod_copied_declaration_cannot_bypass_promotion() {
+    // A declaration "copied" straight into the promotion pipeline (never
+    // through `declare()`) still fails the re-check.
+    let policy = default_v02_policy();
+    let original = qualifying_declaration("thoth", Some("thoth"));
+    let copied = original.clone();
+    assert!(!declaration_qualifies(&original, &policy));
+    assert!(!declaration_qualifies(&copied, &policy));
+}
+
+#[test]
+fn thoth_sod_relabeled_declaration_cannot_bypass_promotion() {
+    // Relabeling the declarer's role/standing_basis doesn't change actor_id.
+    let policy = default_v02_policy();
+    let mut decl = qualifying_declaration("thoth", Some("thoth"));
+    decl.declarer.role = "R-relabeled".into();
+    decl.declarer.standing_basis = "relabeled_basis".into();
+    assert!(!declaration_qualifies(&decl, &policy));
+}
+
+#[test]
+fn thoth_sod_replayed_declaration_cannot_bypass_promotion() {
+    // Re-evaluating the identical record repeatedly still denies.
+    let policy = default_v02_policy();
+    let decl = qualifying_declaration("thoth", Some("thoth"));
+    for _ in 0..2 {
+        assert!(!declaration_qualifies(&decl, &policy));
+    }
 }

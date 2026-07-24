@@ -128,6 +128,21 @@ impl ActionGrant {
         ports
     }
 
+    /// The `max_manager_iterations` boundary dimension, if this grant
+    /// authorizes a `manager_iteration` action (spec §16.2: "Iteration count
+    /// is a grant boundary"). `None` means the policy set no cap for this
+    /// grant — the caller then enforces only its own requested/default
+    /// values. A malformed boundary value is ignored (never widens the
+    /// caller's own cap), matching `network_tcp_ports`'s fail-narrow pattern.
+    pub fn max_manager_iterations(&self) -> Option<u32> {
+        self.boundaries
+            .get("max_manager_iterations")
+            .into_iter()
+            .flatten()
+            .filter_map(|value| value.parse::<u32>().ok())
+            .min()
+    }
+
     pub fn authorize(
         self,
         action: &AuthorityAction,
@@ -725,6 +740,20 @@ impl SelfDisclosureSurface {
         Ok(())
     }
 
+    /// Resolve the grant (if any) authorizing `actor_role` to disclose
+    /// `claim_class`. Callers needing more than a yes/no (e.g. Thoth's
+    /// per-question `require_fresh_snapshot` override, M11 T14A) use this
+    /// instead of re-deriving the match themselves.
+    pub fn matching_grant(
+        &self,
+        actor_role: &str,
+        claim_class: &str,
+    ) -> Option<&SelfDisclosureGrant> {
+        self.grants.iter().find(|grant| {
+            grant.actor_role == actor_role && grant.claim_classes.iter().any(|c| c == claim_class)
+        })
+    }
+
     /// Returns true if `actor_role` is permitted to disclose `claim_class`.
     /// Absent surface ⇒ deny (§8.2).
     pub fn permits(&self, actor_role: &str, claim_class: &str) -> bool {
@@ -1240,7 +1269,12 @@ impl AuthorityPolicyBundle {
             if rule.boundary_constraints.keys().any(|dimension| {
                 !matches!(
                     dimension.as_str(),
-                    "workspace" | "artifacts_root" | "timeout_secs" | "env_keys" | "sandbox_class"
+                    "workspace"
+                        | "artifacts_root"
+                        | "timeout_secs"
+                        | "env_keys"
+                        | "sandbox_class"
+                        | "max_manager_iterations"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));

@@ -562,16 +562,44 @@ pub fn load_pinned(root: &Path, reference: &str) -> Result<PlanTemplate, ForgeEr
 
 /// Store the built-in demo template when absent. Existing bytes are never
 /// overwritten; version changes require a new filename.
-pub fn store_builtin(root: &Path) -> Result<std::path::PathBuf, ForgeError> {
+///
+/// `seed_domain_model_ref`/`seed_model_sha256` are threaded into
+/// `odi_adlc_case@0.1.0`'s desired-outcome origin ref (Task 12 audit
+/// remediation) — callers supply the validated seed model's real identity and
+/// hash (e.g. from Task 11's self-model), never a fabricated placeholder.
+pub fn store_builtin(
+    root: &Path,
+    seed_domain_model_ref: &str,
+    seed_model_sha256: &str,
+    default_endpoint_ref: &str,
+) -> Result<std::path::PathBuf, ForgeError> {
     let template = sea_model_demo_template();
     let path = store_template(root, &template)?;
     // Also materialize the M10 ADLC/ODI built-ins.
     store_template(root, &adlc_case_template())?;
-    store_template(root, &odi_adlc_case_template())?;
+    store_template(
+        root,
+        &odi_adlc_case_template(seed_domain_model_ref, seed_model_sha256),
+    )?;
     // Also materialize the M14 topology built-ins.
-    store_template(root, &sequential_agents_template())?;
-    store_template(root, &concurrent_agents_template())?;
+    store_template(root, &sequential_agents_template(default_endpoint_ref)?)?;
+    store_template(root, &concurrent_agents_template(default_endpoint_ref)?)?;
     Ok(path)
+}
+
+/// Names of built-in templates that can be resolved by `template_ref`
+/// (`name@version`) without re-reading a pinned file — used to decide whether
+/// a submitted plan's criteria should derive from the template (Task 12 audit
+/// remediation step 3) rather than from intent-only provenance.
+pub fn is_built_in_template_ref(template_ref: &str) -> bool {
+    matches!(
+        template_ref,
+        "sea_model_demo@0.1.0"
+            | "adlc_case@0.1.0"
+            | "odi_adlc_case@0.1.0"
+            | "sequential_agents@0.1.0"
+            | "concurrent_agents@0.1.0"
+    )
 }
 
 /// Materialize a built-in template as `<root>/templates/<name>@<version>.yaml`
@@ -854,7 +882,16 @@ pub fn adlc_case_template() -> PlanTemplate {
 /// The built-in `odi_adlc_case@0.1.0` template: prepends Job Framing and
 /// Outcome Discovery/Selection stages before the ADLC lifecycle, binding
 /// desired-outcome concept refs into the criteria origin_refs (§7.5).
-pub fn odi_adlc_case_template() -> PlanTemplate {
+///
+/// `seed_domain_model_ref`/`seed_model_sha256` name and hash the validated
+/// ADLC/ODI seed model (Task 11's self-model seed) that defines the "Desired
+/// Outcome Criterion" concept this template's origin ref points at — callers
+/// supply real, verified values; the template never fabricates its own
+/// provenance (audit remediation Task 12, §10.4).
+pub fn odi_adlc_case_template(
+    seed_domain_model_ref: &str,
+    seed_model_sha256: &str,
+) -> PlanTemplate {
     // Start from the ADLC case and prepend ODI stages + desired-outcome provenance.
     let adlc = adlc_case_template();
     let mut items = vec![
@@ -915,11 +952,11 @@ pub fn odi_adlc_case_template() -> PlanTemplate {
         parameters: BTreeMap::new(),
         origin_refs: vec![OriginRef {
             kind: OriginRefKind::DesiredOutcome,
-            reference: "outcome:primary".into(),
-            sha256: "sha256:placeholder".into(),
+            reference: "Desired Outcome Criterion".into(),
+            sha256: seed_model_sha256.into(),
             role: OriginRole::DesiredResult,
             evidence_refs: vec![],
-            domain_model_ref: Some("godspeed.adlc_odi_case".into()),
+            domain_model_ref: Some(seed_domain_model_ref.into()),
         }],
         job_contract: None,
         plan: TemplatePlan {
@@ -931,16 +968,50 @@ pub fn odi_adlc_case_template() -> PlanTemplate {
 
 // ── M14 (E16a §7.5): deterministic topology built-ins ──
 
+/// Fallback endpoint reference for built-in topology templates when a
+/// caller does not need real dispatch (e.g. CLI template materialization
+/// for criteria derivation only, `plan_pipeline::run_plan_inner`). Any
+/// caller that intends to actually dispatch generated items must supply
+/// its own real, registered endpoint ID instead (audit remediation
+/// Task 17) — this constant exists only to satisfy the endpoint ID
+/// grammar, not to name a real agent.
+pub const DEFAULT_TOPOLOGY_ENDPOINT_REF: &str = "agent_default";
+
+/// Same grammar `AgentEndpointConfig::validate` (`sea-forge-agent`) enforces
+/// for registered endpoint IDs: non-empty, <=64 chars, lowercase
+/// ascii/digit/`_`/`-` only. Topology built-ins bind their endpoint_ref
+/// literally at construction time (never a `${param}` placeholder — see
+/// `check_item_substitution_sites`), so an invalid ID (e.g. containing `:`)
+/// must fail here instead of only at dispatch-time preflight (audit
+/// remediation Task 17).
+fn validate_endpoint_ref(endpoint_ref: &str) -> Result<(), ForgeError> {
+    let valid = !endpoint_ref.is_empty()
+        && endpoint_ref.len() <= 64
+        && endpoint_ref
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '_' | '-'));
+    if valid {
+        Ok(())
+    } else {
+        Err(ForgeError::Config {
+            class: "schema_error",
+            path: PathBuf::new(),
+            message: format!("invalid agent endpoint_ref '{endpoint_ref}'"),
+        })
+    }
+}
+
 /// Shared `AgentTask` body for a repeated topology branch/step. Sentinel
 /// `plan_item_id` (`""`) — expansion derives the real ID from the group's
 /// `id_prefix` and each entry's key. `instruction` is entry-scoped
 /// (substituted per entry, not declared as a template-level parameter).
-fn agent_task_body() -> TemplateItem {
+/// `endpoint_ref` must already be validated by the caller.
+fn agent_task_body(endpoint_ref: &str) -> TemplateItem {
     TemplateItem {
         plan_item_id: "".into(),
         name: "agent_branch".into(),
         operations: vec![TemplateOperation::AgentTask {
-            endpoint_ref: "agent:builtin".into(),
+            endpoint_ref: endpoint_ref.into(),
             instruction: "${instruction}".into(),
             max_turns: 1,
             token_budget: None,
@@ -948,7 +1019,14 @@ fn agent_task_body() -> TemplateItem {
         settlement_criteria: SettlementCriteria::default(),
         item_kind: ItemKind::AgentTask,
         sandbox_class: None,
-        markers: ItemMarkers::default(),
+        // Required: without this, `can_auto_complete` sees zero required
+        // items and completes the case before any branch ever dispatches
+        // (audit remediation Task 17 — the defect that made these
+        // templates unable to prove real end-to-end dispatch).
+        markers: ItemMarkers {
+            required: true,
+            ..ItemMarkers::default()
+        },
         max_instances: 1,
         environment: None,
         entry_criteria: vec![],
@@ -965,8 +1043,12 @@ fn repeated_item_id(id_prefix: &str, key: &str) -> String {
 
 /// The built-in `sequential_agents@0.1.0` template: three `AgentTask` steps
 /// chained by settlement-accepted sentries, each step gated on the prior
-/// step's acceptance (§7.5 E16a slice 6.3, T14.1).
-pub fn sequential_agents_template() -> PlanTemplate {
+/// step's acceptance (§7.5 E16a slice 6.3, T14.1). `endpoint_ref` must be a
+/// real, registry-resolvable endpoint ID (`^[a-z0-9_-]{1,64}$`) — an invalid
+/// ID (e.g. containing `:`) is rejected here rather than reaching dispatch
+/// preflight (audit remediation Task 17).
+pub fn sequential_agents_template(endpoint_ref: &str) -> Result<PlanTemplate, ForgeError> {
+    validate_endpoint_ref(endpoint_ref)?;
     let id_prefix = "step";
     let keys = ["1", "2", "3"];
     let entries = keys
@@ -988,7 +1070,7 @@ pub fn sequential_agents_template() -> PlanTemplate {
             },
         })
         .collect();
-    PlanTemplate {
+    Ok(PlanTemplate {
         name: "sequential_agents".into(),
         version: "0.1.0".into(),
         description:
@@ -1001,18 +1083,21 @@ pub fn sequential_agents_template() -> PlanTemplate {
             items: vec![],
             repeated: vec![RepeatedItem {
                 id_prefix: id_prefix.into(),
-                item: agent_task_body(),
+                item: agent_task_body(endpoint_ref),
                 entries,
             }],
         },
-    }
+    })
 }
 
 /// The built-in `concurrent_agents@0.1.0` template: N independent
 /// `AgentTask` branches plus a flat rollup `Milestone` with
 /// `entry_criteria_mode: All`, naming every branch — the rollup fires only
 /// when every branch settles accepted (§7.5 E16a slice 6.3, T14.2/T14.3).
-pub fn concurrent_agents_template() -> PlanTemplate {
+/// `endpoint_ref` must be a real, registry-resolvable endpoint ID
+/// (`^[a-z0-9_-]{1,64}$`) — see `sequential_agents_template`.
+pub fn concurrent_agents_template(endpoint_ref: &str) -> Result<PlanTemplate, ForgeError> {
+    validate_endpoint_ref(endpoint_ref)?;
     let id_prefix = "branch";
     let keys = ["a", "b", "c"];
     let entries: Vec<RepeatEntry> = keys
@@ -1033,7 +1118,12 @@ pub fn concurrent_agents_template() -> PlanTemplate {
         settlement_criteria: SettlementCriteria::default(),
         item_kind: ItemKind::Milestone,
         sandbox_class: None,
-        markers: ItemMarkers::default(),
+        // Required: the rollup is the topology's completion gate, not an
+        // optional side milestone (audit remediation Task 17).
+        markers: ItemMarkers {
+            required: true,
+            ..ItemMarkers::default()
+        },
         max_instances: 1,
         environment: None,
         entry_criteria: keys
@@ -1045,7 +1135,7 @@ pub fn concurrent_agents_template() -> PlanTemplate {
         parent_stage: None,
         depends_on: vec![],
     };
-    PlanTemplate {
+    Ok(PlanTemplate {
         name: "concurrent_agents".into(),
         version: "0.1.0".into(),
         description:
@@ -1058,9 +1148,9 @@ pub fn concurrent_agents_template() -> PlanTemplate {
             items: vec![rollup],
             repeated: vec![RepeatedItem {
                 id_prefix: id_prefix.into(),
-                item: agent_task_body(),
+                item: agent_task_body(endpoint_ref),
                 entries,
             }],
         },
-    }
+    })
 }

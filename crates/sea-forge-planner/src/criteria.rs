@@ -169,6 +169,72 @@ impl DesiredOutcomeResolver for NoModelResolver {
     }
 }
 
+/// Resolver backed by one validated domain model's real concept set and hash
+/// (§7.5/§10.4, audit remediation Task 12). Constructed by callers from a
+/// validated `DomainModelRef` — e.g. Task 11's self-model seed — never
+/// fabricated. `domain_model_ref`/`model_sha256` are the expected verified
+/// identity/hash; `concept_refs` is the model's full known-concept set (used
+/// to distinguish "unknown concept" from "known concept, wrong class");
+/// `desired_outcome_concept_refs` is the subset of `concept_refs` that are
+/// legitimately usable as a desired-outcome reference (e.g. "Desired Outcome
+/// Criterion"). The planner still does not hard-couple to any specific model
+/// source — this struct only holds already-verified values handed to it.
+pub struct SeedModelResolver {
+    pub domain_model_ref: String,
+    pub model_sha256: String,
+    pub concept_refs: Vec<String>,
+    pub desired_outcome_concept_refs: Vec<String>,
+}
+
+impl DesiredOutcomeResolver for SeedModelResolver {
+    fn verify_desired_outcome(
+        &self,
+        reference: &str,
+        domain_model_ref: &str,
+        model_sha256: &str,
+    ) -> Result<(), ForgeError> {
+        if domain_model_ref != self.domain_model_ref {
+            return Err(ForgeError::Plan {
+                class: "criteria_provenance_error",
+                message: format!(
+                    "desired_outcome domain_model_ref '{domain_model_ref}' does not match the resolver's validated model '{}'",
+                    self.domain_model_ref
+                ),
+            });
+        }
+        if model_sha256 != self.model_sha256 {
+            return Err(ForgeError::Plan {
+                class: "criteria_provenance_error",
+                message: format!(
+                    "desired_outcome model hash drift for '{domain_model_ref}': declared={model_sha256} verified={}",
+                    self.model_sha256
+                ),
+            });
+        }
+        if !self.concept_refs.iter().any(|c| c == reference) {
+            return Err(ForgeError::Plan {
+                class: "criteria_provenance_error",
+                message: format!(
+                    "desired_outcome reference '{reference}' is not a known concept in '{domain_model_ref}'"
+                ),
+            });
+        }
+        if !self
+            .desired_outcome_concept_refs
+            .iter()
+            .any(|c| c == reference)
+        {
+            return Err(ForgeError::Plan {
+                class: "criteria_provenance_error",
+                message: format!(
+                    "desired_outcome reference '{reference}' is a known concept but not a Desired Outcome Criterion"
+                ),
+            });
+        }
+        Ok(())
+    }
+}
+
 /// Verify desired-outcome origin refs in a criteria record through the resolver.
 /// Each `DesiredOutcome` ref MUST have a `domain_model_ref` and MUST resolve.
 pub fn verify_desired_outcome_refs(

@@ -132,6 +132,172 @@ pub fn evaluate_agent_output(output: &str, required: Option<&str>) -> Option<boo
     required.map(|needle| output.contains(needle))
 }
 
+/// Minimal JSON Schema subset validator (M13 T15, spec §7.3
+/// `response_schema`). No JSON Schema crate is approved for this workspace
+/// (ADR-002/ADR-003 approve no such dependency), so per the plan's redesign
+/// trigger this validates a narrow, explicitly-scoped subset instead of
+/// pretending arbitrary JSON Schema is enforced: `type`, `enum`,
+/// `properties` (object member schemas), `required` (object member
+/// presence), and `items` (array element schema, applied uniformly). Any
+/// other keyword is not enforced. `output` is treated as untrusted JSON
+/// text; malformed JSON never validates.
+pub fn validate_response_schema(schema: &serde_json::Value, output: &str) -> bool {
+    match serde_json::from_str::<serde_json::Value>(output) {
+        Ok(value) => schema_matches(schema, &value),
+        Err(_) => false,
+    }
+}
+
+fn schema_matches(schema: &serde_json::Value, value: &serde_json::Value) -> bool {
+    let Some(schema_obj) = schema.as_object() else {
+        return true;
+    };
+    if let Some(enum_value) = schema_obj.get("enum") {
+        let Some(allowed) = enum_value.as_array() else {
+            return false;
+        };
+        if !allowed.contains(value) {
+            return false;
+        }
+    }
+    if let Some(expected_type) = schema_obj.get("type").and_then(|v| v.as_str()) {
+        if !json_type_matches(expected_type, value) {
+            return false;
+        }
+    }
+    if let Some(properties_value) = schema_obj.get("properties") {
+        let Some(properties) = properties_value.as_object() else {
+            return false;
+        };
+        let Some(object) = value.as_object() else {
+            return false;
+        };
+        for (key, sub_schema) in properties {
+            if let Some(field) = object.get(key) {
+                if !schema_matches(sub_schema, field) {
+                    return false;
+                }
+            }
+        }
+    }
+    if let Some(required_value) = schema_obj.get("required") {
+        let Some(required) = required_value.as_array() else {
+            return false;
+        };
+        let Some(object) = value.as_object() else {
+            return false;
+        };
+        if !required.iter().all(|name| match name.as_str() {
+            Some(name) => object.contains_key(name),
+            None => false,
+        }) {
+            return false;
+        }
+    }
+    if let Some(items_schema) = schema_obj.get("items") {
+        let Some(array) = value.as_array() else {
+            return false;
+        };
+        if !array.iter().all(|item| schema_matches(items_schema, item)) {
+            return false;
+        }
+    }
+    true
+}
+
+fn json_type_matches(expected: &str, value: &serde_json::Value) -> bool {
+    match expected {
+        "object" => value.is_object(),
+        "array" => value.is_array(),
+        "string" => value.is_string(),
+        "number" => value.is_number(),
+        "integer" => value.is_i64() || value.is_u64(),
+        "boolean" => value.is_boolean(),
+        "null" => value.is_null(),
+        // Unrecognized type keyword: not enforced rather than falsely rejected.
+        _ => true,
+    }
+}
+
+#[cfg(test)]
+mod response_schema_tests {
+    use super::*;
+
+    #[test]
+    fn valid_object_satisfies_type_properties_and_required() {
+        let schema = serde_json::json!({
+            "type": "object",
+            "required": ["status"],
+            "properties": {"status": {"type": "string", "enum": ["accepted"]}}
+        });
+        assert!(validate_response_schema(
+            &schema,
+            r#"{"status":"accepted"}"#
+        ));
+    }
+
+    #[test]
+    fn wrong_enum_value_fails() {
+        let schema = serde_json::json!({
+            "type": "object",
+            "properties": {"status": {"enum": ["accepted"]}}
+        });
+        assert!(!validate_response_schema(&schema, r#"{"status":"other"}"#));
+    }
+
+    #[test]
+    fn missing_required_field_fails() {
+        let schema = serde_json::json!({"type": "object", "required": ["status"]});
+        assert!(!validate_response_schema(&schema, r#"{"other":1}"#));
+    }
+
+    #[test]
+    fn malformed_json_output_fails() {
+        let schema = serde_json::json!({"type": "object"});
+        assert!(!validate_response_schema(&schema, "not json"));
+    }
+
+    #[test]
+    fn array_items_validated_uniformly() {
+        let schema = serde_json::json!({"type": "array", "items": {"type": "integer"}});
+        assert!(validate_response_schema(&schema, "[1,2,3]"));
+        assert!(!validate_response_schema(&schema, "[1,\"x\",3]"));
+    }
+
+    #[test]
+    fn malformed_enum_shape_fails_closed() {
+        let schema = serde_json::json!({"enum": "accepted"});
+        assert!(!validate_response_schema(&schema, r#""accepted""#));
+    }
+
+    #[test]
+    fn malformed_properties_shape_fails_closed() {
+        let schema = serde_json::json!({"properties": ["status"]});
+        assert!(!validate_response_schema(
+            &schema,
+            r#"{"status":"accepted"}"#
+        ));
+    }
+
+    #[test]
+    fn malformed_required_shape_fails_closed() {
+        let schema = serde_json::json!({"required": "status"});
+        assert!(!validate_response_schema(
+            &schema,
+            r#"{"status":"accepted"}"#
+        ));
+    }
+
+    #[test]
+    fn required_entries_that_are_not_strings_fail_closed() {
+        let schema = serde_json::json!({"required": [42]});
+        assert!(!validate_response_schema(
+            &schema,
+            r#"{"status":"accepted"}"#
+        ));
+    }
+}
+
 #[cfg(test)]
 mod agent_output_tests {
     use super::*;

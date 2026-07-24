@@ -947,6 +947,11 @@ pub struct SettlementDeclarationRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub orchestration_burden: Option<String>,
     pub source_evidence_refs: Vec<String>,
+    /// Immutable Thoth-claim authorship, when the underlying claim being
+    /// settled was Thoth-authored (spec-adlc-thoth §7.3, §10.3). Checked
+    /// against `declarer.actor_id` before acceptance (T13B).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authored_by: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -982,6 +987,13 @@ pub struct SettlementDeclaration {
     pub source_evidence_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub adapter_attestation_ref: Option<String>,
+    /// Immutable Thoth-claim authorship, carried through from the request
+    /// and included in `declaration_hash` (spec-adlc-thoth §7.3, §10.3,
+    /// T11.7/T13B). Re-checked independently at capability-promotion time
+    /// against `declarer.actor_id` — copied or replayed records that skip
+    /// `declare()` still fail this re-check.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authored_by: Option<String>,
     pub declaration_hash: String,
 }
 
@@ -1467,4 +1479,29 @@ pub struct TranscriptEvidence {
     /// Harvested proof/trace artifact refs (E17/SWE_SEED).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub harvested_refs: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Separation of duties: Thoth claim authorship (spec-adlc-thoth §10.3, §15).
+// ---------------------------------------------------------------------------
+
+/// The actor that authored a claim cannot settle or promote that same claim.
+/// Compares immutable `authored_by` provenance against the acting identity —
+/// re-labeling, copying, or replaying a claim cannot remove the binding,
+/// since `authored_by` travels with the record it was set on (T11.7, T13B).
+pub fn validate_claim_authorship_sod(
+    authored_by: Option<&str>,
+    actor_id: &str,
+) -> Result<(), crate::errors::ForgeError> {
+    if let Some(author) = authored_by {
+        if author == actor_id {
+            return Err(crate::errors::ForgeError::Plan {
+                class: "sod_violation",
+                message: format!(
+                    "actor '{actor_id}' cannot settle or promote a claim it authored ('{author}')"
+                ),
+            });
+        }
+    }
+    Ok(())
 }

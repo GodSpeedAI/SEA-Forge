@@ -111,6 +111,18 @@ pub fn declaration_qualifies(
     decl: &SettlementDeclaration,
     policy: &CapabilityPromotionPolicy,
 ) -> bool {
+    // SoD boundary (spec-adlc-thoth §10.3, T13B), re-checked independently of
+    // settlement's own accept-time check: a declaration copied or replayed
+    // directly into the promotion pipeline (bypassing `declare()`) still
+    // cannot count toward promoting a capability its own author declared.
+    if sea_forge_core::types::validate_claim_authorship_sod(
+        decl.authored_by.as_deref(),
+        &decl.declarer.actor_id,
+    )
+    .is_err()
+    {
+        return false;
+    }
     if decl.status != DeclarationStatus::Accepted {
         return false;
     }

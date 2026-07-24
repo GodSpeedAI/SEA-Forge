@@ -25,12 +25,35 @@ const BUILTIN_PROPOSAL_SOURCE_REF: &str = "builtin:manager-agent-task-proposal@0
 const BUILTIN_PROPOSAL_SOURCE_SHA256: &str =
     "c990a16ddb9bd1e2e0ba8f2f609bda601f3e76a9e35d33c6418c2bb84c6be376";
 
+/// Same grammar `AgentEndpointConfig::validate` (`sea-forge-agent`) enforces
+/// for registered endpoint IDs. The manager loop must never invent or
+/// auto-route among endpoints (audit remediation Task 17 redesign trigger),
+/// so its proposal's `endpoint_ref` is always an explicit caller-supplied
+/// value, validated here before use.
+fn validate_endpoint_ref(endpoint_ref: &str) -> Result<(), ForgeError> {
+    let valid = !endpoint_ref.is_empty()
+        && endpoint_ref.len() <= 64
+        && endpoint_ref
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '_' | '-'));
+    if valid {
+        Ok(())
+    } else {
+        Err(ForgeError::Input(format!(
+            "invalid agent endpoint_ref '{endpoint_ref}'"
+        )))
+    }
+}
+
 pub struct ManagerIterateOptions<'a> {
     pub root: &'a Path,
     pub policy: &'a Path,
     pub actor: &'a str,
     pub case_id: &'a str,
     pub max_iterations: u32,
+    /// Endpoint the manager loop proposes discretionary `agent_task` items
+    /// against. Required, never defaulted (§16.2, audit remediation Task 17).
+    pub endpoint_ref: &'a str,
 }
 
 /// Run one auditable step of the Thoth manager loop (§7.6, §16.2). Never a
@@ -41,19 +64,31 @@ pub fn iterate(opts: ManagerIterateOptions) -> Result<u8, ForgeError> {
         policy,
         actor,
         case_id,
-        max_iterations,
+        max_iterations: requested_max_iterations,
+        endpoint_ref,
     } = opts;
+    validate_endpoint_ref(endpoint_ref)?;
 
-    super::mediated::authorize_read(
+    // The requested cap is bound into the canonical authority action/decision
+    // (audit remediation Task 17 step 4) so the ledgered decision reflects
+    // what was actually asked for; the authority-granted
+    // `max_manager_iterations` boundary (if any) is read from the grant
+    // before it's consumed, and the *lower* of the two governs (a grant can
+    // only narrow, never widen, what the caller/config requested).
+    let grant_cap = super::mediated::authorize_read_with_grant(
         root,
         policy,
         actor,
         &AuthorityAction::Reserved {
             resource_type: "manager_iteration".into(),
             resource_id: case_id.into(),
-            parameters: json!({}),
+            parameters: json!({"max_manager_iterations": requested_max_iterations}),
         },
+        |grant| grant.max_manager_iterations(),
     )?;
+    let max_iterations = grant_cap.map_or(requested_max_iterations, |cap| {
+        cap.min(requested_max_iterations)
+    });
 
     let (mut case, plan, events) = load_case_plan(root, case_id)?;
     let stream = LedgerStream::open(root, format!("case-{case_id}"), actor)?;
@@ -184,7 +219,7 @@ pub fn iterate(opts: ManagerIterateOptions) -> Result<u8, ForgeError> {
             )
         }
         ManagerJudgment::Stalled => {
-            let proposal = synthesized_proposal(case_id, iteration, actor);
+            let proposal = synthesized_proposal(case_id, iteration, actor, endpoint_ref);
             iteration_record.action = ManagerAction::ProposeItem;
             iteration_record.proposed_item_ref = Some(proposal.plan_item_id.clone());
             let grant_result = propose_item(root, policy, actor, case_id, proposal);
@@ -255,12 +290,17 @@ fn escalate(
     Ok(5)
 }
 
-fn synthesized_proposal(case_id: &str, iteration: u32, actor: &str) -> PlanItem {
+fn synthesized_proposal(
+    case_id: &str,
+    iteration: u32,
+    actor: &str,
+    endpoint_ref: &str,
+) -> PlanItem {
     PlanItem {
         plan_item_id: format!("mgr_{case_id}_{iteration}"),
         name: "thoth_proposed_agent_task".into(),
         operations: vec![Operation::AgentTask {
-            endpoint_ref: "agent:default".into(),
+            endpoint_ref: endpoint_ref.into(),
             instruction: format!("Advance stalled case {case_id} (manager iteration {iteration})."),
             max_turns: 1,
             token_budget: None,

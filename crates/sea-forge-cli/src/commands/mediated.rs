@@ -116,6 +116,25 @@ pub fn authorize_read(
     })
 }
 
+/// Same as `authorize_read`, but lets the caller peek at a value derived
+/// from the `ActionGrant` (e.g. a boundary-constraint cap) before it is
+/// consumed by `authorize()`. Used by the manager loop to read the
+/// authority-granted `max_manager_iterations` boundary (spec §16.2).
+pub fn authorize_read_with_grant<T>(
+    root: &Path,
+    policy_path: &Path,
+    actor_id: &str,
+    action: &AuthorityAction,
+    peek: impl FnOnce(&ActionGrant) -> T,
+) -> Result<T, ForgeError> {
+    with_authorized_action(root, policy_path, actor_id, action, false, |grant| {
+        let context = action_context(action);
+        let peeked = peek(&grant);
+        grant.authorize(action, context, context, root)?;
+        Ok(peeked)
+    })
+}
+
 fn action_context(action: &AuthorityAction) -> &'static str {
     match action {
         AuthorityAction::Reserved { resource_type, .. }

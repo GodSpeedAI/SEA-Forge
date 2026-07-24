@@ -40,6 +40,7 @@ fn endpoint(port: u16) -> AgentEndpointConfig {
         max_response_bytes: 16_384,
         timeout_secs: 5,
         status: None,
+        transcript_retention: None,
     }
 }
 
@@ -275,6 +276,7 @@ async fn t12_endpoint_registration_marks_self_model_snapshot_stale() {
             sandbox_classes_available: vec!["local".into()],
             created_at: "2026-07-20T00:00:00Z",
             capability_projection_sha256: "sha256:cap0",
+            actor_id: "operator_test",
         },
     )
     .unwrap();

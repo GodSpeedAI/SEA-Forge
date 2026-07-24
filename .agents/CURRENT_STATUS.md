@@ -1,6 +1,344 @@
 # Current Status
 
-Updated: 2026-07-23
+Updated: 2026-07-24
+
+> **2026-07-24 spec-audit-remediation Task 18 landed**
+> (`.agents/plans/2026-07-22-spec-audit-remediation.md`): late SWE_SEED
+> declaration reconciliation closes the last documented M16 gap. New
+> `sea-forge-server::swe_seed_reconciliation` is a single pure, idempotent
+> join: `reconcile_swe_seed_declarations(root, case_id)` reads every
+> `agent_task_evidence` record carrying non-empty `harvested_refs` in a case
+> ledger, joins it against every ledger-verified `settlement_declaration`
+> whose `claim_manifest_sha256` matches an independently-recomputed manifest
+> hash over `(case_id, run_id, plan_item_id, settlement_id,
+> transcript_sha256, harvested_refs)` (`swe_seed_claim_manifest_sha256` —
+> wrong run/verifier/hash therefore never correlates), and commits one
+> `swe_seed_correlation` ledger record plus the `runs/<run_id>/swe-seed-
+> correlation.json` view per *distinct* resulting declaration set
+> (idempotency-keyed on the declaration-id set itself, so an unchanged run
+> commits nothing new and matching declarations appear exactly once).
+> `delegation.rs`'s inline one-shot correlation construction and its
+> snapshot-only `swe_seed_declarations_for_run` helper are replaced by calls
+> into this shared reconciler. A new `submit_swe_seed_declaration` in
+> `delegation.rs` is the previously-absent production declaration ingress:
+> after settlement and harvested evidence are committed, it loads the
+> policy's `strong_settlement_authority()` descriptor, builds the
+> `SettlementDeclarationRequest` only from already-persisted criteria/
+> evidence, and calls `CommandSweSeedTransport`/`SweSeedSettlementAuthority`
+> through `tokio::task::spawn_blocking`; an unavailable authority surfaces as
+> `settlement_authority_unavailable` and is logged, never locally
+> faked — the already-committed settlement is never mutated, and a later
+> out-of-process declaration still reconciles. `append_and_reconcile_swe_seed_declaration`
+> wraps `sea_forge_settlement::append_declaration_ledgered_once` with an
+> immediate reconcile call, used both by the production path and by an
+> out-of-process actor appending directly while the server is absent.
+> `reconcile_all_cases` runs at `ServerState::new` (alongside the existing
+> `recover_cancelled_delegations`), and `verify_swe_seed_completion(root,
+> run_id)` reconciles before reporting a run's harvested/declared status —
+> the two read-time/startup triggers required by the plan. New tests:
+> `sea-forge-server` `swe_seed_reconciliation.rs` unit suite (mismatched
+> run/verifier/hash never correlate, declaration-before-evidence correlates
+> once evidence lands, repeated reconcile is idempotent, two runs in one case
+> correlate independently); `conformance_m16.rs` `t16_8_*` (server-owned
+> declaration correlates immediately through a real `CommandSweSeedTransport`
+> subprocess — `sea-forge-cli`'s existing hidden `internal-test-swe-seed`
+> double, located next to the test binary rather than duplicating a second
+> transport fake; a declaration appended directly via
+> `append_declaration_ledgered_once` while no server is running reconciles
+> on the next `ServerState::new` startup; the same late declaration
+> reconciles at read time via `verify_swe_seed_completion` with no restart);
+> `sea-forge-settlement` `declaration.rs`
+> (`swe_seed_duplicate_declare_for_same_claim_conflicts_on_append`: two
+> independent `declare()` calls for the same claim mint different
+> `declaration_id`s, and appending both is rejected by
+> `append_declaration_ledgered_once`'s idempotency-key conflict check, not
+> silently duplicated). Gates green: `cargo test -p sea-forge-server --test
+> conformance_m16 swe_seed -- --nocapture`, `cargo test -p sea-forge-settlement
+> swe_seed -- --nocapture`, `cargo test -p sea-forge-server
+> swe_seed_reconciliation -- --nocapture`. `cargo fmt --all -- --check` and
+> `cargo clippy --workspace --all-targets --all-features --locked -- -D
+> warnings` are clean; `cargo test --workspace --all-features --locked` (91
+> test binaries, 0 failures), `devbox run -- just check`, `devbox run -- just
+> proof` (P1-P4b), and `devbox run -- just no-async-kernel` (19 kernel
+> crates — `sea-forge-server` is not one) are all green. Real SWE_SEED/ACP
+> host release tests remain intentionally ignored pending operator
+> configuration.
+
+> **2026-07-24 spec-audit-remediation Task 17 landed**
+> (`.agents/plans/2026-07-22-spec-audit-remediation.md`): built-in topology
+> templates and the Thoth manager loop no longer name unregisterable
+> endpoints. `sequential_agents_template`/`concurrent_agents_template`
+> (`sea-forge-planner::templates`) now take a caller-supplied `endpoint_ref`
+> and return `Result<PlanTemplate, ForgeError>`, validating it against the
+> same `^[a-z0-9_-]{1,64}$` grammar `AgentEndpointConfig::validate` enforces
+> — the old literal `agent:builtin`/`agent:default` values fail this check
+> (they contain `:`), so a restored colon ID now fails template construction
+> instead of only failing dispatch preflight. `store_builtin` threads a
+> `default_endpoint_ref` parameter through to both templates (a new
+> `DEFAULT_TOPOLOGY_ENDPOINT_REF` constant covers the CLI's criteria-only
+> materialization call site, which never dispatches). Both templates' generated
+> `AgentTask` branches/steps and the concurrent rollup milestone are now
+> `markers.required = true` — previously `ItemMarkers::default()` left every
+> item optional, so `can_auto_complete` completed the case before any branch
+> ever dispatched, which is why no test had ever proven real end-to-end
+> dispatch through these templates. The Thoth manager loop
+> (`sea-forge-cli::commands::manager`) now requires an explicit `--endpoint`
+> (never invented/auto-routed) for its synthesized proposal, and binds the
+> caller-requested `max_manager_iterations` into the canonical
+> `manager_iteration` authority action's parameters so the ledgered decision
+> reflects what was actually asked (differing requests now produce differing
+> `action_request_hash` values). A new `ActionGrant::max_manager_iterations`
+> accessor (`sea-forge-authority`, mirroring the existing
+> `network_tcp_ports` fail-narrow pattern) reads an authority-granted
+> `max_manager_iterations` boundary constraint (added to the boundary
+> dimension allowlist); `manager::iterate` now enforces
+> `min(requested, grant_cap)` — a policy-granted cap always wins over a
+> larger caller or default-value request, never the reverse. New/extended
+> tests: `sea-forge-planner` `conformance_m14.rs` (`t17_0_*`: colon/empty/
+> oversized endpoint_ref rejection, caller-supplied endpoint_ref binding);
+> `sea-forge-cli` `conformance_m15.rs` (`t17_1`-`t17_5`: caller-above-grant,
+> config-default-above-grant, authority decision hash changes with the
+> requested cap, exact exhaustion at the grant cap, no further proposal
+> after park); a new `sea-forge-server` `conformance_topology.rs`
+> (`topology_*`: sequential steps dispatch through the real server in order
+> against a stub endpoint and settle accepted; concurrent branches all
+> accept and the rollup milestone fires; one required branch's real episode
+> settling rejected terminates the case with `blocking_item` and the rollup
+> never fires). Gate commands (`cargo test -p sea-forge-planner --test
+> conformance_m14`, `-p sea-forge-cli --test conformance_m15`, `-p
+> sea-forge-server topology`) all green, plus full workspace
+> `cargo fmt --all -- --check` / `cargo clippy --workspace --all-targets -- -D
+> warnings` / `cargo test --workspace --all-features` (91 green test
+> binaries) / `devbox run -- just check` / `just proof` /
+> `just no-async-kernel`.
+
+> **2026-07-23 spec-audit-remediation Tasks 11-12 landed**
+> (`.agents/plans/2026-07-22-spec-audit-remediation.md`): self-model rebuild
+> is now ledgered end-to-end — `sea-forge-self-model::store::rebuild` opens a
+> `self-model` `LedgerStream`, commits validation evidence
+> (`self_model_verification_evidence`), a real `AuthorityDecision` for the
+> `self_model_rebuild` reserved action, and a `SettlementEvent`, then threads
+> those refs into every `ProjectionRecord` (`authority_refs`/`evidence_refs`/
+> `settlement_ref` non-empty; a projection missing either evidence or
+> settlement is `Quarantined`, never `Accepted`); release/cell realizations
+> and the immutable snapshot are committed+materialized through the ledger
+> instead of raw file writes, and `store::validate` verifies the ledger's hash
+> chain when one exists. The CLI (`sea-forge self-model rebuild`) now reads
+> real installation state — the extension registry, host-probed sandbox
+> classes, and a real hash over `capabilities.jsonl` — instead of
+> caller-supplied empty/placeholder inputs; `--capability-hash` was replaced
+> by `--actor` (default `operator_local`), matching other governed commands.
+> ODI provenance (M10) no longer ships `sha256:placeholder`/`outcome:primary`:
+> `odi_adlc_case_template` takes real `seed_domain_model_ref`/
+> `seed_model_sha256` parameters, its origin ref now names the real
+> `"Desired Outcome Criterion"` concept, and a new `SeedModelResolver`
+> (`sea-forge-planner::criteria`) verifies domain_model_ref/hash/concept
+> membership/desired-outcome-class before authority. Both production plan
+> ingresses (`pipeline.rs`'s intent path and `plan_pipeline.rs`'s externally
+> supplied `run --plan`) now call `verify_plan_criteria_with_resolver` with a
+> resolver built from Task 11's real bundled self-model seed instead of the
+> fail-closed `NoModelResolver` wrapper; a submitted plan naming a known
+> built-in template (`is_built_in_template_ref`) installs it through the
+> existing source-owned installer (`store_builtin`, pinned under
+> `<root>/templates/`) and derives criteria via `derive_from_template` —
+> previously unreachable from production — instead of intent-only
+> provenance. New/extended tests: `sea-forge-self-model` conformance_m9 (T9.1,
+> T9.3 governance-ref assertions), `sea-forge-cli` `self_model_cli.rs`
+> (ledgered-record-kinds + governance-ref assertions),
+> `sea-forge-planner` `criteria_provenance.rs` (`m10_seed_resolver_*`: valid,
+> missing, wrong-class, unknown-concept, model-drift, unrecognized-model),
+> `sea-forge-planner` `conformance_m10.rs` (T10.3 placeholder-absence
+> assertions), and a new `sea-forge-cli` `conformance_m10.rs` (T10.6 real
+> production plan resolving the real seed hash end-to-end; T10.4 a tampered
+> pinned built-in template rejected before authority with no allocated run).
+> `cargo fmt --all -- --check` and `cargo clippy --workspace --all-targets`
+> are clean; full affected-crate test suites
+> (`sea-forge-self-model`, `sea-forge-planner`, `sea-forge-cli`,
+> `sea-forge-server --test conformance_m12`) are green.
+
+> **2026-07-23 spec-audit-remediation Tasks 13-13B landed**
+> (`.agents/plans/2026-07-22-spec-audit-remediation.md`): Thoth claim
+> derivation (`sea-forge-thoth::engine`) is now bounded and total. A partial
+> disclosure grant (e.g. only `DeclaredCapability` permitted) no longer lets
+> `derive_claims` emit a stronger natural class/status than granted —
+> `capped_capability_claim` picks the natural class when it's permitted, else
+> downgrades to the highest permitted class *below* it and caps `status` to
+> that class's evidence rung (never elevates). Every `QuestionKind` now has a
+> deterministic typed handler (`AskOperationRequirements`,
+> `AskAuthorityRequirements`, `AskFailureExplanation`, `AskEvidenceForClaim`
+> previously fell through to an empty `_ => {}` arm); each always emits a
+> claim (real or a typed `Unsupported` claim) so `Answered` never carries an
+> unexplained empty claim set. `ask_why_denied` now requires and resolves a
+> verified `RecordedAuthorityDecision` (new minimal `SnapshotView` method,
+> default `None`) — unresolvable ⇒ `Denied`; resolved ⇒ discloses only the
+> recorded `denied_classes`/`reason_code`, never fresh claims.
+> `freshness_of`'s broken placeholder (both branches returned `Stale`
+> regardless of `requires_fresh()`) is replaced by an explicit pre-query gate
+> in `answer_question`: a required-fresh policy against a stale snapshot
+> returns `Denied` before `derive_claims` calls any bounded query method
+> (`capability`/`declared_capabilities`/`environment_status` — verified by a
+> `CountingSnapshot` test double asserting zero calls). Task 13B adds
+> immutable Thoth-claim authorship SoD at both authority-bearing boundaries:
+> `GroundedClaim.authored_by` is now stamped `Some("thoth")`
+> (`engine::THOTH_ACTOR_ID`) on every claim Thoth constructs; the shared
+> predicate moved from `sea-forge-thoth`'s unit-test-only `check_sod` to a new
+> public `sea_forge_core::types::validate_claim_authorship_sod` (approved per
+> ADR-003); `SettlementDeclarationRequest`/`SettlementDeclaration` gained an
+> `authored_by` field (input carried through to the persisted record, part of
+> `declaration_hash`) and `sea-forge-settlement`'s `check_integrity` denies
+> before acceptance when the declarer's `actor_id` matches the claim's
+> `authored_by`; `sea-forge-capability::promotion::declaration_qualifies`
+> independently re-checks the same invariant reading straight from the
+> persisted `SettlementDeclaration` — so a declaration record copied or
+> replayed directly into the promotion pipeline (bypassing `declare()`
+> entirely) still can't qualify. New tests: `sea-forge-thoth` `engine.rs`
+> (`t13_1_*` capping, `t13_2_*` unsupported-under-each-grant, `t13_3_*`
+> per-kind totality, `t13_4_*` ask_why_denied resolve/deny,
+> `t13_5_*` pre-query freshness refusal, `t13b_claims_are_stamped_with_thoth_authorship`),
+> `sea-forge-settlement` `criteria_provenance.rs` (`thoth_sod_*`: same-author
+> deny, different-author allow, copied/relabeled/replayed claim),
+> `sea-forge-capability` `conformance_m4a.rs` (`thoth_sod_*`: same at the
+> promotion boundary). Gates green:
+> `cargo test -p sea-forge-thoth -- --nocapture`,
+> `cargo test -p sea-forge-settlement thoth_sod -- --nocapture`,
+> `cargo test -p sea-forge-capability thoth_sod -- --nocapture`,
+> `cargo test -p sea-forge-thoth t11_7 -- --nocapture`. `cargo fmt --all` and
+> `cargo clippy --workspace --all-targets -- -D warnings` are clean; full
+> `cargo test --workspace --all-features` is green workspace-wide.
+
+> **2026-07-24 spec-audit-remediation Tasks 14A-14B landed**
+> (`.agents/plans/2026-07-22-spec-audit-remediation.md`): Thoth now has one
+> real, joined, mediated ask service instead of caller-supplied status. New
+> `sea-forge-thoth::service` (`LedgerSnapshotView` + `pub fn ask`) implements
+> `SnapshotView` over real state: `capability()` returns `None` only when the
+> composed self-model (`ComposedModel::concept_exists`) doesn't declare the
+> concept at all, otherwise rebuilds a `CapabilityRecord` purely from ledgered
+> `capabilities.jsonl`/`settlement/declarations.jsonl` compatibility views
+> (`build_capability_record`, tolerant of either file being absent — unlike
+> `rebuild_capability`, this never writes a materialized record as a side
+> effect of a read); `CapabilityStatus` maps monotonically to Thoth's
+> `ClaimStatus` (`Proven`/`Metabolized → Demonstrated`, `Demonstrated →
+> Validated`, `Attempted → Declared` — never over-claims). `environment_status`
+> reads the real cell realization's evidenced toolchain probes;
+> `declared_capabilities` is the real composed model's concept list.
+> `recorded_authority_decision` resolves a verified, previously committed
+> `self_disclosure_decision` ledger entry (new `Serialize`/`Deserialize` on
+> `RecordedAuthorityDecision`) instead of a test double. The `DisclosurePolicy`
+> is derived from the authority bundle's `self_disclosure` surface via a new
+> `SelfDisclosureSurface::matching_grant` (additive helper, no schema change);
+> `requires_fresh()` is true if any grant this actor holds sets
+> `require_fresh_snapshot: true` (conservative — never widens disclosure).
+> `ask()` validates purpose length (≤500), non-empty typed subject/actor,
+> non-empty case_id-when-given, generates ULID-backed question/answer IDs
+> (`sea_forge_core::ids::random_id`), and commits the complete evidence chain
+> to one `thoth-asks` ledger stream in order: `self_disclosure_question` →
+> `self_disclosure_plan` → `self_disclosure_decision` → `self_disclosure_answer`
+> (each linked via `authority_refs` to its parent). Task 14B made CLI and
+> server thin adapters over this one service: `sea-forge-cli`'s `ask.rs` no
+> longer defines `SelfModelSnapshotView`/`SurfacePolicy` or loads policy
+> directly — it only parses `QuestionKind` (via new shared
+> `sea_forge_thoth::protocol::parse_question_kind`) and formats output.
+> `sea-forge-server` gained an additive `Request::Ask` variant (ADR-003
+> shape (1)/(3)) dispatching through `tokio::task::spawn_blocking` to the same
+> `service::ask`, mirroring the existing sandboxed-task `spawn_blocking`
+> pattern; an old server sees an unrecognized `verb` tag and fails
+> deserialization cleanly (never panics, never misroutes). New tests:
+> `sea-forge-thoth` `conformance_m11_service.rs` (`t14a_*`: demonstrated,
+> attempted-only, unavailable-environment, absent-policy-denies,
+> partial-grant-caps, stale-required-refuses-before-any-query, replay-stable);
+> `sea-forge-cli` `ask_cli.rs` (`ask_with_granted_policy_answers_real_capability`,
+> alongside the 3 pre-existing exit-code tests, all still green);
+> `sea-forge-server` `conformance_m11_ask.rs` (allowed/denied/unknown-kind,
+> full ledgered lineage assertion, wire-tag round-trip, and
+> `unknown_request_verb_fails_clean_not_panic` version-skew guard). Gates
+> green: `cargo test -p sea-forge-thoth --test conformance_m11_service
+> -- --nocapture && cargo test -p sea-forge-thoth`; `cargo test -p
+> sea-forge-cli --test ask_cli -- --nocapture && cargo test -p sea-forge-server
+> ask -- --nocapture && cargo test -p sea-forge-thoth`. `cargo fmt --all --
+> --check` and `cargo clippy --workspace --all-targets -- -D warnings` are
+> clean; `cargo test --workspace --all-features` (90 suites), `devbox run --
+> just check`, `devbox run -- just proof` (P1-P4b), and `devbox run -- just
+> no-async-kernel` (19 kernel crates, still synchronous) are all green.
+
+> **2026-07-24 spec-audit-remediation Tasks 15-16 landed**
+> (`.agents/plans/2026-07-22-spec-audit-remediation.md`): delegation
+> settlement/schema/termination (Task 15) and retention precedence/sealed
+> summarized storage (Task 16). `Operation::AgentTask.response_schema` is now
+> carried end to end: `DelegationRequest` gained `response_schema: Option<&
+> serde_json::Value>`; `case_dispatch.rs::execute_agent` passes the item's
+> field through instead of dropping it via `..`. A minimal, explicitly-scoped
+> JSON Schema subset validator
+> (`sea_forge_settlement::validate_response_schema` — `type`/`enum`/
+> `properties`/`required`/`items`; no full-JSON-Schema dependency is
+> approved, so unrecognized keywords are not enforced rather than pretended)
+> gates settlement in `delegation.rs`: a schema-invalid final output always
+> settles rejected with a typed `schema_invalid` basis; a schema-valid one is
+> committed as new named evidence (`response_schema_evidence` — schema hash +
+> `valid` flag only, never the raw non-conforming payload). `TurnCapExceeded`
+> no longer forces rejection: when the item declares a criterion (schema
+> and/or `agent_output_must_contain`) and the available final output
+> satisfies it, the episode settles accepted while `turn_cap_exceeded`
+> always stays in the basis (no criteria declared ⇒ unchanged prior
+> behavior, rejected). `case_dispatch.rs`'s case-level completion record no
+> longer constructs a synthetic `basis: ["delegation_completed"]` — it reuses
+> `DelegationResult.basis` (new field), the exact basis delegation already
+> committed, so cancelled/turn-capped/endpoint-error/criteria-mismatch
+> episodes are never mislabeled at the case level. Task 16 added
+> `sea_forge_agent::TranscriptRetentionMode` (`Summarized` default/`Full`)
+> with `AgentEndpointConfig.transcript_retention: Option<_>` (endpoint level)
+> and `AgentConfig.transcript_retention` (global `[agent]` default), plus
+> `TranscriptRetentionMode::resolve(item_override, endpoint, agent_config)`
+> implementing the full spec §8.1 precedence (plan item → endpoint → global →
+> summarized default), typed-erroring on an invalid item override string
+> rather than silently falling back. `case_dispatch.rs::execute_agent`
+> resolves this once and passes the typed mode into `DelegationRequest`
+> (new `transcript_retention` field, replacing the previously-ignored
+> destructure). `delegation.rs` now branches on the resolved mode: full mode
+> keeps the existing public plaintext `transcript-<hash>.jsonl` artifact;
+> summarized mode seals the same canonical redacted bytes with
+> `XChaCha20Poly1305` (new `sea-forge-server::transcript_seal` module, ADR-002
+> — fresh random key at `.sea-forge/sealed/<run_id>.key` mode 0600, `nonce ||
+> ciphertext` at `transcript-<hash>.sealed`) and verifies by decrypting
+> immediately; a verification failure is captured and unconditionally forces
+> the settlement rejected with a typed `sealed_verification_failed` basis
+> (checked before termination/criteria — it never degrades to a
+> summary-only success). The redacted `transcript_sha256` is identical
+> across both modes since both seal/store the same `produce_transcript`
+> output. Random key/nonce bytes use `getrandom` directly (already a
+> workspace dependency at the exact pinned version via `sea_forge_core::ids`)
+> rather than `chacha20poly1305`'s own `aead`/`rand_core` re-export chain,
+> whose `OsRng`/`RngCore` surface has churned incompatibly across versions
+> and was not going to be guessed. New tests: `sea-forge-settlement`
+> `response_schema_tests` (valid/enum-mismatch/missing-required/malformed-
+> json/array-items); `sea-forge-agent` `config::tests` (`retention_*`:
+> full precedence chain, invalid-override-typed-error, parse rejects
+> unknown/empty, absent-field version-skew defaulting); `sea-forge-server`
+> `transcript_seal::tests` (round-trip, ciphertext-never-contains-plaintext-
+> marker, tampered/wrong-key/missing-key/missing-ciphertext all fail
+> verification, crypto-shred permanently unrecoverable, restart reads durable
+> disk state not memory); `sea-forge-server` `conformance_m13.rs` `t15_*`
+> (schema valid/invalid with named evidence, turn-cap-with-satisfied-
+> criteria accepts and retains basis, case-dispatch reuses real basis not
+> synthetic — via a genuine `Request::Submit` end-to-end dispatch, the first
+> in this test file) and `t16_*` (redaction digest identical across full/
+> summarized modes with mode-specific artifact visibility, case-dispatch
+> resolves the full item/endpoint/global/default precedence chain end to
+> end, sealed-verification-failure settles rejected never summary-only
+> success). Pre-existing M13/M16 tests that read the plaintext transcript
+> artifact (`t13_transcript_artifact_hash_verifies` and three ACP `t16_*`
+> tests sharing the `execute_fixture` helper) now explicitly request
+> `TranscriptRetentionMode::Full`, since the default changed from
+> unconditional-full to spec-correct summarized. Gates green: `cargo test -p
+> sea-forge-server --test conformance_m13 schema -- --nocapture && cargo
+> test -p sea-forge-server --test conformance_m13 turn_cap -- --nocapture &&
+> cargo test -p sea-forge-server --test conformance_m13`; `cargo test -p
+> sea-forge-server --test conformance_m13 retention -- --nocapture && cargo
+> test -p sea-forge-server --test conformance_m13 redaction -- --nocapture`.
+> `cargo fmt --all -- --check` and `cargo clippy --workspace --all-targets
+> -- -D warnings` are clean; `cargo test --workspace --all-features` (90
+> suites, 0 failures), `devbox run -- just check`, `devbox run -- just proof`
+> (P1-P4b), and `devbox run -- just no-async-kernel` (19 kernel crates, still
+> synchronous) are all green.
 
 > **2026-07-23 review remediation landed** (commit 47608a0): addressed 30/32
 > full-spec review findings across `sea-forge-cell`, `sea-forge-case-runner`,
@@ -42,11 +380,13 @@ add-task path, iteration-cap park+escalate through the existing approval
 mechanism, and a structural SoD gate on approval resolution. M16 ACP portable
 coverage is green: ACP v1 session driver, durable permission records/approvals,
 planned-run cancellation, Landlock jail support, bounded transport/transcript,
-continuation recovery, and SWE_SEED proof harvesting. Remaining M16 work:
-ingest/reconcile a later `SweSeedTransport` declaration rather than only
-snapshot declarations available at episode settlement. Real ACP/SWE_SEED-host
-release tests are also intentionally ignored until operator configuration is
-available. Next: finish declaration reconciliation or supply release evidence.
+continuation recovery, and SWE_SEED proof harvesting. Late SWE_SEED
+declaration reconciliation (Task 18, `sea-forge-server::swe_seed_reconciliation`)
+is now COMPLETE and gated: a declaration submitted by the server's own
+production ingress, or appended out-of-process at any later time, correlates
+to its exact run idempotently, at settlement, at server startup, and at read
+time (see the Task 18 entry above). Real ACP/SWE_SEED-host release tests
+remain intentionally ignored until operator configuration is available.
 
 Historical M13 progress log (kept for context, superseded by "COMPLETE" above):
 T13.2 (Task 5) in progress:

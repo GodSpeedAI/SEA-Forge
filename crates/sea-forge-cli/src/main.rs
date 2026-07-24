@@ -305,6 +305,11 @@ enum CaseCommand {
         case_id: String,
         #[arg(long, default_value_t = 8)]
         max_iterations: u32,
+        /// Endpoint the manager loop proposes discretionary agent_task items
+        /// against. Required — the manager never invents or auto-routes
+        /// among endpoints (audit remediation Task 17).
+        #[arg(long)]
+        endpoint: String,
     },
 }
 
@@ -358,8 +363,8 @@ enum SelfModelCommand {
     Rebuild {
         #[arg(long)]
         probe: bool,
-        #[arg(long, default_value = "sha256:capability-projection")]
-        capability_hash: String,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
     },
     /// Show the newest snapshot (composed-view summary, or full JSON).
     Show {
@@ -636,12 +641,14 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 CaseCommand::ManagerIterate {
                     case_id,
                     max_iterations,
+                    endpoint,
                 } => commands::manager::iterate(commands::manager::ManagerIterateOptions {
                     root: &root,
                     policy: &policy,
                     actor: &actor,
                     case_id: &case_id,
                     max_iterations,
+                    endpoint_ref: &endpoint,
                 }),
             }
             .map_err(|error| (1, error))
@@ -839,10 +846,9 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
         }
         Command::SelfModel { action, root } => match action {
             SelfModelCommand::Validate => commands::self_model::validate(&root),
-            SelfModelCommand::Rebuild {
-                probe,
-                capability_hash,
-            } => commands::self_model::rebuild(&root, probe, &capability_hash),
+            SelfModelCommand::Rebuild { probe, actor } => {
+                commands::self_model::rebuild(&root, probe, &actor)
+            }
             SelfModelCommand::Show { json } => commands::self_model::show(&root, json),
         }
         .map_err(|e| (1, e)),

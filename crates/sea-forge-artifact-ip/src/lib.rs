@@ -1011,6 +1011,7 @@ pub fn resume_pending_transition(
             disruption_tags: vec![],
             orchestration_burden: None,
             source_evidence_refs: evidence_refs.clone(),
+            authored_by: None,
         };
         let declaration = authority.declare(&request)?;
         append_declaration_ledgered_once(

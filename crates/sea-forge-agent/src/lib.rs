@@ -19,6 +19,7 @@ pub use acp::{
 };
 pub use config::{
     AgentConfig, AgentEndpointConfig, EndpointSnapshot, EndpointStatus, ProviderKind,
+    TranscriptRetentionMode,
 };
 pub use delegation::{
     produce_transcript, run_delegation, transcript_sha256, DelegationConfig, DelegationOutcome,
