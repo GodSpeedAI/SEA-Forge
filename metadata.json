@@ -1,0 +1,45 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KYB1WWWD37BJTJM83Q0F8XBN",
+  "strategy": "manual-commit",
+  "branch": "full-spec",
+  "checkpoints_count": 3,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".agents/plans/TODO.md",
+    ".agents/specs/frontend.zip",
+    ".agents/specs/frontend/DESIGN.md",
+    ".agents/specs/frontend/README.md",
+    ".agents/specs/frontend/SKILL.md",
+    ".agents/specs/frontend/deprecated-DESIGN-spec-mapping.md",
+    ".agents/specs/frontend/deprecated-DESIGN.md",
+    ".agents/specs/frontend/sea-forge-workbench-api-method-catalog-v0.1.yaml",
+    ".agents/specs/frontend/sea-forge-workbench-api-spec-v0.1.md",
+    ".agents/specs/frontend/ui_kits/DESIGN-HANDOFF.md",
+    ".agents/specs/frontend/ui_kits/DESIGN-MANIFEST.json",
+    ".agents/specs/frontend/ui_kits/app/README.md",
+    ".agents/specs/frontend/ui_kits/app/app.js",
+    ".agents/specs/frontend/ui_kits/app/components.js",
+    ".agents/specs/frontend/ui_kits/app/components/EvidenceDrawer.html",
+    ".agents/specs/frontend/ui_kits/app/components/GovernedFocusHeader.html",
+    ".agents/specs/frontend/ui_kits/app/components/ReadinessConditionTable.html",
+    ".agents/specs/frontend/ui_kits/app/index.html",
+    ".agents/specs/frontend/ui_kits/app/styles.css"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 516826,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 12455168,
+    "output_tokens": 37527,
+    "api_call_count": 115
+  }
+}

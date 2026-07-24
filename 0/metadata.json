@@ -1,0 +1,107 @@
+{
+  "cli_version": "0.8.42",
+  "checkpoint_id": "01KYB1WWWD37BJTJM83Q0F8XBN",
+  "session_id": "019f95aa-427b-74c0-9174-adeffffb905f",
+  "strategy": "manual-commit",
+  "created_at": "2026-07-24T21:53:30.283842293Z",
+  "branch": "full-spec",
+  "checkpoints_count": 3,
+  "save_step_count": 4,
+  "files_touched": [
+    ".agents/CURRENT_STATUS.md",
+    ".agents/plans/TODO.md",
+    ".agents/specs/frontend.zip",
+    ".agents/specs/frontend/DESIGN.md",
+    ".agents/specs/frontend/README.md",
+    ".agents/specs/frontend/SKILL.md",
+    ".agents/specs/frontend/deprecated-DESIGN-spec-mapping.md",
+    ".agents/specs/frontend/deprecated-DESIGN.md",
+    ".agents/specs/frontend/sea-forge-workbench-api-method-catalog-v0.1.yaml",
+    ".agents/specs/frontend/sea-forge-workbench-api-spec-v0.1.md",
+    ".agents/specs/frontend/ui_kits/DESIGN-HANDOFF.md",
+    ".agents/specs/frontend/ui_kits/DESIGN-MANIFEST.json",
+    ".agents/specs/frontend/ui_kits/app/README.md",
+    ".agents/specs/frontend/ui_kits/app/app.js",
+    ".agents/specs/frontend/ui_kits/app/components.js",
+    ".agents/specs/frontend/ui_kits/app/components/EvidenceDrawer.html",
+    ".agents/specs/frontend/ui_kits/app/components/GovernedFocusHeader.html",
+    ".agents/specs/frontend/ui_kits/app/components/ReadinessConditionTable.html",
+    ".agents/specs/frontend/ui_kits/app/index.html",
+    ".agents/specs/frontend/ui_kits/app/styles.css"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "7063666f7b4e",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 516826,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 12455168,
+    "output_tokens": 37527,
+    "api_call_count": 115
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-07-24T21:53:30.047615737Z",
+    "agent_lines": 4376,
+    "agent_removed": 0,
+    "human_added": 1580,
+    "human_modified": 614,
+    "human_removed": 0,
+    "total_committed": 6570,
+    "total_lines_changed": 6570,
+    "agent_percentage": 66.60578386605785,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 176,
+      "user_lines_removed": 613,
+      "agent_lines_added": 4934,
+      "agent_lines_removed": 536,
+      "user_added_per_file": {
+        ".agents/specs/frontend/README.md": 1,
+        ".agents/specs/frontend/context-provenance.md": 27,
+        ".agents/specs/frontend/css.txt": 148
+      },
+      "user_removed_per_file": {
+        ".agents/specs/frontend/README.md": 1,
+        ".agents/specs/frontend/deprecated-DESIGN-spec-mapping.md": 93,
+        ".agents/specs/frontend/deprecated-DESIGN.md": 519
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 286,
+      "user_lines_removed": 1,
+      "agent_lines_added": 4934,
+      "agent_lines_removed": 1148,
+      "user_added_per_file": {
+        ".agents/plans/TODO.md": 110,
+        ".agents/specs/frontend/README.md": 1,
+        ".agents/specs/frontend/context-provenance.md": 27,
+        ".agents/specs/frontend/css.txt": 148
+      },
+      "user_removed_per_file": {
+        ".agents/specs/frontend/README.md": 1
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 7184,
+      "agent_lines_removed": 1148
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+implement task 19 from .agents/plans/2026-07-22-spec-audit-remediation.md
+
+---
+
+continue in current checkout
+
+---
+
+what needs to been done to prove to finally prove Real ACP, real SWE_SEED, and macOS Seatbelt
+
+---
+
+i tried to document that here: .agents/plans/TODO.md, clean it up and add context if relevant
