@@ -345,7 +345,7 @@ cargo test -p sea-forge-cli --test lifecycle recall -- --nocapture && cargo test
 ### Gate
 
 ```bash
-cargo test -p sea-forge-spec-pipeline --test conformance_m5 prerequisite -- --nocapture && cargo test -p sea-forge-spec-pipeline
+cargo test -p sea-forge-spec-pipeline --test conformance_m5 predecessor -- --nocapture && cargo test -p sea-forge-spec-pipeline
 ```
 
 **Done when:** Every invalid predecessor variant fails before downstream processing, a valid later-start chain passes, and changing one predecessor digest breaks the gate.
@@ -694,33 +694,33 @@ devbox run -- just context-check && devbox run -- just check && devbox run -- ju
 
 ## Final acceptance checklist (whole plan)
 
-- [ ] Clean baseline and exact dependency/contract approvals are captured in ADR-002/ADR-003; unresolved choices block dependent tasks. *(Task 0)*
-- [ ] Cell import rejects every traversal/absolute/symlink escape before mutation, with an outside-sentinel teeth-check. *(Task 1)*
-- [ ] HTTP and ACP share redaction and canonical bytes; redaction-after-hash fails tests. *(Task 2)*
-- [ ] Jail default connect and bind/listen denial is OS-enforced or setup fails closed; disabling the rule fails socket tests. *(Task 3)*
-- [ ] Validator is config-free, demo argv exact, and plan written once in lifecycle order. *(Task 4)*
-- [ ] Multi-file DomainForge validation covers all sources, imports, versions, URIs, and limits. *(Task 5)*
-- [ ] Memory grants bind and enforce exact requester/target scope before reads. *(Task 6)*
-- [ ] SQLite FTS rebuild and stale/missing/corrupt fallback are result-equivalent. *(Task 7)*
-- [ ] Compatibility recall is unchanged/read-only; governed recall emits result-linked evidence. *(Task 8)*
-- [ ] Spec stages cannot advance from absent, invalid, rejected, or mismatched predecessors. *(Task 9)*
-- [ ] M5 stages execute as ordinary governed case episodes and invalid output blocks successors. *(Task 10A)*
-- [ ] A real CLI project invocation proves the complete M5 stage/projection chain. *(Task 10B)*
-- [ ] Self-model snapshots and projections derive from real state and resolve full ledger governance refs. *(Task 11)*
-- [ ] ODI desired outcomes resolve against the pinned seed before authority; placeholders are absent. *(Task 12)*
-- [ ] Thoth disclosure is class-bounded and total, and required-fresh grants refuse before query. *(Task 13)*
-- [ ] Authored claims cannot self-settle or self-promote through copied/replayed records. *(Task 13B)*
-- [ ] One mediated service joins real capability/environment state and commits the complete ask chain. *(Task 14A)*
-- [ ] CLI/server ask are thin adapters over that service with identical ledger lineage. *(Task 14B)*
-- [ ] Delegation preserves schema, criteria, termination, and exact settlement basis. *(Task 15)*
-- [ ] Retention precedence and sealed summarized verification pass with no plaintext leakage. *(Task 16)*
-- [ ] Topologies dispatch valid endpoints and manager iterations stop at the grant boundary. *(Task 17)*
-- [ ] Late SWE_SEED declarations reconcile idempotently to exact runs. *(Task 18)*
-- [ ] `devbox run -- just check` exits 0.
-- [ ] `devbox run -- just test` exits 0 after the clean baseline and at final acceptance.
-- [ ] `devbox run -- just proof` preserves P1-P4b.
-- [ ] `devbox run -- just no-async-kernel` preserves the kernel dependency boundary.
-- [ ] `.agents/CURRENT_STATUS.md` and applicable spec claim tables reflect only executable results; platform/real-host skips remain explicit.
+- [x] Clean baseline and exact dependency/contract approvals are captured in ADR-002/ADR-003; unresolved choices block dependent tasks. *(Task 0)*
+- [x] Cell import rejects every traversal/absolute/symlink escape before mutation, with an outside-sentinel teeth-check. *(Task 1)*
+- [x] HTTP and ACP share redaction and canonical bytes; redaction-after-hash fails tests. *(Task 2)*
+- [x] Jail default connect and bind/listen denial is OS-enforced or setup fails closed; disabling the rule fails socket tests. *(Task 3)*
+- [x] Validator is config-free, demo argv exact, and plan written once in lifecycle order. *(Task 4)*
+- [x] Multi-file DomainForge validation covers all sources, imports, versions, URIs, and limits. *(Task 5)*
+- [x] Memory grants bind and enforce exact requester/target scope before reads. *(Task 6)*
+- [x] SQLite FTS rebuild and stale/missing/corrupt fallback are result-equivalent. *(Task 7)*
+- [x] Compatibility recall is unchanged/read-only; governed recall emits result-linked evidence. *(Task 8)*
+- [x] Spec stages cannot advance from absent, invalid, rejected, or mismatched predecessors. *(Task 9)*
+- [x] M5 stages execute as ordinary governed case episodes and invalid output blocks successors. *(Task 10A)*
+- [x] A real CLI project invocation proves the complete M5 stage/projection chain. *(Task 10B)*
+- [x] Self-model snapshots and projections derive from real state and resolve full ledger governance refs. *(Task 11)*
+- [x] ODI desired outcomes resolve against the pinned seed before authority; placeholders are absent. *(Task 12)*
+- [x] Thoth disclosure is class-bounded and total, and required-fresh grants refuse before query. *(Task 13)*
+- [x] Authored claims cannot self-settle or self-promote through copied/replayed records. *(Task 13B)*
+- [x] One mediated service joins real capability/environment state and commits the complete ask chain. *(Task 14A)*
+- [x] CLI/server ask are thin adapters over that service with identical ledger lineage. *(Task 14B)*
+- [x] Delegation preserves schema, criteria, termination, and exact settlement basis. *(Task 15)*
+- [x] Retention precedence and sealed summarized verification pass with no plaintext leakage. *(Task 16)*
+- [x] Topologies dispatch valid endpoints and manager iterations stop at the grant boundary. *(Task 17)*
+- [x] Late SWE_SEED declarations reconcile idempotently to exact runs. *(Task 18)*
+- [x] `devbox run -- just check` exits 0.
+- [x] `devbox run -- just test` exits 0 after the clean baseline and at final acceptance.
+- [x] `devbox run -- just proof` preserves P1-P4b.
+- [x] `devbox run -- just no-async-kernel` preserves the kernel dependency boundary.
+- [x] `.agents/CURRENT_STATUS.md` and applicable spec claim tables reflect only executable results; platform/real-host skips remain explicit.
 
 ## Guardrails (do not violate)
 

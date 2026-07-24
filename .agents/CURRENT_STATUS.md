@@ -2,6 +2,27 @@
 
 Updated: 2026-07-24
 
+> **2026-07-24 spec-audit-remediation Task 19 portable closeout complete**
+> (`.agents/plans/2026-07-22-spec-audit-remediation.md`): every focused gate
+> from Tasks 1–18 was re-run in dependency order against `ca11dc2`; all
+> selected portable tests passed. The Task 9 gate initially selected zero
+> tests because its `prerequisite` filter matched no current test name, so
+> the plan now uses `predecessor`; the corrected gate selects 10 predecessor
+> tests and the complete `sea-forge-spec-pipeline` suite remains green.
+> Fresh cumulative results: `devbox run -- just test` passed the workspace
+> all-features suite; `devbox run -- just check` passed context, formatting,
+> clippy `-D warnings`, typecheck, dependency-policy, and secret-scan gates;
+> `devbox run -- just proof` passed minimum P1–P4b; and `devbox run -- just
+> no-async-kernel` passed for all 19 kernel crates.
+> Linux Landlock connect/bind denial and explicit-grant tests passed. The
+> Seatbelt/macOS case was skipped on Linux, and the real ACP and real
+> SWE_SEED release tests were not run because their operator-supplied
+> environment/host configuration is absent; those three platform/real-host
+> claims remain unproved. No matching open entry exists in
+> `.agents/OBSERVED_DEBT.md`. The independent correctness/fail-closed/schema/
+> dependency/test-teeth review found no remediation blocker; it recorded one
+> unrelated historical Markdown-whitespace issue in `OBSERVED_DEBT.md`.
+
 > **2026-07-24 spec-audit-remediation Task 18 landed**
 > (`.agents/plans/2026-07-22-spec-audit-remediation.md`): late SWE_SEED
 > declaration reconciliation closes the last documented M16 gap. New
@@ -364,9 +385,10 @@ Updated: 2026-07-24
 
 ## Objective
 
-M9–M16 code-complete implementation of
-`.agents/plans/2026-07-16-adlc-thoth-agent-orchestration.md`. M9–M11 + CEP-0008
-adapter complete. M12 (Task 4) COMPLETE and gated (408 tests). M13 (Task 5)
+Close out `.agents/plans/2026-07-22-spec-audit-remediation.md` with fresh,
+portable cumulative conformance evidence and claim tables that preserve
+platform/real-host skips. M9–M11 + CEP-0008 adapter complete. M12 (Task 4)
+COMPLETE and gated. M13 (Task 5)
 COMPLETE and gated: all T13.1–T13.7 conformance rows green, including T13.2
 mixed sandboxed/agent dispatch with replayable ordinals (`sea-forge-case-runner`
 extraction, server-owned per-episode dispatcher, `sea-forge ledger replay`).
@@ -839,18 +861,13 @@ remain synchronous).
 
 ## Worktree State
 
-2026-07-22 audit work added `.agents/reports/2026-07-22-spec-implementation-audit.md` only. It identifies specification conformance gaps without modifying product code.
-
-On branch `full-spec` at `b351c95`. The M0–M8 implementation and closeout are
-committed. Current worktree changes are the untracked, revised M9–M16 plan and
-updates to this status, `OPEN_QUESTIONS.md`, and the two companion M9–M16
-specifications. The last recorded M0–M8
-workspace tests, strict static checks, minimum proofs, and context-coupled
-Devbox gates passed; Task 0 of the new plan must re-run them before relying on
-that baseline. The shared worktree also contains uncommitted M9-related source
-and test edits that this documentation pass did not create or verify; preserve
-and review them against the now-normative M9 contract before treating them as
-an implementation result.
+On branch `full-spec` at `ca11dc2` before the Task 19 documentation closeout.
+The worktree was clean at Task 19 start. Task 19's changes are limited to the
+remediation plan's corrected Task 9 test filter and Task 19 status/spec/debt
+updates; no product code, dependency, persisted schema, public interface, CI,
+or runtime output changed. Unrelated untracked frontend design/API files
+appeared while the final gates were running; they were neither inspected nor
+modified and remain preserved in the worktree.
 Accepted continuation steps 2–4 and 7–8 are implemented: approval-required
 authority remains escalated until an exact ledgered resolution is consumed;
 artifact transitions park as one canonical pending record; and approved strong
@@ -871,6 +888,13 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 289 tests). Remaining open debt: SodRule transition_kind scoping (.agents/OBSERVED_DEBT.md).
 
 ## Changed Files
+
+- Task 19 closeout: `.agents/plans/2026-07-22-spec-audit-remediation.md`
+  corrects the Task 9 zero-match focused filter and records final acceptance;
+  `.agents/specs/spec-agent-orchestration.md` aligns the M12–M16 claim table
+  with fresh portable evidence and explicit real-host skips;
+  `.agents/OBSERVED_DEBT.md` records unrelated historical Markdown whitespace;
+  this status file records the final verification and remaining release gates.
 
 - `.agents/reports/2026-07-22-spec-implementation-audit.md` — executable-code and test-evidence audit of all four `spec-*.md` specifications.
 
@@ -1262,12 +1286,14 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Remaining
 
-- Triage the reproducible suite-context `sea-forge-cli` test-binary `SIGSEGV` before claiming the workspace test gate green.
-- Address the conformance blockers enumerated in `.agents/reports/2026-07-22-spec-implementation-audit.md` before declaring any of the four specifications coherent.
-
-- Commit Tasks 16–17 when requested.
-- Stale stash `stash@{0}` remains from the initial workspace cleanup; will drop
-  once the log-file reset is no longer a safety-net concern.
+- Run the ignored real ACP release gate when
+  `SEA_FORGE_REAL_ACP_ARGV` (and any required `SEA_FORGE_REAL_ACP_ENV`) is
+  supplied by an operator.
+- Run the ignored real SWE_SEED release gate when the real ACP argv/env plus
+  `SEA_FORGE_REAL_SWE_SEED_REPO` and
+  `SEA_FORGE_REAL_SWE_SEED_COMMIT` are supplied.
+- Run the Seatbelt network conformance case on macOS. None of these skipped
+  release/platform checks is claimed by the portable Task 19 closeout.
 
 ## Tasks 1–4 Specification Reconciliation
 
