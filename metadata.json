@@ -3,7 +3,7 @@
   "checkpoint_id": "01KYAPKGZ2GXF9VGHQP45P2B7Y",
   "strategy": "manual-commit",
   "branch": "full-spec",
-  "checkpoints_count": 11,
+  "checkpoints_count": 12,
   "files_touched": [
     ".agents/CURRENT_STATUS.md",
     "Cargo.lock",
@@ -41,6 +41,7 @@
     "crates/sea-forge-server/src/case_dispatch.rs",
     "crates/sea-forge-server/src/delegation.rs",
     "crates/sea-forge-server/src/lib.rs",
+    "crates/sea-forge-server/src/swe_seed_reconciliation.rs",
     "crates/sea-forge-server/src/transcript_seal.rs",
     "crates/sea-forge-server/tests/conformance_m11_ask.rs",
     "crates/sea-forge-server/tests/conformance_m12.rs",
@@ -64,13 +65,20 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 241519,
-    "cache_creation_tokens": 3789372,
-    "cache_read_tokens": 217390684,
-    "output_tokens": 593642,
-    "api_call_count": 815
+    "input_tokens": 282834,
+    "cache_creation_tokens": 4444971,
+    "cache_read_tokens": 254305981,
+    "output_tokens": 703234,
+    "api_call_count": 944
   }
 }

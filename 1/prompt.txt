@@ -1,0 +1,1 @@
+implement task 18 from .agents/plans/2026-07-22-spec-audit-remediation.md. reference SWE_SEED as needed , do not invent the details about it that you need for this task. it is avail in the workspace (its filepath is /home/sprime01/projects/SWE_SEED)
