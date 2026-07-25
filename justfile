@@ -154,15 +154,20 @@ workbench-check:
     {{set}}
     cd workbench && bun install --frozen-lockfile && bun run check && bun run build && bun run test
 
-# Start the Workbench Vite dev server in the background (http://localhost:5173).
+# Start the Workbench Vite dev server in the background (http://localhost:1420).
 [group('workbench')]
 workbench-dev-up:
     #!/usr/bin/env bash
     {{set}}
     mkdir -p workbench/.pid
     if [ -f workbench/.pid/dev.pid ] && kill -0 "$(cat workbench/.pid/dev.pid)" 2>/dev/null; then
-        echo "[workbench-dev] already running (PID $(cat workbench/.pid/dev.pid)) on http://localhost:5173"
+        echo "[workbench-dev] already running (PID $(cat workbench/.pid/dev.pid)) on http://localhost:1420"
         exit 0
+    fi
+    # Abort if another process already owns port 1420
+    if fuser 1420/tcp >/dev/null 2>&1; then
+        echo "[workbench-dev] fail: port 1420 is already in use (run 'fuser -k 1420/tcp' to clear it)" >&2
+        exit 1
     fi
     rm -f workbench/.pid/dev.pid
     echo "[workbench-dev] starting Vite dev server..."
@@ -172,7 +177,7 @@ workbench-dev-up:
     if [ -f .pid/dev.pid ]; then
         pid=$(cat .pid/dev.pid)
         if kill -0 "$pid" 2>/dev/null; then
-            echo "[workbench-dev] started (PID $pid) on http://localhost:5173 — log: workbench/.pid/dev.log"
+            echo "[workbench-dev] started (PID $pid) on http://localhost:1420 — log: workbench/.pid/dev.log"
         else
             echo "[workbench-dev] fail: process $pid exited during startup — see workbench/.pid/dev.log" >&2
             rm -f .pid/dev.pid
@@ -198,10 +203,12 @@ workbench-dev-down:
         done
         kill -0 "$pid" 2>/dev/null && kill -9 -- -"$pid" 2>/dev/null || true
         rm -f workbench/.pid/dev.pid
-        echo "[workbench-dev] stopped"
     else
         echo "[workbench-dev] no pid file found"
     fi
+    # Kill any process still holding port 1420 (e.g. orphaned Vite child)
+    fuser -k 1420/tcp 2>/dev/null || true
+    echo "[workbench-dev] stopped"
 
 # Start Storybook component explorer in the background (http://localhost:6006).
 [group('workbench')]
@@ -212,6 +219,11 @@ workbench-storybook-up:
     if [ -f workbench/.pid/storybook.pid ] && kill -0 "$(cat workbench/.pid/storybook.pid)" 2>/dev/null; then
         echo "[workbench-storybook] already running (PID $(cat workbench/.pid/storybook.pid)) on http://localhost:6006"
         exit 0
+    fi
+    # Abort if another process already owns port 6006
+    if fuser 6006/tcp >/dev/null 2>&1; then
+        echo "[workbench-storybook] fail: port 6006 is already in use (run 'fuser -k 6006/tcp' to clear it)" >&2
+        exit 1
     fi
     rm -f workbench/.pid/storybook.pid
     echo "[workbench-storybook] starting Storybook..."
@@ -247,10 +259,12 @@ workbench-storybook-down:
         done
         kill -0 "$pid" 2>/dev/null && kill -9 -- -"$pid" 2>/dev/null || true
         rm -f workbench/.pid/storybook.pid
-        echo "[workbench-storybook] stopped"
     else
         echo "[workbench-storybook] no pid file found"
     fi
+    # Kill any process still holding port 6006 (e.g. orphaned Storybook child)
+    fuser -k 6006/tcp 2>/dev/null || true
+    echo "[workbench-storybook] stopped"
 
 # Convenient aliases for Workbench dev server and Storybook commands
 alias dev-up := workbench-dev-up
