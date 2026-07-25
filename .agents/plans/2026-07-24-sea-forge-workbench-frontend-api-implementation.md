@@ -261,6 +261,10 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 
 **Existing substrate reused:** `Request::Submit`/`SubmitPayload` commit path; planner validation + criteria provenance (`crates/sea-forge-planner/`); hash conventions (`compute_record_hash`). **Missing capability:** `case.entry_options`, `case.preflight`, draft store, preflight/commit split.
 
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* — `devbox run -- just check` will still fail on `context-check`; run `fmt-check`/`lint`/`test` individually until it's fixed, don't silently skip the whole gate.
+- *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — the existing e2e harness (`workbench/apps/desktop/e2e/`) mocks the Tauri IPC bridge entirely. Decide deliberately whether the case-authoring e2e (preflight/commit, stale rejection, ambiguity recovery) needs a real server in the loop before reusing the mocked pattern as-is — this task's proof scenarios (duplicate-commit-unreachable, stale-preflight repair) are exactly the kind of race/timing behavior a mock can hide.
+
 ### Steps
 
 1. Ground and implement `case.entry_options`, `case.preflight` (evaluate; audit-only records), and envelope `case.commit` over the existing submit path with preconditions — files: `crates/sea-forge-server/src/sfwp/case.rs` + conformance tests (stale rejection, no side effect on reject).
@@ -287,6 +291,12 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 **Existing substrate reused:** case records/reducers, `Request::Status`, Task 3 events. **Missing capability:** `case.get_summary`/`case.get_overview`/`case.get_horizon` views + UI.
 
 **Why this shape:** Overview/horizon are pure projections over records that already exist; this task proves live event reduction at scale before execution surfaces depend on it.
+
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"Readiness event-invalidation is coarse (any `sfwp://event` invalidates every readiness view)"* — the readiness slice's `useReadiness` hook refetches on every event frame because no fine-grained event `kind` taxonomy exists. This task is the first one that actually needs per-case, per-item live updates at scale — either add the real event-kind narrowing here (and retrofit readiness to use it) or explicitly accept coarse invalidation for the horizon board too and say so, don't silently assume finer granularity already exists.
+- *"Host event-catch-up page cap is a separately hardcoded guess at the server's actual cap"* — `workbench/apps/desktop/src-tauri/src/events.rs`'s `GET_RANGE_PAGE_CAP` (256) vs the server's real `EVENTS_REPLAY_CAP` (500, `crates/sea-forge-server/src/sfwp/events.rs`) are independently hardcoded. This task's "kill/restart server; horizon recovers via cursor + refetch" proof scenario is exactly what would surface a drift between the two — verify or fix the coupling before relying on gap-recovery behavior here.
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* — same `just check` limitation as Task 6; run the individual sub-gates.
+- *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — if the horizon e2e reuses the mocked-IPC harness, it cannot prove real event delivery/gap-recovery end to end; decide whether this task's proof scenario 8 needs a real server in the loop (it likely does, given the scenario is specifically about event-gap recovery).
 
 ### Steps
 
@@ -315,6 +325,10 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 
 **Why this shape:** Execution truth is kernel-owned; the console only renders governed records and streams — `execution state ≠ settlement state` is enforced structurally by `DualStateIndicator`.
 
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"Readiness event-invalidation is coarse..."* and *"Host event-catch-up page cap is a separately hardcoded guess..."* — this console's log/content streams are exactly the kind of high-volume event traffic that makes coarse invalidation and the 256-vs-500 catch-up cap drift matter in practice (not just in theory, as with readiness). Check both before building the streaming UI.
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* and *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — same standing gate/e2e-fidelity caveats as prior tasks.
+
 ### Steps
 
 1. Implement `run.get` + bounded log/content streaming (disclosure-gated, host channel) + conformance tests.
@@ -341,6 +355,10 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 
 **Why this shape:** The port isolates all agent-interaction tech churn; the direct adapter is canonical so CopilotKit (Task 10) can never become load-bearing. Contract: `reference/thoth-interaction-contract.md`.
 
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"`spec-implementation-audit.md` Thoth-governance finding is stale"* — the 2026-07-22 audit claims `ask` "bypasses governance and leaves no required chain," but direct inspection found `service::ask` already commits the full disclosure/decision/answer chain to the `thoth-asks` ledger. Re-verify against `service.rs:258-350` before this task, and don't rebuild governance wiring the code already has.
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* and *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — standing gate/e2e-fidelity caveats; scenario 9 ("no content retrieval before disclosure decision") is a wire-level assertion that a mocked-IPC e2e cannot actually prove — verify this at the Rust conformance-test level, same as Task 5's `readiness_get_*` tests did.
+
 ### Steps
 
 1. Ground `thoth.list_question_kinds`/`thoth.get_answer` (inspect) additively; keep `ask` the single governance path; stream assembly happens presentation-side over the answer/evidence content.
@@ -365,6 +383,9 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 **Goal:** `CopilotKitAdapter` passes the same port-level suite using only open-source, locally runnable CopilotKit packages — and removing it changes nothing outside the adapter.
 
 **Why this shape:** Development convenience only. The Workbench must never depend on this task succeeding; it may be skipped entirely without renumbering.
+
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* and *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — same standing caveats as Task 9, which this task's port-suite reuses.
 
 ### Steps
 
@@ -392,6 +413,10 @@ cd workbench && bun run test -- --grep "port-suite" && bun run e2e -- --grep "th
 
 **Why this shape:** Permission mediation already has a trait seam; the Workbench supplies a mediator implementation routed through SFWP — no parallel permission model.
 
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"Readiness event-invalidation is coarse..."* and *"Host event-catch-up page cap is a separately hardcoded guess..."* — permission requests surfaced as events (step 1) hit the same coarse-invalidation/catch-up-cap concerns as Tasks 7-8, with higher stakes here: a missed or delayed permission-request event has real operator-facing consequences (a pending decision the operator never sees), not just a stale readiness badge.
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* and *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — standing gate/e2e-fidelity caveats; scenario 4 ("permission denial that does not cancel the run") is exactly the kind of real-timing behavior a mocked-IPC e2e can't fully prove — cover it at the Rust conformance level too.
+
 ### Steps
 
 1. Surface permission requests as events + `agent_run.permission.decide` SFWP method mapping to `PermissionDecision`; unavailable mediator stays deny (fail-closed conformance test).
@@ -417,6 +442,10 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 
 **Existing substrate reused:** settlement records/declarations, approvals + SoD checks, `Approve`/`Reject` verbs. **Missing capability:** `settlement.get`, `approval.list/get/decide` envelope, matrix/panel organisms.
 
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"`ReadinessView.recent_invalidations` has no real source and `overall: \"stale\"` is never derived"* — `readiness.get` shows the pattern this task will repeat when shaping `settlement.get`/`approval.list` into views: don't fabricate history/derived fields a projection can't honestly source (e.g. don't invent a "why this settlement result changed" feed unless a real source backs it) — ship the honest subset and log the gap here, same as readiness did.
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* and *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — standing gate/e2e-fidelity caveats; the expiry test ("fast-forwarded TTL") and SoD-deny path are good candidates for real-server Rust conformance tests rather than relying solely on a mocked e2e.
+
 ### Steps
 
 1. Ground `settlement.get`, `approval.list`/`approval.get`, merge approve/reject into enveloped `approval.decide` (existing verbs stay for CLI compat) + conformance tests (expiry, SoD deny, no side effect).
@@ -441,6 +470,10 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 
 **Existing substrate reused:** capability promotion, memory recall (`crates/sea-forge-cli/src/commands/recall.rs` pattern), evidence crate, ledger MMR proofs (`prove_entry`). **Missing capability:** the four view families + `integrity.verify` surfacing.
 
+**Review before starting** — `.agents/OBSERVED_DEBT.md`:
+- *"`ReadinessView.recent_invalidations` has no real source and `overall: \"stale\"` is never derived"* — same view-shaping honesty pattern applies to `capability.get`/`evidence.get`/`integrity.verify`: ship explicit `unknown`/empty sections for anything without a real source rather than fabricating completeness (this task's own "conservative states" goal already points the same direction — stay consistent with it).
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* and *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — standing gate/e2e-fidelity caveats; the "tampered ledger entry → `integrity_failed`" teeth test is exactly the kind of assertion that belongs at the Rust conformance level (mutating a copy of the ledger), not solely behind a mocked-IPC e2e.
+
 ### Steps
 
 1. Ground and implement `capability.get`, `memory.recall` (protected retrieval), `evidence.get` (disclosure-gated), `integrity.verify` views + conformance tests.
@@ -462,6 +495,13 @@ devbox run -- just test && cd workbench && bun run test && bun run e2e -- --grep
 ## Task 14 — Packaging, accessibility, and end-to-end proof  (release · P1)
 
 **Goal:** A packaged desktop bundle (Tauri binary + OS WebView + compiled assets, **no Bun**) passes the full proof-scenario suite, the accessibility contract, and repository release checks.
+
+**Review before starting** — `.agents/OBSERVED_DEBT.md` (this task is where several standing gaps must actually close, not just be re-disclosed):
+- *"Readiness Playwright journey never talks to a real `sea-forge-server`"* — every prior task's e2e (Task 5 onward) mocked the Tauri IPC bridge via `window.__TAURI_INTERNALS__` injection. Step 4 here ("run all 12 proof scenarios... against a packaged build + real server") is the point where that shortcut is no longer acceptable — either replace the mocked harness with real-server-backed runs for the full scenario suite, or explicitly document per-scenario which ones still only ran against a mock and why that's an accepted residual gap.
+- *"`scripts/check-agent-context.sh` is unrunnable on this branch"* — fix this (wrong line endings + lost executable bit) before or as part of this task's "repository release checks," since a release task should not be the one that ships with the composite `just check` gate still broken.
+- *"Tauri host crate's Cargo workspace boundary has no automated gate"* — this task directly touches Tauri bundling config (step 1); verify the host's isolated `[workspace]` table (`workbench/apps/desktop/src-tauri/Cargo.toml`) is still intact and consider adding the suggested `cargo metadata` boundary assertion while packaging config is already in scope.
+- *"Readiness event-invalidation is coarse..."* and *"Host event-catch-up page cap is a separately hardcoded guess..."* — if any earlier task didn't already resolve these, the full-suite proof run here is the last checkpoint before release to catch drift between the host's and server's event-handling assumptions.
+- Sweep the rest of `.agents/OBSERVED_DEBT.md` for any other entries still open at this point in the plan and fold them into step 5's "record residual debt" rather than letting this task silently close them.
 
 ### Steps
 

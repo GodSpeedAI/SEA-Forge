@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReadinessItem",
+  "description": "A single readiness condition, projected from kernel truth. Shapes the\nwireframe's `ReadinessConditionTable` row: an identity, a human label, a\ngrouping category, a status, a plain-language reason, and a short citation\n(`source_ref`) — a spec section or file, matching the kit's \"Atomic §4.4\" /\n\"DESIGN.md\" source column. `source_ref` is a citation string, **not** a\ncontent-addressed `RecordRef` digest (which this slice cannot honestly back).",
+  "type": "object",
+  "properties": {
+    "category": {
+      "description": "Grouping bucket — `\"foundation\"` or `\"operational_capability\"`.",
+      "type": "string"
+    },
+    "id": {
+      "description": "Stable machine identity for this condition (e.g. `\"self_model_integrity\"`).",
+      "type": "string"
+    },
+    "name": {
+      "description": "Human-facing label (e.g. `\"Self-model integrity\"`).",
+      "type": "string"
+    },
+    "reason": {
+      "description": "Plain-language reason for the status. Empty string when self-evidently ready.",
+      "type": "string"
+    },
+    "source_ref": {
+      "description": "Short citation string (spec section or file), not a record digest.",
+      "type": "string"
+    },
+    "status": {
+      "description": "Coarse condition status.",
+      "$ref": "#/$defs/ReadinessStatus"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "category",
+    "status",
+    "reason",
+    "source_ref"
+  ],
+  "$defs": {
+    "ReadinessStatus": {
+      "description": "Coarse status of a single readiness condition. Mirrors the four states the\nReadiness kit's capability rows can render.",
+      "oneOf": [
+        {
+          "description": "The condition is fully satisfied.",
+          "type": "string",
+          "const": "ready"
+        },
+        {
+          "description": "Usable but with a named limitation.",
+          "type": "string",
+          "const": "degraded"
+        },
+        {
+          "description": "The condition prevents the associated capability.",
+          "type": "string",
+          "const": "blocked"
+        },
+        {
+          "description": "Genuinely undetermined — distinct from `Blocked` (`unknown ≠ unavailable`).",
+          "type": "string",
+          "const": "unknown"
+        }
+      ]
+    }
+  }
+}

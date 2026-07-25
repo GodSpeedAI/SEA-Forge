@@ -47,6 +47,25 @@ pub enum SfwpQuery {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         limit: Option<u32>,
     },
+    /// `readiness.get` — mirrors the server's `Request::ReadinessGet`
+    /// byte-for-byte (`verb: "readiness_get"`, optional `intended_operation`).
+    /// Kept host-local (no server-crate dependency) exactly like `Precondition`
+    /// above; the generated TS `ReadinessView`/`IntendedOperation` types are the
+    /// frontend's source of truth for these shapes.
+    ReadinessGet {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        intended_operation: Option<IntendedOperation>,
+    },
+}
+
+/// The operator's intended next operation, mirroring the server's
+/// `sfwp::readiness::IntendedOperation`. Host-local shape (no server-crate
+/// dependency); the generated TS type is the frontend's source of truth.
+#[derive(Deserialize, serde::Serialize)]
+pub struct IntendedOperation {
+    pub method: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_ref: Option<String>,
 }
 
 /// A precondition bundle mirroring `sfwp::precondition::Precondition`. Kept as a

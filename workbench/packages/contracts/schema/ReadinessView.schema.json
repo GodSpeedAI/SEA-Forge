@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReadinessView",
+  "description": "The `readiness.get` view body — a read-only projection, not source truth.",
+  "type": "object",
+  "properties": {
+    "foundations": {
+      "description": "Foundational conditions (self-model / integrity substrate).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ReadinessItem"
+      }
+    },
+    "intended_operation": {
+      "description": "Echo of the intended operation this view was shaped for, if provided.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IntendedOperation"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operational_capabilities": {
+      "description": "Operational capabilities (what the operator can actually do now).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ReadinessItem"
+      }
+    },
+    "overall": {
+      "description": "Deterministically-derived overall verdict.",
+      "$ref": "#/$defs/OverallReadiness"
+    },
+    "recent_invalidations": {
+      "description": "Recent invalidations. Empty in this slice (no honest source yet).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Invalidation"
+      }
+    }
+  },
+  "required": [
+    "overall",
+    "foundations",
+    "operational_capabilities",
+    "recent_invalidations"
+  ],
+  "$defs": {
+    "IntendedOperation": {
+      "description": "The operation the operator intends to perform next, if any. Lets the view\nforeground the capabilities that operation actually depends on\n(operation-sensitivity). Mirrors the request example at\n`sea-forge-workbench-api-spec-v0.1.md:2037-2041`.",
+      "type": "object",
+      "properties": {
+        "method": {
+          "description": "The SFWP method (or method family) the operator intends to invoke next.",
+          "type": "string"
+        },
+        "resource_ref": {
+          "description": "Optional resource the operation targets. A citation string in this\nslice; not resolved to a canonical record digest.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "method"
+      ]
+    },
+    "Invalidation": {
+      "description": "A recorded invalidation of a prior readiness determination. Defined minimally\nbecause the spec references but never defines it. Not populated in this slice\n(no cache/invalidation layer exists to source real records).",
+      "type": "object",
+      "properties": {
+        "item_id": {
+          "description": "Which condition was invalidated.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Plain-language reason the prior determination no longer holds.",
+          "type": "string"
+        },
+        "source_ref": {
+          "description": "Short citation string for the invalidating change.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_id",
+        "reason",
+        "source_ref"
+      ]
+    },
+    "OverallReadiness": {
+      "description": "Overall readiness verdict, derived deterministically from the worst status\namong conditions. `Stale` is a spec value this slice never derives (no cache\nlayer to determine it honestly).",
+      "oneOf": [
+        {
+          "description": "All foundations pass and no operational capability is degraded/blocked.",
+          "type": "string",
+          "const": "ready"
+        },
+        {
+          "description": "Foundations pass but at least one operational capability is degraded/blocked.",
+          "type": "string",
+          "const": "ready_with_limitations"
+        },
+        {
+          "description": "A foundation is blocked for a non-integrity reason.",
+          "type": "string",
+          "const": "blocked"
+        },
+        {
+          "description": "A foundation failed specifically on ledger/snapshot integrity verification.",
+          "type": "string",
+          "const": "integrity_halted"
+        },
+        {
+          "description": "Reserved spec value; never derived in this slice (no cache layer).",
+          "type": "string",
+          "const": "stale"
+        }
+      ]
+    },
+    "ReadinessItem": {
+      "description": "A single readiness condition, projected from kernel truth. Shapes the\nwireframe's `ReadinessConditionTable` row: an identity, a human label, a\ngrouping category, a status, a plain-language reason, and a short citation\n(`source_ref`) — a spec section or file, matching the kit's \"Atomic §4.4\" /\n\"DESIGN.md\" source column. `source_ref` is a citation string, **not** a\ncontent-addressed `RecordRef` digest (which this slice cannot honestly back).",
+      "type": "object",
+      "properties": {
+        "category": {
+          "description": "Grouping bucket — `\"foundation\"` or `\"operational_capability\"`.",
+          "type": "string"
+        },
+        "id": {
+          "description": "Stable machine identity for this condition (e.g. `\"self_model_integrity\"`).",
+          "type": "string"
+        },
+        "name": {
+          "description": "Human-facing label (e.g. `\"Self-model integrity\"`).",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Plain-language reason for the status. Empty string when self-evidently ready.",
+          "type": "string"
+        },
+        "source_ref": {
+          "description": "Short citation string (spec section or file), not a record digest.",
+          "type": "string"
+        },
+        "status": {
+          "description": "Coarse condition status.",
+          "$ref": "#/$defs/ReadinessStatus"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "category",
+        "status",
+        "reason",
+        "source_ref"
+      ]
+    },
+    "ReadinessStatus": {
+      "description": "Coarse status of a single readiness condition. Mirrors the four states the\nReadiness kit's capability rows can render.",
+      "oneOf": [
+        {
+          "description": "The condition is fully satisfied.",
+          "type": "string",
+          "const": "ready"
+        },
+        {
+          "description": "Usable but with a named limitation.",
+          "type": "string",
+          "const": "degraded"
+        },
+        {
+          "description": "The condition prevents the associated capability.",
+          "type": "string",
+          "const": "blocked"
+        },
+        {
+          "description": "Genuinely undetermined — distinct from `Blocked` (`unknown ≠ unavailable`).",
+          "type": "string",
+          "const": "unknown"
+        }
+      ]
+    }
+  }
+}
