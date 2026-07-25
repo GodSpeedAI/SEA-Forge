@@ -13,3 +13,8 @@ apps/desktop/src-tauri/gen/
 
 # Editors
 *.local
+
+# Scratch & PID files
+.pid/
+storybook-static/
+

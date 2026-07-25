@@ -1,0 +1,88 @@
+.header {
+  height: 48px;
+  background-color: var(--surface-bar, #0d1117);
+  border-bottom: 1px solid var(--border-standard, #30363d);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4, 16px);
+  gap: var(--space-4, 16px);
+}
+
+.cellBrand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  font: var(--text-body-sm, 13px / 1.4 system-ui, sans-serif);
+}
+
+.mark {
+  width: 24px;
+  height: 24px;
+  background-color: #238636;
+  color: #ffffff;
+  border-radius: var(--radius-control, 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.contextChips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background-color: rgba(33, 38, 45, 0.8);
+  border: 1px solid #30363d;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 11px;
+  color: #c9d1d9;
+}
+
+.chipLabel {
+  color: #8b949e;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.iconButton {
+  background: none;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  border-radius: var(--radius-control, 6px);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.iconButton:hover {
+  background-color: rgba(110, 118, 129, 0.1);
+  color: #f0f6fc;
+}
+
+.inboxButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: rgba(210, 153, 34, 0.15);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  color: #d29922;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}

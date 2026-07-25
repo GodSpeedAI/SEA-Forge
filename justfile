@@ -154,6 +154,110 @@ workbench-check:
     {{set}}
     cd workbench && bun install --frozen-lockfile && bun run check && bun run build && bun run test
 
+# Start the Workbench Vite dev server in the background (http://localhost:5173).
+[group('workbench')]
+workbench-dev-up:
+    #!/usr/bin/env bash
+    {{set}}
+    mkdir -p workbench/.pid
+    if [ -f workbench/.pid/dev.pid ] && kill -0 "$(cat workbench/.pid/dev.pid)" 2>/dev/null; then
+        echo "[workbench-dev] already running (PID $(cat workbench/.pid/dev.pid)) on http://localhost:5173"
+        exit 0
+    fi
+    rm -f workbench/.pid/dev.pid
+    echo "[workbench-dev] starting Vite dev server..."
+    cd workbench && mkdir -p .pid
+    setsid bash -c 'echo $$ > .pid/dev.pid && exec bun run dev > .pid/dev.log 2>&1' &
+    sleep 2
+    if [ -f .pid/dev.pid ]; then
+        pid=$(cat .pid/dev.pid)
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "[workbench-dev] started (PID $pid) on http://localhost:5173 — log: workbench/.pid/dev.log"
+        else
+            echo "[workbench-dev] fail: process $pid exited during startup — see workbench/.pid/dev.log" >&2
+            rm -f .pid/dev.pid
+            exit 1
+        fi
+    else
+        echo "[workbench-dev] fail: pid file was not created" >&2
+        exit 1
+    fi
+
+# Stop the running Workbench Vite dev server.
+[group('workbench')]
+workbench-dev-down:
+    #!/usr/bin/env bash
+    {{set}}
+    if [ -f workbench/.pid/dev.pid ]; then
+        pid=$(cat workbench/.pid/dev.pid)
+        echo "[workbench-dev] stopping PID $pid"
+        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+        for i in 1 2 3 4 5; do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+        done
+        kill -0 "$pid" 2>/dev/null && kill -9 -- -"$pid" 2>/dev/null || true
+        rm -f workbench/.pid/dev.pid
+        echo "[workbench-dev] stopped"
+    else
+        echo "[workbench-dev] no pid file found"
+    fi
+
+# Start Storybook component explorer in the background (http://localhost:6006).
+[group('workbench')]
+workbench-storybook-up:
+    #!/usr/bin/env bash
+    {{set}}
+    mkdir -p workbench/.pid
+    if [ -f workbench/.pid/storybook.pid ] && kill -0 "$(cat workbench/.pid/storybook.pid)" 2>/dev/null; then
+        echo "[workbench-storybook] already running (PID $(cat workbench/.pid/storybook.pid)) on http://localhost:6006"
+        exit 0
+    fi
+    rm -f workbench/.pid/storybook.pid
+    echo "[workbench-storybook] starting Storybook..."
+    cd workbench && mkdir -p .pid
+    setsid bash -c 'echo $$ > .pid/storybook.pid && exec bun run --cwd packages/sea-forge-ui-components storybook > .pid/storybook.log 2>&1' &
+    sleep 3
+    if [ -f .pid/storybook.pid ]; then
+        pid=$(cat .pid/storybook.pid)
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "[workbench-storybook] started (PID $pid) on http://localhost:6006 — log: workbench/.pid/storybook.log"
+        else
+            echo "[workbench-storybook] fail: process $pid exited during startup — see workbench/.pid/storybook.log" >&2
+            rm -f .pid/storybook.pid
+            exit 1
+        fi
+    else
+        echo "[workbench-storybook] fail: pid file was not created" >&2
+        exit 1
+    fi
+
+# Stop the running Storybook component explorer.
+[group('workbench')]
+workbench-storybook-down:
+    #!/usr/bin/env bash
+    {{set}}
+    if [ -f workbench/.pid/storybook.pid ]; then
+        pid=$(cat workbench/.pid/storybook.pid)
+        echo "[workbench-storybook] stopping PID $pid"
+        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+        for i in 1 2 3 4 5; do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+        done
+        kill -0 "$pid" 2>/dev/null && kill -9 -- -"$pid" 2>/dev/null || true
+        rm -f workbench/.pid/storybook.pid
+        echo "[workbench-storybook] stopped"
+    else
+        echo "[workbench-storybook] no pid file found"
+    fi
+
+# Convenient aliases for Workbench dev server and Storybook commands
+alias dev-up := workbench-dev-up
+alias dev-down := workbench-dev-down
+alias storybook-up := workbench-storybook-up
+alias storybook-down := workbench-storybook-down
+
 # Canonical clean, deterministic, noninteractive CI verification.
 # GitHub Actions invokes this (or its documented constituent recipes when
 # parallelized). Local `just ci` is equivalent to the union of required jobs.

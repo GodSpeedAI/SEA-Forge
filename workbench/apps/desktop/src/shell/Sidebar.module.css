@@ -1,0 +1,71 @@
+.nav {
+  width: 220px;
+  background-color: var(--surface-panel, #0d1117);
+  border-right: 1px solid var(--border-standard, #30363d);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3, 12px);
+  gap: var(--space-1, 4px);
+  user-select: none;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted, #8b949e);
+  padding: var(--space-2, 8px) var(--space-2, 8px) 4px;
+  margin-top: var(--space-2, 8px);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: 8px 12px;
+  border-radius: var(--radius-control, 6px);
+  color: var(--fg-secondary, #c9d1d9);
+  text-decoration: none;
+  font: var(--text-body-sm, 13px / 1.4 system-ui, sans-serif);
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.navItem:hover {
+  background-color: rgba(110, 118, 129, 0.1);
+  color: var(--fg-primary, #f0f6fc);
+}
+
+.navItemActive {
+  background-color: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+.navIcon {
+  width: 16px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.kbd {
+  margin-left: auto;
+  font-family: monospace;
+  font-size: 10px;
+  padding: 2px 4px;
+  background-color: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  color: #8b949e;
+}
+
+.badge {
+  margin-left: auto;
+  padding: 1px 6px;
+  background-color: #d29922;
+  color: #0d1117;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+}

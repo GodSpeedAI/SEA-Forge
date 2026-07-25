@@ -1,0 +1,111 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(1, 4, 9, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: 420px;
+  max-width: 90vw;
+  height: 100%;
+  background-color: var(--surface-drawer, #0d1117);
+  border-left: 1px solid var(--border-standard, #30363d);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4, 16px);
+  border-bottom: 1px solid var(--border-standard, #30363d);
+}
+
+.title {
+  font: var(--text-heading-md, 16px / 1.3 system-ui, sans-serif);
+  font-weight: 600;
+  color: var(--fg-primary, #f0f6fc);
+  margin: 0;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--fg-muted, #8b949e);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-control, 4px);
+}
+
+.closeButton:hover {
+  color: var(--fg-primary, #f0f6fc);
+  background-color: rgba(110, 118, 129, 0.1);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+.sectionTitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted, #8b949e);
+  font-weight: 600;
+}
+
+.dataGrid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-2, 8px);
+  font-size: 12px;
+}
+
+.dataLabel {
+  color: var(--fg-muted, #8b949e);
+}
+
+.dataValue {
+  color: var(--fg-primary, #f0f6fc);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.payloadBox {
+  padding: var(--space-3, 12px);
+  background-color: #010409;
+  border: 1px solid #30363d;
+  border-radius: var(--radius-control, 6px);
+  font-family: monospace;
+  font-size: 11px;
+  color: #79c0ff;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.disclosureNotice {
+  padding: var(--space-3, 12px);
+  background-color: rgba(210, 153, 34, 0.1);
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  border-radius: var(--radius-control, 6px);
+  font-size: 12px;
+  color: #d29922;
+}

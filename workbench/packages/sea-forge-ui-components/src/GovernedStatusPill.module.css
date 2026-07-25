@@ -1,0 +1,95 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  border-radius: var(--radius-pill, 9999px);
+  font: var(--text-label, 12px / 1.2 system-ui, sans-serif);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+
+.pillDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+/* Authority/Ready family */
+.ready {
+  background-color: var(--color-authority-ready-bg, rgba(46, 160, 67, 0.15));
+  color: var(--color-authority-ready-fg, #3fb950);
+  border-color: var(--color-authority-ready-border, rgba(63, 185, 80, 0.4));
+}
+
+.degraded {
+  background-color: var(--color-authority-degraded-bg, rgba(210, 153, 34, 0.15));
+  color: var(--color-authority-degraded-fg, #d29922);
+  border-color: var(--color-authority-degraded-border, rgba(210, 153, 34, 0.4));
+}
+
+.blocked {
+  background-color: var(--color-authority-blocked-bg, rgba(248, 81, 73, 0.15));
+  color: var(--color-authority-blocked-fg, #f85149);
+  border-color: var(--color-authority-blocked-border, rgba(248, 81, 73, 0.4));
+}
+
+.integrity_halted {
+  background-color: var(--color-authority-halted-bg, rgba(163, 113, 247, 0.15));
+  color: var(--color-authority-halted-fg, #a371f7);
+  border-color: var(--color-authority-halted-border, rgba(163, 113, 247, 0.4));
+}
+
+/* Execution family */
+.running {
+  background-color: var(--color-execution-running-bg, rgba(88, 166, 255, 0.15));
+  color: var(--color-execution-running-fg, #58a6ff);
+  border-color: var(--color-execution-running-border, rgba(88, 166, 255, 0.4));
+}
+
+.finished {
+  background-color: var(--color-execution-finished-bg, rgba(46, 160, 67, 0.15));
+  color: var(--color-execution-finished-fg, #3fb950);
+  border-color: var(--color-execution-finished-border, rgba(63, 185, 80, 0.4));
+}
+
+.cancelled {
+  background-color: var(--color-execution-cancelled-bg, rgba(139, 148, 158, 0.15));
+  color: var(--color-execution-cancelled-fg, #8b949e);
+  border-color: var(--color-execution-cancelled-border, rgba(139, 148, 158, 0.4));
+}
+
+.failed {
+  background-color: var(--color-execution-failed-bg, rgba(248, 81, 73, 0.15));
+  color: var(--color-execution-failed-fg, #f85149);
+  border-color: var(--color-execution-failed-border, rgba(248, 81, 73, 0.4));
+}
+
+/* Settlement family */
+.pending {
+  background-color: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+  border-color: rgba(210, 153, 34, 0.4);
+}
+
+.committed {
+  background-color: rgba(46, 160, 67, 0.15);
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.4);
+}
+
+.rejected {
+  background-color: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border-color: rgba(248, 81, 73, 0.4);
+}
+
+/* Unknown / Fallback */
+.unknown {
+  background-color: rgba(110, 118, 129, 0.15);
+  color: #8b949e;
+  border-color: rgba(110, 118, 129, 0.4);
+}

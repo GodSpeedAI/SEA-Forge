@@ -26,8 +26,9 @@ async function fetchProofRows(): Promise<Array<{ id: string; label: string }>> {
 }
 
 export function ProofPage() {
-  const { filter } = useSearch({ from: "/" });
-  const navigate = useNavigate({ from: "/" });
+  const search = useSearch({ strict: false }) as { filter?: string };
+  const filter = search.filter ?? "";
+  const navigate = useNavigate();
   const [filterInput, setFilterInput] = useState(filter);
   const { data: rows = [] } = useQuery({ queryKey: ["proof-rows"], queryFn: fetchProofRows });
   const [state, send] = useMachine(statusMachine);
@@ -72,7 +73,7 @@ export function ProofPage() {
         <Button
           label="Apply filter"
           variant="secondary"
-          onClick={() => navigate({ search: { filter: filterInput } })}
+          onClick={() => navigate({ search: { filter: filterInput } as any })}
         />
       </section>
 
