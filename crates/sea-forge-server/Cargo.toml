@@ -23,6 +23,7 @@ sea-forge-planner = { path = "../sea-forge-planner", version = "0.1.0" }
 sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.1.0" }
 sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
 sea-forge-thoth = { path = "../sea-forge-thoth", version = "0.1.0" }
+schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
@@ -36,4 +37,5 @@ zeroize.workspace = true
 workspace = true
 
 [dev-dependencies]
+sea-forge-planner = { path = "../sea-forge-planner", version = "0.1.0" }
 tempfile.workspace = true

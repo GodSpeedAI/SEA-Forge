@@ -1174,6 +1174,7 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
                     policy,
                     entity: "operator_local".into(),
                     process: "test".into(),
+                    request_id: None,
                 },
                 &state,
             )
@@ -1285,6 +1286,7 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
                     policy,
                     entity: "operator_local".into(),
                     process: "test".into(),
+                    request_id: None,
                 },
                 &state,
             )
@@ -1305,6 +1307,7 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
             policy: policy_str.clone(),
             entity: "operator_local".into(),
             process: "test".into(),
+            request_id: None,
         },
         &state,
     )
@@ -1617,6 +1620,7 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
                 policy: direct_policy,
                 entity: "operator_local".into(),
                 process: "test".into(),
+                request_id: None,
             },
             &direct_state,
         )

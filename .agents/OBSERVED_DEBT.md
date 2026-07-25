@@ -50,6 +50,26 @@ entry when resolved; do not use this file as a backlog of ideas.
 - Scope: this is a caution for later implementation tasks, not a defect to
   fix during Task 1's grounding pass itself.
 
+## Open: Tauri host crate's Cargo workspace boundary has no automated gate
+
+- Observed: 2026-07-24
+- Evidence: `workbench/apps/desktop/src-tauri/Cargo.toml` declares an empty
+  `[workspace]` table to keep the Tauri host (and its `tokio` dependency) out
+  of the root kernel Cargo workspace (`docs/decisions/ADR-004-workbench-stack.md`).
+  `just no-async-kernel` only enumerates a fixed list of kernel crate names —
+  it does not verify this boundary itself.
+- Impact: a future edit that deletes the `[workspace]` table (e.g. during
+  boilerplate cleanup) would silently pull `tokio` into scope of the root
+  workspace's dependency graph, or break the build if the root workspace's
+  explicit `members` list doesn't include the new path — neither failure mode
+  is caught by an existing gate.
+- Next move: add a `workbench-check` (or `no-async-kernel`) assertion that
+  `cargo metadata --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
+  --no-deps` reports a workspace root equal to that same path (i.e. it is its
+  own workspace, not absorbed by the root one).
+- Scope: out of scope for Task 2 (stack proof only); the fix belongs with
+  whichever task next touches `justfile`'s quality gates.
+
 ## Open: Historical frontend planning documents fail repository-wide diff whitespace checks
 
 - Observed: 2026-07-24
@@ -63,3 +83,31 @@ entry when resolved; do not use this file as a backlog of ideas.
   formatting commit after confirming intentional Markdown hard breaks.
 - Scope: the files are pre-existing committed frontend/planning work unrelated
   to Task 19's conformance claims; changing them would expand this closeout.
+
+## Open: Host event-catch-up page cap is a separately hardcoded guess at the server's actual cap
+
+- Observed: 2026-07-24
+- Evidence: `crates/sea-forge-server/src/sfwp/events.rs` defines
+  `EVENTS_REPLAY_CAP = 500` as the server's actual `events.get_range` page
+  size when no `limit` is requested. `workbench/apps/desktop/src-tauri/src/events.rs`
+  defines its own `GET_RANGE_PAGE_CAP = 256` as the threshold its catch-up
+  loop uses to decide "backlog exhausted" (`count < GET_RANGE_PAGE_CAP`), and
+  never sends an explicit `limit` on its `events_get_range` calls, so it is
+  really comparing against the server's true 500-cap while assuming a smaller
+  number.
+- Impact: currently harmless because 256 < 500 — the host's check is
+  conservative, so a backlog page between 256 and 499 events just costs one
+  extra harmless round-trip before the loop correctly terminates on the next
+  (short) page; no event is ever skipped. But the two constants live in
+  separate Cargo workspaces with no shared source, so if a future change
+  raises the host's assumed cap above the server's actual cap (or the two
+  drift for any other reason), the same "conservative by construction"
+  argument no longer holds and termination could become premature.
+- Next move: either have the host always pass an explicit `limit` matching
+  (or below) whatever the server advertises via `system.describe`/`get_schema`,
+  or document the coupling with a comment linking the two constants by file:line
+  so a future editor of either one notices the other. A generated-contracts
+  entry for `EVENTS_REPLAY_CAP` itself (rather than a magic number on each
+  side) would remove the duplication entirely.
+- Scope: not a defect surfaced by Task 3's own gates (all pass); a robustness
+  follow-up for whichever task next revisits the host's event-reconnect loop.
