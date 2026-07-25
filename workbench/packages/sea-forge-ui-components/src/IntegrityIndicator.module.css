@@ -1,0 +1,50 @@
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 6px);
+  padding: 2px 8px;
+  border-radius: var(--radius-control, 6px);
+  font: var(--text-label, 12px / 1.2 system-ui, sans-serif);
+  font-weight: 500;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.verified {
+  color: #3fb950;
+}
+.verifiedDot {
+  background-color: #3fb950;
+}
+
+.compromised {
+  color: #f85149;
+}
+.compromisedDot {
+  background-color: #f85149;
+}
+
+.checking {
+  color: #d29922;
+}
+.checkingDot {
+  background-color: #d29922;
+  animation: pulse 1.2s infinite ease-in-out;
+}
+
+.unverified {
+  color: #8b949e;
+}
+.unverifiedDot {
+  background-color: #8b949e;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}

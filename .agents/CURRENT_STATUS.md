@@ -1,6 +1,23 @@
 # Current Status
 
-Updated: 2026-07-24
+Updated: 2026-07-25
+
+> **2026-07-25 Workbench plan Task 4 (shell + semantic components + guards) complete.**
+> Created `@sea-forge/ui-components` Bun workspace package containing the nine semantic
+> components (`GovernedStatusPill`, `DualStateIndicator`, `SourceFreshnessBadge`,
+> `IntegrityIndicator`, `ProtectedActionButton`, `WhyStatePanel`, `EvidenceDrawer`,
+> `AuthorityBoundaryPanel`, `AvailabilityLadder`) built with CSS Modules and `@astryxdesign/core` primitives.
+> Critical invariant enforced: `GovernedStatusPill` with an unknown or invalid variant strictly fallbacks
+> to `"unknown"` text & class (`status-pill--unknown`), verified by unit test.
+> Storybook v8 configured in `packages/sea-forge-ui-components` with component stories (`*.stories.tsx`) for all 9 components.
+> Built governed shell in `apps/desktop` featuring:
+> - Sidebar navigation with all 13 top-level surfaces (Readiness, Thoth, Assets, Domain Models, Cases, Inbox, Operations, Evidence, Memory, Capabilities, Artifacts, Federation, Administration).
+> - Global Context Bar (Actor, Role, Policy status, Integrity indicator dot, Search shortcut `/`, Inbox count badge).
+> - Governed Focus workspace header, journey ribbon, skip-to-content link.
+> - Collapsible right EvidenceDrawer skeleton.
+> - Route guards G1–G9 with `GovernedDenialSurface` rendering on failed evaluation (never blank screens or crashes).
+> - Keyboard traversal & ARIA accessibility support (`Tab`, `Shift+Tab`, navigation hotkeys `R` & `/`), verified by `axe-core`.
+> Gates green: `bun run check`, `bun run test` (23 unit tests pass), `bun run build-storybook`, `devbox run -- just check`, `devbox run -- just test`. Added `just` recipes for dev server and Storybook (`dev-up`, `dev-down`, `storybook-up`, `storybook-down`). Next: plan Task 5 (Readiness vertical slice).
 
 > **2026-07-24 Workbench plan Task 3 (SFWP transport) complete.** Additive
 > SFWP protocol layer on the existing Unix-socket NDJSON server, added as flat

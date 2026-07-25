@@ -9,7 +9,8 @@
     "dev": "bun run --cwd apps/desktop dev",
     "build": "bun run --cwd apps/desktop build",
     "check": "bun run --cwd apps/desktop check",
-    "test": "bun run --cwd apps/desktop test",
-    "generate:contracts": "bun run --cwd packages/contracts generate"
+    "test": "bun run --cwd apps/desktop test && bun run --cwd packages/sea-forge-ui-components test",
+    "generate:contracts": "bun run --cwd packages/contracts generate",
+    "build-storybook": "bun run --cwd packages/sea-forge-ui-components build-storybook"
   }
 }

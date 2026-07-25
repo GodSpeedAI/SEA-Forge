@@ -1,0 +1,38 @@
+.appShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--surface-background, #010409);
+  color: var(--fg-primary, #f0f6fc);
+}
+
+.skipLink {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #238636;
+  color: #ffffff;
+  padding: 8px;
+  z-index: 10000;
+  transition: top 0.2s ease;
+}
+
+.skipLink:focus {
+  top: 0;
+}
+
+.bodyLayout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mainWorkspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  outline: none;
+}
