@@ -1,0 +1,12 @@
+{
+  "name": "@sea-forge/ui-tokens",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./sea-forge.tokens.css"
+  },
+  "scripts": {
+    "check-drift": "node scripts/check-drift.mjs"
+  }
+}

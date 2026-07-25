@@ -1,0 +1,15 @@
+# Bun / Node
+node_modules/
+bun-debug.log*
+
+# Build output
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# Editors
+*.local

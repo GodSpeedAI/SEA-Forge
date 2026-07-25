@@ -1,0 +1,48 @@
+# Standalone workspace root: deliberately NOT a member of the repository's
+# root Cargo workspace (kernel boundary). See docs/decisions/ADR-004-workbench-stack.md.
+[workspace]
+
+[package]
+name = "sea-forge-workbench"
+version = "0.1.0"
+description = "SEA Forge Workbench desktop host (Tauri 2)"
+license = "LicenseRef-SEA-Forge"
+repository = "https://github.com/GodSpeedAI/SEA-rs"
+edition = "2021"
+rust-version = "1.92.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3" }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.3" }
+tauri-plugin-log = "2"
+# Tauri 2's async runtime is tokio-based; we reuse `tauri::async_runtime::spawn`
+# for background tasks (no second runtime) but need tokio's types directly for
+# the Unix-socket NDJSON client (`tokio::net::UnixStream`, sync primitives).
+tokio = { version = "1", features = ["net", "io-util", "sync", "time", "macros", "rt"] }
+
+[dev-dependencies]
+# Cross-workspace path dependency: this src-tauri crate is its own standalone
+# Cargo workspace (ADR-004), and dev-dependencies never ship in the built
+# bundle, so pulling the real server in for integration tests does not
+# compromise the workspace-isolation boundary. Path resolves to
+# `crates/sea-forge-server` from this manifest's directory.
+sea-forge-server = { path = "../../../../crates/sea-forge-server" }
+# The integration test boots a real server end to end, which needs a stub agent
+# endpoint (`sea-forge-agent`) and a valid plan (`sea-forge-planner`), mirroring
+# `crates/sea-forge-server/tests/conformance_sfwp.rs`. Dev-only, so still no
+# production coupling to the kernel workspace.
+sea-forge-agent = { path = "../../../../crates/sea-forge-agent" }
+sea-forge-planner = { path = "../../../../crates/sea-forge-planner" }
+tempfile = "3"
+tokio = { version = "1", features = ["full"] }

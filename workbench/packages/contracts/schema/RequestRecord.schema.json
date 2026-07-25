@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RequestRecord",
+  "description": "The persisted correlation record for one `request_id`.",
+  "type": "object",
+  "properties": {
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "method": {
+      "type": "string"
+    },
+    "outcome": {
+      "description": "The original response value once the request reached a terminal state."
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RequestStatus"
+    },
+    "submitted_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "method",
+    "status",
+    "submitted_at"
+  ],
+  "$defs": {
+    "RequestStatus": {
+      "description": "Lifecycle status of a correlated request.",
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ]
+    }
+  }
+}
