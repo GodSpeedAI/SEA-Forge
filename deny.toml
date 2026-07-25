@@ -38,14 +38,17 @@ confidence-threshold = 0.8
 # Explicitly approved, exact-version exception.
 #
 # Dependency path:
-# domainforge-core 0.15.0 -> xxhash-rust 0.8.16
+# domainforge-core 0.15.0 -> xxhash-rust 0.8.18
 #
 # BSL-1.0 is the Boost Software License 1.0. This exception applies only
-# to xxhash-rust 0.8.16; upgrading the crate requires another review.
+# to xxhash-rust 0.8.18; upgrading the crate requires another review.
+# (Bumped from 0.8.16 in Task 3 of the Workbench plan: adding `schemars` to
+# the workspace caused Cargo's unified resolver to bump this unrelated
+# transitive dep's lockfile entry within its existing `^0.8` requirement.)
 exceptions = [
     {
         name = "xxhash-rust",
-        version = "=0.8.16",
+        version = "=0.8.18",
         allow = ["BSL-1.0"],
     },
 ]

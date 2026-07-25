@@ -2,6 +2,64 @@
 
 Updated: 2026-07-24
 
+> **2026-07-24 Workbench plan Task 3 (SFWP transport) complete.** Additive
+> SFWP protocol layer on the existing Unix-socket NDJSON server, added as flat
+> `Request` variants behind the ADR-003 seam (`system_*`, `request_get_status`,
+> `events_*`, precondition digests) in `crates/sea-forge-server/src/sfwp/`.
+> Schema generation via `schemars` (confined to `sea-forge-server`; the
+> `gen_sfwp_schema` bin emits JSON Schema to
+> `workbench/packages/contracts/schema/`; the `@sea-forge/contracts` Bun
+> package generates typed TS + AJV validators via `bun run generate:contracts`)
+> — new deps recorded in `docs/decisions/ADR-005-sfwp-schema-generation.md`.
+> Tauri host owns the socket via a closed `SfwpQuery`/`SfwpCommand` bridge
+> (`workbench/apps/desktop/src-tauri/`, per `workbench/AGENTS.md`).
+> Evidence: `crates/sea-forge-server/tests/conformance_sfwp.rs` (the named
+> hello → subscribe → mid-flight kill → reconnect → `request_get_status` →
+> cursor resume → `events_get_range` gap-recovery scenario) and 3 host
+> integration tests in `workbench/apps/desktop/src-tauri/tests/bridge.rs`.
+> Full gate green (`devbox run -- just check`/`just test`; workbench
+> `bun run check`/`build`/`test`; Tauri `cargo build`/`test`). One watch item
+> in `.agents/OBSERVED_DEBT.md` ("Host event-catch-up page cap …"): the host's
+> `events.get_range` page-cap guess (256) vs the server's actual cap (500) are
+> separately hardcoded — currently safe (conservative) but uncoupled. Next
+> step: plan Task 4 (application shell + semantic design foundations: shell
+> layout, nine semantic components, route guards G1–G9, Storybook, a11y).
+>
+> **2026-07-24 Workbench plan Task 2 (workspace + stack proof) complete.**
+> New `workbench/` Bun workspace (`package.json`, `bunfig.toml`,
+> `packageManager: bun@1.4.0`) with `apps/desktop/` (Vite + React 19.2 +
+> TypeScript 6.0 strict, scaffolded via `bun create vite`) and a Tauri 2 host
+> crate at `apps/desktop/src-tauri/` — a standalone Cargo workspace (own
+> empty `[workspace]` table), deliberately not a member of the root kernel
+> workspace. Token/theme packages: `packages/sea-forge-ui-tokens` (byte-exact
+> copy-projection of `.agents/specs/frontend/colors_and_type.css`, drift-
+> checked) and `packages/sea-forge-astryx-theme` (SEA Forge tokens projected
+> onto `@astryxdesign/theme-neutral` via `defineTheme({ name: "neutral",
+> extends, tokens })`, keeping Astryx's scoped component CSS wired while every
+> token value routes through SEA Forge canonical vars). Locked stack
+> exact-pinned: Astryx 0.1.8, StyleX 0.19.0, TanStack Router 1.170.18 / Query
+> 5.101.4, XState 5.32.5 / @xstate/react 6.1.0, react-hook-form 7.82.0, ajv
+> 8.20.0, @tauri-apps/cli 2.11.4, Vitest 4.1.10 — recorded in
+> `docs/decisions/ADR-004-workbench-stack.md`. Proof page (`ProofPage.tsx`)
+> renders an Astryx `Button`+`Table` themed by the projected tokens behind one
+> typed TanStack Router route with validated search state, one TanStack Query
+> call, and one XState machine (`statusMachine`, smoke-tested in
+> `statusMachine.test.ts`). `just workbench-check` (new recipe) and the
+> plan's exact gate command (`bun install --frozen-lockfile && bun run check
+> && bun run build && cargo build --manifest-path
+> apps/desktop/src-tauri/Cargo.toml && bun run test`) both pass; Tauri host
+> `cargo build` succeeds (`dev` profile, 7 min cold compile). Along the way,
+> at the user's explicit request, the machine's mise-managed `bun` was
+> upgraded via `bun upgrade --canary` to 1.4.0 (Bun's in-progress Zig→Rust
+> rewrite, confirmed via upstream announcement); `workbench/package.json`
+> repinned to match, full gate re-verified green under it — reversible via
+> `bun upgrade --stable` per the ADR. One watch item filed in
+> `.agents/OBSERVED_DEBT.md`: the Tauri host's Cargo-workspace exclusion has
+> no automated gate yet. Root kernel untouched (`git status` shows only
+> `workbench/` plus this status update, the ADR, and `OBSERVED_DEBT.md`).
+> Next step: plan Task 3 (SFWP transport: envelopes, negotiation, request
+> recovery, events, generated contracts).
+
 > **2026-07-24 Workbench plan Task 1 (repository grounding and compatibility
 > map) complete.** `.agents/reports/2026-07-24-sfwp-grounding.md` grounds all
 > 74 target SFWP methods across the 18 catalog families Task 1 names (system,

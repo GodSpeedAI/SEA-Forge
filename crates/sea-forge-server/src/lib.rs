@@ -29,12 +29,16 @@ use std::sync::{
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::process::Command;
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
+
+use sfwp::correlation::RequestCorrelationStore;
+use sfwp::events::EventFrame;
 
 pub mod agent_probe;
 pub mod case_dispatch;
 pub mod config;
 pub mod delegation;
+pub mod sfwp;
 pub mod swe_seed_reconciliation;
 mod transcript_seal;
 
@@ -56,6 +60,16 @@ pub struct ServerState {
     delegations: Mutex<HashMap<String, DelegationHandle>>,
     pub(crate) permission_broker: delegation::AcpApprovalBroker,
     pub semaphore: Arc<Semaphore>,
+    /// SFWP request-correlation store (Task 3): answers `request.get_status`
+    /// across reconnects.
+    pub(crate) correlation: RequestCorrelationStore,
+    /// The single durable SFWP events ledger; its `entry_ulid` is the event
+    /// cursor. Guarded so concurrent connection tasks serialize their appends
+    /// on top of the ledger's own file lock.
+    events_ledger: Mutex<LedgerStream>,
+    /// Live SFWP event fan-out. Subscribers ride on top of the durable ledger;
+    /// the broadcast is never source truth.
+    pub(crate) event_bus: broadcast::Sender<EventFrame>,
 }
 
 #[derive(Clone)]
@@ -100,13 +114,58 @@ impl ServerState {
         // harvested evidence before this server accepts new work (M16 T18).
         swe_seed_reconciliation::reconcile_all_cases(&config.root)?;
         let max = config.max_concurrent_runs.max(1);
+        let correlation = RequestCorrelationStore::open(&config.root)?;
+        let events_ledger = sfwp::events::open_events_ledger(&config.root)?;
+        let (event_bus, _) = broadcast::channel::<EventFrame>(256);
         Ok(Self {
             config,
             cases: Mutex::new(HashMap::new()),
             delegations: Mutex::new(HashMap::new()),
             permission_broker: delegation::AcpApprovalBroker::default(),
             semaphore: Arc::new(Semaphore::new(max)),
+            correlation,
+            events_ledger: Mutex::new(events_ledger),
+            event_bus,
         })
+    }
+
+    /// Append an event to the durable events ledger and fan it out on the live
+    /// broadcast channel. The `cursor` on the returned frame is the emitting
+    /// ledger entry's `entry_ulid`. `SendError` (no active subscribers) is not
+    /// an error and is ignored.
+    pub(crate) async fn publish_event(
+        &self,
+        kind: &str,
+        case_id: Option<&str>,
+        run_id: Option<&str>,
+        detail: serde_json::Value,
+    ) -> Result<EventFrame, ForgeError> {
+        let frame = {
+            let ledger = self.events_ledger.lock().await;
+            sfwp::events::append_event(&ledger, kind, case_id, run_id, detail)?
+        };
+        let _ = self.event_bus.send(frame.clone());
+        Ok(frame)
+    }
+
+    /// Snapshot the durable events for gap recovery (`events.get_range`).
+    pub(crate) async fn events_get_range(
+        &self,
+        from_cursor: Option<&str>,
+        to_cursor: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<EventFrame>, ForgeError> {
+        let ledger = self.events_ledger.lock().await;
+        sfwp::events::get_range(&ledger, from_cursor, to_cursor, limit)
+    }
+
+    /// Replay durable events after a cursor for a subscribe catch-up burst.
+    pub(crate) async fn events_replay_after(
+        &self,
+        from_cursor: Option<&str>,
+    ) -> Result<Vec<EventFrame>, ForgeError> {
+        let ledger = self.events_ledger.lock().await;
+        sfwp::events::replay_after(&ledger, from_cursor)
     }
 
     /// Reload config defensively between dispatches (§8.4).
@@ -394,6 +453,14 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
 }
 
 /// NDJSON request envelope.
+///
+/// SFWP (Task 3) is layered additively per ADR-003: new methods are new
+/// `verb`-tagged variants (`system_hello`, `events_subscribe`, ...), never a
+/// nested wrapper frame and never a reshape of the existing verbs. Old clients
+/// omitting the new verbs keep working; old servers reject unknown verbs
+/// cleanly (serde unknown-variant). The optional `request_id`/`preconditions`
+/// fields added to protected verbs are `#[serde(default)]`, so old clients that
+/// omit them still parse. See `sfwp::mod` for the full seam rationale.
 #[derive(Deserialize)]
 #[serde(tag = "verb")]
 #[serde(rename_all = "snake_case")]
@@ -402,6 +469,8 @@ pub enum Request {
     Submit {
         #[serde(flatten)]
         payload: SubmitPayload,
+        #[serde(default)]
+        request_id: Option<String>,
     },
     Status {
         case_id: String,
@@ -411,12 +480,20 @@ pub enum Request {
         approval_id: String,
         #[serde(default)]
         note: Option<String>,
+        #[serde(default)]
+        request_id: Option<String>,
+        #[serde(default)]
+        preconditions: Option<sfwp::precondition::Precondition>,
     },
     Reject {
         case_id: String,
         approval_id: String,
         #[serde(default)]
         note: Option<String>,
+        #[serde(default)]
+        request_id: Option<String>,
+        #[serde(default)]
+        preconditions: Option<sfwp::precondition::Precondition>,
     },
     AgentList,
     AgentProbe {
@@ -449,6 +526,8 @@ pub enum Request {
         entity: String,
         #[serde(default = "default_process")]
         process: String,
+        #[serde(default)]
+        request_id: Option<String>,
     },
     CancelDelegation {
         run_id: String,
@@ -458,6 +537,8 @@ pub enum Request {
         entity: String,
         #[serde(default = "default_process")]
         process: String,
+        #[serde(default)]
+        request_id: Option<String>,
     },
     /// Thoth self-disclosure ask (M11 T14B). Dispatches to the same
     /// `sea_forge_thoth::service::ask` the CLI adapter calls, via
@@ -473,6 +554,41 @@ pub enum Request {
         case: Option<String>,
         #[serde(default = "default_entity")]
         actor: String,
+    },
+
+    // --- SFWP additive methods (Task 3, ADR-003) ------------------------
+    /// Negotiate protocol version and discover implemented methods.
+    SystemHello {
+        protocol_version: String,
+        #[serde(default)]
+        client: Option<String>,
+    },
+    /// Return the method catalog with each method's interaction class.
+    SystemDescribe,
+    /// Return generated schema references (optionally scoped to one method).
+    SystemGetSchema {
+        #[serde(default)]
+        method: Option<String>,
+    },
+    /// Recover the status/outcome of a prior correlated request.
+    RequestGetStatus {
+        request_id: String,
+    },
+    /// Subscribe to live events; optionally replay from a durable cursor first.
+    EventsSubscribe {
+        #[serde(default)]
+        from_cursor: Option<String>,
+    },
+    /// Drop the live event subscription for this connection.
+    EventsUnsubscribe,
+    /// Deterministic bounded read of durable events (gap recovery).
+    EventsGetRange {
+        #[serde(default)]
+        from_cursor: Option<String>,
+        #[serde(default)]
+        to_cursor: Option<String>,
+        #[serde(default)]
+        limit: Option<u32>,
     },
 }
 
@@ -550,29 +666,167 @@ async fn handle_connection(
     let mut reader = BufReader::new(reader);
     let mut line = String::new();
 
-    loop {
+    // All writes to the socket funnel through a single-writer task draining a
+    // bounded mpsc channel, so unsolicited SFWP event lines can interleave
+    // with normal request responses without racing the writer. The bound
+    // imposes per-connection backpressure: request-response writes await send
+    // completion, while the live event subscription uses nonblocking `try_send`
+    // and drops frames when full (a client recovers any gap deterministically
+    // via `events.get_range`).
+    // ponytail: fixed per-connection cap; raise only if a measured subscriber
+    // proves it drops too often under realistic event volume.
+    const WRITER_CHANNEL_CAPACITY: usize = 256;
+    let (tx, mut rx) = mpsc::channel::<String>(WRITER_CHANNEL_CAPACITY);
+    let writer_task = tokio::spawn(async move {
+        while let Some(payload) = rx.recv().await {
+            if writer.write_all(payload.as_bytes()).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // The live event subscription for this connection, if any (`AbortHandle`
+    // is enough — no generalized registry needed).
+    let mut subscription: Option<tokio::task::JoinHandle<()>> = None;
+
+    let result: Result<(), Box<dyn std::error::Error + Send + Sync>> = loop {
         line.clear();
-        let n = reader.read_line(&mut line).await?;
+        let n = match reader.read_line(&mut line).await {
+            Ok(n) => n,
+            Err(e) => break Err(Box::new(e) as _),
+        };
         if n == 0 {
-            break;
+            break Ok(());
         }
         let request: Request = match serde_json::from_str(line.trim()) {
             Ok(r) => r,
             Err(e) => {
                 let resp = serde_json::json!({"error": format!("bad request: {e}")});
-                writer.write_all(format!("{resp}\n").as_bytes()).await?;
+                let _ = tx.send(format!("{resp}\n")).await;
                 continue;
             }
         };
-        let response = handle_request(request, &state).await;
-        writer.write_all(format!("{response}\n").as_bytes()).await?;
+
+        // Connection-scoped SFWP verbs handled here (they need the per-conn
+        // writer channel / subscription slot); everything else delegates to
+        // the shared `handle_request`.
+        match request {
+            Request::EventsSubscribe { from_cursor } => {
+                let response =
+                    start_subscription(&state, &tx, &mut subscription, from_cursor).await;
+                let _ = tx.send(format!("{response}\n")).await;
+            }
+            Request::EventsUnsubscribe => {
+                if let Some(handle) = subscription.take() {
+                    handle.abort();
+                }
+                let response = serde_json::json!({"ok": true, "subscribed": false});
+                let _ = tx.send(format!("{response}\n")).await;
+            }
+            other => {
+                let response = handle_request(other, &state).await;
+                let _ = tx.send(format!("{response}\n")).await;
+            }
+        }
+    };
+
+    if let Some(handle) = subscription.take() {
+        handle.abort();
     }
-    Ok(())
+    drop(tx);
+    let _ = writer_task.await;
+    result
+}
+
+/// Spawn (or replace) the live event-subscription task for a connection.
+/// Replays any durable events after `from_cursor` first, then streams live
+/// frames from the broadcast channel onto the connection's writer channel.
+async fn start_subscription(
+    state: &Arc<ServerState>,
+    tx: &mpsc::Sender<String>,
+    subscription: &mut Option<tokio::task::JoinHandle<()>>,
+    from_cursor: Option<String>,
+) -> serde_json::Value {
+    // Subscribe before replaying so no event committed during replay is lost.
+    let mut rx = state.event_bus.subscribe();
+
+    let replayed = match state.events_replay_after(from_cursor.as_deref()).await {
+        Ok(frames) => frames,
+        Err(error) => {
+            return serde_json::json!({
+                "error": error.to_string(),
+                "error_class": error.class(),
+            });
+        }
+    };
+    let last_replayed_cursor = replayed.last().map(|frame| frame.cursor.clone());
+    for frame in &replayed {
+        let line = serde_json::json!({"type": "event", "event": frame});
+        // Nonblocking send: a full queue drops the frame (the client recovers
+        // it via `events.get_range`); a closed writer ends the subscription.
+        match tx.try_send(format!("{line}\n")) {
+            Ok(()) => {}
+            Err(mpsc::error::TrySendError::Full(_)) => {}
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                return serde_json::json!({"error": "connection closed"});
+            }
+        }
+    }
+
+    // Replace any prior subscription on this connection.
+    if let Some(handle) = subscription.take() {
+        handle.abort();
+    }
+    let tx_for_task = tx.clone();
+    let handle = tokio::spawn(async move {
+        loop {
+            match rx.recv().await {
+                Ok(frame) => {
+                    // Skip frames already delivered in the replay burst.
+                    if let Some(last) = &last_replayed_cursor {
+                        if frame.cursor.as_str() <= last.as_str() {
+                            continue;
+                        }
+                    }
+                    let line = serde_json::json!({"type": "event", "event": frame});
+                    // Drop on a full queue (gap recovered via
+                    // `events.get_range`); only a closed writer ends the
+                    // stream.
+                    match tx_for_task.try_send(format!("{line}\n")) {
+                        Ok(()) => {}
+                        Err(mpsc::error::TrySendError::Full(_)) => {
+                            // The client can recover the gap deterministically
+                            // via events.get_range; keep the live stream going.
+                            continue;
+                        }
+                        Err(mpsc::error::TrySendError::Closed(_)) => break,
+                    }
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => {
+                    // The client can recover the gap deterministically via
+                    // events.get_range; keep the live stream going.
+                    continue;
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+    *subscription = Some(handle);
+
+    serde_json::json!({
+        "ok": true,
+        "subscribed": true,
+        "replayed": replayed.len(),
+    })
 }
 
 pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_json::Value {
     match request {
-        Request::Submit { payload } => {
+        Request::Submit {
+            payload,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "case.submit");
             // Reload config defensively (§8.4).
             if let Ok(new_config) = state.reload_config() {
                 tracing::info!("config reloaded successfully");
@@ -581,7 +835,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 tracing::warn!("invalid config reload — keeping last-known-good");
             }
 
-            match case_dispatch::submit(payload, state).await {
+            let response = match case_dispatch::submit(payload, state).await {
                 Ok(output) => {
                     let case_id = output.case_id;
                     let entry = CaseEntry {
@@ -603,6 +857,16 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                         }
                     }
 
+                    // Emit a durable SFWP event for the successful mutation.
+                    let _ = state
+                        .publish_event(
+                            "case.submitted",
+                            Some(&case_id),
+                            None,
+                            serde_json::json!({"state": output.state}),
+                        )
+                        .await;
+
                     serde_json::json!({
                         "case_id": case_id,
                         "state": output.state,
@@ -610,7 +874,9 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                     })
                 }
                 Err(e) => serde_json::json!({"error": e.to_string()}),
-            }
+            };
+            record_outcome(state, request_id.as_deref(), "case.submit", &response);
+            response
         }
         Request::Status { case_id } => {
             let cases = state.cases.lock().await;
@@ -623,53 +889,41 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             case_id,
             approval_id,
             note,
+            request_id,
+            preconditions,
         } => {
-            let root = state.config.root.clone();
-            let result = run_cli(
-                &root,
-                &[
-                    "approve",
-                    &case_id,
-                    &approval_id,
-                    "--root",
-                    root.to_str().unwrap_or("."),
-                ],
+            decide(
+                state,
+                "approve",
+                "approval.approve",
+                "approval.approved",
+                &case_id,
+                &approval_id,
                 note.as_deref(),
+                request_id.as_deref(),
+                preconditions.as_ref(),
             )
-            .await;
-            match result {
-                Ok(output) => {
-                    let _ = state.permission_broker.resolve(&approval_id).await;
-                    serde_json::json!({"ok": true, "output": output})
-                }
-                Err(e) => serde_json::json!({"error": e}),
-            }
+            .await
         }
         Request::Reject {
             case_id,
             approval_id,
             note,
+            request_id,
+            preconditions,
         } => {
-            let root = state.config.root.clone();
-            let result = run_cli(
-                &root,
-                &[
-                    "reject",
-                    &case_id,
-                    &approval_id,
-                    "--root",
-                    root.to_str().unwrap_or("."),
-                ],
+            decide(
+                state,
+                "reject",
+                "approval.reject",
+                "approval.rejected",
+                &case_id,
+                &approval_id,
                 note.as_deref(),
+                request_id.as_deref(),
+                preconditions.as_ref(),
             )
-            .await;
-            match result {
-                Ok(output) => {
-                    let _ = state.permission_broker.resolve(&approval_id).await;
-                    serde_json::json!({"ok": true, "output": output})
-                }
-                Err(e) => serde_json::json!({"error": e}),
-            }
+            .await
         }
         Request::AgentList => agent_probe::list(&state.config.agent),
         Request::AgentProbe {
@@ -719,84 +973,48 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             policy,
             entity,
             process,
+            request_id,
         } => {
-            let delegation_run_id = match requested_run_id {
-                Some(value) if valid_run_id(&value) => value,
-                Some(_) => return serde_json::json!({"error":"invalid delegation run_id"}),
-                None => match run_id() {
-                    Ok(value) => value,
-                    Err(error) => return serde_json::json!({"error": error.to_string()}),
-                },
-            };
-            let delegation_case_id = match case_id() {
-                Ok(value) => value,
-                Err(error) => return serde_json::json!({"error": error.to_string()}),
-            };
-            let permit = match state.semaphore.acquire().await {
-                Ok(permit) => permit,
-                Err(_) => return serde_json::json!({"error":"server semaphore unavailable"}),
-            };
-            let cancel = Arc::new(AtomicBool::new(false));
-            let requested = Arc::new(AtomicBool::new(false));
-            let handle = DelegationHandle {
-                case_id: delegation_case_id.clone(),
-                cancel: Arc::clone(&cancel),
-                requested,
-            };
-            if state
-                .delegations
-                .lock()
-                .await
-                .insert(delegation_run_id.clone(), handle)
-                .is_some()
-            {
-                drop(permit);
-                return serde_json::json!({"error":"delegation run_id already active"});
-            }
-            let config = state.config.clone();
-            let run_for_execution = delegation_run_id.clone();
-            let case_for_execution = delegation_case_id.clone();
-            let cancel_for_execution = Arc::clone(&cancel);
-            let result = delegation::execute_with_permission_broker(
-                &config,
-                delegation::DelegationRequest {
-                    endpoint_id: &endpoint,
-                    instruction: &instruction,
-                    model: model.as_deref(),
-                    max_turns,
-                    token_budget,
-                    criteria,
-                    policy_path: &policy,
-                    entity: &entity,
-                    process: &process,
-                    ..Default::default()
-                },
-                &agent_probe::EnvironmentCredentialResolver,
-                delegation::DelegationEpisodeContext::standalone(
-                    &case_for_execution,
-                    &run_for_execution,
-                ),
-                move || cancel_for_execution.load(Ordering::SeqCst),
-                Some(state.permission_broker.clone()),
+            record_pending(state, request_id.as_deref(), "agent_run.delegate");
+            let response = delegate_inner(
+                state,
+                &endpoint,
+                &instruction,
+                requested_run_id,
+                model.as_deref(),
+                max_turns,
+                token_budget,
+                criteria,
+                &policy,
+                &entity,
+                &process,
             )
             .await;
-            state.delegations.lock().await.remove(&delegation_run_id);
-            drop(permit);
-            match result {
-                Ok(outcome) => serde_json::to_value(outcome).unwrap_or_else(
-                    |_| serde_json::json!({"error":"delegation response serialization failed"}),
-                ),
-                Err(error) => {
-                    serde_json::json!({"error": error.to_string(), "error_class": error.class()})
-                }
-            }
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "agent_run.delegate",
+                &response,
+            );
+            response
         }
         Request::CancelDelegation {
             run_id,
             policy,
             entity,
             process,
-        } => cancel_delegation(state, &run_id, &policy, &entity, &process).await,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "agent_run.cancel_delegation");
+            let response = cancel_delegation(state, &run_id, &policy, &entity, &process).await;
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "agent_run.cancel_delegation",
+                &response,
+            );
+            response
+        }
         Request::Ask {
             kind,
             subject,
@@ -829,6 +1047,340 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                     serde_json::json!({"error": error.to_string(), "error_class": error.class()})
                 }
             }
+        }
+
+        // --- SFWP additive methods (Task 3) --------------------------------
+        Request::SystemHello {
+            protocol_version,
+            client: _,
+        } => match sfwp::hello(&protocol_version) {
+            Ok(result) => serde_json::to_value(result)
+                .unwrap_or_else(|_| serde_json::json!({"error": "hello serialization failed"})),
+            // Rejected protocol versions are an explicit error response (not
+            // a struct dump masquerading as a successful result): the
+            // `error`/`error_class` discriminators mirror the rest of
+            // `handle_request`, and the UnsupportedVersion payload fields are
+            // surfaced verbatim for the client to act on.
+            Err(unsupported) => serde_json::json!({
+                "error": unsupported.error,
+                "error_class": unsupported.error_class,
+                "requested": unsupported.requested,
+                "supported": unsupported.supported,
+            }),
+        },
+        Request::SystemDescribe => serde_json::to_value(sfwp::describe())
+            .unwrap_or_else(|_| serde_json::json!({"error": "describe serialization failed"})),
+        Request::SystemGetSchema { method } => {
+            serde_json::to_value(sfwp::get_schema(method.as_deref()))
+                .unwrap_or_else(|_| serde_json::json!({"error": "get_schema serialization failed"}))
+        }
+        Request::RequestGetStatus { request_id } => match state.correlation.get(&request_id) {
+            Ok(Some(record)) => serde_json::json!({
+                "request_id": record.request_id,
+                "status": record.status,
+                "method": record.method,
+                "outcome": record.outcome,
+            }),
+            Ok(None) => serde_json::json!({
+                "request_id": request_id,
+                "status": "unknown",
+            }),
+            Err(error) => {
+                serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+            }
+        },
+        Request::EventsGetRange {
+            from_cursor,
+            to_cursor,
+            limit,
+        } => match state
+            .events_get_range(from_cursor.as_deref(), to_cursor.as_deref(), limit)
+            .await
+        {
+            Ok(events) => serde_json::json!({"events": events}),
+            Err(error) => {
+                serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+            }
+        },
+        // These two are connection-scoped and handled inside
+        // `handle_connection`; reaching here means a caller invoked
+        // `handle_request` directly (in-process), where no live subscription
+        // exists. Answer cleanly rather than panicking.
+        Request::EventsSubscribe { .. } | Request::EventsUnsubscribe => {
+            serde_json::json!({
+                "error": "events.subscribe/unsubscribe require a live connection",
+                "error_class": "input_error",
+            })
+        }
+    }
+}
+
+/// Record a correlated request as `pending` before its work begins. No-op if
+/// the client did not supply a `request_id`. Correlation-store failures are
+/// logged, never fatal to the request.
+fn record_pending(state: &Arc<ServerState>, request_id: Option<&str>, method: &str) {
+    if let Some(id) = request_id {
+        if let Err(error) = state.correlation.record_pending(id, method) {
+            tracing::warn!("correlation record_pending failed: {error}");
+        }
+    }
+}
+
+/// Record a correlated request's terminal outcome. No-op without a
+/// `request_id`. This is what makes `request.get_status` recover the outcome
+/// after a client disconnects mid-request and reconnects.
+fn record_outcome(
+    state: &Arc<ServerState>,
+    request_id: Option<&str>,
+    method: &str,
+    outcome: &serde_json::Value,
+) {
+    if let Some(id) = request_id {
+        if let Err(error) = state.correlation.record_outcome(id, method, outcome) {
+            tracing::warn!("correlation record_outcome failed: {error}");
+        }
+    }
+}
+
+/// Resolves precondition record refs against current ledger/case truth so a
+/// stale `expected_digest` can be detected. Supported ref forms:
+/// `case:<case_id>` and `approval:<approval_id>` (the latter resolves the
+/// latest matching approval-shaped ledger record across the case ledgers).
+struct LedgerRecordResolver<'a> {
+    root: &'a Path,
+    case_id: &'a str,
+}
+
+impl sfwp::precondition::RecordResolver for LedgerRecordResolver<'_> {
+    fn resolve(&self, r#ref: &str) -> Result<Option<serde_json::Value>, ForgeError> {
+        let (kind, id) = match r#ref.split_once(':') {
+            Some(parts) => parts,
+            None => return Ok(None),
+        };
+        // Do not create the case ledger as a side effect of a read-only
+        // precondition check: if it does not exist, the referenced record does
+        // not exist and the digest cannot match (correctly triggering a stale
+        // rejection with no mutation).
+        let ledger_dir = self
+            .root
+            .join("ledgers")
+            .join(format!("case-{}", self.case_id));
+        if !ledger_dir.exists() {
+            return Ok(None);
+        }
+        let ledger = LedgerStream::open(
+            self.root,
+            format!("case-{}", self.case_id),
+            "sea-forge-server",
+        )?;
+        let entries = ledger.read_entries()?;
+        match kind {
+            "case" => {
+                // A `case:<id>` ref must name this resolver's own case; a
+                // mismatched id is an unresolvable reference (returns the
+                // established `None` so the precondition stale-rejects),
+                // never a fingerprint of this case's ledger mislabeled with a
+                // foreign id.
+                if id != self.case_id {
+                    return Ok(None);
+                }
+                // The canonical current case digest is the ordered list of
+                // record kinds + payload hashes committed for this case — a
+                // stable fingerprint that changes whenever the case advances.
+                let fingerprint: Vec<serde_json::Value> = entries
+                    .iter()
+                    .map(|entry| {
+                        serde_json::json!({
+                            "kind": entry.record_kind,
+                            "payload_hash": entry.payload_hash,
+                            "ordinal": entry.append_ordinal,
+                        })
+                    })
+                    .collect();
+                Ok(Some(serde_json::json!({
+                    "case_id": id,
+                    "records": fingerprint,
+                })))
+            }
+            "approval" => {
+                // Latest ledger record whose payload names this approval id.
+                let latest = entries.iter().rev().find(|entry| {
+                    entry.payload["approval_id"].as_str() == Some(id)
+                        || entry.payload["approvalId"].as_str() == Some(id)
+                });
+                Ok(latest.map(|entry| entry.payload.clone()))
+            }
+            _ => Ok(None),
+        }
+    }
+}
+
+/// Handle an `approve`/`reject` decision with optional precondition + request
+/// correlation. On a stale precondition, no side effect is performed and a
+/// structured `rejected_as_stale` body is returned (mirrors the no-side-effect
+/// discipline of the authority-deny paths).
+#[allow(clippy::too_many_arguments)]
+async fn decide(
+    state: &Arc<ServerState>,
+    cli_verb: &str,
+    method: &str,
+    event_kind: &str,
+    case_id: &str,
+    approval_id: &str,
+    note: Option<&str>,
+    request_id: Option<&str>,
+    preconditions: Option<&sfwp::precondition::Precondition>,
+) -> serde_json::Value {
+    record_pending(state, request_id, method);
+
+    // Evaluate preconditions first — before any side effect.
+    if let Some(precondition) = preconditions {
+        let resolver = LedgerRecordResolver {
+            root: &state.config.root,
+            case_id,
+        };
+        match sfwp::precondition::evaluate(precondition, &resolver) {
+            Ok(Some(rejected)) => {
+                let response = serde_json::to_value(&rejected).unwrap_or_else(
+                    |_| serde_json::json!({"error": "rejected_as_stale serialization failed"}),
+                );
+                // No side effect performed; still record the terminal outcome.
+                record_outcome(state, request_id, method, &response);
+                return response;
+            }
+            Ok(None) => {}
+            Err(error) => {
+                let response =
+                    serde_json::json!({"error": error.to_string(), "error_class": error.class()});
+                record_outcome(state, request_id, method, &response);
+                return response;
+            }
+        }
+    }
+
+    let root = state.config.root.clone();
+    let result = run_cli(
+        &root,
+        &[
+            cli_verb,
+            case_id,
+            approval_id,
+            "--root",
+            root.to_str().unwrap_or("."),
+        ],
+        note,
+    )
+    .await;
+    let response = match result {
+        Ok(output) => {
+            let _ = state.permission_broker.resolve(approval_id).await;
+            let _ = state
+                .publish_event(
+                    event_kind,
+                    Some(case_id),
+                    None,
+                    serde_json::json!({"approval_id": approval_id}),
+                )
+                .await;
+            serde_json::json!({"ok": true, "output": output})
+        }
+        Err(e) => serde_json::json!({"error": e}),
+    };
+    record_outcome(state, request_id, method, &response);
+    response
+}
+
+/// Inner delegation execution, factored out so the caller can uniformly record
+/// the correlated outcome regardless of which early-exit path is taken.
+#[allow(clippy::too_many_arguments)]
+async fn delegate_inner(
+    state: &Arc<ServerState>,
+    endpoint: &str,
+    instruction: &str,
+    requested_run_id: Option<String>,
+    model: Option<&str>,
+    max_turns: u32,
+    token_budget: Option<u64>,
+    criteria: sea_forge_core::types::SettlementCriteria,
+    policy: &str,
+    entity: &str,
+    process: &str,
+) -> serde_json::Value {
+    let delegation_run_id = match requested_run_id {
+        Some(value) if valid_run_id(&value) => value,
+        Some(_) => return serde_json::json!({"error":"invalid delegation run_id"}),
+        None => match run_id() {
+            Ok(value) => value,
+            Err(error) => return serde_json::json!({"error": error.to_string()}),
+        },
+    };
+    let delegation_case_id = match case_id() {
+        Ok(value) => value,
+        Err(error) => return serde_json::json!({"error": error.to_string()}),
+    };
+    let permit = match state.semaphore.acquire().await {
+        Ok(permit) => permit,
+        Err(_) => return serde_json::json!({"error":"server semaphore unavailable"}),
+    };
+    let cancel = Arc::new(AtomicBool::new(false));
+    let requested = Arc::new(AtomicBool::new(false));
+    let handle = DelegationHandle {
+        case_id: delegation_case_id.clone(),
+        cancel: Arc::clone(&cancel),
+        requested,
+    };
+    if state
+        .delegations
+        .lock()
+        .await
+        .insert(delegation_run_id.clone(), handle)
+        .is_some()
+    {
+        drop(permit);
+        return serde_json::json!({"error":"delegation run_id already active"});
+    }
+    let config = state.config.clone();
+    let run_for_execution = delegation_run_id.clone();
+    let case_for_execution = delegation_case_id.clone();
+    let cancel_for_execution = Arc::clone(&cancel);
+    let result = delegation::execute_with_permission_broker(
+        &config,
+        delegation::DelegationRequest {
+            endpoint_id: endpoint,
+            instruction,
+            model,
+            max_turns,
+            token_budget,
+            criteria,
+            policy_path: policy,
+            entity,
+            process,
+            ..Default::default()
+        },
+        &agent_probe::EnvironmentCredentialResolver,
+        delegation::DelegationEpisodeContext::standalone(&case_for_execution, &run_for_execution),
+        move || cancel_for_execution.load(Ordering::SeqCst),
+        Some(state.permission_broker.clone()),
+    )
+    .await;
+    state.delegations.lock().await.remove(&delegation_run_id);
+    drop(permit);
+    match result {
+        Ok(outcome) => {
+            let _ = state
+                .publish_event(
+                    "agent_run.delegated",
+                    Some(&delegation_case_id),
+                    Some(&delegation_run_id),
+                    serde_json::json!({"endpoint": endpoint}),
+                )
+                .await;
+            serde_json::to_value(outcome).unwrap_or_else(
+                |_| serde_json::json!({"error":"delegation response serialization failed"}),
+            )
+        }
+        Err(error) => {
+            serde_json::json!({"error": error.to_string(), "error_class": error.class()})
         }
     }
 }
@@ -880,6 +1432,14 @@ async fn cancel_delegation(
     match result {
         Ok(control_id) => {
             handle.cancel.store(true, Ordering::SeqCst);
+            let _ = state
+                .publish_event(
+                    "agent_run.cancellation_requested",
+                    Some(&handle.case_id),
+                    Some(run_id),
+                    serde_json::json!({"control_id": control_id}),
+                )
+                .await;
             serde_json::json!({
                 "run_id": run_id,
                 "state": "cancellation_requested",
