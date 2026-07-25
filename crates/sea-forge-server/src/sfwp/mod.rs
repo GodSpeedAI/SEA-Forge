@@ -15,6 +15,7 @@
 pub mod correlation;
 pub mod events;
 pub mod precondition;
+pub mod readiness;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -83,6 +84,14 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
     },
     MethodDescriptor {
         method: "events.get_range",
+        class: InteractionClass::Inspect,
+    },
+    // --- SFWP additive inspect method (Task 5, ADR-003) ---
+    // `readiness.get` is a read-only projection over already-proven kernel
+    // truth (self-model validation + endpoint config). No wrapper frame; a thin
+    // additive verb per the module seam above.
+    MethodDescriptor {
+        method: "readiness.get",
         class: InteractionClass::Inspect,
     },
 ];
@@ -159,6 +168,9 @@ pub const SCHEMA_TYPES: &[&str] = &[
     "GetSchemaResult",
     "UnsupportedVersion",
     "MethodDescriptor",
+    "ReadinessView",
+    "ReadinessItem",
+    "ReadinessGetParams",
 ];
 
 /// Build the `system.hello` result, or an `unsupported_version` error if the

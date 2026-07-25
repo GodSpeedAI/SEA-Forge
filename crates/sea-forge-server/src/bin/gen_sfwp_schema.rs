@@ -13,6 +13,7 @@ use sea_forge_server::sfwp::events::EventFrame;
 use sea_forge_server::sfwp::precondition::{
     ChangedRecord, Precondition, RecordDigest, RejectedAsStale,
 };
+use sea_forge_server::sfwp::readiness::{ReadinessGetParams, ReadinessItem, ReadinessView};
 use sea_forge_server::sfwp::{
     DescribeResult, GetSchemaResult, HelloResult, MethodDescriptor, UnsupportedVersion,
 };
@@ -43,6 +44,9 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(GetSchemaResult, "GetSchemaResult"),
         schema!(UnsupportedVersion, "UnsupportedVersion"),
         schema!(MethodDescriptor, "MethodDescriptor"),
+        schema!(ReadinessView, "ReadinessView"),
+        schema!(ReadinessItem, "ReadinessItem"),
+        schema!(ReadinessGetParams, "ReadinessGetParams"),
     ]
 }
 

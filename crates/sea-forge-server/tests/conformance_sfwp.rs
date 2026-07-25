@@ -467,6 +467,155 @@ async fn live_subscriber_receives_pushed_event() {
     stub.abort();
 }
 
+// --- readiness.get (Task 5) ------------------------------------------------
+//
+// `readiness.get` is a read-only inspect projection. These tests prove it
+// always answers with a shaped view (infallible), that it reflects endpoint
+// configuration honestly, and that switching the intended operation changes
+// which capability is foregrounded (operation-sensitivity).
+
+/// (a) No agent endpoint configured: local governed execution is `ready`,
+/// external delegation is `degraded` with the named reason, and `overall`
+/// reflects the limitation (not a hard block) since foundations pass.
+#[tokio::test]
+async fn readiness_get_no_endpoint_local_ready_external_degraded() {
+    let (_root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+
+    let view = client.call(json!({"verb": "readiness_get"})).await;
+
+    // Foundations pass on a fresh root (bundled models verify; no committed
+    // self-model ledger/snapshot to fail).
+    let foundations = view["foundations"].as_array().unwrap();
+    let self_model = foundations
+        .iter()
+        .find(|i| i["id"] == "self_model_integrity")
+        .expect("self_model_integrity foundation present");
+    assert_eq!(self_model["status"], "ready", "{view}");
+
+    let caps = view["operational_capabilities"].as_array().unwrap();
+    let local = caps
+        .iter()
+        .find(|c| c["id"] == "local_governed_execution")
+        .expect("local capability present");
+    assert_eq!(local["status"], "ready", "{view}");
+
+    let external = caps
+        .iter()
+        .find(|c| c["id"] == "external_delegation")
+        .expect("external capability present");
+    assert_eq!(external["status"], "degraded", "{view}");
+    assert_eq!(
+        external["reason"], "Endpoint verification has not been recorded",
+        "named reason must be sourced, not invented: {view}"
+    );
+
+    // Overall: foundations pass but a capability is degraded ⇒ limited.
+    assert_eq!(view["overall"], "ready_with_limitations", "{view}");
+
+    // Partial scope is honest, not fabricated.
+    assert!(
+        view["recent_invalidations"].as_array().unwrap().is_empty(),
+        "recent_invalidations must be an honest empty array in this slice"
+    );
+}
+
+/// (b) With a stub endpoint registered, external delegation capability improves
+/// to `ready` and the overall verdict becomes `ready`.
+#[tokio::test]
+async fn readiness_get_with_endpoint_external_ready() {
+    let (endpoint, stub) =
+        stub_endpoint(r#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#);
+    let (_root, socket) = boot_with_endpoint(Some(endpoint)).await;
+    let mut client = Client::connect(&socket).await;
+
+    let view = client.call(json!({"verb": "readiness_get"})).await;
+
+    let caps = view["operational_capabilities"].as_array().unwrap();
+    let external = caps
+        .iter()
+        .find(|c| c["id"] == "external_delegation")
+        .expect("external capability present");
+    assert_eq!(
+        external["status"], "ready",
+        "registering an endpoint must improve external delegation: {view}"
+    );
+    assert_eq!(view["overall"], "ready", "{view}");
+
+    stub.abort();
+}
+
+/// (c) Operation-sensitivity: passing `intended_operation.method = "delegate"`
+/// foregrounds the external-delegation capability (orders it first), whereas
+/// omitting the intended operation foregrounds local execution. This is the
+/// "switching intended operation changes readiness" proof — a real assertion on
+/// *which* capability leads, not merely that the responses differ.
+#[tokio::test]
+async fn readiness_get_intended_operation_foregrounds_relevant_capability() {
+    let (_root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+
+    // No intended operation: local governed execution leads.
+    let default_view = client.call(json!({"verb": "readiness_get"})).await;
+    let default_caps = default_view["operational_capabilities"].as_array().unwrap();
+    assert_eq!(
+        default_caps[0]["id"], "local_governed_execution",
+        "without an intended operation, local execution is foregrounded: {default_view}"
+    );
+
+    // Intended operation that requires delegation: external capability leads.
+    let delegate_view = client
+        .call(json!({
+            "verb": "readiness_get",
+            "intended_operation": {"method": "delegate"}
+        }))
+        .await;
+    let delegate_caps = delegate_view["operational_capabilities"]
+        .as_array()
+        .unwrap();
+    assert_eq!(
+        delegate_caps[0]["id"], "external_delegation",
+        "a delegation operation must foreground external delegation: {delegate_view}"
+    );
+
+    // The view echoes the intended operation it was shaped for.
+    assert_eq!(
+        delegate_view["intended_operation"]["method"], "delegate",
+        "{delegate_view}"
+    );
+
+    // Concrete proof the foregrounding actually changed order.
+    assert_ne!(
+        default_caps[0]["id"], delegate_caps[0]["id"],
+        "switching intended operation must change which capability leads"
+    );
+}
+
+/// `readiness.get` is discoverable via the catalog with the `inspect` class.
+#[tokio::test]
+async fn readiness_get_is_listed_as_inspect() {
+    let (_root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+
+    let hello = client
+        .call(json!({"verb": "system_hello", "protocol_version": "1"}))
+        .await;
+    let methods = hello["implemented_methods"].as_array().unwrap();
+    assert!(
+        methods.iter().any(|m| m == "readiness.get"),
+        "readiness.get must be advertised: {hello}"
+    );
+
+    let describe = client.call(json!({"verb": "system_describe"})).await;
+    let entry = describe["methods"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["method"] == "readiness.get")
+        .expect("readiness.get in describe");
+    assert_eq!(entry["class"], "inspect");
+}
+
 /// Drift guard: regenerating the SFWP schemas must produce byte-identical
 /// output to the committed `workbench/packages/contracts/schema/*.schema.json`.
 /// Shells out to the same generator binary the developer runs, into a temp

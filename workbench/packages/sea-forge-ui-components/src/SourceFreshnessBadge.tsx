@@ -1,6 +1,6 @@
 import styles from "./SourceFreshnessBadge.module.css";
 
-export type FreshnessMode = "live" | "cached" | "stale" | "offline";
+export type FreshnessMode = "live" | "cached" | "stale" | "offline" | "checking";
 
 export interface SourceFreshnessBadgeProps {
   mode: FreshnessMode;
@@ -22,6 +22,7 @@ export function SourceFreshnessBadge({
     cached: styles.cachedDot,
     stale: styles.staleDot,
     offline: styles.offlineDot,
+    checking: styles.checkingDot,
   };
 
   const modeLabels: Record<FreshnessMode, string> = {
@@ -29,6 +30,7 @@ export function SourceFreshnessBadge({
     cached: "Cached snapshot",
     stale: "Stale projection",
     offline: "Offline record",
+    checking: "Checking source",
   };
 
   const dotClass = dotClasses[mode] || styles.staleDot;

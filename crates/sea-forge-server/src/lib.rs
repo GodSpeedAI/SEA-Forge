@@ -590,6 +590,14 @@ pub enum Request {
         #[serde(default)]
         limit: Option<u32>,
     },
+    /// Read-only readiness projection (Task 5). Inspect method: shapes proven
+    /// self-model/endpoint truth into a view; introduces no new truth, mutates
+    /// nothing. `intended_operation` foregrounds the capabilities that operation
+    /// depends on (operation-sensitivity).
+    ReadinessGet {
+        #[serde(default)]
+        intended_operation: Option<sfwp::readiness::IntendedOperation>,
+    },
 }
 
 #[derive(Deserialize)]
@@ -1102,6 +1110,17 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 serde_json::json!({"error": error.to_string(), "error_class": error.class()})
             }
         },
+        // Inspect projection: always answers with a shaped view (infallible),
+        // per `unknown ≠ unavailable`. Mirrors the thin `system.describe` arm —
+        // call the typed builder and serialize its result directly, no wrapper.
+        Request::ReadinessGet { intended_operation } => {
+            let view = sfwp::readiness::get(
+                &state.config,
+                sfwp::readiness::ReadinessGetParams { intended_operation },
+            );
+            serde_json::to_value(view)
+                .unwrap_or_else(|_| serde_json::json!({"error": "readiness serialization failed"}))
+        }
         // These two are connection-scoped and handled inside
         // `handle_connection`; reaching here means a caller invoked
         // `handle_request` directly (in-process), where no live subscription

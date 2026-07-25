@@ -58,10 +58,13 @@ async function main(): Promise<void> {
     const validator =
       BANNER +
       "\n" +
-      `import Ajv, { type ValidateFunction } from "ajv";\n` +
+      // schemars emits draft 2020-12 (`$schema`), so compile with Ajv's 2020
+      // build — the default `ajv` entry only knows draft-07 and rejects the
+      // 2020-12 meta-schema at compile time.
+      `import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";\n` +
       `import schema from "../schema/${name}.schema.json" with { type: "json" };\n` +
       `import type { ${name} } from "./${name}.js";\n\n` +
-      `const ajv = new Ajv({ allErrors: true, strict: false });\n` +
+      `const ajv = new Ajv2020({ allErrors: true, strict: false });\n` +
       `export const validate = ajv.compile(schema) as ValidateFunction<${name}>;\n`;
 
     writeFileSync(join(outDir, `${name}.validator.ts`), validator);

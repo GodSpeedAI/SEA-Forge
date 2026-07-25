@@ -111,3 +111,87 @@ entry when resolved; do not use this file as a backlog of ideas.
   side) would remove the duplication entirely.
 - Scope: not a defect surfaced by Task 3's own gates (all pass); a robustness
   follow-up for whichever task next revisits the host's event-reconnect loop.
+
+## Open: `scripts/check-agent-context.sh` is unrunnable on this branch
+
+- Observed: 2026-07-25
+- Evidence: the file is git-tracked as mode `100644` (non-executable;
+  `git ls-files -s scripts/check-agent-context.sh`) and has CRLF line endings
+  (`env: 'sh\r': No such file or directory` when invoked after `chmod +x`).
+  `devbox run -- just check` calls it via the `context-check` recipe
+  (`justfile:104`) and fails with exit 126/127 before reaching `fmt-check`,
+  `lint`, or `test`. Neither issue was introduced by Task 5 (`git log -1 --
+  scripts/check-agent-context.sh` shows the last change predates this work).
+- Impact: `devbox run -- just check` — the composite gate the skill and
+  `AGENTS.md` name as required before declaring any slice done — cannot run
+  end-to-end on this branch. Task 5 worked around it by running `fmt-check`,
+  `lint`, and `test` individually (all green); every other task on this branch
+  since the file broke has presumably done the same or silently skipped
+  `context-check`.
+- Next move: fix the file's line endings (convert to LF) and restore the
+  executable bit (`chmod +x` + commit), then confirm `just check` runs clean
+  end-to-end again.
+- Scope: unrelated to `readiness.get`/`ReadinessConsole`; fixing it would
+  touch a file no reviewer would expect in this slice's diff.
+
+## Open: Readiness Playwright journey never talks to a real `sea-forge-server`
+
+- Observed: 2026-07-25
+- Evidence: `workbench/apps/desktop/e2e/readiness.spec.ts` +
+  `e2e/tauriMock.ts` mock `window.__TAURI_INTERNALS__` entirely (no native
+  Tauri shell, no Unix-socket connection); `sfwp_query` resolves to a
+  hardcoded `degradedReadinessView()` fixture. The plan's Task 5 Definition of
+  Done reads "the journey passes against a real server on a temp root" — that
+  requirement is met at the Rust level (`conformance_sfwp.rs`'s
+  `readiness_get_*` tests boot a real server via `boot()`/`boot_with_endpoint()`
+  on a temp root) but not by the Playwright journey itself.
+- Impact: the e2e layer proves the React/query/component wiring is correct
+  against a known-good fixture, but does not prove the full stack (real
+  server → real Tauri host → real socket → renderer) together in one test.
+  A regression in the Tauri bridge's actual wire serialization (as opposed to
+  the mocked shape) would not be caught by this suite.
+- Next move: a true end-to-end run needs either a packaged Tauri binary (OS
+  windowing not available in this environment) or a browser-mode build of the
+  desktop app pointed at a real `sea-forge-server` process via
+  `SEA_FORGE_SOCKET`, with the mock swapped for a real IPC bridge. Worth
+  revisiting once the Workbench has a CI environment that can launch a
+  browser + a real server together.
+- Scope: accepted as a disclosed, pragmatic scope reduction for Task 5 in this
+  environment; flagged rather than silently presented as full e2e coverage.
+
+## Open: Readiness event-invalidation is coarse (any `sfwp://event` invalidates every readiness view)
+
+- Observed: 2026-07-25
+- Evidence: `workbench/apps/desktop/src/hooks/useReadiness.ts` invalidates
+  `READINESS_QUERY_KEY` on receipt of any `sfwp://event` frame — there is no
+  `self_model.changed`/`endpoint.updated`-style event kind anywhere in the
+  server (verified by grep across `crates/sea-forge-server/src/sfwp/events.rs`
+  and callers) to narrow against.
+- Impact: harmless correctness-wise (over-invalidation just causes an extra
+  refetch, never a stale render), but every case/run/approval event on a busy
+  cell will also refetch readiness even when readiness genuinely didn't
+  change, which won't scale well once event volume grows.
+- Next move: once a self-model/endpoint-config change gets its own event
+  `kind`, narrow the invalidation predicate in `useReadiness.ts` to match it.
+- Scope: not fixable within Task 5 without inventing a server event taxonomy
+  that doesn't exist yet — logged rather than silently narrowed by guessing.
+
+## Open: `ReadinessView.recent_invalidations` has no real source and `overall: "stale"` is never derived
+
+- Observed: 2026-07-25
+- Evidence: `crates/sea-forge-server/src/sfwp/readiness.rs` ships
+  `recent_invalidations` as an always-empty `Vec` and never constructs
+  `OverallReadiness::Stale` — both are documented inline in the file's doc
+  comments as intentional gaps (no cache/invalidation-record layer exists to
+  source either honestly).
+- Impact: the frontend correctly never implies these are populated (renders
+  "No readiness invalidations recorded yet." rather than fabricating
+  entries), but the spec's `ReadinessView` contract (which the frontend and
+  any other future SFWP client will read) currently always has these two
+  fields effectively dead, which a future consumer might not realize without
+  reading this file.
+- Next move: build a real invalidation-record source (likely tied to whatever
+  emits the `self_model.changed`/`endpoint.updated` events from the item
+  above) and a cache/freshness layer before deriving `stale` honestly.
+- Scope: explicitly out of scope for Task 5 per the plan's own "ship the
+  subset with explicit unknown sections" redesign-trigger guidance.

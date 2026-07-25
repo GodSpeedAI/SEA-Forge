@@ -2,6 +2,58 @@
 
 Updated: 2026-07-25
 
+> **2026-07-25 Workbench plan Task 5 (Readiness vertical slice) complete.**
+> First real settlement wired end-to-end: `readiness.get` SFWP inspect method
+> (new `crates/sea-forge-server/src/sfwp/readiness.rs`, dispatched as
+> `Request::ReadinessGet`) projects self-model validation
+> (`sea_forge_self_model::store::validate`) and agent-endpoint config into a
+> `ReadinessView { overall, foundations, operational_capabilities,
+> recent_invalidations, intended_operation }` — infallible (a validation
+> failure renders as a `blocked`/`integrity_halted` item, never propagates an
+> `Err`), operation-sensitive (`intended_operation` reorders which capability
+> is foregrounded), no new truth introduced. `ReadinessItem`/`Invalidation`
+> shapes were defined from scratch (the API spec references but never defines
+> them) grounded in the wireframe's condition-table/capability-row fields.
+> Frontend: `SfwpQuery::ReadinessGet` added to the closed Tauri bridge
+> (`workbench/apps/desktop/src-tauri/src/bridge.rs`); contracts regenerated
+> (`ReadinessView`/`ReadinessItem`/`ReadinessGetParams` + AJV validators,
+> deterministic rerun confirmed); `workbench/apps/desktop/src/hooks/useReadiness.ts`
+> wraps the query in TanStack Query, validates every response against the
+> generated AJV validator before trusting it, and invalidates on any
+> `sfwp://event` frame (coarse but honest — no readiness-specific event kind
+> exists yet); `ReadinessPage.tsx` rewritten from Task 4's hardcoded mock to
+> compose real data through `WhyStatePanel`/`GovernedStatusPill`/
+> `IntegrityIndicator`/`SourceFreshnessBadge`/`ProtectedActionButton`/
+> `EvidenceDrawer`. Case-creation is permanently, honestly disabled (no
+> `case.create` verb exists yet — Task 6) with a reason sourced from the live
+> readiness view, never implying a working flow. Server disconnect renders
+> the last-known view marked `stale` (TanStack Query's default data retention
+> across a failed refetch) rather than blanking it. New Playwright + axe-core
+> harness bootstrapped from scratch (`playwright.config.ts`, `e2e/tauriMock.ts`,
+> `e2e/readiness.spec.ts`) mocking the Tauri IPC bridge via
+> `window.__TAURI_INTERNALS__` injection — proves the real `ReadinessPage`/
+> `useReadiness` code paths against a fixture, but does not exercise a real
+> `sea-forge-server` process (that's covered separately at the Rust level by
+> `conformance_sfwp.rs`'s `readiness_get_*` tests, which do boot a real server
+> on a temp root). `statusMachine.ts` deliberately NOT replaced — a plain read
+> needs no XState machine; it stays as the (unrelated) ProofPage's dependency
+> pending a real preflight/commit machine in a later authoring slice. Two
+> independent architect-verification passes both returned APPROVED. Gates
+> green: `cargo fmt/test -p sea-forge-server` (4/4 readiness tests),
+> `devbox run -- just fmt-check`/`lint`/`test` (workspace-wide, 0 failures —
+> `just check`'s `context-check` sub-recipe could not run, see
+> `OBSERVED_DEBT.md`), `bun run generate` (deterministic), `bun run check`
+> (desktop, clean), `bun run test` (desktop 11/11 + ui-components 16/16),
+> `bunx playwright test --grep readiness` (1/1, zero axe violations). Four
+> new entries filed in `.agents/OBSERVED_DEBT.md`: the broken
+> `check-agent-context.sh` (pre-existing, unrelated), the Playwright-mocks-
+> vs-real-server e2e gap, coarse event-invalidation scope, and the
+> permanently-empty `recent_invalidations`/never-derived `stale` fields.
+> Next step: plan Task 6 (case authoring: draft, validation, preflight,
+> atomic commit) — the first slice that needs a real mutation/lifecycle
+> machine and will also give the disabled "Create case" button real work
+> to do.
+
 > **2026-07-25 Workbench plan Task 4 (shell + semantic components + guards) complete.**
 > Created `@sea-forge/ui-components` Bun workspace package containing the nine semantic
 > components (`GovernedStatusPill`, `DualStateIndicator`, `SourceFreshnessBadge`,
