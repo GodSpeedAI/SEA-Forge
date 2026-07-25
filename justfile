@@ -145,6 +145,15 @@ no-async-kernel:
     fi
     echo "ok: no async runtime or HTTP client in ${#kernel_crates[@]} kernel crates"
 
+# Workbench (Bun workspace) lint + typecheck + build + test. Not part of the
+# kernel `check`/`ci` gates — the frontend is developed and gated separately
+# per docs/decisions/ADR-004-workbench-stack.md.
+[group('quality')]
+workbench-check:
+    #!/usr/bin/env bash
+    {{set}}
+    cd workbench && bun install --frozen-lockfile && bun run check && bun run build && bun run test
+
 # Canonical clean, deterministic, noninteractive CI verification.
 # GitHub Actions invokes this (or its documented constituent recipes when
 # parallelized). Local `just ci` is equivalent to the union of required jobs.

@@ -1,0 +1,15 @@
+{
+  "name": "sea-forge-workbench",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun run --cwd apps/desktop dev",
+    "build": "bun run --cwd apps/desktop build",
+    "check": "bun run --cwd apps/desktop check",
+    "test": "bun run --cwd apps/desktop test",
+    "generate:contracts": "bun run --cwd packages/contracts generate"
+  }
+}

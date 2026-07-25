@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Precondition",
+  "description": "A precondition bundle attached to a protected request.",
+  "type": "object",
+  "properties": {
+    "policy_bundle_digest": {
+      "description": "Optional digest of the active policy bundle the caller assumed.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "records": {
+      "description": "Per-record expected digests.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RecordDigest"
+      }
+    }
+  },
+  "$defs": {
+    "RecordDigest": {
+      "description": "A single `{ref, expected_digest}` precondition entry.",
+      "type": "object",
+      "properties": {
+        "expected_digest": {
+          "description": "The sha256 digest the caller expects the referenced record to have.",
+          "type": "string"
+        },
+        "ref": {
+          "description": "Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "expected_digest"
+      ]
+    }
+  }
+}
