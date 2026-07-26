@@ -147,6 +147,22 @@ SEA Forge owns semantics. Component tiers, the swizzling ladder
 (compose → theme → supported override → swizzle-with-record), and the
 accessibility contract are in `reference/design-and-ux-contract.md`.
 
+For any surface with a checked-in mockup, treat visual fidelity as part of the
+settlement:
+
+1. Render the reference and implementation at the same viewport.
+2. Capture a reference screenshot and an implementation screenshot.
+3. Compare computed geometry for shell tracks, major regions, and fixed bars;
+   inspect typography, density, colors, borders, responsive transitions, and
+   confirm intended rules are active in normal and reduced-motion media.
+4. Add a regression check for stable structure/styles instead of relying on a
+   one-time visual judgment.
+5. Verify zero console errors and run the required axe/keyboard checks.
+
+Copy layout and interaction intent, never prototype truth: live labels, states,
+sources, freshness, authority, and evidence still come from validated
+contracts. Do not claim fidelity from source inspection alone.
+
 ## Thoth adapter workflow
 
 All Thoth UI goes through `ThothInteractionPort`

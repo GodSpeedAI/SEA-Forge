@@ -173,6 +173,26 @@ describe("EvidenceDrawer", () => {
     );
     expect(screen.getByText(/Disclosure Restricted/)).toBeInTheDocument();
   });
+
+  it("keeps the panel mounted while closed so the exit transition can complete", () => {
+    render(
+      <EvidenceDrawer
+        isOpen={false}
+        onClose={() => {}}
+        evidence={{
+          id: "ev_03",
+          kind: "readiness_evaluation_summary",
+          disclosureStatus: "permitted",
+        }}
+      />
+    );
+
+    expect(screen.getByTestId("evidence-drawer")).toBeInTheDocument();
+    expect(screen.getByTestId("evidence-drawer-backdrop")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
 });
 
 describe("AuthorityBoundaryPanel", () => {

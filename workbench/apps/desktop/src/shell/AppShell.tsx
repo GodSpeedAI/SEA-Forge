@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import styles from "./AppShell.module.css";
 import { GlobalHeader } from "./GlobalHeader";
 import { Sidebar } from "./Sidebar";
 import { JourneyRibbon } from "./JourneyRibbon";
 import { EvidenceDrawer, type EvidenceRecord } from "@sea-forge/ui-components";
+import { EvidenceContextProvider } from "./EvidenceContext";
+import { OPERATE_ROUTE_BY_PATH } from "../pages/operateRoutes";
 
 export interface AppShellProps {
   children: React.ReactNode;
@@ -12,10 +14,88 @@ export interface AppShellProps {
   guardFailed?: boolean;
 }
 
-export function AppShell({ children, currentJourneyStep = "Readiness" }: AppShellProps) {
+interface ShellRouteContext {
+  label: string;
+  journeyStep: string;
+  reason: string;
+}
+
+const ROUTE_CONTEXT: Record<string, ShellRouteContext> = {
+  "/readiness": {
+    label: "readiness",
+    journeyStep: "Readiness",
+    reason:
+      "External delegation needs a verified endpoint and an authority boundary before the path becomes spendable.",
+  },
+  ...Object.fromEntries(
+    Object.entries(OPERATE_ROUTE_BY_PATH).map(([path, route]) => [
+      path,
+      {
+        label: route.shellLabel,
+        journeyStep: route.journeyStep,
+        reason: route.reason,
+      },
+    ]),
+  ),
+};
+
+export function AppShell({ children, currentJourneyStep }: AppShellProps) {
   const navigate = useNavigate();
-  const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
-  const [selectedEvidence] = useState<EvidenceRecord | null>(null);
+  const location = useLocation();
+  const routeContext =
+    ROUTE_CONTEXT[location.pathname === "/" ? "/readiness" : location.pathname] ??
+    ROUTE_CONTEXT["/readiness"];
+  const [isEvidenceOpen, setIsEvidenceOpen] = useState(true);
+  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord>({
+    id: "readiness.get",
+    kind: "readiness_evaluation_summary",
+    disclosureStatus: "permitted",
+    rawPayload: JSON.stringify(
+      {
+        state: "readiness",
+        source: "readiness.get",
+        display: "source-backed projection",
+      },
+      null,
+      2,
+    ),
+  });
+
+  useEffect(() => {
+    if (routeContext.label === "readiness") {
+      setSelectedEvidence({
+        id: "readiness.get",
+        kind: "readiness_evaluation_summary",
+        disclosureStatus: "permitted",
+        rawPayload: JSON.stringify(
+          {
+            state: "readiness",
+            source: "readiness.get",
+            display: "source-backed projection",
+          },
+          null,
+          2,
+        ),
+      });
+    } else {
+      const routeId = routeContext.label.replaceAll(" ", "_");
+      setSelectedEvidence({
+        id: `${routeId}.state`,
+        kind: `operate_${routeId}_state`,
+        disclosureStatus: "permitted",
+        rawPayload: JSON.stringify(
+          {
+            route: routeContext.label,
+            reason: routeContext.reason,
+            display: "copied specification projection",
+          },
+          null,
+          2,
+        ),
+      });
+    }
+    setIsEvidenceOpen(true);
+  }, [location.pathname, routeContext.label, routeContext.reason]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -40,7 +120,10 @@ export function AppShell({ children, currentJourneyStep = "Readiness" }: AppShel
   }, [navigate]);
 
   return (
-    <div className={styles.appShell} data-od-id="application-shell">
+    <div
+      className={`${styles.appShell} app-shell ${!isEvidenceOpen ? `${styles.drawerClosed} drawer-closed` : ""}`}
+      data-od-id="application-shell"
+    >
       <a className={styles.skipLink} href="#main-content">
         Skip to governed focus
       </a>
@@ -51,38 +134,50 @@ export function AppShell({ children, currentJourneyStep = "Readiness" }: AppShel
         onToggleEvidence={() => setIsEvidenceOpen((prev) => !prev)}
       />
 
-      <div className={styles.bodyLayout}>
-        <Sidebar />
+      <Sidebar />
 
-        <div className={styles.mainWorkspace}>
-          <JourneyRibbon currentStep={currentJourneyStep} />
-          <main id="main-content" tabIndex={-1} style={{ flex: 1, outline: "none" }}>
+      <div className={`${styles.mainWorkspace} main-workspace`} data-od-id="readiness-workspace">
+        <JourneyRibbon
+          currentStep={currentJourneyStep ?? routeContext.journeyStep}
+        />
+        <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
+          <EvidenceContextProvider
+            value={{
+              inspectEvidence: (evidence) => {
+                setSelectedEvidence(evidence);
+                setIsEvidenceOpen(true);
+              },
+            }}
+          >
             {children}
-          </main>
-        </div>
+          </EvidenceContextProvider>
+        </main>
       </div>
+
+      <footer
+        className={`${styles.connectionBar} connection-bar`}
+        data-od-id="connection-state-bar"
+      >
+        <span>
+          <span
+            className={`state-dot ${
+              routeContext.label === "readiness" ? "state-dot--ready" : ""
+            }`}
+          />
+          {routeContext.label === "readiness"
+            ? "Source projection current"
+            : "Specification view · not live"}
+        </span>
+        <span className="machine-value">
+          Keyboard: R run checks · I intended work · B blocker · E evidence
+        </span>
+      </footer>
 
       <EvidenceDrawer
         isOpen={isEvidenceOpen}
         onClose={() => setIsEvidenceOpen(false)}
-        evidence={
-          selectedEvidence ?? {
-            id: "ev_shell_active_session",
-            kind: "session_integrity_proof",
-            ledgerUlid: "01HQX_SHELL_PROOF",
-            digest: "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
-            disclosureStatus: "permitted",
-            rawPayload: JSON.stringify(
-              {
-                session: "active_desktop_session",
-                cell: "local_sync_cell",
-                integrity: "verified",
-              },
-              null,
-              2
-            ),
-          }
-        }
+        evidence={selectedEvidence}
+        className="evidence-drawer"
       />
     </div>
   );

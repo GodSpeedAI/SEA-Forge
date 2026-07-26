@@ -184,6 +184,23 @@ if not re.search(r"Astryx.*(substrate|not semantic owner|SEA Forge owns)",
                  re.IGNORECASE | re.DOTALL):
     err("design/stack: Astryx must be positioned as substrate, not semantic owner")
 
+# --- visual-fidelity gate -------------------------------------------------
+design = corpus[SKILL_DIR / "reference" / "design-and-ux-contract.md"]
+testing = corpus[SKILL_DIR / "reference" / "testing-and-settlement.md"]
+fidelity_corpus = text + design + testing
+for requirement in [
+    "same viewport",
+    "computed geometry",
+    "reference screenshot",
+    "implementation screenshot",
+    "console errors",
+    "axe",
+]:
+    if requirement.lower() not in fidelity_corpus.lower():
+        err(f"visual fidelity workflow must require: {requirement}")
+if re.search(r"visual snapshots? (?:are |is )?optional", fidelity_corpus, re.IGNORECASE):
+    err("visual fidelity workflow may not make reference snapshots optional")
+
 # --- verdict --------------------------------------------------------------
 if ERRORS:
     print(f"FAIL — {len(ERRORS)} problem(s):")

@@ -48,6 +48,18 @@ stories are the review artifact and the visual-regression basis. Fixture data
 comes from generated types filled with realistic governed records — never
 fabricated authority/evidence/score values presented as real.
 
+### Visual-fidelity tests
+
+When a checked-in mockup or story is the target, render the reference and the
+implementation at the same viewport and capture both a reference screenshot
+and an implementation screenshot. Assert stable computed geometry for shell
+tracks and major regions, plus DOM/source-projection drift where practical.
+Assert key layout rules through computed styles in normal and reduced-motion
+modes so a selector trapped inside the wrong media query fails loudly.
+Review semantic differences caused by live data separately from visual drift.
+The browser pass also requires zero console errors and an axe result with no
+violations; a source-only CSS or JSX review is not settlement evidence.
+
 ### Route integration tests
 Route + guards + view model against a mocked bridge: guard denial renders the
 governed denial surface (not a blank page), search-state round-trips, event

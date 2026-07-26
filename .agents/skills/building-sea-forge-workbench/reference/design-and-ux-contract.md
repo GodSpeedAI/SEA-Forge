@@ -7,8 +7,8 @@
    screen behavior and acceptance criteria.
 3. `sea-forge-gui-atomic-design-breakdown-v0.1.md` — component tiers/naming.
 4. `DESIGN-spec-mapping.md`, `MOCKUP-BRIEF.md` — traceability and scope.
-5. `ui_kits/app/` — visual reference only (Readiness surface); staleness
-   notes in `source-map.md`.
+5. `ui_kits/app/` — visual reference for the shell, Readiness, and static
+   Operate-route scenarios; staleness notes in `source-map.md`.
 
 The design-system skill `.agents/specs/frontend/SKILL.md`
 (`sea-forge-workbench-design`) governs design QA of produced surfaces; apply
@@ -123,7 +123,28 @@ Playwright flows.
 
 Storybook stories are the fidelity fixtures: every semantic component state
 (each authority/execution/settlement/integrity variant) and each organism's
-reference state gets a story. Compare Readiness surfaces against
-`ui_kits/app/index.html` structure and `styles.css` values during review;
-automated visual snapshots are optional until the packaging milestone, then
-required for the primary path.
+reference state gets a story.
+
+For every UI change with a checked-in reference:
+
+1. Serve the reference and implementation in real browsers.
+2. Use the same viewport for both; include the reference's desktop width and
+   each responsive breakpoint the change can affect.
+3. Capture a reference screenshot and an implementation screenshot.
+4. Compare computed geometry for the application shell, fixed bars, navigation,
+   governed focus, content columns, drawers, and responsive overlays.
+   Confirm the intended layout selectors are active in normal and
+   reduced-motion modes; source presence alone does not prove a rule escaped
+   an accidental media-query boundary.
+5. Compare type roles, spacing density, semantic colors, borders, radii, and
+   visible state/action hierarchy.
+6. Add a stable regression check: source-projection drift when CSS is copied,
+   DOM/region assertions, computed-geometry assertions, or reviewed visual
+   snapshots as appropriate.
+7. Check console errors, axe results, keyboard order, focus visibility, and
+   200% zoom before calling the surface faithful.
+
+For Readiness and Operate-route layout, compare against the rendered
+`ui_kits/app/index.html` plus its `styles.css`; inspect `app.js` only to
+understand the static kit's view hierarchy and interaction feel. Never copy its
+state management or display-only records into production.

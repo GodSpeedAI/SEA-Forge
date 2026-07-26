@@ -8,6 +8,7 @@ import "@astryxdesign/core/reset.css";
 import "@astryxdesign/core/astryx.css";
 import "@astryxdesign/theme-neutral/theme.css";
 import "@sea-forge/ui-tokens/tokens.css";
+import "./mockup.css";
 
 import { seaForgeTheme } from "@sea-forge/astryx-theme";
 import { router } from "./router";

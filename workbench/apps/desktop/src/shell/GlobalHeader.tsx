@@ -1,5 +1,4 @@
 import styles from "./GlobalHeader.module.css";
-import { IntegrityIndicator } from "@sea-forge/ui-components";
 
 export interface GlobalHeaderProps {
   actorName?: string;
@@ -23,60 +22,80 @@ export function GlobalHeader({
   onToggleEvidence,
 }: GlobalHeaderProps) {
   return (
-    <header className={styles.header} data-testid="global-context-bar">
-      <div className={styles.cellBrand}>
-        <span className={styles.mark} aria-hidden="true">
+    <header
+      className={`${styles.header} global-bar`}
+      data-od-id="global-context-bar"
+      data-testid="global-context-bar"
+    >
+      <div className={`${styles.productCell} product-cell`}>
+        <span className={`${styles.productMark} product-mark`} aria-hidden="true">
           SF
         </span>
         <div>
-          <strong>SEA Forge</strong> <span>Cell Context</span>
+          <strong>SEA Forge</strong>
+          <span>Cell context</span>
         </div>
       </div>
 
-      <div className={styles.contextChips}>
-        <span className={styles.chip} aria-label="Active actor and role">
-          <span className={styles.chipLabel}>Actor:</span>
+      <div className={`${styles.globalContext} global-context`}>
+        <button
+          className={`${styles.contextChip} context-chip`}
+          type="button"
+          aria-label="Active actor and role"
+        >
+          <span>Actor</span>
           <strong>{actorName} · {roleName}</strong>
-        </span>
-        <span className={styles.chip} aria-label="Active policy">
-          <span className={styles.chipLabel}>Policy:</span>
+        </button>
+        <button
+          className={`${styles.contextChip} context-chip`}
+          type="button"
+          aria-label="Active policy"
+        >
+          <span>Policy</span>
           <strong>{policyStatus}</strong>
-        </span>
-        <IntegrityIndicator status={integrityStatus} />
+        </button>
+        <button
+          className={`${styles.contextChip} context-chip`}
+          type="button"
+          aria-label="Integrity state"
+        >
+          <span className={`state-dot ${integrityStatus === "verified" ? "state-dot--ready" : ""}`} />
+          <strong>Integrity {integrityStatus}</strong>
+        </button>
       </div>
 
-      <div className={styles.actions}>
+      <div className={`${styles.globalActions} global-actions`}>
         <button
           type="button"
           id="searchButton"
-          className={styles.iconButton}
+          className={`${styles.iconButton} icon-button`}
           onClick={onOpenSearch}
           aria-label="Open command search"
           title="Search (/)"
         >
-          <span aria-hidden="true">⌕</span> Search (/)
+          <span aria-hidden="true">⌕</span>
         </button>
 
         <button
           type="button"
-          className={styles.inboxButton}
+          className={`${styles.attentionButton} attention-button`}
           onClick={onOpenInbox}
           aria-label={`Open approval inbox: ${inboxCount} approval`}
         >
           <span>Inbox</span>
-          <strong>{inboxCount}</strong>
+          <strong>{inboxCount} approval</strong>
         </button>
 
-        {onToggleEvidence && (
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={onToggleEvidence}
-            aria-label="Toggle evidence drawer"
-          >
-            Evidence Drawer
-          </button>
-        )}
+        <button
+          type="button"
+          className={`${styles.activeWork} active-work`}
+          onClick={onToggleEvidence}
+          aria-label="Toggle active work evidence"
+        >
+          <span className="state-dot state-dot--running" />
+          <span>Active work</span>
+          <strong>None running</strong>
+        </button>
       </div>
     </header>
   );
