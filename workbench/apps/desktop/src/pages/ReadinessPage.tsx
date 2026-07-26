@@ -10,6 +10,7 @@ import {
   type IntegrityStatus,
 } from "@sea-forge/ui-components";
 import type { ReadinessItem, ReadinessView } from "@sea-forge/contracts";
+import { useNavigate } from "@tanstack/react-router";
 import { useReadiness } from "../hooks/useReadiness";
 import { useEvidenceContext } from "../shell/EvidenceContext";
 import styles from "./ReadinessPage.module.css";
@@ -92,10 +93,15 @@ function itemDetail(item: ReadinessItem): string {
   return item.category.replace(/_/g, " ");
 }
 
+function canCreateCase(view: ReadinessView): boolean {
+  return (
+    view.foundations.every((item) => item.status === "ready") &&
+    view.operational_capabilities.find((item) => item.id === "local_governed_execution")
+      ?.status === "ready"
+  );
+}
+
 function caseCreationReason(view: ReadinessView): string {
-  if (view.overall === "ready") {
-    return "Case authoring is not yet available in this build";
-  }
   const blocker = [...view.foundations, ...view.operational_capabilities].find(
     (item) => item.status !== "ready",
   );
@@ -103,6 +109,7 @@ function caseCreationReason(view: ReadinessView): string {
 }
 
 export function ReadinessPage() {
+  const navigate = useNavigate();
   const [selectedOperation, setSelectedOperation] = useState<Operation>("agent");
   const intendedOperation = useMemo(
     () => ({ method: OPERATION_METHODS[selectedOperation] }),
@@ -433,8 +440,8 @@ export function ReadinessPage() {
             <h2>Create case</h2>
             <ProtectedActionButton
               label="Create case"
-              onClick={() => {}}
-              isAllowed={false}
+              onClick={() => void navigate({ to: "/cases/new" })}
+              isAllowed={view ? canCreateCase(view) : false}
               disabledReason={
                 view ? caseCreationReason(view) : "Readiness projection unavailable"
               }

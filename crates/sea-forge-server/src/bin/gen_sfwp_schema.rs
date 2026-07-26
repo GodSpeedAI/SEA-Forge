@@ -8,6 +8,10 @@
 //! without regeneration.
 
 use schemars::schema_for;
+use sea_forge_server::sfwp::case::{
+    EntryOptionsResult, PlanItemSummary, PreflightParams, PreflightResult, TemplateOption,
+    TemplateParameter,
+};
 use sea_forge_server::sfwp::correlation::RequestRecord;
 use sea_forge_server::sfwp::events::EventFrame;
 use sea_forge_server::sfwp::precondition::{
@@ -47,6 +51,12 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(ReadinessView, "ReadinessView"),
         schema!(ReadinessItem, "ReadinessItem"),
         schema!(ReadinessGetParams, "ReadinessGetParams"),
+        schema!(EntryOptionsResult, "EntryOptionsResult"),
+        schema!(TemplateOption, "TemplateOption"),
+        schema!(TemplateParameter, "TemplateParameter"),
+        schema!(PreflightParams, "PreflightParams"),
+        schema!(PreflightResult, "PreflightResult"),
+        schema!(PlanItemSummary, "PlanItemSummary"),
     ]
 }
 

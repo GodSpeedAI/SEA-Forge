@@ -13,6 +13,49 @@ entry when resolved; do not use this file as a backlog of ideas.
 - Scope: why it was not fixed in the discovering task
 -->
 
+## Open: Case-authoring proof scenarios (6, 7) have no Playwright e2e coverage
+
+- Observed: 2026-07-26
+- Evidence: Task 6's e2e proof scenarios ("ambiguous commit has no duplicate
+  side effect", "stale preflight repairs via re-preflight") are proven at the
+  Rust conformance level (`crates/sea-forge-server/tests/conformance_case_authoring.rs`)
+  and the XState machine level (`workbench/apps/desktop/src/machines/caseAuthoringMachine.test.ts`),
+  but not as a Playwright journey against the mocked-IPC harness
+  (`workbench/apps/desktop/e2e/`) that Tasks 5/7's readiness/horizon specs use.
+- Impact: no proof that the real `CaseCreationWorkbench` UI (not just the
+  machine in isolation) correctly disables/re-enables its buttons and renders
+  the repair/recovery affordances across these two scenarios end to end in a
+  browser.
+- Next move: either extend the mocked-IPC e2e harness with `case_preflight`/
+  `case_commit` fixtures that can simulate a stale precondition and a dropped
+  commit response, or decide (as this task's skill review note flagged for
+  every prior authoring-adjacent task) that a real-server e2e harness is
+  needed before trusting a mocked one for exactly this class of timing-
+  dependent scenario, and build that harness once rather than per-task.
+- Scope: building or deciding the real-server-vs-mock e2e harness question is
+  a cross-cutting decision affecting Tasks 5–13 equally (already flagged in
+  this file's task-review notes since Task 5); resolving it inside Task 6
+  alone would be scope creep onto a decision the plan defers explicitly.
+
+## Open: No visual-fidelity pass exists for the case-creation screen
+
+- Observed: 2026-07-26
+- Evidence: `.agents/specs/frontend/ui_kits/app/` has no `case-creation` or
+  `case-authoring` reference page (checked: only `index.html` covering
+  Readiness and the Operate-route shells exist). `CaseCreationWorkbench.tsx`
+  was built to the wireframe/API-spec semantics only, styled with the same
+  global panel/button classes the rest of the shell uses, with no mockup to
+  diff pixel geometry against.
+- Impact: the skill's design-fidelity workflow (§ "For any surface with a
+  checked-in mockup, treat visual fidelity as part of the settlement") cannot
+  be executed for this screen — there is no reference to render side by side.
+- Next move: either author a `case-creation` static reference in
+  `.agents/specs/frontend/ui_kits/app/` (design-system-skill work) before the
+  next visual pass, or explicitly accept semantic-fidelity-only for this
+  screen and drop it from the visual-fidelity checklist.
+- Scope: authoring a new static mockup is `.agents/specs/frontend/SKILL.md`'s
+  domain (design-system skill), not this implementation task's.
+
 ## Open: Static Workbench kit hides Operate-route CSS in reduced-motion media
 
 - Observed: 2026-07-25

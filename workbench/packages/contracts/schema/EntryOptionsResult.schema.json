@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EntryOptionsResult",
+  "description": "`case.entry_options` result body.",
+  "type": "object",
+  "properties": {
+    "templates": {
+      "description": "Empty when no template has been materialized under `templates/` yet —\nan honest empty list, never a fabricated built-in catalog.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TemplateOption"
+      }
+    }
+  },
+  "required": [
+    "templates"
+  ],
+  "$defs": {
+    "TemplateOption": {
+      "description": "One template an operator may instantiate a case from — projected from the\nreal on-disk `PlanTemplate`, never fabricated.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "parameters": {
+          "description": "Parameter name -> definition, copied from the template.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/TemplateParameter"
+          }
+        },
+        "template_ref": {
+          "description": "`name@version`, the same form `case.preflight`/`case.commit` accept.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_ref",
+        "description",
+        "parameters"
+      ]
+    },
+    "TemplateParameter": {
+      "description": "A template parameter definition, projected from\n`sea_forge_planner::templates::ParameterDef` (which has no `JsonSchema`\nderive of its own — this SFWP-local shape is the frontend-facing contract,\nmirroring the `readiness.rs` pattern of never handing raw core/planner\ntypes straight to `schemars`).",
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "param_type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "param_type",
+        "required"
+      ]
+    }
+  }
+}

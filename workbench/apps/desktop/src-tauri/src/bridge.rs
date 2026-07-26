@@ -14,8 +14,9 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use serde_json::Value;
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
+use crate::drafts::{self, Draft};
 use crate::socket::SocketHandle;
 
 /// Read-only ("inspect") SFWP methods. Field shapes copied from the server's
@@ -55,6 +56,14 @@ pub enum SfwpQuery {
     ReadinessGet {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         intended_operation: Option<IntendedOperation>,
+    },
+    /// Case-authoring inspect methods (Task 6). Mirror the server's
+    /// `Request::CaseEntryOptions`/`Request::CasePreflight` byte-for-byte.
+    CaseEntryOptions,
+    CasePreflight {
+        template_ref: String,
+        #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+        params: std::collections::BTreeMap<String, String>,
     },
 }
 
@@ -161,6 +170,26 @@ pub enum SfwpCommand {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         request_id: Option<String>,
     },
+    /// `case.commit` (Task 6) — mirrors the server's `Request::CaseCommit`
+    /// byte-for-byte. The single protected verb that actually creates a case;
+    /// `preconditions` pins the template digest `case.preflight` returned.
+    CaseCommit {
+        template_ref: String,
+        #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+        params: std::collections::BTreeMap<String, String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        policy: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        entity: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        process: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        request_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        preconditions: Option<Precondition>,
+    },
 }
 
 /// Issue a read-only SFWP query. Serialize the closed enum to a wire line and
@@ -194,4 +223,48 @@ pub async fn sfwp_request_status(
     let request =
         serde_json::to_value(SfwpQuery::RequestGetStatus { request_id }).map_err(|e| e.to_string())?;
     state.call(request).await.map_err(|e| e.to_string())
+}
+
+/// Local case-authoring draft persistence (Task 6). Reversible,
+/// non-authoritative host-owned state (`drafts.rs`) — never the socket, never
+/// `.sea-forge/`. A draft only becomes real case state via `case.preflight`
+/// -> `case.commit`.
+fn app_data_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    app.path().app_data_dir().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_save(app: AppHandle, draft_id: String, state: Value) -> Result<Draft, String> {
+    let dir = app_data_dir(&app)?;
+    tauri::async_runtime::spawn_blocking(move || drafts::save(&dir, &draft_id, state))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_load(app: AppHandle, draft_id: String) -> Result<Draft, String> {
+    let dir = app_data_dir(&app)?;
+    tauri::async_runtime::spawn_blocking(move || drafts::load(&dir, &draft_id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_list(app: AppHandle) -> Result<Vec<Draft>, String> {
+    let dir = app_data_dir(&app)?;
+    tauri::async_runtime::spawn_blocking(move || drafts::list(&dir))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_delete(app: AppHandle, draft_id: String) -> Result<(), String> {
+    let dir = app_data_dir(&app)?;
+    tauri::async_runtime::spawn_blocking(move || drafts::delete(&dir, &draft_id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
 }

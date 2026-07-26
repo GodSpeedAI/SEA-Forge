@@ -1,0 +1,48 @@
+.page {
+  min-width: 0;
+}
+
+.templateList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.templateOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2);
+  border-radius: var(--radius-status);
+  border: 1px solid var(--border-subtle, currentColor);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.templateOption[aria-checked="true"] {
+  border-color: var(--color-authority-active, currentColor);
+}
+
+.paramGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.paramField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.errorList {
+  color: var(--color-execution-rejected, crimson);
+}

@@ -343,3 +343,7 @@
 [2026-07-26T03:21:07.026Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-edges model=claude-sonnet-4-6 cost=$0.1040 in=3 out=3470 cached=8665
 [2026-07-26T03:21:07.033Z] INFO  [GraphDistiller] [trace=13b21c5bccd06da3a5963f69d1192df4] graph phase 3/3 edges: 23 edge(s) over 38 unit(s) in 5 categories (111575ms)
 [2026-07-26T03:21:07.092Z] INFO  [GraphBuilder] [trace=13b21c5bccd06da3a5963f69d1192df4] Knowledge graph built (full): 5 categories, 6 topics, 38 units, 23 edges in 404767ms -> /home/sprime01/Documents/jolli/SEA-rs/.jolli/graph/graph.json
+[2026-07-26T16:06:06.716Z] INFO  [StopHook] Stop hook triggered (session=a556d266-f7b1-4eae-9252-c424a0086a3a)
+[2026-07-26T16:06:06.729Z] INFO  [StopHook] Hook input — session_id=a556d266-f7b1-4eae-9252-c424a0086a3a, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/a556d266-f7b1-4eae-9252-c424a0086a3a.jsonl
+[2026-07-26T16:06:06.735Z] INFO  [StopHook] Session saved successfully
+[2026-07-26T16:06:06.787Z] INFO  [PlanDiscovery] Plan discovery: upserted 0 slug(s) + 2 external path(s) into plans.json

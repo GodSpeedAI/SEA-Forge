@@ -1,6 +1,84 @@
 # Current Status
 
-Updated: 2026-07-25
+Updated: 2026-07-26
+
+> **2026-07-26 Workbench plan Task 6 (case authoring: draft, preflight,
+> atomic commit) complete.** First protected-command vertical slice: three
+> additive SFWP methods in new `crates/sea-forge-server/src/sfwp/case.rs`
+> (`Request::CaseEntryOptions`/`CasePreflight`/`CaseCommit`, `lib.rs`). Grounding:
+> `case.entry_options` is an honest inspect projection of whatever templates are
+> already materialized under `<root>/templates/*.yaml` (empty when none exist —
+> `unknown != unavailable`, never a fabricated built-in catalog).
+> `case.preflight` instantiates a template (`sea_forge_planner::templates::instantiate`)
+> and runs the *same* `case_engine::validate_proposal` `case_dispatch::submit`
+> uses — an authoritative dry run, not a forked validator — returning a
+> `RecordDigest` pinned to the template's current on-disk bytes
+> (`template:<ref>` ref, reusing the existing `sfwp::precondition` mechanism
+> rather than inventing a second staleness scheme). `case.commit` writes the
+> instantiated plan to a scratch file under `<root>/drafts/` and delegates to
+> the exact same `case_dispatch::submit` path `Submit` always used (extracted
+> into a shared `commit_plan` helper) after checking the precondition via a new
+> `TemplateRecordResolver` — on mismatch, `rejected_as_stale` with zero side
+> effects (no case created); on match, the one and only case-minting path runs.
+> `request_id` correlation (`record_pending`/`record_outcome`, reused unchanged
+> from Task 3) makes a lost commit response recoverable via
+> `request.get_status` instead of a resubmit. Draft-storage spike (deferred
+> decision in `stack-and-dependencies.md`) resolved as **versioned local JSON
+> files under the Tauri host's `app_data_dir`** (new `drafts.rs` + four
+> `draft_save`/`draft_load`/`draft_list`/`draft_delete` commands) — zero new
+> dependencies, atomic tmp+rename writes, never touches `.sea-forge/`; SQLite/the
+> Tauri store plugin deferred until real multi-draft conflict needs appear.
+> Frontend: `bridge.rs` gained `SfwpQuery::CaseEntryOptions`/`CasePreflight` and
+> `SfwpCommand::CaseCommit` mirrored byte-for-byte; contracts regenerated (6 new
+> generated types: `EntryOptionsResult`/`TemplateOption`/`TemplateParameter`/
+> `PreflightParams`/`PreflightResult`/`PlanItemSummary` + AJV validators,
+> deterministic rerun confirmed, no drift on existing 14). New
+> `caseAuthoringMachine.ts` (XState v5): `draft -[PREFLIGHT]-> validating
+> -> preflight_ok -[COMMIT]-> committing -> committed | rejected_as_stale |
+> ambiguous`. `ambiguous` deliberately has no `COMMIT` handler — only
+> `RECOVER -> status_recovery` (calls `request.get_status`) — so a duplicate
+> commit is structurally unreachable, not just documented (proof scenario 6,
+> asserted by a machine test that sends `COMMIT` while `ambiguous` and checks
+> the state didn't move). `rejected_as_stale`'s only transition is
+> `RETRY -> validating` (a fresh preflight, never straight back to
+> `committing` — proof scenario 7). New `CaseCreationWorkbench` route
+> (`/cases/new`, `react-hook-form` for per-template parameter fields, no new
+> `@hookform/resolvers` dependency — required-field validation only, since
+> real type/shape validation is `case.preflight`'s job, not duplicated
+> client-side) and `useCaseEntryOptions` hook (plain TanStack Query, no
+> machine, mirroring `useReadiness`). `ReadinessPage`'s previously
+> permanently-disabled "Create case" action now navigates to `/cases/new`
+> whenever `readiness.get`'s `local_governed_execution` capability and all
+> foundations are ready — the first real consumer of that lawful-action slot.
+> Tests: 6 new Rust conformance tests (`conformance_case_authoring.rs`:
+> entry_options honesty incl. empty-when-absent, preflight ok/error, commit
+> success + status roundtrip, stale-precondition-rejects-with-no-case-created,
+> commit-outcome-recoverable-via-request.get_status) + 6 XState machine tests
+> (including the two proof-scenario tests above) + 1 component test (full
+> draft->preflight->commit->navigate flow) + `ReadinessPage.test.tsx` updated
+> for the now-enabled action. Gates green: `cargo fmt --all -- --check`,
+> `cargo clippy -p sea-forge-server --all-targets -- -D warnings`, `cargo
+> clippy` (Tauri host crate, isolated workspace), `cargo test -p
+> sea-forge-server` (all suites incl. the 7 new), `cargo test` (Tauri host,
+> all suites), `bun run check` (desktop, one pre-existing Fast Refresh
+> warning), `bun run test` (desktop 27/27 + ui-components 17/17), `bun run
+> generate:contracts` (deterministic), `devbox run -- just fmt-check`/`lint`/
+> `test` (workspace-wide, 0 failures), `devbox run -- just proof` (P1–P4b
+> green). `just check`'s `context-check` sub-recipe remains blocked by the
+> pre-existing `scripts/check-agent-context.sh` issue (`OBSERVED_DEBT.md`);
+> no platform test is claimed through that blocked composite gate.
+> Limitations/debt filed in `OBSERVED_DEBT.md`: no Playwright e2e was added
+> for this slice (the existing mocked-IPC harness cannot honestly prove the
+> stale-precondition/duplicate-commit-unreachable scenarios — those are proven
+> at the Rust conformance + XState machine level instead, consistent with the
+> skill's guidance to decide this deliberately rather than default to the
+> mocked pattern); visual fidelity against the wireframe/mockup kit was not
+> pixel-checked (no reference mockup for this screen exists in `ui_kits/`, so
+> there is nothing to diff against — logged as an open gap, not claimed done).
+> Next spendable slice: Task 7 (case overview + horizon) — the first slice
+> that needs live per-case event reduction at scale, and the natural home for
+> a "view the case I just created" landing page (this slice navigates to the
+> still-mockup `/cases` on commit).
 
 > **2026-07-25 Workbench mockup-fidelity repair complete.** The React shell now
 > matches the checked-in workbench kit at its responsive evidence breakpoints:
