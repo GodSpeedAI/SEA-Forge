@@ -12,6 +12,7 @@
 //! `Sfwp(SfwpFrame)` variant: flat additive verbs match the existing pattern
 //! exactly and keep the negotiation/correlation/event surface legible.
 
+pub mod case;
 pub mod correlation;
 pub mod events;
 pub mod precondition;
@@ -94,6 +95,22 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
         method: "readiness.get",
         class: InteractionClass::Inspect,
     },
+    // --- SFWP additive case-authoring methods (Task 6, ADR-003) ---
+    // `entry_options`/`preflight` are read-only projections/dry-runs (no case,
+    // run, or ledger is created); `commit` is the one protected verb that
+    // actually creates a case, over the existing `case_dispatch::submit` path.
+    MethodDescriptor {
+        method: "case.entry_options",
+        class: InteractionClass::Inspect,
+    },
+    MethodDescriptor {
+        method: "case.preflight",
+        class: InteractionClass::Inspect,
+    },
+    MethodDescriptor {
+        method: "case.commit",
+        class: InteractionClass::Command,
+    },
 ];
 
 /// True if `requested` names a supported protocol major version.
@@ -171,6 +188,12 @@ pub const SCHEMA_TYPES: &[&str] = &[
     "ReadinessView",
     "ReadinessItem",
     "ReadinessGetParams",
+    "EntryOptionsResult",
+    "TemplateOption",
+    "TemplateParameter",
+    "PreflightParams",
+    "PreflightResult",
+    "PlanItemSummary",
 ];
 
 /// Build the `system.hello` result, or an `unsupported_version` error if the

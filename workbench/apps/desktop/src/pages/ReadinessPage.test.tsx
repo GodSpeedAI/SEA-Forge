@@ -3,6 +3,15 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReadinessView } from "@sea-forge/contracts";
 
+// `ReadinessPage` navigates to `/cases/new` on "Create case" (Task 6); mock
+// `useNavigate` so the page renders without a full `RouterProvider` tree.
+const navigateMock = vi.fn();
+vi.mock("@tanstack/react-router", async () => {
+  const actual =
+    await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
+  return { ...actual, useNavigate: () => navigateMock };
+});
+
 // --- Bridge mocks -----------------------------------------------------------
 // The renderer talks to the host only through the closed `sfwp_query` command
 // and the `sfwp://event` stream. We mock both boundaries directly (the
@@ -104,6 +113,7 @@ beforeEach(() => {
   invokeMock.mockReset();
   listenMock.mockReset();
   listenMock.mockResolvedValue(() => {});
+  navigateMock.mockReset();
   emittedListener = undefined;
 });
 
@@ -140,7 +150,7 @@ describe("ReadinessPage", () => {
     expect(screen.getByRole("table", { name: "Critical foundations" })).toBeInTheDocument();
   });
 
-  it("(a) ready state renders ready pill and a disabled case-creation button with the not-yet-available reason", async () => {
+  it("(a) ready state renders ready pill and an enabled case-creation button that navigates to /cases/new", async () => {
     invokeMock.mockResolvedValue(readyView());
     renderPage();
 
@@ -149,11 +159,11 @@ describe("ReadinessPage", () => {
       expect(document.querySelector('[data-variant="ready"]')).toBeInTheDocument(),
     );
 
-    // Case creation is permanently disabled this slice with an honest reason.
-    const reason = await screen.findByTestId("disabled-reason");
-    expect(reason).toHaveTextContent(/not yet available in this build/i);
+    // Task 6: case authoring exists now, so a fully-ready projection enables it.
     const button = screen.getByRole("button", { name: /create case/i });
-    expect(button).toBeDisabled();
+    expect(button).not.toBeDisabled();
+    button.click();
+    expect(navigateMock).toHaveBeenCalledWith({ to: "/cases/new" });
   });
 
   it("(b) integrity-halted state renders the blocking reason and a compromised integrity indicator", async () => {

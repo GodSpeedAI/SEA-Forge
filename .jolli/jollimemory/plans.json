@@ -1,0 +1,23 @@
+{
+	"version": 1,
+	"plans": {
+		"CURRENT_STATUS": {
+			"slug": "CURRENT_STATUS",
+			"title": "Current Status",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/CURRENT_STATUS.md",
+			"addedAt": "2026-07-26T16:06:06.779Z",
+			"updatedAt": "2026-07-26T16:06:06.779Z",
+			"commitHash": null,
+			"branch": "frontend"
+		},
+		"OBSERVED_DEBT": {
+			"slug": "OBSERVED_DEBT",
+			"title": "Observed Debt",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/OBSERVED_DEBT.md",
+			"addedAt": "2026-07-26T16:06:06.779Z",
+			"updatedAt": "2026-07-26T16:06:06.779Z",
+			"commitHash": null,
+			"branch": "frontend"
+		}
+	}
+}

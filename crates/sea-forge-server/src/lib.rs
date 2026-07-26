@@ -598,6 +598,39 @@ pub enum Request {
         #[serde(default)]
         intended_operation: Option<sfwp::readiness::IntendedOperation>,
     },
+    /// Case-authoring inspect methods (Task 6, ADR-003). `entry_options` lists
+    /// materialized templates; `preflight` is an audit-only dry run of
+    /// `validate_proposal` over an instantiated draft — neither creates a
+    /// case, run, or ledger.
+    CaseEntryOptions,
+    CasePreflight {
+        #[serde(flatten)]
+        params: sfwp::case::PreflightParams,
+    },
+    /// Case-authoring protected command (Task 6, ADR-003). Envelopes the
+    /// existing `case_dispatch::submit` path: instantiates `template_ref` +
+    /// `params` into a `CasePlan` (the same way `case.preflight` did), checks
+    /// `preconditions` against the template's *current* bytes, and on match
+    /// delegates to the same `commit_plan` helper `Submit` uses — one
+    /// governance path, no forked commit logic. On a stale precondition, no
+    /// case is created and a structured `rejected_as_stale` body is returned.
+    CaseCommit {
+        template_ref: String,
+        #[serde(default)]
+        params: std::collections::BTreeMap<String, String>,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default = "default_entity")]
+        entity: String,
+        #[serde(default = "default_process")]
+        process: String,
+        #[serde(default = "default_timeout")]
+        timeout: u64,
+        #[serde(default)]
+        request_id: Option<String>,
+        #[serde(default)]
+        preconditions: Option<sfwp::precondition::Precondition>,
+    },
 }
 
 #[derive(Deserialize)]
@@ -835,54 +868,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "case.submit");
-            // Reload config defensively (§8.4).
-            if let Ok(new_config) = state.reload_config() {
-                tracing::info!("config reloaded successfully");
-                let _ = new_config;
-            } else {
-                tracing::warn!("invalid config reload — keeping last-known-good");
-            }
-
-            let response = match case_dispatch::submit(payload, state).await {
-                Ok(output) => {
-                    let case_id = output.case_id;
-                    let entry = CaseEntry {
-                        case_id: case_id.clone(),
-                        state: output.state.into(),
-                        exit_code: Some(output.exit_code as i32),
-                        run_dir: None,
-                    };
-                    state.cases.lock().await.insert(case_id.clone(), entry);
-
-                    // Fire notify_command (failure is logged and ignored — §10.3).
-                    if let Some(argv) = &state.config.notify_command {
-                        if !argv.is_empty() {
-                            let event = serde_json::json!({
-                                "event": "run_finished",
-                                "case_id": case_id,
-                            });
-                            let _ = fire_notify(argv, event);
-                        }
-                    }
-
-                    // Emit a durable SFWP event for the successful mutation.
-                    let _ = state
-                        .publish_event(
-                            "case.submitted",
-                            Some(&case_id),
-                            None,
-                            serde_json::json!({"state": output.state}),
-                        )
-                        .await;
-
-                    serde_json::json!({
-                        "case_id": case_id,
-                        "state": output.state,
-                        "exit_code": output.exit_code,
-                    })
-                }
-                Err(e) => serde_json::json!({"error": e.to_string()}),
-            };
+            let response = commit_plan(state, payload).await;
             record_outcome(state, request_id.as_deref(), "case.submit", &response);
             response
         }
@@ -1131,6 +1117,187 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 "error_class": "input_error",
             })
         }
+        // Inspect projections (Task 6): shaped views, never propagated errors.
+        Request::CaseEntryOptions => serde_json::to_value(sfwp::case::entry_options(
+            &state.config.root,
+        ))
+        .unwrap_or_else(|_| serde_json::json!({"error": "entry_options serialization failed"})),
+        Request::CasePreflight { params } => {
+            serde_json::to_value(sfwp::case::preflight(&state.config.root, params))
+                .unwrap_or_else(|_| serde_json::json!({"error": "preflight serialization failed"}))
+        }
+        Request::CaseCommit {
+            template_ref,
+            params,
+            policy,
+            entity,
+            process,
+            timeout,
+            request_id,
+            preconditions,
+        } => {
+            record_pending(state, request_id.as_deref(), "case.commit");
+
+            // Evaluate the precondition first — before any side effect. Mirrors
+            // `decide`'s "no side effect on stale" discipline for approve/reject.
+            if let Some(precondition) = &preconditions {
+                let resolver = TemplateRecordResolver {
+                    root: &state.config.root,
+                };
+                match sfwp::precondition::evaluate(precondition, &resolver) {
+                    Ok(Some(rejected)) => {
+                        let response = serde_json::to_value(&rejected).unwrap_or_else(|_| {
+                            serde_json::json!({"error": "rejected_as_stale serialization failed"})
+                        });
+                        record_outcome(state, request_id.as_deref(), "case.commit", &response);
+                        return response;
+                    }
+                    Ok(None) => {}
+                    Err(error) => {
+                        let response = serde_json::json!({
+                            "error": error.to_string(),
+                            "error_class": error.class(),
+                        });
+                        record_outcome(state, request_id.as_deref(), "case.commit", &response);
+                        return response;
+                    }
+                }
+            }
+
+            let response = match instantiate_plan_file(state, &template_ref, &params).await {
+                Ok(plan_path) => {
+                    let payload = SubmitPayload {
+                        intent: None,
+                        plan: Some(plan_path),
+                        policy,
+                        entity,
+                        process,
+                        timeout,
+                    };
+                    commit_plan(state, payload).await
+                }
+                Err(error) => serde_json::json!({
+                    "error": error.to_string(),
+                    "error_class": error.class(),
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "case.commit", &response);
+            response
+        }
+    }
+}
+
+/// Shared commit path for `Submit` and `CaseCommit`: reload config
+/// defensively (§8.4), dispatch through `case_dispatch::submit` (the single
+/// governance path that mints the case, validates the plan, and drives the
+/// dispatch loop), then record the case entry, fire the notify hook, and
+/// publish the durable `case.submitted` event on success.
+async fn commit_plan(state: &Arc<ServerState>, payload: SubmitPayload) -> serde_json::Value {
+    if let Ok(new_config) = state.reload_config() {
+        tracing::info!("config reloaded successfully");
+        let _ = new_config;
+    } else {
+        tracing::warn!("invalid config reload — keeping last-known-good");
+    }
+
+    match case_dispatch::submit(payload, state).await {
+        Ok(output) => {
+            let case_id = output.case_id;
+            let entry = CaseEntry {
+                case_id: case_id.clone(),
+                state: output.state.into(),
+                exit_code: Some(output.exit_code as i32),
+                run_dir: None,
+            };
+            state.cases.lock().await.insert(case_id.clone(), entry);
+
+            // Fire notify_command (failure is logged and ignored — §10.3).
+            if let Some(argv) = &state.config.notify_command {
+                if !argv.is_empty() {
+                    let event = serde_json::json!({
+                        "event": "run_finished",
+                        "case_id": case_id,
+                    });
+                    let _ = fire_notify(argv, event);
+                }
+            }
+
+            // Emit a durable SFWP event for the successful mutation.
+            let _ = state
+                .publish_event(
+                    "case.submitted",
+                    Some(&case_id),
+                    None,
+                    serde_json::json!({"state": output.state}),
+                )
+                .await;
+
+            serde_json::json!({
+                "case_id": case_id,
+                "state": output.state,
+                "exit_code": output.exit_code,
+            })
+        }
+        Err(e) => serde_json::json!({"error": e.to_string()}),
+    }
+}
+
+/// Instantiate `template_ref` + `params` into a `CasePlan` (identical to what
+/// `case.preflight` built) and write it to a scratch file under
+/// `<root>/drafts/`, so `case.commit` can delegate to the existing
+/// `case_dispatch::submit(SubmitPayload{plan: Some(path), ..})` path unchanged
+/// — additive, no forked commit logic, no duplicate case-minting path.
+async fn instantiate_plan_file(
+    state: &Arc<ServerState>,
+    template_ref: &str,
+    params: &std::collections::BTreeMap<String, String>,
+) -> Result<String, ForgeError> {
+    let root = state.config.root.clone();
+    let template_ref = template_ref.to_string();
+    let params = params.clone();
+    tokio::task::spawn_blocking(move || {
+        let (name, version) = template_ref
+            .split_once('@')
+            .ok_or_else(|| ForgeError::Input("template ref must be name@version".into()))?;
+        let path = root
+            .join("templates")
+            .join(format!("{name}@{version}.yaml"));
+        let template = sea_forge_planner::templates::load(&path)?;
+        let plan = sea_forge_planner::templates::instantiate(
+            &template, &params, "pending", "pending", "pending",
+        )?;
+        let drafts_dir = root.join("drafts");
+        std::fs::create_dir_all(&drafts_dir)
+            .map_err(|e| ForgeError::io("create drafts directory", e))?;
+        let scratch = drafts_dir.join(format!("{}.json", random_id("draft")?));
+        std::fs::write(
+            &scratch,
+            serde_json::to_vec(&plan).map_err(|e| ForgeError::Serialization(e.to_string()))?,
+        )
+        .map_err(|e| ForgeError::io("write draft plan", e))?;
+        Ok(scratch.to_string_lossy().into_owned())
+    })
+    .await
+    .map_err(|e| ForgeError::Internal(format!("instantiate_plan_file task panic: {e}")))
+    .and_then(|result| result)
+}
+
+/// Resolves a `template:<name>@<version>` precondition ref to its current
+/// on-disk digest, so a `case.commit` whose template changed since
+/// `case.preflight` computed the expected digest stale-rejects cleanly.
+struct TemplateRecordResolver<'a> {
+    root: &'a Path,
+}
+
+impl sfwp::precondition::RecordResolver for TemplateRecordResolver<'_> {
+    fn resolve(&self, r#ref: &str) -> Result<Option<serde_json::Value>, ForgeError> {
+        let Some(template_ref) = r#ref.strip_prefix("template:") else {
+            return Ok(None);
+        };
+        Ok(sfwp::case::resolve_template_digest_source(
+            self.root,
+            template_ref,
+        ))
     }
 }
 

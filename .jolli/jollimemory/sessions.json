@@ -1,4 +1,11 @@
 {
 	"version": 1,
-	"sessions": {}
+	"sessions": {
+		"a556d266-f7b1-4eae-9252-c424a0086a3a": {
+			"sessionId": "a556d266-f7b1-4eae-9252-c424a0086a3a",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/a556d266-f7b1-4eae-9252-c424a0086a3a.jsonl",
+			"updatedAt": "2026-07-26T16:06:06.730Z",
+			"source": "claude"
+		}
+	}
 }

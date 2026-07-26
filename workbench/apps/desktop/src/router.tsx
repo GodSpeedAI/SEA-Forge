@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { AppShell } from "./shell/AppShell";
 import { ReadinessPage } from "./pages/ReadinessPage";
+import { CaseCreationWorkbench } from "./pages/CaseCreationWorkbench";
 import {
   ThothPage,
   AssetsPage,
@@ -114,6 +115,12 @@ const casesRoute = createRoute({
   component: CasesPage,
 });
 
+const caseCreationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/cases/new",
+  component: CaseCreationWorkbench,
+});
+
 const inboxRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/inbox",
@@ -169,6 +176,7 @@ const routeTree = rootRoute.addChildren([
   assetsRoute,
   modelsRoute,
   casesRoute,
+  caseCreationRoute,
   inboxRoute,
   operationsRoute,
   evidenceRoute,

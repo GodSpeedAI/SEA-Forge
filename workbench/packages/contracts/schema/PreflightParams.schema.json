@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PreflightParams",
+  "description": "Request params for `case.preflight`.",
+  "type": "object",
+  "properties": {
+    "params": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    },
+    "template_ref": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "template_ref"
+  ]
+}

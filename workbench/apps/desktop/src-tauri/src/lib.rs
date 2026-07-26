@@ -7,6 +7,7 @@
 //! `docs/decisions/ADR-004-workbench-stack.md` for the workspace boundary.
 
 pub mod bridge;
+pub mod drafts;
 pub mod events;
 pub mod socket;
 
@@ -105,6 +106,10 @@ pub fn run() {
             bridge::sfwp_query,
             bridge::sfwp_command,
             bridge::sfwp_request_status,
+            bridge::draft_save,
+            bridge::draft_load,
+            bridge::draft_list,
+            bridge::draft_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
