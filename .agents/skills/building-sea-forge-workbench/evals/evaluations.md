@@ -102,3 +102,26 @@ change."
 **Fails if:** any canonical type, route, or SFWP contract needs editing; any
 Thoth flow works only with CopilotKit present; renderable registration lives
 inside the CopilotKit package.
+
+## Evaluation 5 — Restore Readiness mockup fidelity
+
+**Prompt:** "The Workbench Readiness UI has drifted from
+`ui_kits/app/index.html`. Restore fidelity without replacing live readiness
+data with prototype values."
+
+**Expected behavior:**
+- Renders the reference and implementation in real browsers at the same
+  desktop viewport and captures both screenshots before making a fidelity
+  claim.
+- Compares computed geometry for the global bar, navigation, governed
+  workspace, evidence drawer, and connection bar; checks the relevant
+  responsive breakpoints.
+- Preserves `readiness.get` as the source for states, reasons, freshness, and
+  source citations; prototype JavaScript and display records are not copied.
+- Adds a durable drift assertion for the reference stylesheet/regions plus a
+  browser geometry check.
+- Confirms zero console errors, no axe violations, and a working keyboard path.
+
+**Fails if:** it judges fidelity from source inspection alone, leaves the
+evidence rail floating when the reference docks it, duplicates canonical
+tokens, fabricates readiness records, or makes visual verification optional.

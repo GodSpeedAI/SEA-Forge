@@ -1,88 +1,165 @@
 .header {
-  height: 48px;
-  background-color: var(--surface-bar, #0d1117);
-  border-bottom: 1px solid var(--border-standard, #30363d);
+  grid-area: top;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  background: var(--surface-overlay, #161b22);
+  border-bottom: var(--border-standard, 1px solid #30363d);
+}
+
+.productCell {
+  width: 236px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-3, 12px);
   padding: 0 var(--space-4, 16px);
-  gap: var(--space-4, 16px);
+  border-right: var(--border-standard, 1px solid #30363d);
 }
 
-.cellBrand {
+.productCell div,
+.contextChip,
+.activeWork {
   display: flex;
-  align-items: center;
-  gap: var(--space-2, 8px);
-  font: var(--text-body-sm, 13px / 1.4 system-ui, sans-serif);
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.mark {
-  width: 24px;
-  height: 24px;
-  background-color: #238636;
-  color: #ffffff;
-  border-radius: var(--radius-control, 4px);
+.productCell span,
+.contextChip span,
+.activeWork span {
+  color: var(--fg-secondary, #8b949e);
+  font: var(--text-meta, 11px / 1.4 system-ui, sans-serif);
+}
+
+.productMark {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-focus-ring, #58a6ff);
+  border-radius: var(--radius-status, 4px);
+  color: var(--color-focus-ring, #58a6ff) !important;
+  font: var(--text-machine, 12px / 1.4 monospace) !important;
+}
+
+.globalContext,
+.globalActions {
   display: flex;
-  align-items: center;
+  min-width: 0;
+}
+
+.globalContext {
+  flex: 1;
+}
+
+.contextChip,
+.activeWork,
+.attentionButton,
+.iconButton {
+  min-height: 44px;
+  border: 0;
+  border-right: var(--border-standard, 1px solid #30363d);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-exit, 120ms) var(--ease-governed, cubic-bezier(0.16, 1, 0.3, 1)),
+    color var(--motion-exit, 120ms) var(--ease-governed, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--motion-exit, 120ms) var(--ease-governed, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.contextChip {
+  min-width: 138px;
   justify-content: center;
-  font-weight: 700;
-  font-size: 11px;
+  gap: 2px;
+  padding: 0 var(--space-3, 12px);
 }
 
-.contextChips {
-  display: flex;
+.contextChip:hover,
+.activeWork:hover,
+.attentionButton:hover,
+.iconButton:hover {
+  background: var(--surface-panel-elevated, #21262d);
+}
+
+.contextChip:last-child {
+  flex-direction: row;
   align-items: center;
   gap: var(--space-2, 8px);
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background-color: rgba(33, 38, 45, 0.8);
-  border: 1px solid #30363d;
-  border-radius: var(--radius-pill, 9999px);
-  font-size: 11px;
-  color: #c9d1d9;
-}
-
-.chipLabel {
-  color: #8b949e;
-  font-weight: 500;
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2, 8px);
+.globalActions {
+  margin-left: auto;
 }
 
 .iconButton {
-  background: none;
-  border: 1px solid #30363d;
-  color: #c9d1d9;
-  border-radius: var(--radius-control, 6px);
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 12px;
+  min-width: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
 }
 
-.iconButton:hover {
-  background-color: rgba(110, 118, 129, 0.1);
-  color: #f0f6fc;
-}
-
-.inboxButton {
+.attentionButton {
+  min-width: 104px;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background-color: rgba(210, 153, 34, 0.15);
-  border: 1px solid rgba(210, 153, 34, 0.4);
-  color: #d29922;
-  border-radius: var(--radius-pill, 9999px);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 var(--space-3, 12px);
+  color: var(--fg-secondary, #8b949e);
+}
+
+.attentionButton strong {
+  color: var(--color-attention, #d29922);
+}
+
+.activeWork {
+  min-width: 130px;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 var(--space-3, 12px);
+  border-right: 0;
+}
+
+.activeWork span,
+.activeWork strong {
+  margin-left: var(--space-3, 12px);
+}
+
+@media (max-width: 1420px) {
+  .productCell {
+    width: 224px;
+  }
+}
+
+@media (max-width: 1020px) {
+  .productCell {
+    width: 64px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .productCell div,
+  .globalContext .contextChip:not(:last-child) {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .productCell {
+    width: auto;
+    flex: 1;
+    justify-content: flex-start;
+    padding: 0 var(--space-3, 12px);
+    border-right: 0;
+  }
+
+  .productCell div {
+    display: flex;
+  }
+
+  .globalContext,
+  .attentionButton,
+  .activeWork {
+    display: none;
+  }
 }

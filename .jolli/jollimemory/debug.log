@@ -1,0 +1,345 @@
+[2026-07-26T02:40:47.232Z] INFO  [UpdateCheck] [trace=13b21c5bccd06da3a5963f69d1192df4] Spawned detached update-check refresh (PID: 1986502)
+[2026-07-26T02:40:47.243Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T02:40:47.257Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T02:40:47.276Z] WARN  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] loadIndex: index.json unreadable from Qe (fresh repo or backend read failed)
+[2026-07-26T02:41:08.003Z] INFO  [ClaudeExecutableResolver] [trace=13b21c5bccd06da3a5963f69d1192df4] Resolved claude executable: /home/sprime01/.local/share/mise/installs/claude-code/2.1.197/claude (v2.1.197)
+[2026-07-26T02:41:08.007Z] INFO  [SessionTracker] [trace=13b21c5bccd06da3a5963f69d1192df4] Config saved to /home/sprime01/.jolli/jollimemory
+[2026-07-26T02:42:55.845Z] INFO  [SessionTracker] [trace=13b21c5bccd06da3a5963f69d1192df4] Config saved to /home/sprime01/.jolli/jollimemory
+[2026-07-26T02:43:03.141Z] INFO  [Installer] [trace=13b21c5bccd06da3a5963f69d1192df4] Installing Jolli Memory hooks
+[2026-07-26T02:43:03.173Z] INFO  [DispatchScripts] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote resolve-dist-path, run-hook, and run-cli scripts to /home/sprime01/.jolli/jollimemory
+[2026-07-26T02:43:03.180Z] INFO  [DistPathWriter] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote dist-paths/cli (version=0.99.9, distDir=/home/sprime01/.local/share/mise/installs/npm-jolli-ai-cli/0.99.9/lib/node_modules/@jolli.ai/cli/dist)
+[2026-07-26T02:43:03.219Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 1) to /home/sprime01/projects/sea-rs/.agents/skills/jolli-recall/SKILL.md
+[2026-07-26T02:43:03.223Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 1) to /home/sprime01/projects/sea-rs/.agents/skills/jolli-search/SKILL.md
+[2026-07-26T02:43:03.227Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 5) to /home/sprime01/projects/sea-rs/.agents/skills/jolli-local-run/SKILL.md
+[2026-07-26T02:43:03.240Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 4) to /home/sprime01/projects/sea-rs/.agents/skills/jolli-remote-run/SKILL.md
+[2026-07-26T02:43:03.249Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 5) to /home/sprime01/projects/sea-rs/.agents/skills/jolli/SKILL.md
+[2026-07-26T02:43:03.273Z] INFO  [GitExclude] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated /home/sprime01/projects/sea-rs/.git/info/exclude with 7 Jolli skill exclude paths
+[2026-07-26T02:43:03.282Z] INFO  [McpRegistration] [trace=13b21c5bccd06da3a5963f69d1192df4] Registered MCP server in /home/sprime01/projects/sea-rs/.mcp.json
+[2026-07-26T02:43:03.319Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 1) to /home/sprime01/projects/sea-rs/.worktrees/domain-model-validation/.agents/skills/jolli-recall/SKILL.md
+[2026-07-26T02:43:03.323Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 1) to /home/sprime01/projects/sea-rs/.worktrees/domain-model-validation/.agents/skills/jolli-search/SKILL.md
+[2026-07-26T02:43:03.327Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 5) to /home/sprime01/projects/sea-rs/.worktrees/domain-model-validation/.agents/skills/jolli-local-run/SKILL.md
+[2026-07-26T02:43:03.329Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 4) to /home/sprime01/projects/sea-rs/.worktrees/domain-model-validation/.agents/skills/jolli-remote-run/SKILL.md
+[2026-07-26T02:43:03.332Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 5) to /home/sprime01/projects/sea-rs/.worktrees/domain-model-validation/.agents/skills/jolli/SKILL.md
+[2026-07-26T02:43:03.346Z] INFO  [McpRegistration] [trace=13b21c5bccd06da3a5963f69d1192df4] Registered MCP server in /home/sprime01/projects/sea-rs/.worktrees/domain-model-validation/.mcp.json
+[2026-07-26T02:43:03.373Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 1) to /home/sprime01/projects/sea-rs/.worktrees/understand-anything/.agents/skills/jolli-recall/SKILL.md
+[2026-07-26T02:43:03.374Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 1) to /home/sprime01/projects/sea-rs/.worktrees/understand-anything/.agents/skills/jolli-search/SKILL.md
+[2026-07-26T02:43:03.378Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 5) to /home/sprime01/projects/sea-rs/.worktrees/understand-anything/.agents/skills/jolli-local-run/SKILL.md
+[2026-07-26T02:43:03.380Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 4) to /home/sprime01/projects/sea-rs/.worktrees/understand-anything/.agents/skills/jolli-remote-run/SKILL.md
+[2026-07-26T02:43:03.388Z] INFO  [SkillInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote SKILL.md (revision 5) to /home/sprime01/projects/sea-rs/.worktrees/understand-anything/.agents/skills/jolli/SKILL.md
+[2026-07-26T02:43:03.403Z] INFO  [McpRegistration] [trace=13b21c5bccd06da3a5963f69d1192df4] Registered MCP server in /home/sprime01/projects/sea-rs/.worktrees/understand-anything/.mcp.json
+[2026-07-26T02:43:03.429Z] INFO  [JsonMcpWriter] [trace=13b21c5bccd06da3a5963f69d1192df4] Registered MCP server in /home/sprime01/.gemini/settings.json
+[2026-07-26T02:43:03.433Z] INFO  [CodexTomlWriter] [trace=13b21c5bccd06da3a5963f69d1192df4] Registered Codex MCP server in /home/sprime01/.codex/config.toml
+[2026-07-26T02:43:03.437Z] INFO  [JsonMcpWriter] [trace=13b21c5bccd06da3a5963f69d1192df4] Registered MCP server in /home/sprime01/.config/opencode/opencode.json
+[2026-07-26T02:43:03.439Z] INFO  [JsonMcpWriter] [trace=13b21c5bccd06da3a5963f69d1192df4] Registered MCP server in /home/sprime01/.config/Code/User/mcp.json
+[2026-07-26T02:43:03.444Z] INFO  [GitHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Git post-commit hook installed
+[2026-07-26T02:43:03.450Z] INFO  [GitHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Git post-rewrite hook installed
+[2026-07-26T02:43:03.452Z] INFO  [GitHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Git prepare-commit-msg hook installed
+[2026-07-26T02:43:03.453Z] INFO  [GitHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Git post-merge hook installed
+[2026-07-26T02:43:03.457Z] INFO  [GitHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Git pre-push hook installed
+[2026-07-26T02:43:03.459Z] INFO  [SessionTracker] [trace=13b21c5bccd06da3a5963f69d1192df4] Config saved to /home/sprime01/.jolli/jollimemory
+[2026-07-26T02:43:03.461Z] INFO  [Installer] [trace=13b21c5bccd06da3a5963f69d1192df4] Codex CLI detected — enabled Codex session discovery
+[2026-07-26T02:43:03.463Z] INFO  [GeminiHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Gemini AfterAgent hook installed
+[2026-07-26T02:43:03.467Z] INFO  [GeminiHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Gemini AfterAgent hook installed
+[2026-07-26T02:43:03.469Z] INFO  [GeminiHookInstaller] [trace=13b21c5bccd06da3a5963f69d1192df4] Gemini AfterAgent hook installed
+[2026-07-26T02:43:03.469Z] INFO  [SessionTracker] [trace=13b21c5bccd06da3a5963f69d1192df4] Config saved to /home/sprime01/.jolli/jollimemory
+[2026-07-26T02:43:03.470Z] INFO  [Installer] [trace=13b21c5bccd06da3a5963f69d1192df4] Gemini CLI detected — enabled Gemini session tracking
+[2026-07-26T02:43:03.475Z] INFO  [SessionTracker] [trace=13b21c5bccd06da3a5963f69d1192df4] Config saved to /home/sprime01/.jolli/jollimemory
+[2026-07-26T02:43:03.475Z] INFO  [Installer] [trace=13b21c5bccd06da3a5963f69d1192df4] OpenCode detected — enabled OpenCode session discovery
+[2026-07-26T02:43:03.478Z] INFO  [SessionTracker] [trace=13b21c5bccd06da3a5963f69d1192df4] Config saved to /home/sprime01/.jolli/jollimemory
+[2026-07-26T02:43:03.478Z] INFO  [Installer] [trace=13b21c5bccd06da3a5963f69d1192df4] GitHub Copilot detected (CLI=false, Chat=true) — enabled session discovery
+[2026-07-26T02:43:03.479Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T02:43:03.496Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T02:43:03.520Z] INFO  [SchemaV5Migration] [trace=13b21c5bccd06da3a5963f69d1192df4] Storage backend not initialized yet — skipping schema v5 migration (no data to migrate)
+[2026-07-26T02:43:03.520Z] INFO  [Installer] [trace=13b21c5bccd06da3a5963f69d1192df4] Schema v5 migration: alreadyDone=false fresh=true migrated=0 skipped=0
+[2026-07-26T02:43:03.560Z] INFO  [Installer] [trace=13b21c5bccd06da3a5963f69d1192df4] Installation complete
+[2026-07-26T02:43:03.600Z] WARN  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] loadIndex: index.json unreadable from Qe (fresh repo or backend read failed)
+[2026-07-26T02:43:05.086Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T02:43:05.097Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T02:43:05.116Z] WARN  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] loadIndex: index.json unreadable from Qe (fresh repo or backend read failed)
+[2026-07-26T02:43:05.120Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T02:43:05.148Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T02:43:05.172Z] WARN  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] loadIndex: index.json unreadable from Qe (fresh repo or backend read failed)
+[2026-07-26T02:43:12.279Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill start: cwd=/home/sprime01/projects/sea-rs candidates=10 dryRun=false minTier=low
+[2026-07-26T02:43:12.281Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T02:43:12.306Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T02:43:12.318Z] WARN  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] loadIndex: index.json unreadable from Qe (fresh repo or backend read failed)
+[2026-07-26T02:43:12.319Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill: 10/10 commits lack a summary
+[2026-07-26T02:43:26.134Z] INFO  [RawTranscriptScanner] [trace=13b21c5bccd06da3a5963f69d1192df4] Indexed 24 session(s) from /home/sprime01/.claude/projects
+[2026-07-26T02:43:28.553Z] INFO  [CommitTargetIndex] [trace=13b21c5bccd06da3a5963f69d1192df4] Target index: 262 commits, 543 files
+[2026-07-26T02:43:28.554Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill indexes: 24 transcript session(s), 262 target commit(s), worktree roots=["/home/sprime01/projects/sea-rs","/home/sprime01/projects/sea-rs/.worktrees/domain-model-validation","/home/sprime01/projects/sea-rs/.worktrees/understand-anything"]
+[2026-07-26T02:43:28.866Z] INFO  [CommitAttributor] [trace=13b21c5bccd06da3a5963f69d1192df4] Attribution: 4 attributed, 6 skipped (of 10 emitted)
+[2026-07-26T02:43:28.906Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 1545887b: feat(workbench): readiness view + review remediation
+[2026-07-26T02:43:29.124Z] WARN  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Diff exceeds 150000-char budget (317548 chars) — prepending --stat file list and truncating body
+[2026-07-26T02:43:29.162Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 1545887b
+[2026-07-26T02:43:29.162Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=0, files=45, lines=2910+1025
+[2026-07-26T02:43:29.163Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T02:46:52.617Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.6410 in=3 out=11581 cached=77887
+[2026-07-26T02:46:52.645Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 4 topic(s) from delimited text format
+[2026-07-26T02:46:52.646Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 4 topic(s), response length: 11647 chars
+[2026-07-26T02:46:52.646Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Readiness status endpoint added to the server
+[2026-07-26T02:46:52.646Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 2: Readiness console page wired to live server data
+[2026-07-26T02:46:52.646Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 3: Browser journey and component tests bootstrapped for the readiness feature
+[2026-07-26T02:46:52.646Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 4: Known technical gaps documented and surfaced for subsequent development tasks
+[2026-07-26T02:46:52.646Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (1657 chars): The readiness console — the screen showing operators whether the system is prepared to take on new work — was built out 
+[2026-07-26T02:46:52.689Z] WARN  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] loadIndex: index.json unreadable from Qe (fresh repo or backend read failed)
+[2026-07-26T02:46:52.742Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Creating orphan branch 'jollimemory/summaries/v3' using plumbing commands
+[2026-07-26T02:46:52.788Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Orphan branch 'jollimemory/summaries/v3' created successfully
+[2026-07-26T02:46:52.842Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 3 written, 0 deleted (via fast-import)
+[2026-07-26T02:46:52.867Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Branch mapping created: backfilled → backfilled
+[2026-07-26T02:46:53.239Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: backfilled/featworkbench-readiness-view-review-remediation-1545887b.md (commit)
+[2026-07-26T02:46:53.239Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: backfilled/featworkbench-readiness-view-review-remediation-1545887b.md
+[2026-07-26T02:46:53.239Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 3 files, deleted 0 (Add summary for 1545887b: feat(workbench): readiness view + review remediati)
+[2026-07-26T02:46:53.239Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 1545887b
+[2026-07-26T02:46:53.244Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 1545887b via diff-only (4 topics)
+[2026-07-26T02:46:53.259Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 86d15574: feat: add GovernedStatusPill, IntegrityIndicator, SourceFres
+[2026-07-26T02:46:53.455Z] WARN  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Diff exceeds 150000-char budget (746096 chars) — prepending --stat file list and truncating body
+[2026-07-26T02:46:53.486Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 86d15574
+[2026-07-26T02:46:53.486Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=0, files=63, lines=6798+6784
+[2026-07-26T02:46:53.487Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T02:49:04.274Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.4514 in=3 out=7350 cached=56851
+[2026-07-26T02:49:04.279Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 3 topic(s) from delimited text format
+[2026-07-26T02:49:04.279Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 3 topic(s), response length: 7722 chars
+[2026-07-26T02:49:04.279Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Nine governance-aware UI components added to shared design library
+[2026-07-26T02:49:04.279Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 2: Full navigational application shell built with keyboard and accessibility suppor
+[2026-07-26T02:49:04.279Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 3: Route guards with governed denial surface prevent blank screens on access failur
+[2026-07-26T02:49:04.279Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (1149 chars): The workbench application's foundational UI layer is now complete. A shared component library delivers nine reusable bui
+[2026-07-26T02:49:04.339Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 3 written, 0 deleted (via fast-import)
+[2026-07-26T02:49:04.344Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: backfilled/feat-add-governedstatuspill-integrityindicator-sou-86d15574.md (commit)
+[2026-07-26T02:49:04.344Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: backfilled/feat-add-governedstatuspill-integrityindicator-sou-86d15574.md
+[2026-07-26T02:49:04.344Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 3 files, deleted 0 (Add summary for 86d15574: feat: add GovernedStatusPill, IntegrityIndicator, )
+[2026-07-26T02:49:04.344Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 86d15574
+[2026-07-26T02:49:04.346Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 86d15574 via diff-only (3 topics)
+[2026-07-26T02:49:04.353Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 5283575d: feat(server): sfwp transport layer + review remediation (tas
+[2026-07-26T02:49:04.446Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 5283575d
+[2026-07-26T02:49:04.446Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=0, files=15, lines=2375+247
+[2026-07-26T02:49:04.446Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T02:51:33.825Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.4753 in=3 out=8055 cached=59074
+[2026-07-26T02:51:33.830Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 5 topic(s) from delimited text format
+[2026-07-26T02:51:33.831Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 5 topic(s), response length: 13451 chars
+[2026-07-26T02:51:33.831Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Server protocol handshake and method catalog discovery added
+[2026-07-26T02:51:33.831Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 2: Live event subscription with durable cursor-based gap recovery
+[2026-07-26T02:51:33.831Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 3: Request status recovery after client disconnect and reconnect
+[2026-07-26T02:51:33.831Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 4: Stale-state protection for approval and rejection decisions
+[2026-07-26T02:51:33.831Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 5: Automated contract generation from server type definitions to TypeScript
+[2026-07-26T02:51:33.831Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (2000 chars): This commit delivered the full SFWP transport layer on top of the existing server, covering four interconnected capabili
+[2026-07-26T02:51:33.992Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 3 written, 0 deleted (via fast-import)
+[2026-07-26T02:51:33.999Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: backfilled/featserver-sfwp-transport-layer-review-remediation-5283575d.md (commit)
+[2026-07-26T02:51:33.999Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: backfilled/featserver-sfwp-transport-layer-review-remediation-5283575d.md
+[2026-07-26T02:51:33.999Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 3 files, deleted 0 (Add summary for 5283575d: feat(server): sfwp transport layer + review remedi)
+[2026-07-26T02:51:33.999Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 5283575d
+[2026-07-26T02:51:34.001Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 5283575d via diff-only (5 topics)
+[2026-07-26T02:51:34.018Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 9ddff9a7: feat(workbench): tauri/bun/react stack + sfwp host bridge (t
+[2026-07-26T02:51:34.234Z] WARN  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Diff exceeds 150000-char budget (336516 chars) — prepending --stat file list and truncating body
+[2026-07-26T02:51:34.267Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 9ddff9a7
+[2026-07-26T02:51:34.267Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=0, files=92, lines=9422+0
+[2026-07-26T02:51:34.267Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T02:55:41.953Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.7134 in=3 out=15249 cached=80777
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 5 topic(s) from delimited text format
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 5 topic(s), response length: 13590 chars
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Desktop workbench foundation: locked technology stack proven to coexist
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 2: Host bridge: typed connection between the desktop UI and the backend service
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 3: Design system integration: project visual identity applied to Astryx components
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 4: Protocol contracts: auto-generated TypeScript types matched to backend definitio
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 5: Separate CI gate for the frontend workbench
+[2026-07-26T02:55:41.954Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (1901 chars): The developer established the SEA Forge desktop workbench from scratch: a Bun-managed workspace containing a Tauri 2 des
+[2026-07-26T02:55:42.238Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 3 written, 0 deleted (via fast-import)
+[2026-07-26T02:55:42.244Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: backfilled/featworkbench-tauribunreact-stack-sfwp-host-bridge-9ddff9a7.md (commit)
+[2026-07-26T02:55:42.245Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: backfilled/featworkbench-tauribunreact-stack-sfwp-host-bridge-9ddff9a7.md
+[2026-07-26T02:55:42.247Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 3 files, deleted 0 (Add summary for 9ddff9a7: feat(workbench): tauri/bun/react stack + sfwp host)
+[2026-07-26T02:55:42.247Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 9ddff9a7
+[2026-07-26T02:55:42.261Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 9ddff9a7 via diff-only (5 topics)
+[2026-07-26T02:55:42.278Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 37da64f8: docs: record workbench task one
+[2026-07-26T02:55:42.402Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 37da64f8
+[2026-07-26T02:55:42.402Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=2, files=1, lines=22+0
+[2026-07-26T02:55:42.402Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T02:56:57.045Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.1446 in=3 out=4089 cached=13874
+[2026-07-26T02:56:57.046Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 1 topic(s) from delimited text format
+[2026-07-26T02:56:57.046Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 1 topic(s), response length: 3901 chars
+[2026-07-26T02:56:57.047Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Server method compatibility survey across 74 planned API endpoints
+[2026-07-26T02:56:57.047Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (958 chars): The developer completed a foundational compatibility survey of 74 planned server API methods across 18 families, tracing
+[2026-07-26T02:56:57.122Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 4 written, 0 deleted (via fast-import)
+[2026-07-26T02:56:57.124Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Branch mapping created: main → main
+[2026-07-26T02:56:57.130Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: main/docs-record-workbench-task-one-37da64f8.md (commit)
+[2026-07-26T02:56:57.131Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: main/docs-record-workbench-task-one-37da64f8.md
+[2026-07-26T02:56:57.133Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 4 files, deleted 0 (Add summary for 37da64f8: docs: record workbench task one)
+[2026-07-26T02:56:57.133Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 37da64f8
+[2026-07-26T02:56:57.135Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 37da64f8 via file-overlap (1 topics)
+[2026-07-26T02:56:57.144Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 8fdce70f: docs: add workbench grounding report
+[2026-07-26T02:56:57.176Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 8fdce70f
+[2026-07-26T02:56:57.176Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=4, files=3, lines=293+4
+[2026-07-26T02:56:57.176Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T02:57:01.310Z] INFO  [ClaudeExecutableResolver] [trace=13b21c5bccd06da3a5963f69d1192df4] Resolved claude executable: /home/sprime01/.local/share/mise/installs/claude-code/2.1.197/claude (v2.1.197)
+[2026-07-26T02:58:01.185Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.1640 in=3 out=2239 cached=21735
+[2026-07-26T02:58:01.185Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 1 topic(s) from delimited text format
+[2026-07-26T02:58:01.185Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 1 topic(s), response length: 4109 chars
+[2026-07-26T02:58:01.185Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Workbench API method compatibility map produced for all 18 planned families
+[2026-07-26T02:58:01.185Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (1039 chars): A complete compatibility map was produced for the 74 planned frontend API methods spanning 18 backend capability familie
+[2026-07-26T02:58:01.247Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 4 written, 0 deleted (via fast-import)
+[2026-07-26T02:58:01.249Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: main/docs-add-workbench-grounding-report-8fdce70f.md (commit)
+[2026-07-26T02:58:01.249Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: main/docs-add-workbench-grounding-report-8fdce70f.md
+[2026-07-26T02:58:01.249Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 4 files, deleted 0 (Add summary for 8fdce70f: docs: add workbench grounding report)
+[2026-07-26T02:58:01.249Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 8fdce70f
+[2026-07-26T02:58:01.252Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 8fdce70f via file-overlap (1 topics)
+[2026-07-26T02:58:01.257Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 7aef3c49: docs: refresh merge handoff
+[2026-07-26T02:58:01.295Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 7aef3c49
+[2026-07-26T02:58:01.295Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=7, files=2, lines=13+1
+[2026-07-26T02:58:01.295Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T02:58:55.342Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.1214 in=3 out=2336 cached=14385
+[2026-07-26T02:58:55.343Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 1 topic(s) from delimited text format
+[2026-07-26T02:58:55.343Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 1 topic(s), response length: 1321 chars
+[2026-07-26T02:58:55.343Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Branch merge and pending publication state recorded in project status
+[2026-07-26T02:58:55.410Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 4 written, 0 deleted (via fast-import)
+[2026-07-26T02:58:55.413Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: main/docs-refresh-merge-handoff-7aef3c49.md (commit)
+[2026-07-26T02:58:55.413Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: main/docs-refresh-merge-handoff-7aef3c49.md
+[2026-07-26T02:58:55.413Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 4 files, deleted 0 (Add summary for 7aef3c49: docs: refresh merge handoff)
+[2026-07-26T02:58:55.414Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 7aef3c49
+[2026-07-26T02:58:55.414Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 7aef3c49 via file-overlap (1 topics)
+[2026-07-26T02:58:55.419Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 74dc8ab3: merge: integrate full-spec
+[2026-07-26T02:58:56.078Z] WARN  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Diff exceeds 150000-char budget (4175677 chars) — prepending --stat file list and truncating body
+[2026-07-26T02:58:56.175Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 74dc8ab3
+[2026-07-26T02:58:56.175Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=0, files=245, lines=98904+2912
+[2026-07-26T02:58:56.175Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T03:06:47.481Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.6980 in=3 out=23031 cached=58748
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 9 topic(s) from delimited text format
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 9 topic(s), response length: 22659 chars
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Rust workspace reorganized from two crates into twenty focused modules
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 2: All authority decisions committed to a tamper-evident ledger before any effects 
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 3: System can dispatch tasks to real AI agents over a structured conversation proto
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 4: System maintains a governed ledger-tracked record of its own capabilities and an
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 5: Specification documents run through a governed pipeline that proves implementati
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 6: Multi-agent workflow templates fixed to use valid endpoint names and manager ite
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 7: Conversation transcripts encrypted at rest and agent output validated against de
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 8: Late-arriving proof declarations from external benchmark tools now reconcile wit
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 9: Reusable implementation guide created for the workbench browser interface
+[2026-07-26T03:06:47.482Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (2159 chars): This merge commit delivers the complete v0.2 full-specification implementation across a substantially restructured Rust 
+[2026-07-26T03:06:47.547Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 3 written, 0 deleted (via fast-import)
+[2026-07-26T03:06:47.550Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: backfilled/merge-integrate-full-spec-74dc8ab3.md (commit)
+[2026-07-26T03:06:47.550Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: backfilled/merge-integrate-full-spec-74dc8ab3.md
+[2026-07-26T03:06:47.551Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 3 files, deleted 0 (Add summary for 74dc8ab3: merge: integrate full-spec)
+[2026-07-26T03:06:47.551Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 74dc8ab3
+[2026-07-26T03:06:47.554Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 74dc8ab3 via diff-only (9 topics)
+[2026-07-26T03:06:47.560Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 2aa479da: docs: add workbench planning and release evidence
+[2026-07-26T03:06:47.618Z] WARN  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Diff exceeds 150000-char budget (366360 chars) — prepending --stat file list and truncating body
+[2026-07-26T03:06:47.660Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 2aa479da
+[2026-07-26T03:06:47.660Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=13, files=34, lines=7184+612
+[2026-07-26T03:06:47.660Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T03:08:48.686Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.5020 in=3 out=5997 cached=68667
+[2026-07-26T03:08:48.686Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 3 topic(s) from delimited text format
+[2026-07-26T03:08:48.686Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 3 topic(s), response length: 9910 chars
+[2026-07-26T03:08:48.687Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Reusable implementation skill created for the Workbench frontend build
+[2026-07-26T03:08:48.687Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 2: Fourteen-milestone repository-grounded Workbench implementation plan created
+[2026-07-26T03:08:48.687Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 3: Stale spec-package references corrected and unproved release claims documented
+[2026-07-26T03:08:48.687Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (1258 chars): The developer created a reusable instruction set for future automated agents to follow when implementing the Workbench's
+[2026-07-26T03:08:48.747Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 4 written, 0 deleted (via fast-import)
+[2026-07-26T03:08:48.748Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Branch mapping created: full-spec → full-spec
+[2026-07-26T03:08:48.749Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: full-spec/docs-add-workbench-planning-and-release-evidence-2aa479da.md (commit)
+[2026-07-26T03:08:48.749Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: full-spec/docs-add-workbench-planning-and-release-evidence-2aa479da.md
+[2026-07-26T03:08:48.750Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 4 files, deleted 0 (Add summary for 2aa479da: docs: add workbench planning and release evidence)
+[2026-07-26T03:08:48.750Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 2aa479da
+[2026-07-26T03:08:48.751Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 2aa479da via file-overlap (3 topics)
+[2026-07-26T03:08:48.756Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Commit 107d3c5b: docs: close spec audit remediation
+[2026-07-26T03:08:48.797Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Generating summary for commit 107d3c5b
+[2026-07-26T03:08:48.797Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Context: transcript=0, files=4, lines=108+60
+[2026-07-26T03:08:48.797Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=summarize source=local-agent
+[2026-07-26T03:09:20.024Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=summarize model=claude-sonnet-4-6 cost=$0.1397 in=3 out=992 cached=20796
+[2026-07-26T03:09:20.024Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Parsed 1 topic(s) from delimited text format
+[2026-07-26T03:09:20.024Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary parsed: 1 topic(s), response length: 4329 chars
+[2026-07-26T03:09:20.024Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4]   Topic 1: Spec audit remediation plan fully closed out with portable evidence
+[2026-07-26T03:09:20.024Z] INFO  [Summarizer] [trace=13b21c5bccd06da3a5963f69d1192df4] Recap (968 chars): The spec audit remediation plan — covering eighteen conformance tasks across the agent orchestration milestones — was fo
+[2026-07-26T03:09:20.076Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 3 written, 0 deleted (via fast-import)
+[2026-07-26T03:09:20.078Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: backfilled/docs-close-spec-audit-remediation-107d3c5b.md (commit)
+[2026-07-26T03:09:20.079Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Markdown generated: backfilled/docs-close-spec-audit-remediation-107d3c5b.md
+[2026-07-26T03:09:20.079Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 3 files, deleted 0 (Add summary for 107d3c5b: docs: close spec audit remediation)
+[2026-07-26T03:09:20.079Z] INFO  [SummaryStore] [trace=13b21c5bccd06da3a5963f69d1192df4] Summary stored successfully for commit 107d3c5b
+[2026-07-26T03:09:20.080Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill generated 107d3c5b via diff-only (1 topics)
+[2026-07-26T03:09:20.081Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill batch done — triggering one repo-wide wiki/graph ingest
+[2026-07-26T03:09:20.084Z] INFO  [SessionTracker] [trace=13b21c5bccd06da3a5963f69d1192df4] Enqueued queue operation: type=ingest tag=ingest file=1785035360083-00000001-966e52b6-ingest.json
+[2026-07-26T03:09:20.085Z] INFO  [QueueWorker] [trace=13b21c5bccd06da3a5963f69d1192df4] Launching background worker
+[2026-07-26T03:09:20.092Z] INFO  [QueueWorker] [trace=13b21c5bccd06da3a5963f69d1192df4] Background worker spawned (PID: 1995649)
+[2026-07-26T03:09:20.092Z] INFO  [BackfillEngine] [trace=13b21c5bccd06da3a5963f69d1192df4] Back-fill complete: generated=10 skipped=0 errors=0 (of 10 candidates)
+[2026-07-26T03:09:20.454Z] INFO  [QueueWorker] [trace=13b21c5bccd06da3a5963f69d1192df4] === Queue worker started === node=24.17.0 kind=cli source=cli pkgVer=0.99.9 cliVer=0.99.9 dist=/home/sprime01/.local/share/mise/installs/npm-jolli-ai-cli/0.99.9/lib/node_modules/@jolli.ai/cli/dist
+[2026-07-26T03:09:20.460Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T03:09:20.468Z] INFO  [StorageFactory] [trace=13b21c5bccd06da3a5963f69d1192df4] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T03:09:20.478Z] INFO  [QueueWorker] [trace=13b21c5bccd06da3a5963f69d1192df4] === Queue worker finished ===
+[2026-07-26T03:09:20.482Z] INFO  [QueueWorker] [trace=13b21c5bccd06da3a5963f69d1192df4] Processing queue entry: type=ingest triggeredBy=manual
+[2026-07-26T03:09:20.503Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=route source=local-agent
+[2026-07-26T03:09:25.017Z] INFO  [ClaudeExecutableResolver] [trace=13b21c5bccd06da3a5963f69d1192df4] Resolved claude executable: /home/sprime01/.local/share/mise/installs/claude-code/2.1.197/claude (v2.1.197)
+[2026-07-26T03:09:47.718Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=route model=claude-sonnet-4-6 cost=$0.0737 in=3 out=1494 cached=8541
+[2026-07-26T03:09:47.720Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=reconcile source=local-agent
+[2026-07-26T03:10:16.664Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=reconcile model=claude-sonnet-4-6 cost=$0.0851 in=3 out=1347 cached=10808
+[2026-07-26T03:10:16.666Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=reconcile source=local-agent
+[2026-07-26T03:11:13.365Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=reconcile model=claude-sonnet-4-6 cost=$0.1075 in=3 out=2558 cached=11512
+[2026-07-26T03:11:13.366Z] WARN  [ReconciledPage] [trace=13b21c5bccd06da3a5963f69d1192df4] reconcile echoed slug workbench-planning-documentation, keeping authoritative workbench-planning-docs
+[2026-07-26T03:11:13.367Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=reconcile source=local-agent
+[2026-07-26T03:11:43.653Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=reconcile model=claude-sonnet-4-6 cost=$0.0954 in=3 out=1209 cached=12877
+[2026-07-26T03:11:43.654Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=reconcile source=local-agent
+[2026-07-26T03:12:50.923Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=reconcile model=claude-sonnet-4-6 cost=$0.1226 in=3 out=2956 cached=13045
+[2026-07-26T03:12:50.926Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=reconcile source=local-agent
+[2026-07-26T03:13:58.165Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=reconcile model=claude-sonnet-4-6 cost=$0.1294 in=3 out=3240 cached=13470
+[2026-07-26T03:13:58.166Z] WARN  [ReconciledPage] [trace=13b21c5bccd06da3a5963f69d1192df4] reconcile echoed slug sfwp-transport-host-bridge, keeping authoritative sfwp-integration
+[2026-07-26T03:13:58.166Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=reconcile source=local-agent
+[2026-07-26T03:14:40.125Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=reconcile model=claude-sonnet-4-6 cost=$0.0979 in=3 out=1766 cached=11908
+[2026-07-26T03:14:40.163Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.164Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic page spec-audit-remediation)
+[2026-07-26T03:14:40.192Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.192Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic KB index (1 topics))
+[2026-07-26T03:14:40.236Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.237Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic page workbench-planning-docs)
+[2026-07-26T03:14:40.277Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.278Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic KB index (2 topics))
+[2026-07-26T03:14:40.313Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.313Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic page branch-merge-handoff)
+[2026-07-26T03:14:40.337Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.337Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic KB index (3 topics))
+[2026-07-26T03:14:40.367Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.367Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic page workbench-implementation)
+[2026-07-26T03:14:40.390Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.391Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic KB index (4 topics))
+[2026-07-26T03:14:40.422Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.423Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic page sfwp-integration)
+[2026-07-26T03:14:40.452Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.453Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic KB index (5 topics))
+[2026-07-26T03:14:40.488Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.488Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic page ui-components)
+[2026-07-26T03:14:40.513Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.514Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic KB index (6 topics))
+[2026-07-26T03:14:40.548Z] INFO  [GitOps] [trace=13b21c5bccd06da3a5963f69d1192df4] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-26T03:14:40.548Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Wrote 1 files, deleted 0 (Update topic KB processed-source set)
+[2026-07-26T03:14:40.555Z] INFO  [QueueWorker] [trace=13b21c5bccd06da3a5963f69d1192df4] Ingest drained: 1 batches, 10 sources (manual)
+[2026-07-26T03:14:40.581Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: _wiki/topic--spec-audit-remediation.md (wiki)
+[2026-07-26T03:14:40.582Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: _wiki/topic--workbench-planning-docs.md (wiki)
+[2026-07-26T03:14:40.582Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: _wiki/topic--branch-merge-handoff.md (wiki)
+[2026-07-26T03:14:40.582Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: _wiki/topic--workbench-implementation.md (wiki)
+[2026-07-26T03:14:40.583Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: _wiki/topic--sfwp-integration.md (wiki)
+[2026-07-26T03:14:40.583Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: _wiki/topic--ui-components.md (wiki)
+[2026-07-26T03:14:40.583Z] INFO  [MetadataManager] [trace=13b21c5bccd06da3a5963f69d1192df4] Manifest updated: _wiki/_index.md (wiki)
+[2026-07-26T03:14:40.584Z] INFO  [FolderStorage] [trace=13b21c5bccd06da3a5963f69d1192df4] Topic-KB wiki regenerated: 6 topics under /home/sprime01/Documents/jolli/SEA-rs/_wiki
+[2026-07-26T03:14:40.588Z] INFO  [GraphBuilder] [trace=13b21c5bccd06da3a5963f69d1192df4] Building knowledge graph for /home/sprime01/Documents/jolli/SEA-rs: 6 topic(s) (full)
+[2026-07-26T03:14:40.588Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-categories source=local-agent
+[2026-07-26T03:14:56.724Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-categories model=claude-sonnet-4-6 cost=$0.0597 in=3 out=640 cached=8345
+[2026-07-26T03:14:56.725Z] INFO  [GraphDistiller] [trace=13b21c5bccd06da3a5963f69d1192df4] graph phase 1/3 categories: 5 categories over 6 topic(s) (16137ms)
+[2026-07-26T03:14:56.725Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-units source=local-agent
+[2026-07-26T03:15:21.198Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-units model=claude-sonnet-4-6 cost=$0.0770 in=3 out=1429 cached=9258
+[2026-07-26T03:15:21.199Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-units source=local-agent
+[2026-07-26T03:16:01.998Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-units model=claude-sonnet-4-6 cost=$0.0980 in=3 out=2476 cached=10136
+[2026-07-26T03:16:01.999Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-units source=local-agent
+[2026-07-26T03:16:35.305Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-units model=claude-sonnet-4-6 cost=$0.0839 in=3 out=1880 cached=9275
+[2026-07-26T03:16:35.305Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-units source=local-agent
+[2026-07-26T03:17:55.384Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-units model=claude-sonnet-4-6 cost=$0.1395 in=3 out=4962 cached=10840
+[2026-07-26T03:17:55.384Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-units source=local-agent
+[2026-07-26T03:18:45.560Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-units model=claude-sonnet-4-6 cost=$0.1078 in=3 out=2753 cached=11078
+[2026-07-26T03:18:45.561Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-units source=local-agent
+[2026-07-26T03:19:20.044Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-units model=claude-sonnet-4-6 cost=$0.0835 in=3 out=1651 cached=9787
+[2026-07-26T03:19:20.044Z] INFO  [GraphDistiller] [trace=13b21c5bccd06da3a5963f69d1192df4] graph phase 2/3 units: 38 unit(s) from 6 topic(s) (276995ms)
+[2026-07-26T03:19:20.045Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-edges source=local-agent
+[2026-07-26T03:19:20.045Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-edges source=local-agent
+[2026-07-26T03:19:20.045Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-edges source=local-agent
+[2026-07-26T03:19:20.045Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-edges source=local-agent
+[2026-07-26T03:20:14.088Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-edges model=claude-sonnet-4-6 cost=$0.0956 in=3 out=2859 cached=8783
+[2026-07-26T03:20:14.089Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] LLM call: action=graph-edges source=local-agent
+[2026-07-26T03:20:32.997Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-edges model=claude-sonnet-4-6 cost=$0.1160 in=3 out=4188 cached=8868
+[2026-07-26T03:20:42.775Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-edges model=claude-sonnet-4-6 cost=$0.1208 in=3 out=4524 cached=8827
+[2026-07-26T03:20:57.771Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-edges model=claude-sonnet-4-6 cost=$0.1367 in=3 out=5584 cached=8818
+[2026-07-26T03:21:07.026Z] INFO  [LlmClient] [trace=13b21c5bccd06da3a5963f69d1192df4] Local-agent completion: action=graph-edges model=claude-sonnet-4-6 cost=$0.1040 in=3 out=3470 cached=8665
+[2026-07-26T03:21:07.033Z] INFO  [GraphDistiller] [trace=13b21c5bccd06da3a5963f69d1192df4] graph phase 3/3 edges: 23 edge(s) over 38 unit(s) in 5 categories (111575ms)
+[2026-07-26T03:21:07.092Z] INFO  [GraphBuilder] [trace=13b21c5bccd06da3a5963f69d1192df4] Knowledge graph built (full): 5 categories, 6 topics, 38 units, 23 edges in 404767ms -> /home/sprime01/Documents/jolli/SEA-rs/.jolli/graph/graph.json

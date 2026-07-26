@@ -1,4 +1,4 @@
-# Repository integration — actual substrate (verified 2026-07-24, branch `full-spec`)
+# Repository integration — actual substrate (verified 2026-07-25, branch `frontend`)
 
 Everything here was verified against the working tree. If reality has moved,
 update this file in the same change that depends on the new reality. Claims
@@ -8,28 +8,30 @@ that could not be verified are marked `UNKNOWN — repository evidence not found
 
 - Rust workspace, 22 crates under `crates/` (root `Cargo.toml`, resolver 2,
   edition 2021, `rust-version 1.92.0`, `unsafe_code = "deny"`).
-- **No JavaScript/TypeScript workspace exists.** No `package.json`, no
-  `bun.lock`, no `node_modules` outside `.opencode/` (editor tooling, not
-  product). No Tauri, no Vite, no frontend directory of any kind.
+- Workbench exists at `workbench/`: Bun 1.4.0 workspace
+  (`workbench/package.json:6-7`) with a React/Vite renderer at
+  `apps/desktop/`, a standalone Tauri 2 host workspace at
+  `apps/desktop/src-tauri/`, and token/theme/contracts/component packages
+  under `packages/`.
 - Task runner: `justfile` via devbox. Gates: `devbox run -- just check`,
   `just test`, `just context-check`, `just fmt-check`, `just lint`,
   `just no-async-kernel`, `just ci`, `just proof`.
 - Plans live in `.agents/plans/` named `YYYY-MM-DD-<topic>.md`; specs in
   `.agents/specs/`; ADRs in `docs/decisions/` (ADR-001 domainforge boundary,
   ADR-002 dependency approvals, ADR-003 additive contracts).
-- Frontend workspace location: **to be created** — plan Milestone 2 proposes
-  `workbench/` at repo root (Bun workspace + Tauri host), kept out of the
-  Cargo workspace except the Tauri host crate. Until it exists:
-  `UNKNOWN — repository evidence not found` for any frontend path.
+- Frontend gates: `bun run check`, `bun run build`, `bun run test`, and
+  `bunx playwright test` from `workbench/`; `just workbench-check` is the
+  root convenience gate. The Tauri host remains outside the root Cargo
+  workspace by design (ADR-004).
 
 ## Server and transport (the wire the Workbench must speak)
 
 | Fact | Location |
 |---|---|
-| Unix-socket NDJSON server, tokio | `crates/sea-forge-server/src/lib.rs:515-535` (`UnixListener::bind(socket_path)`, 0600 perms, line-delimited JSON responses) |
-| Request envelope: `#[serde(tag = "verb", rename_all = "snake_case")] pub enum Request` | `crates/sea-forge-server/src/lib.rs:396-401` |
-| Existing verbs | `submit`, `status`, `approve`, `reject`, `agent_list`, `agent_probe`, `delegate`, `cancel_delegation`, `ask` (`lib.rs:401-…`) |
-| Responses are ad-hoc `serde_json::json!` values, one line each | `lib.rs:563-568` |
+| Unix-socket NDJSON server, tokio | `crates/sea-forge-server/src/lib.rs:647` (`UnixListener::bind`, 0600 permissions, line-delimited JSON) |
+| Request envelope: `#[serde(tag = "verb", rename_all = "snake_case")] pub enum Request` | `crates/sea-forge-server/src/lib.rs:468` |
+| Existing verbs | Legacy verbs plus additive SFWP `system_*`, `request_get_status`, `events_*`, catalog/describe, and `readiness_get` (`lib.rs:468-617`) |
+| Readiness view | `crates/sea-forge-server/src/sfwp/readiness.rs:166`; dispatched from `lib.rs:1116` |
 | Server config (`server.yaml`, `socket_path`) | `crates/sea-forge-server/src/config.rs` |
 | Binary entry | `crates/sea-forge-server/src/main.rs` (39 lines) |
 | Delegation + transcript evidence + SWE_SEED declaration ingress | `crates/sea-forge-server/src/delegation.rs` (1851 lines) |
@@ -38,12 +40,12 @@ that could not be verified are marked `UNKNOWN — repository evidence not found
 | Transcript sealing | `crates/sea-forge-server/src/transcript_seal.rs` |
 | SWE_SEED reconciliation (claim-manifest hashes) | `crates/sea-forge-server/src/swe_seed_reconciliation.rs` |
 
-**Missing vs SFWP** (all additive, ADR-003 pattern — old servers reject
-unknown verbs cleanly): request envelopes with `request_id`/`protocol_version`,
-`system.hello` negotiation, `request.get_status` recovery, `events.subscribe`
-/ `events.get_range`, preconditions/expected digests on protected verbs,
-structured error frames. Idempotency: `UNKNOWN — repository evidence not
-found` for any server-side request-correlation store.
+**SFWP substrate now present:** negotiation, request correlation/status
+recovery, event subscription/range replay, method catalog/describe, and
+`readiness.get` are implemented additively under
+`crates/sea-forge-server/src/sfwp/` and dispatched from `lib.rs`. Later
+vertical slices still need their own view-shaped query/protected-command
+verbs; the catalog is not proof that roadmap methods exist.
 
 ## Canonical types and owners
 
@@ -76,10 +78,13 @@ found` for any server-side request-correlation store.
 
 ## Generated contracts
 
-- **No schema/TS generation exists.** `schemars`, `ts-rs`, `typeshare` appear
-  in no `Cargo.toml`. The `canonical Rust types → JSON Schema → TypeScript →
-  AJV` pipeline is greenfield (plan Milestone 3); adding the generator crate
-  requires an ADR-002 entry.
+- Rust SFWP types derive schemas through `schemars`
+  (`crates/sea-forge-server/Cargo.toml:26`); `gen_sfwp_schema` emits committed
+  schema files under `workbench/packages/contracts/schema/`.
+- `workbench/packages/contracts/scripts/generate.ts` generates TypeScript and
+  AJV validators into `packages/contracts/generated/`; for example
+  `ReadinessView.ts` and `ReadinessView.validator.ts`. These zones are
+  generated and must never be hand-edited (ADR-005).
 
 ## Tests and fixtures
 
@@ -100,11 +105,11 @@ found` for any server-side request-correlation store.
 
 | Seam | Status |
 |---|---|
-| Frontend workspace (Bun/Vite/React) | MISSING |
-| Tauri host crate | MISSING |
-| SFWP envelope/negotiation/request-status | MISSING (additive on existing socket) |
-| Event subscription + cursor + gap recovery | MISSING (ledger `entry_ulid` is the substrate) |
-| JSON Schema / TS generation | MISSING (needs ADR) |
-| Read-model queries shaped for views (`readiness.get`, `case.get_horizon`, …) | MISSING to PARTIAL (records exist; view shaping absent) |
+| Frontend workspace (Bun/Vite/React) | EXISTS (`workbench/`) |
+| Tauri host crate | EXISTS (`workbench/apps/desktop/src-tauri/`) |
+| SFWP envelope/negotiation/request-status | EXISTS |
+| Event subscription + cursor + gap recovery | EXISTS |
+| JSON Schema / TS generation | EXISTS |
+| Read-model queries shaped for views | PARTIAL (`readiness.get` exists; later route families remain milestone-scoped) |
 | Thoth AG-UI stream | MISSING (`ask` is synchronous request/response today) |
 | ACP permission surfacing to an interactive client | PARTIAL (`AcpPermissionMediator` trait exists; only `DenyAllMediator` shipped) |

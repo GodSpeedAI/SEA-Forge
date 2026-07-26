@@ -13,6 +13,24 @@ entry when resolved; do not use this file as a backlog of ideas.
 - Scope: why it was not fixed in the discovering task
 -->
 
+## Open: Static Workbench kit hides Operate-route CSS in reduced-motion media
+
+- Observed: 2026-07-25
+- Evidence: `.agents/specs/frontend/ui_kits/app/styles.css:998-1067` opens
+  `@media (prefers-reduced-motion: reduce)` before the Operate-route variants
+  and does not close it until after those selectors. In a normal-motion browser,
+  `.asset-row` computes to `display: block` even though the source later declares
+  a grid; the production browser regression now asserts `display: grid`.
+- Impact: rendered reference routes appear compressed in the default browser
+  mode, and a source-only fidelity pass can copy a media-query parsing defect
+  instead of the intended route layouts.
+- Next move: correct the brace boundary in a dedicated frontend-spec revision,
+  then recapture normal/reduced-motion reference screenshots and update the
+  source-projection contract deliberately.
+- Scope: this slice preserves the checked-in reference byte-for-byte and
+  projects the intended route selectors through production CSS; editing
+  preserved specification evidence is a separate review decision.
+
 ## Open: `spec-implementation-audit.md` Thoth-governance finding is stale
 
 - Observed: 2026-07-24

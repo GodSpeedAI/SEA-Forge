@@ -34,9 +34,9 @@ Single-slice tasks should instead load only the rows relevant to the slice.
 | `ui_kits/DESIGN-HANDOFF.md` | OpenDesign handoff notes | Understanding kit provenance | Reference |
 | `ui_kits/DESIGN-MANIFEST.json` | Generated OpenDesign manifest | Almost never — see caveats | Generated; do not hand-edit |
 | `ui_kits/app/README.md` | Kit reuse guide | Extracting kit patterns | Reference |
-| `ui_kits/app/index.html` | Applied **Readiness** workbench reference (not a generic launcher) | Readiness slice visual fidelity | Reference (visual only) |
-| `ui_kits/app/styles.css` | Applied layout/component styling bound to `../../colors_and_type.css` | Readiness slice styling detail | Reference (visual only) |
-| `ui_kits/app/app.js` | Prototype interactions (operation switch, drawer, keyboard) | Interaction feel only | Reference — **never** copy its state management into production |
+| `ui_kits/app/index.html` | Applied **Readiness** workbench and shared-shell reference (not a generic launcher) | Shell and Readiness visual fidelity | Reference (visual only) |
+| `ui_kits/app/styles.css` | Applied shell, Readiness, and Operate-route styling bound to `../../colors_and_type.css` | Visual styling detail; see media-query caveat below | Reference (visual only) |
+| `ui_kits/app/app.js` | Static Operate-route view scenarios plus prototype interactions | View hierarchy and interaction feel only | Reference — **never** copy its state management or display records into production |
 | `ui_kits/app/components.js` | Dependency-free HTML render helpers for the static preview | Rarely | Reference (prototype plumbing) |
 | `ui_kits/app/components/GovernedFocusHeader.html` | Semantic component reference | Building the governed focus header | Reference (component contract) |
 | `ui_kits/app/components/ReadinessConditionTable.html` | Semantic component reference | Building the readiness matrix | Reference (component contract) |
@@ -74,6 +74,11 @@ list is kept so future agents recognize old copies or diffs:
 - **Prototype JS is not architecture.** `app.js` mutates DOM state directly
   and simulates transitions locally; production state ownership is defined by
   the frontend architecture contract §6 (state classes) and this skill.
+- **Operate-route CSS is trapped inside reduced-motion media.** In the
+  checked-in `styles.css`, the route-variant block follows an unclosed
+  `prefers-reduced-motion` rule. Treat its selectors as design intent, but
+  verify their production projection with normal-motion computed styles;
+  do not copy the accidental media-query boundary.
 - **The API spec/catalog are self-declared `target-unmapped`.** Every method
   must be grounded per `api-and-event-contracts.md` before implementation.
 - **No fonts ship with the package.** Inter and JetBrains Mono stacks resolve

@@ -41,6 +41,12 @@ export async function installTauriMock(
       unregisterListener: () => {},
       convertFileSrc: (p: string) => p,
     };
+    // `@tauri-apps/api/event` owns listener cleanup in a separate plugin
+    // namespace from invoke/callback internals.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+      unregisterListener: () => {},
+    };
   }, readinessView);
 }
 

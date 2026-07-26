@@ -2,6 +2,46 @@
 
 Updated: 2026-07-25
 
+> **2026-07-25 Workbench mockup-fidelity repair complete.** The React shell now
+> matches the checked-in workbench kit at its responsive evidence breakpoints:
+> the Context / Evidence region is a 380px docked grid track above 1420px and a
+> transparent, non-modal 400px (maximum 92vw) right overlay below it, beginning
+> below the 56px global bar. It remains mounted while closed so the kit's 180ms
+> `cubic-bezier(.23,1,.32,1)` slide-out/slide-in completes; Escape, the close
+> control, evidence citations, and the header toggle preserve that state.
+> Container-responsive Operate layouts stack focus actions and attention rails
+> before labels/tables compress, while shell tracks follow the kit's 236/224/64
+> navigation widths. The six Operate routes (Thoth, Assets, Domain Models,
+> Cases, Inbox, Operations) now render their route-specific focus/panel
+> hierarchies and active journey label instead of generic placeholders. Because
+> no live route-family read models exist yet, those surfaces are visibly marked
+> `Specification preview · not live`; their controls inspect context only and
+> do not imply backend mutations. `readiness.get` remains the sole live source
+> for the Readiness route.
+>
+> Durable regression evidence: `mockupFidelity.test.ts` drift-checks the
+> reference stylesheet and required regions; `SurfacesPages.test.tsx` covers all
+> Operate view structures; component coverage proves the drawer remains mounted
+> for exit motion; Playwright asserts 1600px and 1280px shell/drawer geometry,
+> exact transition timing/easing, close/reopen motion, all Operate route swaps,
+> computed route-grid activation, no horizontal action overflow, and zero axe
+> violations or console/page errors for each route plus Readiness. The
+> browser-mode Tauri shim now supplies the event plugin's separate
+> `unregisterListener` namespace, so listener cleanup is exercised without an
+> unhandled rejection. The Workbench skill now requires
+> same-viewport browser comparison and computed-style checks in normal and
+> reduced-motion media; its source map records that the static kit's Operate
+> selectors are accidentally trapped inside an unclosed reduced-motion block,
+> so production must project their intent without copying that boundary.
+> Frontend gates green: `bun run check` (one pre-existing Fast Refresh warning),
+> `bun run test` (20 desktop + 17 UI-component tests), `bun run build`, and
+> `bunx playwright test e2e/readiness.spec.ts --workers=1` (3/3).
+> `devbox run -- just test` also passed workspace-wide. `devbox run -- just
+> context-check` and therefore `just check` remain blocked before execution by
+> the pre-existing non-executable `scripts/check-agent-context.sh` (exit 126),
+> already tracked in `OBSERVED_DEBT.md`; no platform test is claimed through
+> that blocked composite gate.
+
 > **2026-07-25 Workbench plan Task 5 (Readiness vertical slice) complete.**
 > First real settlement wired end-to-end: `readiness.get` SFWP inspect method
 > (new `crates/sea-forge-server/src/sfwp/readiness.rs`, dispatched as

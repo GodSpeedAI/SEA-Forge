@@ -9,7 +9,7 @@ export interface NavItemDef {
   badge?: number;
 }
 
-export const OPERATE_NAV: NavItemDef[] = [
+const OPERATE_NAV: NavItemDef[] = [
   { path: "/readiness", label: "Readiness", icon: "◈", shortcut: "R" },
   { path: "/thoth", label: "Thoth", icon: "◇" },
   { path: "/assets", label: "Assets", icon: "▱" },
@@ -19,7 +19,7 @@ export const OPERATE_NAV: NavItemDef[] = [
   { path: "/operations", label: "Operations", icon: "▶" },
 ];
 
-export const INSPECT_NAV: NavItemDef[] = [
+const INSPECT_NAV: NavItemDef[] = [
   { path: "/evidence", label: "Evidence", icon: "◎" },
   { path: "/memory", label: "Memory", icon: "≋" },
   { path: "/capabilities", label: "Capabilities", icon: "△" },
@@ -27,7 +27,7 @@ export const INSPECT_NAV: NavItemDef[] = [
   { path: "/federation", label: "Federation", icon: "⌁" },
 ];
 
-export const ADMIN_NAV: NavItemDef[] = [
+const ADMIN_NAV: NavItemDef[] = [
   { path: "/admin", label: "Administration", icon: "⚙" },
 ];
 
@@ -41,31 +41,37 @@ export function Sidebar() {
         <Link
           key={item.path}
           to={item.path}
-          className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
+          className={`${styles.navItem} nav-item ${
+            isActive ? `${styles.navItemActive} nav-item--active` : ""
+          }`}
           data-route={item.label}
           aria-current={isActive ? "page" : undefined}
         >
-          <span className={styles.navIcon} aria-hidden="true">
-            {item.icon}
-          </span>
+          <span aria-hidden="true">{item.icon}</span>
           <span>{item.label}</span>
-          {item.badge !== undefined && <span className={styles.badge}>{item.badge}</span>}
-          {item.shortcut && <kbd className={styles.kbd}>{item.shortcut}</kbd>}
+          {item.badge !== undefined && (
+            <span className={`${styles.badge} nav-count`}>{item.badge}</span>
+          )}
+          {item.shortcut && <kbd>{item.shortcut}</kbd>}
         </Link>
       );
     });
 
   return (
-    <nav className={styles.nav} aria-label="Primary navigation" data-testid="primary-navigation">
-      <div className={styles.sectionLabel}>Operate</div>
+    <nav
+      className={`${styles.nav} primary-nav`}
+      aria-label="Primary navigation"
+      data-od-id="primary-navigation"
+      data-testid="primary-navigation"
+    >
+      <div className={`${styles.sectionLabel} nav-section-label`}>Operate</div>
       {renderNavGroup(OPERATE_NAV)}
 
-      <div className={styles.sectionLabel}>Inspect</div>
+      <div className={`${styles.sectionLabel} nav-section-label`}>Inspect</div>
       {renderNavGroup(INSPECT_NAV)}
 
-      <div style={{ flex: 1 }} />
+      <div className={`${styles.navSpacer} nav-spacer`} />
 
-      <div className={styles.sectionLabel}>Admin</div>
       {renderNavGroup(ADMIN_NAV)}
     </nav>
   );

@@ -112,6 +112,34 @@ afterEach(() => {
 });
 
 describe("ReadinessPage", () => {
+  it("mirrors the Readiness mockup's governed-focus and operational region structure", async () => {
+    invokeMock.mockResolvedValue(readyView());
+    renderPage();
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-variant="ready"]')).toBeInTheDocument(),
+    );
+
+    expect(
+      document.querySelector('[data-od-id="readiness-governed-focus"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-od-id="intended-work-selector"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-od-id="critical-foundations"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-od-id="operational-capabilities"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-od-id="current-affordance-rail"]'),
+    ).toBeInTheDocument();
+
+    expect(screen.getByRole("radiogroup", { name: "Intended operation" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Critical foundations" })).toBeInTheDocument();
+  });
+
   it("(a) ready state renders ready pill and a disabled case-creation button with the not-yet-available reason", async () => {
     invokeMock.mockResolvedValue(readyView());
     renderPage();
