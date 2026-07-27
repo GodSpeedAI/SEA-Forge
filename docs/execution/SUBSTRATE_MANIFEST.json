@@ -1,0 +1,286 @@
+{
+  "schema_version": "1.0",
+  "census_pass": 1,
+  "inspected_commit": "8361f25ff0bbfc13c56c96ccb82161f317b4d0e6",
+  "inspected_commit_date": "2026-07-27T14:54:47Z",
+  "branch": "frontend",
+  "dirty_state_summary": "Working tree clean except .jolli/jollimemory/debug.log (agent memory log; gitignored content class, tracked by exception). Branch is 5 commits ahead of origin/frontend, 0 behind.",
+  "repository_roots": [
+    {
+      "path": ".",
+      "kind": "rust_workspace_root",
+      "manifest": "Cargo.toml",
+      "members": 22
+    },
+    {
+      "path": "workbench",
+      "kind": "bun_workspace_root",
+      "manifest": "package.json",
+      "package_manager": "bun@1.4.0"
+    },
+    {
+      "path": "workbench/apps/desktop/src-tauri",
+      "kind": "rust_workspace_standalone",
+      "manifest": "Cargo.toml",
+      "members": 1,
+      "note": "Deliberately not a member of the root workspace; isolates the Tauri host's tokio/reqwest deps from the kernel crates (ADR-004)."
+    }
+  ],
+  "languages": {
+    "rust": {
+      "toolchain_pin": "rust-toolchain.toml channel=1.92.0 (components: rustfmt, clippy, profile: minimal)",
+      "edition": "2021",
+      "loc_in_crates": 76025,
+      "files": 154,
+      "workspace_loc_including_tauri_host": 113403,
+      "tauri_host_loc": 37378
+    },
+    "typescript": {
+      "pinned_node_target": "lts",
+      "pinned_bun": "1.4.0",
+      "loc_workbench": 12877,
+      "files_workbench": 178,
+      "strict_tsconfig": true
+    },
+    "shell": {
+      "posix_scripts": ["justfile", "scripts/check-agent-context.sh", "scripts/doctor.sh", ".githooks/*", ".envrc"]
+    },
+    "python": {
+      "present": true,
+      "use": "auxiliary scripts only (UI-kit generators, skill validators); not a product language in this repo"
+    }
+  },
+  "package_managers": [
+    {"name": "cargo", "lockfile": "Cargo.lock", "lockfile_dependency_count_approx": 331, "policy": "--locked enforced"},
+    {"name": "bun", "lockfile": "workbench/bun.lock", "policy": "--frozen-lockfile enforced via just workbench-check"},
+    {"name": "devbox", "lockfile": "devbox.lock", "scope": "system tools (git, rustup, just, direnv, sops, age, gitleaks, cargo-deny)"},
+    {"name": "mise", "manifest": "mise.toml", "scope": "host-level tool shims for cargo/just/node"}
+  ],
+  "applications": [
+    {
+      "name": "sea-forge-cli",
+      "binary": "target/debug/sea-forge (release: target/release/sea-forge)",
+      "kind": "one-shot CLI",
+      "subcommand_count": 24,
+      "evidence": "crates/sea-forge-cli/src/main.rs:25-275"
+    },
+    {
+      "name": "sea-forge-server",
+      "binary": "target/debug/sea-forge-server",
+      "kind": "long-running Unix-socket NDJSON server (Tokio)",
+      "transport": "AF_UNIX socket at .sea-forge/server.sock (default)",
+      "config_source": "$SEA_FORGE_ROOT/server.yaml or defaults",
+      "evidence": "crates/sea-forge-server/src/main.rs:6-39"
+    },
+    {
+      "name": "sea-forge-desktop",
+      "binary": "Tauri 2 bundle (dev: bun run --cwd apps/desktop tauri dev)",
+      "kind": "desktop application (Tauri host + React 19 renderer)",
+      "renderer_dev_server": "Vite on http://localhost:1420",
+      "evidence": "workbench/apps/desktop/src-tauri/src/lib.rs, workbench/apps/desktop/package.json"
+    },
+    {
+      "name": "gen_sfwp_schema",
+      "binary": "target/debug/gen_sfwp_schema",
+      "kind": "schema emitter",
+      "output": "workbench/packages/contracts/schema/*.schema.json",
+      "evidence": "crates/sea-forge-server/src/bin/"
+    }
+  ],
+  "services": [
+    {
+      "name": "sea-forge-server",
+      "runtime": "Tokio multi-thread",
+      "wire_protocol": "SFWP v1 (NDJSON, verb-tagged Request enum)",
+      "implemented_methods_count": 21,
+      "implemented_methods": [
+        "system.hello", "system.describe", "system.get_schema",
+        "request.get_status",
+        "events.subscribe", "events.unsubscribe", "events.get_range",
+        "readiness.get",
+        "case.entry_options", "case.preflight", "case.commit",
+        "case.list", "case.get_overview", "case.get_horizon",
+        "approval.list", "approval.decide",
+        "run.list", "run.get",
+        "asset.list",
+        "delegation.preview", "delegation.list"
+      ],
+      "smoke_test_evidence": "Live system_hello response observed 2026-07-27; see VERIFICATION_BASELINE.md V-SMOKE-1."
+    }
+  ],
+  "libraries": [
+    {"name": "sea-forge-core", "role": "kernel types, ID grammar, errors, approvals fold"},
+    {"name": "sea-forge-domain", "role": "domain enum vocabulary"},
+    {"name": "sea-forge-authority", "role": "policy engine, identity, default-deny decisions"},
+    {"name": "sea-forge-planner", "role": "deterministic intent-to-plan, templates, criteria"},
+    {"name": "sea-forge-sandbox", "role": "workspace materialization, Landlock/Seatbelt jail backend"},
+    {"name": "sea-forge-runtime", "role": "argv execution, timeout, output capture"},
+    {"name": "sea-forge-trace", "role": "append-only lifecycle trace events"},
+    {"name": "sea-forge-evidence", "role": "evidence records and artifact hashes"},
+    {"name": "sea-forge-settlement", "role": "outcome evaluation, declarations, SWE_SEED claim manifests"},
+    {"name": "sea-forge-capability", "role": "capability envelope, promotion, SQLite-indexed capability memory"},
+    {"name": "sea-forge-extension", "role": "extension descriptors and ABI"},
+    {"name": "sea-forge-ledger", "role": "ULID ledger streams, hash chains, MMR commitments"},
+    {"name": "sea-forge-domainforge", "role": "DomainForge .sea parser/validator adapter"},
+    {"name": "sea-forge-spec-pipeline", "role": "M5 spec-to-code pipeline"},
+    {"name": "sea-forge-cell", "role": "SeaCell federation bundles"},
+    {"name": "sea-forge-artifact-ip", "role": "artifact-to-IP transitions (M8)"},
+    {"name": "sea-forge-self-model", "role": "genesis self-model snapshot/rebuild/projections"},
+    {"name": "sea-forge-thoth", "role": "Thoth disclosure engine + manager loop"},
+    {"name": "sea-forge-agent", "role": "AgentProvider seam (OpenAI/Anthropic-compatible), ACP driver, delegation"},
+    {"name": "sea-forge-case-runner", "role": "extracted synchronous case lifecycle primitives (M13)"},
+    {"name": "sea-forge-cli", "role": "the 24-subcommand CLI; bin-only (no lib.rs)"},
+    {"name": "sea-forge-server", "role": "SFWP Unix-socket server; async-isolated"},
+    {"name": "sea-forge-workbench (Tauri host)", "role": "closed typed SFWP bridge to the renderer"}
+  ],
+  "interfaces": [
+    {
+      "name": "SFWP (SEA Forge Workbench Protocol)",
+      "kind": "NDJSON over AF_UNIX socket",
+      "version": "1",
+      "versioning_policy": "major-only accept; unknown verb fails clean (serde unknown-variant), no panic",
+      "server_implementation": "crates/sea-forge-server/src/sfwp/",
+      "client_implementations": [
+        "workbench/apps/desktop/src-tauri/src/socket.rs (Rust host side, real)",
+        "workbench/apps/desktop/src/hooks/* (React/TanStack Query via Tauri commands)",
+        "tests/conformance_sfwp.rs (Rust integration test client)"
+      ],
+      "method_catalog_target_count": 123,
+      "method_catalog_source": ".agents/specs/frontend/sea-forge-workbench-api-method-catalog-v0.1.yaml",
+      "method_catalog_status": "target-unmapped (yaml preamble); 21 of 123 implemented"
+    },
+    {
+      "name": "Tauri command bridge",
+      "kind": "closed typed enum (SfwpQuery, SfwpCommand)",
+      "rule": "no generic invoke_backend escape hatch; mirrors server Request variants byte-for-byte",
+      "evidence": "workbench/apps/desktop/src-tauri/src/bridge.rs:1-100"
+    },
+    {
+      "name": "sea-forge CLI",
+      "kind": "clap-derive CLI",
+      "subcommands": ["run","runs","recall","inspect","migrate","project","case","task","ledger","approve","reject","resume","memory","env","export","import","adopt","artifact","self-model","ask","agent","validate","stage-check","internal-test-*"]
+    }
+  ],
+  "apis": [
+    {
+      "name": "SFWP (primary external API)",
+      "transport": "Unix socket",
+      "auth_model": "filesystem permissions on socket; no in-protocol auth"
+    },
+    {
+      "name": "AgentProvider HTTP",
+      "transport": "HTTPS (reqwest, rustls)",
+      "target": "OpenAI-compatible and Anthropic-compatible endpoints",
+      "auth_model": "credential from secret allowlist, Zeroizing<String>; never inherited ambient"
+    },
+    {
+      "name": "ACP (Agent Client Protocol) v1",
+      "transport": "NDJSON JSON-RPC over child process stdio",
+      "auth_model": "ACP permission requests mediated as SEA approval decisions"
+    }
+  ],
+  "data_stores": [
+    {
+      "name": ".sea-forge/ append-only JSONL truth",
+      "kind": "filesystem JSONL",
+      "path": ".sea-forge/cases/<case_id>.json, runs/<run_id>/, capabilities.jsonl, ledgers/, requests/",
+      "trust": "source of truth"
+    },
+    {
+      "name": "ledger streams",
+      "kind": "ULID-keyed JSONL with hash chains and MMR commitments",
+      "evidence": "crates/sea-forge-ledger/"
+    },
+    {
+      "name": "capability SQLite index",
+      "kind": "rusqlite (bundled)",
+      "path": "rebuilt projection; rebuildable from append-only source",
+      "evidence": "crates/sea-forge-capability/Cargo.toml"
+    },
+    {
+      "name": "Tauri host draft storage",
+      "kind": "versioned local JSON files in app_data_dir/drafts/",
+      "trust": "client-only; never touches .sea-forge/",
+      "evidence": "workbench/apps/desktop/src-tauri/src/drafts.rs"
+    },
+    {
+      "name": "sealed transcripts",
+      "kind": "XChaCha20Poly1305 sealed bytes at .sea-forge/sealed/<run_id>.key + transcript-<hash>.sealed",
+      "evidence": "crates/sea-forge-server/src/transcript_seal.rs"
+    }
+  ],
+  "entry_points": [
+    "sea-forge CLI (target/debug/sea-forge)",
+    "sea-forge-server (target/debug/sea-forge-server)",
+    "gen_sfwp_schema (target/debug/gen_sfwp_schema)",
+    "Tauri desktop (workbench/apps/desktop: bun run tauri dev|build)",
+    "Vite renderer dev server (workbench: bun run dev)",
+    "Storybook (workbench: bun run --cwd packages/sea-forge-ui-components storybook)"
+  ],
+  "verification_commands": [
+    {"cmd": "cargo fmt --all -- --check", "purpose": "rust format check"},
+    {"cmd": "cargo check --workspace --all-targets --locked", "purpose": "type/build check"},
+    {"cmd": "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings", "purpose": "lint"},
+    {"cmd": "cargo test --workspace --all-features --locked --no-fail-fast", "purpose": "full test suite"},
+    {"cmd": "devbox run -- just proof", "purpose": "minimum-spec P1-P4b conformance"},
+    {"cmd": "devbox run -- just no-async-kernel", "purpose": "kernel invariant: 19 kernel crates have no async/HTTP deps"},
+    {"cmd": "devbox run -- just context-check", "purpose": "agent handoff freshness"},
+    {"cmd": "cd workbench && bun run check", "purpose": "TS typecheck + oxlint"},
+    {"cmd": "cd workbench && bun run test", "purpose": "Vitest desktop + components"},
+    {"cmd": "cd workbench && bun run build", "purpose": "Vite renderer production bundle"},
+    {"cmd": "cargo build --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml", "purpose": "Tauri host build"},
+    {"cmd": "cd workbench && bun run generate:contracts", "purpose": "regenerate TS contracts from Rust JSON Schema; deterministic"},
+    {"cmd": "devbox run -- just check", "purpose": "context + fmt + clippy + check + security sweep"},
+    {"cmd": "devbox run -- just ci", "purpose": "canonical CI union (lint + test + build + no-async-kernel)"}
+  ],
+  "canonical_document_candidates": [
+    {"path": "AGENTS.md", "role": "top-level agent guide; the nearest AGENTS.md wins per source-of-truth rule"},
+    {"path": ".agents/specs/Shell-SPEC.md", "role": "development shell + toolchain + secrets + CI; status Draft v0.1"},
+    {"path": ".agents/specs/spec-minimum.md", "role": "minimum governed kernel; status Implemented v0.1"},
+    {"path": ".agents/specs/spec-full.md", "role": "additive M0-M8 milestones; status Draft v0.2"},
+    {"path": ".agents/specs/spec-adlc-thoth-minimum.md", "role": "ADLC + Thoth minimum (M9-M11); status Draft v0.1"},
+    {"path": ".agents/specs/spec-agent-orchestration.md", "role": "E14-E17 agent orchestration (M12-M16); status Draft v0.1"},
+    {"path": ".agents/specs/frontend/", "role": "Workbench frontend specs (atomic design, view flow, wireframe, API spec, method catalog)"},
+    {"path": "ARCHITECTURE.md", "role": "intended-architecture map; header states 'pre-implementation' (stale vs reality)"},
+    {"path": "README.md", "role": "user-facing readme; describes 'minimum kernel' demo (stale vs reality)"},
+    {"path": "docs/decisions/ADR-001..005", "role": "decisions; DomainForge boundary, audit-remediation deps/contracts, Workbench stack, SFWP schema generation"},
+    {"path": ".agents/CURRENT_STATUS.md", "role": "resumable handoff; ~2400 lines, dates 2026-07-23..2026-07-26"},
+    {"path": ".agents/OBSERVED_DEBT.md", "role": "open out-of-scope gaps; ~833 lines"},
+    {"path": "CONTRIBUTING.md", "role": "contributor happy path (referenced, not inspected in this pass)"},
+    {"path": ".github/copilot-instructions.md", "role": "absent (file does not exist; AGENTS.md rule #3 not exercisable)"}
+  ],
+  "known_generated_artifacts": [
+    "workbench/packages/contracts/schema/*.schema.json (from gen_sfwp_schema)",
+    "workbench/packages/contracts/generated/*.ts and *.validator.ts (from bun run generate:contracts)",
+    "workbench/packages/sea-forge-ui-tokens/sea-forge.tokens.css (byte-copy of .agents/specs/frontend/colors_and_type.css; drift-checked)",
+    "workbench/apps/desktop/src-tauri/gen/ (Tauri build scaffolding)",
+    "workbench/apps/desktop/dist/ (Vite production bundle)",
+    "workbench/apps/desktop/src-tauri/target/ (Cargo build output)",
+    "target/ (kernel workspace build output; gitignored)",
+    "target/bootstrap-evidence/ (doctor.jsonl; gitignored)",
+    ".sea-forge/ (runtime records; gitignored, never committed)",
+    ".ua/knowledge-graph.json (Understand-Anything projection; rebuildable)",
+    ".githooks/ (checked-in; installed via git config core.hooksPath)"
+  ],
+  "known_external_dependencies": [
+    "DomainForge (semantic .sea engine; referenced as future first-party crate per ADR-001; current adapter at crates/sea-forge-domainforge)",
+    "Astryx (@astryxdesign/core, @astryxdesign/theme-neutral v0.1.8; design substrate for Workbench)",
+    "Tauri 2 (desktop host)",
+    "React 19.2 + TanStack Router/Query + XState 5 + react-hook-form 7",
+    "Storybook 8 (component explorer)",
+    "OpenAI/Anthropic HTTP APIs (via AgentProvider)",
+    "ACP-speaking CLI agents (Claude Code, Codex, etc.; via sea-forge-agent::acp)",
+    "SWE_SEED (operator-supplied host coding agent harness; not vendored)",
+    "Devbox + Nix (reproducible system tools)",
+    "SOPS + age (encrypted secrets at rest)"
+  ],
+  "known_environmental_requirements": [
+    "Host tools (3): git, devbox, direnv",
+    "Pinned via devbox: git 2.49.0, rustup 1.28.2, just 1.55.1, direnv 2.37.0, sops 3.10.2, age 1.2.1, gitleaks 8.30.1, cargo-deny 0.19.9",
+    "Pinned via rust-toolchain.toml: Rust 1.92.0 (stable, minimal profile + rustfmt + clippy)",
+    "Pinned via workbench/package.json: bun 1.4.0 (canary Zig->Rust rewrite; reversible to stable per ADR-004)",
+    "Linux primary, macOS secondary; CI runs ubuntu-latest + macos-latest",
+    "Optional age key at $SOPS_AGE_KEY_FILE (default ~/.config/sops/key.txt) for secrets decryption; offline gates work without it",
+    "Real ACP / SWE_SEED host release tests require operator-supplied configuration (intentionally ignored)"
+  ]
+}
