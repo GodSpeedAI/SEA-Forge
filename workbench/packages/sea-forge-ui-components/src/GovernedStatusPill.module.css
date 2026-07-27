@@ -93,3 +93,15 @@
   color: #8b949e;
   border-color: rgba(110, 118, 129, 0.4);
 }
+
+/* `unsupported` is distinct from both `blocked` and `unknown` (UX epic
+   invariant 6). Blocked means a lawful path exists but a condition stops it;
+   unknown means we could not determine the state. Unsupported means the
+   installation definitively does not provide the capability — a settled,
+   non-alarming fact, so it reads as muted rather than red. */
+.unsupported {
+  background-color: var(--color-authority-unsupported-bg, rgba(110, 118, 129, 0.15));
+  color: var(--color-authority-unsupported-fg, #8b949e);
+  border-color: var(--color-authority-unsupported-border, rgba(110, 118, 129, 0.4));
+  border-style: dashed;
+}

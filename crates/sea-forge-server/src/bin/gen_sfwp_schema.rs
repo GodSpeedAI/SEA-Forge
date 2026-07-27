@@ -8,9 +8,13 @@
 //! without regeneration.
 
 use schemars::schema_for;
+use sea_forge_server::sfwp::approvals::{ApprovalListResult, PendingApproval};
 use sea_forge_server::sfwp::case::{
     EntryOptionsResult, PlanItemSummary, PreflightParams, PreflightResult, TemplateOption,
     TemplateParameter,
+};
+use sea_forge_server::sfwp::case_views::{
+    CaseHorizon, CaseListResult, CaseOverview, CaseSummary, HorizonItem, RunSettlement,
 };
 use sea_forge_server::sfwp::correlation::RequestRecord;
 use sea_forge_server::sfwp::events::EventFrame;
@@ -18,6 +22,10 @@ use sea_forge_server::sfwp::precondition::{
     ChangedRecord, Precondition, RecordDigest, RejectedAsStale,
 };
 use sea_forge_server::sfwp::readiness::{ReadinessGetParams, ReadinessItem, ReadinessView};
+use sea_forge_server::sfwp::run_views::{
+    AuthorityProjection, CriterionCheck, DeclarationRow, EvidenceRow, RecordPresence,
+    RunListResult, RunRecord, RunSummary, RunTermination, SettlementDetail, TraceRow,
+};
 use sea_forge_server::sfwp::{
     DescribeResult, GetSchemaResult, HelloResult, MethodDescriptor, UnsupportedVersion,
 };
@@ -57,6 +65,25 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(PreflightParams, "PreflightParams"),
         schema!(PreflightResult, "PreflightResult"),
         schema!(PlanItemSummary, "PlanItemSummary"),
+        schema!(CaseListResult, "CaseListResult"),
+        schema!(CaseSummary, "CaseSummary"),
+        schema!(CaseOverview, "CaseOverview"),
+        schema!(CaseHorizon, "CaseHorizon"),
+        schema!(HorizonItem, "HorizonItem"),
+        schema!(RunSettlement, "RunSettlement"),
+        schema!(ApprovalListResult, "ApprovalListResult"),
+        schema!(PendingApproval, "PendingApproval"),
+        schema!(RunListResult, "RunListResult"),
+        schema!(RunSummary, "RunSummary"),
+        schema!(RunRecord, "RunRecord"),
+        schema!(RunTermination, "RunTermination"),
+        schema!(AuthorityProjection, "AuthorityProjection"),
+        schema!(CriterionCheck, "CriterionCheck"),
+        schema!(SettlementDetail, "SettlementDetail"),
+        schema!(DeclarationRow, "DeclarationRow"),
+        schema!(EvidenceRow, "EvidenceRow"),
+        schema!(TraceRow, "TraceRow"),
+        schema!(RecordPresence, "RecordPresence"),
     ]
 }
 

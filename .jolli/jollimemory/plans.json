@@ -6,7 +6,7 @@
 			"title": "Current Status",
 			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/CURRENT_STATUS.md",
 			"addedAt": "2026-07-26T16:06:06.779Z",
-			"updatedAt": "2026-07-26T16:06:06.779Z",
+			"updatedAt": "2026-07-27T00:24:01.393Z",
 			"commitHash": null,
 			"branch": "frontend"
 		},
@@ -15,7 +15,7 @@
 			"title": "Observed Debt",
 			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/OBSERVED_DEBT.md",
 			"addedAt": "2026-07-26T16:06:06.779Z",
-			"updatedAt": "2026-07-26T16:06:06.779Z",
+			"updatedAt": "2026-07-27T00:22:43.521Z",
 			"commitHash": null,
 			"branch": "frontend"
 		}

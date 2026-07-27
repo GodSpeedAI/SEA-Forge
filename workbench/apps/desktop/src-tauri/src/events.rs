@@ -5,7 +5,7 @@
 //!   * persists `last_cursor` to a small JSON file under the app data dir, so a
 //!     restart (not merely a reconnect) resumes from the right position;
 //!   * on every (re)connect, drains `events.get_range` from the persisted cursor
-//!     until a short page proves the backlog is exhausted — the deterministic
+//!     until an empty page proves the backlog is exhausted — the deterministic
 //!     gap-recovery path, independent of `events.subscribe`'s own bounded
 //!     catch-up burst;
 //!   * then `events.subscribe`s and forwards every pushed `EventFrame` to the
@@ -25,11 +25,6 @@ use serde_json::{json, Value};
 use tokio::sync::{mpsc, Mutex};
 
 use crate::socket::SocketHandle;
-
-/// The server's `events.get_range` page cap. A page strictly shorter than this
-/// proves the durable backlog is exhausted (deterministic termination of the
-/// catch-up drain). Kept conservative; the server may return fewer.
-const GET_RANGE_PAGE_CAP: usize = 256;
 
 /// Fixed reconnect backoff. This is a reconnect loop, not a scheduler — a small
 /// constant delay is sufficient and keeps the behavior legible/testable.
@@ -138,7 +133,7 @@ async fn connect_and_pump<E: EventEmitter>(
     }
 
     // Deterministic gap recovery: drain get_range from the persisted cursor
-    // until a short page proves the backlog is exhausted.
+    // until an empty page proves the backlog is exhausted.
     catch_up(&client, cursor, emitter).await?;
 
     // Subscribe from the (now-advanced) cursor and forward live frames.
@@ -175,6 +170,15 @@ async fn connect_and_pump<E: EventEmitter>(
 
 /// Drain `events.get_range` pages from the persisted cursor until exhausted,
 /// emitting and persisting each recovered event in order.
+///
+/// Termination is on an **empty** page, not a short one. `get_range` reads
+/// strictly *after* the cursor and clamps any requested `limit` to its own cap
+/// (`sfwp::events::get_range`), so an empty page is the only signal that means
+/// "exhausted" without encoding an assumption about that cap here. A short-page
+/// rule would need the host to know the server's page size: guess too high and
+/// the drain stops early, silently dropping the rest of the backlog — the one
+/// failure this loop exists to prevent. One extra round trip per reconnect buys
+/// immunity to that drift.
 async fn catch_up<E: EventEmitter>(
     client: &crate::socket::SocketClient,
     cursor: &Arc<EventCursor>,
@@ -197,13 +201,22 @@ async fn catch_up<E: EventEmitter>(
             .and_then(Value::as_array)
             .cloned()
             .unwrap_or_default();
-        let count = events.len();
+        if events.is_empty() {
+            return Ok(());
+        }
         for frame in &events {
             forward(cursor, emitter, frame).await;
         }
-        // A short page (fewer than the server cap) means no more backlog.
-        if count < GET_RANGE_PAGE_CAP {
-            return Ok(());
+        // The next page is read strictly after the cursor, so a non-empty page
+        // that failed to advance it would re-read forever. That only happens if
+        // frames arrive without a `cursor`, which is contract drift — report it
+        // rather than spin, because a hung reconnect is harder to diagnose than
+        // a named error.
+        if cursor.get().await == from_cursor {
+            return Err(format!(
+                "get_range returned {} event(s) but none advanced the cursor",
+                events.len()
+            ));
         }
     }
 }

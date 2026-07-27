@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod approvals;
 pub mod errors;
 pub mod ids;
 pub mod types;

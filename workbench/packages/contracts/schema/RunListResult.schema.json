@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunListResult",
+  "description": "`run.list` result body.",
+  "type": "object",
+  "properties": {
+    "runs": {
+      "description": "Newest first.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RunSummary"
+      }
+    },
+    "unreadable": {
+      "description": "Run directories that exist but whose trace could not be read at all.\nReported rather than dropped: an unreadable run is an integrity signal.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "runs"
+  ],
+  "$defs": {
+    "ExecutionStanding": {
+      "description": "How far an item has progressed *as execution* — derived only from the trace\nevents the case runner appended. Deliberately disjoint from\n[`SettlementStanding`] so no consumer can conflate the two.",
+      "oneOf": [
+        {
+          "description": "In the plan, but no event has been observed for it yet.",
+          "type": "string",
+          "const": "pending"
+        },
+        {
+          "description": "Entry criteria met; eligible to be dispatched.",
+          "type": "string",
+          "const": "enabled"
+        },
+        {
+          "description": "Dispatched and running.",
+          "type": "string",
+          "const": "active"
+        },
+        {
+          "description": "Execution finished without error. Says nothing about settlement.",
+          "type": "string",
+          "const": "completed"
+        },
+        {
+          "description": "Execution ended in error.",
+          "type": "string",
+          "const": "failed"
+        },
+        {
+          "description": "Deliberately stopped before completing.",
+          "type": "string",
+          "const": "terminated"
+        }
+      ]
+    },
+    "RunSummary": {
+      "description": "One row of `run.list`.",
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "description": "The case whose `run_ids` contains this run. Absent for a run directory\nno case claims — an orphan, which epic 11.6 requires be *visible* rather\nthan dropped from the list.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_count": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "execution": {
+          "$ref": "#/$defs/ExecutionStanding"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plan_item_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "settlement": {
+          "$ref": "#/$defs/SettlementStanding"
+        },
+        "started_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "run_id",
+        "execution",
+        "settlement",
+        "evidence_count"
+      ]
+    },
+    "SettlementStanding": {
+      "description": "Whether a *governed settlement* has been recorded for the item. Distinct\nfrom execution: work can execute perfectly and settle as rejected.",
+      "oneOf": [
+        {
+          "description": "No settlement record exists for this item yet.",
+          "type": "string",
+          "const": "unsettled"
+        },
+        {
+          "description": "A settlement record accepted the work.",
+          "type": "string",
+          "const": "accepted"
+        },
+        {
+          "description": "A settlement record rejected the work.",
+          "type": "string",
+          "const": "rejected"
+        },
+        {
+          "description": "A settlement record escalated the decision to a human.",
+          "type": "string",
+          "const": "escalated"
+        }
+      ]
+    }
+  }
+}

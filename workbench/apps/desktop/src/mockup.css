@@ -1047,6 +1047,14 @@ kbd {
 .event-stream > div { min-height: var(--row-review); display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 0 var(--space-3); padding: var(--space-2); border-bottom: var(--border-standard); }
 .event-stream small { grid-column: 2; color: var(--fg-secondary); }
 .event-stale { box-shadow: inset 2px 0 0 var(--color-attention); }
+/* A durable event frame is clickable (it opens its own evidence), so it is a
+   button rather than the plain div the stream otherwise contains. */
+.event-frame { width: 100%; min-height: var(--row-review); display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 0 var(--space-3); padding: var(--space-2); border: 0; border-bottom: var(--border-standard); background: transparent; color: var(--fg-primary); text-align: left; font: inherit; cursor: pointer; }
+.event-frame:hover { background: var(--bg-raised); }
+.event-frame:focus-visible { outline: var(--focus-ring, 2px solid var(--color-focus)); outline-offset: -2px; }
+.event-frame small { grid-column: 2 / -1; color: var(--fg-secondary); }
+.correlation-row { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2); }
+.correlation-row .workbench-input { flex: 1; }
 .criterion-row { grid-template-columns: minmax(180px, 1fr) auto minmax(130px, .7fr); }
 @media (max-width: 1020px) { .workbench-grid { grid-template-columns: 160px minmax(0, 1fr); } .workbench-grid .attention-rail { grid-column: 1 / -1; grid-template-columns: 1fr; } .asset-row { grid-template-columns: minmax(140px, 1fr) auto minmax(180px, 1.2fr); } .asset-row > :last-child { display: none; } .horizon-board { grid-template-columns: repeat(4, minmax(200px, 1fr)); } }
 @media (max-width: 720px) { .workbench-grid { grid-template-columns: 1fr; } .side-list { display: flex; gap: var(--space-1); overflow-x: auto; } .side-list > .section-kicker { display: none; } .list-item { min-width: max-content; } .asset-row, .validation-row, .criterion-row { grid-template-columns: 1fr; padding: var(--space-3) var(--space-2); } .asset-row--header { display: none; } .asset-row > :last-child { display: block; } .detail-grid { grid-template-columns: 1fr; } .case-toolbar { align-items: flex-start; flex-direction: column; } .horizon-board { grid-template-columns: repeat(4, minmax(220px, 1fr)); } .event-stream > div { grid-template-columns: 1fr; gap: var(--space-1); } .event-stream small { grid-column: auto; } }
@@ -1063,5 +1071,95 @@ kbd {
   .condition-row:not(.condition-row--header):hover,
   .condition-row:focus-visible {
     transform: none;
+  }
+}
+
+/* --- Specimen surfaces -------------------------------------------------
+   Layouts copied from the design specification. Their contents illustrate
+   what the screen will look like; none of it is read from a record. The
+   watermark makes that visible without hiding the design, and every pill
+   inside is forced to `unknown` at the component level. */
+[data-specimen="true"] {
+  position: relative;
+}
+
+[data-specimen="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, currentColor 4%, transparent) 0 2px,
+    transparent 2px 11px
+  );
+}
+
+[data-specimen="true"] .content-grid {
+  opacity: 0.82;
+  filter: saturate(0.55);
+  transition: opacity 160ms ease, filter 160ms ease;
+}
+
+[data-specimen="true"] .content-grid:hover,
+[data-specimen="true"] .content-grid:focus-within {
+  opacity: 1;
+  filter: saturate(0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-specimen="true"] .content-grid {
+    transition: none;
+  }
+}
+
+/* --- Method catalog ---------------------------------------------------- */
+.method-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.method-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+}
+
+.method-row:nth-child(odd) {
+  background: color-mix(in srgb, currentColor 3%, transparent);
+}
+
+.method-row[data-standing="live"] {
+  border-left-color: color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.method-row .machine-value {
+  overflow-wrap: anywhere;
+}
+
+.method-class {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .method-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .method-class {
+    grid-column: 1 / -1;
+    order: 3;
   }
 }

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunTermination",
+  "description": "How the *execution* episode ended. Deliberately disjoint from\n[`SettlementStanding`]: this is the terminal fact about the process, not a\ngoverned outcome (epic 12.4).",
+  "type": "object",
+  "properties": {
+    "at": {
+      "type": "string"
+    },
+    "execution_status": {
+      "description": "The kernel's `ExecutionStatus` for the episode (`completed`,\n`timed_out`, `spawn_failed`, `sandbox_violation`), when recorded.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "exit_code": {
+      "description": "Process exit code, when the terminating event carried an execution\nresult. Absent for episodes that never spawned a process.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "int64"
+    },
+    "trace_kind": {
+      "description": "The trace event kind that ended the episode — `command_finished`,\n`run_halted`, `item_failed`, `run_finished`, …",
+      "type": "string"
+    }
+  },
+  "required": [
+    "trace_kind",
+    "at"
+  ]
+}

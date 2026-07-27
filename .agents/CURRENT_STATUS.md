@@ -2,6 +2,81 @@
 
 Updated: 2026-07-26
 
+> **2026-07-26 Workbench plan Task 7 (case overview and horizon) complete,
+> plus the four `OBSERVED_DEBT.md` entries Task 7's own "review before
+> starting" block gates on.**
+>
+> **New SFWP methods (five, all additive per ADR-003).** `case.list`,
+> `case.get_overview`, `case.get_horizon` in new
+> `crates/sea-forge-server/src/sfwp/case_views.rs`; `approval.list` and an
+> `approval.decide` envelope in new `sfwp/approvals.rs`. `IMPLEMENTED_METHODS`
+> is now sixteen, covering six of the epic's journeys. All five are read-only
+> projections over records the kernel already committed — `case.json`,
+> `plan.json`, per-run `settlement.json`, `case-events.jsonl`, and
+> `approvals.jsonl`. None introduces new truth.
+>
+> **Horizon item standing is folded from trace events, not read off a status
+> field.** No per-item status exists anywhere in the kernel; standing *is* the
+> `TraceKind` sequence the case runner appended. Folding it is reading kernel
+> truth (the same derivation `next_case_actions` performs); caching it anywhere
+> would create a second authority that drifts.
+>
+> **Execution and settlement are structurally separate.** `ExecutionStanding`
+> and `SettlementStanding` are disjoint enums with no shared values, neither
+> derived from the other, and the UI maps `execution: completed` to a
+> *non-success* pill. A zero exit code cannot masquerade as accepted work.
+> `execution_and_settlement_are_separate_vocabularies` asserts the vocabularies
+> never cross.
+>
+> **One owner for the approvals fold.** The append-only journal's "latest record
+> per `approval_id` wins" rule moved from `sea-forge-cli` into
+> `sea_forge_core::approvals`; the CLI module is now a re-export. Two folds
+> could disagree about whether an approval is open, and the one saying "open"
+> would offer a decision already made.
+>
+> **Debt resolved.** (1) `scripts/check-agent-context.sh` — CRLF→LF + exec bit;
+> `just context-check` is a live gate again. (2) The host's hardcoded
+> `GET_RANGE_PAGE_CAP = 256` vs the server's real 500 — deleted rather than
+> reconciled: the catch-up drain now terminates on an **empty** page, encoding
+> no assumption about the server's page size at all. (3) Coarse readiness
+> event-invalidation — `hooks/eventKinds.ts` narrows by kind, deliberately
+> asymmetric so an *unrecognized* kind still invalidates (fails open to an extra
+> read, never to a stale render). (4) `approval.decide` reachable but not
+> discoverable — `approval.list` closes it.
+>
+> **Two real defects found and fixed en route.** The event-loop listener
+> dereferenced `event.payload` unguarded; a throwing listener tears down the
+> whole subscription, so it now reads `event?.payload` and degrades to
+> "invalidate anyway". And `` `${verdict}d` `` rendered "rejectd" to the operator
+> — replaced with an explicit past-tense map.
+>
+> **Evidence.** `cargo fmt --all -- --check` clean; `cargo clippy --workspace
+> --all-targets --all-features -- -D warnings` clean; `./scripts/check-agent-context.sh`
+> → "context check passed"; **`cargo test --workspace` — 98 suites, 714 passed,
+> 0 failed, 4 ignored** (the ignored are the documented real-host release
+> gates); 13 of those are new (`conformance_case_views.rs` 6,
+> `conformance_approvals.rs` 7); host `tests/bridge.rs` 4/4 including the new
+> `catch_up_drains_until_a_page_is_empty_not_merely_short`, verified to have
+> teeth (restoring the short-page rule drops 3 of 6 events); `bun run check`
+> clean apart from the pre-existing `router.tsx` fast-refresh warning;
+> `bun run test` 73 desktop + 17 component tests green; `bun run build`
+> produces a renderer bundle.
+>
+> On the one failure seen in the *first* workspace run
+> (`kill_9_leaves_a_valid_jsonl_prefix_without_capability_corruption`): measured
+> rather than assumed-flaky, because this change touched `sea-forge-cli`. A
+> clean-`HEAD` worktree passed while the working tree failed, which read as a
+> regression; re-running both on an idle host resolved it (working tree 8/8
+> consecutive, and the second full workspace run green). It tracks host load,
+> not the diff. Method recorded in `OBSERVED_DEBT.md`.
+>
+> **Still open.** Three specimen surfaces remain (Thoth, Assets, Models) —
+> `thoth.ask` has no typed response contract, `asset.list`/`domain_model.list`
+> do not exist. Plan Tasks 8–14 remain. The Playwright horizon journey named in
+> Task 7 step 4 was **not** run: the e2e harness mocks `__TAURI_INTERNALS__`
+> entirely, so it cannot prove real event delivery end to end — that limitation
+> is its own standing `OBSERVED_DEBT.md` entry and was not closed here.
+
 > **2026-07-26 Workbench plan Task 6 (case authoring: draft, preflight,
 > atomic commit) complete.** First protected-command vertical slice: three
 > additive SFWP methods in new `crates/sea-forge-server/src/sfwp/case.rs`
@@ -1936,3 +2011,55 @@ contract choices for Tasks 1-18 before any remediation code lands.
 - `.agents/OPEN_QUESTIONS.md` has no unresolved entries after Task 0 — all
   three dependency choices and the network-isolation scope question were
   resolved by owner confirmation in-session rather than left open.
+
+## Task 8 — the run record (epic 12.1, 12.3, 12.4; unblocks 7.4, 7.5, 9.x, 13.x)
+
+**Slice chosen for blast radius.** Of the epic's open journeys, the run record
+was the one whose absence blocked the most downstream work: every other view
+already emitted run ids that resolved to nothing. Implementing it turns four
+existing surfaces from display-only into navigable, and gives journeys 9
+(execution evidence), 11.8 (failure diagnosis), 12 (audit truth), and 13
+(capability from settlements) the record they all have to hang off.
+
+**Server** — `crates/sea-forge-server/src/sfwp/run_views.rs`, additive per
+ADR-003:
+- `run.list` (optional `case_id` scope) over `<root>/runs/*`, cross-indexed
+  against `cases/*/case.json` for ownership. Runs no case claims stay listed as
+  unclaimed rather than filtered out (epic 11.6 — process death must not hide
+  work).
+- `run.get` — the linked view: plan item, authority projection, criteria paired
+  against the settlement basis, settlement detail, declarations, evidence rows,
+  trace rows, and a presence inventory of every canonical run file.
+- Both advertised via `IMPLEMENTED_METHODS`; eleven new contract types added to
+  `SCHEMA_TYPES` and `gen_sfwp_schema.rs` (which had silently drifted apart —
+  eight Task 7 types were in the generator but not in `system.get_schema`; both
+  lists are now complete).
+
+**Frontend**:
+- `hooks/governedQuery.ts` — one invoke → reject-governed-error → AJV-validate
+  path, replacing three copies of `describeAjv` and eight bespoke throw sites.
+  The order is load-bearing: a governed error body can never satisfy a view
+  schema, so validating first would report every denial as a contract failure.
+  `useCases`/`useApprovals` now route through it (which also closed a real gap —
+  `approval.list` never checked for the error envelope at all).
+- `pages/standing.ts` — the standing→pill maps, shared rather than copied,
+  because each encodes a governance rule (`completed` is `degraded`, never
+  `ready`) that would eventually be enforced in only one copy.
+- `pages/RunRecordPage.tsx` at `/runs/$runId`; `pages/EvidencePage.tsx` replaces
+  the `UnbackedSurface` stub with a `run.list`-backed index; the case horizon's
+  `Episodes: N` count became one link per attempt.
+
+**Gates**: `cargo fmt --all --check` clean; `devbox run -- just check` — all
+gates green (fmt, clippy, cargo-deny, gitleaks); `cargo test --workspace
+--all-features --locked` — all suites pass; frontend `bun run check` clean and
+`bun run test` — 79 passed / 14 files.
+
+**One flake observed, not caused here**: `sea-forge-cli`'s
+`kill_9_leaves_a_valid_jsonl_prefix_without_capability_corruption` failed once
+under full-workspace parallel load and passes in isolation. It is a `kill -9`
+timing test and no CLI code was touched by this task.
+
+**Next spendable slice**: `9.3`/`9.8` (follow non-agent execution, preserve
+evidence from every termination) now have their record surface and need only
+artifact/stdout access; or `13.4` (capability records), which can read the
+declaration rows this task already projects.

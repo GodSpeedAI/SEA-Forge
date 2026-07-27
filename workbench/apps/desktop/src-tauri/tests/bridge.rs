@@ -332,3 +332,114 @@ async fn event_loop_recovers_backlog_via_get_range() {
     loop_task.abort();
     stub.abort();
 }
+
+/// A scripted SFWP stub that hands out `events.get_range` pages from a fixed
+/// script. Lets the catch-up drain be tested against page sizes a real server
+/// would not currently produce — which is the point: the host must not depend
+/// on the server's page size at all.
+async fn scripted_sfwp_stub(socket: PathBuf, pages: Vec<usize>) -> tokio::task::JoinHandle<()> {
+    let listener = tokio::net::UnixListener::bind(&socket).expect("bind stub socket");
+    tokio::spawn(async move {
+        let Ok((stream, _)) = listener.accept().await else {
+            return;
+        };
+        let (read_half, mut write_half) = stream.into_split();
+        let mut reader = tokio::io::BufReader::new(read_half);
+        let mut page_index = 0_usize;
+        let mut emitted = 0_usize;
+        loop {
+            let mut line = String::new();
+            use tokio::io::AsyncBufReadExt;
+            match reader.read_line(&mut line).await {
+                Ok(0) | Err(_) => return,
+                Ok(_) => {}
+            }
+            let Ok(request) = serde_json::from_str::<Value>(line.trim()) else {
+                return;
+            };
+            let response = match request["verb"].as_str() {
+                Some("system_hello") => json!({
+                    "protocol_version": "1",
+                    "server_protocol_version": "1",
+                    "implemented_methods": ["system.hello", "events.get_range"],
+                }),
+                Some("events_get_range") => {
+                    let size = pages.get(page_index).copied().unwrap_or(0);
+                    page_index += 1;
+                    let events: Vec<Value> = (0..size)
+                        .map(|_| {
+                            emitted += 1;
+                            json!({
+                                "cursor": format!("cur-{emitted:04}"),
+                                "kind": "case.submitted",
+                                "detail": {},
+                                "committed_at": "2026-07-26T00:00:00Z",
+                            })
+                        })
+                        .collect();
+                    json!({ "events": events })
+                }
+                Some("events_subscribe") => json!({"ok": true}),
+                _ => json!({"error": "unsupported in stub"}),
+            };
+            let line = format!("{response}\n");
+            if write_half.write_all(line.as_bytes()).await.is_err() {
+                return;
+            }
+            let _ = write_half.flush().await;
+        }
+    })
+}
+
+/// The catch-up drain must keep reading until a page comes back **empty**, not
+/// until a page looks short.
+///
+/// The script hands out two non-empty pages of 3 before the empty one. Any rule
+/// of the form "a page shorter than N proves the backlog is exhausted" stops
+/// after the first page for every N > 3 and silently drops the remaining
+/// events — the exact loss this loop exists to prevent, and what the host's
+/// former hardcoded 256 would have done against a server that pages smaller.
+#[tokio::test]
+async fn catch_up_drains_until_a_page_is_empty_not_merely_short() {
+    let dir = tempfile::tempdir().unwrap();
+    let socket = dir.path().join("scripted.sock");
+    let stub = scripted_sfwp_stub(socket.clone(), vec![3, 3]).await;
+
+    let (event_tx, event_rx) = mpsc::unbounded_channel::<Value>();
+    let handle = Arc::new(SocketHandle::new(socket.clone(), event_tx));
+    let cursor = Arc::new(EventCursor::load(dir.path().join("cursor.json")));
+    let emitter = Arc::new(RecordingEmitter {
+        frames: StdMutex::new(Vec::new()),
+    });
+
+    let loop_task = tokio::spawn(run_event_loop(
+        Arc::clone(&handle),
+        Arc::clone(&cursor),
+        Arc::clone(&emitter),
+        event_rx,
+        "1".to_string(),
+    ));
+
+    for _ in 0..200 {
+        if emitter.frames.lock().unwrap().len() >= 6 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+
+    let frames = emitter.frames.lock().unwrap().clone();
+    assert_eq!(
+        frames.len(),
+        6,
+        "both non-empty pages must be drained before termination, got {} frame(s)",
+        frames.len()
+    );
+    assert_eq!(
+        cursor.get().await.as_deref(),
+        Some("cur-0006"),
+        "cursor must advance to the last recovered event"
+    );
+
+    loop_task.abort();
+    stub.abort();
+}

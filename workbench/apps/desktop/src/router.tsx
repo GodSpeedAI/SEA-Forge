@@ -8,14 +8,15 @@ import {
 import { AppShell } from "./shell/AppShell";
 import { ReadinessPage } from "./pages/ReadinessPage";
 import { CaseCreationWorkbench } from "./pages/CaseCreationWorkbench";
+import { CaseHorizonPage } from "./pages/CaseHorizonPage";
+import { ApprovalInboxPage } from "./pages/ApprovalInboxPage";
+import { EvidencePage } from "./pages/EvidencePage";
+import { RunRecordPage } from "./pages/RunRecordPage";
 import {
   ThothPage,
   AssetsPage,
   ModelsPage,
-  CasesPage,
-  InboxPage,
   OperationsPage,
-  EvidencePage,
   MemoryPage,
   CapabilitiesPage,
   ArtifactsPage,
@@ -112,7 +113,7 @@ const modelsRoute = createRoute({
 const casesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/cases",
-  component: CasesPage,
+  component: CaseHorizonPage,
 });
 
 const caseCreationRoute = createRoute({
@@ -124,7 +125,7 @@ const caseCreationRoute = createRoute({
 const inboxRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/inbox",
-  component: InboxPage,
+  component: ApprovalInboxPage,
 });
 
 const operationsRoute = createRoute({
@@ -137,6 +138,19 @@ const evidenceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/evidence",
   component: EvidencePage,
+});
+
+/**
+ * The run record every other surface's run ids resolve to. Kept at the top
+ * level rather than nested under `/cases/$caseId` because a run is reachable
+ * from the horizon, the evidence index, and the event stream alike — and
+ * because a run whose case cannot be determined (an orphan, epic 11.6) still
+ * has to be openable.
+ */
+const runRecordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/runs/$runId",
+  component: RunRecordPage,
 });
 
 const memoryRoute = createRoute({
@@ -180,6 +194,7 @@ const routeTree = rootRoute.addChildren([
   inboxRoute,
   operationsRoute,
   evidenceRoute,
+  runRecordRoute,
   memoryRoute,
   capabilitiesRoute,
   artifactsRoute,
