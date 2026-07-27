@@ -42,7 +42,7 @@ pub mod sfwp;
 pub mod swe_seed_reconciliation;
 mod transcript_seal;
 
-pub use config::ServerConfig;
+pub use config::{resolve_cell_root, resolve_socket_override, ServerConfig};
 
 /// A running case submitted to the server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -748,6 +748,39 @@ fn suffixed(path: &Path, suffix: &str) -> Result<PathBuf, ForgeError> {
     Ok(path.with_file_name(name))
 }
 
+/// The longest suffix `run` appends to the socket path before binding.
+/// `.binding` is longer than `.lock`, so budgeting for it covers both.
+const LONGEST_SOCKET_SUFFIX: usize = ".binding".len();
+
+/// Reject a socket path that cannot fit in `sockaddr_un.sun_path` *before* the
+/// server creates any directory, lock file, or ledger.
+///
+/// Without this check the kernel rejects the path at `bind()` — several side
+/// effects later — with a bare `InvalidInput: path must be shorter than
+/// SUN_LEN`, which names neither the offending path nor the fix. A cell root
+/// nested a few directories deep is enough to trigger it, so an operator hits
+/// this while their configuration looks perfectly reasonable.
+///
+/// The budget is the platform's `sun_path` capacity, less one byte for the NUL
+/// terminator, less the longest suffix appended before binding.
+fn check_socket_path_length(socket_path: &Path) -> Result<(), ForgeError> {
+    // `sun_path` is 108 bytes on Linux and 104 on macOS; use the smaller bound
+    // so a cell that starts on Linux is not rejected only after moving.
+    const SUN_PATH_CAPACITY: usize = 104;
+    let budget = SUN_PATH_CAPACITY - 1 - LONGEST_SOCKET_SUFFIX;
+
+    let length = socket_path.as_os_str().as_encoded_bytes().len();
+    if length <= budget {
+        return Ok(());
+    }
+    Err(ForgeError::Input(format!(
+        "socket path is {length} bytes but a Unix socket allows at most {budget}: {}\n\
+         Choose a shorter cell root (SEA_FORGE_ROOT), or point SEA_FORGE_SOCKET at a \
+         short path such as /run/user/$UID/sea-forge.sock while keeping records where they are.",
+        socket_path.display()
+    )))
+}
+
 /// Take the exclusive, process-lifetime lock guarding one socket path.
 ///
 /// This is what makes a second server fail instead of silently unlinking a
@@ -787,7 +820,13 @@ fn lock_socket_path(socket_path: &Path) -> Result<std::fs::File, ForgeError> {
 
 /// Start the server.
 pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>> {
-    let socket_path = config.socket_path.clone();
+    let socket_path = config.resolved_socket_path();
+
+    // Fail before the first side effect: `ServerState::new` creates the cell's
+    // directories and ledgers, so an unbindable socket path must be rejected
+    // ahead of it rather than leaving a half-built cell behind.
+    check_socket_path_length(&socket_path)?;
+
     let state = Arc::new(ServerState::new(config)?);
 
     // Fail closed if another server already owns this socket path.
@@ -2118,5 +2157,42 @@ mod cancellation_tests {
         assert!(entries
             .iter()
             .any(|entry| entry.record_kind == "control_request"));
+    }
+}
+
+#[cfg(test)]
+mod socket_contract_tests {
+    use super::*;
+
+    #[test]
+    fn a_bindable_socket_path_is_accepted() {
+        assert!(check_socket_path_length(Path::new("/tmp/cell/server.sock")).is_ok());
+    }
+
+    #[test]
+    fn an_overlong_socket_path_is_rejected_with_the_fix_named() {
+        let long = PathBuf::from("/tmp")
+            .join("x".repeat(120))
+            .join("server.sock");
+        let error = check_socket_path_length(&long).unwrap_err();
+        let message = error.to_string();
+        assert!(message.contains("SEA_FORGE_ROOT"), "{message}");
+        assert!(message.contains("SEA_FORGE_SOCKET"), "{message}");
+    }
+
+    #[test]
+    fn the_budget_leaves_room_for_the_binding_suffix() {
+        // A path that fits sun_path exactly but not once `.binding` is appended
+        // must still be rejected — otherwise bind() fails on the staging path.
+        let budget = 104 - 1 - LONGEST_SOCKET_SUFFIX;
+
+        // `/` + (budget - 1) characters == exactly `budget` bytes.
+        let at_budget = PathBuf::from("/").join("y".repeat(budget - 1));
+        assert_eq!(at_budget.as_os_str().as_encoded_bytes().len(), budget);
+        assert!(check_socket_path_length(&at_budget).is_ok());
+
+        let over = PathBuf::from("/").join("y".repeat(budget));
+        assert_eq!(over.as_os_str().as_encoded_bytes().len(), budget + 1);
+        assert!(check_socket_path_length(&over).is_err());
     }
 }

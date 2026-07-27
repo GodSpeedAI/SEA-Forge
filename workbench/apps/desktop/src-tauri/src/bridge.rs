@@ -287,8 +287,8 @@ pub async fn sfwp_request_status(
     state: State<'_, Arc<SocketHandle>>,
     request_id: String,
 ) -> Result<Value, String> {
-    let request =
-        serde_json::to_value(SfwpQuery::RequestGetStatus { request_id }).map_err(|e| e.to_string())?;
+    let request = serde_json::to_value(SfwpQuery::RequestGetStatus { request_id })
+        .map_err(|e| e.to_string())?;
     state.call(request).await.map_err(|e| e.to_string())
 }
 

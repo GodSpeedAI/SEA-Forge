@@ -90,10 +90,7 @@ impl SocketClient {
     /// pushed event frames to `event_sink`. The read loop runs on the ambient
     /// tokio runtime (`tokio::spawn`), which under Tauri is the same runtime as
     /// `tauri::async_runtime::spawn`.
-    pub async fn connect(
-        socket_path: &Path,
-        event_sink: EventSink,
-    ) -> Result<Self, SocketError> {
+    pub async fn connect(socket_path: &Path, event_sink: EventSink) -> Result<Self, SocketError> {
         let stream = UnixStream::connect(socket_path)
             .await
             .map_err(|e| SocketError::Connect(e.to_string()))?;
@@ -175,8 +172,8 @@ impl SocketClient {
     /// request, write its line, register the response slot, and await the
     /// matching response line. Atomic write+register guarantees FIFO pairing.
     pub async fn call(&self, request: Value) -> Result<Value, SocketError> {
-        let line = serde_json::to_string(&request)
-            .map_err(|e| SocketError::Encode(e.to_string()))?;
+        let line =
+            serde_json::to_string(&request).map_err(|e| SocketError::Encode(e.to_string()))?;
 
         let rx = {
             let mut state = self.inner.write.lock().await;
@@ -236,16 +233,14 @@ impl SocketHandle {
         if let Some(client) = guard.as_ref() {
             return Ok(client.clone());
         }
-        let client =
-            SocketClient::connect(&self.socket_path, self.event_sink.clone()).await?;
+        let client = SocketClient::connect(&self.socket_path, self.event_sink.clone()).await?;
         *guard = Some(client.clone());
         Ok(client)
     }
 
     /// Force a fresh connection, replacing any stale one (reconnect path).
     pub async fn reconnect(&self) -> Result<SocketClient, SocketError> {
-        let client =
-            SocketClient::connect(&self.socket_path, self.event_sink.clone()).await?;
+        let client = SocketClient::connect(&self.socket_path, self.event_sink.clone()).await?;
         let mut guard = self.current.lock().await;
         *guard = Some(client.clone());
         Ok(client)

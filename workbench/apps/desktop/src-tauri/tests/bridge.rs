@@ -229,7 +229,10 @@ async fn concurrent_calls_are_correctly_paired() {
                     .await
                     .expect("hello");
                 // Only hello responses carry `server_protocol_version`.
-                assert_eq!(r["server_protocol_version"], "1", "hello #{i} mispaired: {r}");
+                assert_eq!(
+                    r["server_protocol_version"], "1",
+                    "hello #{i} mispaired: {r}"
+                );
             } else {
                 let r = c
                     .call(json!({"verb": "system_describe"}))
@@ -320,7 +323,10 @@ async fn event_loop_recovers_backlog_via_get_range() {
         }
         tokio::time::sleep(Duration::from_millis(25)).await;
     }
-    assert!(recovered, "event loop must recover the backlog via get_range");
+    assert!(
+        recovered,
+        "event loop must recover the backlog via get_range"
+    );
 
     // The cursor was persisted to disk (survives restart, not just reconnect).
     assert!(cursor_path.exists(), "cursor file must be persisted");

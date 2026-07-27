@@ -1,7 +1,6 @@
 #![forbid(unsafe_code)]
 
 use sea_forge_server::{run, ServerConfig};
-use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,20 +16,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_span_list(false)
         .init();
 
-    let root = std::env::var("SEA_FORGE_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(".sea-forge"));
+    // One cell contract: the resolved root owns the records *and* the socket.
+    // `SEA_FORGE_ROOT` relocates both together; `SEA_FORGE_SOCKET` is the only
+    // way to split them, and only on purpose.
+    let root = sea_forge_server::resolve_cell_root();
     let config_path = root.join("server.yaml");
-    let config = ServerConfig::load(&config_path).unwrap_or_else(|e| {
+    let mut config = ServerConfig::load(&config_path).unwrap_or_else(|e| {
         tracing::warn!("config load failed ({e}), using defaults");
-        ServerConfig {
-            root: root.clone(),
-            ..Default::default()
-        }
+        ServerConfig::default()
     });
+    // The resolved root always wins over a `root:` key in the file: the file
+    // lives *inside* the cell, so it cannot name a different one.
+    config.root = root;
+    if let Some(socket_override) = sea_forge_server::resolve_socket_override() {
+        config.socket_path = socket_override;
+    }
 
     tracing::info!(
-        socket = %config.socket_path.display(),
+        root = %config.root.display(),
+        socket = %config.resolved_socket_path().display(),
         max_concurrent = config.max_concurrent_runs,
         "starting sea-forge-server"
     );

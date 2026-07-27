@@ -96,9 +96,7 @@ pub async fn run_event_loop<E: EventEmitter>(
     protocol_version: String,
 ) {
     loop {
-        match connect_and_pump(&handle, &cursor, &emitter, &mut event_rx, &protocol_version)
-            .await
-        {
+        match connect_and_pump(&handle, &cursor, &emitter, &mut event_rx, &protocol_version).await {
             Ok(()) => { /* pump returns only on disconnect */ }
             Err(error) => {
                 log::warn!("sfwp event loop error: {error}; backing off");
