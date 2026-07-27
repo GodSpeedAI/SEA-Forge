@@ -1125,7 +1125,12 @@ fn kill_9_leaves_a_valid_jsonl_prefix_without_capability_corruption() {
         .spawn()
         .unwrap();
     let mut trace = None;
-    for _ in 0..200 {
+    // Wait for the run to reach `command_started`. This is a precondition for
+    // the assertions below, not one of them — so the budget only has to be long
+    // enough to distinguish "slow to start" from "never starts". At 2s it
+    // failed roughly one run in three under a loaded machine, reporting a
+    // startup delay as a lifecycle defect.
+    for _ in 0..3_000 {
         if let Ok(runs) = fs::read_dir(root.join("runs")) {
             for run in runs
                 .flatten()
