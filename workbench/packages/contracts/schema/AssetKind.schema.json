@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AssetKind",
+  "description": "Which family an asset belongs to. Closed on purpose: a fourth family means a\nfourth real source of truth in the kernel, not a free-text label.",
+  "type": "string",
+  "enum": [
+    "plan_template",
+    "agent_endpoint",
+    "extension"
+  ]
+}

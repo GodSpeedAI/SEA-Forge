@@ -9,6 +9,7 @@ import { AppShell } from "./shell/AppShell";
 import { ReadinessPage } from "./pages/ReadinessPage";
 import { CaseCreationWorkbench } from "./pages/CaseCreationWorkbench";
 import { CaseHorizonPage } from "./pages/CaseHorizonPage";
+import { DelegationWorkbench } from "./pages/DelegationWorkbench";
 import { ApprovalInboxPage } from "./pages/ApprovalInboxPage";
 import { EvidencePage } from "./pages/EvidencePage";
 import { RunRecordPage } from "./pages/RunRecordPage";
@@ -104,6 +105,19 @@ const assetsRoute = createRoute({
   component: AssetsPage,
 });
 
+/**
+ * Configuring an agent task is its own surface rather than a panel on
+ * `/assets`: the catalog answers "what does this cell hold", while this answers
+ * "what would this particular delegation be governed by" — a question about a
+ * request that does not exist yet, and one whose answer is only meaningful for
+ * one exact set of inputs.
+ */
+const delegateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/delegate",
+  component: DelegationWorkbench,
+});
+
 const modelsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/models",
@@ -188,6 +202,7 @@ const routeTree = rootRoute.addChildren([
   readinessRoute,
   thothRoute,
   assetsRoute,
+  delegateRoute,
   modelsRoute,
   casesRoute,
   caseCreationRoute,

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AssetListResult",
+  "description": "`asset.list` result body.",
+  "type": "object",
+  "properties": {
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssetRow"
+      }
+    },
+    "unreadable": {
+      "description": "Asset *sources* that exist but could not be read — an unparseable\ntemplate, an unreadable registry. Reported rather than silently dropped:\n`agent_probe::list` and `case.entry_options` both filter these away, so a\nbroken file reads as \"no such asset\" there. Here it reads as an\nintegrity signal, which is what it is.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "assets"
+  ],
+  "$defs": {
+    "AssetKind": {
+      "description": "Which family an asset belongs to. Closed on purpose: a fourth family means a\nfourth real source of truth in the kernel, not a free-text label.",
+      "type": "string",
+      "enum": [
+        "plan_template",
+        "agent_endpoint",
+        "extension"
+      ]
+    },
+    "AssetRow": {
+      "description": "One asset, projected. Every field is read from a committed record or from\nconfiguration; none is inferred from another.",
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "description": "Stable, kind-prefixed address (`template:repair@1.0.0`,\n`agent_endpoint:local`, `extension:acme.linter@2.1.0`).",
+          "type": "string"
+        },
+        "blocking_reason": {
+          "description": "Why this cell will not offer the asset for work (epic 4.8). `None` means\nnothing blocks it — which is *not* a claim that it has been proven.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_refs": {
+          "description": "The committed records that put `standing` where it is. Empty at the\nfloor of a ladder, where nothing has been proven yet — an empty list is\nthe honest answer, not a missing one.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "identity_digest": {
+          "description": "The digest that identifies exactly these bytes/this configuration.\n`None` when the source could not be read well enough to compute one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/AssetKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "standing": {
+          "description": "This asset kind's own standing word, verbatim. See the module docs for\nwhy this is deliberately not one cross-kind ladder.",
+          "type": "string"
+        },
+        "version": {
+          "description": "`None` where the kind has no version concept (agent endpoints are\nidentified by their descriptor digest, not by a version).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "asset_id",
+        "kind",
+        "name",
+        "standing"
+      ]
+    }
+  }
+}

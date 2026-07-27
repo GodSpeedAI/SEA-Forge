@@ -13,6 +13,7 @@ const OPERATE_NAV: NavItemDef[] = [
   { path: "/readiness", label: "Readiness", icon: "◈", shortcut: "R" },
   { path: "/thoth", label: "Thoth", icon: "◇" },
   { path: "/assets", label: "Assets", icon: "▱" },
+  { path: "/delegate", label: "Delegation", icon: "⇥" },
   { path: "/models", label: "Domain Models", icon: "⌘" },
   { path: "/cases", label: "Cases", icon: "▤" },
   { path: "/inbox", label: "Inbox", icon: "▾", badge: 1 },

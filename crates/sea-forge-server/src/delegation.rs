@@ -213,17 +213,6 @@ pub async fn execute_with_permission_broker(
     let endpoint_id = request.endpoint_id;
     let instruction = request.instruction;
 
-    if instruction.is_empty() {
-        return Err(ForgeError::Input(
-            "agent_task instruction must be non-empty".into(),
-        ));
-    }
-    if request.max_turns == 0 {
-        return Err(ForgeError::Input(
-            "agent_task max_turns must be >= 1".into(),
-        ));
-    }
-
     let endpoint = config
         .agent
         .endpoint(endpoint_id)
@@ -237,18 +226,8 @@ pub async fn execute_with_permission_broker(
         path: config.root.join("server.yaml"),
         message,
     })?;
-    if instruction.len() > snapshot.max_request_bytes {
-        return Err(ForgeError::Input(format!(
-            "agent_task instruction exceeds endpoint max_request_bytes ({})",
-            snapshot.max_request_bytes
-        )));
-    }
-    let model = request.model.unwrap_or(&snapshot.model).to_owned();
-    if model.is_empty() {
-        return Err(ForgeError::Input(
-            "agent_task model must not be empty".into(),
-        ));
-    }
+    let model = check_preconditions(&snapshot, instruction, request.model, request.max_turns)
+        .map_err(|unmet| ForgeError::Input(unmet.join("; ")))?;
 
     let run = episode.run_id;
     let case = episode.case_id;
@@ -966,7 +945,52 @@ fn termination_str(t: &DelegationTermination) -> String {
     .into()
 }
 
-fn action_for_delegation(
+/// The request-shape preconditions a delegation must meet before any record is
+/// written, evaluated in one place.
+///
+/// Shared with [`crate::sfwp::delegation_preview`] rather than copied. The whole
+/// value of a preview is that it agrees with execution about what is runnable,
+/// and two copies of these rules would drift the first time one of them moved —
+/// leaving the workbench confidently offering a delegation the kernel refuses,
+/// or refusing one it would have run.
+///
+/// The two callers differ only in how much they report: execution takes the
+/// first unmet rule and turns it into a `ForgeError::Input`, while the preview
+/// shows every one, because an operator repairing a request wants the whole
+/// list rather than one round trip per problem.
+///
+/// Returns the resolved model on success — resolution and validation are the
+/// same step, so there is no window in which a caller holds an unchecked model.
+pub(crate) fn check_preconditions(
+    snapshot: &sea_forge_agent::EndpointSnapshot,
+    instruction: &str,
+    model: Option<&str>,
+    max_turns: u32,
+) -> Result<String, Vec<String>> {
+    let mut unmet = Vec::new();
+    if instruction.is_empty() {
+        unmet.push("agent_task instruction must be non-empty".to_string());
+    } else if instruction.len() > snapshot.max_request_bytes {
+        unmet.push(format!(
+            "agent_task instruction exceeds endpoint max_request_bytes ({})",
+            snapshot.max_request_bytes
+        ));
+    }
+    if max_turns == 0 {
+        unmet.push("agent_task max_turns must be >= 1".to_string());
+    }
+    let model = model.unwrap_or(&snapshot.model);
+    if model.is_empty() {
+        unmet.push("agent_task model must not be empty".to_string());
+    }
+    if unmet.is_empty() {
+        Ok(model.to_owned())
+    } else {
+        Err(unmet)
+    }
+}
+
+pub(crate) fn action_for_delegation(
     endpoint: &sea_forge_agent::EndpointSnapshot,
     endpoint_ref: &str,
     model: &str,

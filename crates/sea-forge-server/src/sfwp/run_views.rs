@@ -366,7 +366,10 @@ fn run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
     valid_run_id(run_id).then(|| root.join("runs").join(run_id))
 }
 
-fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
+/// Read one JSON record, treating any failure (absent, unreadable, malformed)
+/// as absence. Shared with [`crate::sfwp::assets`] rather than copied: both
+/// projections must agree that a half-written record is *not* a record.
+pub(crate) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
     serde_json::from_slice(&std::fs::read(path).ok()?).ok()
 }
 
@@ -393,10 +396,40 @@ fn enum_str<T: Serialize>(value: &T) -> String {
         .unwrap_or_else(|| "unknown".into())
 }
 
+/// Every readable run directory as `(run_id, path)`, sorted by id.
+///
+/// Shared with `crate::sfwp::assets` and `crate::sfwp::delegations` rather than
+/// copied a third time: all three project different files out of the same
+/// directory, and three hand-rolled walks would eventually disagree about what
+/// counts as a run directory at all. Each caller keeps its own *readability*
+/// policy — this decides only what to look at, never what to do with it.
+pub(crate) fn run_dirs(root: &Path) -> Vec<(String, PathBuf)> {
+    let Ok(entries) = std::fs::read_dir(root.join("runs")) else {
+        // No `runs/` yet is the normal state of a fresh cell, not a failure.
+        return Vec::new();
+    };
+    let mut dirs: Vec<(String, PathBuf)> = entries
+        .flatten()
+        .filter(|entry| entry.path().is_dir())
+        .filter_map(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .map(|run_id| (run_id.to_string(), entry.path()))
+        })
+        .collect();
+    dirs.sort_by(|a, b| a.0.cmp(&b.0));
+    dirs
+}
+
 /// Map every run id a case claims back to that case. Built by one pass over
 /// `<root>/cases/*/case.json`, which is also the only place that ownership is
 /// recorded — a run does not name its own case.
-fn case_index(root: &Path) -> BTreeMap<String, String> {
+///
+/// Shared with `crate::sfwp::delegations`: "a run belongs to the case that
+/// claims it" is a rule, and a second copy could let two views disagree about
+/// who owns a run.
+pub(crate) fn case_index(root: &Path) -> BTreeMap<String, String> {
     let mut index = BTreeMap::new();
     let Ok(entries) = std::fs::read_dir(root.join("cases")) else {
         return index;
@@ -687,18 +720,7 @@ pub fn list(root: &Path, case_id: Option<&str>) -> RunListResult {
     let mut runs = Vec::new();
     let mut unreadable = Vec::new();
 
-    let Ok(entries) = std::fs::read_dir(root.join("runs")) else {
-        // No `runs/` directory yet is the normal state of a fresh cell.
-        return RunListResult::default();
-    };
-
-    for entry in entries.flatten() {
-        if !entry.path().is_dir() {
-            continue;
-        }
-        let Some(run_id) = entry.file_name().to_str().map(str::to_string) else {
-            continue;
-        };
+    for (run_id, dir) in run_dirs(root) {
         let owner = index.get(&run_id).cloned();
 
         // Scoping to a case means "runs this case claims" — a run the case does
@@ -709,7 +731,6 @@ pub fn list(root: &Path, case_id: Option<&str>) -> RunListResult {
             }
         }
 
-        let dir = entry.path();
         let events: Vec<TraceEvent> = read_jsonl(&dir.join("trace.jsonl"));
         let settlement: Option<SettlementEvent> = read_json(&dir.join("settlement.json"));
 

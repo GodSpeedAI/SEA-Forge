@@ -18,6 +18,15 @@
 			"updatedAt": "2026-07-27T00:22:43.521Z",
 			"commitHash": null,
 			"branch": "frontend"
+		},
+		"WORKBENCH-SLICE-PROMPT": {
+			"slug": "WORKBENCH-SLICE-PROMPT",
+			"title": "Workbench slice prompt",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/WORKBENCH-SLICE-PROMPT.md",
+			"addedAt": "2026-07-27T03:40:03.414Z",
+			"updatedAt": "2026-07-27T03:40:03.414Z",
+			"commitHash": null,
+			"branch": "frontend"
 		}
 	}
 }

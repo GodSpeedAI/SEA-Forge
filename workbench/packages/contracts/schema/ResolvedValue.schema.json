@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResolvedValue",
+  "description": "One resolved value together with who decided it.",
+  "type": "object",
+  "properties": {
+    "source": {
+      "$ref": "#/$defs/ValueSource"
+    },
+    "value": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "value",
+    "source"
+  ],
+  "$defs": {
+    "ValueSource": {
+      "description": "Where a resolved value came from.\n\nClosed on purpose. Each variant is a distinct, recoverable fact about who\ndecided the value; a variant that could not be told apart from another would\nbe provenance theatre.",
+      "oneOf": [
+        {
+          "description": "The caller asked for this value explicitly in the preview request.",
+          "type": "string",
+          "const": "requested"
+        },
+        {
+          "description": "The endpoint descriptor in `server.yaml` declares it.",
+          "type": "string",
+          "const": "endpoint_default"
+        },
+        {
+          "description": "The cell-wide `[agent]` configuration supplied it.\n\nThis does *not* separate \"the cell chose this\" from \"the cell left it\nalone and the kernel's fallback applied\", because `AgentConfig`'s\nretention field is not an `Option` — after parsing, an explicit\n`summarized` and an absent one are the same value. Reporting a\n`built_in` here would be inventing a distinction the record does not\nhold.",
+          "type": "string",
+          "const": "cell_default"
+        },
+        {
+          "description": "Nothing declared it at any level and the kernel's own fallback applies.\nUsed only where the config type preserves the absence (`default_model`\nis an `Option`, so this is real for the model).",
+          "type": "string",
+          "const": "built_in"
+        }
+      ]
+    }
+  }
+}
