@@ -54,6 +54,11 @@ export const SURFACED_METHODS: ReadonlySet<string> = new Set([
   "case.get_horizon",
   "approval.list",
   "approval.decide",
+  "asset.list",
+  "delegation.preview",
+  "delegation.list",
+  "run.list",
+  "run.get",
   "events.get_range",
   "request.get_status",
 ]);

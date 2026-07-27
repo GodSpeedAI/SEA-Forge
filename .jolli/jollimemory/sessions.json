@@ -16,7 +16,13 @@
 		"b27609ad-cef8-4c86-b643-f1837273835f": {
 			"sessionId": "b27609ad-cef8-4c86-b643-f1837273835f",
 			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/b27609ad-cef8-4c86-b643-f1837273835f.jsonl",
-			"updatedAt": "2026-07-27T03:20:54.617Z",
+			"updatedAt": "2026-07-27T03:40:03.329Z",
+			"source": "claude"
+		},
+		"cd0daf26-041f-4d32-bf57-3b857eaa6d4d": {
+			"sessionId": "cd0daf26-041f-4d32-bf57-3b857eaa6d4d",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl",
+			"updatedAt": "2026-07-27T13:06:35.856Z",
 			"source": "claude"
 		}
 	}

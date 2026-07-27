@@ -1,6 +1,4 @@
-import { useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   validateRunListResult,
   validateRunRecord,
@@ -10,6 +8,7 @@ import {
 import { toError } from "./bridgeError";
 import { queryGoverned } from "./governedQuery";
 import { affectsCases } from "./eventKinds";
+import { useGovernedEventInvalidation } from "./useGovernedEventInvalidation";
 
 /**
  * Run records over `run.list` and `run.get`.
@@ -37,40 +36,8 @@ function fetchRunList(caseId?: string): Promise<RunListResult> {
 const fetchRunRecord = (runId: string) =>
   queryGoverned<RunRecord>({ verb: "run_get", run_id: runId }, validateRunRecord, "run.get");
 
-function useRunEventInvalidation() {
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-
-    const safeUnlisten = (fn?: () => void) => {
-      try {
-        fn?.();
-      } catch {
-        /* subscription already gone */
-      }
-    };
-
-    listen<unknown>("sfwp://event", (event) => {
-      // `event?.payload`: a throwing listener tears down the subscription, so
-      // an unexpected frame shape degrades to "invalidate anyway".
-      if (!affectsCases(event?.payload)) return;
-      void queryClient.invalidateQueries({ queryKey: RUNS_QUERY_KEY });
-    })
-      .then((fn) => {
-        if (disposed) safeUnlisten(fn);
-        else unlisten = fn;
-      })
-      .catch(() => {
-        /* no host bridge — views still re-read on demand */
-      });
-
-    return () => {
-      disposed = true;
-      safeUnlisten(unlisten);
-    };
-  }, [queryClient]);
-}
+const useRunEventInvalidation = () =>
+  useGovernedEventInvalidation(affectsCases, RUNS_QUERY_KEY);
 
 export function useRunList(caseId?: string) {
   useRunEventInvalidation();

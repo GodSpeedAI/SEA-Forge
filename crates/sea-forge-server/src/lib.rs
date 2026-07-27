@@ -676,6 +676,27 @@ pub enum Request {
     RunGet {
         run_id: String,
     },
+    /// Asset-catalog inspect method (Task 9, ADR-003). Read-only projection
+    /// over materialized templates, configured agent endpoints, and the
+    /// extension registry, with each endpoint's standing derived from the probe
+    /// records rather than asserted. Creates nothing; see `sfwp::assets`.
+    AssetList,
+    /// Delegation job-contract inspect method (Task 10, ADR-003). Projects the
+    /// contract a `delegate` with these exact inputs would run under — resolved
+    /// model, caps, timeout, retention, and the authority action that *will be*
+    /// submitted. It commits nothing and decides nothing: see
+    /// `sfwp::delegation_preview` for why a preview verdict would be an
+    /// authority claim with no record behind it.
+    DelegationPreview {
+        #[serde(flatten)]
+        params: sfwp::delegation_preview::DelegationPreviewParams,
+    },
+    /// Delegation roster inspect method (Task 11, ADR-003). Joins the server's
+    /// live delegation handles with the committed run records so the already-
+    /// reachable `cancel_delegation` verb finally has enumerable targets.
+    /// Creates nothing; see `sfwp::delegations` for why a run with neither a
+    /// handle nor a settlement is reported as unresolved rather than guessed at.
+    DelegationList,
 }
 
 #[derive(Deserialize)]
@@ -1292,6 +1313,40 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 "error_class": error.class(),
             }),
         },
+        Request::AssetList => {
+            serde_json::to_value(sfwp::assets::list(&state.config.root, &state.config.agent))
+                .unwrap_or_else(|_| serde_json::json!({"error": "asset list serialization failed"}))
+        }
+        Request::DelegationList => {
+            // Snapshot the live handles under one lock, then project outside it:
+            // the projection also touches the filesystem, and holding the
+            // delegation map across that would put disk latency on the path of
+            // every cancellation.
+            let live = state
+                .delegations
+                .lock()
+                .await
+                .iter()
+                .map(|(run_id, handle)| {
+                    (
+                        run_id.clone(),
+                        sfwp::delegations::LiveDelegation {
+                            case_id: handle.case_id.clone(),
+                            cancellation_requested: handle.requested.load(Ordering::SeqCst),
+                        },
+                    )
+                })
+                .collect();
+            serde_json::to_value(sfwp::delegations::list(&state.config.root, &live)).unwrap_or_else(
+                |_| serde_json::json!({"error": "delegation list serialization failed"}),
+            )
+        }
+        Request::DelegationPreview { params } => serde_json::to_value(
+            sfwp::delegation_preview::preview(&state.config.root, &state.config.agent, params),
+        )
+        .unwrap_or_else(
+            |_| serde_json::json!({"error": "delegation preview serialization failed"}),
+        ),
         Request::ApprovalList { case_id } => serde_json::to_value(sfwp::approvals::list(
             &state.config.root,
             case_id.as_deref(),
@@ -1754,6 +1809,25 @@ async fn delegate_inner(
     let run_for_execution = delegation_run_id.clone();
     let case_for_execution = delegation_case_id.clone();
     let cancel_for_execution = Arc::clone(&cancel);
+    // Resolve retention through the full precedence chain (endpoint → cell
+    // `[agent]` → built-in), exactly as `case_dispatch` does for a planned
+    // agent task. `DelegationRequest::transcript_retention` is documented as
+    // "already resolved by the caller", and taking `Default::default()` here
+    // silently pinned every socket-issued delegation to `summarized` — ignoring
+    // an endpoint that had explicitly asked for `full` transcripts. There is no
+    // item override on this path: `delegate` has no field for one.
+    let resolved_retention = match sea_forge_agent::TranscriptRetentionMode::resolve(
+        None,
+        config.agent.endpoint(endpoint),
+        &config.agent,
+    ) {
+        Ok(mode) => mode,
+        Err(message) => {
+            state.delegations.lock().await.remove(&delegation_run_id);
+            drop(permit);
+            return serde_json::json!({"error": message});
+        }
+    };
     let result = delegation::execute_with_permission_broker(
         &config,
         delegation::DelegationRequest {
@@ -1766,6 +1840,7 @@ async fn delegate_inner(
             policy_path: policy,
             entity,
             process,
+            transcript_retention: resolved_retention,
             ..Default::default()
         },
         &agent_probe::EnvironmentCredentialResolver,

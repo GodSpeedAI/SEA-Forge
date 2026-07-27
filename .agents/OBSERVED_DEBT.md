@@ -532,3 +532,302 @@ serialization test in `src-tauri/src/bridge.rs`.
   without restructuring a surface covered by a mockup-fidelity test. Deferred
   deliberately: the run record is already reachable from the horizon and the
   evidence index.
+
+## Resolved (2026-07-27, Task 9): `SCHEMA_TYPES` had drifted from the generator with nothing enforcing it
+
+**Observed** at the end of Task 8: `sfwp::SCHEMA_TYPES` claims to share its list
+with `gen_sfwp_schema.rs` "so they never drift", but the claim was only a
+comment — and it had already been broken once (eight Task 7 types reached the
+generator and never `system.get_schema`).
+
+**Fix.** `generated_schemas_are_committed_and_current` in
+`crates/sea-forge-server/tests/conformance_sfwp.rs` now also asserts
+`SCHEMA_TYPES` equals the generator's emitted filenames. Adding a type to one
+list and not the other fails the gate instead of silently under-reporting the
+contracts a client can fetch.
+
+## Resolved (2026-07-27, Task 9): the Assets surface fabricated an availability ladder the kernel refuses to let anyone assert
+
+**Observed.** `SurfacesPages.tsx`'s `AssetsPage` hardcoded three rows with
+`Available` / `Installed` / `Declared` pills. Meanwhile
+`AgentEndpointConfig::validate` rejects an endpoint whose configuration asserts
+its own `status` — "status is evidence-derived" — because that ladder may only
+be climbed by committed probe records. The renderer was asserting exactly the
+thing the kernel refuses to accept from configuration.
+
+**Fix.** `asset.list` (`crates/sea-forge-server/src/sfwp/assets.rs`) and
+`pages/AssetCatalogPage.tsx`. Endpoint standing is now folded from the probe
+runs `agent_probe::probe` writes, with the *most recent* probe deciding.
+
+## Open: `agent_list` still reports a hardcoded `declared` status and hides misconfigured endpoints
+
+- Observed: 2026-07-27 (while implementing `asset.list`)
+- Evidence: `crates/sea-forge-server/src/agent_probe.rs` — `list()` sets
+  `status: "declared"` for every endpoint unconditionally, and
+  `.filter_map(|endpoint| endpoint.snapshot().ok())` drops any endpoint whose
+  configuration will not snapshot.
+- Impact: bounded. `declared` is the honest *floor*, so nothing is overstated —
+  but a demonstrated endpoint reads the same as an unprobed one, and a
+  misconfigured endpoint vanishes from the listing rather than reporting why.
+  The workbench no longer uses this verb (it reads `asset.list`), so the
+  exposure is CLI and any direct socket client.
+- Next move: `agent_list` could delegate to `sfwp::assets::collect_endpoints`,
+  which already derives both. Left alone here because changing a shipped verb's
+  response shape is not additive and needs its own ADR-003 pass.
+
+## Open: nothing ties `SURFACED_METHODS` to the methods hooks actually call
+
+- Observed: 2026-07-27
+- Evidence: `run.list` and `run.get` were implemented, wired into
+  `useRuns.ts`, and rendered by `RunRecordPage`/`EvidencePage` in Task 8 — but
+  were never added to `SURFACED_METHODS`
+  (`workbench/apps/desktop/src/hooks/useServerContract.ts`). For a full release
+  cycle `/admin` reported two live, operator-reachable methods as "implemented,
+  not surfaced". Added in this pass along with `asset.list`.
+- Impact: the error is one-directional and quiet. A missing entry *understates*
+  reach, which is the safe direction, but it makes the admin catalog wrong and
+  the mistake is invisible — exactly the drift `SURFACED_METHODS` exists to
+  prevent for the *other* list.
+- Next move: derive the set from the `queryGoverned` call sites (each already
+  passes its dotted method name as the third argument) or assert the
+  correspondence in a test that greps the hooks directory.
+- Scope: recorded rather than fixed structurally; the immediate wrongness is
+  corrected.
+
+## Open: endpoint standing costs a full scan of `<root>/runs`
+
+- Observed: 2026-07-27
+- Evidence: `sfwp::assets::latest_probe_per_endpoint` reads `plan.json` for
+  every run directory to find the probe episodes. `run_views::list` already
+  does the same, so the cost is precedented, not new.
+- Impact: none today (a cell has tens of runs). On a cell with tens of
+  thousands, opening the asset catalog becomes an O(ledger) read.
+- Next move: a per-endpoint index written at probe time, or a `runs` index
+  keyed by operation kind. Deliberately not built now — no cell is near the
+  size where it matters, and an index is a second truth to keep consistent.
+- Scope: the projection is short-circuited when no endpoint is configured, so
+  the scan never runs on a cell with nothing to attribute.
+
+## Open: templates are now projected by two methods with two shapes
+
+- Observed: 2026-07-27
+- Evidence: `case.entry_options` returns `TemplateOption` (template_ref,
+  description, parameters — what you need to *instantiate* one); `asset.list`
+  returns an `AssetRow` for the same file (identity digest, standing, blocking
+  reason — what you need to *judge* one).
+- Impact: none yet. The two answer different questions and neither derives the
+  other, so this is not duplication so much as two projections of one source.
+  It becomes debt if a third reader appears, or if the parse rules diverge —
+  note that `entry_options` silently skips an unparseable template while
+  `asset.list` reports it, which is already a small divergence in *policy*
+  rather than in code.
+- Next move: if a third reader lands, extract one template-enumeration helper
+  that both project from; do not merge the response shapes.
+
+## Open: the asset catalog abandoned its mockup layout without a fidelity pass
+
+- Observed: 2026-07-27
+- Evidence: `pages/AssetCatalogPage.tsx` renders three kind-scoped tables. The
+  checked-in kit's assets screen (`asset-catalog-table`, `asset-detail`,
+  `asset-boundary` regions) is one merged table plus a detail panel.
+- Impact: the departure is deliberate and load-bearing — one merged table puts
+  three disjoint standing vocabularies in one column and invites reading them
+  as one ladder — but it means the assets route now has no visual-fidelity
+  coverage and no `data-od-id` correspondence to the kit.
+- Next move: either update the kit's assets screen to the three-table shape and
+  add a fidelity check, or record the divergence in
+  `.agents/specs/frontend/DESIGN-spec-mapping.md`.
+- Scope: correctness and a11y are covered by
+  `pages/AssetCatalogPage.test.tsx`; only visual fidelity is uncovered.
+
+## Resolved (Task 10): `delegate` ignored endpoint and cell transcript retention
+
+- Observed: 2026-07-27 · Resolved: 2026-07-27
+- Evidence: `delegate_inner` built its `DelegationRequest` with
+  `..Default::default()`, so `transcript_retention` was always
+  `TranscriptRetentionMode::Summarized` — despite the field's own doc comment
+  ("already resolved through the full precedence chain by the caller") and
+  despite `case_dispatch` resolving it correctly for planned agent tasks.
+- Impact (while open): an endpoint configuring `transcript_retention: full`, or
+  a cell configuring it globally, was silently overridden for every delegation
+  issued over the socket. The plan item recorded `summarized`, so the record was
+  internally consistent and the discrepancy left no trace.
+- Fix: `delegate_inner` now calls `TranscriptRetentionMode::resolve(None,
+  endpoint, agent)` — the same chain `case_dispatch` uses. Covered by
+  `transcript_retention_is_resolved_through_the_endpoint_then_the_cell`.
+
+## Open: `delegation.preview` reports authority but cannot dry-run it
+
+- Observed: 2026-07-27
+- Evidence: `sfwp::delegation_preview` names the authority action kind
+  (`agent_task`) and its digest, but performs no `PolicyAuthorityEngine`
+  evaluation. `delegation::execute_with_permission_broker` evaluates only after
+  committing intent, plan, and criteria to the ledger.
+- Impact: an operator can assemble a job contract that is fully eligible and
+  still be denied the moment they commit, with no way to find out first. The
+  deferral is deliberate — a verdict with no ledger entry behind it is an
+  unrecorded grant, and `evaluate` needs a committed case/run/item identity the
+  preview does not have — but the gap is real and will be felt as soon as
+  `/delegate` grows its command half.
+- Next move: if this is closed, it needs a *governed* shape — a decision the
+  kernel records as a preview decision, not a verdict computed and thrown away.
+  Do not add a bare `would_be_allowed: bool`.
+
+## Open: `delegate` has no precondition field, so `contract_digest` is advisory
+
+- Observed: 2026-07-27
+- Evidence: `JobContractPreview::contract_digest` identifies the exact contract
+  inspected, and `sfwp::precondition` already exists (Task 6 used it for
+  `case.commit`). But `Request::Delegate` has no `preconditions` field, so
+  nothing can be enforced against the digest.
+- Impact: an operator can inspect a contract, have the endpoint descriptor
+  change underneath them, and commit a delegation that differs from what they
+  approved. The digest lets a careful operator *notice*; it cannot make the
+  kernel refuse.
+- Next move: when `/delegate` gains its command half, add
+  `preconditions: Option<Precondition>` to `Delegate` and reject on mismatch the
+  way `case.commit` does — same `rejected_as_stale` body, no forked logic.
+
+## Open: `delegation.preview` costs a full asset-catalog build per call
+
+- Observed: 2026-07-27
+- Evidence: `delegation_preview::preview` calls `assets::list(root, agent)` and
+  keeps one row. `assets::list` walks `<root>/runs/*` (already logged as an
+  O(runs) scan), reads every template, and loads the extension registry.
+- Impact: negligible today; a cell with thousands of runs makes an interactive
+  preview slow, and the page reads it on every explicit inspect.
+- Next move: the fix is *not* to re-derive standing in the preview — the whole
+  point is that the two agree. Narrow `assets` to expose a single-endpoint
+  projection that `list` also uses, so there stays exactly one derivation.
+
+## Open: `delegate` cannot override transcript retention per request
+
+- Observed: 2026-07-27
+- Evidence: `Operation::AgentTask` carries a `transcript_retention` override and
+  `TranscriptRetentionMode::resolve` honours it, but `Request::Delegate` has no
+  field for one, so the item-override rung of the precedence chain is
+  unreachable over the socket. `DelegationPreviewParams` therefore omits it too.
+- Impact: an operator delegating an unusually sensitive task cannot ask for
+  `summarized` against an endpoint configured `full` without editing
+  `server.yaml`. `ValueSource::Requested` is consequently unreachable for
+  retention (it is reachable for model).
+- Next move: additive field on `Delegate` plus the matching preview param; the
+  resolution call already accepts the override, so this is wiring, not logic.
+
+## Resolved (Task 11): the frontend event taxonomy had drifted from the server
+
+- Observed: 2026-07-27 · Resolved: 2026-07-27
+- Evidence: `hooks/eventKinds.ts` declared `KNOWN_EVENT_KINDS` as three kinds
+  and described them as "verified against its publish sites". The server's
+  `publish_event` call sites emit five: `case.submitted`, `approval.approved`,
+  `approval.rejected`, `agent_run.delegated`, `agent_run.cancellation_requested`.
+- Impact (while open): none visible, and that is the point. The narrowing is
+  deliberately asymmetric, so the two unlisted kinds over-invalidated every
+  surface instead of being ignored. The safety property worked exactly as
+  designed and therefore hid the drift — no surface could go stale, so nothing
+  ever surfaced the omission.
+- Fix: all five listed and classified, plus `affectsDelegations`. New
+  `hooks/eventKinds.test.ts` pins the roster against a transcribed list of the
+  server's publish sites and asserts the asymmetry directly.
+- Residual: the test's server-side list is transcribed by hand, so it catches
+  drift only when someone updates one side. A generated event-kind contract
+  (the same Rust → schemars → TS path the view types already use) would make
+  this structural. Logged separately below.
+
+## Resolved (Task 11): run-directory enumeration reached a third copy
+
+- Observed: 2026-07-27 · Resolved: 2026-07-27
+- Evidence: the prior entry on this predicted it — `run_views::list`,
+  `assets::latest_probe_per_endpoint`, and the new `delegations::list` all
+  walked `<root>/runs/*` by hand.
+- Fix: `run_views::run_dirs` and `case_index` are now `pub(crate)` and used by
+  all three. Deliberately *not* parameterised: each caller keeps its own
+  readability policy (`run.list` reports a run with neither trace nor
+  settlement as unreadable; `assets` skips silently; `delegations` filters to
+  agent tasks). The shared helper decides only what to look at.
+
+## Resolved (Task 11): a Task 10 test assertion was vacuous
+
+- Observed: 2026-07-27 · Resolved: 2026-07-27
+- Evidence: `preview_creates_no_run_case_or_ledger_entry` asserted that
+  directories named `runs`, `cases`, and `ledger` stayed empty. The kernel's
+  path is `ledgers`; `ledger` never exists, so that third of the assertion
+  passed unconditionally and would have passed for any implementation.
+- Impact (while open): the "no ledger entry" half of the claim in that test's
+  own name was never actually tested. The `runs`/`cases` halves were real.
+- Fix: both that test and `listing_the_roster_creates_nothing` now capture the
+  whole cell tree before and after the read and compare. A name the author did
+  not think of can no longer produce a silent pass.
+
+## Open: no event-kind contract ties the frontend taxonomy to the server
+
+- Observed: 2026-07-27
+- Evidence: `KNOWN_EVENT_KINDS` and the server's `publish_event` call sites are
+  two independent hand-maintained lists. The new `eventKinds.test.ts` compares
+  the frontend list against a *transcription* of the server's, not against the
+  server.
+- Impact: adding a kind server-side still silently over-invalidates until
+  someone notices — which, as the resolved entry above shows, may be a long
+  time.
+- Next move: emit the kind list from Rust through the existing schemars → TS
+  contract pipeline (an `EventKind` enum would be the natural shape), then
+  assert against the generated constant instead of a transcription.
+
+## Open: the kernel exposes no live turn, token, or streaming state
+
+- Observed: 2026-07-27
+- Evidence: `DelegationHandle` carries `case_id` and two `AtomicBool`s and
+  nothing else; the delegation loop publishes no per-turn event. `turns_used`
+  and `tool_calls` first exist when `transcript-evidence.json` is written at
+  termination.
+- Impact: epic 9.7 asks for bounded turn, token, streaming, permission, and
+  continuation state *during* the dialogue. `delegation.list` can only report
+  those after the fact, so the roster shows "not observable while running"
+  against the plan's cap. This is the unsettled half of 9.7 — the control half
+  (enumerate, cancel one) is done.
+- Next move: kernel-side first. A per-turn `agent_run.turn` event (or a
+  counter on the handle) is the prerequisite; no frontend work can close this.
+  Do not synthesise a count from elapsed time or from the transcript file's
+  presence — a guessed turn count against a hard cap is worse than an absent one.
+
+## Open: an in-flight delegation is never reconciled after a server restart
+
+- Observed: 2026-07-27
+- Evidence: `recover_cancelled_delegations` runs at `ServerState::new` but only
+  iterates `control_request` ledger entries — i.e. delegations someone had
+  asked to cancel. A delegation that was simply running when the server stopped
+  has no control request, so nothing reconciles it; it keeps a `plan.json` and
+  no `settlement.json` forever.
+- Impact: `delegation.list` reports it as `unresolved`, which is honest but
+  permanent. The cell accumulates delegations whose outcome nobody will ever
+  determine, and there is no path to settle or formally abandon one.
+- Next move: extend startup recovery to settle *any* unsettled delegation run
+  with a typed `interrupted` termination and a basis naming the restart. That
+  is a governed settlement, not a projection change — the roster should keep
+  reporting whatever the records say.
+
+## Open: `delegation.list` walks every run directory
+
+- Observed: 2026-07-27
+- Evidence: `delegations::list` calls `run_dirs(root)` and reads `plan.json`
+  for every run to find the agent tasks; `assets::list` does the same for
+  probes. Both are O(runs) per call, and `/delegate` now issues both.
+- Impact: negligible today; a cell with thousands of runs makes an
+  event-invalidated roster expensive, and this view refetches on every
+  `agent_run.*` frame.
+- Next move: an index keyed by operation kind, written when a run is committed.
+  Do not cache the projection itself — the roster's whole value is that it
+  reflects the records rather than a remembered summary.
+
+## Open: `useRuns` invalidates on the case predicate
+
+- Observed: 2026-07-27
+- Evidence: `hooks/useRuns.ts` passes `affectsCases` to
+  `useGovernedEventInvalidation` against `RUNS_QUERY_KEY`. There is no
+  `affectsRuns`.
+- Impact: correct but imprecise — run views refetch on approval decisions that
+  cannot change them. Harmless, and it fails in the safe direction.
+- Next move: add `affectsRuns` alongside the others when a run-specific event
+  kind exists to narrow against. Not worth a predicate today, since the two
+  `agent_run.*` kinds are already the only runs-relevant ones and both are in
+  the case set.

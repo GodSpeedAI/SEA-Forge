@@ -479,3 +479,222 @@
 [2026-07-27T03:20:54.872Z] INFO  [plans] detectPlans found 2 plans (2 in registry)
 [2026-07-27T03:20:54.873Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
 [2026-07-27T03:20:55.505Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T03:40:03.298Z] INFO  [StopHook] Stop hook triggered (session=b27609ad-cef8-4c86-b643-f1837273835f)
+[2026-07-27T03:40:03.328Z] INFO  [StopHook] Hook input — session_id=b27609ad-cef8-4c86-b643-f1837273835f, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/b27609ad-cef8-4c86-b643-f1837273835f.jsonl
+[2026-07-27T03:40:03.334Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T03:40:03.411Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T03:40:03.414Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T03:40:03.418Z] INFO  [plans] detectPlans found 2 plans (2 in registry)
+[2026-07-27T03:40:03.419Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:40:03.429Z] INFO  [PlanDiscovery] Plan discovery: upserted 1 slug(s) + 1 external path(s) into plans.json
+[2026-07-27T03:40:03.643Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T03:40:04.154Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T03:40:04.155Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T03:40:04.155Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:18.291Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:19.892Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:21.490Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:26.189Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:29.240Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:31.038Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:33.966Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:37.747Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:44.182Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:46.930Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:49.840Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:52.123Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:56.409Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:58.062Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:41:59.971Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:42:19.144Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:42:22.955Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:42:26.910Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:42:32.707Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:42:52.909Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:43:15.918Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:43:35.433Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:43:37.371Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:44:06.227Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:44:08.801Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:44:34.728Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-27T03:44:34.759Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-27T03:44:34.771Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-27T04:21:27.924Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T04:21:27.938Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T04:21:27.943Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T04:21:28.125Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T04:21:28.280Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T04:21:28.281Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T04:21:28.281Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T04:21:28.750Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T11:25:04.245Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-27T11:25:04.259Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-27T11:25:04.267Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-27T11:58:55.196Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T11:58:55.212Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T11:58:55.220Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T11:58:55.404Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T11:58:55.536Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T11:58:55.536Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T11:58:55.537Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T11:58:56.531Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T11:59:07.415Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T11:59:07.435Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T11:59:07.445Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T11:59:07.521Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T11:59:07.524Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T11:59:07.525Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T11:59:07.532Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T11:59:07.736Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T11:59:58.572Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T11:59:58.595Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T11:59:58.599Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T11:59:58.682Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T11:59:58.690Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T11:59:58.690Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T11:59:58.690Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T11:59:58.827Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:01:02.285Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:01:02.305Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:01:02.316Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:01:02.394Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:01:02.420Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:01:02.420Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:01:02.421Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:01:02.630Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:01:40.725Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:01:40.731Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:01:40.734Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:01:40.822Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:01:40.823Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:01:40.833Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:01:40.833Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:01:40.953Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:02:29.990Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:02:30.004Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:02:30.007Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:02:30.127Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:02:30.131Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:02:30.131Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:02:30.131Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:02:30.259Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:04:12.022Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:04:12.037Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:04:12.047Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:04:12.128Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:04:12.137Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:04:12.138Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:04:12.138Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:04:12.341Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:04:49.034Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:04:49.045Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:04:49.050Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:04:49.129Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:04:49.131Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:04:49.131Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:04:49.136Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:04:49.316Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:05:52.569Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:05:52.577Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:05:52.584Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:05:52.659Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:05:52.662Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:05:52.664Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:05:52.664Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:05:52.774Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:06:14.258Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:06:14.272Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:06:14.286Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:06:14.364Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:06:14.372Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:06:14.373Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:06:14.374Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:06:14.529Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:06:43.947Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:06:43.956Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:06:43.962Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:06:44.079Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:06:44.103Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:06:44.103Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:06:44.103Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:06:44.250Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:57:54.235Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:57:54.287Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:57:54.305Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:57:54.512Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:57:54.665Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:57:54.665Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:57:54.665Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:57:55.572Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:58:05.442Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:58:05.452Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:58:05.456Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:58:05.559Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:58:05.568Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:58:05.568Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:58:05.568Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:58:05.784Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T12:58:10.827Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T12:58:10.862Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T12:58:10.866Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T12:58:10.946Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T12:58:10.951Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T12:58:10.952Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T12:58:10.953Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T12:58:11.131Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T13:02:10.697Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T13:02:10.707Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T13:02:10.713Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T13:02:10.793Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T13:02:10.798Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T13:02:10.798Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T13:02:10.798Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T13:02:10.909Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T13:03:33.756Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T13:03:33.769Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T13:03:33.775Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T13:03:33.859Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T13:03:33.861Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T13:03:33.862Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T13:03:33.862Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T13:03:34.077Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T13:04:21.232Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T13:04:21.241Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T13:04:21.245Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T13:04:21.327Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T13:04:21.328Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T13:04:21.338Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T13:04:21.340Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T13:04:21.467Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T13:04:59.740Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T13:04:59.750Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T13:04:59.753Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T13:04:59.836Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T13:04:59.839Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T13:04:59.840Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T13:04:59.840Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T13:04:59.952Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T13:05:37.458Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T13:05:37.467Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T13:05:37.471Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T13:05:37.551Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T13:05:37.553Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T13:05:37.553Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T13:05:37.554Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T13:05:37.672Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T13:06:03.884Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T13:06:03.896Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T13:06:03.901Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T13:06:03.980Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T13:06:03.984Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T13:06:03.984Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T13:06:03.984Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T13:06:04.095Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T13:06:35.841Z] INFO  [StopHook] Stop hook triggered (session=cd0daf26-041f-4d32-bf57-3b857eaa6d4d)
+[2026-07-27T13:06:35.854Z] INFO  [StopHook] Hook input — session_id=cd0daf26-041f-4d32-bf57-3b857eaa6d4d, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl
+[2026-07-27T13:06:35.858Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T13:06:35.939Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T13:06:35.949Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T13:06:35.949Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T13:06:35.949Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T13:06:36.124Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined

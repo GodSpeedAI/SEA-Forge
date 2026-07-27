@@ -89,6 +89,32 @@ pub enum SfwpQuery {
     RunGet {
         run_id: String,
     },
+    /// `asset.list` (Task 9). Takes no parameters: the catalog is small and the
+    /// renderer filters by kind locally, so a server-side filter would be a
+    /// second place for "which assets exist" to be decided.
+    AssetList,
+    /// `delegation.preview` (Task 10). Mirrors `Request::DelegationPreview`,
+    /// whose params are `#[serde(flatten)]`ed — so these fields sit beside
+    /// `verb` on the wire rather than nested under a `params` object.
+    ///
+    /// The field list is deliberately identical to the delegation *command*'s
+    /// inputs. A preview knob the command cannot accept would let the renderer
+    /// show a job contract nobody can run.
+    DelegationPreview {
+        endpoint: String,
+        instruction: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        model: Option<String>,
+        max_turns: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        token_budget: Option<u64>,
+    },
+    /// `delegation.list` (Task 11). Takes no parameters: the roster is the
+    /// cell's delegations, and a server-side filter would be a second place to
+    /// decide which delegations exist. `SfwpCommand::CancelDelegation` is the
+    /// command half and has existed since Task 3 — this is what finally makes
+    /// its targets enumerable.
+    DelegationList,
 }
 
 /// The operator's intended next operation, mirroring the server's
@@ -344,6 +370,84 @@ mod tests {
         assert_eq!(
             record,
             serde_json::json!({"verb": "run_get", "run_id": "run-1"})
+        );
+    }
+
+    /// A unit variant must serialize to the bare tag object — a stray field or
+    /// a `null` payload would make the server's `Request::AssetList` fail to
+    /// deserialize, and the catalog would read as a transport error rather than
+    /// as an empty cell.
+    #[test]
+    fn asset_list_serializes_to_the_bare_verb() {
+        assert_eq!(
+            serde_json::to_value(SfwpQuery::AssetList).unwrap(),
+            serde_json::json!({"verb": "asset_list"})
+        );
+    }
+
+    /// The server flattens `DelegationPreviewParams` into the request, so these
+    /// fields must land beside `verb` and not under a `params` key. An omitted
+    /// optional must stay absent rather than serialize as `null`: the server's
+    /// `Option<u64>` would reject an explicit null for `token_budget`, and "no
+    /// token cap" would come back as a transport error.
+    #[test]
+    fn delegation_preview_flattens_its_params_beside_the_verb() {
+        let minimal = serde_json::to_value(SfwpQuery::DelegationPreview {
+            endpoint: "local".into(),
+            instruction: "summarize".into(),
+            model: None,
+            max_turns: 4,
+            token_budget: None,
+        })
+        .unwrap();
+        assert_eq!(
+            minimal,
+            serde_json::json!({
+                "verb": "delegation_preview",
+                "endpoint": "local",
+                "instruction": "summarize",
+                "max_turns": 4,
+            })
+        );
+
+        let full = serde_json::to_value(SfwpQuery::DelegationPreview {
+            endpoint: "local".into(),
+            instruction: "summarize".into(),
+            model: Some("m1".into()),
+            max_turns: 4,
+            token_budget: Some(5000),
+        })
+        .unwrap();
+        assert_eq!(full["model"], "m1");
+        assert_eq!(full["token_budget"], 5000);
+    }
+
+    /// The roster query and the cancel command are two halves of one control
+    /// loop, so they are asserted together: a drift in either verb spelling
+    /// leaves an operator able to see delegations but not stop them, or the
+    /// reverse.
+    #[test]
+    fn the_delegation_roster_and_its_cancel_command_use_the_verbs_the_server_accepts() {
+        assert_eq!(
+            serde_json::to_value(SfwpQuery::DelegationList).unwrap(),
+            serde_json::json!({"verb": "delegation_list"})
+        );
+
+        let cancel = serde_json::to_value(SfwpCommand::CancelDelegation {
+            run_id: "run-1".into(),
+            policy: None,
+            entity: None,
+            process: None,
+            request_id: Some("req-1".into()),
+        })
+        .unwrap();
+        assert_eq!(
+            cancel,
+            serde_json::json!({
+                "verb": "cancel_delegation",
+                "run_id": "run-1",
+                "request_id": "req-1",
+            })
         );
     }
 }

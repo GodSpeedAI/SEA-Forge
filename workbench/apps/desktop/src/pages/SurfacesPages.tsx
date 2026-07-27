@@ -221,68 +221,6 @@ export function ThothPage() {
   );
 }
 
-export function AssetsPage() {
-  const route = OPERATE_ROUTES.assets;
-  const assets = [
-    ["repair.tests", "ready", "Available", "Compatible with current policy", "JUnit manifest"],
-    ["agent-kit/repair", "unknown", "Installed", "Endpoint validation stale", "Install record"],
-    [
-      "external/triage-bundle",
-      "degraded",
-      "Declared",
-      "Inspection required before adoption",
-      "Bundle digest",
-    ],
-  ] as const;
-
-  return (
-    <RouteLayout
-      route={route}
-      primary={
-        <div className="content-primary">
-          <Panel kicker="Availability ladder" title="Governed assets" id="asset-catalog-table">
-            <div className="asset-table" aria-label="Governed assets">
-              <div className="asset-row asset-row--header" aria-hidden="true">
-                <span>Name</span>
-                <span>Availability</span>
-                <span>Compatibility</span>
-                <span>Evidence</span>
-              </div>
-              {assets.map(([name, state, label, compatibility, evidence]) => (
-                <InspectButton
-                  key={name}
-                  route={route}
-                  className="asset-row"
-                  detail={`${name}: ${compatibility}`}
-                >
-                  <strong className="machine-value">{name}</strong>
-                  <Status state={state} label={label} />
-                  <span>{compatibility}</span>
-                  <span className="machine-value">{evidence}</span>
-                </InspectButton>
-              ))}
-            </div>
-          </Panel>
-          <Panel kicker="Selected asset" title="repair.tests" id="asset-detail">
-            <dl className="detail-grid">
-              <div><dt>Version</dt><dd className="machine-value">1.4.2</dd></div>
-              <div><dt>Producer</dt><dd>Local test suite</dd></div>
-              <div><dt>Compatibility</dt><dd>Policy PB-14</dd></div>
-              <div><dt>Evidence</dt><dd>JUnit report required</dd></div>
-            </dl>
-          </Panel>
-        </div>
-      }
-      attention={
-        <Panel kicker="Import boundary" title="External bundle is inert" id="asset-boundary">
-          <p>Inspection can stage the bundle. It cannot adopt it automatically.</p>
-          <InspectButton route={route}>Why this boundary</InspectButton>
-        </Panel>
-      }
-    />
-  );
-}
-
 export function ModelsPage() {
   const route = OPERATE_ROUTES.domain;
   return (
@@ -363,6 +301,13 @@ function ValidationRow({
     </InspectButton>
   );
 }
+
+// Assets is no longer a specimen either. `asset.list` projects the templates,
+// agent endpoints, and extensions this cell actually holds, with endpoint
+// standing derived from probe records rather than illustrated — which is the
+// one thing the copied layout could not do, since it hardcoded the availability
+// ladder the kernel refuses to let configuration assert.
+export { AssetCatalogPage as AssetsPage } from "./AssetCatalogPage";
 
 // Cases and Inbox are no longer specimens. `case.list`/`case.get_overview`/
 // `case.get_horizon` and `approval.list`/`approval.decide` are implemented by

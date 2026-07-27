@@ -13,9 +13,12 @@
 //! exactly and keep the negotiation/correlation/event surface legible.
 
 pub mod approvals;
+pub mod assets;
 pub mod case;
 pub mod case_views;
 pub mod correlation;
+pub mod delegation_preview;
+pub mod delegations;
 pub mod events;
 pub mod precondition;
 pub mod readiness;
@@ -156,6 +159,35 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
         method: "run.get",
         class: InteractionClass::Inspect,
     },
+    // --- SFWP additive asset-catalog method (Task 9, ADR-003) ---
+    // `asset.list` is a read-only projection over three sources the kernel
+    // already owns (materialized templates, configured agent endpoints, the
+    // extension registry) plus the probe evidence that has accrued against
+    // each endpoint. It creates nothing; see `assets` for why the three
+    // standing vocabularies stay disjoint.
+    MethodDescriptor {
+        method: "asset.list",
+        class: InteractionClass::Inspect,
+    },
+    // --- SFWP additive delegation method (Task 10, ADR-003) ---
+    // `delegation.preview` projects the job contract a `delegate` would run
+    // under. Inspect, not command: it commits no intent, plan, criteria, or
+    // authority decision, and it deliberately does *not* evaluate authority —
+    // a verdict with no ledger entry behind it would be an unrecorded grant.
+    MethodDescriptor {
+        method: "delegation.preview",
+        class: InteractionClass::Inspect,
+    },
+    // --- SFWP additive delegation roster (Task 11, ADR-003) ---
+    // `delegation.list` is the missing half of an already-reachable capability:
+    // `cancel_delegation` has existed since M12 but nothing could enumerate
+    // what there was to cancel. Inspect — it joins the server's live handles
+    // with the committed run records and reports the seam between them rather
+    // than guessing across it (see `delegations`).
+    MethodDescriptor {
+        method: "delegation.list",
+        class: InteractionClass::Inspect,
+    },
 ];
 
 /// True if `requested` names a supported protocol major version.
@@ -258,6 +290,17 @@ pub const SCHEMA_TYPES: &[&str] = &[
     "EvidenceRow",
     "TraceRow",
     "RecordPresence",
+    "AssetListResult",
+    "AssetRow",
+    "AssetKind",
+    "DelegationPreviewParams",
+    "DelegationPreviewResult",
+    "JobContractPreview",
+    "ResolvedValue",
+    "ValueSource",
+    "DelegationListResult",
+    "DelegationRow",
+    "DelegationStanding",
 ];
 
 /// Build the `system.hello` result, or an `unsupported_version` error if the

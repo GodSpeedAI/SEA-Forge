@@ -1,5 +1,4 @@
-import { useCallback, useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   validateCaseHorizon,
@@ -12,6 +11,7 @@ import {
 import { toError } from "./bridgeError";
 import { queryGoverned } from "./governedQuery";
 import { affectsCases } from "./eventKinds";
+import { useGovernedEventInvalidation } from "./useGovernedEventInvalidation";
 
 export { GovernedViewError as CaseViewError } from "./governedQuery";
 
@@ -48,40 +48,8 @@ const fetchCaseHorizon = (caseId: string) =>
  * Re-read case views when a case-relevant event lands. Unrecognized kinds also
  * trigger a read — see `eventKinds` for why that asymmetry is deliberate.
  */
-function useCaseEventInvalidation() {
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-
-    const safeUnlisten = (fn?: () => void) => {
-      try {
-        fn?.();
-      } catch {
-        /* subscription already gone */
-      }
-    };
-
-    listen<unknown>("sfwp://event", (event) => {
-      // `event?.payload`: a throwing listener tears down the subscription, so
-      // an unexpected frame shape degrades to "invalidate anyway".
-      if (!affectsCases(event?.payload)) return;
-      void queryClient.invalidateQueries({ queryKey: CASES_QUERY_KEY });
-    })
-      .then((fn) => {
-        if (disposed) safeUnlisten(fn);
-        else unlisten = fn;
-      })
-      .catch(() => {
-        /* no host bridge — views still re-read on demand */
-      });
-
-    return () => {
-      disposed = true;
-      safeUnlisten(unlisten);
-    };
-  }, [queryClient]);
-}
+const useCaseEventInvalidation = () =>
+  useGovernedEventInvalidation(affectsCases, CASES_QUERY_KEY);
 
 export function useCaseList() {
   const queryClient = useQueryClient();

@@ -9,6 +9,7 @@
 
 use schemars::schema_for;
 use sea_forge_server::sfwp::approvals::{ApprovalListResult, PendingApproval};
+use sea_forge_server::sfwp::assets::{AssetKind, AssetListResult, AssetRow};
 use sea_forge_server::sfwp::case::{
     EntryOptionsResult, PlanItemSummary, PreflightParams, PreflightResult, TemplateOption,
     TemplateParameter,
@@ -17,6 +18,13 @@ use sea_forge_server::sfwp::case_views::{
     CaseHorizon, CaseListResult, CaseOverview, CaseSummary, HorizonItem, RunSettlement,
 };
 use sea_forge_server::sfwp::correlation::RequestRecord;
+use sea_forge_server::sfwp::delegation_preview::{
+    DelegationPreviewParams, DelegationPreviewResult, JobContractPreview, ResolvedValue,
+    ValueSource,
+};
+use sea_forge_server::sfwp::delegations::{
+    DelegationListResult, DelegationRow, DelegationStanding,
+};
 use sea_forge_server::sfwp::events::EventFrame;
 use sea_forge_server::sfwp::precondition::{
     ChangedRecord, Precondition, RecordDigest, RejectedAsStale,
@@ -84,6 +92,17 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(EvidenceRow, "EvidenceRow"),
         schema!(TraceRow, "TraceRow"),
         schema!(RecordPresence, "RecordPresence"),
+        schema!(AssetListResult, "AssetListResult"),
+        schema!(AssetRow, "AssetRow"),
+        schema!(AssetKind, "AssetKind"),
+        schema!(DelegationPreviewParams, "DelegationPreviewParams"),
+        schema!(DelegationPreviewResult, "DelegationPreviewResult"),
+        schema!(JobContractPreview, "JobContractPreview"),
+        schema!(ResolvedValue, "ResolvedValue"),
+        schema!(ValueSource, "ValueSource"),
+        schema!(DelegationListResult, "DelegationListResult"),
+        schema!(DelegationRow, "DelegationRow"),
+        schema!(DelegationStanding, "DelegationStanding"),
     ]
 }
 

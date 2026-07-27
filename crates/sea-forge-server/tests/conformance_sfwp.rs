@@ -684,4 +684,20 @@ fn generated_schemas_are_committed_and_current() {
             );
         }
     }
+
+    // `sfwp::SCHEMA_TYPES` claims to share its list with the generator "so they
+    // never drift". Until this assertion existed the claim was only a comment,
+    // and it had already been broken once: eight Task 7 types reached the
+    // generator but never `system.get_schema`, which under-reported the
+    // contracts a client could fetch. Now the claim is enforced.
+    let mut advertised: Vec<String> = sea_forge_server::sfwp::SCHEMA_TYPES
+        .iter()
+        .map(|name| format!("{name}.schema.json"))
+        .collect();
+    advertised.sort();
+    assert_eq!(
+        advertised, fresh,
+        "sfwp::SCHEMA_TYPES and gen_sfwp_schema disagree; system.get_schema would \
+         under- or over-report the available contracts"
+    );
 }

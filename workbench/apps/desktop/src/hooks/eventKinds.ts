@@ -14,11 +14,22 @@
  * symmetric, so the default must not be either.
  */
 
-/** Event kinds the server emits today, verified against its publish sites. */
+/**
+ * Event kinds the server emits today, verified against its `publish_event`
+ * call sites.
+ *
+ * The two `agent_run.*` kinds were emitted by the server well before they were
+ * listed here. Because the narrowing is asymmetric they over-invalidated rather
+ * than being ignored, so nothing rendered stale — which is exactly the failure
+ * mode the asymmetry exists to produce, and exactly why the drift went
+ * unnoticed. Adding a kind here is what lets a surface *stop* refetching on it.
+ */
 export const KNOWN_EVENT_KINDS = [
   "case.submitted",
   "approval.approved",
   "approval.rejected",
+  "agent_run.delegated",
+  "agent_run.cancellation_requested",
 ] as const;
 
 export type KnownEventKind = (typeof KNOWN_EVENT_KINDS)[number];
@@ -41,6 +52,11 @@ const READINESS_IRRELEVANT: readonly string[] = [
   "case.submitted",
   "approval.approved",
   "approval.rejected",
+  // Delegating or cancelling changes neither the self-model nor the endpoint
+  // set. It *does* change an endpoint's standing once the probe settles, but
+  // that is `asset.list`'s projection, not readiness'.
+  "agent_run.delegated",
+  "agent_run.cancellation_requested",
 ];
 
 /** Kinds that can change a case list, overview, or horizon. */
@@ -48,10 +64,27 @@ const CASE_RELEVANT: readonly string[] = [
   "case.submitted",
   "approval.approved",
   "approval.rejected",
+  // A delegation runs inside a case and moves its horizon.
+  "agent_run.delegated",
+  "agent_run.cancellation_requested",
 ];
 
 /** Kinds that can change the approval inbox. */
 const APPROVAL_RELEVANT: readonly string[] = ["approval.approved", "approval.rejected"];
+
+/**
+ * Kinds that can change the delegation roster.
+ *
+ * Both `agent_run.*` kinds move a row's standing: one adds a delegation, the
+ * other flips `cancellable` to false. `case.submitted` can too — a committed
+ * case may dispatch an agent task — so it is included rather than excluded on
+ * the grounds that it is "a case event".
+ */
+const DELEGATION_RELEVANT: readonly string[] = [
+  "agent_run.delegated",
+  "agent_run.cancellation_requested",
+  "case.submitted",
+];
 
 /** Read the `kind` off a raw event frame without asserting its full shape. */
 export function eventKindOf(frame: unknown): string | undefined {
@@ -81,4 +114,11 @@ export function affectsApprovals(frame: unknown): boolean {
   const kind = eventKindOf(frame);
   if (kind === undefined) return true;
   return !isKnown(kind) || APPROVAL_RELEVANT.includes(kind);
+}
+
+/** True when `frame` should invalidate the delegation roster. */
+export function affectsDelegations(frame: unknown): boolean {
+  const kind = eventKindOf(frame);
+  if (kind === undefined) return true;
+  return !isKnown(kind) || DELEGATION_RELEVANT.includes(kind);
 }

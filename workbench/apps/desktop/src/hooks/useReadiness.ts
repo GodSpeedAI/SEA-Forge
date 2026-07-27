@@ -1,9 +1,8 @@
-import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { validateReadinessView, type ReadinessView } from "@sea-forge/contracts";
 import { affectsReadiness } from "./eventKinds";
+import { useGovernedEventInvalidation } from "./useGovernedEventInvalidation";
 
 /**
  * The intended-operation shape, derived from the generated `ReadinessView`
@@ -67,8 +66,6 @@ export interface UseReadinessResult {
  * invalidates. See `eventKinds` for why that asymmetry is the safe default.
  */
 export function useReadiness(intendedOperation?: IntendedOperation): UseReadinessResult {
-  const queryClient = useQueryClient();
-
   const query = useQuery<ReadinessView, Error>({
     queryKey: [...READINESS_QUERY_KEY, intendedOperation ?? null],
     queryFn: () => fetchReadiness(intendedOperation),
@@ -77,44 +74,7 @@ export function useReadiness(intendedOperation?: IntendedOperation): UseReadines
     retry: false,
   });
 
-  useEffect(() => {
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-
-    const safeUnlisten = (fn?: () => void) => {
-      // Under StrictMode the effect mounts/unmounts twice; a partially-resolved
-      // unlisten can throw in a mocked runtime. Swallow it — the subscription is
-      // being torn down regardless.
-      try {
-        fn?.();
-      } catch {
-        /* subscription already gone */
-      }
-    };
-
-    listen<unknown>("sfwp://event", (event) => {
-      // `event?.payload`: a listener that throws tears down the subscription,
-      // so a frame arriving in an unexpected shape must degrade to
-      // "invalidate anyway", never to a dead listener.
-      if (!affectsReadiness(event?.payload)) return;
-      void queryClient.invalidateQueries({ queryKey: READINESS_QUERY_KEY });
-    })
-      .then((fn) => {
-        if (disposed) {
-          safeUnlisten(fn);
-        } else {
-          unlisten = fn;
-        }
-      })
-      .catch(() => {
-        /* listen unavailable (e.g. no host bridge) — readiness still refetches on demand */
-      });
-
-    return () => {
-      disposed = true;
-      safeUnlisten(unlisten);
-    };
-  }, [queryClient]);
+  useGovernedEventInvalidation(affectsReadiness, READINESS_QUERY_KEY);
 
   return { query };
 }

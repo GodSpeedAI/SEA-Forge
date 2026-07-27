@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DelegationPreviewParams",
+  "description": "`delegation.preview` parameters.\n\nDeliberately the same inputs `Request::Delegate` accepts and no others. A\npreview that took a knob the command cannot take (a per-request retention\noverride, say) would describe a delegation nobody can actually run.\n\n`max_turns` defaults to `0` rather than to some runnable number: an unset\nturn cap is not a runnable delegation, and the preview says so through the\nsame rule execution uses instead of inventing a cap on the operator's\nbehalf.",
+  "type": "object",
+  "properties": {
+    "endpoint": {
+      "type": "string"
+    },
+    "instruction": {
+      "type": "string",
+      "default": ""
+    },
+    "max_turns": {
+      "type": "integer",
+      "format": "uint32",
+      "default": 0,
+      "minimum": 0
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "token_budget": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "default": null,
+      "minimum": 0
+    }
+  },
+  "required": [
+    "endpoint"
+  ]
+}

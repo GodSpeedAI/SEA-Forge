@@ -7,12 +7,13 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invokeMock(...args),
 }));
 
-import { AssetsPage, ModelsPage, ThothPage } from "./SurfacesPages";
+import { ModelsPage, ThothPage } from "./SurfacesPages";
 
 // Surfaces that have graduated out of this file are covered by their own
 // suites: `OperationsPage` (durable events ledger), `AdminPage` →
-// `SystemContractPage`, `CasesPage` → `CaseHorizonPage`, and `InboxPage` →
-// `ApprovalInboxPage`. What remains here is only what is still illustrative.
+// `SystemContractPage`, `CasesPage` → `CaseHorizonPage`, `InboxPage` →
+// `ApprovalInboxPage`, and `AssetsPage` → `AssetCatalogPage`. What remains here
+// is only what is still illustrative.
 
 function renderPage(Page: () => React.JSX.Element) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -36,7 +37,6 @@ afterEach(cleanup);
 
 describe.each([
   { Page: ThothPage, heading: "Thoth workspace", region: "thoth-question-composer", method: "thoth.ask" },
-  { Page: AssetsPage, heading: "Asset catalog", region: "asset-catalog-table", method: "asset.list" },
   {
     Page: ModelsPage,
     heading: "Domain models",

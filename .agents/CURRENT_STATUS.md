@@ -2063,3 +2063,340 @@ timing test and no CLI code was touched by this task.
 evidence from every termination) now have their record surface and need only
 artifact/stdout access; or `13.4` (capability records), which can read the
 declaration rows this task already projects.
+
+**Iteration entry point**: `.agents/WORKBENCH-SLICE-PROMPT.md` holds the
+idempotent prompt for advancing the workbench one slice at a time. It derives
+state from this file, `IMPLEMENTED_METHODS`, and `router.tsx` on every run
+rather than from a remembered plan, so it selects the same next slice against an
+unchanged tree and never re-does shipped work.
+
+## Task 9 — the governed asset catalog (epic 4.1, 4.5, 4.7, 4.8; unblocks 4.6, 9.4, 9.5, 6.7)
+
+**Slice chosen for blast radius.** Three surfaces still rendered copied
+specification data (Thoth, Assets, Models). Assets was picked over Thoth because
+of what sits *downstream*, not because journey 4 is longer:
+
+- Journey 9's delegation stories (9.4 configure an agent task, 9.5 run HTTP/ACP
+  agents, 9.7 monitor and intervene) all begin with "choose an eligible
+  endpoint". The kernel has spoken `agent_list`, `agent_probe`, `delegate`, and
+  `cancel_delegation` since M12 — the capability was real and unreachable from
+  the workbench, the same shape as the `approval.decide` gap Task 7 closed.
+- The Assets specimen was the *worst-behaved* of the three. Thoth and Models
+  fabricate layout; Assets fabricated an availability ladder
+  (`Available`/`Installed`/`Declared`) that `AgentEndpointConfig::validate`
+  explicitly refuses to let even *configuration* assert, because that ladder is
+  evidence-derived. The renderer was claiming what the kernel rejects.
+
+Runner-up was `thoth.ask` (journey 3, nine stories). Passed over because it is
+not one slice: it needs a typed response contract, a disclosure-gating decision,
+and an AG-UI stream — and nothing downstream is blocked by its absence, since a
+Thoth answer is an inspection aid that authorizes nothing.
+
+**Server** — `crates/sea-forge-server/src/sfwp/assets.rs`, additive per ADR-003:
+- `asset.list` over three sources the kernel already owns: materialized
+  templates (`<root>/templates/*.yaml`), configured agent endpoints
+  (`server.yaml`), and the extension registry.
+- Endpoint standing folded from committed records, never asserted: `declared`
+  (configured only) → `probed` (a registry runtime-adapter entry, which
+  `agent_probe::register_endpoint` writes only after an allowed authority
+  decision, or a probe run that settled) → `demonstrated` (an *accepted* probe
+  settlement). The most recent probe decides, so an endpoint that has started
+  failing does not keep an old demonstration.
+- Advertised via `IMPLEMENTED_METHODS`; `AssetListResult`/`AssetRow`/`AssetKind`
+  added to `SCHEMA_TYPES` and `gen_sfwp_schema.rs`.
+
+What the design had to get right:
+
+- **Three vocabularies stay three.** The obvious simplification is one shared
+  availability enum. It would make a quarantined extension and an unprobed
+  endpoint render identically — erasing *refused* vs *not yet proven*, which is
+  the entire content of epic 4.8. Each row carries its own kind's word verbatim
+  (`materialized` / `declared|probed|demonstrated` / `active|disabled|
+  quarantined|superseded`) and the UI maps each separately.
+- **Standing and blocking are separate fields.** They answer different
+  questions. An extension can be `active` and still refused because its trust
+  level is quarantined; an endpoint can be `declared` — proven nothing — and be
+  perfectly lawful to probe. One field would have to drop one of the two facts.
+- **Absence is reported, not dropped.** `case.entry_options` silently skips a
+  template it cannot parse and `agent_probe::list` silently drops an endpoint
+  that will not snapshot, so a broken file reads as "no such asset" in both.
+  `asset.list` lists it with the reason and names the source in `unreadable`.
+- **The floor stays the floor.** A configured endpoint with no evidence is
+  `declared` with an empty `evidence_refs` — an honest empty list, not a
+  missing one, and never upgraded on the strength of being configured.
+
+**Frontend**:
+- `hooks/useAssets.ts` over `queryGoverned`. Deliberately *not* event-
+  invalidated: no `KNOWN_EVENT_KINDS` entry announces a template, endpoint, or
+  extension change, so subscribing to the case/run taxonomy would look like
+  liveness without being it. The page says so and offers an explicit re-read.
+- `pages/AssetCatalogPage.tsx` replaces the specimen `AssetsPage`. Three
+  kind-scoped tables rather than one — a merged table would put the three
+  vocabularies in one column and invite reading them as one ladder. `run:<id>`
+  evidence refs link to the run record; ledger ids render as ids rather than as
+  links that go nowhere.
+- `pages/standing.ts` gains `ASSET_STANDING_VARIANT`; nothing in it maps to a
+  blocked variant, because blocking is the other column.
+- `SURFACED_METHODS` gained `asset.list` — **and `run.list`/`run.get`, which
+  Task 8 shipped, wired, and rendered but never listed.** `/admin` had been
+  reporting two live methods as "implemented, not surfaced" ever since.
+
+**Neatcode judgment.** Two shared things, both load-bearing; nothing else.
+`run_views::read_json` became `pub(crate)` rather than being copied — the two
+projections must agree that a half-written record is not a record.
+`ASSET_STANDING_VARIANT` lives with the other standing maps for the reason
+stated there. Explicitly *not* built: an `asset.get` detail method (the row
+carries what the detail panel needs), a server-side `kind` filter (the catalog
+is small and a second place to decide "which assets exist" is a liability), and
+a shared template-enumeration helper (two readers, not three — logged instead).
+
+**Gates**: `cargo fmt --all -- --check` clean; `devbox run -- just check` — all
+gates green (fmt, clippy, cargo-deny, gitleaks, no leaks); `cargo test
+--workspace --all-features --locked` — all suites pass, zero failures. Two
+tests are **skipped**, both pre-existing and unrelated: `self_invoke_noop_pass`
+and `self_invoke_noop_fail` are `#[ignore]`d in the CLI suite. The Tauri host
+crate is outside the workspace and was run separately (`cargo test` in
+`src-tauri`): 2 lib + 4 integration tests pass. Frontend `bun run check` clean
+apart from the pre-existing `router.tsx` fast-refresh warning;
+`bun run --cwd apps/desktop test` — 85 passed / 15 files (was 79 / 14).
+
+**Tests added**: 12 in `crates/sea-forge-server/tests/conformance_assets.rs`
+(ladder floor, accepted → demonstrated, rejected → probed-and-blocked-with-its-
+basis, most-recent-probe-wins, no evidence leakage between endpoints, registry
+registration reaching `probed` but not `demonstrated`, no double-listing of a
+registered endpoint, quarantined trust blocking an `active` extension,
+unparseable template reported not dropped, empty cell staying empty, catalog
+advertised as `inspect`); 3 unit tests in `sfwp/assets.rs`; 9 in
+`pages/AssetCatalogPage.test.tsx`; 1 in the host bridge; and one closing a
+documented debt — `generated_schemas_are_committed_and_current` now asserts
+`SCHEMA_TYPES` equals the generator's emitted filenames, so the comment claiming
+they "never drift" is finally enforced.
+
+**Next spendable slice**: `9.4` (configure an agent task) is now unblocked and
+is the highest-leverage follow-on — endpoints are enumerable with real standing,
+`delegate` exists in the kernel, and the missing piece is a job-contract
+inspection view plus a `delegation.preview`-shaped inspect method. The
+alternative is `thoth.ask`'s response contract (journey 3), which remains the
+largest single unclaimed block but is at least two slices wide.
+
+---
+
+## Task 10 — the delegation job contract (epic 9.4; unblocks 9.5, 9.7, 9.2)
+
+**Slice**: `delegation.preview` — an SFWP inspect method that projects the
+complete job contract a `delegate` with these exact inputs would run under, plus
+a `/delegate` surface that reads it.
+
+**Why this one.** The runner-up was `thoth.ask` (journey 3, nine stories), passed
+over for the same reason as last slice: it is a response contract *plus*
+disclosure gating *plus* an AG-UI stream, which is at least two slices, and
+nothing downstream is blocked by its absence. 9.4 was picked because it is the
+step every remaining journey-9 story starts from — 9.5 (provider parity), 9.7
+(monitor and intervene), and 9.2 (the granted sandbox) all presuppose a
+configured, inspectable agent task — and because the kernel's `delegate` has
+been reachable-but-blind since M12: the only way to learn what a delegation
+would do was to run one, which is exactly the side effect being decided about.
+
+**Settles** 9.4. **Unblocks** 9.5, 9.7, 9.2.
+
+**Server** (`crates/sea-forge-server/src/sfwp/delegation_preview.rs`):
+- `DelegationPreviewParams` takes *exactly* the inputs `Request::Delegate`
+  accepts. A preview knob the command cannot take would describe a delegation
+  nobody can run.
+- The contract carries provider kind, endpoint digest, resolved model and
+  transcript retention (each with a `ValueSource`), instruction hash + size
+  against the endpoint's own cap, response cap, timeout, turn cap, token budget,
+  the authority action kind, and a `contract_digest`.
+- `eligible` means only "no precondition known at preview time is unmet". The
+  method deliberately does **not** evaluate authority: a verdict with no ledger
+  entry behind it would be an unrecorded grant. It names the gate (`agent_task`)
+  and stops.
+- Standing, evidence refs, and evidence-derived blocking come from
+  `sfwp::assets` rather than being re-derived, so `/assets` and `/delegate` can
+  never disagree about whether an endpoint is usable.
+- An unconfigured endpoint gets **no** standing word rather than being demoted
+  to `declared` — absence reported, not inferred onto a ladder it was never on.
+- Absent `token_budget` is omitted, never zeroed: a zero budget and no budget are
+  opposite instructions to the runner.
+
+**Bug found and fixed.** `delegate_inner` passed `..Default::default()` for
+`DelegationRequest::transcript_retention`, whose doc comment says the caller has
+already resolved it. Every socket-issued delegation was therefore pinned to
+`summarized`, silently ignoring an endpoint that had asked for `full`
+transcripts (`case_dispatch` resolved correctly; the standalone verb did not).
+Fixed to call `TranscriptRetentionMode::resolve` through the same chain. This
+was in scope rather than deferred: a preview reporting `full (from the endpoint
+descriptor)` while execution ran `summarized` would be a projection lying about
+truth, which is the one thing this method exists not to do.
+
+**Frontend**: `hooks/useDelegationPreview.ts` (parameterised — the request is
+the query key, and an uncommitted request issues no query); `pages/
+DelegationWorkbench.tsx` at `/delegate`, plus a sidebar entry. Blocked endpoints
+stay in the picker: hiding one would report an endpoint that exists and is
+refused as one that is absent, and the refusal is what the operator came to
+read. Editing after reading marks the contract as describing the earlier
+request rather than silently re-attributing it to the current form. There is no
+"Run delegation" button — `delegate` is a protected command and belongs behind
+`ProtectedActionButton` with its own preconditions, which is the next slice.
+
+**Neatcode judgment.** Two extractions, both load-bearing, no new abstractions.
+`delegation::check_preconditions` now holds the four request-shape rules that
+were about to exist in two copies — execution takes the first unmet rule, the
+preview lists all of them, and neither can drift. `action_for_delegation` became
+`pub(crate)` so the preview reports the *same* authority action that will be
+submitted, including the descriptor hash, rather than a second spelling of it.
+`VALUE_SOURCE_LABEL` joined the existing standing maps and is deliberately not a
+pill: provenance is different, not better or worse, and a `ready`/`degraded`
+treatment would rank "you chose this" above "the endpoint chose it". Explicitly
+*not* built: a read-only authority dry run (see above), a `delegation.commit`
+envelope, a debounced live preview (an explicit read plus a staleness marker is
+less code and does not manufacture contracts nobody chose), and a new CSS module
+(`RunRecordPage.module.css` already carried the layout).
+
+**Gates**: `cargo fmt --all -- --check` clean; `devbox run -- just check` all
+green; `cargo test --workspace --all-features --locked` — exit 0, **101 suites,
+762 passed, 0 failed, 4 ignored**.
+**Those four are the skipped ones**, all `#[ignore]`d, all pre-existing and untouched by
+this slice: `self_invoke_noop_pass` and `self_invoke_noop_fail` (self-invocation
+fixtures in `sea-forge-case-runner`, deliberately never executed by a normal
+run) and `t16_1_real_acp_host_release_gate` / `t16_6_real_swe_seed_release_gate`
+(release gates needing operator-supplied real ACP / SWE_SEED hosts). No flakes
+observed this run. Correction to the Task 9 note above: it said two skipped
+tests in the CLI suite — there are four, and the `self_invoke_*` pair lives in
+`sea-forge-case-runner`, not the CLI. The Tauri host crate is outside the
+workspace and was run separately in `src-tauri` (3 lib + 4 integration, pass). Frontend
+`bun run check` clean apart from the pre-existing `router.tsx` fast-refresh
+warning; `bun run --cwd apps/desktop test` — 98 passed / 16 files (was 85 / 15).
+
+**Tests added**: 14 in `crates/sea-forge-server/tests/conformance_delegation_
+preview.rs` (contract projection; **nothing written to runs/cases/ledger**;
+authority named but never decided and no verdict field present; unconfigured
+endpoint has no standing and no contract; every unmet precondition reported not
+just the first; over-long instruction blocked against the endpoint's own cap;
+instruction reported by hash and size and never echoed; requested vs endpoint
+model provenance; retention resolved endpoint-then-cell; a rejected probe
+blocking the preview with the *same words* `asset.list` uses; accepted probe
+evidence carried through; contract digest moving with request and descriptor;
+absent token budget omitted not zeroed; advertised as `inspect`); 4 unit tests
+in `sfwp/delegation_preview.rs`; 1 in the host bridge (flattened params, no
+nulls); 13 in `pages/DelegationWorkbench.test.tsx`.
+
+**Next spendable slice**: `9.7` (monitor and intervene in agent dialogue) —
+`delegate`/`cancel_delegation` both exist in the kernel and `agent_run.delegated`
+is already an event kind, so the missing piece is a `delegation.list`-shaped
+inspect method over live/finished delegations plus a cancel path behind
+`ProtectedActionButton`. That would also give `/delegate` its command half. The
+alternative remains `thoth.ask`'s response contract (journey 3): still the
+largest unclaimed block, still at least two slices wide.
+
+---
+
+## Task 11 — the delegation roster and per-run cancel (epic 9.7, partially; unblocks 9.8)
+
+**Slice**: `delegation.list` — an SFWP inspect roster joining the server's live
+delegation handles with the committed run records, plus a `/delegate` section
+that cancels exactly one delegation.
+
+**Why this one.** `cancel_delegation` has been a kernel verb since M12 and the
+Tauri host has carried `SfwpCommand::CancelDelegation` since Task 3 — but
+nothing could enumerate what there was to cancel. That is precisely the shape of
+the `approval.decide` gap Task 7 closed: a capability whose targets are
+undiscoverable is not a capability an operator has. It also completes the
+command half of `/delegate`, which Task 10 named as its own follow-on.
+
+**Scope honesty — 9.7 is settled in part, not in full.** The story asks for
+"bounded turn, token, streaming, permission, and continuation state" *during*
+the dialogue. The kernel does not expose that: `DelegationHandle` carries only a
+case id and two atomics, and the per-turn loop publishes no event. Turn and tool
+counts therefore appear only once `transcript-evidence.json` is written — after
+termination. The roster reports them as **absent while running** rather than as
+`0`, and the kernel-side gap is logged rather than papered over. What *is*
+settled is the control half: see every delegation, and cancel one without
+touching its siblings. **Unblocks** 9.8 (terminations are now reachable from a
+roster rather than only from a run id someone already had).
+
+**Server** (`crates/sea-forge-server/src/sfwp/delegations.rs`):
+- Joins two sources that cannot be merged — the in-memory handle map (live, not
+  durable) and `runs/<run_id>/` (durable, only once terminated).
+- `DelegationStanding` is a closed four-variant lifecycle vocabulary, distinct
+  from the existing execution and settlement ones. The load-bearing variant is
+  `unresolved`: a delegation run with no settlement *and* no live handle. That
+  is what a server restart mid-episode produces, and the kernel cannot say what
+  happened to it — so neither does the projection. `cancelled` would invent a
+  request nobody made; `failed` would invent a settlement nobody recorded.
+- Standing is not settlement. A delegation can be `settled` and rejected, or
+  `settled` after having been cancelled; the verdict is its own field carrying
+  the settlement record's own word.
+- `cancellable` is per-run by construction — the cancel flag lives on that run's
+  own handle — and the UI has one button per row with no bulk affordance.
+
+**Frontend**: `hooks/useDelegations.ts` (roster + cancel, event-invalidated
+unlike the asset catalog, because both `agent_run.*` kinds move a row);
+`pages/DelegationRoster.tsx` mounted on `/delegate` with per-row
+`ProtectedActionButton`. A successful cancel is reported as **requested**, never
+as "cancelled" — the kernel records a control request and the episode still
+terminates on its own terms. Reporting the outcome in place of the request would
+be the execution-equals-settlement conflation the epic forbids everywhere else.
+
+**Two bugs found and fixed en route.**
+1. `hooks/eventKinds.ts` listed three event kinds while claiming to be "verified
+   against its publish sites"; the server has been emitting five since M12
+   (`agent_run.delegated`, `agent_run.cancellation_requested` were missing).
+   Nothing rendered stale because the narrowing is asymmetric and unknown kinds
+   invalidate — which is exactly why it went unnoticed. Now listed, classified,
+   and pinned by a new `eventKinds.test.ts`.
+2. **My own Task 10 test was partly vacuous.** `preview_creates_no_run_case_or_
+   ledger_entry` checked that a directory named `ledger` stayed empty; the
+   kernel's path is `ledgers`, so that third of the assertion could never fail.
+   Both that test and the new roster equivalent now diff the whole cell tree
+   before and after, which cannot be fooled by a name the author did not think
+   of.
+
+**Neatcode judgment.** Two extractions, both at thresholds previously named, and
+no new abstractions. (1) `run_views::run_dirs` and `case_index` became
+`pub(crate)`: run enumeration had reached its third hand-rolled copy — the exact
+trigger recorded in `OBSERVED_DEBT.md` last slice — and "a run belongs to the
+case that claims it" is a rule two views must not disagree about. Each caller
+keeps its own readability policy, so nothing gained a policy parameter.
+(2) `hooks/useGovernedEventInvalidation.ts` replaces **five** hand-copied
+`listen("sfwp://event")` blocks that differed only in predicate and query key.
+They each carried two rules subtle enough to drift: `event?.payload` (a throwing
+listener tears down the subscription) and the `disposed` flag (a late-resolving
+`listen()` promise leaks a listener after unmount). `useOperationsStream` was
+deliberately left alone — it consumes frames as data, which is a different job.
+Explicitly *not* built: a `delegation.get` detail method (the row carries what
+the roster needs and `run.get` already resolves the rest), a live turn counter
+(the kernel has nothing to report), and a bulk-cancel affordance.
+
+**Gates**: `cargo fmt --all -- --check` clean; `devbox run -- just check` all
+green (fmt, clippy, cargo-deny advisories/bans/licenses/sources, gitleaks — 291
+commits scanned, no leaks); `cargo test --workspace --all-features --locked` —
+exit 0, **102 suites, 776 passed, 0 failed, 4 ignored** (was 762 passed at Task
+10). The four ignored are unchanged and pre-existing: `self_invoke_noop_pass`
+and `self_invoke_noop_fail` (self-invocation fixtures in
+`sea-forge-case-runner`) and `t16_1_real_acp_host_release_gate` /
+`t16_6_real_swe_seed_release_gate` (release gates needing operator-supplied real
+ACP / SWE_SEED hosts). No flakes observed. The Tauri host crate is outside the
+workspace and was run separately in `src-tauri`: 4 lib + 4 integration tests
+pass. Frontend `bun run check` clean apart from the pre-existing `router.tsx`
+fast-refresh warning; `bun run --cwd apps/desktop test` — 116 passed / 18 files
+(was 98 / 16).
+
+**Tests added**: 12 in `crates/sea-forge-server/tests/conformance_delegations.rs`
+(empty roster on a fresh cell; **no settlement + no handle → `unresolved`**;
+standing and settlement as separate facts; dialogue reported against its bounds;
+a cancelled episode settling with `cancelled` as its *termination*; non-agent
+runs excluded; case attribution via the shared index; absent token budget
+omitted not zeroed; cancelling an inactive delegation refused, agreeing with
+`cancellable: false`; unsettled sorting ahead of settled; advertised as
+`inspect`; **a full tree diff proving the read writes nothing**); 2 unit tests in
+`sfwp/delegations.rs`; 1 in the host bridge (roster verb + cancel command
+asserted together, since they are two halves of one control loop); 15 in
+`pages/DelegationRoster.test.tsx`; 3 in the new `hooks/eventKinds.test.ts`.
+
+**Next spendable slice**: `9.8` (preserve evidence from every termination) —
+the roster now reaches every terminated delegation, `TranscriptEvidence` already
+records termination, transcript hash, and harvested refs, and `run.get` resolves
+the rest; the gap is a termination-complete evidence view that proves failure
+cannot erase the record. The alternative remains `thoth.ask`'s response contract
+(journey 3): still the largest unclaimed block, still at least two slices wide.

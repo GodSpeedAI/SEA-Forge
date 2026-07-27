@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { validateApprovalListResult, type ApprovalListResult } from "@sea-forge/contracts";
 import { toError } from "./bridgeError";
 import { queryGoverned } from "./governedQuery";
 import { affectsApprovals } from "./eventKinds";
+import { useGovernedEventInvalidation } from "./useGovernedEventInvalidation";
 
 /**
  * The approval inbox over `approval.list` and `approval.decide`.
@@ -50,37 +50,7 @@ export function useApprovals(caseId?: string) {
     retry: false,
   });
 
-  useEffect(() => {
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-
-    const safeUnlisten = (fn?: () => void) => {
-      try {
-        fn?.();
-      } catch {
-        /* subscription already gone */
-      }
-    };
-
-    listen<unknown>("sfwp://event", (event) => {
-      // `event?.payload`: a throwing listener tears down the subscription, so
-      // an unexpected frame shape degrades to "invalidate anyway".
-      if (!affectsApprovals(event?.payload)) return;
-      void queryClient.invalidateQueries({ queryKey: APPROVALS_QUERY_KEY });
-    })
-      .then((fn) => {
-        if (disposed) safeUnlisten(fn);
-        else unlisten = fn;
-      })
-      .catch(() => {
-        /* no host bridge — the inbox still re-reads on demand */
-      });
-
-    return () => {
-      disposed = true;
-      safeUnlisten(unlisten);
-    };
-  }, [queryClient]);
+  useGovernedEventInvalidation(affectsApprovals, APPROVALS_QUERY_KEY);
 
   const refresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: APPROVALS_QUERY_KEY });
