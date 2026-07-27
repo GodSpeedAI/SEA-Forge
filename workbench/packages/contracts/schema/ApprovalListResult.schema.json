@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ApprovalListResult",
+  "description": "`approval.list` result body.",
+  "type": "object",
+  "properties": {
+    "approvals": {
+      "description": "Oldest request first: an approval inbox is a queue, and the thing that\nhas waited longest is the thing most likely to be blocking work.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PendingApproval"
+      }
+    },
+    "unreadable": {
+      "description": "Set when the journal itself could not be read. The list is then empty\n*because nothing could be determined*, which is different from an empty\nqueue — the UI must be able to tell those apart.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "approvals"
+  ],
+  "$defs": {
+    "PendingApproval": {
+      "description": "One pending approval, shaped for the inbox.",
+      "type": "object",
+      "properties": {
+        "approval_id": {
+          "type": "string"
+        },
+        "case_id": {
+          "type": "string"
+        },
+        "criteria_ref": {
+          "description": "Reference to the settlement criteria this decision is judged against,\nwhen the request recorded one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "criteria_sha256": {
+          "description": "Content hash of those criteria — lets the UI prove the criteria being\nshown are the ones the approval was raised against.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decision_id": {
+          "type": "string"
+        },
+        "expired": {
+          "description": "True when `expires_at` has passed. Reported so the approver sees *why*\na decision may be refused, rather than the row vanishing.",
+          "type": "boolean"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "plan_item_id": {
+          "type": "string"
+        },
+        "requested_at": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approval_id",
+        "case_id",
+        "run_id",
+        "plan_item_id",
+        "decision_id",
+        "requested_at",
+        "expires_at",
+        "expired"
+      ]
+    }
+  }
+}

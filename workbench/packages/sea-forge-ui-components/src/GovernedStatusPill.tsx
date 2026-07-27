@@ -12,6 +12,7 @@ export type GovernedStatusVariant =
   | "pending"
   | "committed"
   | "rejected"
+  | "unsupported"
   | "unknown";
 
 export interface GovernedStatusPillProps {
@@ -32,6 +33,7 @@ const KNOWN_VARIANTS = new Set<GovernedStatusVariant>([
   "pending",
   "committed",
   "rejected",
+  "unsupported",
   "unknown",
 ]);
 

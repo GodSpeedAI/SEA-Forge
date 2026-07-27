@@ -20,13 +20,13 @@ use sea_forge_core::{
 use sea_forge_ledger::LedgerStream;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::process::Command;
 use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
@@ -631,6 +631,51 @@ pub enum Request {
         #[serde(default)]
         preconditions: Option<sfwp::precondition::Precondition>,
     },
+    /// Case-navigation inspect methods (Task 7, ADR-003). Read-only projections
+    /// over committed case records — `case.json`, `plan.json`, per-run
+    /// `settlement.json`, and the case's own `case-events.jsonl`. None creates
+    /// a case, run, or ledger entry; see `sfwp::case_views`.
+    CaseList,
+    CaseGetOverview {
+        case_id: String,
+    },
+    CaseGetHorizon {
+        case_id: String,
+    },
+    /// List approvals awaiting a decision (Task 7, ADR-003). Read-only
+    /// projection over the approvals journal; see `sfwp::approvals`.
+    ApprovalList {
+        #[serde(default)]
+        case_id: Option<String>,
+    },
+    /// Resolve one approval. A thin envelope over the *same* `decide` path
+    /// `Approve`/`Reject` use — including its precondition check and its
+    /// correlated-outcome recording — so there is exactly one place an
+    /// approval decision can be made. `decision` selects the arm; an
+    /// unrecognized value is refused rather than defaulted, because guessing
+    /// between approve and reject is never a safe default.
+    ApprovalDecide {
+        case_id: String,
+        approval_id: String,
+        decision: String,
+        #[serde(default)]
+        note: Option<String>,
+        #[serde(default)]
+        request_id: Option<String>,
+        #[serde(default)]
+        preconditions: Option<sfwp::precondition::Precondition>,
+    },
+    /// Run-record inspect methods (Task 8, ADR-003). Read-only projections over
+    /// `<root>/runs/<run_id>/*` — the resolution target for the run ids the
+    /// case, horizon, approval, and event views already emit. Neither creates a
+    /// run or ledger entry; see `sfwp::run_views`.
+    RunList {
+        #[serde(default)]
+        case_id: Option<String>,
+    },
+    RunGet {
+        run_id: String,
+    },
 }
 
 #[derive(Deserialize)]
@@ -669,27 +714,106 @@ fn default_purpose() -> String {
     "planning".into()
 }
 
+/// `path` with `suffix` appended to its file name (`forge.sock` → `forge.sock.lock`).
+///
+/// Deliberately not `with_extension`, which would *replace* `.sock` and could
+/// collide with an unrelated sibling.
+fn suffixed(path: &Path, suffix: &str) -> Result<PathBuf, ForgeError> {
+    let name = path.file_name().ok_or_else(|| {
+        ForgeError::Input(format!("socket path has no file name: {}", path.display()))
+    })?;
+    let mut name = name.to_os_string();
+    name.push(suffix);
+    Ok(path.with_file_name(name))
+}
+
+/// Take the exclusive, process-lifetime lock guarding one socket path.
+///
+/// This is what makes a second server fail instead of silently unlinking a
+/// *live* socket: two servers sharing one socket path would both append to the
+/// same JSONL ledger and MMR, and the append-only invariant has no
+/// cross-process reconciliation for interleaved writers. Uses the same
+/// advisory-lock mechanism as the ledger's append stream, so the check is
+/// atomic rather than a connect-then-bind race.
+///
+/// The returned handle must stay in scope for as long as the server runs;
+/// dropping it releases the lock.
+fn lock_socket_path(socket_path: &Path) -> Result<std::fs::File, ForgeError> {
+    let lock_path = suffixed(socket_path, ".lock")?;
+    if let Some(parent) = lock_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| ForgeError::io("create server socket directory", e))?;
+    }
+    let lock_file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .map_err(|e| ForgeError::io("open server socket lock", e))?;
+    match lock_file.try_lock() {
+        Ok(()) => Ok(lock_file),
+        Err(std::fs::TryLockError::WouldBlock) => Err(ForgeError::io(
+            format!(
+                "another sea-forge server is already listening on {}",
+                socket_path.display()
+            ),
+            std::io::Error::new(std::io::ErrorKind::AddrInUse, "server socket lock held"),
+        )),
+        Err(std::fs::TryLockError::Error(e)) => Err(ForgeError::io("lock server socket", e)),
+    }
+}
+
 /// Start the server.
 pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>> {
     let socket_path = config.socket_path.clone();
     let state = Arc::new(ServerState::new(config)?);
 
-    // Remove stale socket.
-    let _ = std::fs::remove_file(&socket_path);
+    // Fail closed if another server already owns this socket path.
+    // `_socket_lock` is held for the process lifetime — do not drop it early.
+    let _socket_lock = lock_socket_path(&socket_path)?;
 
-    let listener = UnixListener::bind(&socket_path)?;
-
-    // Set socket permissions to 0600 (§11.1).
+    // Bind on a staging path, restrict it to 0600, then rename into place.
+    // `bind()` creates the socket with umask-derived permissions, so setting
+    // the mode *after* binding the live path leaves a window in which other
+    // local users can already connect (§11.1). Renaming publishes a socket
+    // that is 0600 from the first instant it is reachable, and atomically
+    // replaces any stale socket a crashed server left behind — which is why
+    // no unlink of the live path is needed. `forbid(unsafe_code)` at the crate
+    // root rules out setting `umask` around the bind instead.
+    let staging_path = suffixed(&socket_path, ".binding")?;
+    let _ = std::fs::remove_file(&staging_path);
+    let listener = UnixListener::bind(&staging_path)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&socket_path, std::fs::Permissions::from_mode(0o600))?;
+        std::fs::set_permissions(&staging_path, std::fs::Permissions::from_mode(0o600))?;
     }
+    std::fs::rename(&staging_path, &socket_path).inspect_err(|_| {
+        // Leave no orphaned staging socket behind on a failed publish.
+        let _ = std::fs::remove_file(&staging_path);
+    })?;
 
     tracing::info!("server listening on {}", socket_path.display());
 
     loop {
-        let (stream, _) = listener.accept().await?;
+        let (stream, _) = match listener.accept().await {
+            Ok(accepted) => accepted,
+            Err(e) => {
+                // One failed accept is not a reason to take the governed
+                // kernel down: EMFILE/ENFILE clear as descriptors are
+                // released, and ECONNABORTED only means that client went away
+                // between its connect and this accept. A listener that is
+                // genuinely broken fails every iteration and surfaces as a
+                // sustained warn stream rather than a silent process exit.
+                // ponytail: fixed 100ms backoff so a permanently broken
+                // listener cannot spin hot; a healthy accept never takes this
+                // branch, so it costs nothing in the normal path.
+                tracing::warn!("accept failed: {e}");
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                continue;
+            }
+        };
         let state = Arc::clone(&state);
         tokio::spawn(async move {
             if let Err(e) = handle_connection(stream, state).await {
@@ -717,6 +841,14 @@ async fn handle_connection(
     // ponytail: fixed per-connection cap; raise only if a measured subscriber
     // proves it drops too often under realistic event volume.
     const WRITER_CHANNEL_CAPACITY: usize = 256;
+
+    // `read_line` grows its buffer until it finds a newline, so a client that
+    // opens the socket and never sends one would otherwise consume memory
+    // without bound. The cap is applied to the read itself, so the oversized
+    // bytes are never allocated in the first place.
+    // ponytail: fixed 1 MiB per NDJSON request line; raise only if a real plan
+    // payload is measured near it.
+    const MAX_REQUEST_BYTES: u64 = 1024 * 1024;
     let (tx, mut rx) = mpsc::channel::<String>(WRITER_CHANNEL_CAPACITY);
     let writer_task = tokio::spawn(async move {
         while let Some(payload) = rx.recv().await {
@@ -732,11 +864,24 @@ async fn handle_connection(
 
     let result: Result<(), Box<dyn std::error::Error + Send + Sync>> = loop {
         line.clear();
-        let n = match reader.read_line(&mut line).await {
+        let n = match (&mut reader)
+            .take(MAX_REQUEST_BYTES)
+            .read_line(&mut line)
+            .await
+        {
             Ok(n) => n,
             Err(e) => break Err(Box::new(e) as _),
         };
         if n == 0 {
+            break Ok(());
+        }
+        // Hitting the cap with no terminator means the line was oversized:
+        // reject it and close rather than parsing a truncated request.
+        if n as u64 == MAX_REQUEST_BYTES && !line.ends_with('\n') {
+            let resp = serde_json::json!({
+                "error": format!("request line exceeds {MAX_REQUEST_BYTES} bytes")
+            });
+            let _ = tx.send(format!("{resp}\n")).await;
             break Ok(());
         }
         let request: Request = match serde_json::from_str(line.trim()) {
@@ -1126,6 +1271,66 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             serde_json::to_value(sfwp::case::preflight(&state.config.root, params))
                 .unwrap_or_else(|_| serde_json::json!({"error": "preflight serialization failed"}))
         }
+        Request::CaseList => serde_json::to_value(sfwp::case_views::list(&state.config.root))
+            .unwrap_or_else(|_| serde_json::json!({"error": "case list serialization failed"})),
+        Request::CaseGetOverview { case_id } => {
+            case_view_response(sfwp::case_views::get_overview(&state.config.root, &case_id))
+        }
+        Request::CaseGetHorizon { case_id } => {
+            case_view_response(sfwp::case_views::get_horizon(&state.config.root, &case_id))
+        }
+        Request::RunList { case_id } => serde_json::to_value(sfwp::run_views::list(
+            &state.config.root,
+            case_id.as_deref(),
+        ))
+        .unwrap_or_else(|_| serde_json::json!({"error": "run list serialization failed"})),
+        Request::RunGet { run_id } => match sfwp::run_views::get(&state.config.root, &run_id) {
+            Ok(view) => serde_json::to_value(view)
+                .unwrap_or_else(|_| serde_json::json!({"error": "run view serialization failed"})),
+            Err(error) => serde_json::json!({
+                "error": error.message(),
+                "error_class": error.class(),
+            }),
+        },
+        Request::ApprovalList { case_id } => serde_json::to_value(sfwp::approvals::list(
+            &state.config.root,
+            case_id.as_deref(),
+        ))
+        .unwrap_or_else(|_| serde_json::json!({"error": "approval list serialization failed"})),
+        Request::ApprovalDecide {
+            case_id,
+            approval_id,
+            decision,
+            note,
+            request_id,
+            preconditions,
+        } => {
+            // Route to the same `decide` helper `Approve`/`Reject` use. An
+            // unknown verdict is refused outright: defaulting it would resolve
+            // a governed decision on the server's guess.
+            let (cli_verb, method, event_kind) = match decision.as_str() {
+                "approve" => ("approve", "approval.approve", "approval.approved"),
+                "reject" => ("reject", "approval.reject", "approval.rejected"),
+                other => {
+                    return serde_json::json!({
+                        "error": format!("unknown approval decision {other:?}; expected \"approve\" or \"reject\""),
+                        "error_class": "invalid_decision",
+                    })
+                }
+            };
+            decide(
+                state,
+                cli_verb,
+                method,
+                event_kind,
+                &case_id,
+                &approval_id,
+                note.as_deref(),
+                request_id.as_deref(),
+                preconditions.as_ref(),
+            )
+            .await
+        }
         Request::CaseCommit {
             template_ref,
             params,
@@ -1298,6 +1503,26 @@ impl sfwp::precondition::RecordResolver for TemplateRecordResolver<'_> {
             self.root,
             template_ref,
         ))
+    }
+}
+
+/// Shape a case-view result into a wire response.
+///
+/// A failed lookup carries a machine-readable `error_class` (`not_found` vs
+/// `record_unreadable`) because those need different operator responses: the
+/// first means "you asked for something that isn't here", the second means
+/// "something that should be readable isn't" — an integrity signal. Collapsing
+/// both into a generic error would hide the second inside the first.
+fn case_view_response<T: serde::Serialize>(
+    result: Result<T, sfwp::case_views::CaseViewError>,
+) -> serde_json::Value {
+    match result {
+        Ok(view) => serde_json::to_value(view)
+            .unwrap_or_else(|_| serde_json::json!({"error": "case view serialization failed"})),
+        Err(error) => serde_json::json!({
+            "error": error.message(),
+            "error_class": error.class(),
+        }),
     }
 }
 

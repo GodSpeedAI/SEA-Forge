@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaseSummary",
+  "description": "One row of `case.list`.",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "case_state": {
+      "type": "string"
+    },
+    "close_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "closed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "run_count": {
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0
+    },
+    "summary": {
+      "description": "The operator-facing intent summary committed with the case.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "case_id",
+    "case_state",
+    "summary",
+    "created_at",
+    "run_count"
+  ]
+}

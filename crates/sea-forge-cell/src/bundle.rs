@@ -24,6 +24,38 @@ const RUN_EVIDENCE_FILES: &[&str] = &[
     "semantic-envelope.json",
 ];
 
+/// Maximum accepted size of a bundle file.
+///
+/// Import holds the whole bundle in memory at once — the raw bytes, then a
+/// per-entry copy, then the verified copy — and every hash check happens
+/// *after* the read. An unbounded read therefore exhausts memory before the
+/// integrity checks that would have rejected the file get a chance to run,
+/// and bundle bytes are untrusted by construction (§14.8).
+// ponytail: fixed ceiling, no config knob; raise only when a real exported
+// cell is measured near it.
+const MAX_BUNDLE_BYTES: u64 = 256 * 1024 * 1024;
+
+/// Read a bundle file, rejecting anything over [`MAX_BUNDLE_BYTES`].
+///
+/// Reads one byte past the ceiling rather than consulting `metadata` first, so
+/// the bound is enforced by the read itself; a `metadata` check could be
+/// invalidated by a concurrent writer between the check and the read.
+fn read_bundle_bytes(bundle: &Path) -> Result<Vec<u8>, ForgeError> {
+    let file =
+        File::open(bundle).map_err(|e| ForgeError::io(format!("read {}", bundle.display()), e))?;
+    let mut bytes = Vec::new();
+    file.take(MAX_BUNDLE_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| ForgeError::io(format!("read {}", bundle.display()), e))?;
+    if bytes.len() as u64 > MAX_BUNDLE_BYTES {
+        return Err(tamper_error(
+            bundle,
+            format!("bundle exceeds the {MAX_BUNDLE_BYTES}-byte limit"),
+        ));
+    }
+    Ok(bytes)
+}
+
 /// Export selected runs (and optionally templates) to a tar bundle at `out_path`.
 /// Returns the manifest. Caller is responsible for authority approval.
 pub fn export(
@@ -133,8 +165,7 @@ pub fn export(
 /// bundle — no partial state remains. Imported runs NEVER merge into local
 /// `capabilities.jsonl` (§7.4).
 pub fn import(root: &Path, bundle: &Path) -> Result<BundleManifest, ForgeError> {
-    let bytes =
-        fs::read(bundle).map_err(|e| ForgeError::io(format!("read {}", bundle.display()), e))?;
+    let bytes = read_bundle_bytes(bundle)?;
     // First pass: read manifest, then verify each entry by recomputing sha256.
     let mut archive = tar::Archive::new(&bytes[..]);
     let mut entries: Vec<(String, Vec<u8>)> = Vec::new();
@@ -413,8 +444,7 @@ pub fn imported_template_path(root: &Path, cell_id: &str, name: &str, version: &
 
 /// Read a manifest from a bundle tar (read-only).
 pub fn read_manifest(bundle: &Path) -> Result<BundleManifest, ForgeError> {
-    let bytes =
-        fs::read(bundle).map_err(|e| ForgeError::io(format!("read {}", bundle.display()), e))?;
+    let bytes = read_bundle_bytes(bundle)?;
     let mut archive = tar::Archive::new(&bytes[..]);
     for entry in archive
         .entries()

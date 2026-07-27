@@ -12,11 +12,14 @@
 //! `Sfwp(SfwpFrame)` variant: flat additive verbs match the existing pattern
 //! exactly and keep the negotiation/correlation/event surface legible.
 
+pub mod approvals;
 pub mod case;
+pub mod case_views;
 pub mod correlation;
 pub mod events;
 pub mod precondition;
 pub mod readiness;
+pub mod run_views;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -111,6 +114,48 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
         method: "case.commit",
         class: InteractionClass::Command,
     },
+    // --- SFWP additive case-navigation methods (Task 7, ADR-003) ---
+    // All three are read-only projections over committed case records; they
+    // create nothing and derive item standing by folding the trace events the
+    // case runner already appended (see `case_views`).
+    MethodDescriptor {
+        method: "case.list",
+        class: InteractionClass::Inspect,
+    },
+    MethodDescriptor {
+        method: "case.get_overview",
+        class: InteractionClass::Inspect,
+    },
+    MethodDescriptor {
+        method: "case.get_horizon",
+        class: InteractionClass::Inspect,
+    },
+    // --- SFWP additive approval methods (Task 7, ADR-003) ---
+    // `approval.list` is the missing half of an already-reachable capability:
+    // `approve`/`reject` require ids no method could previously enumerate.
+    // `approval.decide` is a thin envelope over that same governance path — it
+    // forks no decision logic.
+    MethodDescriptor {
+        method: "approval.list",
+        class: InteractionClass::Inspect,
+    },
+    MethodDescriptor {
+        method: "approval.decide",
+        class: InteractionClass::Command,
+    },
+    // --- SFWP additive run-record methods (Task 8, ADR-003) ---
+    // Read-only projections over per-run committed records. `run.get` is the
+    // resolution target for the run ids every other view already emits — see
+    // `run_views` for why the criteria pairing joins the settlement's own basis
+    // rather than re-evaluating criteria.
+    MethodDescriptor {
+        method: "run.list",
+        class: InteractionClass::Inspect,
+    },
+    MethodDescriptor {
+        method: "run.get",
+        class: InteractionClass::Inspect,
+    },
 ];
 
 /// True if `requested` names a supported protocol major version.
@@ -194,6 +239,25 @@ pub const SCHEMA_TYPES: &[&str] = &[
     "PreflightParams",
     "PreflightResult",
     "PlanItemSummary",
+    "CaseListResult",
+    "CaseSummary",
+    "CaseOverview",
+    "CaseHorizon",
+    "HorizonItem",
+    "RunSettlement",
+    "ApprovalListResult",
+    "PendingApproval",
+    "RunListResult",
+    "RunSummary",
+    "RunRecord",
+    "RunTermination",
+    "AuthorityProjection",
+    "CriterionCheck",
+    "SettlementDetail",
+    "DeclarationRow",
+    "EvidenceRow",
+    "TraceRow",
+    "RecordPresence",
 ];
 
 /// Build the `system.hello` result, or an `unsupported_version` error if the

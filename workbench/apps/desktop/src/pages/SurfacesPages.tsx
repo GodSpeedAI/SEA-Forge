@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { GovernedStatusPill } from "@sea-forge/ui-components";
 import { useEvidenceContext } from "../shell/EvidenceContext";
+import { UnbackedSurface } from "./UnbackedSurface";
+import {
+  STANDING_PRESENTATION,
+  standingOf,
+  useServerContract,
+} from "../hooks/useServerContract";
 import styles from "./SurfacesPages.module.css";
 import {
   OPERATE_ROUTES,
@@ -25,14 +31,28 @@ function routeEvidence(route: RouteContext, detail = route.reason) {
   };
 }
 
+/**
+ * Every pill inside a specimen surface renders `unknown`, whatever the layout
+ * asks for.
+ *
+ * This is the single choke point where the copied specification's illustrative
+ * states would otherwise become governance claims. The layouts below are the
+ * design target and are worth keeping, but the states they depict were written
+ * to show what the screens will look like — not read from any record. A pill
+ * saying `ready` here would be indistinguishable from one backed by evidence,
+ * so the label survives to carry the layout's meaning while the variant tells
+ * the truth: this cell knows nothing about it.
+ */
 function Status({
   state,
   label,
 }: {
+  /** Retained so the specimen layouts stay self-documenting; never rendered. */
   state: RouteState | "pending" | "unknown";
   label: string;
 }) {
-  return <GovernedStatusPill variant={state} label={label} className="status-pill" />;
+  void state;
+  return <GovernedStatusPill variant="unknown" label={label} className="status-pill" />;
 }
 
 function InspectButton({
@@ -59,24 +79,27 @@ function InspectButton({
 }
 
 function GovernedFocus({ route }: { route: RouteContext }) {
+  const { contract } = useServerContract();
+  const standing = standingOf(route.method, contract);
+  const presentation = STANDING_PRESENTATION[standing];
+
   return (
-    <section
-      className="governed-focus"
-      data-od-id={route.id}
-      data-state={route.state}
-    >
+    <section className="governed-focus" data-od-id={route.id} data-state="unknown">
       <div className="focus-copy">
         <div className="title-line">
           <h1>{route.title}</h1>
           <Status state="unknown" label="○ Specification preview" />
         </div>
-        <p>Reference scenario: {route.reason}</p>
+        <p>{presentation.explanation}</p>
+        <p className="operational-copy">Reference scenario: {route.reason}</p>
         <div className="focus-meta">
           <InspectButton route={route} className="freshness-badge">
             <span className="state-dot" />
             Copied specification · not live
           </InspectButton>
-          <span className="machine-value">Reference layout: {route.projection}</span>
+          <span className="machine-value">
+            requires {route.method} · {presentation.label.toLowerCase()}
+          </span>
         </div>
       </div>
       <div className="focus-actions">
@@ -126,8 +149,11 @@ function RouteLayout({
   attention: ReactNode;
   className?: string;
 }) {
+  // `data-specimen` marks the region whose contents are illustrative. The CSS
+  // watermark makes that legible at a glance, so an operator never has to infer
+  // it from the header alone.
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-specimen="true">
       <GovernedFocus route={route} />
       <div className={`content-grid ${className}`.trim()}>
         {primary}
@@ -338,156 +364,69 @@ function ValidationRow({
   );
 }
 
-export function CasesPage() {
-  const route = OPERATE_ROUTES.cases;
-  return (
-    <div className={styles.page}>
-      <GovernedFocus route={route} />
-      <section className="case-toolbar panel">
-        <div>
-          <p className="section-kicker">Case projections</p>
-          <h2>Repair agent for recurring service incidents</h2>
-        </div>
-        <div className="projection-switch">
-          <button className="segment segment--active" type="button">Board</button>
-          <button className="segment" type="button">List</button>
-          <button className="segment" type="button">Graph</button>
-        </div>
-      </section>
-      <section className="horizon-board" data-od-id="case-horizon-board">
-        <HorizonLane route={route} title="Spendable now" card="Local repair recovery" state="ready" status="Ready" />
-        <HorizonLane route={route} title="Awaiting authority" card="External agent repair" state="degraded" status="Awaiting evidence" />
-        <HorizonLane route={route} title="Blocked" card="Endpoint validation" state="blocked" status="Blocked" />
-        <HorizonLane route={route} title="Future" card="Evidence review" state="unknown" status="Parked" />
-      </section>
-    </div>
-  );
-}
+// Cases and Inbox are no longer specimens. `case.list`/`case.get_overview`/
+// `case.get_horizon` and `approval.list`/`approval.decide` are implemented by
+// the kernel, so both surfaces read committed records instead of illustrating
+// what they would look like. Re-exported under their original names so the
+// route table and any importer are unchanged.
+export { CaseHorizonPage as CasesPage } from "./CaseHorizonPage";
+export { ApprovalInboxPage as InboxPage } from "./ApprovalInboxPage";
 
-function HorizonLane({
-  route,
-  title,
-  card,
-  state,
-  status,
-}: {
-  route: RouteContext;
-  title: string;
-  card: string;
-  state: RouteState | "unknown";
-  status: string;
-}) {
-  return (
-    <section className={`horizon-lane horizon-lane--${state}`}>
-      <div><h2>{title}</h2><span className="machine-value">1</span></div>
-      <InspectButton route={route} className="case-card" detail={`${card}: ${status}`}>
-        <strong>{card}</strong>
-        <Status state={state} label={status} />
-        <span>Source-backed case projection</span>
-      </InspectButton>
-    </section>
-  );
-}
+// The operations console reads the durable events ledger for real; it lives in
+// its own module and is re-exported here so the route table is unchanged.
+export { OperationsPage } from "./OperationsPage";
 
-export function InboxPage() {
-  const route = OPERATE_ROUTES.inbox;
+/*
+ * Surfaces below have no SFWP method behind them in this cell. Each names the
+ * method from the target catalog that would back it and resolves its own
+ * standing from `system.hello`, so none of them asserts a state the kernel
+ * cannot evidence — and none of them keeps claiming absence after the kernel
+ * implements the method.
+ */
+
+export function MemoryPage() {
   return (
-    <RouteLayout
-      route={route}
-      primary={
-        <div className="content-primary">
-          <Panel
-            kicker="Approval APR-07"
-            title="Permit external agent endpoint probe"
-            id="approval-decision-panel"
-          >
-            <dl className="detail-grid">
-              <div><dt>Requesting actor</dt><dd>Operator</dd></div>
-              <div><dt>Sponsor</dt><dd>Service recovery</dd></div>
-              <div><dt>Resource</dt><dd className="machine-value">endpoint:repair-agent</dd></div>
-              <div><dt>Boundary</dt><dd>Probe only; no task start</dd></div>
-              <div><dt>Policy reason</dt><dd>External endpoint lacks current verification</dd></div>
-              <div><dt>Separation of duty</dt><dd>Requester may not approve</dd></div>
-            </dl>
-            <div className="decision-actions">
-              <InspectButton route={route}>Inspect evidence</InspectButton>
-              <InspectButton route={route} className="button button--attention">
-                Escalate for decision
-              </InspectButton>
-            </div>
-          </Panel>
-        </div>
-      }
-      attention={
-        <Panel
-          kicker="Decision consequence"
-          title="No automatic approval"
-          id="approval-consequence"
-        >
-          <p>Approval does not execute the probe. It only permits the bounded request.</p>
-          <p className="machine-value">Expires in 1h 58m</p>
-        </Panel>
-      }
+    <UnbackedSurface
+      title="Memory recall"
+      purpose="Developmental memory recalled under authority, with the records that constrain what may be retrieved."
+      method="memory.recall"
     />
   );
 }
 
-export function OperationsPage() {
-  const route = OPERATE_ROUTES.operations;
+export function CapabilitiesPage() {
   return (
-    <RouteLayout
-      route={route}
-      primary={
-        <div className="content-primary">
-          <Panel kicker="Run RUN-041" title="Repair recovery verification" id="execution-console">
-            <div className="dual-state">
-              <div><span>Execution</span><Status state="ready" label="Execution succeeded" /></div>
-              <div><span>Settlement</span><Status state="degraded" label="Settlement evaluating" /></div>
-            </div>
-            <div className="event-stream">
-              <div><span className="machine-value">EVT-1182</span><strong>Test command exited 0</strong><small>Execution evidence captured</small></div>
-              <div><span className="machine-value">EVT-1183</span><strong>Settlement evaluator queued</strong><small>Awaiting criterion result</small></div>
-              <div className="event-stale"><span className="machine-value">CURSOR</span><strong>Live state may be stale. Reconnecting…</strong><small>Last confirmed event remains visible.</small></div>
-            </div>
-          </Panel>
-          <Panel kicker="Evidence inventory" title="Settlement preview" id="settlement-preview">
-            <div className="criterion-row"><strong>Repair recovery test passes</strong><Status state="ready" label="Pass" /><span>JUnit report</span></div>
-            <div className="criterion-row"><strong>Qualifying declaration</strong><Status state="degraded" label="Not evaluated" /><span>Human reviewer required</span></div>
-          </Panel>
-        </div>
-      }
-      attention={
-        <Panel
-          kicker="Scoped control"
-          title="Cancellation is not required"
-          id="operation-control"
-        >
-          <p>No active process is running. Retry would create a new episode.</p>
-          <button className="button button--disabled" type="button" disabled>
-            Cancel run
-          </button>
-        </Panel>
-      }
+    <UnbackedSurface
+      title="Capability matrix"
+      purpose="Demonstrated capability with its qualifying settlements — what has held under variation, not what was declared."
+      method="capability.list"
     />
   );
 }
 
-function GenericSurfacePage({ title, kind }: { title: string; kind: string }) {
+export function ArtifactsPage() {
   return (
-    <div className={styles.genericPage}>
-      <h1>{title} Surface</h1>
-      <Status state="ready" label={`${kind} Active`} />
-      <p>
-        Governed workspace surface for <strong>{title}</strong>. Grounded in SFWP view
-        projections.
-      </p>
-    </div>
+    <UnbackedSurface
+      title="Artifact registry"
+      purpose="Artifact identity, lineage, and maturity, with the producing evidence behind each stage transition."
+      method="artifact.list"
+    />
   );
 }
 
-export function EvidencePage() { return <GenericSurfacePage title="Evidence Browser" kind="Evidence" />; }
-export function MemoryPage() { return <GenericSurfacePage title="Memory Recall" kind="Memory" />; }
-export function CapabilitiesPage() { return <GenericSurfacePage title="Capability Matrix" kind="Capabilities" />; }
-export function ArtifactsPage() { return <GenericSurfacePage title="Artifact Registry" kind="Artifacts" />; }
-export function FederationPage() { return <GenericSurfacePage title="Federation Gateway" kind="Federation" />; }
-export function AdminPage() { return <GenericSurfacePage title="Administration" kind="Admin" />; }
+export function FederationPage() {
+  return (
+    <UnbackedSurface
+      title="Federation gateway"
+      purpose="Peer cells, the bundles exchanged with them, and the verification standing of each import before adoption."
+      method="federation.preview_export"
+    />
+  );
+}
+
+/**
+ * Administration resolves to the one self-description surface the kernel does
+ * implement. `system.describe` is live, so this route is genuinely backed
+ * rather than a placeholder waiting on a projection.
+ */
+export { SystemContractPage as AdminPage } from "./SystemContractPage";

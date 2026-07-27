@@ -6,6 +6,18 @@
 			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/a556d266-f7b1-4eae-9252-c424a0086a3a.jsonl",
 			"updatedAt": "2026-07-26T16:06:06.730Z",
 			"source": "claude"
+		},
+		"84108429-d686-47d6-931b-dbde5a208ae2": {
+			"sessionId": "84108429-d686-47d6-931b-dbde5a208ae2",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl",
+			"updatedAt": "2026-07-27T00:24:01.019Z",
+			"source": "claude"
+		},
+		"b27609ad-cef8-4c86-b643-f1837273835f": {
+			"sessionId": "b27609ad-cef8-4c86-b643-f1837273835f",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/b27609ad-cef8-4c86-b643-f1837273835f.jsonl",
+			"updatedAt": "2026-07-27T03:20:54.617Z",
+			"source": "claude"
 		}
 	}
 }

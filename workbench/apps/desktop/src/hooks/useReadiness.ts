@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { validateReadinessView, type ReadinessView } from "@sea-forge/contracts";
+import { affectsReadiness } from "./eventKinds";
 
 /**
  * The intended-operation shape, derived from the generated `ReadinessView`
@@ -60,9 +61,10 @@ export interface UseReadinessResult {
  * (see implementation-workflow.md step 10, "plain queries need no machine").
  *
  * Live invalidation: the host emits every SFWP event frame on `sfwp://event`.
- * There is no readiness-specific event `kind` taxonomy in the server yet, so we
- * invalidate on ANY frame. This is a deliberately COARSE (but honest) scope —
- * narrowing it would require inventing event kinds the server does not emit.
+ * Frames whose kind is known not to affect readiness (case commits, approval
+ * decisions — none of which touch the self-model or endpoint config) are
+ * skipped; every other kind, including any the server grows later, still
+ * invalidates. See `eventKinds` for why that asymmetry is the safe default.
  */
 export function useReadiness(intendedOperation?: IntendedOperation): UseReadinessResult {
   const queryClient = useQueryClient();
@@ -90,8 +92,11 @@ export function useReadiness(intendedOperation?: IntendedOperation): UseReadines
       }
     };
 
-    listen("sfwp://event", () => {
-      // Coarse-but-honest: any event frame invalidates every readiness view.
+    listen<unknown>("sfwp://event", (event) => {
+      // `event?.payload`: a listener that throws tears down the subscription,
+      // so a frame arriving in an unexpected shape must degrade to
+      // "invalidate anyway", never to a dead listener.
+      if (!affectsReadiness(event?.payload)) return;
       void queryClient.invalidateQueries({ queryKey: READINESS_QUERY_KEY });
     })
       .then((fn) => {

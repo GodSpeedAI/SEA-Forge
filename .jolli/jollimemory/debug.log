@@ -347,3 +347,135 @@
 [2026-07-26T16:06:06.729Z] INFO  [StopHook] Hook input — session_id=a556d266-f7b1-4eae-9252-c424a0086a3a, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/a556d266-f7b1-4eae-9252-c424a0086a3a.jsonl
 [2026-07-26T16:06:06.735Z] INFO  [StopHook] Session saved successfully
 [2026-07-26T16:06:06.787Z] INFO  [PlanDiscovery] Plan discovery: upserted 0 slug(s) + 2 external path(s) into plans.json
+[2026-07-26T21:11:31.172Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-26T21:11:31.203Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-26T21:11:31.215Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-26T21:12:16.169Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-26T21:12:16.216Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-26T21:12:16.234Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-26T21:12:30.376Z] INFO  [SkillAutoRefresh] [trace=b7d467621456f6c90aa2ca050b542cdf] Refreshed Jolli skills at /home/sprime01/projects/sea-rs for version 0.99.9
+[2026-07-26T21:12:30.380Z] INFO  [StorageFactory] [trace=b7d467621456f6c90aa2ca050b542cdf] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T21:12:30.396Z] INFO  [StorageFactory] [trace=b7d467621456f6c90aa2ca050b542cdf] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T21:12:31.250Z] INFO  [McpServer] [trace=b7d467621456f6c90aa2ca050b542cdf] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-26T21:58:33.180Z] INFO  [StopHook] Stop hook triggered (session=84108429-d686-47d6-931b-dbde5a208ae2)
+[2026-07-26T21:58:33.247Z] INFO  [StopHook] Hook input — session_id=84108429-d686-47d6-931b-dbde5a208ae2, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl
+[2026-07-26T21:58:33.259Z] INFO  [StopHook] Session saved successfully
+[2026-07-26T22:00:54.511Z] INFO  [StopHook] Stop hook triggered (session=84108429-d686-47d6-931b-dbde5a208ae2)
+[2026-07-26T22:00:54.527Z] INFO  [StopHook] Hook input — session_id=84108429-d686-47d6-931b-dbde5a208ae2, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl
+[2026-07-26T22:00:54.532Z] INFO  [StopHook] Session saved successfully
+[2026-07-26T22:07:32.103Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-26T22:07:32.136Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-26T22:07:32.151Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-26T22:24:40.621Z] INFO  [StopHook] Stop hook triggered (session=84108429-d686-47d6-931b-dbde5a208ae2)
+[2026-07-26T22:24:40.636Z] INFO  [StopHook] Hook input — session_id=84108429-d686-47d6-931b-dbde5a208ae2, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl
+[2026-07-26T22:24:40.643Z] INFO  [StopHook] Session saved successfully
+[2026-07-26T22:29:14.348Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-26T22:29:14.367Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-26T22:29:14.375Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-26T22:48:33.540Z] INFO  [StopHook] Stop hook triggered (session=84108429-d686-47d6-931b-dbde5a208ae2)
+[2026-07-26T22:48:33.570Z] INFO  [StopHook] Hook input — session_id=84108429-d686-47d6-931b-dbde5a208ae2, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl
+[2026-07-26T22:48:33.578Z] INFO  [StopHook] Session saved successfully
+[2026-07-26T22:54:00.077Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-26T22:54:00.093Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-26T22:54:00.104Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-26T23:33:54.919Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-26T23:33:55.064Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-26T23:33:55.125Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-26T23:34:17.282Z] INFO  [StorageFactory] [trace=f5842966d20ae9586d4e0637ea40e0db] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-26T23:34:17.318Z] INFO  [StorageFactory] [trace=f5842966d20ae9586d4e0637ea40e0db] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-26T23:34:18.404Z] INFO  [McpServer] [trace=f5842966d20ae9586d4e0637ea40e0db] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-27T00:22:42.941Z] INFO  [StopHook] Stop hook triggered (session=84108429-d686-47d6-931b-dbde5a208ae2)
+[2026-07-27T00:22:42.993Z] INFO  [StopHook] Hook input — session_id=84108429-d686-47d6-931b-dbde5a208ae2, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl
+[2026-07-27T00:22:43.012Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T00:22:43.625Z] INFO  [PlanDiscovery] Plan discovery: upserted 1 slug(s) + 2 external path(s) into plans.json
+[2026-07-27T00:24:00.929Z] INFO  [StopHook] Stop hook triggered (session=84108429-d686-47d6-931b-dbde5a208ae2)
+[2026-07-27T00:24:01.018Z] INFO  [StopHook] Hook input — session_id=84108429-d686-47d6-931b-dbde5a208ae2, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl
+[2026-07-27T00:24:01.027Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T00:24:01.442Z] INFO  [PlanDiscovery] Plan discovery: upserted 1 slug(s) + 1 external path(s) into plans.json
+[2026-07-27T02:25:51.327Z] INFO  [activate] Activating JolliMemory extension {"workspaceRoot":"/home/sprime01/projects/sea-rs","extensionPath":"/home/sprime01/.vscode-server/extensions/jolli.jollimemory-vscode-0.99.9"}
+[2026-07-27T02:25:51.661Z] INFO  [initialLoad] Loading all panels
+[2026-07-27T02:26:10.110Z] INFO  [bridge] Own dist-paths/vscode-server missing, stale, or pointing elsewhere — re-enabling
+[2026-07-27T02:26:10.110Z] INFO  [bridge] enable() called
+[2026-07-27T02:26:10.120Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T02:26:10.142Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T02:26:10.153Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T02:26:11.665Z] INFO  [plans] detectPlans found 2 plans (2 in registry)
+[2026-07-27T02:26:11.666Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T02:26:11.668Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T02:26:11.670Z] INFO  [Sync:VsCodeBootstrap] Memory Bank sync engine built (auto-sync off — manual only)
+[2026-07-27T02:26:12.113Z] INFO  [Installer] Installing Jolli Memory hooks
+[2026-07-27T02:26:19.215Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T02:26:19.299Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T02:26:22.149Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T02:26:22.225Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T02:26:30.453Z] INFO  [DispatchScripts] Wrote resolve-dist-path, run-hook, and run-cli scripts to /home/sprime01/.jolli/jollimemory
+[2026-07-27T02:26:30.717Z] INFO  [SchemaV5Migration] Found 10 summary files to inspect
+[2026-07-27T02:26:31.382Z] INFO  [SchemaV5Migration] Reading 10 summaries...
+[2026-07-27T02:26:32.447Z] INFO  [DistPathWriter] Wrote dist-paths/vscode-server (version=0.99.9, distDir=/home/sprime01/.vscode-server/extensions/jolli.jollimemory-vscode-0.99.9/dist)
+[2026-07-27T02:26:32.593Z] INFO  [SchemaV5Migration] Read 10 summaries in 1211 ms
+[2026-07-27T02:26:32.596Z] INFO  [SchemaV5Migration] Writing 6 summary file(s) via active storage...
+[2026-07-27T02:26:34.299Z] INFO  [GitOps] Updated branch 'jollimemory/summaries/v3': 6 written, 0 deleted (via fast-import)
+[2026-07-27T02:26:34.312Z] INFO  [MetadataManager] Manifest updated: backfilled/docs-close-spec-audit-remediation-107d3c5b.md (commit)
+[2026-07-27T02:26:34.312Z] INFO  [FolderStorage] Markdown generated: backfilled/docs-close-spec-audit-remediation-107d3c5b.md
+[2026-07-27T02:26:34.316Z] INFO  [MetadataManager] Manifest updated: backfilled/featworkbench-readiness-view-review-remediation-1545887b.md (commit)
+[2026-07-27T02:26:34.316Z] INFO  [FolderStorage] Markdown generated: backfilled/featworkbench-readiness-view-review-remediation-1545887b.md
+[2026-07-27T02:26:34.321Z] INFO  [MetadataManager] Manifest updated: backfilled/featserver-sfwp-transport-layer-review-remediation-5283575d.md (commit)
+[2026-07-27T02:26:34.321Z] INFO  [FolderStorage] Markdown generated: backfilled/featserver-sfwp-transport-layer-review-remediation-5283575d.md
+[2026-07-27T02:26:34.326Z] INFO  [MetadataManager] Manifest updated: backfilled/merge-integrate-full-spec-74dc8ab3.md (commit)
+[2026-07-27T02:26:34.326Z] INFO  [FolderStorage] Markdown generated: backfilled/merge-integrate-full-spec-74dc8ab3.md
+[2026-07-27T02:26:34.330Z] INFO  [MetadataManager] Manifest updated: backfilled/feat-add-governedstatuspill-integrityindicator-sou-86d15574.md (commit)
+[2026-07-27T02:26:34.330Z] INFO  [FolderStorage] Markdown generated: backfilled/feat-add-governedstatuspill-integrityindicator-sou-86d15574.md
+[2026-07-27T02:26:34.334Z] INFO  [MetadataManager] Manifest updated: backfilled/featworkbench-tauribunreact-stack-sfwp-host-bridge-9ddff9a7.md (commit)
+[2026-07-27T02:26:34.335Z] INFO  [FolderStorage] Markdown generated: backfilled/featworkbench-tauribunreact-stack-sfwp-host-bridge-9ddff9a7.md
+[2026-07-27T02:26:34.335Z] INFO  [FolderStorage] Wrote 6 files, deleted 0 (Schema v5 migration: 6 upgraded, 4 skipped)
+[2026-07-27T02:26:35.843Z] INFO  [GitOps] Updated branch 'jollimemory/summaries/v3': 1 written, 0 deleted (via fast-import)
+[2026-07-27T02:26:35.856Z] INFO  [FolderStorage] Wrote 1 files, deleted 0 (Schema v5 migration: 6 upgraded, 4 skipped)
+[2026-07-27T02:26:35.856Z] INFO  [SchemaV5Migration] Schema v5 migration complete: 6 migrated, 4 skipped, fresh=false, recovery=false (took 3260 ms)
+[2026-07-27T02:26:35.856Z] INFO  [SchemaV5Migration] Pre-migration orphan-branch SHA was 6d63ff30388b5447f381d45cf74f31fdc4f0cee4 (debug-only recovery anchor)
+[2026-07-27T02:26:37.110Z] INFO  [activate] Schema v5 migration: alreadyDone=false fresh=false migrated=6 skipped=4
+[2026-07-27T02:26:38.067Z] INFO  [MigrationEngine] === Migration started ===
+[2026-07-27T02:26:39.084Z] INFO  [FolderStorage] Wrote 1 files, deleted 0 (Migration: copy index)
+[2026-07-27T02:26:39.086Z] INFO  [MigrationEngine] === Migration completed: 0 migrated, 10 skipped, 0 failed ===
+[2026-07-27T02:26:39.086Z] INFO  [MigrationEngine] === 0.99.2 head-regen (one-shot) started ===
+[2026-07-27T02:26:39.092Z] INFO  [MigrationEngine] Head regenerate: regenerated=10 skipped=0 failed=0
+[2026-07-27T02:26:39.093Z] INFO  [MigrationEngine] Stale-child sweep: deleted=0 failed=0
+[2026-07-27T02:26:39.096Z] INFO  [activate] KB auto-migration: completed (10/10)
+[2026-07-27T02:26:40.362Z] INFO  [McpRegistration] Registered MCP server in /home/sprime01/projects/sea-rs/.mcp.json
+[2026-07-27T02:26:42.500Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=5, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T02:26:42.835Z] INFO  [initialLoad] All panels loaded — updating status bar
+[2026-07-27T02:26:43.282Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T02:26:43.310Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T02:26:43.310Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T02:26:43.890Z] INFO  [McpRegistration] Registered MCP server in /home/sprime01/projects/sea-rs/.worktrees/domain-model-validation/.mcp.json
+[2026-07-27T02:26:44.692Z] INFO  [McpRegistration] Registered MCP server in /home/sprime01/projects/sea-rs/.worktrees/understand-anything/.mcp.json
+[2026-07-27T02:26:44.850Z] INFO  [JsonMcpWriter] Registered MCP server in /home/sprime01/.gemini/settings.json
+[2026-07-27T02:26:44.930Z] INFO  [CodexTomlWriter] Registered Codex MCP server in /home/sprime01/.codex/config.toml
+[2026-07-27T02:26:45.031Z] INFO  [JsonMcpWriter] Registered MCP server in /home/sprime01/.config/opencode/opencode.json
+[2026-07-27T02:26:45.101Z] INFO  [JsonMcpWriter] Registered MCP server in /home/sprime01/.config/Code/User/mcp.json
+[2026-07-27T02:26:45.424Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=5, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T02:26:45.546Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T02:26:45.592Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T02:26:45.861Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T02:26:45.890Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T02:26:45.926Z] INFO  [Installer] Skipping v5 migration on vscode-extension source — Extension.ts owns it with UI
+[2026-07-27T02:26:45.926Z] INFO  [Installer] Installation complete
+[2026-07-27T02:26:45.986Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T02:26:48.270Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=5, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T02:26:48.340Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T02:26:56.444Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=5, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T02:26:56.473Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T02:26:58.176Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=5, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T02:27:58.901Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-27T02:27:59.159Z] WARN  [SummaryStore] resolveStorage fallback to OrphanBranchStorage — caller did not thread storage or call setActiveStorage. Folder-mode users will miss this write. cwd=/home/sprime01/projects/sea-rs
+[2026-07-27T02:27:59.196Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-07-27T02:28:20.287Z] INFO  [StorageFactory] [trace=ededc7cd13f1c3e5ac9f03f3374fcef2] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T02:28:20.538Z] INFO  [StorageFactory] [trace=ededc7cd13f1c3e5ac9f03f3374fcef2] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T02:28:21.581Z] INFO  [McpServer] [trace=ededc7cd13f1c3e5ac9f03f3374fcef2] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-27T03:20:54.587Z] INFO  [StopHook] Stop hook triggered (session=b27609ad-cef8-4c86-b643-f1837273835f)
+[2026-07-27T03:20:54.614Z] INFO  [StopHook] Hook input — session_id=b27609ad-cef8-4c86-b643-f1837273835f, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/b27609ad-cef8-4c86-b643-f1837273835f.jsonl
+[2026-07-27T03:20:54.627Z] INFO  [StopHook] Session saved successfully
+[2026-07-27T03:20:54.793Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T03:20:54.832Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T03:20:54.872Z] INFO  [plans] detectPlans found 2 plans (2 in registry)
+[2026-07-27T03:20:54.873Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T03:20:55.505Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined

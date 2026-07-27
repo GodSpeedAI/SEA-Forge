@@ -1,0 +1,265 @@
+.page {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.header h1 {
+  margin: 0 0 var(--space-2);
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.breadcrumb {
+  margin-bottom: var(--space-2);
+  color: var(--fg-secondary);
+  font-size: 12px;
+}
+
+.breadcrumb a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lede,
+.sectionLede {
+  margin: 0 0 var(--space-3);
+  max-width: 72ch;
+  color: var(--fg-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.grid dt {
+  margin: 0 0 2px;
+  color: var(--fg-secondary);
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.grid dd {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-control);
+  background: var(--surface-panel);
+}
+
+.section h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 14px;
+}
+
+/*
+  Termination and settlement sit in two equal columns so neither reads as the
+  headline fact. Collapsing to one column on narrow viewports keeps them
+  adjacent and in the same order — execution first, then the governed outcome.
+*/
+.outcome {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
+}
+
+.outcomeCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-control);
+  background: var(--surface-panel);
+}
+
+.outcomeCard h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.note {
+  margin: auto 0 0;
+  color: var(--fg-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.authority {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.reason,
+.codes {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.codes {
+  color: var(--fg-secondary);
+}
+
+.nextSteps h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 12px;
+}
+
+.nextSteps ul {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Wide tables scroll inside their own box; the page never scrolls sideways. */
+.table {
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--surface-muted);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  color: var(--fg-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.criterionName {
+  white-space: nowrap;
+}
+
+.expected code,
+.token,
+.digest {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.token {
+  display: inline-block;
+  margin: 0 var(--space-2) var(--space-2) 0;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-control);
+}
+
+.basis {
+  max-width: 42ch;
+}
+
+.trace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: trace;
+}
+
+.traceRow {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(180px, 1fr) minmax(120px, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--surface-muted);
+  font-size: 12px;
+}
+
+.traceKind {
+  font-weight: 600;
+}
+
+.traceTime,
+.traceActor {
+  color: var(--fg-secondary);
+  overflow-wrap: anywhere;
+}
+
+.records {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.records li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-control);
+  font-size: 11px;
+}
+
+.records li[data-present="false"] {
+  color: var(--fg-secondary);
+  border-style: dashed;
+}
+
+.records code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.muted {
+  margin: 0;
+  color: var(--fg-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.alert {
+  padding: var(--space-3);
+  border: 1px solid var(--color-execution-blocked, currentColor);
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.alert p {
+  margin: var(--space-2) 0 0;
+}
+
+.backLink {
+  align-self: flex-start;
+  color: var(--fg-secondary);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

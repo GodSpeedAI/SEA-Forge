@@ -65,6 +65,30 @@ pub enum SfwpQuery {
         #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
         params: std::collections::BTreeMap<String, String>,
     },
+    /// Case-navigation inspect methods (Task 7). Mirror the server's
+    /// `Request::CaseList` / `CaseGetOverview` / `CaseGetHorizon`.
+    CaseList,
+    CaseGetOverview {
+        case_id: String,
+    },
+    CaseGetHorizon {
+        case_id: String,
+    },
+    /// `approval.list` (Task 7). `case_id` scopes the inbox to one case.
+    ApprovalList {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        case_id: Option<String>,
+    },
+    /// Run-record inspect methods (Task 8). Mirror the server's
+    /// `Request::RunList` / `RunGet`. `run.get` is what resolves the run ids the
+    /// case, horizon, and event views already render.
+    RunList {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        case_id: Option<String>,
+    },
+    RunGet {
+        run_id: String,
+    },
 }
 
 /// The operator's intended next operation, mirroring the server's
@@ -133,6 +157,23 @@ pub enum SfwpCommand {
     Reject {
         case_id: String,
         approval_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        note: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        request_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        preconditions: Option<Precondition>,
+    },
+    /// `approval.decide` (Task 7) — the verdict-carrying form of
+    /// `Approve`/`Reject`. Both spellings reach the same server-side `decide`
+    /// path; this one lets an inbox that renders a row with two buttons send
+    /// one command shape rather than branching on which verb to construct.
+    ApprovalDecide {
+        case_id: String,
+        approval_id: String,
+        /// `"approve"` or `"reject"`. The server refuses anything else rather
+        /// than defaulting — a governed decision is never guessed.
+        decision: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         note: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -267,4 +308,42 @@ pub async fn draft_delete(app: AppHandle, draft_id: String) -> Result<(), String
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The whole closed-enum boundary rests on these variants serializing to the
+    /// exact wire line the server's `Request` deserializes. Nothing but a test
+    /// enforces that: a renamed field or a `null` where the server expects an
+    /// absent key fails at runtime, on the socket, with a serde error the
+    /// renderer surfaces as an opaque string.
+    #[test]
+    fn run_query_variants_serialize_to_the_verbs_the_server_accepts() {
+        let listing = serde_json::to_value(SfwpQuery::RunList { case_id: None }).unwrap();
+        assert_eq!(listing, serde_json::json!({"verb": "run_list"}));
+
+        // An omitted optional stays *absent*, never `null` — the server's
+        // `#[serde(default)]` handles a missing key, not a null one.
+        assert!(listing.get("case_id").is_none());
+
+        let scoped = serde_json::to_value(SfwpQuery::RunList {
+            case_id: Some("case-1".into()),
+        })
+        .unwrap();
+        assert_eq!(
+            scoped,
+            serde_json::json!({"verb": "run_list", "case_id": "case-1"})
+        );
+
+        let record = serde_json::to_value(SfwpQuery::RunGet {
+            run_id: "run-1".into(),
+        })
+        .unwrap();
+        assert_eq!(
+            record,
+            serde_json::json!({"verb": "run_get", "run_id": "run-1"})
+        );
+    }
 }

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvidenceRow",
+  "description": "One row of the run's evidence journal.",
+  "type": "object",
+  "properties": {
+    "evidence_id": {
+      "type": "string"
+    },
+    "kind": {
+      "description": "`artifact`, `authority_decision`, `execution_result`, `recall`.",
+      "type": "string"
+    },
+    "sha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_event_id": {
+      "description": "The trace event this evidence was captured from — the link back that\nmakes evidence attributable rather than free-floating.",
+      "type": "string"
+    },
+    "uri": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidence_id",
+    "kind",
+    "uri",
+    "source_event_id"
+  ]
+}
