@@ -717,3 +717,126 @@
 [2026-07-27T15:21:50.207Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
 [2026-07-27T15:45:47.860Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
 [2026-07-27T15:47:46.624Z] INFO  [SearchIndex] Built search index: 16 docs
+[2026-07-27T17:33:21.661Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:21.661Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:21.661Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:21.908Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:22.082Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:22.857Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:22.965Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:22.965Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:22.965Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:23.160Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:23.236Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:23.286Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:23.287Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:23.287Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:23.476Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:24.398Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:24.427Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:24.427Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:24.427Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:24.486Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:24.812Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:24.812Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:24.812Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:28.435Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:28.458Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:28.458Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:28.458Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:30.007Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:30.364Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:30.364Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:30.364Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:34.745Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:34.774Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:34.774Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:34.775Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:37.067Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:37.067Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:37.165Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:37.253Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:37.254Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:37.254Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:39.349Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:39.369Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:39.369Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:39.369Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:41.054Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:41.116Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:41.116Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:41.117Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:42.438Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:43.422Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:43.512Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:43.512Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:43.512Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:44.140Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:45.117Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:46.918Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:46.918Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:46.966Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:47.020Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:47.020Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:47.020Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:50.792Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:50.808Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:50.809Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:50.809Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:52.313Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:52.411Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:52.457Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:52.458Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:52.458Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:54.486Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:55.271Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:55.307Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:55.307Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:55.307Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:56.661Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:56.701Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:56.701Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:56.701Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:58.183Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:58.251Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:33:58.270Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:58.270Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:58.270Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:33:59.219Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:33:59.316Z] INFO  [plans] detectPlans found 0 plans (0 in registry)
+[2026-07-27T17:33:59.316Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:33:59.316Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:34:00.487Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:02.434Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:03.739Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:06.896Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:10.161Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:13.028Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:14.422Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:15.875Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:17.279Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:18.338Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:19.693Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=false, worktreeHooks=true, sessions=8, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:22.770Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:34:22.770Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:34:22.912Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:34:22.912Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T17:34:24.128Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T17:34:24.128Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:34:24.129Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:34:24.130Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T17:34:24.130Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:34:24.130Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:34:24.146Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T17:34:24.147Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:34:24.147Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:34:24.148Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T17:34:24.148Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:34:24.148Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:34:24.149Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T17:34:24.149Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T17:34:24.149Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T17:34:43.324Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:43.541Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:43.541Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T17:34:43.541Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined

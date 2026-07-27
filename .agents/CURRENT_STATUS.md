@@ -2,6 +2,16 @@
 
 Updated: 2026-07-27
 
+> **2026-07-27 rebase recovery complete.** `main` now contains the previously
+> local full-spec/workbench history rebased onto `origin/main` (110 commits
+> ahead, 0 behind). Rebase conflicts preserved the published licensing package,
+> added the approved exact `xxhash-rust 0.8.16` / `BSL-1.0` cargo-deny
+> exception, and retained a valid `LicenseRef-SEA-Forge` workspace expression
+> plus `LICENSE` file reference. `cargo metadata`, `cargo deny check licenses`,
+> and `git diff --check` pass. Graph refresh was explicitly deferred. Local
+> Jolli state is preserved in `stash@{0}`; the original user stash remains at
+> `stash@{1}`. Do not pop either without reviewing its contents.
+
 > **2026-07-27 architectural adjudication Pass 2 complete.** Seven authoritative
 > reconciliation and packaging inputs were added under `docs/execution/`:
 > `ARCHITECTURAL_TRUTH.md`, `ARCHITECTURAL_INVARIANTS.md`,
