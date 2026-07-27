@@ -21,10 +21,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // way to split them, and only on purpose.
     let root = sea_forge_server::resolve_cell_root();
     let config_path = root.join("server.yaml");
-    let mut config = ServerConfig::load(&config_path).unwrap_or_else(|e| {
-        tracing::warn!("config load failed ({e}), using defaults");
-        ServerConfig::default()
-    });
+    // Fail closed (§8.3 `server_config_error`). An absent `server.yaml` is a
+    // first run and yields defaults; a file that *exists* and does not parse or
+    // validate blocks the start. Falling back to defaults there would silently
+    // run the cell under a configuration the operator never wrote — the wrong
+    // agent endpoint, the wrong concurrency, no notify hook — while every log
+    // line claimed a healthy server.
+    let mut config = ServerConfig::load(&config_path).map_err(|message| {
+        tracing::error!(
+            config_path = %config_path.display(),
+            error_class = "server_config_error",
+            "{message}"
+        );
+        message
+    })?;
     // The resolved root always wins over a `root:` key in the file: the file
     // lives *inside* the cell, so it cannot name a different one.
     config.root = root;

@@ -55,7 +55,15 @@ pub struct CaseEntry {
 
 /// Shared server state.
 pub struct ServerState {
-    pub config: ServerConfig,
+    /// The cell this server owns. Fixed for the process lifetime: `server.yaml`
+    /// lives *inside* the cell it configures, so a reload cannot relocate it
+    /// (see `docs/CELL_CONTRACT.md`). Keeping it out of the reloadable snapshot
+    /// makes that unrepresentable rather than merely documented.
+    pub root: PathBuf,
+    /// Live configuration snapshot (§8.4). `reload_config` swaps the whole
+    /// `Arc`; a dispatch that already took one keeps it to completion, so new
+    /// configuration reaches future dispatches only.
+    config: std::sync::RwLock<Arc<ServerConfig>>,
     pub cases: Mutex<HashMap<String, CaseEntry>>,
     delegations: Mutex<HashMap<String, DelegationHandle>>,
     pub(crate) permission_broker: delegation::AcpApprovalBroker,
@@ -118,7 +126,8 @@ impl ServerState {
         let events_ledger = sfwp::events::open_events_ledger(&config.root)?;
         let (event_bus, _) = broadcast::channel::<EventFrame>(256);
         Ok(Self {
-            config,
+            root: config.root.clone(),
+            config: std::sync::RwLock::new(Arc::new(config)),
             cases: Mutex::new(HashMap::new()),
             delegations: Mutex::new(HashMap::new()),
             permission_broker: delegation::AcpApprovalBroker::default(),
@@ -168,12 +177,53 @@ impl ServerState {
         sfwp::events::replay_after(&ledger, from_cursor)
     }
 
-    /// Reload config defensively between dispatches (§8.4).
-    pub fn reload_config(&self) -> Result<ServerConfig, String> {
-        match ServerConfig::load(&self.config.root.join("server.yaml")) {
-            Ok(new_config) => Ok(new_config),
-            Err(e) => Err(e),
+    /// The current configuration snapshot.
+    ///
+    /// Hold the returned `Arc` for the whole of a dispatch: a reload that lands
+    /// mid-dispatch swaps the shared slot, and re-reading it partway through
+    /// would let one run straddle two configurations.
+    pub fn config(&self) -> Arc<ServerConfig> {
+        // A panic while *reading* a config snapshot cannot have left it torn —
+        // the `Arc` is swapped whole — so a poisoned lock is recoverable here
+        // and failing the request instead would be strictly worse.
+        Arc::clone(&self.config.read().unwrap_or_else(|e| e.into_inner()))
+    }
+
+    /// Re-read `server.yaml` between dispatches and atomically swap the live
+    /// snapshot (§8.4).
+    ///
+    /// An invalid file leaves the previous snapshot in place untouched — the
+    /// swap only happens after the load and validation both succeed, so there
+    /// is no window in which the server runs on a half-applied configuration.
+    /// The caller is responsible for the operator-visible `invalid_reload_error`
+    /// event on `Err`.
+    ///
+    /// An *absent* file is a no-op, not a reset. `ServerConfig::load` answers
+    /// `Ok(default)` for a missing path because that is the correct answer at
+    /// startup — a first run has no file and should get defaults. Applying that
+    /// same answer to a reload would mean that deleting `server.yaml` on a
+    /// running cell silently reverted every setting to its default, which is a
+    /// fail-open of exactly the kind §8.4 exists to prevent. Nothing to re-read
+    /// means nothing to change.
+    pub fn reload_config(&self) -> Result<Arc<ServerConfig>, String> {
+        let config_path = self.root.join("server.yaml");
+        if !config_path.exists() {
+            tracing::debug!(
+                config_path = %config_path.display(),
+                "no server.yaml to reload; keeping the current configuration"
+            );
+            return Ok(self.config());
         }
+        let mut next = ServerConfig::load(&config_path)?;
+        // The cell is fixed at startup. A `root:` or `socket_path:` key that
+        // drifted into the file cannot move a running server's records or
+        // socket out from under its own connections and in-flight runs.
+        next.root = self.root.clone();
+        next.socket_path = self.config().socket_path.clone();
+
+        let next = Arc::new(next);
+        *self.config.write().unwrap_or_else(|e| e.into_inner()) = Arc::clone(&next);
+        Ok(next)
     }
 
     pub(crate) async fn begin_planned_delegation(
@@ -763,6 +813,42 @@ const LONGEST_SOCKET_SUFFIX: usize = ".binding".len();
 ///
 /// The budget is the platform's `sun_path` capacity, less one byte for the NUL
 /// terminator, less the longest suffix appended before binding.
+/// Startup preflight for `notify_command` (§8.5): the configured argv0 must
+/// exist and be executable.
+///
+/// This is the one hook whose failure is *deliberately* swallowed at runtime
+/// ("failure is logged and ignored — §10.3"), which is right for a transient
+/// hook error but wrong for a hook that can never run at all. Without this
+/// check a typo in `notify_command` costs the operator every completion
+/// notification for the life of the cell, and the only symptom is a log line
+/// nobody reads because they are waiting on the notification.
+fn check_notify_command(argv: Option<&[String]>) -> Result<(), ForgeError> {
+    let Some([program, ..]) = argv else {
+        // Unset, or set to an empty argv, which the notify path already skips.
+        return Ok(());
+    };
+
+    // A bare name is resolved against PATH at spawn time, so resolve it the
+    // same way here instead of stat-ing a relative path that would only
+    // resolve against the current directory.
+    let resolved = if program.contains(std::path::MAIN_SEPARATOR) {
+        std::path::Path::new(program).is_file()
+    } else {
+        std::env::var_os("PATH")
+            .map(|paths| std::env::split_paths(&paths).any(|dir| dir.join(program).is_file()))
+            .unwrap_or(false)
+    };
+
+    if resolved {
+        return Ok(());
+    }
+    Err(ForgeError::Input(format!(
+        "notify_command argv0 not found: {program}\n\
+         Fix or remove `notify_command` in server.yaml. A relative name is \
+         resolved against PATH; use an absolute path to pin it."
+    )))
+}
+
 fn check_socket_path_length(socket_path: &Path) -> Result<(), ForgeError> {
     // `sun_path` is 108 bytes on Linux and 104 on macOS; use the smaller bound
     // so a cell that starts on Linux is not rejected only after moving.
@@ -826,6 +912,7 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
     // directories and ledgers, so an unbindable socket path must be rejected
     // ahead of it rather than leaving a half-built cell behind.
     check_socket_path_length(&socket_path)?;
+    check_notify_command(config.notify_command.as_deref())?;
 
     let state = Arc::new(ServerState::new(config)?);
 
@@ -970,7 +1057,7 @@ async fn handle_connection(
                 let _ = tx.send(format!("{response}\n")).await;
             }
             other => {
-                let response = handle_request(other, &state).await;
+                let response = dispatch_bounded(other, &state, line.trim()).await;
                 let _ = tx.send(format!("{response}\n")).await;
             }
         }
@@ -982,6 +1069,87 @@ async fn handle_connection(
     drop(tx);
     let _ = writer_task.await;
     result
+}
+
+/// The per-request bound from §11.1. `events.subscribe` is excluded: it is
+/// handled on the connection loop above and is long-lived by design.
+const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// Run one request under [`REQUEST_TIMEOUT`].
+///
+/// The handler runs on its own task, so expiry stops *waiting* for the work —
+/// it does not cancel it. That distinction is the whole point: a `case.submit`
+/// that has already appended to a ledger must finish, or the durable record and
+/// the client's view of it would permanently disagree. `record_pending` runs
+/// before the work starts, so a timed-out request is already answerable through
+/// `request.get_status` and is upgraded to its real outcome when the work lands.
+///
+/// Awaiting the handle here rather than detaching it preserves per-connection
+/// response ordering: NDJSON replies carry no sequence number, so a client
+/// pairs them with requests positionally.
+async fn dispatch_bounded(
+    request: Request,
+    state: &Arc<ServerState>,
+    raw_line: &str,
+) -> serde_json::Value {
+    let state = Arc::clone(state);
+    bounded(
+        async move { handle_request(request, &state).await },
+        REQUEST_TIMEOUT,
+        raw_line,
+    )
+    .await
+}
+
+/// The bound itself, over any request future. Separated from
+/// [`dispatch_bounded`] so the no-cancellation property can be asserted
+/// directly: the whole guarantee lives in `spawn`-then-time-out-the-*handle*,
+/// and collapsing it to `timeout(d, work)` would still compile and still pass
+/// any test that only checked the response shape.
+async fn bounded<F>(work: F, limit: std::time::Duration, raw_line: &str) -> serde_json::Value
+where
+    F: std::future::Future<Output = serde_json::Value> + Send + 'static,
+{
+    let handle = tokio::spawn(work);
+
+    match tokio::time::timeout(limit, handle).await {
+        Ok(Ok(response)) => response,
+        // A panicking handler must not take the connection down with it; the
+        // client gets a typed failure and the loop keeps serving.
+        Ok(Err(join_error)) => serde_json::json!({
+            "error": format!("request handler failed: {join_error}"),
+            "error_class": "internal_error",
+        }),
+        Err(_) => {
+            // ponytail: re-parse for the id only on the timeout path — it costs
+            // one JSON parse per 10-second stall and saves matching every
+            // `request_id`-bearing variant by hand, which would silently miss
+            // any variant added later.
+            let request_id = serde_json::from_str::<serde_json::Value>(raw_line)
+                .ok()
+                .and_then(|value| {
+                    value
+                        .get("request_id")
+                        .and_then(|id| id.as_str())
+                        .map(str::to_owned)
+                });
+            tracing::warn!(
+                request_id = request_id.as_deref().unwrap_or("<none>"),
+                "request exceeded {}s; work continues",
+                limit.as_secs()
+            );
+            serde_json::json!({
+                "error": format!(
+                    "request exceeded the {}s server timeout; the work was not cancelled",
+                    limit.as_secs()
+                ),
+                "error_class": "request_timeout",
+                "timeout_seconds": limit.as_secs(),
+                "request_id": request_id,
+                "recover_with": "request.get_status",
+            })
+        }
+    }
 }
 
 /// Spawn (or replace) the live event-subscription task for a connection.
@@ -1124,7 +1292,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             )
             .await
         }
-        Request::AgentList => agent_probe::list(&state.config.agent),
+        Request::AgentList => agent_probe::list(&state.config().agent),
         Request::AgentProbe {
             endpoint,
             prompt,
@@ -1137,7 +1305,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 Ok(permit) => permit,
                 Err(_) => return serde_json::json!({"error":"server semaphore unavailable"}),
             };
-            let config = state.config.clone();
+            let config = state.config();
             let result = agent_probe::probe(
                 &config,
                 agent_probe::ProbeRequest {
@@ -1224,7 +1392,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             let Some(question_kind) = sea_forge_thoth::protocol::parse_question_kind(&kind) else {
                 return serde_json::json!({"error": format!("unknown question kind: {kind}")});
             };
-            let root = state.config.root.clone();
+            let root = state.root.clone();
             let result = tokio::task::spawn_blocking(move || {
                 sea_forge_thoth::service::ask(
                     &root,
@@ -1306,7 +1474,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
         // call the typed builder and serialize its result directly, no wrapper.
         Request::ReadinessGet { intended_operation } => {
             let view = sfwp::readiness::get(
-                &state.config,
+                &state.config(),
                 sfwp::readiness::ReadinessGetParams { intended_operation },
             );
             serde_json::to_value(view)
@@ -1323,28 +1491,25 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             })
         }
         // Inspect projections (Task 6): shaped views, never propagated errors.
-        Request::CaseEntryOptions => serde_json::to_value(sfwp::case::entry_options(
-            &state.config.root,
-        ))
-        .unwrap_or_else(|_| serde_json::json!({"error": "entry_options serialization failed"})),
+        Request::CaseEntryOptions => serde_json::to_value(sfwp::case::entry_options(&state.root))
+            .unwrap_or_else(|_| serde_json::json!({"error": "entry_options serialization failed"})),
         Request::CasePreflight { params } => {
-            serde_json::to_value(sfwp::case::preflight(&state.config.root, params))
+            serde_json::to_value(sfwp::case::preflight(&state.root, params))
                 .unwrap_or_else(|_| serde_json::json!({"error": "preflight serialization failed"}))
         }
-        Request::CaseList => serde_json::to_value(sfwp::case_views::list(&state.config.root))
+        Request::CaseList => serde_json::to_value(sfwp::case_views::list(&state.root))
             .unwrap_or_else(|_| serde_json::json!({"error": "case list serialization failed"})),
         Request::CaseGetOverview { case_id } => {
-            case_view_response(sfwp::case_views::get_overview(&state.config.root, &case_id))
+            case_view_response(sfwp::case_views::get_overview(&state.root, &case_id))
         }
         Request::CaseGetHorizon { case_id } => {
-            case_view_response(sfwp::case_views::get_horizon(&state.config.root, &case_id))
+            case_view_response(sfwp::case_views::get_horizon(&state.root, &case_id))
         }
-        Request::RunList { case_id } => serde_json::to_value(sfwp::run_views::list(
-            &state.config.root,
-            case_id.as_deref(),
-        ))
-        .unwrap_or_else(|_| serde_json::json!({"error": "run list serialization failed"})),
-        Request::RunGet { run_id } => match sfwp::run_views::get(&state.config.root, &run_id) {
+        Request::RunList { case_id } => {
+            serde_json::to_value(sfwp::run_views::list(&state.root, case_id.as_deref()))
+                .unwrap_or_else(|_| serde_json::json!({"error": "run list serialization failed"}))
+        }
+        Request::RunGet { run_id } => match sfwp::run_views::get(&state.root, &run_id) {
             Ok(view) => serde_json::to_value(view)
                 .unwrap_or_else(|_| serde_json::json!({"error": "run view serialization failed"})),
             Err(error) => serde_json::json!({
@@ -1353,7 +1518,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             }),
         },
         Request::AssetList => {
-            serde_json::to_value(sfwp::assets::list(&state.config.root, &state.config.agent))
+            serde_json::to_value(sfwp::assets::list(&state.root, &state.config().agent))
                 .unwrap_or_else(|_| serde_json::json!({"error": "asset list serialization failed"}))
         }
         Request::DelegationList => {
@@ -1376,21 +1541,22 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                     )
                 })
                 .collect();
-            serde_json::to_value(sfwp::delegations::list(&state.config.root, &live)).unwrap_or_else(
+            serde_json::to_value(sfwp::delegations::list(&state.root, &live)).unwrap_or_else(
                 |_| serde_json::json!({"error": "delegation list serialization failed"}),
             )
         }
         Request::DelegationPreview { params } => serde_json::to_value(
-            sfwp::delegation_preview::preview(&state.config.root, &state.config.agent, params),
+            sfwp::delegation_preview::preview(&state.root, &state.config().agent, params),
         )
         .unwrap_or_else(
             |_| serde_json::json!({"error": "delegation preview serialization failed"}),
         ),
-        Request::ApprovalList { case_id } => serde_json::to_value(sfwp::approvals::list(
-            &state.config.root,
-            case_id.as_deref(),
-        ))
-        .unwrap_or_else(|_| serde_json::json!({"error": "approval list serialization failed"})),
+        Request::ApprovalList { case_id } => {
+            serde_json::to_value(sfwp::approvals::list(&state.root, case_id.as_deref()))
+                .unwrap_or_else(
+                    |_| serde_json::json!({"error": "approval list serialization failed"}),
+                )
+        }
         Request::ApprovalDecide {
             case_id,
             approval_id,
@@ -1440,9 +1606,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
             // Evaluate the precondition first — before any side effect. Mirrors
             // `decide`'s "no side effect on stale" discipline for approve/reject.
             if let Some(precondition) = &preconditions {
-                let resolver = TemplateRecordResolver {
-                    root: &state.config.root,
-                };
+                let resolver = TemplateRecordResolver { root: &state.root };
                 match sfwp::precondition::evaluate(precondition, &resolver) {
                     Ok(Some(rejected)) => {
                         let response = serde_json::to_value(&rejected).unwrap_or_else(|_| {
@@ -1492,11 +1656,23 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
 /// dispatch loop), then record the case entry, fire the notify hook, and
 /// publish the durable `case.submitted` event on success.
 async fn commit_plan(state: &Arc<ServerState>, payload: SubmitPayload) -> serde_json::Value {
-    if let Ok(new_config) = state.reload_config() {
-        tracing::info!("config reloaded successfully");
-        let _ = new_config;
-    } else {
-        tracing::warn!("invalid config reload — keeping last-known-good");
+    // The swap has already happened by the time this returns, so the dispatch
+    // below runs on the reloaded snapshot. An invalid file keeps the previous
+    // one and is reported to the operator — a silent log line would let a cell
+    // run for days on a configuration its `server.yaml` no longer describes.
+    if let Err(message) = state.reload_config() {
+        tracing::warn!("invalid config reload — keeping last-known-good: {message}");
+        let _ = state
+            .publish_event(
+                "invalid_reload_error",
+                None,
+                None,
+                serde_json::json!({
+                    "config_path": state.root.join("server.yaml").display().to_string(),
+                    "message": message,
+                }),
+            )
+            .await;
     }
 
     match case_dispatch::submit(payload, state).await {
@@ -1511,7 +1687,7 @@ async fn commit_plan(state: &Arc<ServerState>, payload: SubmitPayload) -> serde_
             state.cases.lock().await.insert(case_id.clone(), entry);
 
             // Fire notify_command (failure is logged and ignored — §10.3).
-            if let Some(argv) = &state.config.notify_command {
+            if let Some(argv) = &state.config().notify_command {
                 if !argv.is_empty() {
                     let event = serde_json::json!({
                         "event": "run_finished",
@@ -1551,7 +1727,7 @@ async fn instantiate_plan_file(
     template_ref: &str,
     params: &std::collections::BTreeMap<String, String>,
 ) -> Result<String, ForgeError> {
-    let root = state.config.root.clone();
+    let root = state.root.clone();
     let template_ref = template_ref.to_string();
     let params = params.clone();
     tokio::task::spawn_blocking(move || {
@@ -1741,7 +1917,7 @@ async fn decide(
     // Evaluate preconditions first — before any side effect.
     if let Some(precondition) = preconditions {
         let resolver = LedgerRecordResolver {
-            root: &state.config.root,
+            root: &state.root,
             case_id,
         };
         match sfwp::precondition::evaluate(precondition, &resolver) {
@@ -1763,7 +1939,7 @@ async fn decide(
         }
     }
 
-    let root = state.config.root.clone();
+    let root = state.root.clone();
     let result = run_cli(
         &root,
         &[
@@ -1844,7 +2020,7 @@ async fn delegate_inner(
         drop(permit);
         return serde_json::json!({"error":"delegation run_id already active"});
     }
-    let config = state.config.clone();
+    let config = state.config();
     let run_for_execution = delegation_run_id.clone();
     let case_for_execution = delegation_case_id.clone();
     let cancel_for_execution = Arc::clone(&cancel);
@@ -1947,7 +2123,7 @@ async fn cancel_delegation(
     }
 
     let result = record_cancellation(
-        &state.config,
+        &state.config(),
         run_id,
         &handle.case_id,
         policy_path,
@@ -2194,5 +2370,123 @@ mod socket_contract_tests {
         let over = PathBuf::from("/").join("y".repeat(budget));
         assert_eq!(over.as_os_str().as_encoded_bytes().len(), budget + 1);
         assert!(check_socket_path_length(&over).is_err());
+    }
+}
+
+#[cfg(test)]
+mod lifecycle_contract_tests {
+    use super::*;
+    use std::sync::atomic::AtomicBool;
+    use std::time::Duration;
+
+    /// The load-bearing half of the §11.1 timeout: expiry stops *waiting*, it
+    /// does not stop the work. A `case.submit` that has already begun appending
+    /// to a ledger must finish that append, or the durable record and the
+    /// client's view of it diverge permanently.
+    ///
+    /// Rewriting `bounded` as `timeout(limit, work)` passes every assertion
+    /// about the response shape and fails this one.
+    #[tokio::test]
+    async fn a_timed_out_request_keeps_running() {
+        static FINISHED: AtomicBool = AtomicBool::new(false);
+
+        let response = bounded(
+            async {
+                tokio::time::sleep(Duration::from_millis(300)).await;
+                FINISHED.store(true, Ordering::SeqCst);
+                serde_json::json!({"ok": true})
+            },
+            Duration::from_millis(50),
+            r#"{"verb":"case_submit","request_id":"req_abc"}"#,
+        )
+        .await;
+
+        assert_eq!(response["error_class"], "request_timeout");
+        assert!(
+            !FINISHED.load(Ordering::SeqCst),
+            "the bound returned only after the work finished — it did not bound anything"
+        );
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        assert!(
+            FINISHED.load(Ordering::SeqCst),
+            "the work was cancelled at the timeout; a half-written durable record would be \
+             unrecoverable"
+        );
+    }
+
+    /// The timeout response has to name the request the client should poll, or
+    /// `recover_with: request.get_status` is advice the client cannot act on.
+    #[tokio::test]
+    async fn a_timeout_names_the_request_to_recover_with() {
+        let response = bounded(
+            std::future::pending::<serde_json::Value>(),
+            Duration::from_millis(20),
+            r#"{"verb":"case_submit","request_id":"req_recover_me"}"#,
+        )
+        .await;
+
+        assert_eq!(response["request_id"], "req_recover_me");
+        assert_eq!(response["recover_with"], "request.get_status");
+        assert_eq!(response["timeout_seconds"], 0);
+    }
+
+    /// A verb that carries no `request_id` still gets a typed timeout rather
+    /// than a dropped connection.
+    #[tokio::test]
+    async fn a_timeout_without_a_request_id_is_still_typed() {
+        let response = bounded(
+            std::future::pending::<serde_json::Value>(),
+            Duration::from_millis(20),
+            r#"{"verb":"agent_probe"}"#,
+        )
+        .await;
+
+        assert_eq!(response["error_class"], "request_timeout");
+        assert!(response["request_id"].is_null());
+    }
+
+    /// A panicking handler is a bug in one request, not a reason to drop a
+    /// connection that may be carrying an event subscription.
+    #[tokio::test]
+    async fn a_panicking_handler_is_reported_not_propagated() {
+        let response = bounded(
+            async { panic!("handler bug") },
+            Duration::from_secs(5),
+            r#"{"verb":"case_submit"}"#,
+        )
+        .await;
+
+        assert_eq!(response["error_class"], "internal_error");
+    }
+
+    #[test]
+    fn an_unset_notify_command_preflights_clean() {
+        assert!(check_notify_command(None).is_ok());
+        assert!(check_notify_command(Some(&[])).is_ok());
+    }
+
+    #[test]
+    fn a_notify_command_on_path_preflights_clean() {
+        // `sh` is mandated by POSIX and is on PATH wherever this test runs.
+        let argv = ["sh".to_string(), "-c".to_string(), "true".to_string()];
+        assert!(check_notify_command(Some(&argv)).is_ok());
+    }
+
+    #[test]
+    fn a_missing_notify_command_blocks_startup_with_the_fix_named() {
+        let argv = ["/nonexistent/notify-hook".to_string()];
+        let error = check_notify_command(Some(&argv)).unwrap_err().to_string();
+        assert!(error.contains("/nonexistent/notify-hook"), "{error}");
+        assert!(error.contains("server.yaml"), "{error}");
+    }
+
+    /// A bare name is resolved against PATH at spawn time. Preflighting it as a
+    /// relative path would pass or fail on the server's working directory,
+    /// which is not where the hook will be looked up.
+    #[test]
+    fn a_bare_name_is_preflighted_against_path_not_the_cwd() {
+        let argv = ["definitely-not-a-real-program-xyzzy".to_string()];
+        assert!(check_notify_command(Some(&argv)).is_err());
     }
 }
