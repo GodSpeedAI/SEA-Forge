@@ -1,6 +1,23 @@
 # Current Status
 
-Updated: 2026-07-26
+Updated: 2026-07-27
+
+> **2026-07-27 architectural adjudication Pass 2 complete.** Seven authoritative
+> reconciliation and packaging inputs were added under `docs/execution/`:
+> `ARCHITECTURAL_TRUTH.md`, `ARCHITECTURAL_INVARIANTS.md`,
+> `CONTRADICTIONS_AND_DECISIONS.md`, `PRODUCT_COMPLETION_DEFINITION.md`,
+> `EXECUTION_DAG.md`, `DECISION_REGISTER.md`, and `PASS_2_HANDOFF.md`. No product
+> feature or source behavior changed. Independent source review corrected Pass
+> 1's Copilot, tracked `working/face/`, DomainForge, route-guard, inferred-gate,
+> and end-to-end usability claims. The highest completion blockers are the
+> server case sandbox path's pre-authority directory creation, incomplete
+> lifecycle/exit-code settlement, case-run versus run-view path mismatch,
+> unresolved Workbench/server service lifecycle, identity/idempotency gaps, and
+> absent packaged real-stack E2E. Distribution packaging is conditionally ready:
+> owner decision U-06 (Tauri sidecar versus separately installed local service)
+> is required before deployment configuration changes. Verification: fresh
+> adversarial review completed and reconciled; `git diff --check` clean;
+> `devbox run -- just context-check` passed.
 
 > **2026-07-26 Workbench plan Task 7 (case overview and horizon) complete,
 > plus the four `OBSERVED_DEBT.md` entries Task 7's own "review before

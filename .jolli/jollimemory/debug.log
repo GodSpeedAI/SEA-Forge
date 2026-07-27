@@ -698,3 +698,22 @@
 [2026-07-27T13:06:35.949Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
 [2026-07-27T13:06:35.949Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
 [2026-07-27T13:06:36.124Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=6, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T14:56:42.106Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T14:56:58.214Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T14:57:00.417Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T14:57:02.573Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T14:57:23.855Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T14:57:29.492Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T14:57:33.001Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T14:59:58.132Z] INFO  [UpdateCheck] [trace=7069e751cbeea93ce0ccfb92aa76959a] Spawned detached update-check refresh (PID: 2837420)
+[2026-07-27T14:59:58.150Z] INFO  [StorageFactory] [trace=7069e751cbeea93ce0ccfb92aa76959a] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T14:59:58.169Z] INFO  [StorageFactory] [trace=7069e751cbeea93ce0ccfb92aa76959a] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T14:59:59.926Z] INFO  [McpServer] [trace=7069e751cbeea93ce0ccfb92aa76959a] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-27T15:03:18.629Z] INFO  [StorageFactory] [trace=2bf7478ede6f8f92798e855404dfbfe9] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-27T15:03:18.651Z] INFO  [StorageFactory] [trace=2bf7478ede6f8f92798e855404dfbfe9] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-27T15:03:19.726Z] INFO  [McpServer] [trace=2bf7478ede6f8f92798e855404dfbfe9] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-27T15:21:49.840Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T15:21:49.845Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T15:21:50.207Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T15:45:47.860Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T15:47:46.624Z] INFO  [SearchIndex] Built search index: 16 docs
