@@ -1,0 +1,24 @@
+{
+  "agents": [
+    {
+      "agent_id": "aff6d036c9dfa708e",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-27T18:44:36.955Z",
+      "parent_mode": "none",
+      "status": "failed",
+      "completed_at": "2026-07-27T18:51:37.360Z",
+      "duration_ms": 420405
+    },
+    {
+      "agent_id": "aaa752db7913fd44f",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-27T18:44:41.314Z",
+      "parent_mode": "none",
+      "status": "running"
+    }
+  ],
+  "total_spawned": 2,
+  "total_completed": 0,
+  "total_failed": 1,
+  "last_updated": "2026-07-27T18:51:37.361Z"
+}

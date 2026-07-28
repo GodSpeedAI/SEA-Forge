@@ -237,9 +237,10 @@ fn run_stage_episode(
         .join("runs")
         .join(run_id)
         .join("workspace");
-    let artifacts = workspace.parent().unwrap().join("artifacts");
-    fs::create_dir_all(&workspace).map_err(|e| ForgeError::io("create workspace", e))?;
-    fs::create_dir_all(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
+    let run_dir = workspace.parent().unwrap().to_path_buf();
+    let artifacts = run_dir.join("artifacts");
+    // AUTH-01: created below, inside the allow branch. A denied stage must
+    // leave nothing behind on the filesystem.
 
     let bundle = AuthorityPolicyBundle::load(policy_path)?;
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
@@ -271,8 +272,11 @@ fn run_stage_episode(
         vec![],
     )?;
     let execution = if decision.verdict == Verdict::Allow {
+        // The Allow is committed (`decision_ref`) before anything is written.
+        fs::create_dir_all(&workspace).map_err(|e| ForgeError::io("create workspace", e))?;
+        fs::create_dir_all(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
         let grant = engine.grant(&decision, &decision_ref, &action, None)?;
-        sea_forge_runtime::execute(
+        Some(sea_forge_runtime::execute(
             grant,
             &ExecutionRequest {
                 plan_item_id: item.plan_item_id.clone(),
@@ -293,58 +297,46 @@ fn run_stage_episode(
             run_id,
             &workspace,
             &artifacts,
-        )?
+        )?)
     } else {
-        ExecutionResult {
-            status: ExecutionStatus::SpawnFailed,
-            exit_code: None,
-            stdout_path: String::new(),
-            stderr_path: String::new(),
-            started_at: Utc::now().to_rfc3339(),
-            finished_at: Utc::now().to_rfc3339(),
-        }
+        // Not a spawn that failed — no spawn was ever attempted.
+        None
     };
-    let accepted = decision.verdict == Verdict::Allow
-        && execution.status == ExecutionStatus::Completed
-        && execution.exit_code == Some(0);
-    stages[stage_index].status = if accepted {
-        StageStatus::Accepted
-    } else {
-        StageStatus::Rejected
+
+    // Settlement evaluates the stage's declared criteria against the evidence
+    // the stage produced, rather than trusting its exit code. It is also the
+    // only path that represents `Escalate`, which the previous `accepted`
+    // boolean collapsed into a plain rejection — discarding the review the
+    // verdict asked for.
+    let settlement = sea_forge_settlement::settle(
+        &sea_forge_core::types::SettlementClaim {
+            run_id: run_id.into(),
+            plan_item_id: item.plan_item_id.clone(),
+            criteria_ref: item.settlement_criteria_ref.clone(),
+            criteria: item.settlement_criteria.clone(),
+            execution,
+            authority_verdicts: vec![decision.verdict.clone()],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
+        },
+        &workspace,
+        &run_dir,
+    )?;
+
+    stages[stage_index].status = match settlement.status {
+        SettlementStatus::Accepted => StageStatus::Accepted,
+        _ => StageStatus::Rejected,
     };
-    if !accepted {
+    if settlement.status != SettlementStatus::Accepted {
+        // `basis` already carries why (authority_deny / spawn_failed /
+        // exit_nonzero / required_artifact_missing / ...), so the quarantine
+        // reason quotes it instead of re-deriving a coarser one.
         sea_forge_spec_pipeline::quarantine_stage(
             &mut stages[stage_index],
-            if decision.verdict == Verdict::Allow {
-                "stage_execution_failed"
-            } else {
-                "authority_denied"
-            },
+            &settlement.basis.join(","),
         )?;
     }
-    Ok(SettlementEvent {
-        version: RECORD_VERSION.into(),
-        settlement_id: ids::random_id("set")?,
-        run_id: run_id.into(),
-        status: if accepted {
-            SettlementStatus::Accepted
-        } else {
-            SettlementStatus::Rejected
-        },
-        basis: vec![if accepted {
-            "execution_completed".into()
-        } else if decision.verdict == Verdict::Allow {
-            // Authority allowed but the run did not accept (nonzero exit,
-            // spawn failure, etc.) — mirror quarantine_stage's basis so the
-            // settlement record distinguishes execution failure from denial.
-            "stage_execution_failed".into()
-        } else {
-            "authority_denied".into()
-        }],
-        review_required: false,
-        settled_at: Utc::now().to_rfc3339(),
-        criteria_ref: item.settlement_criteria_ref.clone(),
-    })
+    Ok(settlement)
 }
 
 /// Drive a stage `CasePlan` (from `sea_forge_planner::stage_case_plan`) to

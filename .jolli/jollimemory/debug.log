@@ -840,3 +840,48 @@
 [2026-07-27T17:34:43.541Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
 [2026-07-27T17:34:43.541Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
 [2026-07-27T17:34:43.541Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-27T20:08:21.180Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-27T20:08:21.333Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T20:08:21.335Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T20:08:21.580Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T20:08:21.740Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-27T20:08:21.740Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-27T20:08:21.747Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-27T20:08:23.135Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-28T00:23:10.668Z] INFO  [StorageFactory] [trace=5f301c4f1f37cedfc6c182a3e3d8e82c] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-28T00:23:10.734Z] INFO  [StorageFactory] [trace=5f301c4f1f37cedfc6c182a3e3d8e82c] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-28T00:23:11.887Z] INFO  [McpServer] [trace=5f301c4f1f37cedfc6c182a3e3d8e82c] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-07-28T19:35:15.370Z] INFO  [activate] Activating JolliMemory extension {"workspaceRoot":"/home/sprime01/projects/sea-rs","extensionPath":"/home/sprime01/.vscode-server/extensions/jolli.jollimemory-vscode-0.99.9"}
+[2026-07-28T19:35:15.486Z] INFO  [initialLoad] Loading all panels
+[2026-07-28T19:35:24.336Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-28T19:35:24.358Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-28T19:35:24.389Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-28T19:35:24.470Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-28T19:35:36.167Z] INFO  [Sync:VsCodeBootstrap] Memory Bank sync engine built (auto-sync off — manual only)
+[2026-07-28T19:35:36.446Z] INFO  [plans] detectPlans found 3 plans (3 in registry)
+[2026-07-28T19:35:37.283Z] INFO  [references] detectReferences(*) found 0 (0 in registry)
+[2026-07-28T19:35:37.332Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-07-28T19:35:46.168Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-28T19:35:46.245Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-28T19:35:47.053Z] INFO  [activate] Schema v5 migration already complete — skipping (no UI toggle)
+[2026-07-28T19:35:53.637Z] INFO  [MigrationEngine] 0.99.2 head-regen already completed at 2026-07-27T02:26:39.094Z — skipping phase 1
+[2026-07-28T19:35:53.640Z] INFO  [MigrationEngine] Stale-child sweep: deleted=0 failed=0
+[2026-07-28T19:35:53.642Z] INFO  [activate] KB stale-child reconcile: swept=0 completedAt=2026-07-27T02:26:39.094Z
+[2026-07-28T19:35:59.048Z] INFO  [SessionTracker] Pruning stale session a556d266-f7b1-4eae-9252-c424a0086a3a (age: 51h)
+[2026-07-28T19:35:59.076Z] INFO  [SessionTracker] Pruning stale session a556d266-f7b1-4eae-9252-c424a0086a3a (age: 51h)
+[2026-07-28T19:36:10.611Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-28T19:36:10.711Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-28T19:36:10.805Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-28T19:36:10.912Z] INFO  [initialLoad] All panels loaded — updating status bar
+[2026-07-28T19:36:10.912Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-28T19:36:13.876Z] INFO  [SessionTracker] Pruning stale session a556d266-f7b1-4eae-9252-c424a0086a3a (age: 52h)
+[2026-07-28T19:36:13.919Z] INFO  [SessionTracker] Pruning stale session a556d266-f7b1-4eae-9252-c424a0086a3a (age: 52h)
+[2026-07-28T19:36:15.323Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-28T19:36:15.324Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined
+[2026-07-28T19:36:15.414Z] INFO  [Installer] Checking Jolli Memory status
+[2026-07-28T19:36:15.621Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-28T19:36:15.664Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-28T19:36:15.949Z] INFO  [StorageFactory] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-07-28T19:36:15.979Z] INFO  [StorageFactory] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-07-28T19:36:16.438Z] INFO  [SessionTracker] Pruning stale session a556d266-f7b1-4eae-9252-c424a0086a3a (age: 52h)
+[2026-07-28T19:36:17.136Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=12, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/true, copilotChat=true, cline=false/undefined

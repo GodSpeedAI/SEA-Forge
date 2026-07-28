@@ -37,9 +37,8 @@ pub(crate) async fn submit(
         &fs::read(&plan_path).map_err(|e| ForgeError::io("read plan proposal", e))?,
     )?;
     validate_proposal(&mut plan)?;
-    fs::create_dir_all(&state.config.root).map_err(|e| ForgeError::io("create state root", e))?;
+    fs::create_dir_all(&state.root).map_err(|e| ForgeError::io("create state root", e))?;
     let root = state
-        .config
         .root
         .canonicalize()
         .map_err(|e| ForgeError::io("canonicalize state root", e))?;
@@ -258,7 +257,7 @@ pub(crate) async fn submit(
                             },
                         }),
                     )?;
-                    let config = state.config.clone();
+                    let config = state.config();
                     let policy = payload.policy.clone();
                     let entity = payload.entity.clone();
                     let process = payload.process.clone();
@@ -316,16 +315,30 @@ pub(crate) async fn submit(
                             .and_then(|result| result),
                             _ => Err(ForgeError::Input("unsupported executable plan item".into())),
                         };
-                        let settlement = result.unwrap_or_else(|error| SettlementEvent {
-                            version: RECORD_VERSION.into(),
-                            settlement_id: ids::random_id("set")
-                                .unwrap_or_else(|_| "set_dispatch_error".into()),
-                            run_id: run_id.clone(),
-                            status: SettlementStatus::Rejected,
-                            basis: vec!["episode_dispatch_error".into(), error.class().into()],
-                            review_required: false,
-                            settled_at: Utc::now().to_rfc3339(),
-                            criteria_ref,
+                        let settlement = result.unwrap_or_else(|error| {
+                            // The basis carries the error *class* because it is a
+                            // durable record with a stable vocabulary. The message
+                            // is the only thing that says which policy file or
+                            // which field was wrong, so it must not die here.
+                            tracing::error!(
+                                run_id = %run_id,
+                                error_class = error.class(),
+                                "episode dispatch failed: {error}"
+                            );
+                            SettlementEvent {
+                                version: RECORD_VERSION.into(),
+                                settlement_id: ids::random_id("set")
+                                    .unwrap_or_else(|_| "set_dispatch_error".into()),
+                                run_id: run_id.clone(),
+                                status: SettlementStatus::Rejected,
+                                basis: vec![
+                                    "episode_dispatch_error".into(),
+                                    error.class().into(),
+                                ],
+                                review_required: false,
+                                settled_at: Utc::now().to_rfc3339(),
+                                criteria_ref,
+                            }
                         });
                         Completion {
                             item_id,
@@ -516,9 +529,11 @@ fn execute_sandbox(
         .join("runs")
         .join(run_id)
         .join("workspace");
-    let artifacts = workspace.parent().unwrap().join("artifacts");
-    fs::create_dir_all(&workspace).map_err(|e| ForgeError::io("create workspace", e))?;
-    fs::create_dir_all(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
+    let run_dir = workspace.parent().unwrap().to_path_buf();
+    let artifacts = run_dir.join("artifacts");
+    // AUTH-01: these directories are created below, *inside* the allow branch.
+    // Creating them here would make a denied action leave a trace on the
+    // filesystem — a side effect that no committed Allow ever authorised.
     let policy = agent_probe::resolve_policy_path(&config.root, policy_path);
     let bundle = AuthorityPolicyBundle::load(&policy)?;
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
@@ -551,8 +566,11 @@ fn execute_sandbox(
         vec![],
     )?;
     let execution = if decision.verdict == Verdict::Allow {
+        // The Allow is committed (`decision_ref`) before anything is written.
+        fs::create_dir_all(&workspace).map_err(|e| ForgeError::io("create workspace", e))?;
+        fs::create_dir_all(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
         let grant = engine.grant(&decision, &decision_ref, &action, None)?;
-        sea_forge_runtime::execute(
+        Some(sea_forge_runtime::execute(
             grant,
             &ExecutionRequest {
                 plan_item_id: item.plan_item_id.clone(),
@@ -573,37 +591,32 @@ fn execute_sandbox(
             run_id,
             &workspace,
             &artifacts,
-        )?
+        )?)
     } else {
-        sea_forge_core::types::ExecutionResult {
-            status: sea_forge_core::types::ExecutionStatus::SpawnFailed,
-            exit_code: None,
-            stdout_path: String::new(),
-            stderr_path: String::new(),
-            started_at: Utc::now().to_rfc3339(),
-            finished_at: Utc::now().to_rfc3339(),
-        }
+        // Nothing ran. Reporting this as a `SpawnFailed` execution — as this
+        // used to — describes a spawn that was attempted and failed, which is
+        // not what happened and is not what an operator reading the record
+        // needs to know. `None` says the truth: no execution took place.
+        None
     };
-    let status = if decision.verdict == Verdict::Allow
-        && execution.status == sea_forge_core::types::ExecutionStatus::Completed
-        && execution.exit_code == Some(0)
-    {
-        SettlementStatus::Accepted
-    } else {
-        SettlementStatus::Rejected
-    };
-    Ok(SettlementEvent {
-        version: RECORD_VERSION.into(),
-        settlement_id: ids::random_id("set")?,
-        run_id: run_id.into(),
-        status,
-        basis: vec![if decision.verdict == Verdict::Allow {
-            "execution_completed".into()
-        } else {
-            "authority_denied".into()
-        }],
-        review_required: false,
-        settled_at: Utc::now().to_rfc3339(),
-        criteria_ref: item.settlement_criteria_ref.clone(),
-    })
+
+    // Settlement evaluates the declared criteria against the evidence the run
+    // actually produced. The previous `exit_code == Some(0)` shortcut accepted
+    // a command that exited zero while writing none of its required artifacts,
+    // and it had no representation for `Escalate` at all — an escalation was
+    // silently settled as a rejection, losing the review the verdict asked for.
+    sea_forge_settlement::settle(
+        &sea_forge_core::types::SettlementClaim {
+            run_id: run_id.into(),
+            plan_item_id: item.plan_item_id.clone(),
+            criteria_ref: item.settlement_criteria_ref.clone(),
+            criteria: item.settlement_criteria.clone(),
+            execution,
+            authority_verdicts: vec![decision.verdict.clone()],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
+        },
+        &workspace,
+        &run_dir,
+    )
 }
