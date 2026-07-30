@@ -149,10 +149,64 @@ no-async-kernel:
 # kernel `check`/`ci` gates — the frontend is developed and gated separately
 # per docs/decisions/ADR-004-workbench-stack.md.
 [group('quality')]
-workbench-check:
+workbench-check: workbench-contracts-gate
     #!/usr/bin/env bash
     {{set}}
     cd workbench && bun install --frozen-lockfile && bun run check && bun run build && bun run test
+
+# Generated-zone drift gate (ADR-005, GEN-01, API-01, ADR-004).
+#
+# Rust types are canonical; the TS interfaces, AJV validators, and UI token
+# sheet are committed *projections*. This regenerates each one and requires the
+# result to be byte-identical to what is committed. The Rust->JSON-Schema half
+# is already gated by `conformance_sfwp::generated_schemas_are_committed_and_current`,
+# so it is not repeated here.
+#
+# Workbench-only by design: the kernel gates (`check`, `ci`) must not acquire a
+# Bun dependency (K-06).
+[group('quality')]
+workbench-contracts-gate:
+    #!/usr/bin/env bash
+    {{set}}
+    cd workbench
+    bun install --frozen-lockfile
+    bun run generate:contracts
+    # `git diff` alone would pass a regeneration that *added* a file — a new
+    # SFWP type shows up untracked, not modified. Both checks are needed.
+    if ! git diff --exit-code -- packages/contracts/generated; then
+        echo "fail: generated TS/AJV contracts drifted from the committed schemas." >&2
+        echo "      run 'bun run generate:contracts' in workbench/ and commit the result." >&2
+        exit 1
+    fi
+    untracked="$(git status --porcelain --untracked-files=all -- packages/contracts/generated)"
+    if [ -n "$untracked" ]; then
+        echo "fail: generation produced files that are not committed:" >&2
+        echo "$untracked" >&2
+        exit 1
+    fi
+    # The token sheet is a byte copy of the spec source, not a transform.
+    # Invoked through bun rather than the `check-drift` npm script because
+    # devbox pins no node toolchain for this repo.
+    bun packages/sea-forge-ui-tokens/scripts/check-drift.mjs
+    # ADR-004: src-tauri is its own Cargo workspace root. If its `[workspace]`
+    # table were removed, cargo would walk up and adopt the repository root,
+    # pulling Tauri's async dependency tree into the kernel workspace (BUILD-01).
+    # `cargo metadata` names the root it actually resolved, which a grep for
+    # `[workspace]` cannot.
+    expected="$(cd apps/desktop/src-tauri && pwd -P)"
+    # `|| true`: removing the table makes cargo error outright rather than
+    # report a different root, and under `set -e` that would kill the recipe
+    # before it could say why. An empty `actual` fails the comparison below and
+    # prints the fix.
+    actual="$(cargo metadata --no-deps --offline --format-version 1 \
+        --manifest-path apps/desktop/src-tauri/Cargo.toml 2>/dev/null \
+        | jq -r .workspace_root || true)"
+    if [ "$actual" != "$expected" ]; then
+        echo "fail: src-tauri resolved to workspace root '$actual', expected '$expected'." >&2
+        echo "      restore the empty [workspace] table in apps/desktop/src-tauri/Cargo.toml (ADR-004)." >&2
+        exit 1
+    fi
+    echo "ok: generated contracts, UI tokens, and the Tauri workspace boundary are current"
 
 # Start the Workbench Vite dev server in the background (http://localhost:1420).
 [group('workbench')]
