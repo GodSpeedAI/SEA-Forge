@@ -6,13 +6,16 @@ use sea_forge_core::{
     errors::ForgeError,
     ids,
     types::{
-        Actor, ActorRole, Case, CasePlan, CaseState, ExecutionRequest, ItemKind, Operation,
-        SettlementEvent, SettlementStatus, TraceKind, Verdict,
+        Actor, ActorRole, ApprovalRequest, ApprovalStatus, Case, CasePlan, CaseState, EvidenceKind,
+        ExecutionRequest, ItemKind, Operation, SettlementEvent, SettlementStatus, TraceKind,
+        Verdict,
     },
     RECORD_VERSION,
 };
+use sea_forge_evidence::JsonlEvidenceWriter;
 use sea_forge_ledger::LedgerStream;
 use sea_forge_planner::case_engine::{replay_case, validate_proposal, CaseAction};
+use sea_forge_trace::JsonlTraceRecorder;
 use std::{collections::BTreeMap, fs, path::PathBuf, sync::Arc};
 use tokio::task::JoinSet;
 
@@ -331,10 +334,7 @@ pub(crate) async fn submit(
                                     .unwrap_or_else(|_| "set_dispatch_error".into()),
                                 run_id: run_id.clone(),
                                 status: SettlementStatus::Rejected,
-                                basis: vec![
-                                    "episode_dispatch_error".into(),
-                                    error.class().into(),
-                                ],
+                                basis: vec!["episode_dispatch_error".into(), error.class().into()],
                                 review_required: false,
                                 settled_at: Utc::now().to_rfc3339(),
                                 criteria_ref,
@@ -531,9 +531,16 @@ fn execute_sandbox(
         .join("workspace");
     let run_dir = workspace.parent().unwrap().to_path_buf();
     let artifacts = run_dir.join("artifacts");
-    // AUTH-01: these directories are created below, *inside* the allow branch.
-    // Creating them here would make a denied action leave a trace on the
-    // filesystem — a side effect that no committed Allow ever authorised.
+    // The run directory is where this episode's *governance* records live, so
+    // it exists before authority is evaluated: a denial that wrote its trace
+    // and evidence nowhere would be indistinguishable from an episode that
+    // never happened. `workspace/` and `artifacts/` — the only directories the
+    // operation itself would touch — stay unborn until a committed Allow
+    // (AUTH-01), and are created inside the allow branch below.
+    fs::create_dir_all(&run_dir).map_err(|e| ForgeError::io("create run dir", e))?;
+    let mut trace = JsonlTraceRecorder::create(&run_dir.join("trace.jsonl"), run_id, entity)?;
+    let mut evidence = JsonlEvidenceWriter::create(&run_dir.join("evidence.jsonl"), run_id)?;
+
     let policy = agent_probe::resolve_policy_path(&config.root, policy_path);
     let bundle = AuthorityPolicyBundle::load(&policy)?;
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
@@ -542,6 +549,24 @@ fn execute_sandbox(
         role: ActorRole::Operator,
     };
     let action = sea_forge_core::types::AuthorityAction::from(&operation);
+    // DOM-03: the domain model judges the action *before* policy authority
+    // does, exactly as `cli/src/pipeline.rs:486-498` does it. A policy with no
+    // `domainforge` engine yields `None` and the evaluation is unchanged; a
+    // policy that declares one but whose model has drifted fails here, with a
+    // typed error, before any grant exists.
+    let domainforge_candidate = bundle
+        .load_domainforge_model()?
+        .map(|model| {
+            sea_forge_authority::DomainForgeCandidate::evaluate(
+                &model,
+                &action,
+                vec![format!(
+                    "domain-model:{}",
+                    model.model_ref.semantic_model_sha256
+                )],
+            )
+        })
+        .transpose()?;
     let decision = engine.evaluate(AuthorityEvaluation {
         actor: &actor,
         binding: bundle.resolve_identity(entity, ActorRole::Operator),
@@ -555,22 +580,92 @@ fn execute_sandbox(
         artifacts_root: Some(&artifacts),
         timeout_secs: Some(timeout),
         env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
-        domainforge_candidate: None,
+        domainforge_candidate: domainforge_candidate.as_ref(),
         environment: None,
     })?;
     let ledger = LedgerStream::open(&root, format!("case-{case_id}"), entity)?;
+    let decision_event = trace.append(
+        TraceKind::AuthorityEvaluated,
+        Some(item.plan_item_id.clone()),
+        serde_json::json!({
+            "decision_id": decision.decision_id,
+            "verdict": decision.verdict,
+        }),
+    )?;
+    evidence.append(
+        EvidenceKind::AuthorityDecision,
+        decision.decision_id.clone(),
+        None,
+        decision_event,
+        BTreeMap::new(),
+    )?;
     let decision_ref = ledger.commit_typed(
         "authority_decision",
         vec![run_id.into(), item.plan_item_id.clone()],
         &decision,
         vec![],
     )?;
+    if decision.verdict == Verdict::Escalate {
+        // An escalation asks a human a question. Recording only "rejected"
+        // would throw that question away and make the episode look decided.
+        // The request is committed and mirrored into the approvals view the
+        // same way delegation does it (`delegation.rs:1671-1722`); nothing
+        // runs, here or later, until someone resolves it.
+        let sequence = ledger
+            .read_entries()?
+            .iter()
+            .filter(|entry| entry.record_kind == "approval_request")
+            .count()
+            + 1;
+        let requested_at = Utc::now();
+        let approval = ApprovalRequest {
+            version: RECORD_VERSION.into(),
+            approval_id: ids::seq_id("apr", 4, sequence),
+            run_id: run_id.into(),
+            case_id: case_id.into(),
+            decision_id: decision.decision_id.clone(),
+            plan_item_id: item.plan_item_id.clone(),
+            criteria_ref: item.settlement_criteria_ref.clone(),
+            criteria_sha256: None,
+            criteria_record_hash: None,
+            job_contract_ref: None,
+            requested_at: requested_at.to_rfc3339(),
+            expires_at: (requested_at + chrono::Duration::seconds(timeout as i64)).to_rfc3339(),
+            status: ApprovalStatus::Pending,
+            resolved_by: None,
+            resolved_at: None,
+            note: Some(format!(
+                "sandbox episode {} awaits approval",
+                item.plan_item_id
+            )),
+        };
+        ledger.commit_typed(
+            "approval_request",
+            vec![case_id.into(), approval.approval_id.clone()],
+            &approval,
+            vec![decision_ref.entry_ulid().into()],
+        )?;
+        delegation::append_approval_view(&root, &approval)?;
+    }
     let execution = if decision.verdict == Verdict::Allow {
         // The Allow is committed (`decision_ref`) before anything is written.
         fs::create_dir_all(&workspace).map_err(|e| ForgeError::io("create workspace", e))?;
         fs::create_dir_all(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
+        trace.append(
+            TraceKind::WorkspaceCreated,
+            Some(item.plan_item_id.clone()),
+            serde_json::json!({"workspace": workspace.display().to_string()}),
+        )?;
         let grant = engine.grant(&decision, &decision_ref, &action, None)?;
-        Some(sea_forge_runtime::execute(
+        trace.append(
+            TraceKind::CommandStarted,
+            Some(item.plan_item_id.clone()),
+            // `ActionGrant`'s fields are private, so the trace names the
+            // committed decision the grant was minted from — which is the
+            // cross-reference an auditor follows anyway.
+            serde_json::json!({"decision_id": decision.decision_id}),
+        )?;
+        let result = sea_forge_runtime::execute(
             grant,
             &ExecutionRequest {
                 plan_item_id: item.plan_item_id.clone(),
@@ -591,12 +686,33 @@ fn execute_sandbox(
             run_id,
             &workspace,
             &artifacts,
-        )?)
+        )?;
+        let finished = trace.append(
+            TraceKind::CommandFinished,
+            Some(item.plan_item_id.clone()),
+            serde_json::json!({
+                "status": result.status,
+                "exit_code": result.exit_code,
+            }),
+        )?;
+        evidence.append(
+            EvidenceKind::ExecutionResult,
+            result.stdout_path.clone(),
+            None,
+            finished,
+            BTreeMap::new(),
+        )?;
+        Some(result)
     } else {
         // Nothing ran. Reporting this as a `SpawnFailed` execution — as this
         // used to — describes a spawn that was attempted and failed, which is
         // not what happened and is not what an operator reading the record
         // needs to know. `None` says the truth: no execution took place.
+        trace.append(
+            TraceKind::RunHalted,
+            Some(item.plan_item_id.clone()),
+            serde_json::json!({"verdict": decision.verdict}),
+        )?;
         None
     };
 

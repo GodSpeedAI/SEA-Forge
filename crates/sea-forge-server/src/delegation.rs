@@ -1561,7 +1561,10 @@ struct AcpAuthorityMediator {
     criteria_ref: sea_forge_ledger::CommittedRecordRef,
 }
 
-fn append_approval_view(root: &Path, approval: &ApprovalRequest) -> Result<(), ForgeError> {
+pub(crate) fn append_approval_view(
+    root: &Path,
+    approval: &ApprovalRequest,
+) -> Result<(), ForgeError> {
     let path = root.join("approvals.jsonl");
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)

@@ -32,18 +32,20 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-/// A policy that allows `execute_command`, or denies everything.
+/// A policy carrying one `execute_command` rule with the given verdict, or —
+/// for `None` — no rules at all, which denies by default.
 ///
 /// `argv0` must be `sea-forge`: `AuthorityPolicyBundle::validate` refuses a
 /// *local* allow for `execute_command` with any other argv0 as a
 /// `schema_error`, so policy cannot hand out local shell execution.
-fn policy(root: &Path, allow: bool) -> PathBuf {
-    let rules = if allow {
-        "  - name: allow-command\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n"
-    } else {
-        ""
+fn policy(root: &Path, verdict: Option<&str>) -> PathBuf {
+    let rules = match verdict {
+        Some(verdict) => format!(
+            "  - name: {verdict}-command\n    verdict: {verdict}\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n"
+        ),
+        None => String::new(),
     };
-    let path = root.join(if allow { "allow.yaml" } else { "deny.yaml" });
+    let path = root.join(format!("{}.yaml", verdict.unwrap_or("deny")));
     fs::write(&path, format!("version: \"0.1\"\nrules:\n{rules}")).unwrap();
     path
 }
@@ -152,6 +154,26 @@ impl Episode {
             .unwrap_or(serde_json::Value::Null)
     }
 
+    /// Every record of one kind from every run directory this case produced.
+    fn jsonl(&self, file: &str) -> Vec<serde_json::Value> {
+        self.run_dirs()
+            .into_iter()
+            .filter_map(|dir| fs::read_to_string(dir.join(file)).ok())
+            .flat_map(|text| {
+                text.lines()
+                    .map(|line| serde_json::from_str(line).expect("well-formed jsonl"))
+                    .collect::<Vec<serde_json::Value>>()
+            })
+            .collect()
+    }
+
+    fn trace_kinds(&self) -> Vec<String> {
+        self.jsonl("trace.jsonl")
+            .into_iter()
+            .map(|event| event["kind"].as_str().unwrap_or_default().to_owned())
+            .collect()
+    }
+
     fn run_dirs(&self) -> Vec<PathBuf> {
         let runs = self
             .root
@@ -167,8 +189,16 @@ impl Episode {
 }
 
 async fn dispatch(args: &[&str], criteria: SettlementCriteria, allow: bool) -> Episode {
+    dispatch_under(args, criteria, allow.then_some("allow")).await
+}
+
+async fn dispatch_under(
+    args: &[&str],
+    criteria: SettlementCriteria,
+    verdict: Option<&str>,
+) -> Episode {
     let root = tempfile::tempdir().unwrap();
-    let policy_path = policy(root.path(), allow);
+    let policy_path = policy(root.path(), verdict);
     let mut argv = vec![trusted_self_executable(root.path())
         .to_string_lossy()
         .into_owned()];
@@ -374,4 +404,115 @@ async fn every_settlement_records_the_authority_verdict_first() {
         "basis {:?}",
         denied.basis()
     );
+}
+
+// ---------------------------------------------------------------------------
+// DOM-02: the episode leaves a trace and evidence, not just a settlement
+// ---------------------------------------------------------------------------
+
+/// A settlement on its own says what was decided but not how. The CLI has
+/// always written `trace.jsonl` and `evidence.jsonl` beside it
+/// (`cli/src/pipeline.rs:383-394`); the dispatcher wrote neither, so a case
+/// submitted over the socket produced an unauditable run that still looked
+/// complete in the case view.
+#[tokio::test]
+async fn an_allowed_episode_records_its_trace_and_evidence() {
+    let episode = dispatch(EXIT_ZERO, SettlementCriteria::default(), true).await;
+    let kinds = episode.trace_kinds();
+    for expected in [
+        "authority_evaluated",
+        "workspace_created",
+        "command_started",
+        "command_finished",
+    ] {
+        assert!(
+            kinds.iter().any(|kind| kind == expected),
+            "trace is missing {expected}; got {kinds:?}"
+        );
+    }
+    // Ordering carries the invariant: authority is evaluated before the
+    // workspace exists, not merely alongside it.
+    let position = |needle: &str| kinds.iter().position(|kind| kind == needle);
+    assert!(position("authority_evaluated") < position("workspace_created"));
+
+    let evidence = episode.jsonl("evidence.jsonl");
+    let kinds: Vec<&str> = evidence
+        .iter()
+        .map(|record| record["kind"].as_str().unwrap_or_default())
+        .collect();
+    assert!(
+        kinds.contains(&"authority_decision") && kinds.contains(&"execution_result"),
+        "evidence kinds {kinds:?}"
+    );
+    // Evidence points back at the trace event that produced it, or the two
+    // files are parallel logs rather than one linked record.
+    let trace_ids: Vec<String> = episode
+        .jsonl("trace.jsonl")
+        .into_iter()
+        .map(|event| event["event_id"].as_str().unwrap_or_default().to_owned())
+        .collect();
+    for record in &evidence {
+        let source = record["source_event_id"].as_str().unwrap_or_default();
+        assert!(
+            trace_ids.iter().any(|id| id == source),
+            "evidence {} cites {source}, which is not in the trace {trace_ids:?}",
+            record["evidence_id"]
+        );
+    }
+}
+
+/// A denial is still an episode. Its trace has to show that authority was
+/// evaluated and the run stopped — otherwise the only durable difference
+/// between "denied" and "never dispatched" is a settlement row.
+#[tokio::test]
+async fn a_denied_episode_records_why_it_stopped() {
+    let episode = dispatch(EXIT_ZERO, SettlementCriteria::default(), false).await;
+    let kinds = episode.trace_kinds();
+    assert!(
+        kinds.iter().any(|kind| kind == "authority_evaluated")
+            && kinds.iter().any(|kind| kind == "run_halted"),
+        "trace {kinds:?}"
+    );
+    assert!(
+        !kinds.iter().any(|kind| kind == "command_started"),
+        "a denied episode traced a command start: {kinds:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Escalate: a question for a human, not a rejection
+// ---------------------------------------------------------------------------
+
+/// `Escalate` used to reach settlement as an ordinary rejection, which
+/// discarded the review the verdict was asking for: nobody could approve
+/// something that had already been recorded as refused.
+#[tokio::test]
+async fn an_escalated_episode_opens_an_approval_and_runs_nothing() {
+    let episode = dispatch_under(EXIT_ZERO, SettlementCriteria::default(), Some("escalate")).await;
+    assert_eq!(
+        episode.settlement()["status"],
+        "escalated",
+        "decision {}",
+        episode.decision()
+    );
+    assert_eq!(episode.settlement()["review_required"], true);
+
+    let approvals = episode.entries("approval_request");
+    assert_eq!(approvals.len(), 1, "approvals {approvals:?}");
+    assert_eq!(approvals[0]["status"], "pending");
+    assert_eq!(
+        approvals[0]["decision_id"],
+        episode.decision()["decision_id"],
+        "the approval must name the decision that escalated"
+    );
+    assert!(
+        episode.root.path().join("approvals.jsonl").exists(),
+        "an escalation must reach the operator-visible approvals view"
+    );
+
+    // Pending review means nothing ran.
+    for run_dir in episode.run_dirs() {
+        assert!(!run_dir.join("workspace").exists());
+        assert!(!run_dir.join("artifacts").exists());
+    }
 }

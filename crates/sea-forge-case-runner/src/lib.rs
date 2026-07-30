@@ -249,6 +249,23 @@ fn run_stage_episode(
         role: ActorRole::Operator,
     };
     let action = AuthorityAction::from(&operation);
+    // DOM-03: the domain model judges the action before policy authority does.
+    // A policy that declares no `domainforge` engine yields `None` and nothing
+    // changes; one that declares a model which has drifted fails here, with a
+    // typed error, before any grant exists.
+    let domainforge_candidate = bundle
+        .load_domainforge_model()?
+        .map(|model| {
+            sea_forge_authority::DomainForgeCandidate::evaluate(
+                &model,
+                &action,
+                vec![format!(
+                    "domain-model:{}",
+                    model.model_ref.semantic_model_sha256
+                )],
+            )
+        })
+        .transpose()?;
     let decision = engine.evaluate(AuthorityEvaluation {
         actor: &actor,
         binding: bundle.resolve_identity(entity, ActorRole::Operator),
@@ -262,7 +279,7 @@ fn run_stage_episode(
         artifacts_root: Some(&artifacts),
         timeout_secs: Some(600),
         env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
-        domainforge_candidate: None,
+        domainforge_candidate: domainforge_candidate.as_ref(),
         environment: None,
     })?;
     let decision_ref = stream.commit_typed(
