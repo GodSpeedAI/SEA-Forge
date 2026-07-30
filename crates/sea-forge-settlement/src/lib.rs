@@ -2,7 +2,7 @@ use std::{fs::File, io::Read, path::Path};
 
 use chrono::Utc;
 
-use sea_forge_core::{errors::ForgeError, types::*, RECORD_VERSION};
+use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};
 use sea_forge_sandbox::safe_existing;
 
 pub mod declaration;
@@ -117,7 +117,13 @@ pub fn settle(
     }
     Ok(SettlementEvent {
         version: RECORD_VERSION.into(),
-        settlement_id: "set_01".into(),
+        // Every other settlement site in the workspace mints an id here
+        // (`case-runner:183,218`, `cli/plan_pipeline.rs:601`, `server/lib.rs:364`).
+        // This one returned the literal `set_01`, so every settlement `settle`
+        // produced shared one id: two settlements in a cell were
+        // indistinguishable and a `settlement_ref` pointing at `set_01` named
+        // all of them at once.
+        settlement_id: ids::random_id("set")?,
         run_id: claim.run_id.clone(),
         status,
         basis,
@@ -403,6 +409,24 @@ mod tests {
                 .status,
             SettlementStatus::Escalated
         );
+    }
+
+    #[test]
+    fn two_settlements_are_distinguishable() {
+        let claim = SettlementClaim {
+            run_id: "run".into(),
+            plan_item_id: "item_01".into(),
+            criteria_ref: None,
+            criteria: SettlementCriteria::default(),
+            execution: None,
+            authority_verdicts: vec![Verdict::Deny],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
+        };
+        let first = settle(&claim, Path::new("."), Path::new(".")).unwrap();
+        let second = settle(&claim, Path::new("."), Path::new(".")).unwrap();
+        assert_ne!(first.settlement_id, second.settlement_id);
+        assert!(first.settlement_id.starts_with("set_"));
     }
 
     #[test]
