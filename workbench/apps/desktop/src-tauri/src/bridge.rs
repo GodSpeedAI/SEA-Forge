@@ -18,6 +18,7 @@ use tauri::{AppHandle, Manager, State};
 
 use crate::drafts::{self, Draft};
 use crate::socket::SocketHandle;
+use crate::supervisor::CellSupervisor;
 
 /// Read-only ("inspect") SFWP methods. Field shapes copied from the server's
 /// `Request` variants; `#[serde(skip_serializing_if = "Option::is_none")]`
@@ -278,9 +279,21 @@ pub async fn sfwp_query(
 /// the renderer can name the active cell from the path it actually connected
 /// to rather than from a constant — `router.tsx` used to default to the string
 /// `"cell_local_01"`, which named nothing.
+/// `supervision` reports how this window came to have a kernel: `adopted` (one
+/// was already listening), `supervised` (this process started it, U-06), or
+/// `unavailable` with the reason. The renderer needs the distinction because
+/// "the cell is starting" and "there is no cell" look identical from a failed
+/// call, and only one of them is the operator's problem to fix.
 #[tauri::command]
-pub fn sfwp_cell(state: State<'_, Arc<SocketHandle>>) -> Value {
-    serde_json::json!({ "socket_path": state.socket_path().to_string_lossy() })
+pub fn sfwp_cell(
+    state: State<'_, Arc<SocketHandle>>,
+    supervisor: State<'_, Arc<CellSupervisor>>,
+) -> Value {
+    serde_json::json!({
+        "socket_path": state.socket_path().to_string_lossy(),
+        "root": supervisor.cell().root.to_string_lossy(),
+        "supervision": supervisor.supervision(),
+    })
 }
 
 /// Ask the cell which actors this connection may claim (`identity.get`).

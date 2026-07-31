@@ -42,3 +42,6 @@
 
 
 .tmp/
+
+# Tauri sidecar staging: built by `just workbench-sidecar`, never committed.
+workbench/apps/desktop/src-tauri/binaries/

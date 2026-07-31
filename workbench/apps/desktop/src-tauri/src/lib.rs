@@ -10,6 +10,7 @@ pub mod bridge;
 pub mod drafts;
 pub mod events;
 pub mod socket;
+pub mod supervisor;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ use tauri::{Emitter, Manager};
 
 use crate::events::{EventCursor, EventEmitter};
 use crate::socket::SocketHandle;
+use crate::supervisor::CellSupervisor;
 
 /// The SFWP protocol major version the host negotiates.
 const SFWP_PROTOCOL_VERSION: &str = "1";
@@ -38,63 +40,9 @@ impl EventEmitter for AppEmitter {
     }
 }
 
-/// The socket file name inside a cell root. Must match
-/// `sea_forge_server::config::SOCKET_FILE_NAME` — the desktop host is a
-/// separate Cargo workspace (ADR-004 / K-06), so the constant is duplicated
-/// rather than imported, and `resolve_socket_path_from` is tested against the
-/// same cases as the server's `resolved_socket_path`.
-const SOCKET_FILE_NAME: &str = "server.sock";
-
-/// The conventional cell root directory name.
-const DEFAULT_ROOT_DIR: &str = ".sea-forge";
-
-/// Resolve the server socket path using the one cell contract shared by the
-/// server, the CLI, and this host (see `docs/CELL_CONTRACT.md`):
-///
-/// 1. `SEA_FORGE_SOCKET` — explicit socket override, wins outright.
-/// 2. `SEA_FORGE_ROOT` — the cell root; the socket is `<root>/server.sock`.
-/// 3. Neither set — `$HOME/.sea-forge/server.sock`.
-///
-/// Step 3 differs from the server's CWD-relative default *on purpose*: a
-/// windowed application has no meaningful working directory, so anchoring it at
-/// `$HOME` is the only default that names a stable cell. A packaged install
-/// sets `SEA_FORGE_ROOT` for both surfaces, which is why steps 1 and 2 are the
-/// documented procedure and step 3 is a convenience for a home-directory cell.
-fn resolve_socket_path() -> PathBuf {
-    resolve_socket_path_from(
-        std::env::var_os("SEA_FORGE_SOCKET").map(PathBuf::from),
-        std::env::var_os("SEA_FORGE_ROOT").map(PathBuf::from),
-        dirs_home(),
-    )
-}
-
-/// Pure core of [`resolve_socket_path`], so the contract is testable without
-/// mutating process environment.
-fn resolve_socket_path_from(
-    socket_override: Option<PathBuf>,
-    root: Option<PathBuf>,
-    home: Option<PathBuf>,
-) -> PathBuf {
-    if let Some(explicit) = socket_override {
-        return explicit;
-    }
-    let base = root.unwrap_or_else(|| {
-        home.unwrap_or_else(|| PathBuf::from("."))
-            .join(DEFAULT_ROOT_DIR)
-    });
-    base.join(SOCKET_FILE_NAME)
-}
-
-/// Best-effort home-dir resolution without pulling in an extra crate.
-fn dirs_home() -> Option<PathBuf> {
-    std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .map(PathBuf::from)
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -108,8 +56,27 @@ pub fn run() {
             // this channel; the event loop drains it.
             let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel::<Value>();
 
-            let socket_path = resolve_socket_path();
-            let handle = Arc::new(SocketHandle::new(socket_path, event_tx));
+            // Decision U-06: this Workbench supervises its own kernel, and
+            // adopts one that is already running rather than starting a second.
+            // Synchronous on purpose — the window must not paint a governed
+            // surface before it is settled whether there is a cell behind it.
+            // A cold start costs a few hundred milliseconds; a failure is
+            // bounded by `SPAWN_DEADLINE` and still opens the window, because
+            // every surface already resolves its own standing from a catalog it
+            // may be unable to negotiate.
+            let supervisor = Arc::new(CellSupervisor::start(supervisor::resolve_cell()));
+            log::info!(
+                "cell {} — {:?}",
+                supervisor.cell().root.display(),
+                supervisor.supervision()
+            );
+
+            let handle = Arc::new(SocketHandle::new(
+                supervisor.cell().socket.clone(),
+                event_tx,
+            ));
+            app.manage(Arc::clone(&supervisor));
+            supervisor::watch_for_signals(Arc::clone(&supervisor));
 
             // Durable cursor lives under the app data dir so it survives restart.
             let cursor_path = app
@@ -151,40 +118,16 @@ pub fn run() {
             bridge::draft_list,
             bridge::draft_delete,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn socket_override_wins_outright() {
-        let resolved = resolve_socket_path_from(
-            Some(PathBuf::from("/run/user/1000/sea-forge.sock")),
-            Some(PathBuf::from("/tmp/cell")),
-            Some(PathBuf::from("/home/op")),
-        );
-        assert_eq!(resolved, PathBuf::from("/run/user/1000/sea-forge.sock"));
-    }
-
-    #[test]
-    fn cell_root_composes_the_same_socket_as_the_server() {
-        // Mirrors `ServerConfig::relative_socket_path_composes_under_root`:
-        // SEA_FORGE_ROOT=/tmp/cell must name /tmp/cell/server.sock on both
-        // sides of the transport, or the host cannot reach its server.
-        let resolved = resolve_socket_path_from(
-            None,
-            Some(PathBuf::from("/tmp/cell")),
-            Some(PathBuf::from("/home/op")),
-        );
-        assert_eq!(resolved, PathBuf::from("/tmp/cell/server.sock"));
-    }
-
-    #[test]
-    fn falls_back_to_a_home_anchored_cell() {
-        let resolved = resolve_socket_path_from(None, None, Some(PathBuf::from("/home/op")));
-        assert_eq!(resolved, PathBuf::from("/home/op/.sea-forge/server.sock"));
-    }
+    app.run(|app_handle, event| {
+        // Stop the kernel this process started. An adopted one is left alone —
+        // `CellSupervisor::shutdown` only ever reaches a child it spawned.
+        if let tauri::RunEvent::Exit = event {
+            if let Some(supervisor) = app_handle.try_state::<Arc<CellSupervisor>>() {
+                supervisor.shutdown();
+            }
+        }
+    });
 }

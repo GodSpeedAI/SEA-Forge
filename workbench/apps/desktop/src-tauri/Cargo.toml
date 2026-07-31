@@ -29,7 +29,18 @@ tauri-plugin-log = "2"
 # Tauri 2's async runtime is tokio-based; we reuse `tauri::async_runtime::spawn`
 # for background tasks (no second runtime) but need tokio's types directly for
 # the Unix-socket NDJSON client (`tokio::net::UnixStream`, sync primitives).
-tokio = { version = "1", features = ["net", "io-util", "sync", "time", "macros", "rt"] }
+# `signal` is not for the transport: a signalled process never runs Tauri's
+# `RunEvent::Exit` and never unwinds, so without it a SIGTERM to the window
+# leaves the kernel it started running. See `supervisor::watch_for_signals`.
+tokio = { version = "1", features = [
+    "net",
+    "io-util",
+    "sync",
+    "time",
+    "macros",
+    "rt",
+    "signal",
+] }
 
 [dev-dependencies]
 # Cross-workspace path dependency: this src-tauri crate is its own standalone
