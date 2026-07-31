@@ -57,20 +57,53 @@ async function fetchIdentity(): Promise<IdentityView> {
   return raw as IdentityView;
 }
 
-async function fetchCell(): Promise<string> {
-  const raw = await invoke<{ socket_path?: string }>("sfwp_cell");
-  return raw?.socket_path ?? "";
+/**
+ * How this window came to have a kernel to talk to (decision U-06).
+ *
+ * The distinction is load-bearing for the operator, not decoration. "This
+ * window started the cell" and "this window attached to a cell that was already
+ * running" have different consequences on quit — closing the first stops the
+ * kernel, closing the second leaves it alone — and "there is no cell" is the
+ * only one of the three that is the operator's problem to fix. A failed call
+ * looks identical in all three cases, so the host reports which it is.
+ */
+export type SupervisionState =
+  | { state: "adopted" }
+  | { state: "supervised"; pid: number }
+  | { state: "unavailable"; error_class: string; message: string };
+
+export interface CellInfo {
+  socketPath: string;
+  /** The cell root: where the records are, which need not hold the socket. */
+  root: string;
+  supervision?: SupervisionState;
+}
+
+async function fetchCell(): Promise<CellInfo> {
+  const raw = await invoke<{
+    socket_path?: string;
+    root?: string;
+    supervision?: SupervisionState;
+  }>("sfwp_cell");
+  return {
+    socketPath: raw?.socket_path ?? "",
+    root: raw?.root ?? "",
+    supervision: raw?.supervision,
+  };
 }
 
 /**
- * The cell's display name: the directory holding the socket, which is the cell
- * root by the cell contract (`<root>/server.sock`). The full path stays
- * available for the machine-readable line — an operator with two cells open
- * needs to tell them apart, and `.sea-forge` alone would not.
+ * The cell's display name: the last segment of the cell root.
+ *
+ * Derived from the root rather than the socket because the two need not be in
+ * the same place — `SEA_FORGE_SOCKET` moves the socket while deliberately
+ * leaving the records where they are, which is the server's own printed remedy
+ * for a cell root too deep for a Unix socket path. Naming the cell after the
+ * socket's directory would then name `/tmp`.
  */
-export function cellNameFromSocket(socketPath: string): string {
-  const parts = socketPath.split("/").filter(Boolean);
-  return parts.length >= 2 ? parts[parts.length - 2] : socketPath;
+export function cellNameFromRoot(root: string): string {
+  const parts = root.split("/").filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : root;
 }
 
 export function useIdentity() {
@@ -84,7 +117,7 @@ export function useIdentity() {
     retry: false,
   });
 
-  const cell = useQuery<string, Error>({
+  const cell = useQuery<CellInfo, Error>({
     queryKey: CELL_QUERY_KEY,
     queryFn: fetchCell,
     staleTime: Infinity,
@@ -111,8 +144,10 @@ export function useIdentity() {
 
   return {
     identity: state,
-    socketPath: cell.data,
-    cellId: cell.data ? cellNameFromSocket(cell.data) : undefined,
+    socketPath: cell.data?.socketPath,
+    cellRoot: cell.data?.root,
+    cellId: cell.data?.root ? cellNameFromRoot(cell.data.root) : undefined,
+    supervision: cell.data?.supervision,
     isLoading: identity.isLoading || cell.isLoading,
     error: identity.isError
       ? toError(identity.error)

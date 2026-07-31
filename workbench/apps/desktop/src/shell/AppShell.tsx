@@ -10,6 +10,8 @@ import { OPERATE_ROUTE_BY_PATH } from "../pages/operateRoutes";
 import { useIdentity } from "../hooks/useIdentity";
 import { useGuardContext } from "../guards/useGuardContext";
 import { useApprovals } from "../hooks/useApprovals";
+import { useServerContract } from "../hooks/useServerContract";
+import { describeConnection } from "./connectionState";
 
 export interface AppShellProps {
   children: React.ReactNode;
@@ -47,63 +49,32 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
   const location = useLocation();
   // The governance context bar reads the same sources every surface does, so
   // the header can never disagree with the page under it.
-  const { identity, cellId } = useIdentity();
+  const { identity, cellId, cellRoot, supervision } = useIdentity();
   const { integrityStatus } = useGuardContext();
   const approvals = useApprovals();
+  const contract = useServerContract();
+  const connection = describeConnection(supervision, contract);
   const routeContext =
     ROUTE_CONTEXT[location.pathname === "/" ? "/readiness" : location.pathname] ??
     ROUTE_CONTEXT["/readiness"];
   const [isEvidenceOpen, setIsEvidenceOpen] = useState(true);
-  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord>({
-    id: "readiness.get",
-    kind: "readiness_evaluation_summary",
-    disclosureStatus: "permitted",
-    rawPayload: JSON.stringify(
-      {
-        state: "readiness",
-        source: "readiness.get",
-        display: "source-backed projection",
-      },
-      null,
-      2,
-    ),
-  });
+  // No evidence until a surface hands over a real record.
+  //
+  // This used to be seeded with a written-in `readiness_evaluation_summary`
+  // whose payload was the object literal above it, re-synthesized on every
+  // navigation. It rendered in the evidence drawer, beside real records, with
+  // the same affordances — a claim about the cell sourced from this file. The
+  // drawer already renders an honest empty state, which is the correct thing to
+  // show when nothing has been inspected.
+  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord | undefined>(
+    undefined,
+  );
 
+  // Changing surface clears the previous surface's evidence rather than
+  // carrying it over, which would attribute one page's record to another.
   useEffect(() => {
-    if (routeContext.label === "readiness") {
-      setSelectedEvidence({
-        id: "readiness.get",
-        kind: "readiness_evaluation_summary",
-        disclosureStatus: "permitted",
-        rawPayload: JSON.stringify(
-          {
-            state: "readiness",
-            source: "readiness.get",
-            display: "source-backed projection",
-          },
-          null,
-          2,
-        ),
-      });
-    } else {
-      const routeId = routeContext.label.replaceAll(" ", "_");
-      setSelectedEvidence({
-        id: `${routeId}.state`,
-        kind: `operate_${routeId}_state`,
-        disclosureStatus: "permitted",
-        rawPayload: JSON.stringify(
-          {
-            route: routeContext.label,
-            reason: routeContext.reason,
-            display: "copied specification projection",
-          },
-          null,
-          2,
-        ),
-      });
-    }
-    setIsEvidenceOpen(true);
-  }, [location.pathname, routeContext.label, routeContext.reason]);
+    setSelectedEvidence(undefined);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -135,6 +106,19 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
       <a className={styles.skipLink} href="#main-content">
         Skip to governed focus
       </a>
+
+      {/*
+        A window with no kernel behind it must say so once, loudly, rather than
+        letting every surface report its own call failure. `role="alert"` because
+        nothing in the application will work until this is resolved, and the
+        message carries the cell root so the operator knows which cell failed.
+      */}
+      {supervision?.state === "unavailable" && (
+        <div className={styles.cellAlert} role="alert" data-od-id="cell-unavailable">
+          <strong>No cell is running.</strong> {supervision.message}
+          {cellRoot ? <span className="machine-value"> ({cellRoot})</span> : null}
+        </div>
+      )}
 
       <GlobalHeader
         actorName={identity?.actor?.actorId}
@@ -179,14 +163,8 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
         data-od-id="connection-state-bar"
       >
         <span>
-          <span
-            className={`state-dot ${
-              routeContext.label === "readiness" ? "state-dot--ready" : ""
-            }`}
-          />
-          {routeContext.label === "readiness"
-            ? "Source projection current"
-            : "Specification view · not live"}
+          <span className={`state-dot ${connection.ready ? "state-dot--ready" : ""}`} />
+          {connection.label}
         </span>
         <span className="machine-value">
           Keyboard: R run checks · I intended work · B blocker · E evidence

@@ -32,6 +32,24 @@
   transform: translateY(0);
 }
 
+/*
+  Overlaid rather than placed in the grid: `.appShell` uses named template
+  areas, so an unplaced child would be auto-placed into a cell and displace the
+  shell. Fixed positioning keeps the alert out of that negotiation entirely.
+*/
+.cellAlert {
+  position: fixed;
+  z-index: 90;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  background: var(--surface-danger, #4a1216);
+  color: var(--fg-primary, #f0f6fc);
+  border-bottom: 1px solid var(--border-danger, #8b2c34);
+  font: var(--text-body, 13px / 1.5 system-ui, sans-serif);
+}
+
 .mainWorkspace {
   grid-area: main;
   min-width: 0;
