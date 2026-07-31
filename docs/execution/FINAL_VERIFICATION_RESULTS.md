@@ -1,20 +1,39 @@
 # Final Verification Results
 
-Run date: 2026-07-30. Branch `ultracode/sea-forge-completion`, HEAD after the
-five commits listed in `FINAL_COMPLETION_REPORT.md`.
+Run date: 2026-07-31. Branch `ultracode/sea-forge-completion`.
 
 Toolchain: cargo/rustc 1.92.0 (edition 2021), bun 1.3.14, just 1.55.1,
 devbox 0.17.5, Linux 6.18.33.2-microsoft-standard-WSL2.
 
-## Commands and outcomes
+## Commands and outcomes (2026-07-31)
 
 | Command | Result |
 |---|---|
-| `devbox run -- cargo fmt --all` | clean, no diff |
-| `devbox run -- cargo clippy --workspace --all-targets --locked -- -D warnings` | **0 errors, 0 lint warnings** |
-| `devbox run -- cargo test --workspace --all-targets --locked --no-fail-fast` | **819 passed, 0 failed, 4 ignored, 84 suites** |
+| `cargo clippy --workspace --all-targets --locked -- -D warnings` | **0 errors** |
+| `cargo test --workspace --all-targets --locked --no-fail-fast` | **840 passed, 0 failed, 4 ignored** |
 | `devbox run -- just proof` | **P1-P4b passed** |
-| `devbox run -- just workbench-contracts-gate` | **ok** — contracts, tokens, and Tauri boundary current |
+| `devbox run -- just workbench-check` | **exit 0** |
+| ├ `workbench-contracts-gate` | **ok** — contracts, tokens, Tauri boundary current |
+| ├ `workbench-tauri-test` | **16 passed** (new gate; see below) |
+| └ `bun run test` | **123 renderer + 17 ui-components passed** |
+| `python3 docs/execution/journey/drive_identity.py` | **17 live checks passed** |
+
+### The gate that did not exist
+
+`workbench-tauri-test` is new. `workbench/apps/desktop/src-tauri` is a separate
+Cargo workspace (ADR-004, K-06), so `cargo test --workspace` never compiled it
+and **nothing ran the desktop host's Rust tests**. This was not hypothetical:
+the SF-005 identity gate made every protected verb require an actor block,
+which broke the host's two correlation-recovery tests on the day it landed, and
+the entire kernel suite stayed green for a full session while they were broken.
+
+A suite that cannot compile the code it is meant to cover reports the absence
+of failures, not their absence.
+
+## Earlier run (2026-07-30)
+
+Retained for comparison: 819 passed, 0 failed, 4 ignored; clippy 0 errors;
+`just proof` P1-P4b; `just workbench-contracts-gate` ok.
 
 Clippy emits 14 manifest warnings of the form *"only one of `license` or
 `license-file` is necessary"*. These are Cargo manifest hygiene notes present
@@ -94,10 +113,31 @@ caught a wrong path prefix in the check itself — the assertion was comparing
 against `runs/<id>/…` when migrate records the *destination* path. Without the
 guard the check would have silently iterated zero entries and passed.
 
-## Regression found and fixed by live driving
+## Defects found by live driving (2026-07-31)
 
-The most important result of this pass came from running the real server rather
-than the test harness.
+Four, in a chain, each hidden behind the one before it. The kernel suite —
+839 tests at the time — passed straight through all of them, because the
+escalation test asserted that an escalation *opens* an approval and never that
+anyone can resolve one.
+
+| # | Defect | Symptom in the live transcript |
+|---|---|---|
+| 1 | The escalation bound no settlement criteria | `approval criteria reference is missing` |
+| 2 | The server never materialized `authority/active-policy.json` | `missing_config_error` on a file only the CLI wrote |
+| 3 | The verified actor never reached the CLI the server shells out to | `resolved_by=operator_local` when `operator_b` approved |
+| 4 | `SCHEMA_TYPES` omitted the new identity contracts | `system.get_schema` would under-report its own catalog |
+
+Defect 3 is the one worth dwelling on: it is not a crash or a refusal, it is a
+**false record**. The approval succeeded, the case advanced, and the ledger
+named someone who had not made the decision. Nothing about the response
+distinguished it from a correct one — only reading the transcript did.
+
+All four are fixed in `52565b5`, and the live journey is now 17 passing checks.
+
+## Regression found and fixed by live driving (2026-07-30)
+
+The most important result of the previous pass also came from running the real
+server rather than the test harness.
 
 First live journey (`USER_JOURNEY_EVIDENCE.md`, Journey 2), before the fix:
 

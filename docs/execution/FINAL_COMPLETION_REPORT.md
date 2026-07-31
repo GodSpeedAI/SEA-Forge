@@ -1,13 +1,42 @@
 # Final Completion Report
 
-Date: 2026-07-30. Branch: `ultracode/sea-forge-completion`.
+Date: 2026-07-31. Branch: `ultracode/sea-forge-completion`.
 
 ## Verdict
 
 **PARTIALLY COMPLETE**
 
-Five of the thirteen P0 packets are complete and verified, and a sixth
-(SF-005) is half landed. Nothing is blocked.
+Six of the thirteen P0 packets are complete and verified. Nothing is blocked.
+
+## Update — 2026-07-31
+
+SF-005 is complete. The desktop client no longer fabricates its governance
+context, separation of duty is enforced against the ledger, and the two-actor
+approval journey runs end to end against a real server.
+
+The commit `19b21b0` ("add neatcode skill", which contained the SF-003
+dispatcher work and no neatcode files) was rewritten at the owner's request
+into `140e411` + `1974838`, splitting the tooling artifacts out of the
+governance change. Verified content-identical: `git diff` between the rewritten
+branch and its pre-rewrite backup is empty.
+
+**What changed the verdict less than expected.** Driving the real socket found
+that every approval the server's dispatcher had ever opened was unresolvable —
+no criteria binding, no active-policy snapshot — and that a resolution by
+`operator_b` was recorded as `resolved_by=operator_local`. The 839-test kernel
+suite passed through all of it, because the escalation test asserted an
+approval is *opened* and never that anyone can resolve one. That is the second
+consecutive pass in which live driving found what the suite could not; it is
+the strongest available argument against treating a green suite as completion.
+
+A related structural gap: `workbench/apps/desktop/src-tauri` is a separate
+Cargo workspace, so no gate ran the desktop host's Rust tests. The SF-005
+identity gate broke them the day it landed and nothing noticed. Closed by
+`just workbench-tauri-test`.
+
+The verdict stays `PARTIALLY COMPLETE`: SF-006 and SF-008 through SF-013 are
+unstarted implementation work, and nothing has been packaged, so no transcript
+shows a human completing the journey in an installed application.
 
 **Update, later the same day:** U-07 — the decision that had blocked every
 remaining packet — was answered by the owner and is recorded in
@@ -42,8 +71,9 @@ real binaries.
 |---|---|---|
 | SF-001 | One cell contract for root and socket resolution | `240619d` |
 | SF-002 | Fail closed at startup, reload, and request timeout | `041641c` |
-| SF-003 | Canonical episode pipeline | `19b21b0` (mislabeled) + `ae86c77` |
+| SF-003 | Canonical episode pipeline | `140e411` + `ae86c77` |
 | SF-004 | One run locator with flat-minimum compatibility | `3352c47` |
+| SF-005 | Identity and authority context | `1ebcea3`, `7a95800`, `0d15202`, `52565b5` |
 | SF-007 | Contract and generated-zone gate | `34e2c77` |
 
 Plus one defect fixed at its source in its own commit:
@@ -117,9 +147,12 @@ Full results in `FINAL_VERIFICATION_RESULTS.md`. Summary:
 
 ```
 cargo clippy --workspace --all-targets --locked -- -D warnings   0 errors
-cargo test --workspace --all-targets --locked --no-fail-fast     819 passed, 0 failed, 4 ignored
+cargo test --workspace --all-targets --locked --no-fail-fast     840 passed, 0 failed, 4 ignored
 just proof                                                        P1-P4b passed
-just workbench-contracts-gate                                     ok
+just workbench-check (contracts gate + tauri tests + bun)         ok
+  · workbench-tauri-test                                          16 passed
+  · bun run test (renderer + ui-components)                       140 passed
+docs/execution/journey/drive_identity.py                          17 live checks passed
 ```
 
 The 4 ignored tests are pre-existing release gates requiring external ACP hosts;

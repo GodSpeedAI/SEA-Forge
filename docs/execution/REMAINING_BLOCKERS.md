@@ -18,17 +18,38 @@ contract", and the identity half of SF-005 has landed (`1ebcea3`):
 **No blocker remains.** The rest of SF-005 and everything downstream is
 ordinary implementation work, listed under "Remaining work" below.
 
-### Remaining in SF-005
+### SF-005 is complete
 
-| Item | State |
+| Acceptance criterion | State |
 |---|---|
 | Actor required and verified on protected verbs | done (`1ebcea3`) |
-| Separation of duty — compare an approval's actor to the submitter in the ledger | **not started** |
-| Two-actor conformance test (operator submits, second actor approves) | not started |
-| Desktop router `mockGuardContext` replaced with server-resolved identity | not started |
-| `identity` block in the SFWP JSON Schema and generated TS | not started |
+| Two-actor test: operator submits, approver resolves; both recorded | done (`7a95800`, live in `drive_identity.py`) |
+| SoD: same actor submits and approves → denied with no effect | done (`7a95800`) |
+| Missing identity on a protected verb → typed denial, no side effect | done (`1ebcea3`) |
+| UI displays resolved actor, role, cell from server state | done (`0d15202`) |
+| Old SFWP clients without actor context still work for inspect verbs | done (`1ebcea3`) |
+| `identity.get` in the SFWP schema and generated TS | done (`7a95800`) |
+
+Two things were found only by driving a real server, and both are fixed
+(`52565b5`):
+
+- Every approval this dispatcher opened was **unresolvable** — no criteria
+  binding and no active-policy snapshot. The kernel suite was green throughout,
+  because the existing test asserted an escalation *opens* an approval and
+  never that anyone can resolve one.
+- An approval resolved by `operator_b` was recorded `resolved_by=operator_local`,
+  because the server shells out to the CLI and never passed the verified actor.
 
 Then SF-006, SF-008 → SF-013 in dependency order, unchanged.
+
+### A verification gap that hid a live regression
+
+`workbench/apps/desktop/src-tauri` is a separate Cargo workspace (ADR-004,
+K-06), so `cargo test --workspace` never compiled it and **no gate ran the
+desktop host's Rust tests at all**. The SF-005 identity gate broke the host's
+correlation-recovery tests the day it landed and the whole kernel suite stayed
+green. Closed by `just workbench-tauri-test`, now a dependency of
+`workbench-check` (`52565b5`). Wiring it into CI belongs to SF-013.
 
 ---
 
@@ -150,6 +171,10 @@ These are recorded so they are not lost; none blocks anything.
 | Shared synchronous episode function | SF-003 | `execute_sandbox` and `run_stage_episode` now agree on every governance property; unifying them is a refactor with no behavioural requirement behind it. |
 | Other flat-only run readers | SF-004 | `delegation.rs`, `agent_probe.rs`, `server/lib.rs`, `transcript_seal.rs`, `swe_seed_reconciliation.rs` read runs they themselves wrote flat. Outside SF-004's `allowed_paths` and not a reachable defect. |
 | CI wiring for `workbench-contracts-gate` | SF-007 | Explicitly SF-013's scope; CI changes are ask-first per the decision register. |
+| CI wiring for `workbench-tauri-test` | SF-005 | Same: the recipe exists and passes locally; adding it to `.github/workflows` is SF-013's scope. |
+| Guards G3, G4, G6, G7, G8, G10 report `indeterminate` | SF-005 | No SFWP verb backs sponsorship, policy digest, resource lookup, disclosure scope, the compatibility matrix, or pre-decision standing. They are now honestly undetermined rather than fabricated; grounding them needs the kernel verbs SF-008/SF-010/SF-011 introduce. |
+| `act_as` actor picker in the renderer | SF-005 | The host accepts and validates `act_as`, so a cell binding several actors is served correctly by the transport. No UI control selects among them yet, so such a cell currently refuses protected work with "choose one explicitly" rather than offering a choice. Single-actor cells — the common case — are unaffected. |
+| An approval's criteria snapshot is per-escalation | SF-005 | `commit_item_criteria` reuses an already-committed record when the plan carries a resolving `settlement_criteria_ref`, and otherwise mints one from the item's inline criteria. A wire-submitted plan has no ref, so re-escalating the same item twice records two criteria ids with identical content. |
 
 ## Repository hygiene noted, not acted on
 

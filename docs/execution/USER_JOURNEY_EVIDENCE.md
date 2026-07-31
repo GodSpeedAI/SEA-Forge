@@ -144,18 +144,55 @@ over a real Unix socket, then boots a *second* server against the same cell:
 
 6 tests, all green. With the case-owned probe neutralized, 4 of the 6 fail.
 
-## Journey NOT demonstrated — the Workbench operator journey
+## Journey 6 — Two actors, one approval (live, 2026-07-31)
 
-**The desktop journey does not work end-to-end and is not claimed to.**
+`docs/execution/journey/drive_identity.py`, over a real Unix socket against a
+cell binding `operator_a` and `operator_b`. All 17 checks pass. The uid comes
+from `SO_PEERCRED`, so nothing in the script can assert it.
 
-`workbench/apps/desktop/src/router.tsx:38-51` supplies a fabricated
-`mockGuardContext` — `actor_op_01`, `sha256:policy_v1`, `verified`. No resolved
-identity reaches the server, the server hardcodes `ActorRole::Operator`, and
-separation of duty cannot be enforced or demonstrated.
+```
+== identity.get ==
+  {"available": [{"actor_id": "operator_a", "roles": ["operator"]},
+                 {"actor_id": "operator_b", "roles": ["operator"]}],
+   "configured": true, "uid": 1000}
 
-Making it real is SF-005, which is blocked on decision U-07 (the exact public
-SFWP identity/session contract). See `REMAINING_BLOCKERS.md`. Nothing in this
-pass papered over that with a plausible-looking default.
+== a protected verb with no actor block ==
+  {"error_class": "identity_required", "no_side_effect": true}
+
+== claiming an actor this uid does not hold ==      identity_not_bound
+== verifying one actor, attributing work to another == identity_entity_mismatch
+
+== operator_a submits work that escalates ==        apr_0001 opened
+== operator_a tries to resolve their own approval ==
+  {"error": "actor `operator_a` requested the work approval `apr_0001` gates
+             and cannot resolve it; approval requires a different actor",
+   "error_class": "separation_of_duty", "no_side_effect": true}
+== the same attempt on a brand-new connection ==    still separation_of_duty
+== the approval is still pending ==                 apr_0001 remains in the inbox
+
+== operator_b resolves it ==
+  {"ok": true, "output": "approval_id=apr_0001\nstatus=Approved\nresolved_by=operator_b\n"}
+```
+
+**Verified live.** This is the journey SF-005 exists for, and it is the one that
+found the four defects in `52565b5` — every one of which the 839-test kernel
+suite passed straight through.
+
+## Journey 7 — What the Workbench now shows, and what it does not
+
+The desktop client no longer fabricates its governance context. `router.tsx`'s
+`mockGuardContext` is gone; the actor comes from `identity.get`, the cell from
+the socket the host dialed, integrity and readiness from `readiness.get`. The
+renderer cannot assert an actor at all — `SfwpCommand` has no actor field, and
+the host attaches the verified one (`bridge.rs`).
+
+**Still test-driven, not live.** The transport, the host's actor selection, and
+every surface's rendering are covered by 123 renderer tests and 16 host tests,
+but no transcript here shows a human completing the journey in the packaged
+application — SF-012 packages it, and that has not been built. Six of the ten
+guards report `indeterminate` because this kernel has no verb behind them; they
+are honestly undetermined rather than fabricated, which is a smaller claim than
+"the guard passed" and the correct one.
 
 ## Reproducing these journeys
 
@@ -172,6 +209,17 @@ rm "$CELL/server.yaml"
 SEA_FORGE_ROOT="$CELL" SEA_FORGE_SOCKET=/tmp/sf-journey.sock \
   ./target/debug/sea-forge-server &
 python3 docs/execution/journey/drive.py "$CELL"   # see the script in this repo's scratchpad
+
+# 6 — two actors, one approval
+CELL2=/tmp/sf-id-cell && rm -rf "$CELL2" && mkdir -p "$CELL2"
+# argv0 must be named `sea-forge` AND canonicalize to the process that runs it,
+# which for an in-process submit is the server, not the CLI.
+ln -sf "$PWD/target/debug/sea-forge-server" "$CELL2/sea-forge"
+printf 'identity:\n  bindings:\n    - uid: %s\n      actor_id: operator_a\n      roles: [operator]\n    - uid: %s\n      actor_id: operator_b\n      roles: [operator]\n' \
+  "$(id -u)" "$(id -u)" > "$CELL2/server.yaml"
+SEA_FORGE_ROOT="$CELL2" SEA_FORGE_SOCKET=/tmp/sf-id.sock \
+  ./target/debug/sea-forge-server &
+python3 docs/execution/journey/drive_identity.py "$CELL2" /tmp/sf-id.sock
 
 # 3
 devbox run -- just proof
