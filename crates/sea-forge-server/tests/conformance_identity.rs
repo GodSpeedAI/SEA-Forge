@@ -8,9 +8,10 @@
 //! Those are different claims. A resolver that works perfectly and is never
 //! called would satisfy the first set and none of these.
 
-use sea_forge_server::identity::IdentityBindings;
+use sea_forge_server::identity::{IdentityBinding, IdentityBindings};
 use sea_forge_server::{run, ServerConfig};
 use serde_json::{json, Value};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -19,6 +20,78 @@ use tokio::net::{unix::OwnedReadHalf, unix::OwnedWriteHalf, UnixStream};
 /// The actor block a well-behaved client sends.
 fn actor() -> Value {
     json!({"actor_id": "operator_local", "role": "operator"})
+}
+
+/// Two actors on this machine's uid.
+///
+/// Both bind to the same uid because a test can only ever present one — the
+/// kernel fills in `SO_PEERCRED` and nothing here can forge a second. That is
+/// exactly the configuration separation of duty has to survive: two identities
+/// one human can legitimately hold, where the *actor*, not the uid, is what
+/// keeps a submitter from approving their own work.
+fn two_actors() -> IdentityBindings {
+    let uid = sea_forge_server::identity::current_uid().expect("uid must be readable");
+    IdentityBindings {
+        bindings: ["operator_a", "operator_b"]
+            .into_iter()
+            .map(|actor_id| IdentityBinding {
+                uid,
+                actor_id: actor_id.into(),
+                roles: vec![sea_forge_core::types::ActorRole::Operator],
+            })
+            .collect(),
+    }
+}
+
+/// A policy that escalates `execute_command` — the only way to get a real
+/// `approval_request` into a case ledger, since an approval exists only because
+/// authority asked a human a question.
+///
+/// `argv0: sea-forge` is required: `AuthorityPolicyBundle::validate` refuses a
+/// local rule for `execute_command` with any other argv0.
+fn escalating_policy(dir: &Path) -> PathBuf {
+    let path = dir.join("escalate.yaml");
+    fs::write(
+        &path,
+        "version: \"0.1\"\nrules:\n  - name: escalate-command\n    verdict: escalate\n    \
+         actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n",
+    )
+    .unwrap();
+    path
+}
+
+/// A plan whose single item escalates. Mirrors `conformance_case_episode`'s
+/// fixture; the symlink is what satisfies both argv0 checks at once (the policy
+/// matches on `file_name`, and `untrusted_executable` requires the canonical
+/// path to equal `current_exe`).
+fn escalating_plan(dir: &Path) -> PathBuf {
+    let link = dir.join("sea-forge");
+    std::os::unix::fs::symlink(std::env::current_exe().expect("current_exe"), &link).unwrap();
+    let plan = json!({
+        "version": "0.2",
+        "plan_id": "plan_sod",
+        "case_id": "case_placeholder",
+        "run_id": "run_placeholder",
+        "intent_id": "int_sod",
+        "items": [{
+            "plan_item_id": "task",
+            "name": "sandboxed",
+            "operations": [{
+                "kind": "execute_command",
+                "argv": [link.to_string_lossy(), "--exact", "__no_test_matches_this_name__"],
+                "cwd": "."
+            }],
+            "entry_criteria": [], "exit_criteria": [],
+            "settlement_criteria": {"required_artifacts": [], "required_declarations": []},
+            "item_kind": "sandboxed_task",
+            "markers": {"required": true},
+            "max_instances": 1,
+            "depends_on": []
+        }]
+    });
+    let path = dir.join("plan.json");
+    fs::write(&path, serde_json::to_vec(&plan).unwrap()).unwrap();
+    path
 }
 
 async fn boot(identity: IdentityBindings) -> (tempfile::TempDir, PathBuf) {
@@ -173,6 +246,156 @@ async fn a_role_the_actor_does_not_hold_is_refused() {
     assert_eq!(
         response["error_class"], "identity_role_not_held",
         "{response}"
+    );
+}
+
+/// `identity.get` is how a client learns which actor to claim. Before it, the
+/// desktop router fabricated one (`mockGuardContext`); the whole point is that
+/// the answer comes from the cell rather than from the client's imagination.
+#[tokio::test]
+async fn identity_get_reports_the_actors_this_connection_may_claim() {
+    let (_root, socket) = boot(IdentityBindings::local_operator("operator_local")).await;
+    let mut client = Client::connect(&socket).await;
+
+    let view = client.call(json!({"verb": "identity_get"})).await;
+
+    assert_eq!(view["configured"], true, "{view}");
+    assert_eq!(view["available"][0]["actor_id"], "operator_local");
+    assert_eq!(view["available"][0]["roles"][0], "operator");
+    assert!(view["uid"].is_u64(), "the peer uid must be reported: {view}");
+    assert!(
+        view.get("refusal").is_none(),
+        "a resolvable connection must not carry a refusal: {view}"
+    );
+}
+
+/// An unconfigured cell must say so through the *same* vocabulary a refused
+/// protected verb uses, so a client can explain the block before attempting
+/// work rather than discovering it from a denial.
+#[tokio::test]
+async fn identity_get_reports_an_unconfigured_cell_in_the_refusal_vocabulary() {
+    let (_root, socket) = boot(IdentityBindings::default()).await;
+    let mut client = Client::connect(&socket).await;
+
+    let view = client.call(json!({"verb": "identity_get"})).await;
+
+    assert_eq!(view["configured"], false, "{view}");
+    assert_eq!(view["refusal"]["error_class"], "identity_unconfigured");
+    assert_eq!(
+        view["available"].as_array().map(Vec::len),
+        Some(0),
+        "nothing is claimable on an unconfigured cell: {view}"
+    );
+}
+
+/// Identity must be *used*, not merely checked. `entity` is what reaches the
+/// authority engine and lands in the ledger as the acting principal, so a
+/// request that verifies one actor and attributes its work to another would
+/// authenticate `a` and record `b` — and could then approve its own work as
+/// `a`. That is the separation-of-duty hole, one layer up.
+#[tokio::test]
+async fn a_request_cannot_verify_one_actor_and_attribute_its_work_to_another() {
+    let (_root, socket) = boot(two_actors()).await;
+    let mut client = Client::connect(&socket).await;
+
+    let response = client
+        .call(json!({"verb": "submit",
+                     "actor": {"actor_id": "operator_a", "role": "operator"},
+                     "plan": "/nonexistent/plan.json", "policy": "/nonexistent/policy.yaml",
+                     "entity": "operator_b", "process": "test", "timeout": 30}))
+        .await;
+
+    assert_eq!(
+        response["error_class"], "identity_entity_mismatch",
+        "{response}"
+    );
+    assert_eq!(response["no_side_effect"], true);
+}
+
+/// The two-actor journey SF-005 exists for, end to end over a real socket:
+/// `operator_a` submits work that escalates, then cannot resolve the approval
+/// it created — but `operator_b` can.
+///
+/// Both halves matter. A gate that refuses everyone would pass the first
+/// assertion and make approvals unusable, so the test proves the refusal is
+/// specific to the submitter rather than general.
+#[tokio::test]
+async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
+    let (root, socket) = boot(two_actors()).await;
+    let plan = escalating_plan(root.path());
+    let policy = escalating_policy(root.path());
+    let mut client = Client::connect(&socket).await;
+
+    let submitted = client
+        .call(json!({"verb": "submit",
+                     "actor": {"actor_id": "operator_a", "role": "operator"},
+                     "plan": plan, "policy": policy,
+                     "entity": "operator_a", "process": "test", "timeout": 60}))
+        .await;
+    let case_id = submitted["case_id"]
+        .as_str()
+        .unwrap_or_else(|| panic!("submit did not return a case_id: {submitted}"))
+        .to_owned();
+
+    let inbox = client.call(json!({"verb": "approval_list"})).await;
+    let approval_id = inbox["approvals"][0]["approval_id"]
+        .as_str()
+        .unwrap_or_else(|| panic!("an escalated episode must open an approval: {inbox}"))
+        .to_owned();
+
+    let decide = |actor_id: &str| {
+        json!({"verb": "approval_decide",
+               "actor": {"actor_id": actor_id, "role": "operator"},
+               "case_id": case_id, "approval_id": approval_id, "decision": "approve"})
+    };
+
+    let by_submitter = client.call(decide("operator_a")).await;
+    assert_eq!(
+        by_submitter["error_class"], "separation_of_duty",
+        "the submitter resolved their own approval: {by_submitter}"
+    );
+    assert_eq!(by_submitter["no_side_effect"], true);
+
+    let by_other = client.call(decide("operator_b")).await;
+    let class = by_other["error_class"].as_str().unwrap_or_default();
+    assert_ne!(
+        class, "separation_of_duty",
+        "a second actor must be able to approve: {by_other}"
+    );
+}
+
+/// The refusal must survive a reconnect. Identity binds per request (U-07
+/// answer 1), so a submitter who drops and redials is a *new connection* with
+/// the same actor — and the comparison is against the ledger, not the session,
+/// precisely so the new connection changes nothing.
+#[tokio::test]
+async fn reconnecting_does_not_launder_a_self_approval() {
+    let (root, socket) = boot(two_actors()).await;
+    let plan = escalating_plan(root.path());
+    let policy = escalating_policy(root.path());
+
+    let mut first = Client::connect(&socket).await;
+    let submitted = first
+        .call(json!({"verb": "submit",
+                     "actor": {"actor_id": "operator_a", "role": "operator"},
+                     "plan": plan, "policy": policy,
+                     "entity": "operator_a", "process": "test", "timeout": 60}))
+        .await;
+    let case_id = submitted["case_id"].as_str().unwrap().to_owned();
+    let inbox = first.call(json!({"verb": "approval_list"})).await;
+    let approval_id = inbox["approvals"][0]["approval_id"].as_str().unwrap();
+
+    drop(first);
+    let mut second = Client::connect(&socket).await;
+    let response = second
+        .call(json!({"verb": "approval_decide",
+                     "actor": {"actor_id": "operator_a", "role": "operator"},
+                     "case_id": case_id, "approval_id": approval_id, "decision": "approve"}))
+        .await;
+
+    assert_eq!(
+        response["error_class"], "separation_of_duty",
+        "a fresh connection laundered a self-approval: {response}"
     );
 }
 

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IdentityView",
+  "description": "What this cell believes about the identity on the other end of this\nconnection (`identity.get`).\n\nAn inspect verb: it reports only what the kernel already knows about a\nconnection the caller already holds, and reveals nothing about other uids'\nbindings. It exists so the client can *display* a resolved identity and\nchoose which bound actor to act as, instead of fabricating one — which is\nprecisely what `router.tsx`'s `mockGuardContext` did before SF-005.",
+  "type": "object",
+  "properties": {
+    "available": {
+      "description": "Every actor this connection may claim. Empty when nothing resolves.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AvailableActor"
+      }
+    },
+    "configured": {
+      "description": "Whether this cell configures any bindings at all. False means every\nprotected verb will be refused regardless of what is claimed.",
+      "type": "boolean"
+    },
+    "refusal": {
+      "description": "Present exactly when `available` is empty.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RefusalView"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "uid": {
+      "description": "The uid the kernel reported for this connection, when readable.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "configured",
+    "available"
+  ],
+  "$defs": {
+    "AvailableActor": {
+      "description": "One actor this connection is entitled to claim, and the roles it holds.",
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string"
+        },
+        "roles": {
+          "description": "Wire spellings, in `server.yaml` order. Empty means a suspended actor:\nthe cell still records who they are, but they can claim nothing.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "actor_id",
+        "roles"
+      ]
+    },
+    "RefusalView": {
+      "description": "Why nothing can be claimed on this connection, in the same vocabulary a\nrefused protected verb uses — so a client never has to map one set of\nreasons onto another.",
+      "type": "object",
+      "properties": {
+        "error_class": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_class",
+        "message"
+      ]
+    }
+  }
+}

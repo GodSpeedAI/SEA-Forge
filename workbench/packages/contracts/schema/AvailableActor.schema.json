@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AvailableActor",
+  "description": "One actor this connection is entitled to claim, and the roles it holds.",
+  "type": "object",
+  "properties": {
+    "actor_id": {
+      "type": "string"
+    },
+    "roles": {
+      "description": "Wire spellings, in `server.yaml` order. Empty means a suspended actor:\nthe cell still records who they are, but they can claim nothing.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "actor_id",
+    "roles"
+  ]
+}

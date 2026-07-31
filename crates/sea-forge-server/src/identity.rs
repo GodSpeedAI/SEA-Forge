@@ -28,8 +28,22 @@
 //! rather than remove it.
 
 use crate::Request;
+use schemars::JsonSchema;
 use sea_forge_core::types::ActorRole;
 use serde::{Deserialize, Serialize};
+
+/// The wire spelling of a role (`operator`, `R-SO`, …).
+///
+/// The view below reports roles as these strings rather than as `ActorRole`.
+/// `ActorRole` lives in `sea-forge-core`, a kernel crate, and deriving
+/// `JsonSchema` on it would pull `schemars` across the kernel boundary to
+/// describe a value whose wire form is already just this string.
+fn role_wire_name(role: &ActorRole) -> String {
+    serde_json::to_value(role)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_else(|| format!("{role:?}"))
+}
 
 /// The OS identity of the process on the other end of the connection, as
 /// reported by the kernel.
@@ -136,6 +150,23 @@ pub enum IdentityRefusal {
     NotBound { actor_id: String, uid: u32 },
     /// The actor is bound to this uid but not in the role it claimed.
     RoleNotHeld { actor_id: String, role: ActorRole },
+    /// The request attributes its work to a different actor than it verified.
+    ///
+    /// `entity` is what reaches the authority engine and lands in the ledger as
+    /// the acting principal; `actor` is what the uid check verified. If those
+    /// disagree the cell would verify one identity and record another — which
+    /// would defeat separation of duty by letting a submitter file work under a
+    /// name they are not, then approve it under the name they are.
+    EntityMismatch { actor_id: String, entity: String },
+    /// The actor resolving this approval is the one whose work it gates.
+    ///
+    /// U-07 answer 3: the approver is identified independently and compared
+    /// against the submitter *recorded in the ledger* — not against the
+    /// connection, which would let a reconnect launder a self-approval.
+    SelfApproval {
+        actor_id: String,
+        approval_id: String,
+    },
 }
 
 impl IdentityRefusal {
@@ -146,6 +177,8 @@ impl IdentityRefusal {
             Self::Unconfigured => "identity_unconfigured",
             Self::NotBound { .. } => "identity_not_bound",
             Self::RoleNotHeld { .. } => "identity_role_not_held",
+            Self::EntityMismatch { .. } => "identity_entity_mismatch",
+            Self::SelfApproval { .. } => "separation_of_duty",
         }
     }
 
@@ -167,6 +200,17 @@ impl IdentityRefusal {
             Self::RoleNotHeld { actor_id, role } => {
                 format!("actor `{actor_id}` does not hold the role {role:?} it claimed")
             }
+            Self::EntityMismatch { actor_id, entity } => format!(
+                "this request verified actor `{actor_id}` but attributes its work to \
+                 `{entity}`; the two must name the same actor"
+            ),
+            Self::SelfApproval {
+                actor_id,
+                approval_id,
+            } => format!(
+                "actor `{actor_id}` requested the work approval `{approval_id}` gates and \
+                 cannot resolve it; approval requires a different actor"
+            ),
         }
     }
 
@@ -237,6 +281,65 @@ impl IdentityBindings {
         }
     }
 
+    /// What this connection may claim (`identity.get`).
+    ///
+    /// Scoped to `peer`'s own uid: a caller learns which actors *they* may act
+    /// as and nothing about anyone else's bindings. The refusal reasons are the
+    /// same ones [`Self::resolve`] would produce, so a client can show why
+    /// protected work will fail before attempting it rather than discovering it
+    /// from a denied side effect.
+    pub fn describe(&self, peer: Option<PeerIdentity>) -> IdentityView {
+        let refusal = |refusal: IdentityRefusal| {
+            Some(RefusalView {
+                error_class: refusal.error_class().into(),
+                message: refusal.message(),
+            })
+        };
+
+        let Some(peer) = peer else {
+            return IdentityView {
+                uid: None,
+                configured: !self.is_empty(),
+                available: Vec::new(),
+                refusal: refusal(IdentityRefusal::UnknownPeer),
+            };
+        };
+
+        if self.is_empty() {
+            return IdentityView {
+                uid: Some(peer.uid),
+                configured: false,
+                available: Vec::new(),
+                refusal: refusal(IdentityRefusal::Unconfigured),
+            };
+        }
+
+        let available: Vec<AvailableActor> = self
+            .bindings
+            .iter()
+            .filter(|binding| binding.uid == peer.uid)
+            .map(|binding| AvailableActor {
+                actor_id: binding.actor_id.clone(),
+                roles: binding.roles.iter().map(role_wire_name).collect(),
+            })
+            .collect();
+
+        // A uid the cell has bindings for, but none of them this one. Reported
+        // as `not_bound` against the uid itself rather than against an actor
+        // the caller never named — there is no claim here to echo back.
+        let refusal = available.is_empty().then(|| RefusalView {
+            error_class: "identity_not_bound".into(),
+            message: format!("no actor is bound to uid {} in this cell", peer.uid),
+        });
+
+        IdentityView {
+            uid: Some(peer.uid),
+            configured: true,
+            available,
+            refusal,
+        }
+    }
+
     /// Check a claim against the peer's uid and this cell's bindings.
     pub fn resolve(
         &self,
@@ -270,6 +373,99 @@ impl IdentityBindings {
     }
 }
 
+/// The actor who requested the work an approval gates, per the ledger.
+///
+/// Walks `approval_request` → its `decision_id` → the `authority_decision` that
+/// escalated, and reports that decision's bound principal. The ledger is the
+/// only acceptable source here: the submitter may have disconnected, restarted,
+/// or reconnected since, so anything derived from a live connection would be a
+/// different question with a coincidentally similar answer.
+///
+/// `Ok(None)` means the chain could not be completed — an unknown approval, a
+/// case with no ledger, or a decision that is not recorded. The caller must
+/// treat that as *not proven distinct* rather than as permission, and it does.
+pub fn approval_submitter(
+    root: &std::path::Path,
+    case_id: &str,
+    approval_id: &str,
+) -> Result<Option<String>, sea_forge_core::errors::ForgeError> {
+    let ledger_dir = root.join("ledgers").join(format!("case-{case_id}"));
+    if !ledger_dir.exists() {
+        return Ok(None);
+    }
+    let entries = sea_forge_ledger::LedgerStream::open(
+        root,
+        format!("case-{case_id}"),
+        "sea-forge-server",
+    )?
+    .read_entries()?;
+
+    let field = |value: &serde_json::Value, key: &str| {
+        value.get(key).and_then(|v| v.as_str()).map(str::to_owned)
+    };
+
+    let Some(decision_id) = entries
+        .iter()
+        .filter(|entry| entry.record_kind == "approval_request")
+        .find(|entry| field(&entry.payload, "approval_id").as_deref() == Some(approval_id))
+        .and_then(|entry| field(&entry.payload, "decision_id"))
+    else {
+        return Ok(None);
+    };
+
+    Ok(entries
+        .iter()
+        .filter(|entry| entry.record_kind == "authority_decision")
+        .find(|entry| field(&entry.payload, "decision_id").as_deref() == Some(&decision_id))
+        .and_then(|entry| {
+            entry
+                .payload
+                .get("identity_binding")
+                .and_then(|binding| field(binding, "principal"))
+        }))
+}
+
+/// One actor this connection is entitled to claim, and the roles it holds.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
+pub struct AvailableActor {
+    pub actor_id: String,
+    /// Wire spellings, in `server.yaml` order. Empty means a suspended actor:
+    /// the cell still records who they are, but they can claim nothing.
+    pub roles: Vec<String>,
+}
+
+/// Why nothing can be claimed on this connection, in the same vocabulary a
+/// refused protected verb uses — so a client never has to map one set of
+/// reasons onto another.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
+pub struct RefusalView {
+    pub error_class: String,
+    pub message: String,
+}
+
+/// What this cell believes about the identity on the other end of this
+/// connection (`identity.get`).
+///
+/// An inspect verb: it reports only what the kernel already knows about a
+/// connection the caller already holds, and reveals nothing about other uids'
+/// bindings. It exists so the client can *display* a resolved identity and
+/// choose which bound actor to act as, instead of fabricating one — which is
+/// precisely what `router.tsx`'s `mockGuardContext` did before SF-005.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
+pub struct IdentityView {
+    /// The uid the kernel reported for this connection, when readable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uid: Option<u32>,
+    /// Whether this cell configures any bindings at all. False means every
+    /// protected verb will be refused regardless of what is claimed.
+    pub configured: bool,
+    /// Every actor this connection may claim. Empty when nothing resolves.
+    pub available: Vec<AvailableActor>,
+    /// Present exactly when `available` is empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<RefusalView>,
+}
+
 /// Whether this verb causes a side effect and therefore requires an actor.
 ///
 /// The match is exhaustive with no wildcard arm on purpose. Adding a verb to
@@ -301,6 +497,10 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::EventsUnsubscribe
         | Request::EventsGetRange { .. }
         | Request::ReadinessGet { .. }
+        // Reports only what the kernel already knows about the caller's own
+        // connection. Requiring an actor here would make it impossible to
+        // discover which actor to claim.
+        | Request::IdentityGet
         | Request::CaseEntryOptions
         | Request::CasePreflight { .. }
         | Request::CaseList

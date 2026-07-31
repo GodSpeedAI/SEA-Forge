@@ -101,6 +101,13 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
         method: "readiness.get",
         class: InteractionClass::Inspect,
     },
+    // --- SFWP additive identity method (SF-005) ---
+    // Read-only: reports which actors the calling connection's uid may claim.
+    // Scoped to that uid, so it discloses nothing about other principals.
+    MethodDescriptor {
+        method: "identity.get",
+        class: InteractionClass::Inspect,
+    },
     // --- SFWP additive case-authoring methods (Task 6, ADR-003) ---
     // `entry_options`/`preflight` are read-only projections/dry-runs (no case,
     // run, or ledger is created); `commit` is the one protected verb that

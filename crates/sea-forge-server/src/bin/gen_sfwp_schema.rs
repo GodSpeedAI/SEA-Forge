@@ -29,6 +29,7 @@ use sea_forge_server::sfwp::events::EventFrame;
 use sea_forge_server::sfwp::precondition::{
     ChangedRecord, Precondition, RecordDigest, RejectedAsStale,
 };
+use sea_forge_server::identity::{AvailableActor, IdentityView, RefusalView};
 use sea_forge_server::sfwp::readiness::{ReadinessGetParams, ReadinessItem, ReadinessView};
 use sea_forge_server::sfwp::run_views::{
     AuthorityProjection, CriterionCheck, DeclarationRow, EvidenceRow, RecordPresence,
@@ -67,6 +68,9 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(ReadinessView, "ReadinessView"),
         schema!(ReadinessItem, "ReadinessItem"),
         schema!(ReadinessGetParams, "ReadinessGetParams"),
+        schema!(IdentityView, "IdentityView"),
+        schema!(AvailableActor, "AvailableActor"),
+        schema!(RefusalView, "RefusalView"),
         schema!(EntryOptionsResult, "EntryOptionsResult"),
         schema!(TemplateOption, "TemplateOption"),
         schema!(TemplateParameter, "TemplateParameter"),

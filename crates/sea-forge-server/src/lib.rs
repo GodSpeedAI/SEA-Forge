@@ -649,6 +649,12 @@ pub enum Request {
         #[serde(default)]
         intended_operation: Option<sfwp::readiness::IntendedOperation>,
     },
+    /// Read-only identity projection (SF-005). Reports which actors *this*
+    /// connection may claim, so a client can display a resolved identity and
+    /// pick an actor instead of inventing one. Answered in `dispatch_bounded`
+    /// rather than `handle_request` because it is the only inspect verb whose
+    /// answer depends on the connection's peer credential.
+    IdentityGet,
     /// Case-authoring inspect methods (Task 6, ADR-003). `entry_options` lists
     /// materialized templates; `preflight` is an audit-only dry run of
     /// `validate_proposal` over an instantiated draft — neither creates a
@@ -1112,6 +1118,15 @@ async fn dispatch_bounded(
     //
     // `is_protected` is one exhaustive match (see `identity`), so a verb added
     // later cannot slip through unclassified.
+    // Answered here, not in `handle_request`: this is the one inspect verb
+    // whose answer is a property of the *connection* rather than of the cell,
+    // and `peer` exists only at this level.
+    if matches!(request, Request::IdentityGet) {
+        let view = state.config().identity.describe(peer);
+        return serde_json::to_value(view)
+            .unwrap_or_else(|_| serde_json::json!({"error": "identity serialization failed"}));
+    }
+
     if crate::identity::is_protected(&request) {
         let claim = crate::identity::ActorClaim::parse(raw_line);
         match state.config().identity.resolve(claim.as_ref(), peer) {
@@ -1121,6 +1136,60 @@ async fn dispatch_bounded(
                     uid = actor.uid(),
                     "protected request attributed"
                 );
+                // The verified identity must be the one the work is recorded
+                // under. `entity` is what reaches the authority engine and the
+                // ledger; verifying `actor` while recording `entity` would
+                // authenticate one principal and attribute the work to another.
+                if let Some(entity) = request_entity(raw_line) {
+                    if entity != actor.actor_id() {
+                        let refusal = crate::identity::IdentityRefusal::EntityMismatch {
+                            actor_id: actor.actor_id().into(),
+                            entity,
+                        };
+                        tracing::warn!("protected request refused: {}", refusal.message());
+                        return refusal.response();
+                    }
+                }
+                // Separation of duty, enforced beside the gate that resolved
+                // the actor rather than inside `decide`: refusing here is what
+                // makes "no side effect" true by construction, since `decide`
+                // has already recorded a pending correlation and shelled out
+                // to the CLI by the time it could check.
+                if let Some((case_id, approval_id)) = approval_target(&request) {
+                    match crate::identity::approval_submitter(&state.root, case_id, approval_id) {
+                        Ok(Some(submitter)) if submitter == actor.actor_id() => {
+                            let refusal = crate::identity::IdentityRefusal::SelfApproval {
+                                actor_id: actor.actor_id().into(),
+                                approval_id: approval_id.into(),
+                            };
+                            tracing::warn!(
+                                actor_id = actor.actor_id(),
+                                approval_id,
+                                "approval refused: {}",
+                                refusal.message()
+                            );
+                            return refusal.response();
+                        }
+                        Ok(_) => {}
+                        // An unreadable ledger cannot prove the approver is
+                        // someone else, and separation of duty is exactly the
+                        // property that must not be assumed. Refuse.
+                        Err(error) => {
+                            tracing::warn!(
+                                approval_id,
+                                "approval refused: submitter unreadable: {error}"
+                            );
+                            return serde_json::json!({
+                                "error": format!(
+                                    "the submitter behind approval `{approval_id}` could not be \
+                                     read, so separation of duty cannot be verified: {error}"
+                                ),
+                                "error_class": "separation_of_duty_unverifiable",
+                                "no_side_effect": true,
+                            });
+                        }
+                    }
+                }
             }
             Err(refusal) => {
                 tracing::warn!(
@@ -1139,6 +1208,47 @@ async fn dispatch_bounded(
         raw_line,
     )
     .await
+}
+
+/// The `entity` a request attributes its work to, read off the raw line.
+///
+/// Read from the line rather than matched per variant for the same reason
+/// `ActorClaim` is: `entity` appears on many protected verbs and is absent from
+/// others, and a per-variant match would silently skip any verb added later.
+fn request_entity(raw_line: &str) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(raw_line)
+        .ok()?
+        .get("entity")
+        .and_then(|entity| entity.as_str())
+        .map(str::to_owned)
+}
+
+/// The `(case_id, approval_id)` an approval-resolving verb targets, if this
+/// request is one.
+///
+/// Exhaustive over the three spellings that reach `decide`. A fourth would have
+/// to be added here to be covered, which is why this returns a target rather
+/// than a bool: the caller needs the ids anyway, so there is no version of this
+/// that compiles while silently skipping the check.
+fn approval_target(request: &Request) -> Option<(&str, &str)> {
+    match request {
+        Request::Approve {
+            case_id,
+            approval_id,
+            ..
+        }
+        | Request::Reject {
+            case_id,
+            approval_id,
+            ..
+        }
+        | Request::ApprovalDecide {
+            case_id,
+            approval_id,
+            ..
+        } => Some((case_id, approval_id)),
+        _ => None,
+    }
 }
 
 /// The bound itself, over any request future. Separated from
@@ -1530,6 +1640,12 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 "error_class": "input_error",
             })
         }
+        // Also connection-scoped: the answer is derived from the peer's uid,
+        // which `dispatch_bounded` holds and this level does not. Answer with
+        // the honest shape — no peer, therefore nothing claimable — rather than
+        // inventing a uid or panicking.
+        Request::IdentityGet => serde_json::to_value(state.config().identity.describe(None))
+            .unwrap_or_else(|_| serde_json::json!({"error": "identity serialization failed"})),
         // Inspect projections (Task 6): shaped views, never propagated errors.
         Request::CaseEntryOptions => serde_json::to_value(sfwp::case::entry_options(&state.root))
             .unwrap_or_else(|_| serde_json::json!({"error": "entry_options serialization failed"})),
