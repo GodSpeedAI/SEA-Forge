@@ -6,9 +6,10 @@ use sea_forge_core::{
     errors::ForgeError,
     ids,
     types::{
-        Actor, ActorRole, ApprovalRequest, ApprovalStatus, Case, CasePlan, CaseState, EvidenceKind,
-        ExecutionRequest, ItemKind, Operation, SettlementEvent, SettlementStatus, TraceKind,
-        Verdict,
+        Actor, ActorRole, ApprovalRequest, ApprovalStatus, Case, CasePlan, CaseState,
+        CriteriaDerivation, DerivationMethod, EvidenceKind, ExecutionRequest, ItemKind, Operation,
+        OriginRef, OriginRefKind, OriginRole, SettlementCriteriaRecord, SettlementEvent,
+        SettlementStatus, TraceKind, Verdict,
     },
     RECORD_VERSION,
 };
@@ -506,6 +507,71 @@ async fn execute_agent(
     })
 }
 
+/// Commit the settlement criteria an escalated item's approval will be bound to,
+/// returning the record.
+///
+/// A plan submitted to the server carries its criteria inline, with
+/// `settlement_criteria_ref` usually absent — the CLI's plan pipeline mints
+/// criteria records at plan time, but a plan arriving over SFWP has been
+/// through no such pass. Reusing an already-committed record when the ref does
+/// resolve keeps a re-escalation of the same item pointing at one immutable
+/// set of criteria rather than minting a second copy per attempt.
+fn commit_item_criteria(
+    ledger: &LedgerStream,
+    case_id: &str,
+    item: &sea_forge_core::types::PlanItem,
+) -> Result<SettlementCriteriaRecord, ForgeError> {
+    if let Some(existing) = item.settlement_criteria_ref.as_deref() {
+        let committed = ledger.read_entries()?.into_iter().find(|entry| {
+            entry.record_kind == "settlement_criteria"
+                && entry.payload.get("criteria_id").and_then(|id| id.as_str()) == Some(existing)
+        });
+        if let Some(entry) = committed {
+            return serde_json::from_value(entry.payload).map_err(Into::into);
+        }
+    }
+
+    let criteria = item.settlement_criteria.clone();
+    let mut record = SettlementCriteriaRecord {
+        version: RECORD_VERSION.into(),
+        criteria_id: ids::random_id("crit")?,
+        criteria_sha256: sea_forge_planner::compute_criteria_sha256(&criteria)?,
+        criteria,
+        // The origin is the plan item as submitted. `ImplementationDefined`
+        // rather than `Intent` or `PlanTemplate` because neither is true here:
+        // these criteria were declared inline by whoever wrote the plan, and
+        // naming an intent that was never hashed would be a provenance claim
+        // this path cannot support.
+        origin_refs: vec![OriginRef {
+            kind: OriginRefKind::ImplementationDefined,
+            reference: format!("case:{case_id}#{}", item.plan_item_id),
+            sha256: sea_forge_ledger::types::hash_canonical(item)?,
+            role: OriginRole::AcceptanceSource,
+            evidence_refs: vec![],
+            domain_model_ref: None,
+        }],
+        derivation: CriteriaDerivation {
+            method: DerivationMethod::Manual,
+            actor_ref: "sea-forge-server".into(),
+            producer_ref: None,
+            rationale: format!(
+                "criteria declared inline on plan item '{}' of the submitted case plan",
+                item.plan_item_id
+            ),
+        },
+        declared_at: Utc::now().to_rfc3339(),
+        criteria_record_hash: String::new(),
+    };
+    record.criteria_record_hash = sea_forge_planner::compute_record_hash(&record)?;
+    ledger.commit_typed(
+        "settlement_criteria",
+        vec![case_id.into(), record.criteria_id.clone()],
+        &record,
+        vec![],
+    )?;
+    Ok(record)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn execute_sandbox(
     config: &crate::ServerConfig,
@@ -617,6 +683,29 @@ fn execute_sandbox(
             .filter(|entry| entry.record_kind == "approval_request")
             .count()
             + 1;
+        // The approval must name the criteria it gates, and those criteria must
+        // be committed. `approve` reads the `settlement_criteria` record, then
+        // cross-checks the approval's `criteria_sha256` and
+        // `criteria_record_hash` against it — so an approval carrying `None`
+        // for all three is not merely thin, it is *unresolvable*: every
+        // escalated episode opened an approval that parked the case forever
+        // with `approval criteria reference is missing`.
+        let criteria = commit_item_criteria(&ledger, case_id, item)?;
+        // `approve` authorizes the resolution against the cell's active policy
+        // at `<root>/authority/active-policy.json`, which only the CLI's plan
+        // pipeline used to materialize (`cli/src/pipeline.rs:345-355`). A case
+        // submitted over SFWP therefore escalated into an approval that could
+        // never be resolved: `missing_config_error` on a file the server had
+        // never written. Recorded through the ledger rather than written
+        // loose, so the snapshot the approver is judged against is the one this
+        // decision was actually made under.
+        let committed_policy =
+            ledger.commit_typed("authority_policy", vec![case_id.into()], &bundle, vec![])?;
+        ledger.materialize_view(
+            &committed_policy,
+            &root.join("authority/active-policy.json"),
+            &serde_json::to_vec_pretty(&bundle)?,
+        )?;
         let requested_at = Utc::now();
         let approval = ApprovalRequest {
             version: RECORD_VERSION.into(),
@@ -625,9 +714,9 @@ fn execute_sandbox(
             case_id: case_id.into(),
             decision_id: decision.decision_id.clone(),
             plan_item_id: item.plan_item_id.clone(),
-            criteria_ref: item.settlement_criteria_ref.clone(),
-            criteria_sha256: None,
-            criteria_record_hash: None,
+            criteria_ref: Some(criteria.criteria_id.clone()),
+            criteria_sha256: Some(criteria.criteria_sha256.clone()),
+            criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
             job_contract_ref: None,
             requested_at: requested_at.to_rfc3339(),
             expires_at: (requested_at + chrono::Duration::seconds(timeout as i64)).to_rfc3339(),

@@ -362,6 +362,82 @@ async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
         class, "separation_of_duty",
         "a second actor must be able to approve: {by_other}"
     );
+
+    // Getting past separation of duty is not the same as the approval being
+    // resolvable, and live driving found that it was not: the escalation
+    // recorded no criteria binding, so `approve` refused every approval this
+    // dispatcher opened and the case parked forever.
+    //
+    // This test cannot carry that assertion to completion. `decide` shells out
+    // through `run_cli`, which resolves a `sea-forge` binary beside
+    // `current_exe()` — inside a test harness that is the test binary, so the
+    // approve subcommand never runs here regardless of correctness. What is
+    // assertable is that the *specific* defect is gone; the end-to-end
+    // resolution is proven live by `docs/execution/journey/drive_identity.py`,
+    // and the record binding by the test below.
+    let message = by_other["error"].as_str().unwrap_or_default();
+    assert!(
+        !message.contains("criteria reference is missing")
+            && !message.contains("criteria record is missing"),
+        "the escalation opened an approval with no usable criteria binding: {by_other}"
+    );
+}
+
+/// The binding that makes an approval resolvable at all: a committed
+/// `settlement_criteria` record, and an approval whose three criteria fields
+/// point at it. `approve` cross-checks all of them, so any one being absent
+/// makes the escalation a dead end.
+#[tokio::test]
+async fn an_escalated_approval_is_bound_to_committed_criteria() {
+    let (root, socket) = boot(two_actors()).await;
+    let plan = escalating_plan(root.path());
+    let policy = escalating_policy(root.path());
+    let mut client = Client::connect(&socket).await;
+
+    let submitted = client
+        .call(json!({"verb": "submit",
+                     "actor": {"actor_id": "operator_a", "role": "operator"},
+                     "plan": plan, "policy": policy,
+                     "entity": "operator_a", "process": "test", "timeout": 60}))
+        .await;
+    let case_id = submitted["case_id"].as_str().expect("a case").to_owned();
+
+    let entries = sea_forge_ledger::LedgerStream::open(
+        root.path(),
+        format!("case-{case_id}"),
+        "test",
+    )
+    .unwrap()
+    .read_entries()
+    .unwrap();
+
+    let criteria: Vec<_> = entries
+        .iter()
+        .filter(|entry| entry.record_kind == "settlement_criteria")
+        .collect();
+    assert_eq!(
+        criteria.len(),
+        1,
+        "an escalation must commit exactly one criteria record"
+    );
+
+    let approval = entries
+        .iter()
+        .find(|entry| entry.record_kind == "approval_request")
+        .expect("an escalation must open an approval");
+
+    assert_eq!(
+        approval.payload["criteria_ref"], criteria[0].payload["criteria_id"],
+        "the approval must name the criteria it gates"
+    );
+    assert_eq!(
+        approval.payload["criteria_sha256"], criteria[0].payload["criteria_sha256"],
+        "the approval must pin the criteria content hash"
+    );
+    assert_eq!(
+        approval.payload["criteria_record_hash"], criteria[0].payload["criteria_record_hash"],
+        "the approval must pin the criteria record hash"
+    );
 }
 
 /// The refusal must survive a reconnect. Identity binds per request (U-07

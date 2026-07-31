@@ -1127,6 +1127,11 @@ async fn dispatch_bounded(
             .unwrap_or_else(|_| serde_json::json!({"error": "identity serialization failed"}));
     }
 
+    // Carried past the gate so the records this request produces name the actor
+    // that was actually verified, rather than whatever default a downstream
+    // component would otherwise pick.
+    let mut verified_actor: Option<String> = None;
+
     if crate::identity::is_protected(&request) {
         let claim = crate::identity::ActorClaim::parse(raw_line);
         match state.config().identity.resolve(claim.as_ref(), peer) {
@@ -1190,6 +1195,7 @@ async fn dispatch_bounded(
                         }
                     }
                 }
+                verified_actor = Some(actor.actor_id().to_owned());
             }
             Err(refusal) => {
                 tracing::warn!(
@@ -1203,7 +1209,7 @@ async fn dispatch_bounded(
     }
     let state = Arc::clone(state);
     bounded(
-        async move { handle_request(request, &state).await },
+        async move { handle_request_as(request, &state, verified_actor.as_deref()).await },
         REQUEST_TIMEOUT,
         raw_line,
     )
@@ -1385,6 +1391,21 @@ async fn start_subscription(
 }
 
 pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde_json::Value {
+    handle_request_as(request, state, None).await
+}
+
+/// [`handle_request`], carrying the actor the identity gate verified.
+///
+/// Separate entry point rather than a changed signature because the actor is
+/// only knowable at the connection level (`SO_PEERCRED`), and every in-process
+/// caller — the CLI-facing paths and the test suites — legitimately has none.
+/// Those callers get `None` and the behaviour they always had; a socket request
+/// carries the verified actor through to the records it produces.
+pub async fn handle_request_as(
+    request: Request,
+    state: &Arc<ServerState>,
+    actor_id: Option<&str>,
+) -> serde_json::Value {
     match request {
         Request::Submit {
             payload,
@@ -1419,6 +1440,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 note.as_deref(),
                 request_id.as_deref(),
                 preconditions.as_ref(),
+                actor_id,
             )
             .await
         }
@@ -1439,6 +1461,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 note.as_deref(),
                 request_id.as_deref(),
                 preconditions.as_ref(),
+                actor_id,
             )
             .await
         }
@@ -1744,6 +1767,7 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
                 note.as_deref(),
                 request_id.as_deref(),
                 preconditions.as_ref(),
+                actor_id,
             )
             .await
         }
@@ -2067,6 +2091,8 @@ async fn decide(
     note: Option<&str>,
     request_id: Option<&str>,
     preconditions: Option<&sfwp::precondition::Precondition>,
+    // The actor the identity gate verified, when this arrived over a socket.
+    actor_id: Option<&str>,
 ) -> serde_json::Value {
     record_pending(state, request_id, method);
 
@@ -2096,18 +2122,22 @@ async fn decide(
     }
 
     let root = state.root.clone();
-    let result = run_cli(
-        &root,
-        &[
-            cli_verb,
-            case_id,
-            approval_id,
-            "--root",
-            root.to_str().unwrap_or("."),
-        ],
-        note,
-    )
-    .await;
+    let mut args = vec![
+        cli_verb,
+        case_id,
+        approval_id,
+        "--root",
+        root.to_str().unwrap_or("."),
+    ];
+    // Attribute the resolution to the actor the gate verified. Without this the
+    // CLI falls back to its own default (`operator_local`), so every approval
+    // resolved over SFWP was recorded as `resolved_by=operator_local` no matter
+    // who decided it — an audit trail naming the wrong person, and a
+    // separation-of-duty check downstream comparing against the wrong actor.
+    if let Some(actor_id) = actor_id {
+        args.extend_from_slice(&["--actor", actor_id]);
+    }
+    let result = run_cli(&root, &args, note).await;
     let response = match result {
         Ok(output) => {
             let _ = state.permission_broker.resolve(approval_id).await;

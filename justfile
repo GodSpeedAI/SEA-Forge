@@ -149,10 +149,29 @@ no-async-kernel:
 # kernel `check`/`ci` gates — the frontend is developed and gated separately
 # per docs/decisions/ADR-004-workbench-stack.md.
 [group('quality')]
-workbench-check: workbench-contracts-gate
+workbench-check: workbench-contracts-gate workbench-tauri-test
     #!/usr/bin/env bash
     {{set}}
     cd workbench && bun install --frozen-lockfile && bun run check && bun run build && bun run test
+
+# The desktop host's own Rust tests.
+#
+# `src-tauri` is a separate Cargo workspace (ADR-004, K-06), so
+# `cargo test --workspace` from the repo root never compiles it. Nothing else
+# ran these, and the gap was not theoretical: the SF-005 identity gate made
+# every protected verb require an actor block, which broke the host's
+# `tests/bridge.rs` correlation-recovery scenarios — and the whole kernel suite
+# stayed green through it, because it never built them.
+#
+# This is the host's transport: the SFWP socket client, response pairing,
+# reconnect, and the actor the renderer is structurally unable to forge. It
+# needs a gate of its own precisely because it is out of the root workspace's
+# reach.
+[group('quality')]
+workbench-tauri-test:
+    #!/usr/bin/env bash
+    {{set}}
+    cargo test --locked --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
 
 # Generated-zone drift gate (ADR-005, GEN-01, API-01, ADR-004).
 #
