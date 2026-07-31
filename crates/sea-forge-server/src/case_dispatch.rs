@@ -721,7 +721,7 @@ fn execute_sandbox(
     // a command that exited zero while writing none of its required artifacts,
     // and it had no representation for `Escalate` at all — an escalation was
     // silently settled as a rejection, losing the review the verdict asked for.
-    sea_forge_settlement::settle(
+    let settlement = sea_forge_settlement::settle(
         &sea_forge_core::types::SettlementClaim {
             run_id: run_id.into(),
             plan_item_id: item.plan_item_id.clone(),
@@ -734,5 +734,23 @@ fn execute_sandbox(
         },
         &workspace,
         &run_dir,
-    )
+    )?;
+
+    // The ledger is the truth, but `run.get` and `case.get_overview` read
+    // `settlement.json` — so a settlement that lived only in the ledger made
+    // every case-dispatched run render as *unsettled*, including runs that had
+    // been denied and settled. That is the one thing these views must never
+    // say: `unknown != unavailable`, and "unsettled" is a claim about the run,
+    // not about a missing record.
+    //
+    // Written after the decision it reports, and only ever as a projection of
+    // the value returned above — never a second place a settlement is decided.
+    write_json(&run_dir.join("settlement.json"), &settlement)?;
+
+    // Same reason for the authority decision: `RunRecord::records` lists
+    // `authority.json` as canonical, and a run whose decision is unreadable is
+    // an integrity signal an operator is meant to be able to see.
+    write_json(&run_dir.join("authority.json"), &vec![&decision])?;
+
+    Ok(settlement)
 }

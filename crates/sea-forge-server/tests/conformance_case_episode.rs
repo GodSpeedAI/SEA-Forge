@@ -479,6 +479,48 @@ async fn a_denied_episode_records_why_it_stopped() {
     );
 }
 
+/// The ledger is the truth, but `run.get` and `case.get_overview` read
+/// `settlement.json` and `authority.json` off the run directory. A settlement
+/// that lived only in the ledger made every case-dispatched run render as
+/// `"unsettled"` — including runs that had been denied *and* settled, which is
+/// the one thing those views must never say. Caught by driving a real server
+/// over its socket, not by any test that existed at the time.
+#[tokio::test]
+async fn a_settled_episode_materializes_the_records_the_views_read() {
+    for allow in [true, false] {
+        let episode = dispatch(EXIT_ZERO, SettlementCriteria::default(), allow).await;
+        let expected = episode.settlement();
+
+        for run_dir in episode.run_dirs() {
+            let settlement: serde_json::Value = serde_json::from_slice(
+                &fs::read(run_dir.join("settlement.json")).unwrap_or_else(|_| {
+                    panic!(
+                        "no settlement.json in {} (allow={allow})",
+                        run_dir.display()
+                    )
+                }),
+            )
+            .expect("settlement.json is well-formed");
+            // The projection must be the settlement, not a second opinion
+            // about it.
+            assert_eq!(settlement["status"], expected["status"]);
+            assert_eq!(settlement["settlement_id"], expected["settlement_id"]);
+            assert_eq!(settlement["basis"], expected["basis"]);
+
+            let authority: serde_json::Value =
+                serde_json::from_slice(&fs::read(run_dir.join("authority.json")).unwrap_or_else(
+                    |_| panic!("no authority.json in {} (allow={allow})", run_dir.display()),
+                ))
+                .expect("authority.json is well-formed");
+            assert_eq!(
+                authority[0]["decision_id"],
+                episode.decision()["decision_id"],
+                "authority.json must name the decision the ledger committed"
+            );
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Escalate: a question for a human, not a rejection
 // ---------------------------------------------------------------------------
