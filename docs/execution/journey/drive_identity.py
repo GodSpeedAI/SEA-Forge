@@ -11,6 +11,7 @@ comes from `SO_PEERCRED` — not from anything this script can assert.
 import json
 import os
 import socket
+import subprocess
 import sys
 
 CELL, SOCK = sys.argv[1], sys.argv[2]
@@ -58,6 +59,57 @@ expect(
     "9999" not in json.dumps(me),
     "no binding for a uid other than this connection's appears in the view",
 )
+
+print("== the catalog advertises what a client can actually call ==")
+hello = c.call(verb="system_hello", protocol_version="1")
+advertised = set(hello.get("implemented_methods", []))
+expect("identity.get" in advertised, "identity.get is advertised")
+expect(
+    "thoth.ask" in advertised,
+    "thoth.ask is advertised (it was implemented but undiscoverable)",
+)
+
+def do_ask():
+    return c.call(verb="ask", actor={"actor_id": "operator_a", "role": "operator"},
+                  kind="ask_available_affordances", subject="delegation",
+                  purpose="live journey")
+
+
+# Before the Genesis self-model exists (epic 1.5), asking must fail in a way
+# that names its own remedy — not merely report that something went wrong.
+if os.path.isdir(os.path.join(CELL, "self-model")):
+    print("== (self-model already present) ==")
+else:
+    print("== asking before the self-model is realized ==")
+    ungrounded = do_ask()
+    show("response", ungrounded)
+    expect(ungrounded.get("error_class") == "self_model_error",
+           "an ungrounded ask is refused as a self-model problem")
+    expect("self-model rebuild" in ungrounded.get("error", ""),
+           "the refusal names the command that fixes it")
+
+    print("== realizing the Genesis self-model ==")
+    # `<cell>/sea-forge` is the *server*, symlinked under that name so argv0
+    # satisfies both the policy's file-name match and `untrusted_executable`'s
+    # canonical-path check. The CLI is a different binary and lives beside it as
+    # `sea-forge-cli`; running the server here would boot a second cell.
+    built = subprocess.run(
+        [os.path.join(CELL, "sea-forge-cli"), "self-model", "--root", CELL, "rebuild"],
+        capture_output=True, text=True, timeout=120,
+    )
+    expect(built.returncode == 0,
+           f"self-model rebuild succeeds (exit {built.returncode}: {built.stderr[:200]})")
+
+print("== thoth.ask answers, and discloses its own standing ==")
+answer = do_ask()
+show("answer", answer, 500)
+expect("error_class" not in answer, "ask was not refused")
+expect(answer.get("disposition") in {"answered", "partial", "denied"},
+       "the answer carries a governed disposition")
+expect(bool(answer.get("authority_notice")),
+       "the answer states that it confers no execution authority")
+expect(bool(answer.get("assurance")) and bool(answer.get("freshness")),
+       "the answer discloses its assurance and freshness")
 
 print("== a protected verb with no actor block ==")
 bare = c.call(verb="submit", plan="/nope.json", policy="/nope.yaml",

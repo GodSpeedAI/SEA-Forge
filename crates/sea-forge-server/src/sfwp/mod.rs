@@ -23,6 +23,7 @@ pub mod events;
 pub mod precondition;
 pub mod readiness;
 pub mod run_views;
+pub mod thoth;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -107,6 +108,17 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
     MethodDescriptor {
         method: "identity.get",
         class: InteractionClass::Inspect,
+    },
+    // --- Thoth (E13) ---
+    // The kernel has answered `ask` since M11, but it was never listed here, so
+    // `system.hello` did not advertise it and no client could discover it: an
+    // implemented capability with no reachable path, which is precisely the
+    // distinction the catalog exists to make (epic invariant 6). Classed as a
+    // command, not an inspect: answering is disclosure-controlled and is
+    // recorded, so it is governed even though it mutates no case.
+    MethodDescriptor {
+        method: "thoth.ask",
+        class: InteractionClass::Command,
     },
     // --- SFWP additive case-authoring methods (Task 6, ADR-003) ---
     // `entry_options`/`preflight` are read-only projections/dry-runs (no case,
@@ -275,6 +287,8 @@ pub const SCHEMA_TYPES: &[&str] = &[
     "IdentityView",
     "AvailableActor",
     "RefusalView",
+    "ThothAnswerView",
+    "ClaimView",
     "EntryOptionsResult",
     "TemplateOption",
     "TemplateParameter",

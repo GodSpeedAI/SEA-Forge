@@ -30,6 +30,7 @@ use sea_forge_server::sfwp::precondition::{
     ChangedRecord, Precondition, RecordDigest, RejectedAsStale,
 };
 use sea_forge_server::identity::{AvailableActor, IdentityView, RefusalView};
+use sea_forge_server::sfwp::thoth::{ClaimView, ThothAnswerView};
 use sea_forge_server::sfwp::readiness::{ReadinessGetParams, ReadinessItem, ReadinessView};
 use sea_forge_server::sfwp::run_views::{
     AuthorityProjection, CriterionCheck, DeclarationRow, EvidenceRow, RecordPresence,
@@ -71,6 +72,8 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(IdentityView, "IdentityView"),
         schema!(AvailableActor, "AvailableActor"),
         schema!(RefusalView, "RefusalView"),
+        schema!(ThothAnswerView, "ThothAnswerView"),
+        schema!(ClaimView, "ClaimView"),
         schema!(EntryOptionsResult, "EntryOptionsResult"),
         schema!(TemplateOption, "TemplateOption"),
         schema!(TemplateParameter, "TemplateParameter"),

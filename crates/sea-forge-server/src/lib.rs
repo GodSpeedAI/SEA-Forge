@@ -603,8 +603,18 @@ pub enum Request {
         purpose: String,
         #[serde(default)]
         case: Option<String>,
-        #[serde(default = "default_entity")]
-        actor: String,
+        /// Who is asking. Named `actor_id` rather than `actor` because SF-005
+        /// claimed `actor` for the identity block `{actor_id, role}` that every
+        /// protected verb carries — and `ask` is protected. Two fields of
+        /// different types under one wire name meant the identity gate could
+        /// not parse this request's block, so `ask` was refused on every real
+        /// socket while the suite stayed green (its tests call `handle_request`
+        /// directly, below the gate).
+        ///
+        /// Ignored when the gate resolved an actor: a caller does not get to
+        /// ask questions as someone else.
+        #[serde(default = "default_entity", alias = "asker")]
+        actor_id: String,
     },
 
     // --- SFWP additive methods (Task 3, ADR-003) ------------------------
@@ -1560,16 +1570,19 @@ pub async fn handle_request_as(
             subject,
             purpose,
             case,
-            actor,
+            actor_id: requested_actor,
         } => {
             let Some(question_kind) = sea_forge_thoth::protocol::parse_question_kind(&kind) else {
                 return serde_json::json!({"error": format!("unknown question kind: {kind}")});
             };
+            // Disclosure is scoped to the asker, so the asker must be the
+            // identity the gate verified — not one the request nominated.
+            let asker = actor_id.map(str::to_owned).unwrap_or(requested_actor);
             let root = state.root.clone();
             let result = tokio::task::spawn_blocking(move || {
                 sea_forge_thoth::service::ask(
                     &root,
-                    &actor,
+                    &asker,
                     question_kind,
                     &subject,
                     &purpose,
@@ -1580,9 +1593,14 @@ pub async fn handle_request_as(
             .map_err(|e| ForgeError::Internal(format!("ask task panic: {e}")))
             .and_then(|result| result);
             match result {
-                Ok(answer) => serde_json::to_value(answer).unwrap_or_else(
-                    |_| serde_json::json!({"error": "answer serialization failed"}),
-                ),
+                // Projected through the SFWP view rather than serialized
+                // straight out of the kernel type, so the contract the
+                // Workbench validates against is generated from something this
+                // layer owns (ADR-005, GEN-01).
+                Ok(answer) => serde_json::to_value(sfwp::thoth::ThothAnswerView::from(answer))
+                    .unwrap_or_else(
+                        |_| serde_json::json!({"error": "answer serialization failed"}),
+                    ),
                 Err(error) => {
                     serde_json::json!({"error": error.to_string(), "error_class": error.class()})
                 }

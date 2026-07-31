@@ -178,6 +178,42 @@ from `SO_PEERCRED`, so nothing in the script can assert it.
 found the four defects in `52565b5` — every one of which the 839-test kernel
 suite passed straight through.
 
+## Journey 6b — Asking the cell what it can do (live, 2026-07-31)
+
+Part of the same driver. `thoth.ask` was implemented in the kernel from M11 but
+absent from the method catalog, so `system.hello` never advertised it and no
+client could discover it — an implemented capability with no reachable path.
+
+```
+== the catalog advertises what a client can actually call ==
+  PASS  identity.get is advertised
+  PASS  thoth.ask is advertised (it was implemented but undiscoverable)
+
+== asking before the self-model is realized ==
+  {"error": "no self-model snapshot; run 'sea-forge self-model rebuild'",
+   "error_class": "self_model_error"}
+  PASS  the refusal names the command that fixes it
+
+== realizing the Genesis self-model ==   (epic 1.5)
+  PASS  self-model rebuild succeeds
+
+== thoth.ask answers, and discloses its own standing ==
+  {"answer_id": "tha_3f4e38", "disposition": "denied", "claims": [],
+   "omitted_claim_classes": ["identity", "architecture", "declared_capability"],
+   "assurance": "local_tamper_evident", "freshness": "current",
+   "snapshot_ref": "smsnap_20260731T072602Z_c70a06",
+   "authority_notice": "This answer confers no execution authority."}
+```
+
+**Verified live.** The answer is a governed *denial*, not an error: this cell's
+policy grants none of the three claim classes the question needed, and the
+answer says which three. That is the shape epic story 3.9 asks for, and it is
+what the surface renders.
+
+Worth noting what the refusal before it did: it named its own remedy. An
+operator reading `no self-model snapshot; run 'sea-forge self-model rebuild'`
+does not have to find the fix.
+
 ## Journey 7 — What the Workbench now shows, and what it does not
 
 The desktop client no longer fabricates its governance context. `router.tsx`'s
@@ -185,6 +221,14 @@ The desktop client no longer fabricates its governance context. `router.tsx`'s
 the socket the host dialed, integrity and readiness from `readiness.get`. The
 renderer cannot assert an actor at all — `SfwpCommand` has no actor field, and
 the host attaches the verified one (`bridge.rs`).
+
+The last two fabricated surfaces are gone. `ThothPage` rendered a written-in
+answer citing "UX epic §4.6" as its evidence — a claim about the system sourced
+from a design document — and `ModelsPage` rendered a `.sea` model this cell has
+never held with three invented validation verdicts. Both were watermarked and
+forced their pills to `unknown`, which made them honest about their *states*
+while the content stayed fiction. Thoth now asks; the domain workbench declares
+the method it is waiting on and resolves that standing from `system.hello`.
 
 **Still test-driven, not live.** The transport, the host's actor selection, and
 every surface's rendering are covered by 123 renderer tests and 16 host tests,

@@ -383,6 +383,58 @@ async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
     );
 }
 
+/// `ask` is protected, so it carries the identity block — and it also has a
+/// field naming who is asking. Those collided: SF-005 claimed `actor` for
+/// `{actor_id, role}` while `Request::Ask` already used `actor` for a plain
+/// string, so the gate could not parse the block and refused every `ask` that
+/// arrived on a real socket.
+///
+/// The whole kernel suite stayed green through it, because every `ask` test
+/// calls `handle_request` directly — below the gate. This one goes over the
+/// wire on purpose; that is the only thing that would have caught it.
+#[tokio::test]
+async fn ask_is_reachable_over_a_socket_with_an_identity_block() {
+    let (_root, socket) = boot(IdentityBindings::local_operator("operator_local")).await;
+    let mut client = Client::connect(&socket).await;
+
+    let response = client
+        .call(json!({"verb": "ask", "actor": actor(),
+                     "kind": "ask_capability", "subject": "delegation",
+                     "purpose": "conformance"}))
+        .await;
+
+    let class = response["error_class"].as_str().unwrap_or_default();
+    assert!(
+        !class.starts_with("identity_"),
+        "ask was refused by the identity gate it satisfies: {response}"
+    );
+}
+
+/// An implemented method that the catalog does not list is unreachable: no
+/// client can discover it. `thoth.ask` was in exactly that state.
+#[tokio::test]
+async fn the_catalog_advertises_every_method_a_client_can_call() {
+    let (_root, socket) = boot(IdentityBindings::local_operator("operator_local")).await;
+    let mut client = Client::connect(&socket).await;
+
+    let hello = client
+        .call(json!({"verb": "system_hello", "protocol_version": "1"}))
+        .await;
+    let methods: Vec<&str> = hello["implemented_methods"]
+        .as_array()
+        .expect("hello must list methods")
+        .iter()
+        .filter_map(|m| m.as_str())
+        .collect();
+
+    for method in ["identity.get", "thoth.ask"] {
+        assert!(
+            methods.contains(&method),
+            "{method} is implemented but not advertised: {methods:?}"
+        );
+    }
+}
+
 /// The binding that makes an approval resolvable at all: a committed
 /// `settlement_criteria` record, and an approval whose three criteria fields
 /// point at it. `approve` cross-checks all of them, so any one being absent

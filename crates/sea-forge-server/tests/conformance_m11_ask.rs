@@ -80,7 +80,7 @@ async fn server_ask_allowed_returns_answer() {
             subject: name,
             purpose: "test".into(),
             case: None,
-            actor: "operator_local".into(),
+            actor_id: "operator_local".into(),
         },
         &state,
     )
@@ -103,7 +103,7 @@ async fn server_ask_denied_leaks_no_restricted_facts() {
             subject: "some_subject".into(),
             purpose: "test".into(),
             case: None,
-            actor: "operator_local".into(),
+            actor_id: "operator_local".into(),
         },
         &state,
     )
@@ -128,7 +128,7 @@ async fn server_ask_unknown_kind_errors_without_panicking() {
             subject: "x".into(),
             purpose: "test".into(),
             case: None,
-            actor: "operator_local".into(),
+            actor_id: "operator_local".into(),
         },
         &state,
     )
@@ -157,7 +157,7 @@ async fn server_ask_ledgers_the_full_question_to_answer_chain() {
             subject: name,
             purpose: "test".into(),
             case: None,
-            actor: "operator_local".into(),
+            actor_id: "operator_local".into(),
         },
         &state,
     )
@@ -196,7 +196,7 @@ fn unknown_request_verb_fails_clean_not_panic() {
 #[test]
 fn ask_request_wire_tag_is_snake_case_ask() {
     let request: Request = serde_json::from_str(
-        r#"{"verb":"ask","kind":"ask_capability","subject":"x","purpose":"test","actor":"operator_local"}"#,
+        r#"{"verb":"ask","kind":"ask_capability","subject":"x","purpose":"test","actor_id":"operator_local"}"#,
     )
     .unwrap();
     assert!(matches!(request, Request::Ask { .. }));

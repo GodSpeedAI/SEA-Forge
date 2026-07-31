@@ -1,333 +1,58 @@
-import type { ReactNode } from "react";
-import { GovernedStatusPill } from "@sea-forge/ui-components";
-import { useEvidenceContext } from "../shell/EvidenceContext";
 import { UnbackedSurface } from "./UnbackedSurface";
-import {
-  STANDING_PRESENTATION,
-  standingOf,
-  useServerContract,
-} from "../hooks/useServerContract";
-import styles from "./SurfacesPages.module.css";
-import {
-  OPERATE_ROUTES,
-  type OperateRouteDefinition as RouteContext,
-  type OperateRouteState as RouteState,
-} from "./operateRoutes";
-
-function routeEvidence(route: RouteContext, detail = route.reason) {
-  return {
-    id: `${route.id}.state`,
-    kind: `operate_${route.id}_state`,
-    disclosureStatus: "permitted" as const,
-    rawPayload: JSON.stringify(
-      {
-        route: route.title,
-        reason: detail,
-        display: "copied specification projection",
-      },
-      null,
-      2,
-    ),
-  };
-}
 
 /**
- * Every pill inside a specimen surface renders `unknown`, whatever the layout
- * asks for.
+ * The route table's remaining surfaces, each resolved to what this cell can
+ * actually evidence.
  *
- * This is the single choke point where the copied specification's illustrative
- * states would otherwise become governance claims. The layouts below are the
- * design target and are worth keeping, but the states they depict were written
- * to show what the screens will look like — not read from any record. A pill
- * saying `ready` here would be indistinguishable from one backed by evidence,
- * so the label survives to carry the layout's meaning while the variant tells
- * the truth: this cell knows nothing about it.
+ * This module used to hold two *specimens*: layouts copied from the design
+ * specification and populated with illustrative content — a written-in Thoth
+ * answer citing "UX epic §4.6" as its evidence, a `.sea` source for a domain
+ * this cell has never held, three validation rows with invented verdicts. They
+ * carried a watermark and forced every status pill to `unknown`, which made
+ * them honest about their *states* while the content itself stayed fiction.
+ *
+ * Both are gone. Thoth is live — `thoth.ask` was always implemented, it was
+ * simply missing from the method catalog, so no client could reach it. The
+ * domain workbench has no kernel method at all and now says so.
+ *
+ * What is left here is routing. Each surface either reads a real method or
+ * declares which method it is waiting on, and `UnbackedSurface` resolves that
+ * standing from `system.hello` rather than from a claim baked into this build —
+ * so the day the kernel implements one, its surface stops reporting absence
+ * without anyone editing this file.
  */
-function Status({
-  state,
-  label,
-}: {
-  /** Retained so the specimen layouts stay self-documenting; never rendered. */
-  state: RouteState | "pending" | "unknown";
-  label: string;
-}) {
-  void state;
-  return <GovernedStatusPill variant="unknown" label={label} className="status-pill" />;
-}
 
-function InspectButton({
-  route,
-  children,
-  className = "button",
-  detail,
-}: {
-  route: RouteContext;
-  children: ReactNode;
-  className?: string;
-  detail?: string;
-}) {
-  const { inspectEvidence } = useEvidenceContext();
-  return (
-    <button
-      className={className}
-      type="button"
-      onClick={() => inspectEvidence(routeEvidence(route, detail))}
-    >
-      {children}
-    </button>
-  );
-}
+// --- Live surfaces, re-exported under the names the route table uses. --------
 
-function GovernedFocus({ route }: { route: RouteContext }) {
-  const { contract } = useServerContract();
-  const standing = standingOf(route.method, contract);
-  const presentation = STANDING_PRESENTATION[standing];
+// `thoth.ask` is in the catalog and this surface calls it.
+export { ThothPage } from "./ThothPage";
 
-  return (
-    <section className="governed-focus" data-od-id={route.id} data-state="unknown">
-      <div className="focus-copy">
-        <div className="title-line">
-          <h1>{route.title}</h1>
-          <Status state="unknown" label="○ Specification preview" />
-        </div>
-        <p>{presentation.explanation}</p>
-        <p className="operational-copy">Reference scenario: {route.reason}</p>
-        <div className="focus-meta">
-          <InspectButton route={route} className="freshness-badge">
-            <span className="state-dot" />
-            Copied specification · not live
-          </InspectButton>
-          <span className="machine-value">
-            requires {route.method} · {presentation.label.toLowerCase()}
-          </span>
-        </div>
-      </div>
-      <div className="focus-actions">
-        <InspectButton route={route}>Why this state</InspectButton>
-        <InspectButton route={route} className="button button--primary">
-          {route.action}
-        </InspectButton>
-      </div>
-    </section>
-  );
-}
-
-function Panel({
-  kicker,
-  title,
-  id,
-  children,
-  className = "",
-}: {
-  kicker: string;
-  title: string;
-  id: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <section className={`panel ${className}`.trim()} data-od-id={id}>
-      <div className="section-header">
-        <div>
-          <p className="section-kicker">{kicker}</p>
-          <h2>{title}</h2>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function RouteLayout({
-  route,
-  primary,
-  attention,
-  className = "",
-}: {
-  route: RouteContext;
-  primary: ReactNode;
-  attention: ReactNode;
-  className?: string;
-}) {
-  // `data-specimen` marks the region whose contents are illustrative. The CSS
-  // watermark makes that legible at a glance, so an operator never has to infer
-  // it from the header alone.
-  return (
-    <div className={styles.page} data-specimen="true">
-      <GovernedFocus route={route} />
-      <div className={`content-grid ${className}`.trim()}>
-        {primary}
-        <aside className="attention-rail" aria-label={`${route.title} attention`}>
-          {attention}
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-export function ThothPage() {
-  const route = OPERATE_ROUTES.thoth;
-  return (
-    <RouteLayout
-      route={route}
-      primary={
-        <div className="content-primary">
-          <Panel
-            kicker="Grounded question"
-            title="What should be inspected?"
-            id="thoth-question-composer"
-          >
-            <label className="field-label" htmlFor="thothQuestion">
-              Question
-            </label>
-            <textarea
-              id="thothQuestion"
-              className="workbench-input"
-              rows={3}
-              defaultValue="What is missing before external agent delegation is spendable?"
-            />
-            <div className="source-chip-row">
-              <span className="machine-value">
-                3 selected sources · disclosure required
-              </span>
-            </div>
-          </Panel>
-          <Panel kicker="Answer detail" title="Grounded answer" id="thoth-answer-detail">
-            <p className="operational-copy">
-              Endpoint verification and an allowed authority boundary are both
-              required before delegation becomes spendable. The current projection
-              records no endpoint-verification evidence.
-            </p>
-            <InspectButton route={route} className="evidence-link">
-              <strong>Readiness screen contract</strong>
-              <span>Primary path §3</span>
-            </InspectButton>
-            <InspectButton route={route} className="evidence-link">
-              <strong>Authority boundary</strong>
-              <span>UX epic §4.6</span>
-            </InspectButton>
-          </Panel>
-        </div>
-      }
-      attention={
-        <Panel kicker="Answer standing" title="Not a decision" id="thoth-standing">
-          <p>
-            This answer is an inspection aid. It does not approve, commit, or execute
-            work.
-          </p>
-        </Panel>
-      }
-    />
-  );
-}
-
-export function ModelsPage() {
-  const route = OPERATE_ROUTES.domain;
-  return (
-    <RouteLayout
-      route={route}
-      className="workbench-grid"
-      primary={
-        <>
-          <aside className="panel side-list" aria-label="Domain models">
-            <p className="section-kicker">Models</p>
-            <button className="list-item list-item--active" type="button">
-              Repair domain <span>current</span>
-            </button>
-            <button className="list-item" type="button">Service incident</button>
-            <button className="list-item" type="button">Escalation policy</button>
-          </aside>
-          <div className="content-primary">
-            <Panel kicker=".sea source" title="Repair domain" id="domain-model-workbench">
-              <pre className="model-editor">{`domain repair {
-  outcome recovery_test: all_pass
-  evidence junit_report: required
-  delegate repair_agent: endpoint_verified
-}`}</pre>
-            </Panel>
-            <Panel kicker="Validation" title="Projection checks" id="model-validation">
-              <div className="validation-list">
-                <ValidationRow route={route} name="Schema" state="ready" label="Validated">
-                  Current model schema is valid.
-                </ValidationRow>
-                <ValidationRow
-                  route={route}
-                  name="Concept references"
-                  state="ready"
-                  label="Resolved"
-                >
-                  Desired outcome and evidence types are linked.
-                </ValidationRow>
-                <ValidationRow route={route} name="Agent endpoint" state="degraded" label="Stale">
-                  Endpoint configuration requires refresh before execution.
-                </ValidationRow>
-              </div>
-            </Panel>
-          </div>
-        </>
-      }
-      attention={
-        <Panel
-          kicker="Model consequence"
-          title="Execution unavailable"
-          id="model-consequence"
-        >
-          <p>The model can be edited and reviewed. It cannot authorize delegation.</p>
-          <InspectButton route={route}>Inspect validation evidence</InspectButton>
-        </Panel>
-      }
-    />
-  );
-}
-
-function ValidationRow({
-  route,
-  name,
-  state,
-  label,
-  children,
-}: {
-  route: RouteContext;
-  name: string;
-  state: RouteState;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <InspectButton route={route} className="validation-row" detail={`${name}: ${children}`}>
-      <strong>{name}</strong>
-      <Status state={state} label={label} />
-      <span>{children}</span>
-    </InspectButton>
-  );
-}
-
-// Assets is no longer a specimen either. `asset.list` projects the templates,
-// agent endpoints, and extensions this cell actually holds, with endpoint
-// standing derived from probe records rather than illustrated — which is the
-// one thing the copied layout could not do, since it hardcoded the availability
-// ladder the kernel refuses to let configuration assert.
+// `asset.list` projects the templates, agent endpoints, and extensions this
+// cell holds, with endpoint standing derived from probe records.
 export { AssetCatalogPage as AssetsPage } from "./AssetCatalogPage";
 
-// Cases and Inbox are no longer specimens. `case.list`/`case.get_overview`/
-// `case.get_horizon` and `approval.list`/`approval.decide` are implemented by
-// the kernel, so both surfaces read committed records instead of illustrating
-// what they would look like. Re-exported under their original names so the
-// route table and any importer are unchanged.
+// `case.list` / `case.get_overview` / `case.get_horizon` and `approval.list` /
+// `approval.decide` read committed records.
 export { CaseHorizonPage as CasesPage } from "./CaseHorizonPage";
 export { ApprovalInboxPage as InboxPage } from "./ApprovalInboxPage";
 
-// The operations console reads the durable events ledger for real; it lives in
-// its own module and is re-exported here so the route table is unchanged.
+// The operations console reads the durable events ledger.
 export { OperationsPage } from "./OperationsPage";
 
-/*
- * Surfaces below have no SFWP method behind them in this cell. Each names the
- * method from the target catalog that would back it and resolves its own
- * standing from `system.hello`, so none of them asserts a state the kernel
- * cannot evidence — and none of them keeps claiming absence after the kernel
- * implements the method.
- */
+// `system.describe` is live, so administration is genuinely backed.
+export { SystemContractPage as AdminPage } from "./SystemContractPage";
+
+// --- Surfaces with no method behind them in this cell. ----------------------
+
+export function ModelsPage() {
+  return (
+    <UnbackedSurface
+      title="Domain models"
+      purpose="Validated .sea models with their source hashes, concept refs, and the projections pinned to them."
+      method="domain.list_models"
+    />
+  );
+}
 
 export function MemoryPage() {
   return (
@@ -368,10 +93,3 @@ export function FederationPage() {
     />
   );
 }
-
-/**
- * Administration resolves to the one self-description surface the kernel does
- * implement. `system.describe` is live, so this route is genuinely backed
- * rather than a placeholder waiting on a projection.
- */
-export { SystemContractPage as AdminPage } from "./SystemContractPage";
