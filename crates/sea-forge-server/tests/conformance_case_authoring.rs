@@ -73,6 +73,7 @@ async fn boot() -> (tempfile::TempDir, PathBuf) {
         ..AgentConfig::default()
     };
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         agent,
@@ -161,6 +162,7 @@ async fn entry_options_is_empty_not_fabricated_when_no_templates_exist() {
     let root = tempfile::tempdir().unwrap();
     let socket = root.path().join("sfwp.sock");
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         ..ServerConfig::default()
@@ -237,7 +239,7 @@ async fn commit_with_matching_precondition_creates_a_real_case() {
 
     let commit = client
         .call(json!({
-            "verb": "case_commit",
+            "verb": "case_commit", "actor": {"actor_id": "operator_local", "role": "operator"},
             "template_ref": TEMPLATE_REF,
             "params": {},
             "policy": policy_path(root.path()),
@@ -270,7 +272,7 @@ async fn commit_with_stale_precondition_is_rejected_with_no_case_created() {
 
     let commit = client
         .call(json!({
-            "verb": "case_commit",
+            "verb": "case_commit", "actor": {"actor_id": "operator_local", "role": "operator"},
             "template_ref": TEMPLATE_REF,
             "params": {},
             "policy": policy_path(root.path()),
@@ -308,7 +310,7 @@ async fn commit_outcome_is_recoverable_via_request_get_status() {
 
     let commit = client
         .call(json!({
-            "verb": "case_commit",
+            "verb": "case_commit", "actor": {"actor_id": "operator_local", "role": "operator"},
             "template_ref": TEMPLATE_REF,
             "params": {},
             "policy": policy_path(root.path()),

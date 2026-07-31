@@ -66,6 +66,7 @@ async fn boot() -> (tempfile::TempDir, PathBuf) {
         ..AgentConfig::default()
     };
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         agent,
@@ -148,7 +149,7 @@ async fn commit_case(client: &mut Client, root: &Path) -> String {
 
     let commit = client
         .call(json!({
-            "verb": "case_commit",
+            "verb": "case_commit", "actor": {"actor_id": "operator_local", "role": "operator"},
             "template_ref": TEMPLATE_REF,
             "params": {},
             "policy": policy_path(root),
@@ -175,6 +176,7 @@ async fn case_list_is_empty_for_a_fresh_cell_rather_than_an_error() {
     let root = tempfile::tempdir().unwrap();
     let socket = root.path().join("sfwp.sock");
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         ..ServerConfig::default()

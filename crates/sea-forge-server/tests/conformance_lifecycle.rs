@@ -156,6 +156,7 @@ fn a_notify_command_that_cannot_run_blocks_startup() {
 
 fn state_for(root: &Path) -> ServerState {
     ServerState::new(ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: root.join("unused.sock"),
         root: root.to_path_buf(),
         max_concurrent_runs: 4,
@@ -222,6 +223,7 @@ fn an_invalid_reload_keeps_the_last_known_good() {
 fn a_reload_with_no_file_present_changes_nothing() {
     let root = tempfile::tempdir().unwrap();
     let state = ServerState::new(ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: root.path().join("unused.sock"),
         root: root.path().to_path_buf(),
         max_concurrent_runs: 6,
@@ -332,6 +334,7 @@ async fn boot_with_hung_endpoint(port: u16) -> (tempfile::TempDir, PathBuf) {
     let root = tempfile::tempdir().unwrap();
     let socket = root.path().join("lifecycle.sock");
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         agent: AgentConfig {
@@ -397,7 +400,7 @@ async fn a_hung_endpoint_is_bounded_and_the_server_keeps_serving() {
     let response = round_trip(
         &socket,
         json!({
-            "verb": "agent_probe",
+            "verb": "agent_probe", "actor": {"actor_id": "operator_local", "role": "operator"},
             "endpoint": "hung",
             "prompt": "health check",
             "policy": policy.to_str().unwrap(),
@@ -453,7 +456,7 @@ async fn an_invalid_reload_publishes_an_operator_visible_event() {
 
     let _ = round_trip(
         &socket,
-        json!({"verb": "submit", "intent": "anything", "policy": "policy.yaml"}),
+        json!({"verb": "submit", "actor": {"actor_id": "operator_local", "role": "operator"}, "intent": "anything", "policy": "policy.yaml"}),
         Duration::from_secs(30),
     )
     .await;

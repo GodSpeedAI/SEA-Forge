@@ -18,6 +18,7 @@ async fn boot() -> (tempfile::TempDir, PathBuf) {
     let root = tempfile::tempdir().unwrap();
     let socket = root.path().join("sfwp.sock");
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         ..ServerConfig::default()
@@ -230,7 +231,7 @@ async fn an_unrecognized_decision_is_refused_rather_than_defaulted() {
 
     let response = client
         .call(json!({
-            "verb": "approval_decide",
+            "verb": "approval_decide", "actor": {"actor_id": "operator_local", "role": "operator"},
             "case_id": "case-1",
             "approval_id": "ap-1",
             "decision": "maybe",

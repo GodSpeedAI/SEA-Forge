@@ -29,6 +29,7 @@ async fn boot() -> (tempfile::TempDir, PathBuf) {
     let root = tempfile::tempdir().unwrap();
     let socket = root.path().join("sfwp.sock");
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         agent: AgentConfig {
@@ -398,7 +399,7 @@ async fn cancelling_a_delegation_that_is_not_active_is_refused() {
     assert_eq!(row(&body, "run-done")["cancellable"], false);
 
     let refused = client
-        .call(json!({"verb": "cancel_delegation", "run_id": "run-done"}))
+        .call(json!({"verb": "cancel_delegation", "actor": {"actor_id": "operator_local", "role": "operator"}, "run_id": "run-done"}))
         .await;
     assert_eq!(refused["error"], "delegation run not active", "{refused}");
 }

@@ -38,6 +38,7 @@ pub mod agent_probe;
 pub mod case_dispatch;
 pub mod config;
 pub mod delegation;
+pub mod identity;
 pub mod sfwp;
 pub mod swe_seed_reconciliation;
 mod transcript_seal;
@@ -961,9 +962,19 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
                 continue;
             }
         };
+        // Read the peer's OS identity from the kernel *here*, while the
+        // accepted stream is still whole. It is the one fact about the caller
+        // that cannot be asserted (SF-005, U-07), and `into_split` inside
+        // `handle_connection` would put it out of reach.
+        let peer = crate::identity::PeerIdentity::of(&stream);
+        if peer.is_none() {
+            // Not fatal: inspect verbs stay available. Every protected verb on
+            // this connection will be refused as `identity_unverifiable`.
+            tracing::warn!("could not read peer credentials; protected verbs refused");
+        }
         let state = Arc::clone(&state);
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, state).await {
+            if let Err(e) = handle_connection(stream, state, peer).await {
                 tracing::warn!("connection error: {e}");
             }
         });
@@ -973,6 +984,7 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
 async fn handle_connection(
     stream: UnixStream,
     state: Arc<ServerState>,
+    peer: Option<crate::identity::PeerIdentity>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -1057,7 +1069,7 @@ async fn handle_connection(
                 let _ = tx.send(format!("{response}\n")).await;
             }
             other => {
-                let response = dispatch_bounded(other, &state, line.trim()).await;
+                let response = dispatch_bounded(other, &state, line.trim(), peer).await;
                 let _ = tx.send(format!("{response}\n")).await;
             }
         }
@@ -1091,7 +1103,35 @@ async fn dispatch_bounded(
     request: Request,
     state: &Arc<ServerState>,
     raw_line: &str,
+    peer: Option<crate::identity::PeerIdentity>,
 ) -> serde_json::Value {
+    // SF-005 / U-07. The gate sits here, above `tokio::spawn`, so a refused
+    // request never reaches a handler and therefore cannot have had an effect
+    // to undo. Doing it inside `handle_request` would put the check downstream
+    // of every early return that already touched something.
+    //
+    // `is_protected` is one exhaustive match (see `identity`), so a verb added
+    // later cannot slip through unclassified.
+    if crate::identity::is_protected(&request) {
+        let claim = crate::identity::ActorClaim::parse(raw_line);
+        match state.config().identity.resolve(claim.as_ref(), peer) {
+            Ok(actor) => {
+                tracing::debug!(
+                    actor_id = actor.actor_id(),
+                    uid = actor.uid(),
+                    "protected request attributed"
+                );
+            }
+            Err(refusal) => {
+                tracing::warn!(
+                    error_class = refusal.error_class(),
+                    "protected request refused: {}",
+                    refusal.message()
+                );
+                return refusal.response();
+            }
+        }
+    }
     let state = Arc::clone(state);
     bounded(
         async move { handle_request(request, &state).await },

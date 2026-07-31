@@ -127,7 +127,23 @@ pub fn cancel(
     Ok(0)
 }
 
-pub(crate) fn request(root: &Path, request: Value) -> Result<Value, ForgeError> {
+pub(crate) fn request(root: &Path, mut request: Value) -> Result<Value, ForgeError> {
+    // SF-005 / U-07: protected verbs carry an actor block. The CLI claims the
+    // entity it was invoked as; the server still checks that claim against the
+    // connection's uid, so asserting it here grants nothing the cell has not
+    // already bound. Requests that carry no `entity` are inspect verbs, which
+    // need no actor.
+    if let Some(entity) = request
+        .get("entity")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+    {
+        if let Some(object) = request.as_object_mut() {
+            object
+                .entry("actor")
+                .or_insert_with(|| json!({"actor_id": entity, "role": "operator"}));
+        }
+    }
     let socket_path = root.join("server.sock");
     let mut stream = UnixStream::connect(&socket_path)
         .map_err(|error| ForgeError::io("connect to sea-forge-server", error))?;

@@ -16,6 +16,14 @@ pub struct ServerConfig {
     pub root: PathBuf,
     #[serde(default)]
     pub agent: AgentConfig,
+    /// uid -> actor bindings for protected verbs (SF-005, decision U-07).
+    ///
+    /// Absent means *unconfigured*, and an unconfigured cell refuses every
+    /// protected verb rather than deriving an actor from whoever connects.
+    /// Reloadable, so an operator can bind a second actor for two-person
+    /// approval without restarting a cell that has work in flight.
+    #[serde(default)]
+    pub identity: crate::identity::IdentityBindings,
 }
 
 /// The socket file name inside a cell root. Every surface (server, CLI,
@@ -87,6 +95,9 @@ impl Default for ServerConfig {
             approval_ttl_hours: default_approval_ttl(),
             root: default_root(),
             agent: AgentConfig::default(),
+            // Empty by default, and empty refuses every protected verb. A cell
+            // that has not said who may act does not get to guess.
+            identity: crate::identity::IdentityBindings::default(),
         }
     }
 }

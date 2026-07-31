@@ -36,6 +36,7 @@ async fn boot_with_endpoint(endpoint: Option<AgentEndpointConfig>) -> (tempfile:
         ..AgentConfig::default()
     };
     let config = ServerConfig {
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         agent,
@@ -110,7 +111,7 @@ fn success_submit(root: &Path, request_id: Option<&str>) -> Value {
     let plan_path = root.join("plan.json");
     std::fs::write(&plan_path, serde_json::to_vec(&plan).unwrap()).unwrap();
     let mut request = json!({
-        "verb": "submit",
+        "verb": "submit", "actor": {"actor_id": "operator_local", "role": "operator"},
         "plan": plan_path.to_str().unwrap(),
         "policy": policy_path.to_str().unwrap(),
         "entity": "operator_local",
@@ -241,7 +242,7 @@ async fn stale_precondition_on_approve_is_rejected_with_no_side_effect() {
     // does not exist / differs), with a deliberately bogus expected digest.
     let response = client
         .call(json!({
-            "verb": "approve",
+            "verb": "approve", "actor": {"actor_id": "operator_local", "role": "operator"},
             "case_id": "case_does_not_exist",
             "approval_id": "appr_1",
             "preconditions": {
@@ -292,7 +293,7 @@ async fn precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint() {
     let mut client = Client::connect(&socket).await;
     let response = client
         .call(json!({
-            "verb": "approve",
+            "verb": "approve", "actor": {"actor_id": "operator_local", "role": "operator"},
             "case_id": "real_case",
             "approval_id": "appr_1",
             "preconditions": {

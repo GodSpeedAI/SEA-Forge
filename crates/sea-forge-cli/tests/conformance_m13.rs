@@ -4,6 +4,23 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+/// This process's uid, for the cell's `identity.bindings`.
+///
+/// The CLI under test connects as this process, so the binding has to name
+/// this uid. Derived from the ownership of a file we create rather than a
+/// `libc` dependency the CLI does not otherwise need.
+fn current_uid() -> u32 {
+    use std::os::unix::fs::MetadataExt;
+    let probe = std::env::temp_dir().join(format!("sf-m13-uid-{}", std::process::id()));
+    let uid = std::fs::File::create(&probe)
+        .expect("create uid probe")
+        .metadata()
+        .expect("stat uid probe")
+        .uid();
+    let _ = std::fs::remove_file(&probe);
+    uid
+}
+
 fn server_bin() -> PathBuf {
     let cli = env!("CARGO_BIN_EXE_sea-forge");
     Path::new(cli).with_file_name("sea-forge-server")
@@ -134,10 +151,18 @@ fn t13_1_agent_task_routed_through_server_and_settles() {
     };
 
     // server.yaml
+    // `identity.bindings` is required for protected verbs (SF-005, U-07): a
+    // cell that has not said who may act refuses them all. The uid is this
+    // process's, because the CLI under test connects as this process.
     let server_yaml = format!(
         "socket_path: {root}/server.sock\n\
          root: {root}\n\
          max_concurrent_runs: 2\n\
+         identity:\n\
+         \x20 bindings:\n\
+         \x20   - uid: {uid}\n\
+         \x20     actor_id: operator_local\n\
+         \x20     roles: [operator]\n\
          agent:\n\
          \x20 endpoints:\n\
          \x20   - id: local-test\n\
@@ -147,6 +172,7 @@ fn t13_1_agent_task_routed_through_server_and_settles() {
          \x20     allow_loopback_test: true\n",
         root = root_path.display(),
         port = stub_port,
+        uid = current_uid(),
     );
     fs::write(root_path.join("server.yaml"), server_yaml).unwrap();
 
