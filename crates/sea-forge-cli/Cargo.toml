@@ -38,6 +38,9 @@ serde_yaml.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+# Tests only: recompute a migrated file's digest independently of the code that
+# recorded it, so a lossless-relocation claim is checked rather than restated.
+sha2.workspace = true
 tempfile.workspace = true
 
 [[bin]]

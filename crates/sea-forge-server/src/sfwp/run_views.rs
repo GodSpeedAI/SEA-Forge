@@ -362,8 +362,42 @@ fn valid_run_id(run_id: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
-fn run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
-    valid_run_id(run_id).then(|| root.join("runs").join(run_id))
+/// Where one run's records live.
+///
+/// Two layouts coexist by design. The minimum CLI writes `<root>/runs/<id>`;
+/// a case episode writes `<root>/cases/<case>/runs/<id>` (spec-full.md:659).
+/// Both stay readable forever (K-04), so this probes flat first — the older
+/// layout, and the one `just proof` pins — then the case-owned one. It is a
+/// read-time merge, never a dual write, and no id is ever re-keyed.
+///
+/// A valid id with no directory anywhere still yields the flat path rather
+/// than `None`: callers read through it and treat an unreadable file as
+/// absence, and returning `None` here would turn "no such run" into "malformed
+/// run id" at every call site.
+pub(crate) fn run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
+    if !valid_run_id(run_id) {
+        return None;
+    }
+    let flat = root.join("runs").join(run_id);
+    if flat.is_dir() {
+        return Some(flat);
+    }
+    Some(case_run_dir(root, run_id).unwrap_or(flat))
+}
+
+/// The case-owned directory for `run_id`, if some case owns it.
+///
+/// Scans `cases/*/runs/` rather than consulting `case.json`'s `run_ids`: a run
+/// directory exists from the moment the episode records its first governance
+/// event, which is before the case file naming it is rewritten. Resolving off
+/// the filesystem means a run is reachable during the window a crash could
+/// leave behind, not only after the case was updated.
+fn case_run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
+    std::fs::read_dir(root.join("cases"))
+        .ok()?
+        .flatten()
+        .map(|case| case.path().join("runs").join(run_id))
+        .find(|candidate| candidate.is_dir())
 }
 
 /// Read one JSON record, treating any failure (absent, unreadable, malformed)
@@ -404,22 +438,35 @@ fn enum_str<T: Serialize>(value: &T) -> String {
 /// counts as a run directory at all. Each caller keeps its own *readability*
 /// policy — this decides only what to look at, never what to do with it.
 pub(crate) fn run_dirs(root: &Path) -> Vec<(String, PathBuf)> {
-    let Ok(entries) = std::fs::read_dir(root.join("runs")) else {
-        // No `runs/` yet is the normal state of a fresh cell, not a failure.
-        return Vec::new();
-    };
-    let mut dirs: Vec<(String, PathBuf)> = entries
+    // Both layouts, for the reason given on `run_dir`: a case episode's run is
+    // as real as a CLI run, and a view that walked only `runs/` rendered every
+    // case-dispatched run as if it did not exist.
+    let mut cases: Vec<PathBuf> = std::fs::read_dir(root.join("cases"))
+        .into_iter()
         .flatten()
-        .filter(|entry| entry.path().is_dir())
-        .filter_map(|entry| {
-            entry
-                .file_name()
-                .to_str()
-                .map(|run_id| (run_id.to_string(), entry.path()))
-        })
+        .flatten()
+        .map(|case| case.path().join("runs"))
         .collect();
-    dirs.sort_by(|a, b| a.0.cmp(&b.0));
-    dirs
+    // Deterministic order regardless of readdir order, so the flat-wins rule
+    // below and the final list are both stable.
+    cases.sort();
+
+    let mut dirs: BTreeMap<String, PathBuf> = BTreeMap::new();
+    // Case-owned first, then flat, so a flat run wins a duplicate id: it is
+    // the older layout and the one existing proofs read.
+    for runs in cases.into_iter().chain([root.join("runs")]) {
+        let Ok(entries) = std::fs::read_dir(&runs) else {
+            // No `runs/` yet is the normal state of a fresh cell or a case
+            // whose first episode has not started, not a failure.
+            continue;
+        };
+        for entry in entries.flatten().filter(|entry| entry.path().is_dir()) {
+            if let Some(run_id) = entry.file_name().to_str() {
+                dirs.insert(run_id.to_string(), entry.path());
+            }
+        }
+    }
+    dirs.into_iter().collect()
 }
 
 /// Map every run id a case claims back to that case. Built by one pass over

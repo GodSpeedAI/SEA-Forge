@@ -356,7 +356,10 @@ pub fn get_overview(root: &Path, case_id: &str) -> Result<CaseOverview, CaseView
 }
 
 fn read_settlement(root: &Path, run_id: &str) -> Option<RunSettlement> {
-    let path = root.join("runs").join(run_id).join("settlement.json");
+    // Through the one locator (K-04/DATA-02): a case's own episodes write the
+    // case-owned layout, so reading `<root>/runs/` alone made a case view
+    // unable to see the settlements of the runs that case created.
+    let path = crate::sfwp::run_views::run_dir(root, run_id)?.join("settlement.json");
     let bytes = std::fs::read(path).ok()?;
     let event: SettlementEvent = serde_json::from_slice(&bytes).ok()?;
     Some(RunSettlement {

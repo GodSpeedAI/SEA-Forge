@@ -144,6 +144,40 @@ fn conformance_m0_migrate_imports_v01_root_losslessly_and_blocks_re_migration() 
     assert!(migrated_run.join("plan.json").is_file());
     assert!(migrated_run.join("settlement.json").is_file());
 
+    // The digest each ledger entry recorded must equal the bytes that actually
+    // landed at the destination. Asserting only that a `sha256` field is
+    // *present* — as the loop above does — would pass for a migration that
+    // hashed one file and moved another, which is precisely the corruption a
+    // lossless-relocation claim exists to rule out.
+    // Each entry's `path` is the *destination* and its `sha256` was taken from
+    // the *source* before the move, so recomputing the digest at the
+    // destination is what makes "lossless" a checked property rather than a
+    // restated claim. The loop above asserts only that a digest field exists,
+    // which would pass for a migration that hashed one file and moved another.
+    let digest_of = |path: &std::path::Path| {
+        use sha2::{Digest, Sha256};
+        format!("sha256:{:x}", Sha256::digest(fs::read(path).unwrap()))
+    };
+    let mut relocated_run_files = 0;
+    for entry in &entries {
+        let recorded = entry["payload"]["path"].as_str().unwrap();
+        let landed = root.join(recorded);
+        assert!(landed.is_file(), "{recorded} did not land at {landed:?}");
+        assert_eq!(
+            entry["payload"]["sha256"].as_str().unwrap(),
+            digest_of(&landed),
+            "{recorded} was recorded with a digest its relocated bytes do not match"
+        );
+        if landed.starts_with(&migrated_run) {
+            relocated_run_files += 1;
+        }
+    }
+    assert!(
+        relocated_run_files > 0,
+        "no file from runs/{run_id} was relocated under its case, so the \
+         digest check proved nothing about run relocation"
+    );
+
     // Case file relocated into case directory.
     let migrated_case = root.join("cases").join(case_id).join("case.json");
     assert!(migrated_case.is_file());
