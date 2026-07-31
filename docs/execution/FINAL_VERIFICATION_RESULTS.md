@@ -16,7 +16,7 @@ devbox 0.17.5, Linux 6.18.33.2-microsoft-standard-WSL2.
 | `cargo test --manifest-path .../src-tauri/Cargo.toml` | **31 passed, 0 failed** |
 | `devbox run -- just proof` | **P1-P4b passed** |
 | `devbox run -- just workbench-check` | **exit 0** |
-| `just workbench-package` | **`.deb`, `.rpm`, `.AppImage` built** |
+| `just workbench-package` | **`.deb` and `.rpm` built** (see "The target that never built") |
 | `just workbench-package-inventory` | **ok** — sidecar present, no JS runtime, no source maps |
 | `python3 docs/execution/journey/drive_identity.py` | **25 live checks passed** |
 | packaged app, live against a seeded cell | **started its own kernel; renderer negotiated, resolved identity, read the inbox** |
@@ -41,6 +41,29 @@ the host crate is linted, formatted, and tested by one gate.
 The pattern is the same one this branch keeps rediscovering: **a check that
 cannot see a directory reports no failures there, and that is indistinguishable
 from having none.**
+
+### The target that never built
+
+`bundle.targets` listed `appimage`. It failed on every one of the three package
+runs with `failed to run linuxdeploy`, and `just workbench-package` exited
+non-zero each time.
+
+That went unnoticed for two runs for an instructive reason: the recipe was
+launched as a background command, and the *wrapper's* exit code was read rather
+than the recipe's. `Bundling …AppImage` also reads like a result and is actually
+a start message. A first draft of `USER_JOURNEY_EVIDENCE.md` consequently listed
+a `.AppImage` among the artifacts produced — a file that has never existed.
+
+The cause is specific and environmental: AppImage's tooling `dlopen`s
+`libfuse.so.2`, and this host provides FUSE 3 only. It is one `libfuse2` install
+away. It is recorded rather than waved through precisely because "environmental"
+is the easiest place to hide an unmet claim, and because the artifact list is
+exactly the kind of statement a reader will act on. `appimage` has been removed
+from `bundle.targets`, and the route back is documented in the
+`workbench-package` recipe.
+
+The correct check is `find … -name '*.deb' -o -name '*.rpm'` — look for the
+file, not for a log line that mentions it.
 
 ## Earlier run (2026-07-31, SF-005)
 

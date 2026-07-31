@@ -244,10 +244,22 @@ are honestly undetermined rather than fabricated, which is a smaller claim than
 below was driven against **those** artifacts rather than a source tree.
 
 ```
-target/release/bundle/deb/sea-forge-workbench_0.1.0_amd64.deb        11M
-target/release/bundle/rpm/sea-forge-workbench-0.1.0-1.x86_64.rpm     11M
-target/release/bundle/appimage/sea-forge-workbench_0.1.0_amd64.AppImage
+target/release/bundle/deb/sea-forge-workbench_0.1.0_amd64.deb        10609060 bytes
+target/release/bundle/rpm/sea-forge-workbench-0.1.0-1.x86_64.rpm     10609258 bytes
 ```
+
+**`appimage` was listed as a target and never once built.** Three package runs
+reported `failed to run linuxdeploy`, and the recipe exited non-zero every
+time — which was missed because the surrounding background command's exit code
+was read instead of the recipe's, and because `Bundling …AppImage` is a *start*
+message. The cause is real and specific: AppImage's tooling `dlopen`s
+`libfuse.so.2`, and this host has FUSE 3 only.
+
+That is an environmental gap with a one-line fix (`libfuse2`), which is exactly
+why it is recorded rather than waved through: an unbuilt target stayed in
+`bundle.targets`, and a first draft of this document listed the `.AppImage`
+among the artifacts produced. It has been removed from the targets, and the
+route back is in the `workbench-package` recipe.
 
 ### 8a. What actually ships
 
@@ -293,6 +305,29 @@ srw------- 1 sprime01 sprime01 0 /tmp/sea-forge-demo.sock
 
 **Verified live.** Nothing was running before launch; the window started its own
 kernel, and that kernel served the cell.
+
+And from the installed layout itself — the `.deb` unpacked, then run out of it,
+with no `SEA_FORGE_SERVER_BIN` and no source tree in the picture:
+
+```
+$ dpkg-deb -x sea-forge-workbench_0.1.0_amd64.deb /tmp/sf-install
+-rwxr-xr-x 19694824 /tmp/sf-install/usr/bin/sea-forge-server
+-rwxr-xr-x 10903160 /tmp/sf-install/usr/bin/sea-forge-workbench
+
+$ SEA_FORGE_ROOT=$CELL /tmp/sf-install/usr/bin/sea-forge-workbench &
+app=1405136 kernel=1405192
+kernel exe: /tmp/sf-install/usr/bin/sea-forge-server
+  protocol 1 | methods 23
+  identity: {"available": [{"actor_id": "operator_a", "roles": ["operator"]}],
+             "configured": true, "uid": 1000}
+
+$ kill -TERM 1405136
+  kernel stopped with the app
+```
+
+The kernel's `exe` link is the decisive line: the application located the
+sidecar as a sibling of itself inside the installed tree, which is the path that
+only exists once something is actually packaged.
 
 ### 8c. The packaged renderer really runs, under the bundle's CSP
 

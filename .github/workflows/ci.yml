@@ -168,7 +168,6 @@ jobs:
           path: |
             workbench/apps/desktop/src-tauri/target/release/bundle/deb/*.deb
             workbench/apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
-            workbench/apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
           if-no-files-found: error
           retention-days: 14
 

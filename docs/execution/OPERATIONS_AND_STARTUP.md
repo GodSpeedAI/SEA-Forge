@@ -6,16 +6,17 @@ against it; nothing is aspirational.
 ## Installing the product
 
 ```sh
-sudo dpkg -i sea-forge-workbench_0.1.0_amd64.deb   # or the .rpm / .AppImage
+sudo dpkg -i sea-forge-workbench_0.1.0_amd64.deb   # or the .rpm
 sea-forge-workbench
 ```
 
 That is the whole procedure. There is no second binary to install and no
 service to start first — see "Who starts the kernel" below.
 
-Supported targets are Linux `deb`, `rpm`, and `AppImage`. macOS is **not
-built** and not advertised: the packet requires its Seatbelt journey to pass
-before it may be called supported, and that journey has not been run.
+Supported targets are Linux `deb` and `rpm`. Two others are deliberately not
+built and therefore not advertised: macOS, whose Seatbelt journey has not been
+run, and `AppImage`, whose tooling needs `libfuse2` (this host has FUSE 3 only).
+Both are one configuration line away once their prerequisite is met.
 
 ## Who starts the kernel (decision U-06)
 

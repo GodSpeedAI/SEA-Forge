@@ -185,10 +185,16 @@ workbench-sidecar profile='debug':
 
 # Build the installable Linux packages (SF-012).
 #
-# Targets are deb/rpm/appimage only. macOS targets were removed from
-# tauri.conf.json deliberately: the packet requires the Seatbelt journey to pass
-# before macOS is called supported, and it has not been run. Advertising a
-# target we have never built is exactly the over-claim SF-013 forbids.
+# `deb` and `rpm` only. Every other target `tauri.conf.json` used to list has
+# been removed for the same reason: advertising a target nobody has built is
+# the over-claim SF-013 forbids.
+#
+#   * macOS (`app`, `dmg`) — the packet requires its Seatbelt journey to pass
+#     before macOS may be called supported, and that has not been run.
+#   * `appimage` — needs `libfuse2`, which AppImage's own tooling dlopens as
+#     `libfuse.so.2`. This host has FUSE 3 only, so linuxdeploy exits before
+#     producing anything. Re-enable by installing `libfuse2` and adding
+#     `"appimage"` back to `bundle.targets`; nothing else has to change.
 [group('workbench')]
 workbench-package: (workbench-sidecar 'release')
     #!/usr/bin/env bash

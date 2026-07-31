@@ -12,7 +12,7 @@ SF-012 and the CI half of SF-013 have landed:
 
 | Was missing | Now |
 |---|---|
-| No package existed | `just workbench-package` builds `.deb` / `.rpm` / `.AppImage` |
+| No package existed | `just workbench-package` builds `.deb` and `.rpm` |
 | The Workbench needed a hand-started server | it starts its own, or adopts one already running |
 | `"csp": null` — no content-security policy at all | a real policy, verified with the renderer running under it |
 | `bundle.targets` advertised untested macOS | Linux only; macOS is not built and not claimed |
@@ -41,6 +41,9 @@ Both fixed, both pinned, both described in `USER_JOURNEY_EVIDENCE.md`:
 ### Still true, and deliberate
 
 - **macOS is not built and not advertised.** Its Seatbelt journey has not run.
+- **`AppImage` is not built and no longer advertised.** Its tooling `dlopen`s
+  `libfuse.so.2`; this host has FUSE 3 only. It had been listed as a target and
+  had never once succeeded.
 - **`SIGKILL` still orphans the kernel.** Uncatchable by anyone; adoption makes
   the next launch attach to the survivor rather than start a rival, so it is
   recoverable rather than corrupting.

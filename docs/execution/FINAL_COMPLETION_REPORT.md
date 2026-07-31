@@ -25,8 +25,9 @@ user decision. See `DECISION_REGISTER.md`.
 
 SF-012 landed and the CI half of SF-013 with it:
 
-- `just workbench-package` produces `.deb`, `.rpm`, and `.AppImage`, with the
-  kernel shipped alongside the application as a Tauri sidecar.
+- `just workbench-package` produces `.deb` and `.rpm`, with the kernel shipped
+  alongside the application as a Tauri sidecar. `AppImage` was listed as a
+  target and had never built (it needs `libfuse2`); it is no longer claimed.
 - Installing and opening the application is the whole procedure. It starts its
   own cell, or adopts one already running and leaves that one alone on quit.
 - `tauri.conf.json` had `"csp": null` — no content-security policy at all,
