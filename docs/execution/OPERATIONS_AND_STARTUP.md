@@ -19,11 +19,19 @@ Resolution order (`crates/sea-forge-server/src/config.rs`):
 
 The socket is `<root>/server.sock`, owner-only (mode 0600).
 
-**Unix path limit.** `sun_path` is 108 bytes on Linux and 104 on macOS. A cell
-root nested deeply enough to overflow it is rejected at startup with a message
-naming the limit, rather than failing inside `bind()` with an opaque errno.
-Use `SEA_FORGE_SOCKET` to point at a short path if your project directory is
-deep.
+**Unix path limit.** `sun_path` is 108 bytes on Linux and 104 on macOS, and the
+server enforces a 95-byte budget to leave headroom. A cell root nested deeply
+enough to overflow it is rejected at startup, rather than failing inside
+`bind()` with an opaque errno:
+
+```
+Error: Input("socket path is 120 bytes but a Unix socket allows at most 95: <path>
+Choose a shorter cell root (SEA_FORGE_ROOT), or point SEA_FORGE_SOCKET at a short
+path such as /run/user/$UID/sea-forge.sock while keeping records where they are.")
+```
+
+This fired for real during this pass against a deep scratchpad directory; the
+remedy in the message worked without consulting the source.
 
 ## Starting the server
 
