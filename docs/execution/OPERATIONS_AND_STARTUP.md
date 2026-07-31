@@ -1,7 +1,80 @@
 # Operations and Startup
 
-Status date: 2026-07-30. Everything below was exercised by the tests named
+Status date: 2026-07-31. Everything below was exercised by the tests named
 against it; nothing is aspirational.
+
+## Installing the product
+
+```sh
+sudo dpkg -i sea-forge-workbench_0.1.0_amd64.deb   # or the .rpm / .AppImage
+sea-forge-workbench
+```
+
+That is the whole procedure. There is no second binary to install and no
+service to start first — see "Who starts the kernel" below.
+
+Supported targets are Linux `deb`, `rpm`, and `AppImage`. macOS is **not
+built** and not advertised: the packet requires its Seatbelt journey to pass
+before it may be called supported, and that journey has not been run.
+
+## Who starts the kernel (decision U-06)
+
+The Workbench supervises its own kernel, and adopts one that is already
+running rather than starting a second.
+
+| On launch | What happens | On quit |
+|---|---|---|
+| Something is listening on the cell's socket | The window **adopts** it | The kernel is left running |
+| Nothing is listening | The window **starts** the bundled `sea-forge-server` sidecar | The kernel is stopped |
+| Nothing is listening and the sidecar cannot start | The window opens and reports the reason | — |
+
+Consequences worth knowing before you rely on them:
+
+* **Closing a window stops a kernel that window started**, ending any work in
+  flight. If you need work to outlive the window, start the server yourself —
+  the Workbench will adopt it and will not stop it. This is the supported
+  escape hatch, and it is why adoption exists.
+* **Three exits, three mechanisms.** Closing the window runs Tauri's
+  `RunEvent::Exit`; a panic unwinds through `Drop`; `SIGTERM`/`SIGINT` are
+  caught by a handler installed at startup. The third was found the hard way —
+  a signalled process runs neither of the first two, so `kill <app-pid>` left a
+  reparented kernel still serving the cell the operator thought they had
+  closed. `SIGKILL` cannot be caught by anyone; adoption is what makes that case
+  recoverable instead of corrupting, since the next launch attaches to the
+  survivor rather than starting a rival.
+* **Two windows on one cell are fine.** The second adopts the first's kernel.
+  Closing the second does not disturb the first.
+* **A crashed kernel leaves a stale socket, which is not a trap.** The server
+  binds a staging path and renames it into place, atomically replacing the dead
+  file, so the next launch starts cleanly.
+
+The server binary is located, in order: `SEA_FORGE_SERVER_BIN`, then a sibling
+of the application executable (where the package puts the sidecar), then
+`PATH`. An override naming a missing file is an error rather than a fallback —
+starting a different server than the one named would be worse than starting
+none.
+
+Pinned by `workbench/apps/desktop/src-tauri/tests/packaged_stack.rs`, which
+drives the staged sidecar — the same file the `.deb` ships — through the real
+supervisor and a real socket.
+
+## Seeing it work on a fresh machine
+
+A new cell is empty, so the surfaces have nothing to show. To populate one with
+real records:
+
+```sh
+just cell-seed        # ~/.sea-forge-demo
+just workbench-demo   # open the packaged Workbench against it
+just cell-reset       # remove everything the seed created
+```
+
+The seeded records are not fixtures. Each one is produced by really running the
+kernel — real runs, really authorized, really settled, really committed to the
+append-only ledger — so following any of them to its evidence checks out
+exactly as if you had done the work by hand. `scripts/reset-cell.sh` refuses
+any directory without the marker `seed-cell.sh` writes, so it cannot be pointed
+at a real cell.
 
 ## The cell
 

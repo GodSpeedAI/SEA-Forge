@@ -1,6 +1,6 @@
 # User Journey Evidence
 
-Status date: 2026-07-30. Every transcript below is from a real binary in a real
+Status date: 2026-07-31. Every transcript below is from a real binary in a real
 cell, not from a test harness. Test-only evidence is labelled as such.
 
 ## Journey 1 — Operator starts a cell (live)
@@ -237,6 +237,163 @@ application — SF-012 packages it, and that has not been built. Six of the ten
 guards report `indeterminate` because this kernel has no verb behind them; they
 are honestly undetermined rather than fabricated, which is a smaller claim than
 "the guard passed" and the correct one.
+
+## Journey 8 — The packaged product (live, 2026-07-31)
+
+`just workbench-package` produced installable Linux artifacts, and everything
+below was driven against **those** artifacts rather than a source tree.
+
+```
+target/release/bundle/deb/sea-forge-workbench_0.1.0_amd64.deb        11M
+target/release/bundle/rpm/sea-forge-workbench-0.1.0-1.x86_64.rpm     11M
+target/release/bundle/appimage/sea-forge-workbench_0.1.0_amd64.AppImage
+```
+
+### 8a. What actually ships
+
+```
+$ just workbench-package-inventory
+19693960 usr/bin/sea-forge-server
+10809704 usr/bin/sea-forge-workbench
+   23137 usr/share/icons/hicolor/256x256@2/apps/sea-forge-workbench.png
+     221 usr/share/applications/sea-forge-workbench.desktop
+[inventory] ok: sidecar present, no JS runtime, no source maps
+```
+
+The kernel ships *beside* the application in `/usr/bin`, which is exactly where
+the supervisor's sibling lookup expects it. No Bun, no Node, no source maps.
+`bundle.targets` was narrowed to `deb`/`rpm`/`appimage`; the macOS targets that
+were previously listed have never been built and are no longer advertised.
+
+### 8b. Install, open, and there is a cell (decision U-06)
+
+`workbench/apps/desktop/src-tauri/tests/packaged_stack.rs` drives the **staged
+sidecar** — byte-for-byte the file the `.deb` copies in — through the real
+`CellSupervisor` and a real Unix socket. Four tests, all green:
+
+| Claim | What it does |
+|---|---|
+| A cold cell serves SFWP with no operator step | starts the sidecar, negotiates `system.hello`, asserts the socket is 0600 |
+| A second window adopts rather than restarts | asserts `Adopted`, then that closing it leaves the first window's kernel alive |
+| Records survive a stop and start | commits a denied run, stops the kernel, restarts, requires `run.get` to return an identical record and `run_list` to still hold it |
+| A cell that cannot start says why | an over-long socket path, refused with the remedy named, well inside the deadline |
+
+Then the real thing, against the packaged binary on a seeded cell:
+
+```
+$ SEA_FORGE_ROOT=/tmp/sf-demo SEA_FORGE_SOCKET=/tmp/sea-forge-demo.sock \
+    target/release/sea-forge-workbench &
+srw------- 1 sprime01 sprime01 0 /tmp/sea-forge-demo.sock
+
+  protocol: 1 | methods: 23
+  identity: {"available": [{"actor_id": "operator_a", ...}, {"actor_id": "operator_b", ...}],
+             "configured": true, "uid": 1000}
+  cases: 2   runs: 4
+```
+
+**Verified live.** Nothing was running before launch; the window started its own
+kernel, and that kernel served the cell.
+
+### 8c. The packaged renderer really runs, under the bundle's CSP
+
+`tauri.conf.json` had `"csp": null` — no content-security policy at all, which
+the mission forbids. It is now a real policy: `default-src 'self'`, no
+`object-src`, no inline scripts, `connect-src` limited to `'self'` and Tauri's
+own IPC origins.
+
+Proving the frontend still works under it needed evidence, not reasoning, and
+this host has no screenshot tool. So the renderer was observed instead: a
+logging proxy was placed on the cell's socket, the packaged application was
+pointed at it, and every line the application sent was recorded. The renderer
+is the only thing that issues these, so their presence is the proof.
+
+```
+-> {"protocol_version":"1","verb":"system_hello"}                     <- host event loop
+-> {"from_cursor":"01KYW0MFHA9RR86W4K4MTCB1A5","verb":"events_subscribe"}
+-> {"client":"workbench","protocol_version":"1","verb":"system_hello"}  <- the renderer
+-> {"verb":"system_describe"}
+-> {"verb":"identity_get"}
+-> {"intended_operation":{"method":"agent_run.start"},"verb":"readiness_get"}
+-> {"verb":"approval_list"}
+```
+
+The renderer negotiated the method catalog, resolved its actor from
+`identity.get`, read readiness, and read the approval inbox — through real Tauri
+IPC, the real host bridge, a real Unix socket, and a real kernel. It also
+confirms adoption: the proxy was already listening, so the application attached
+to it and started no rival.
+
+An earlier reading of this same test appeared to show the CSP blocking the
+renderer. It did not: the window simply had not finished first paint within the
+15-second sample, under software rendering. Worth recording because the wrong
+conclusion was one step away, and "the security control I just added broke the
+product" is exactly the claim that deserves a second measurement.
+
+### 8d. Demonstration data that is not fixture data
+
+```
+$ just cell-seed
+[seed]   accepted run: run_20260731T113252Z_61fc5c
+[seed]   denied run:   run_20260731T113252Z_a845fd (no workspace contents — AUTH-01)
+  case ...174a3b: apr_0001 is waiting in the inbox
+  operator_a was refused their own approval (separation_of_duty)
+  case ...cb457e: apr_0001 resolved by operator_b
+```
+
+Every record is produced by really running the kernel. Checked afterwards:
+
+```
+accepted: {"status":"accepted","basis":["authority_allow","exit_zero",
+                                        "required_artifact_present:model.sea","stdout_match"]}
+denied:   {"status":"rejected","basis":["authority_deny"]}
+denied workspace file count: 0
+artifacts/stdout.txt: OK   artifacts/stderr.txt: OK   artifacts/model.sea: OK   (sha256 -c)
+```
+
+`just cell-reset` removes it, and refuses any directory without the marker the
+seed writes.
+
+## What driving the package found
+
+Two defects, neither of which the 843-test suite or any prior journey caught.
+
+### A pending approval vanished from the inbox
+
+The seeded cell had one approval waiting and one resolved. The running kernel
+reported an **empty inbox**, scoped or unscoped, while the ledger plainly held
+the committed `approval_request`.
+
+Cause: `sea_forge_core::approvals::latest_by_id` folded the journal on
+`approval_id` alone. Approval ids are per-case ordinals — every case's first
+escalation is `apr_0001` — so the `approved` record written for one case's
+`apr_0001` superseded the still-pending `apr_0001` of the other. The request
+stayed committed, but nothing could enumerate it, and `approval.decide` requires
+identifiers only the inbox can supply. **The work was stranded, and nothing
+reported a problem.**
+
+Fixed by keying the fold on `(case_id, approval_id)`, and scoping
+`latest_status`/`check_expiry` the same way. Pinned by
+`approvals::tests::resolving_one_case_does_not_clear_the_same_ordinal_in_another`
+and `sfwp::approvals::tests::one_cases_resolved_approval_does_not_empty_another_cases_inbox`.
+Neutralizing the fold key fails exactly those two and nothing else.
+
+Every test in that module used a single case. The bug needed two, which is what
+seeding a demonstration cell produced for the first time.
+
+### Signalling the window orphaned its kernel
+
+`kill <app-pid>` left `sea-forge-server` running, reparented, still holding the
+socket and still serving the cell the operator had just closed.
+
+Cause: the shutdown path was `RunEvent::Exit`, which Tauri emits from its event
+loop, plus `Drop` as a backstop. A signalled process reaches neither — the
+default disposition for `SIGTERM` terminates without unwinding.
+
+Fixed with a handler for `SIGTERM`/`SIGINT` that stops the supervised kernel
+before exiting, using tokio's `signal` feature (tokio was already a direct
+dependency; no new one was added). `SIGKILL` remains uncatchable by anyone —
+adoption is what makes that case recoverable rather than corrupting, since the
+next launch attaches to the survivor instead of starting a rival.
 
 ## Reproducing these journeys
 

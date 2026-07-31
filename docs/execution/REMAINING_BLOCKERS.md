@@ -1,6 +1,54 @@
 # Remaining Blockers
 
-Status date: 2026-07-30. Branch: `ultracode/sea-forge-completion`.
+Status date: 2026-07-31. Branch: `ultracode/sea-forge-completion`.
+
+## Status update — U-06 is resolved; the product is packaged and gated
+
+**U-06 was decided on 2026-07-31** under the standing instruction not to
+escalate ordinary engineering choices: **supervised sidecar, with adoption**.
+Recorded in `DECISION_REGISTER.md`. It was the last user-decision blocker.
+
+SF-012 and the CI half of SF-013 have landed:
+
+| Was missing | Now |
+|---|---|
+| No package existed | `just workbench-package` builds `.deb` / `.rpm` / `.AppImage` |
+| The Workbench needed a hand-started server | it starts its own, or adopts one already running |
+| `"csp": null` — no content-security policy at all | a real policy, verified with the renderer running under it |
+| `bundle.targets` advertised untested macOS | Linux only; macOS is not built and not claimed |
+| CI never compiled `src-tauri` or the renderer | `workbench` job runs `just workbench-check` |
+| CI never built or inspected a package | `package` job builds and inventories the bundle |
+| A fresh cell had nothing to show | `just cell-seed` / `just cell-reset` |
+
+**No blocker remains.** SF-006 and SF-008 → SF-011 are ordinary implementation
+work; the release half of SF-013 (checksummed artifacts, release notes) is
+ordinary release work.
+
+### What packaging found that 843 tests did not
+
+Both fixed, both pinned, both described in `USER_JOURNEY_EVIDENCE.md`:
+
+- **A pending approval was unreachable.** The approvals journal folded on
+  `approval_id` alone, but ids are per-case ordinals, so resolving one case's
+  `apr_0001` superseded another case's still-pending `apr_0001`. It stayed
+  committed in the ledger and vanished from every inbox, stranding the work with
+  no lawful path to the identifiers `approval.decide` requires. Needed two cases
+  in one cell to reproduce; every test in that module used one.
+- **Signalling the window orphaned its kernel.** `RunEvent::Exit` and `Drop`
+  both miss a signalled process, so `kill <app-pid>` left a reparented server
+  still serving the cell the operator had closed.
+
+### Still true, and deliberate
+
+- **macOS is not built and not advertised.** Its Seatbelt journey has not run.
+- **`SIGKILL` still orphans the kernel.** Uncatchable by anyone; adoption makes
+  the next launch attach to the survivor rather than start a rival, so it is
+  recoverable rather than corrupting.
+- **No accessibility audit has been run.** SF-012 asks for keyboard, 200% zoom,
+  reduced motion, and axe-core evidence. None of that has been produced, so
+  none of it is claimed.
+- **README.md is mid-rewrite by the owner** and was deliberately left alone, so
+  SF-013's documentation refresh is not done.
 
 ## Status update — U-07 is resolved; nothing is blocked
 

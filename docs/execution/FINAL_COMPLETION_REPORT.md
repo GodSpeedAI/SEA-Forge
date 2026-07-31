@@ -6,9 +6,67 @@ Date: 2026-07-31. Branch: `ultracode/sea-forge-completion`.
 
 **PARTIALLY COMPLETE**
 
-Six of the thirteen P0 packets are complete and verified. Nothing is blocked.
+Eight of the thirteen P0 packets are complete and verified, and the product is
+now installable and self-starting. Nothing is blocked; no user decision is
+outstanding.
 
-## Update — 2026-07-31
+The verdict is not `FUNCTIONALLY COMPLETE WITH EXTERNAL VERIFICATION PENDING`
+because SF-006 and SF-008 through SF-011 are genuinely unstarted implementation
+work, not verification pending on finished work. It is not `PARTIALLY COMPLETE`
+for the reason it was yesterday: a packaged application now exists, starts its
+own kernel, and was driven against real records.
+
+## Update — 2026-07-31 (packaging pass)
+
+**U-06 is resolved: supervised sidecar, with adoption** — decided rather than
+escalated, under the standing instruction to take the most reversible option
+consistent with the specifications and document it. It was the last outstanding
+user decision. See `DECISION_REGISTER.md`.
+
+SF-012 landed and the CI half of SF-013 with it:
+
+- `just workbench-package` produces `.deb`, `.rpm`, and `.AppImage`, with the
+  kernel shipped alongside the application as a Tauri sidecar.
+- Installing and opening the application is the whole procedure. It starts its
+  own cell, or adopts one already running and leaves that one alone on quit.
+- `tauri.conf.json` had `"csp": null` — no content-security policy at all,
+  which the mission forbids. It now carries a real one, and the renderer was
+  observed working under it.
+- `bundle.targets` no longer advertises macOS, which has never been built.
+- CI gained a `workbench` job and a `package` job; the `gate` job requires both.
+  Before this, CI never compiled `src-tauri`, never ran the renderer suite, and
+  never built a package.
+- `just cell-seed` populates a cell with real, inspectable records so the
+  application has something to show on a fresh machine; `just cell-reset`
+  removes it and refuses anything without the seed's marker.
+
+**What packaging found.** Two defects, neither visible to 843 passing tests:
+
+1. **A pending approval was unreachable.** The approvals journal folded on
+   `approval_id` alone, but ids are per-case ordinals, so resolving one case's
+   `apr_0001` superseded another case's still-pending `apr_0001`. The request
+   stayed committed in the ledger and disappeared from every inbox — and
+   `approval.decide` needs identifiers only the inbox can supply, so the work was
+   stranded with no lawful path back to it. Reproducing it required two cases in
+   one cell; every test in that module used one. Seeding a demonstration cell
+   produced the second case for the first time.
+2. **Signalling the window orphaned its kernel.** `RunEvent::Exit` and `Drop`
+   both miss a signalled process, so `kill <app-pid>` left a reparented server
+   still serving the cell the operator had just closed.
+
+**And two gates that had never run.** `cargo fmt --check` was not part of the
+previous pass's sweep, so three files had been unformatted since that session
+and CI would have rejected the branch. Clippy had never run on `src-tauri` at
+all — the same standalone-workspace boundary that hid the host's tests hides its
+lints — and it failed immediately on the code added this session. Both are now
+inside `just workbench-tauri-test`.
+
+That is the third consecutive pass in which running the product found what the
+suite could not. The recurring shape is worth stating plainly: **a check that
+cannot see a directory reports no failures there, and that is indistinguishable
+from having none.**
+
+## Update — 2026-07-31 (SF-005)
 
 SF-005 is complete. The desktop client no longer fabricates its governance
 context, separation of duty is enforced against the ledger, and the two-actor
@@ -75,6 +133,8 @@ real binaries.
 | SF-004 | One run locator with flat-minimum compatibility | `3352c47` |
 | SF-005 | Identity and authority context | `1ebcea3`, `7a95800`, `0d15202`, `52565b5` |
 | SF-007 | Contract and generated-zone gate | `34e2c77` |
+| SF-012 | Packaged Linux stack, self-starting (U-06) | this pass |
+| SF-013 (CI half) | Aggregate CI gates both halves and the package | this pass |
 
 Plus one defect fixed at its source in its own commit:
 

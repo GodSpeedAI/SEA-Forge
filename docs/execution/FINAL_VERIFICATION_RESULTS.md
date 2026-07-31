@@ -5,18 +5,50 @@ Run date: 2026-07-31. Branch `ultracode/sea-forge-completion`.
 Toolchain: cargo/rustc 1.92.0 (edition 2021), bun 1.3.14, just 1.55.1,
 devbox 0.17.5, Linux 6.18.33.2-microsoft-standard-WSL2.
 
-## Commands and outcomes (2026-07-31)
+## Commands and outcomes (2026-07-31, packaging pass)
 
 | Command | Result |
 |---|---|
+| `cargo fmt --check` | **clean** (see "Two more gates that did not exist") |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | **0 errors** |
-| `cargo test --workspace --all-targets --locked --no-fail-fast` | **840 passed, 0 failed, 4 ignored** |
+| `cargo test --workspace --all-targets --locked --no-fail-fast` | **846 passed, 0 failed, 4 ignored** |
+| `cargo clippy --all-targets --manifest-path .../src-tauri/Cargo.toml -- -D warnings` | **0 errors** (new; see below) |
+| `cargo test --manifest-path .../src-tauri/Cargo.toml` | **31 passed, 0 failed** |
 | `devbox run -- just proof` | **P1-P4b passed** |
 | `devbox run -- just workbench-check` | **exit 0** |
-| ├ `workbench-contracts-gate` | **ok** — contracts, tokens, Tauri boundary current |
-| ├ `workbench-tauri-test` | **16 passed** (new gate; see below) |
-| └ `bun run test` | **123 renderer + 17 ui-components passed** |
-| `python3 docs/execution/journey/drive_identity.py` | **17 live checks passed** |
+| `just workbench-package` | **`.deb`, `.rpm`, `.AppImage` built** |
+| `just workbench-package-inventory` | **ok** — sidecar present, no JS runtime, no source maps |
+| `python3 docs/execution/journey/drive_identity.py` | **25 live checks passed** |
+| packaged app, live against a seeded cell | **started its own kernel; renderer negotiated, resolved identity, read the inbox** |
+
+### Two more gates that did not exist
+
+Both found by running commands the previous pass's sweep had never run.
+
+**`cargo fmt --check` was never run locally.** The previous session verified with
+`cargo test`, `cargo clippy`, `just proof`, and `just workbench-check` — none of
+which check formatting. `just ci` does, and was not run. Three files
+(`identity.rs`, `gen_sfwp_schema.rs`, `conformance_identity.rs`) had been sitting
+unformatted since that session, and CI would have rejected the branch.
+
+**Clippy had never run on `src-tauri` at all.** The same standalone-workspace
+boundary that hid the host's tests hides its lints: `just lint` runs
+`cargo clippy --workspace` from the repo root, which does not reach it. It found
+dead code and an `.err().expect()` in the code added this session, immediately.
+`workbench-tauri-test` now runs clippy and `fmt --check` alongside the tests, so
+the host crate is linted, formatted, and tested by one gate.
+
+The pattern is the same one this branch keeps rediscovering: **a check that
+cannot see a directory reports no failures there, and that is indistinguishable
+from having none.**
+
+## Earlier run (2026-07-31, SF-005)
+
+| Command | Result |
+|---|---|
+| `cargo test --workspace --all-targets --locked --no-fail-fast` | 843 passed, 0 failed, 4 ignored |
+| `devbox run -- just workbench-check` | exit 0 (16 tauri, 123 renderer, 17 ui-components) |
+| `python3 docs/execution/journey/drive_identity.py` | 25 live checks passed |
 
 ### The gate that did not exist
 

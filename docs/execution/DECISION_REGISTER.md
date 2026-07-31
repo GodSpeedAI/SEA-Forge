@@ -42,11 +42,47 @@ choices require the owner when their trigger occurs:
 | U-03 | Remote/multi-user authentication and service deployment model. | A non-local client or shared daemon becomes a product requirement. |
 | U-04 | Archive or delete tracked `working/face/` material. | Repository cleanup package; deletion is explicitly authorized. |
 | U-05 | Licensing/edition composition of release artifacts. | A release combines components whose `LICENSE_EE.md` classification changes what may be distributed. |
-| U-06 | Tauri-supervised sidecar versus separately installed local server service. | Before implementing the distribution/service lifecycle package. |
+| U-06 | Tauri-supervised sidecar versus separately installed local server service. | **RESOLVED 2026-07-31 — see below.** |
 | U-07 | Exact public SFWP identity/session contract. | **RESOLVED 2026-07-30 — see below.** |
 
 Branch merge/push and release timing are workflow authorizations, not
 architectural unknowns. They remain outside this pass.
+
+## U-06 — Resolved: supervised sidecar, with adoption
+
+Decided 2026-07-31 under the standing instruction not to escalate ordinary
+engineering choices, and to take the most reversible option consistent with the
+specifications. Recorded here rather than asked, because the packet's own stated
+outcome decides it.
+
+**The Workbench supervises its own kernel and adopts one that is already
+running.**
+
+The alternative — a separately installed service the operator starts by hand —
+was rejected against SF-012's own outcome: *"a user installs the packaged
+product on a clean Linux host and completes the full governed journey without
+source-tree knowledge."* A window that opens onto a dead socket until the
+operator finds and runs a second binary does not meet that, however well it
+renders the failure.
+
+**Adoption is what keeps it reversible.** If anything is already listening on
+the cell's socket — systemd, `just`, a terminal, another window — the app
+attaches and never spawns, never signals, never stops it. The separate-service
+model therefore still works exactly as it would have; it is simply no longer
+*required*. Reverting means not shipping the sidecar, not unpicking code.
+
+Two properties already in the kernel make the spawn safe rather than merely
+convenient: the server takes an exclusive socket lock for its process lifetime,
+so a race produces a refusal rather than two kernels on one cell; and it binds
+a staging path and renames it into place, so a stale socket from a crash is
+atomically replaced rather than mistaken for a live server.
+
+What this does **not** change: the SFWP contract, the record layout, the cell
+contract, or which component owns authority. The sidecar is a lifecycle
+decision, not an architectural one.
+
+Implemented in `workbench/apps/desktop/src-tauri/src/supervisor.rs`; pinned by
+`tests/packaged_stack.rs` against the staged sidecar the `.deb` actually ships.
 
 ## U-07 — Resolved: the public SFWP identity contract
 
