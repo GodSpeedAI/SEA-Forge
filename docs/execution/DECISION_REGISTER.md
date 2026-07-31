@@ -43,10 +43,65 @@ choices require the owner when their trigger occurs:
 | U-04 | Archive or delete tracked `working/face/` material. | Repository cleanup package; deletion is explicitly authorized. |
 | U-05 | Licensing/edition composition of release artifacts. | A release combines components whose `LICENSE_EE.md` classification changes what may be distributed. |
 | U-06 | Tauri-supervised sidecar versus separately installed local server service. | Before implementing the distribution/service lifecycle package. |
-| U-07 | Exact public SFWP identity/session contract. | Before implementing the required governed actor propagation across host/server. |
+| U-07 | Exact public SFWP identity/session contract. | **RESOLVED 2026-07-30 — see below.** |
 
 Branch merge/push and release timing are workflow authorizations, not
 architectural unknowns. They remain outside this pass.
+
+## U-07 — Resolved: the public SFWP identity contract
+
+Decided by the owner on 2026-07-30, unblocking SF-005 and everything
+downstream of it. Four answers, each binding on the wire contract.
+
+### 1. Identity binds **per request**, not per connection
+
+Each protected verb carries an `actor` block. The server holds no session
+state for identity, a reconnect needs no re-handshake, and the actor travels
+with the ledger entry the request produces. Additive to the existing
+`#[serde(tag = "verb")]` request enum.
+
+*Rejected:* a connection-scoped handshake. A dropped connection would lose the
+binding mid-case, and the server would have to hold state whose only purpose is
+to be re-derived after every reconnect.
+
+### 2. The server **derives** the caller's identity from the socket
+
+`SO_PEERCRED` on the accepted Unix stream gives the peer's uid. The `actor`
+block a client asserts must map to that uid through policy; a mismatch is a
+denial, not a warning.
+
+This is what makes the actor block trustworthy. Believing the host's assertion
+because the socket is `0600` would let any process running as the owner claim
+any actor id — which is the same fabrication SF-005 exists to remove, moved one
+layer down. A signed credential would be stronger still, but it introduces key
+issuance and rotation that nothing in the repository has today, and the threat
+model here is local-only.
+
+*Consequence:* the identity contract is Unix-socket-shaped. A future remote or
+multi-user model is **U-03**, and will need a different answer.
+
+### 3. The approver is identified **independently** and compared to the ledger
+
+An approval carries its own actor block. Separation of duty is enforced by
+comparing it against the submitter recorded in the ledger for that case — not
+against the connection the approval arrived on.
+
+This is the only answer that survives a restart, and the only one under which a
+second person can approve from a second window hours later. Requiring the
+approver to be on the submitting session would make two-person approval
+impossible in exactly the situations it exists for.
+
+### 4. The actor block is **optional on inspect, required on protected**
+
+Read-only verbs (`run_get`, `run_list`, `case_get_*`, `system_*`, `events_*`)
+continue to work without it. Verbs that cause a side effect (`submit`,
+`approve`, `reject`, `delegate`, `cancel_delegation`, `case_commit`, …) refuse
+without it, with a typed denial and no side effect.
+
+This confirms as the contract what SF-005's compatibility criterion — "Old SFWP
+clients without actor context still work for inspect verbs" — had only implied.
+Whether a call is governed is a property of the *verb*, decided by the
+protocol, not a policy question resolved per deployment.
 
 ## Stale Decisions Or Claims
 
