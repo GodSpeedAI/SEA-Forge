@@ -52,14 +52,41 @@ describe("Shell & Keyboard Navigation", () => {
 
   it("evaluates Route Guards G1 to G9 correctly", () => {
     const g1Pass = evaluateGuard("G1", { cellId: "cell_1" });
+    expect(g1Pass.verdict).toBe("passed");
     expect(g1Pass.passed).toBe(true);
 
-    const g1Fail = evaluateGuard("G1", {});
-    expect(g1Fail.passed).toBe(false);
+    const g1Fail = evaluateGuard("G1", { cellId: "" });
+    expect(g1Fail.verdict).toBe("failed");
     expect(g1Fail.reason).toContain("Active cell context");
 
     const g9Fail = evaluateGuard("G9", { readinessState: "blocked" });
+    expect(g9Fail.verdict).toBe("failed");
     expect(g9Fail.passed).toBe(false);
+  });
+
+  /**
+   * The distinction the fabricated `mockGuardContext` erased. A guard nothing
+   * answered must not read as a pass — and must not read as a failure either,
+   * because "we did not ask" and "the cell said no" call for different operator
+   * responses (epic invariant 6).
+   */
+  it("reports a guard with no source as indeterminate, never as passed", () => {
+    for (const guard of ["G1", "G4", "G5", "G6", "G7", "G8", "G9", "G10"] as const) {
+      const result = evaluateGuard(guard, {});
+      expect(result.verdict, `${guard} with no evidence`).toBe("indeterminate");
+      expect(result.passed, `${guard} must not claim a pass`).toBe(false);
+      expect(result.reason, `${guard} must say what is missing`).toBeTruthy();
+    }
+  });
+
+  /** Sponsorship governs automated actors; a human operator is out of scope. */
+  it("reports sponsorship as not applicable for a self-sponsoring role", () => {
+    const operator = evaluateGuard("G3", { actorRole: "operator" });
+    expect(operator.verdict).toBe("not_applicable");
+    expect(operator.passed).toBe(false);
+
+    const agent = evaluateGuard("G3", { actorRole: "R-AA" });
+    expect(agent.verdict).toBe("indeterminate");
   });
 
   it("renders GovernedDenialSurface when a guard fails (no blank screen)", () => {

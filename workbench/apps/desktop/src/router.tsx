@@ -24,48 +24,49 @@ import {
   FederationPage,
   AdminPage,
 } from "./pages/SurfacesPages";
-import { evaluateGuard, type GuardContext, type GuardId } from "./guards/guards";
+import { evaluateGuard, type GuardId } from "./guards/guards";
 import { GovernedDenialSurface } from "./guards/GovernedDenialSurface";
+import { useGuardContext, BLOCKING_GUARDS } from "./guards/useGuardContext";
 
 interface RouterContextSearch {
-  cellId?: string;
   guardSimFail?: GuardId;
 }
 
+/**
+ * The shell, gated on the guards this cell can actually answer.
+ *
+ * Only guards that reached a `failed` verdict block a route. An
+ * `indeterminate` guard — one no source answered — does not, because blocking
+ * on absent evidence would make surfaces unreachable without making anything
+ * safer: the server refuses protected work on its own authority regardless of
+ * what renders here. What it must never do is *claim* the guard passed, which
+ * is what the removed `mockGuardContext` did for all ten at once.
+ */
 function RootComponent() {
   const search = useSearch({ strict: false }) as RouterContextSearch;
+  const guardContext = useGuardContext();
 
-  const mockGuardContext: GuardContext = {
-    cellId: search.cellId ?? "cell_local_01",
-    actorId: "actor_op_01",
-    actorRole: "Operator",
-    sponsorId: "sponsor_human_01",
-    policyLoaded: true,
-    policyHash: "sha256:policy_v1",
-    integrityStatus: "verified",
-    resourceFound: true,
-    disclosurePermitted: true,
-    compatibilityOk: true,
-    readinessState: "ready",
-    standingOk: true,
-  };
-
-  // Allow simulating guard failure via query param `?guardSimFail=G9`
+  // `?guardSimFail=G9` renders the denial surface for one guard against the
+  // real context, so the layout can be inspected without a broken cell.
   if (search.guardSimFail) {
-    const result = evaluateGuard(search.guardSimFail, { ...mockGuardContext, readinessState: "blocked" });
+    const simulated = evaluateGuard(search.guardSimFail, {
+      ...guardContext,
+      readinessState: "blocked",
+    });
     return (
       <AppShell>
-        <GovernedDenialSurface guardResult={result} />
+        <GovernedDenialSurface guardResult={simulated} />
       </AppShell>
     );
   }
 
-  // Base Guard G1 check
-  const g1Result = evaluateGuard("G1", mockGuardContext);
-  if (!g1Result.passed) {
+  const blocked = BLOCKING_GUARDS.map((guard) => evaluateGuard(guard, guardContext)).find(
+    (result) => result.verdict === "failed",
+  );
+  if (blocked) {
     return (
       <AppShell>
-        <GovernedDenialSurface guardResult={g1Result} />
+        <GovernedDenialSurface guardResult={blocked} />
       </AppShell>
     );
   }

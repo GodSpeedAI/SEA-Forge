@@ -3537,6 +3537,7 @@ dependencies = [
  "sea-forge-planner",
  "sea-forge-runtime",
  "sea-forge-sandbox",
+ "sea-forge-settlement",
  "sea-forge-spec-pipeline",
  "serde",
  "serde_json",
@@ -3572,6 +3573,18 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "sea-forge-evidence"
+version = "0.1.0"
+dependencies = [
+ "sea-forge-core",
+ "sea-forge-sandbox",
+ "serde",
+ "serde_json",
+ "sha2",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -3666,6 +3679,7 @@ dependencies = [
  "sea-forge-authority",
  "sea-forge-case-runner",
  "sea-forge-core",
+ "sea-forge-evidence",
  "sea-forge-extension",
  "sea-forge-ledger",
  "sea-forge-planner",
@@ -3674,6 +3688,7 @@ dependencies = [
  "sea-forge-self-model",
  "sea-forge-settlement",
  "sea-forge-thoth",
+ "sea-forge-trace",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -3722,6 +3737,16 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "sea-forge-trace"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-forge-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

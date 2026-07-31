@@ -7,6 +7,9 @@ import { JourneyRibbon } from "./JourneyRibbon";
 import { EvidenceDrawer, type EvidenceRecord } from "@sea-forge/ui-components";
 import { EvidenceContextProvider } from "./EvidenceContext";
 import { OPERATE_ROUTE_BY_PATH } from "../pages/operateRoutes";
+import { useIdentity } from "../hooks/useIdentity";
+import { useGuardContext } from "../guards/useGuardContext";
+import { useApprovals } from "../hooks/useApprovals";
 
 export interface AppShellProps {
   children: React.ReactNode;
@@ -42,6 +45,11 @@ const ROUTE_CONTEXT: Record<string, ShellRouteContext> = {
 export function AppShell({ children, currentJourneyStep }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  // The governance context bar reads the same sources every surface does, so
+  // the header can never disagree with the page under it.
+  const { identity, cellId } = useIdentity();
+  const { integrityStatus } = useGuardContext();
+  const approvals = useApprovals();
   const routeContext =
     ROUTE_CONTEXT[location.pathname === "/" ? "/readiness" : location.pathname] ??
     ROUTE_CONTEXT["/readiness"];
@@ -129,6 +137,18 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
       </a>
 
       <GlobalHeader
+        actorName={identity?.actor?.actorId}
+        roleName={identity?.actor?.role}
+        cellName={cellId}
+        integrityStatus={integrityStatus}
+        // `undefined` unless the inbox was actually read. An unread inbox, an
+        // unreadable journal, and an empty queue are three different things,
+        // and only the third is "0 approvals".
+        inboxCount={
+          approvals.isLoading || approvals.error || approvals.unreadable
+            ? undefined
+            : approvals.approvals.length
+        }
         onOpenSearch={() => alert("Search command palette (Press /)")}
         onOpenInbox={() => navigate({ to: "/inbox" })}
         onToggleEvidence={() => setIsEvidenceOpen((prev) => !prev)}

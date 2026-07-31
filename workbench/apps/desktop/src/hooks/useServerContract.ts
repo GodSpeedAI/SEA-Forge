@@ -46,6 +46,7 @@ export const SURFACED_METHODS: ReadonlySet<string> = new Set([
   "system.hello",
   "system.describe",
   "readiness.get",
+  "identity.get",
   "case.entry_options",
   "case.preflight",
   "case.commit",

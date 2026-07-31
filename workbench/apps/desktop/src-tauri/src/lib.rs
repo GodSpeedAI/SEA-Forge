@@ -143,6 +143,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             bridge::sfwp_query,
             bridge::sfwp_command,
+            bridge::sfwp_identity,
+            bridge::sfwp_cell,
             bridge::sfwp_request_status,
             bridge::draft_save,
             bridge::draft_load,

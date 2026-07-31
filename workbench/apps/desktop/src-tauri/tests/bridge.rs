@@ -42,6 +42,11 @@ async fn boot(endpoint: AgentEndpointConfig) -> (tempfile::TempDir, PathBuf) {
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         agent,
+        // A cell that configures no identity refuses every protected verb
+        // (SF-005), so `submit` here would be denied before it ran. Bind the
+        // uid this test's own connections will present — the same shape a
+        // single-operator local cell uses.
+        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
         ..ServerConfig::default()
     };
     tokio::spawn(async move {
@@ -113,6 +118,10 @@ fn success_submit(root: &Path, request_id: &str) -> Value {
     std::fs::write(&plan_path, serde_json::to_vec(&plan).unwrap()).unwrap();
     json!({
         "verb": "submit",
+        // The actor block the host attaches in `bridge::sfwp_command`. Spelled
+        // out here because these tests drive the socket layer directly, below
+        // the Tauri command that would add it.
+        "actor": {"actor_id": "operator_local", "role": "operator"},
         "plan": plan_path.to_str().unwrap(),
         "policy": policy_path.to_str().unwrap(),
         "entity": "operator_local",

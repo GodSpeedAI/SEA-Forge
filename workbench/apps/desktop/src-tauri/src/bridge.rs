@@ -270,14 +270,124 @@ pub async fn sfwp_query(
     state.call(request).await.map_err(|e| e.to_string())
 }
 
+/// Which cell this host dialed.
+///
+/// The host resolves the socket path from the cell contract
+/// (`SEA_FORGE_SOCKET` > `SEA_FORGE_ROOT` > `$HOME/.sea-forge`), so it is the
+/// only component that knows which cell the window is attached to. Exposed so
+/// the renderer can name the active cell from the path it actually connected
+/// to rather than from a constant — `router.tsx` used to default to the string
+/// `"cell_local_01"`, which named nothing.
+#[tauri::command]
+pub fn sfwp_cell(state: State<'_, Arc<SocketHandle>>) -> Value {
+    serde_json::json!({ "socket_path": state.socket_path().to_string_lossy() })
+}
+
+/// Ask the cell which actors this connection may claim (`identity.get`).
+///
+/// Inspect verb, so it needs no actor of its own — which is what makes it
+/// usable as the way to discover one.
+#[tauri::command]
+pub async fn sfwp_identity(state: State<'_, Arc<SocketHandle>>) -> Result<Value, String> {
+    state
+        .call(serde_json::json!({"verb": "identity_get"}))
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Issue a protected SFWP command (correlated by `request_id`).
+///
+/// The host attaches the actor; the renderer never does. `SfwpCommand` has no
+/// actor field precisely so that a renderer bug or a compromised web context
+/// cannot attribute work to a principal it is not — the closed enum makes that
+/// unrepresentable rather than merely discouraged.
+///
+/// `act_as` selects among several bound actors (an operator who also approves,
+/// say). It is checked against `identity.get` before use, so it can only ever
+/// narrow the set the cell already granted this uid — never widen it.
 #[tauri::command]
 pub async fn sfwp_command(
     state: State<'_, Arc<SocketHandle>>,
     command: SfwpCommand,
+    act_as: Option<String>,
 ) -> Result<Value, String> {
-    let request = serde_json::to_value(&command).map_err(|e| e.to_string())?;
+    let mut request = serde_json::to_value(&command).map_err(|e| e.to_string())?;
+
+    // ponytail: resolved per command rather than cached. These are
+    // human-initiated actions over a local Unix socket, so the extra round trip
+    // is unmeasurable, and it means a `server.yaml` reload takes effect
+    // immediately instead of after a restart. Cache it if a batch path ever
+    // issues commands in a loop.
+    let identity = state
+        .call(serde_json::json!({"verb": "identity_get"}))
+        .await
+        .map_err(|e| e.to_string())?;
+    let actor = choose_actor(&identity, act_as.as_deref())?;
+
+    if let Some(object) = request.as_object_mut() {
+        object.insert("actor".into(), actor.clone());
+        // `entity` is what reaches the authority engine and lands in the ledger
+        // as the acting principal. Overwritten rather than trusted so the
+        // verified identity and the recorded one cannot disagree — the server
+        // refuses that mismatch too, but the renderer should not be able to
+        // author a request that earns the refusal.
+        if object.contains_key("entity") {
+            object.insert("entity".into(), actor["actor_id"].clone());
+        }
+    }
+
     state.call(request).await.map_err(|e| e.to_string())
+}
+
+/// Pick the actor block to send, from what the cell says this connection holds.
+///
+/// Refuses rather than guesses in every ambiguous case. Acting as an
+/// unspecified one of several identities would be the same fabrication SF-005
+/// removed, just chosen by array order instead of by a constant.
+fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, String> {
+    let available = identity
+        .get("available")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+
+    if available.is_empty() {
+        let refusal = identity.get("refusal");
+        return Err(format!(
+            "no actor is available on this connection: {}",
+            refusal
+                .and_then(|r| r.get("message"))
+                .and_then(Value::as_str)
+                .unwrap_or("this cell reported no identity bindings")
+        ));
+    }
+
+    let chosen = match act_as {
+        Some(wanted) => available
+            .iter()
+            .find(|entry| entry.get("actor_id").and_then(Value::as_str) == Some(wanted))
+            .ok_or_else(|| format!("this connection may not act as `{wanted}`"))?,
+        None if available.len() == 1 => &available[0],
+        None => {
+            return Err(format!(
+                "this connection may act as {} different actors; choose one explicitly",
+                available.len()
+            ))
+        }
+    };
+
+    let actor_id = chosen
+        .get("actor_id")
+        .and_then(Value::as_str)
+        .ok_or("identity.get returned an actor with no id")?;
+    let role = chosen
+        .get("roles")
+        .and_then(Value::as_array)
+        .and_then(|roles| roles.first())
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("actor `{actor_id}` holds no role in this cell"))?;
+
+    Ok(serde_json::json!({"actor_id": actor_id, "role": role}))
 }
 
 /// Thin convenience wrapper over `SfwpQuery::RequestGetStatus` — the correlation
@@ -420,6 +530,79 @@ mod tests {
         .unwrap();
         assert_eq!(full["model"], "m1");
         assert_eq!(full["token_budget"], 5000);
+    }
+
+    fn identity(actors: &[(&str, &[&str])]) -> Value {
+        serde_json::json!({
+            "configured": true,
+            "uid": 1000,
+            "available": actors.iter().map(|(id, roles)| {
+                serde_json::json!({"actor_id": id, "roles": roles})
+            }).collect::<Vec<_>>(),
+        })
+    }
+
+    #[test]
+    fn a_sole_bound_actor_is_used_without_being_named() {
+        let actor = choose_actor(&identity(&[("operator_local", &["operator"])]), None).unwrap();
+        assert_eq!(
+            actor,
+            serde_json::json!({"actor_id": "operator_local", "role": "operator"})
+        );
+    }
+
+    /// The renderer picking among several is fine; the renderer *inventing* one
+    /// is not. `act_as` can only ever select from what the cell already granted.
+    #[test]
+    fn act_as_selects_within_the_granted_set_and_cannot_leave_it() {
+        let bound = identity(&[("operator_a", &["operator"]), ("operator_b", &["operator"])]);
+
+        let chosen = choose_actor(&bound, Some("operator_b")).unwrap();
+        assert_eq!(chosen["actor_id"], "operator_b");
+
+        let refused = choose_actor(&bound, Some("operator_c")).unwrap_err();
+        assert!(
+            refused.contains("may not act as `operator_c`"),
+            "unexpected refusal: {refused}"
+        );
+    }
+
+    /// Ambiguity must refuse, not default. Picking `available[0]` would
+    /// reintroduce a fabricated identity chosen by array order — and would let
+    /// a submitter approve their own work by happening to be listed first.
+    #[test]
+    fn several_bound_actors_with_no_choice_refuses_rather_than_picking_one() {
+        let error = choose_actor(
+            &identity(&[("operator_a", &["operator"]), ("operator_b", &["operator"])]),
+            None,
+        )
+        .unwrap_err();
+        assert!(error.contains("choose one explicitly"), "{error}");
+    }
+
+    /// An unconfigured cell must surface the kernel's own reason, not a
+    /// host-invented one, so the operator reads the same explanation the
+    /// server would have given.
+    #[test]
+    fn no_available_actor_reports_the_cells_own_refusal() {
+        let unconfigured = serde_json::json!({
+            "configured": false,
+            "available": [],
+            "refusal": {
+                "error_class": "identity_unconfigured",
+                "message": "this cell configures no identity bindings"
+            }
+        });
+        let error = choose_actor(&unconfigured, None).unwrap_err();
+        assert!(error.contains("configures no identity bindings"), "{error}");
+    }
+
+    /// A suspended actor — bound, but holding no role — authorizes nothing.
+    /// Sending a role we invented would be worse than refusing.
+    #[test]
+    fn an_actor_holding_no_role_is_refused() {
+        let error = choose_actor(&identity(&[("suspended", &[])]), None).unwrap_err();
+        assert!(error.contains("holds no role"), "{error}");
     }
 
     /// The roster query and the cancel command are two halves of one control
