@@ -262,7 +262,10 @@ async fn identity_get_reports_the_actors_this_connection_may_claim() {
     assert_eq!(view["configured"], true, "{view}");
     assert_eq!(view["available"][0]["actor_id"], "operator_local");
     assert_eq!(view["available"][0]["roles"][0], "operator");
-    assert!(view["uid"].is_u64(), "the peer uid must be reported: {view}");
+    assert!(
+        view["uid"].is_u64(),
+        "the peer uid must be reported: {view}"
+    );
     assert!(
         view.get("refusal").is_none(),
         "a resolvable connection must not carry a refusal: {view}"
@@ -454,14 +457,11 @@ async fn an_escalated_approval_is_bound_to_committed_criteria() {
         .await;
     let case_id = submitted["case_id"].as_str().expect("a case").to_owned();
 
-    let entries = sea_forge_ledger::LedgerStream::open(
-        root.path(),
-        format!("case-{case_id}"),
-        "test",
-    )
-    .unwrap()
-    .read_entries()
-    .unwrap();
+    let entries =
+        sea_forge_ledger::LedgerStream::open(root.path(), format!("case-{case_id}"), "test")
+            .unwrap()
+            .read_entries()
+            .unwrap();
 
     let criteria: Vec<_> = entries
         .iter()

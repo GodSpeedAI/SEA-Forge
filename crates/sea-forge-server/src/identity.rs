@@ -393,12 +393,9 @@ pub fn approval_submitter(
     if !ledger_dir.exists() {
         return Ok(None);
     }
-    let entries = sea_forge_ledger::LedgerStream::open(
-        root,
-        format!("case-{case_id}"),
-        "sea-forge-server",
-    )?
-    .read_entries()?;
+    let entries =
+        sea_forge_ledger::LedgerStream::open(root, format!("case-{case_id}"), "sea-forge-server")?
+            .read_entries()?;
 
     let field = |value: &serde_json::Value, key: &str| {
         value.get(key).and_then(|v| v.as_str()).map(str::to_owned)
