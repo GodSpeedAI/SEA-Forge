@@ -236,6 +236,54 @@ workbench-package-inventory:
     if [ "$status" -ne 0 ]; then exit 1; fi
     echo "[inventory] ok: sidecar present, no JS runtime, no source maps"
 
+# --- demonstration cell -----------------------------------------------------
+
+# Seed a cell with real, inspectable records so the Workbench has something to
+# show on a fresh machine.
+#
+# These are not fixtures. Every record is produced by really running the kernel
+# — real runs, really authorized, really settled, really committed. A seeded
+# record survives being followed to its evidence, because there is nothing
+# behind it but the same code path an operator would have taken. Demo data that
+# could not survive that inspection would be fabricated evidence, which is the
+# one thing this system must never contain.
+[group('workbench')]
+cell-seed root='':
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/seed-cell.sh {{root}}
+
+# Remove the demonstration cell. Refuses anything without the seed marker.
+[group('workbench')]
+cell-reset root='':
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/reset-cell.sh {{root}} --yes
+
+# Open the packaged Workbench against the demonstration cell.
+#
+# No server is started here on purpose: the app supervises its own kernel
+# (U-06), so this is also the demonstration that it does.
+[group('workbench')]
+workbench-demo root='':
+    #!/usr/bin/env bash
+    {{set}}
+    cell="{{root}}"
+    [ -n "$cell" ] || cell="${SEA_FORGE_DEMO_ROOT:-$HOME/.sea-forge-demo}"
+    app="workbench/apps/desktop/src-tauri/target/release/sea-forge-workbench"
+    if [ ! -x "$app" ]; then
+        echo "no packaged Workbench at $app — run 'just workbench-package' first" >&2
+        exit 1
+    fi
+    if [ ! -d "$cell" ]; then
+        echo "no cell at $cell — run 'just cell-seed' first" >&2
+        exit 1
+    fi
+    echo "[demo] opening $cell"
+    SEA_FORGE_ROOT="$cell" \
+      SEA_FORGE_SOCKET="${SEA_FORGE_DEMO_SOCKET:-/tmp/sea-forge-demo.sock}" \
+      "$app"
+
 # The desktop host's own Rust tests.
 #
 # `src-tauri` is a separate Cargo workspace (ADR-004, K-06), so
