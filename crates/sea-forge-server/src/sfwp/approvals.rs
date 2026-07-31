@@ -129,6 +129,56 @@ mod tests {
         );
     }
 
+    /// The operator-visible half of the `(case_id, approval_id)` fold key.
+    ///
+    /// Approval ids are per-case ordinals, so a cell holding two cases has two
+    /// `apr_0001`s. Resolving one used to empty the other out of the inbox —
+    /// the request stayed committed in its case ledger, but nothing could
+    /// enumerate it, so the only lawful path to the identifiers `approval.decide`
+    /// demands was gone and the work was stranded.
+    ///
+    /// Caught by driving a packaged cell that had been seeded with two cases.
+    #[test]
+    fn one_cases_resolved_approval_does_not_empty_another_cases_inbox() {
+        use sea_forge_core::types::{ApprovalRequest, ApprovalStatus};
+
+        let root = tempfile::tempdir().unwrap();
+        let record = |case: &str, status| ApprovalRequest {
+            version: sea_forge_core::RECORD_VERSION.into(),
+            approval_id: "apr_0001".into(),
+            run_id: "run-1".into(),
+            case_id: case.into(),
+            decision_id: "dec-1".into(),
+            plan_item_id: "item-1".into(),
+            criteria_ref: None,
+            criteria_sha256: None,
+            criteria_record_hash: None,
+            job_contract_ref: None,
+            requested_at: "2026-07-26T00:00:00Z".into(),
+            expires_at: "2126-07-27T00:00:00Z".into(),
+            status,
+            resolved_by: None,
+            resolved_at: None,
+            note: None,
+        };
+        let append = |r| sea_forge_core::approvals::append(root.path(), &r).unwrap();
+        append(record("case-a", ApprovalStatus::Pending));
+        append(record("case-b", ApprovalStatus::Pending));
+        append(record("case-b", ApprovalStatus::Approved));
+
+        let all = list(root.path(), None);
+        assert_eq!(
+            all.approvals.len(),
+            1,
+            "case-a's approval vanished from the inbox: {:?}",
+            all.approvals
+        );
+        assert_eq!(all.approvals[0].case_id, "case-a");
+
+        assert_eq!(list(root.path(), Some("case-a")).approvals.len(), 1);
+        assert!(list(root.path(), Some("case-b")).approvals.is_empty());
+    }
+
     #[test]
     fn an_unparseable_journal_is_reported_rather_than_read_as_an_empty_queue() {
         let root = tempfile::tempdir().unwrap();
