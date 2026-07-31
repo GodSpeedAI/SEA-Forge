@@ -93,6 +93,85 @@ jobs:
       - name: build
         run: devbox run -- just build
 
+  # The product's other half. `cargo test --workspace` from the repo root does
+  # NOT reach this: `src-tauri` is a standalone Cargo workspace (ADR-004, K-06),
+  # so nothing here was ever compiled by the kernel jobs above.
+  #
+  # That gap was not theoretical. The SF-005 identity gate made every protected
+  # verb require an actor block, which broke the desktop host's integration
+  # tests — and the full kernel suite stayed green through it for a whole
+  # session, because it never built them. `just workbench-check` runs the
+  # generated-contract drift gate, the Tauri workspace-boundary check, the
+  # host's own Rust tests, and the renderer suite.
+  workbench:
+    name: workbench (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Workbench, host, and generated-contract gates
+        run: devbox run -- just workbench-check
+
+  # The packaged artifact (SF-012). A product that builds but does not package
+  # is not shipped, and the negative bundle claims ("no JS runtime, sidecar
+  # present, no source maps") are only true if something checks them.
+  package:
+    name: package (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # Tauri links against the system WebKitGTK stack; these are not available
+      # through devbox for this repo and are the documented Linux build
+      # prerequisites.
+      - name: Install Tauri build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Build the Linux packages
+        run: devbox run -- just workbench-package
+
+      - name: Inventory what actually ships
+        run: devbox run -- just workbench-package-inventory
+
+      - name: Upload packages
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-packages
+          path: |
+            workbench/apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+            workbench/apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
+            workbench/apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
+
   # Cross-platform sweep. The proof recipe has a sha256sum/shasum fallback,
   # so macOS is a real (not decorative) second target.
   macos:
@@ -118,7 +197,7 @@ jobs:
   # `just ci` is equivalent to the union of lint + test + macos.
   gate:
     name: gate
-    needs: [lint, test, macos]
+    needs: [lint, test, workbench, package, macos]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -127,6 +206,8 @@ jobs:
         env:
           LINT_RESULT: ${{ needs.lint.result }}
           TEST_RESULT: ${{ needs.test.result }}
+          WORKBENCH_RESULT: ${{ needs.workbench.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
           MACOS_RESULT: ${{ needs.macos.result }}
         run: |
           set -uo pipefail
@@ -139,11 +220,15 @@ jobs:
           # `needs.${name}.result` shell loop is impossible. Instead each result
           # is statically interpolated into an env var above, and the loop reads
           # those vars by name.
-          echo "lint:  $LINT_RESULT"
-          echo "test:  $TEST_RESULT"
-          echo "macos: $MACOS_RESULT"
+          echo "lint:      $LINT_RESULT"
+          echo "test:      $TEST_RESULT"
+          echo "workbench: $WORKBENCH_RESULT"
+          echo "package:   $PACKAGE_RESULT"
+          echo "macos:     $MACOS_RESULT"
           fail=0
-          for entry in "lint:$LINT_RESULT" "test:$TEST_RESULT" "macos:$MACOS_RESULT"; do
+          for entry in "lint:$LINT_RESULT" "test:$TEST_RESULT" \
+                       "workbench:$WORKBENCH_RESULT" "package:$PACKAGE_RESULT" \
+                       "macos:$MACOS_RESULT"; do
             name="${entry%%:*}"
             r="${entry#*:}"
             case "$r" in
