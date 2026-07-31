@@ -6,10 +6,25 @@ Date: 2026-07-30. Branch: `ultracode/sea-forge-completion`.
 
 **PARTIALLY COMPLETE**
 
-Five of the thirteen P0 packets are complete and verified. The remaining eight
-are blocked — all of them, transitively — on one decision the repository itself
-designates as user-required: **U-07, the exact public SFWP identity/session
-contract** (`DECISION_REGISTER.md:46`).
+Five of the thirteen P0 packets are complete and verified, and a sixth
+(SF-005) is half landed. Nothing is blocked.
+
+**Update, later the same day:** U-07 — the decision that had blocked every
+remaining packet — was answered by the owner and is recorded in
+`DECISION_REGISTER.md`. The identity half of SF-005 shipped on the back of it
+(`1ebcea3`): protected verbs now require an `actor` block verified against the
+connection's uid from `SO_PEERCRED`, an unconfigured cell refuses them all, and
+inspect verbs are untouched so old clients keep working. What remains in SF-005
+is separation-of-duty enforcement and the desktop router's fabricated
+`mockGuardContext`; see `REMAINING_BLOCKERS.md`.
+
+The verdict stays `PARTIALLY COMPLETE` because the primary Workbench operator
+journey still does not run end to end — the desktop client has not yet been
+moved onto the real identity contract.
+
+The original blocker analysis, retained below because it explains the shape of
+the work: the remaining eight packets all depended, transitively, on **U-07,
+the exact public SFWP identity/session contract** (`DECISION_REGISTER.md:46`).
 
 This is not the strongest available verdict, and the evidence does not support a
 stronger one. `COMPLETE AND VERIFIED` would require the primary Workbench

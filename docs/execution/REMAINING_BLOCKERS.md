@@ -2,10 +2,42 @@
 
 Status date: 2026-07-30. Branch: `ultracode/sea-forge-completion`.
 
-## The single blocker: decision U-07
+## Status update — U-07 is resolved; nothing is blocked
 
-**Every remaining P0 packet depends, transitively, on one decision the
-repository itself designates as user-required.**
+**The owner answered U-07 on 2026-07-30.** The four answers are recorded in
+`DECISION_REGISTER.md` under "U-07 — Resolved: the public SFWP identity
+contract", and the identity half of SF-005 has landed (`1ebcea3`):
+
+- Protected verbs require an `actor` block; inspect verbs do not.
+- The server verifies the claim against the connection's uid from
+  `SO_PEERCRED`.
+- An unconfigured cell refuses every protected verb — no fallback.
+- `identity::is_protected` is one exhaustive match, so a new verb cannot be
+  added without being classified.
+
+**No blocker remains.** The rest of SF-005 and everything downstream is
+ordinary implementation work, listed under "Remaining work" below.
+
+### Remaining in SF-005
+
+| Item | State |
+|---|---|
+| Actor required and verified on protected verbs | done (`1ebcea3`) |
+| Separation of duty — compare an approval's actor to the submitter in the ledger | **not started** |
+| Two-actor conformance test (operator submits, second actor approves) | not started |
+| Desktop router `mockGuardContext` replaced with server-resolved identity | not started |
+| `identity` block in the SFWP JSON Schema and generated TS | not started |
+
+Then SF-006, SF-008 → SF-013 in dependency order, unchanged.
+
+---
+
+## Historical: why this was a blocker
+
+Retained because it explains the shape of the work and the decision record.
+
+**Every remaining P0 packet depended, transitively, on one decision the
+repository itself designated as user-required.**
 
 `docs/execution/DECISION_REGISTER.md:46`
 
