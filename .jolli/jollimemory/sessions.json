@@ -1,28 +1,16 @@
 {
 	"version": 1,
 	"sessions": {
-		"a556d266-f7b1-4eae-9252-c424a0086a3a": {
-			"sessionId": "a556d266-f7b1-4eae-9252-c424a0086a3a",
-			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/a556d266-f7b1-4eae-9252-c424a0086a3a.jsonl",
-			"updatedAt": "2026-07-26T16:06:06.730Z",
+		"cd3163b8-486f-4867-9b0a-d975a39701d1": {
+			"sessionId": "cd3163b8-486f-4867-9b0a-d975a39701d1",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd3163b8-486f-4867-9b0a-d975a39701d1.jsonl",
+			"updatedAt": "2026-07-31T12:51:49.125Z",
 			"source": "claude"
 		},
-		"84108429-d686-47d6-931b-dbde5a208ae2": {
-			"sessionId": "84108429-d686-47d6-931b-dbde5a208ae2",
-			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/84108429-d686-47d6-931b-dbde5a208ae2.jsonl",
-			"updatedAt": "2026-07-27T00:24:01.019Z",
-			"source": "claude"
-		},
-		"b27609ad-cef8-4c86-b643-f1837273835f": {
-			"sessionId": "b27609ad-cef8-4c86-b643-f1837273835f",
-			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/b27609ad-cef8-4c86-b643-f1837273835f.jsonl",
-			"updatedAt": "2026-07-27T03:40:03.329Z",
-			"source": "claude"
-		},
-		"cd0daf26-041f-4d32-bf57-3b857eaa6d4d": {
-			"sessionId": "cd0daf26-041f-4d32-bf57-3b857eaa6d4d",
-			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd0daf26-041f-4d32-bf57-3b857eaa6d4d.jsonl",
-			"updatedAt": "2026-07-27T13:06:35.856Z",
+		"14ddc642-4465-4b67-8d70-e9567e226aec": {
+			"sessionId": "14ddc642-4465-4b67-8d70-e9567e226aec",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/14ddc642-4465-4b67-8d70-e9567e226aec.jsonl",
+			"updatedAt": "2026-08-01T13:06:44.917Z",
 			"source": "claude"
 		}
 	}

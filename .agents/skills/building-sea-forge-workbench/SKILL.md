@@ -117,8 +117,8 @@ failure/recovery handling → tests → visual fidelity + a11y → repository ch
 → evidence report.
 
 Definition of done for every slice: the settlement is demonstrable, its tests
-fail when the behavior is broken, `devbox run -- just check` and
-`devbox run -- just test` stay green, and no invariant in
+fail when the behavior is broken, `just check` and `just test` stay green, and
+no invariant in
 `reference/implementation-workflow.md` §Invariants is weakened.
 
 ## API grounding workflow
@@ -178,12 +178,11 @@ approval/settlement behavior. Generative UI resolves only to the registered
 After every change set:
 
 ```sh
-cargo fmt --all -- --check          # Rust touched?
-devbox run -- just check            # workspace gate
-devbox run -- just test             # workspace tests
-bun run check                       # frontend lint+types (once workspace exists)
-bun test / bun run test:unit        # frontend tests (once workspace exists)
-python3 .agents/skills/building-sea-forge-workbench/scripts/validate-skill.py  # when editing this skill
+just fmt-check                      # Rust formatting, if Rust changed
+just check                          # kernel quality gate
+just test                           # kernel tests
+just workbench-check                # frontend + host gates
+just workbench-skill-check          # when editing this skill
 ```
 
 Never claim a skipped platform test passed; report it skipped with the reason.

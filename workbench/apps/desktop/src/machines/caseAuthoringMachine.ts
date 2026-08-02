@@ -94,26 +94,51 @@ function requestId(): string {
   return `req-case-commit-${Math.random().toString(36).slice(2)}-${Date.now()}`;
 }
 
+/**
+ * Whether an error response certifies that nothing was mutated.
+ *
+ * Every refusal the server makes *before* dispatch carries `no_side_effect`.
+ * The 10s `request_timeout` deliberately does not: `dispatch_bounded` stops
+ * waiting for the work, it does not cancel it, so the commit may still land
+ * after the reply. Keying on the absence of the flag rather than on any
+ * particular `error_class` means a server error added later that forgets to
+ * certify itself is treated as ambiguous — the safe side — by default.
+ */
+function provesNoSideEffect(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { no_side_effect?: unknown }).no_side_effect === true
+  );
+}
+
+function errorText(value: unknown): string {
+  return typeof value === "object" && value !== null && "error" in value
+    ? String((value as { error: unknown }).error)
+    : "commit failed";
+}
+
+/** The commit actor is handed its id; it never mints one. An id that only
+ * exists inside the promise dies with the promise, and `ambiguous` has nothing
+ * left to ask `request.get_status` about. */
 const commitActor = fromPromise<
-  { requestId: string; response: CommitSuccess | RejectedAsStale | { error: string } },
-  { draft: CaseDraft; precondition?: RecordDigest }
+  CommitSuccess | RejectedAsStale | { error: string },
+  { draft: CaseDraft; requestId: string; precondition?: RecordDigest }
 >(async ({ input }) => {
-  const id = requestId();
-  const response = await invoke<CommitSuccess | RejectedAsStale | { error: string }>(
+  return await invoke<CommitSuccess | RejectedAsStale | { error: string }>(
     "sfwp_command",
     {
       command: {
         verb: "case_commit",
         template_ref: input.draft.templateRef,
         params: input.draft.params,
-        request_id: id,
+        request_id: input.requestId,
         ...(input.precondition
           ? { preconditions: { records: [input.precondition] } }
           : {}),
       },
     },
   );
-  return { requestId: id, response };
 });
 
 const statusRecoveryActor = fromPromise<
@@ -181,46 +206,60 @@ export const caseAuthoringMachine = setup({
       },
     },
     committing: {
+      // Minted on entry, so the id is machine state before the actor exists and
+      // survives the actor's rejection. A fresh one per attempt is safe because
+      // both routes back into this state have ruled out a pending mutation:
+      // `validating` re-runs preflight and pins a new digest, and `preflight_ok`
+      // is now only reachable from a refusal that certified no side effect. The
+      // ambiguous routes deliberately have no COMMIT at all.
+      entry: assign({ requestId: () => requestId() }),
       invoke: {
         src: "commitActor",
         input: ({ context }) => ({
           draft: context.draft,
+          requestId: context.requestId ?? "",
           precondition: context.preflight?.precondition ?? undefined,
         }),
         onDone: [
           {
-            guard: ({ event }) => isCommitSuccess(event.output.response),
+            guard: ({ event }) => isCommitSuccess(event.output),
             target: "committed",
             actions: assign({
-              requestId: ({ event }) => event.output.requestId,
-              commitResult: ({ event }) => event.output.response as CommitSuccess,
+              commitResult: ({ event }) => event.output as CommitSuccess,
             }),
           },
           {
-            guard: ({ event }) => isRejectedAsStale(event.output.response),
+            guard: ({ event }) => isRejectedAsStale(event.output),
             target: "rejected_as_stale",
             actions: assign({
-              requestId: ({ event }) => event.output.requestId,
-              rejection: ({ event }) => event.output.response as RejectedAsStale,
+              rejection: ({ event }) => event.output as RejectedAsStale,
             }),
           },
           {
-            // A definitive (non-transport) error response — the roundtrip
-            // completed, so this is not "ambiguous"; go back to preflight_ok
-            // so the operator can inspect and retry deliberately.
+            // A refusal that certified it changed nothing. Only here is it
+            // safe to go back to preflight_ok, where COMMIT mints a new id:
+            // nothing was written under the old one.
+            guard: ({ event }) => provesNoSideEffect(event.output),
             target: "preflight_ok",
             actions: assign({
-              requestId: ({ event }) => event.output.requestId,
-              transportError: ({ event }) =>
-                "error" in event.output.response
-                  ? String(event.output.response.error)
-                  : "commit failed",
+              transportError: ({ event }) => errorText(event.output),
+            }),
+          },
+          {
+            // An error the server did not certify as effect-free — above all
+            // `request_timeout`, whose work explicitly keeps running. Getting
+            // a reply is not the same as knowing the outcome, so this is the
+            // same ambiguity as no reply at all and recovers the same way.
+            target: "ambiguous",
+            actions: assign({
+              transportError: ({ event }) => errorText(event.output),
             }),
           },
         ],
         // The invoke() promise itself rejected (no response at all) — a real
         // transport ambiguity: the client cannot know whether the case was
-        // created. Recovery is `request.get_status`, never a resubmit.
+        // created. Recovery is `request.get_status` on the id context still
+        // holds, never a resubmit.
         onError: {
           target: "ambiguous",
           actions: assign({

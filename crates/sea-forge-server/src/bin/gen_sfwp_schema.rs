@@ -2,9 +2,9 @@
 //!
 //! Emits one `<TypeName>.schema.json` per SFWP-layer contract type into
 //! `workbench/packages/contracts/schema/`. This is the Rust-authored
-//! intermediate the follow-up TS task's `bun run generate:contracts` consumes.
-//! Running `cargo run -p sea-forge-server --bin gen_sfwp_schema` regenerates
-//! these deterministically; a drift test fails if a contract type changes
+//! intermediate the follow-up TypeScript generator consumes. Running
+//! `just workbench-contracts-generate` regenerates these deterministically; a
+//! drift test fails if a contract type changes
 //! without regeneration.
 
 use schemars::schema_for;

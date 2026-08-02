@@ -58,6 +58,11 @@ lint:
 typecheck:
     cargo check --workspace --all-targets --locked
 
+# Type-check one workspace crate. Example: `just crate-check sea-forge-core`.
+[group('quality')]
+crate-check crate:
+    cargo check -p "{{crate}}" --locked
+
 # Supply-chain + secret scan: cargo-deny then gitleaks.
 # `cargo deny check advisories` fetches the RustSec database; the other
 # categories are offline. gitleaks scans staged + committed history.
@@ -107,6 +112,12 @@ context-check:
 [group('quality')]
 test:
     cargo test --workspace --all-features --locked
+
+# Test one workspace crate, optionally filtering by test name.
+# Example: `just crate-test sea-forge-core authority`.
+[group('quality')]
+crate-test crate test_filter='':
+    cargo test -p "{{crate}}" --locked "{{test_filter}}"
 
 # Dependency-boundary gate (spec-full §6.1, spec-agent-orchestration G1/T12.5).
 # Kernel crates MUST stay synchronous: no async runtime and no HTTP client.
@@ -182,6 +193,19 @@ workbench-sidecar profile='debug':
     # package, and a dangling link would ship a broken sidecar.
     cp -f "$built" "$dest"
     echo "[sidecar] staged {{profile}} sea-forge-server -> $dest"
+
+# Launch the Tauri desktop application with a debug sidecar.
+[group('workbench')]
+workbench-tauri-dev: (workbench-sidecar 'debug')
+    #!/usr/bin/env bash
+    {{set}}
+    cd workbench && bun install --frozen-lockfile
+    cd apps/desktop && bun run tauri dev
+
+# Build the standalone Tauri host crate without packaging the Workbench.
+[group('workbench')]
+workbench-host-build:
+    cargo build --locked --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
 
 # Build the installable Linux packages (SF-012).
 #
@@ -315,6 +339,19 @@ workbench-tauri-test: (workbench-sidecar 'debug')
     cargo test --locked --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
     cargo fmt --check --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
 
+# Regenerate Rust schemas and their TypeScript/AJV projections.
+[group('quality')]
+workbench-contracts-generate:
+    #!/usr/bin/env bash
+    {{set}}
+    cargo run --locked -p sea-forge-server --bin gen_sfwp_schema
+    cd workbench && bun install --frozen-lockfile && bun run generate:contracts
+
+# Validate the repository-local Workbench skill after editing it.
+[group('quality')]
+workbench-skill-check:
+    python3 .agents/skills/building-sea-forge-workbench/scripts/validate-skill.py
+
 # Generated-zone drift gate (ADR-005, GEN-01, API-01, ADR-004).
 #
 # Rust types are canonical; the TS interfaces, AJV validators, and UI token
@@ -336,7 +373,7 @@ workbench-contracts-gate:
     # SFWP type shows up untracked, not modified. Both checks are needed.
     if ! git diff --exit-code -- packages/contracts/generated; then
         echo "fail: generated TS/AJV contracts drifted from the committed schemas." >&2
-        echo "      run 'bun run generate:contracts' in workbench/ and commit the result." >&2
+        echo "      run 'just workbench-contracts-generate' and commit the result." >&2
         exit 1
     fi
     untracked="$(git status --porcelain --untracked-files=all -- packages/contracts/generated)"
@@ -346,8 +383,8 @@ workbench-contracts-gate:
         exit 1
     fi
     # The token sheet is a byte copy of the spec source, not a transform.
-    # Invoked through bun rather than the `check-drift` npm script because
-    # devbox pins no node toolchain for this repo.
+    # The contracts gate invokes the token drift script directly because the
+    # repository pins no separate Node toolchain.
     bun packages/sea-forge-ui-tokens/scripts/check-drift.mjs
     # ADR-004: src-tauri is its own Cargo workspace root. If its `[workspace]`
     # table were removed, cargo would walk up and adopt the repository root,

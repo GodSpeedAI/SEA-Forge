@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-07-27
+Updated: 2026-08-02
 
 > **2026-07-27 rebase recovery complete.** `main` now contains the previously
 > local full-spec/workbench history rebased onto `origin/main` (110 commits
@@ -771,6 +771,11 @@ Updated: 2026-07-27
 
 ## Objective
 
+Current documentation task: make `just` the agent-facing command-line interface.
+All active agent-facing guides and diagnostics must name only `just` commands;
+Devbox, Cargo, and Bun remain recipe implementations. Add generic crate-scoped
+check/test and missing Workbench recipes rather than exposing a second CLI.
+
 Close out `.agents/plans/2026-07-22-spec-audit-remediation.md` with fresh,
 portable cumulative conformance evidence and claim tables that preserve
 platform/real-host skips. M9–M11 + CEP-0008 adapter complete. M12 (Task 4)
@@ -1247,6 +1252,10 @@ remain synchronous).
 
 ## Worktree State
 
+The worktree contained unrelated user changes before the `AGENTS.md` refactor;
+they remain untouched. The pre-existing uncommitted additions to `AGENTS.md`
+were consolidated rather than discarded.
+
 On 2026-07-24, `full-spec` was merged into `main` as `74dc8ab` after a
 fast-forward update from `origin/main`. The integrated tree passed
 `devbox run -- just ci`; publication is pending the pre-push context gate after
@@ -1282,6 +1291,15 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 289 tests). Remaining open debt: SodRule transition_kind scoping (.agents/OBSERVED_DEBT.md).
 
 ## Changed Files
+
+- `AGENTS.md` — command-first root guide using only `just` commands; Workbench
+  detail remains delegated to the existing nested guide.
+- `justfile` — adds generic `crate-check` and `crate-test` fast-feedback recipes.
+- `workbench/AGENTS.md` and `.agents/skills/building-sea-forge-workbench/SKILL.md`
+  — route Workbench development and validation through `just`.
+- `crates/sea-forge-server/src/bin/gen_sfwp_schema.rs` and its conformance-test
+  diagnostics — point schema regeneration to `just workbench-contracts-generate`.
+- `.agents/CURRENT_STATUS.md` — records this documentation-only handoff.
 
 - Merge handoff: this status refresh records the `main` integration and the
   current source reference in
@@ -1391,6 +1409,17 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Completed
 
+- Reconciled the root agent guide with the current `justfile`; removed stale
+  implementation-status claims, circular Copilot precedence, repeated guidance,
+  obsolete async-boundary wording, and direct Devbox/Cargo commands. Retained
+  the user's design, naming, semantic-density, encapsulation, and layer-boundary
+  rules in condensed form.
+- Added `just crate-check <crate>` and `just crate-test <crate> [filter]` so
+  focused Rust feedback stays behind the repository command surface.
+- Added `just workbench-tauri-dev`, `just workbench-host-build`, and
+  `just workbench-contracts-generate`, plus `just workbench-skill-check`, to
+  close the nested Workbench guide's direct-command gaps.
+
 - Audited all four `spec-*.md` documents against source and executable tests; the report identifies conformance blockers in every specification and does not use documentation as evidence.
 
 - Copied the authoritative CEP-0008 Semantic Envelope specification into the
@@ -1438,6 +1467,20 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   quarantining incomplete tails. CLI `ledger verify|prove` subcommands added.
 
 ## Verification
+
+- `git diff --check` for the command-surface paths: passed.
+- `just --show` for `crate-check`, `crate-test`, `workbench-tauri-dev`,
+  `workbench-host-build`, `workbench-contracts-generate`, and
+  `workbench-skill-check`: parsed as expected.
+- `just crate-check sea-forge-core`: passed (Cargo emitted pre-existing
+  `license`/`license-file` manifest warnings).
+- `just crate-test sea-forge-core ids`: passed (1 selected test passed).
+- `just check-fast`: passed (same pre-existing manifest warnings).
+- `just workbench-skill-check`: passed.
+- Contract regeneration and package/desktop-launch recipes were not run because
+  regeneration mutates a user-modified generated zone and the latter recipes
+  are outside this command-surface change.
+- No build or product tests run: only Markdown agent instructions changed.
 
 - 2026-07-22 audit: `devbox run -- just check` passed; focused conformance suites and `just proof` passed as recorded in `.agents/reports/2026-07-22-spec-implementation-audit.md`.
 - 2026-07-22 audit: `devbox run -- just test` failed twice with a suite-context `SIGSEGV` before `sea-forge-cli` main-unit test output. Its isolated binary test passed (5 tests); the fault remains unresolved.
@@ -1687,6 +1730,8 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Remaining
 
+- No remaining work for the Just command-surface refactor.
+
 - Run the ignored real ACP release gate when
   `SEA_FORGE_REAL_ACP_ARGV` (and any required `SEA_FORGE_REAL_ACP_ENV`) is
   supplied by an operator.
@@ -1775,6 +1820,8 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   `devbox run -- just test` passed after ledger-verification hardening.
 
 ## Blockers
+
+- No blockers for the Just command-surface refactor.
 
 - **Task 0.2 (M9 contract delta) — awaiting owner approval.** Seven additive
   changes; the only one with a real compatibility tradeoff is the closed
@@ -1954,6 +2001,12 @@ Remaining M12 gaps (before cumulative gate):
 - Spec §5 claim table update + cumulative gate + this status refresh.
 
 ## Decisions
+
+- Keep the root guide at approximately 150 lines, expose only `just` commands,
+  and route Workbench-specific commands and generated-zone detail through
+  `workbench/AGENTS.md`.
+- Treat `justfile` as the canonical recipe implementation. Document aggregate
+  gate coverage and exclusions instead of copying recipe bodies into the guide.
 
 - Pipeline moved to `sea-forge-cli` (not kept in `sea-forge-core`) because keeping
   it in core would create a circular dependency once authority/runtime/sandbox

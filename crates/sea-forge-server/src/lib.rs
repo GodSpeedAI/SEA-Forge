@@ -1217,6 +1217,81 @@ async fn dispatch_bounded(
             }
         }
     }
+    // SF-006. Dedupe sits beside the identity gate, above `tokio::spawn`, for
+    // the same reason the gate does: a replayed request that reaches a handler
+    // has already had its effect, and there is no undoing it afterwards.
+    if let Some((request_id, verb, hash)) = dedupe_key(&request, raw_line) {
+        match state.correlation.check(&request_id, &hash) {
+            Ok(crate::sfwp::correlation::DedupeVerdict::Replay(outcome)) => {
+                tracing::info!(
+                    request_id,
+                    "duplicate request replayed from correlation store"
+                );
+                return outcome;
+            }
+            Ok(crate::sfwp::correlation::DedupeVerdict::Reused) => {
+                tracing::warn!(
+                    request_id,
+                    "request refused: id already bound to another payload"
+                );
+                return serde_json::json!({
+                    "error": format!(
+                        "request_id `{request_id}` was already used for a different operation \
+                         or payload; issue a new id rather than re-using this one"
+                    ),
+                    "error_class": "request_id_reused",
+                    "no_side_effect": true,
+                });
+            }
+            Ok(crate::sfwp::correlation::DedupeVerdict::Proceed) => {
+                // Bind the id to this payload before the work starts, so a
+                // retry that arrives mid-flight is measured against it.
+                //
+                // Refused if the write fails, on the same principle as the
+                // unreadable case below and for a sharper reason: this write
+                // is the *only* thing that makes the next attempt recognisable
+                // as a duplicate. Logging and proceeding would run the mutation
+                // with no record that it happened, which is exactly the state
+                // a full disk turns into two cases from one id.
+                if let Err(error) =
+                    state
+                        .correlation
+                        .record_pending(&request_id, &verb, Some(&hash))
+                {
+                    tracing::warn!(
+                        request_id,
+                        "request refused: correlation unwritable: {error}"
+                    );
+                    return serde_json::json!({
+                        "error": format!(
+                            "the correlation record for `{request_id}` could not be written, so \
+                             this request cannot be made idempotent: {error}"
+                        ),
+                        "error_class": "idempotency_unverifiable",
+                        "no_side_effect": true,
+                    });
+                }
+            }
+            // An unreadable store cannot prove this is not a replay, and
+            // exactly-once is the property that must not be assumed. Refused
+            // for the same reason an unreadable ledger refuses an approval.
+            Err(error) => {
+                tracing::warn!(
+                    request_id,
+                    "request refused: correlation unreadable: {error}"
+                );
+                return serde_json::json!({
+                    "error": format!(
+                        "the correlation record for `{request_id}` could not be read, so this \
+                         request cannot be shown to be a first attempt: {error}"
+                    ),
+                    "error_class": "idempotency_unverifiable",
+                    "no_side_effect": true,
+                });
+            }
+        }
+    }
+
     let state = Arc::clone(state);
     bounded(
         async move { handle_request_as(request, &state, verified_actor.as_deref()).await },
@@ -1224,6 +1299,36 @@ async fn dispatch_bounded(
         raw_line,
     )
     .await
+}
+
+/// The `(request_id, payload_hash)` a protected request dedupes on, or `None`
+/// when this request is not eligible (unprotected, or carries no id).
+///
+/// Read off the raw line rather than matched per variant, for the reason
+/// `request_entity` gives: `request_id` is optional on many protected verbs and
+/// a per-variant match would silently skip any verb added later. Eligibility
+/// reuses `is_protected` — the one exhaustive match — so the set of deduped
+/// verbs cannot drift from the set of governed ones.
+fn dedupe_key(request: &Request, raw_line: &str) -> Option<(String, String, String)> {
+    if !crate::identity::is_protected(request) {
+        return None;
+    }
+    let mut value: serde_json::Value = serde_json::from_str(raw_line).ok()?;
+    let object = value.as_object_mut()?;
+    // Removed before hashing: the id is the key, not part of what it keys.
+    // Everything else stays in, `verb` included — so a reused id pointed at a
+    // different operation is caught by the payload comparison alone.
+    let request_id = object.remove("request_id")?.as_str()?.to_owned();
+    if request_id.is_empty() {
+        return None;
+    }
+    let verb = object
+        .get("verb")
+        .and_then(|verb| verb.as_str())
+        .unwrap_or("unknown")
+        .to_owned();
+    let hash = crate::sfwp::correlation::payload_hash(&value);
+    Some((request_id, verb, hash))
 }
 
 /// The `entity` a request attributes its work to, read off the raw line.
@@ -1997,9 +2102,13 @@ fn case_view_response<T: serde::Serialize>(
 /// Record a correlated request as `pending` before its work begins. No-op if
 /// the client did not supply a `request_id`. Correlation-store failures are
 /// logged, never fatal to the request.
+///
+/// Passes no payload hash: the dispatch guard upstream has already bound the
+/// id to one, and the store carries it forward rather than letting this second
+/// write erase it.
 fn record_pending(state: &Arc<ServerState>, request_id: Option<&str>, method: &str) {
     if let Some(id) = request_id {
-        if let Err(error) = state.correlation.record_pending(id, method) {
+        if let Err(error) = state.correlation.record_pending(id, method, None) {
             tracing::warn!("correlation record_pending failed: {error}");
         }
     }

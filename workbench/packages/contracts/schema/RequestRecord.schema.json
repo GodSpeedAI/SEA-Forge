@@ -16,6 +16,13 @@
     "outcome": {
       "description": "The original response value once the request reached a terminal state."
     },
+    "payload_hash": {
+      "description": "Hash of the request payload this id was first used for (SF-006).\nAdditive and optional: records written before SF-006 have none, and a\nrecord without one is not dedupeable (see [`RequestCorrelationStore::check`]).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "request_id": {
       "type": "string"
     },

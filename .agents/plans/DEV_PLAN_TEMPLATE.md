@@ -5,8 +5,9 @@
 <!--   [PLACEHOLDER: x] = fill-in specific to this plan; delete the brackets when done   -->
 <!--   <!-- … -->       = authoring guidance; DELETE these comments in the final plan     -->
 <!--   ⟨optional⟩       = include only if relevant; otherwise remove the whole line/block -->
-<!-- Golden rule this template enforces: every task PROVES or CHANGES something with a    -->
-<!-- copy-pasteable verification gate that exits 0. No task is "done" on assertion alone. -->
+<!-- Golden rule: observable gates derive progress. Checkboxes, prose, file presence, and  -->
+<!-- prior claims never establish completion. Every task has a copy-pasteable gate and a   -->
+<!-- teeth check; the first failing gate selects the next work.                             -->
 <!-- ============================================================= -->
 
 # Implementation Plan — {{PLAN_TITLE}}
@@ -22,11 +23,22 @@
 
 <!-- This section is what lets a COLD agent execute without re-deriving context. Keep it. -->
 
-- Execute tasks in the order given. Dependencies: [PLACEHOLDER: e.g. "Task 1→2 dependent (2 reuses X); Tasks 3,4 independent"].
-- **Every task ends with a verification gate.** Do not mark a task done until its gate command exits 0.
+- Execute tasks in the order given. Dependencies: [PLACEHOLDER: e.g. "Task 1→2 dependent (2 reuses X); Tasks 3,4 independent"]. Select the first dependency-ready task whose gate does not currently pass.
+- **Every task ends with a verification gate.** Task state is derived by running that gate, never by editing a checkbox or trusting a prior report.
 - **{{CORE_PRINCIPLE}}** <!-- the single rule that keeps the work coherent. e.g. "One engine, one producer — never re-implement output in a wrapper/test; extract a shared function." Make it specific to THIS codebase. -->
 - Match surrounding code style; locate the relevant idioms here: [PLACEHOLDER: dirs/files that show the pattern to mirror].
 - [PLACEHOLDER: any source-of-truth-is-X rule, e.g. "the corpus/fixtures are the spec — change expected files deliberately, in the same commit as the code that justifies them."]
+
+### Completion state model
+
+<!-- Keep these states. They prevent a long-running or Ralph-loop agent from turning a stale plan marker into truth. -->
+
+- `UNVERIFIED`: no current gate result exists for the present tree. This is the default, even when implementation files exist.
+- `FAILING`: the gate ran and returned nonzero or its required observable/teeth evidence is absent. This task is eligible work when its dependencies pass.
+- `PASSING`: the full gate exits 0 on the current tree and the named teeth check is known to fail under the prohibited mutation. Record the command, revision/tree state, and result in the handoff.
+- `BLOCKED`: the gate cannot run because of a specific external input, authority, or environment constraint. Record the exact blocker and the command that will resume verification. Difficulty or incomplete code is `FAILING`, not `BLOCKED`.
+
+Recompute state after relevant upstream changes. A previously passing task returns to `UNVERIFIED` when its evidence is stale. Decorative task lists may summarize these derived states, but they never control them.
 
 ### Dependency graph
 
@@ -124,14 +136,17 @@ Tasks 1-18 (including lettered tasks) ─ Task 19 final conformance and handoff
 
 ---
 
-## Final acceptance checklist (whole plan)
-<!-- One checkbox per task's "Done when", plus the cross-cutting ones. The reviewer reads only this. -->
-- [ ] [PLACEHOLDER: Task 1 outcome, with its teeth-check] *(Task 1)*
-- [ ] [PLACEHOLDER: Task 2 outcome] *(Task 2)*
-- [ ] [PLACEHOLDER: Task N outcome] *(Task N)*
-- [ ] {{GATE_LINT}} exits 0.
-- [ ] [PLACEHOLDER: docs/{{DOC}} reflects reality — no status ahead of a passing test.]
-- [ ] All global gates green; {{ARTIFACT}} rebuilt.
+## Final acceptance gates (whole plan)
+<!-- This is a gate set, not a checklist. Progress is the live result of these commands and observations. -->
+
+- **Task 1 gate:** [PLACEHOLDER: command + required observable/teeth result].
+- **Task 2 gate:** [PLACEHOLDER: command + required observable/teeth result].
+- **Task N gate:** [PLACEHOLDER: command + required observable/teeth result].
+- **Cross-cutting gate:** `{{GATE_LINT}}` exits 0.
+- **Truthfulness gate:** [PLACEHOLDER: docs/{{DOC}} reflects passing evidence; no status is ahead of a gate].
+- **Terminal gate:** all global gates exit 0 on the same tree and `{{ARTIFACT}}` is reproducibly rebuilt.
+
+The plan is complete only when every gate above is `PASSING` on the same relevant tree. A summary marker cannot override a failing, blocked, missing, or stale result.
 
 ## Guardrails (do not violate)
 <!-- Pulled from the source-of-truth doc. These stop an eager agent from scope-creeping the system wider. -->
@@ -141,11 +156,12 @@ Tasks 1-18 (including lettered tasks) ─ Task 19 final conformance and handoff
 
 <!-- ============================================================= -->
 <!-- AUTHORING CHECKLIST (delete before saving the real plan):     -->
-<!--  [ ] Every task has a Gate that exits 0 and a teeth-check.     -->
-<!--  [ ] Every file reference is file:line, not vibes.            -->
-<!--  [ ] Dependencies between tasks stated; independent ones flagged. -->
-<!--  [ ] Dependency graph updated to reflect task ordering & prerequisites. -->
-<!--  [ ] CORE_PRINCIPLE + Guardrails come from the source doc, quoted. -->
-<!--  [ ] Pre-existing/unrelated work is isolated, not smuggled in.  -->
-<!--  [ ] A cold agent could start at Task 1 with zero prior context. -->
+<!--  - Every task has a Gate that exits 0 and a teeth-check.        -->
+<!--  - Gate results, not task markers, derive progress.             -->
+<!--  - Every file reference is file:line, not vibes.                -->
+<!--  - Dependencies between tasks stated; independent ones flagged. -->
+<!--  - Dependency graph updated to reflect task ordering & prerequisites. -->
+<!--  - CORE_PRINCIPLE + Guardrails come from the source doc, quoted. -->
+<!--  - Pre-existing/unrelated work is isolated, not smuggled in.     -->
+<!--  - A cold agent could start at Task 1 with zero prior context.    -->
 <!-- ============================================================= -->

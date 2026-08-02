@@ -7,30 +7,26 @@ separate Cargo workspace from the repository root — see
 `docs/decisions/ADR-004-workbench-stack.md` for why, and the root `AGENTS.md`
 for the kernel this frontend is a client of.
 
-For any Workbench task, load `.claude/skills/building-sea-forge-workbench/SKILL.md`
-first; this file only covers local commands and boundaries.
+For any Workbench task, load `.agents/skills/building-sea-forge-workbench/SKILL.md`
+first. Use `just` from the repository root; it is the only command interface
+agents should invoke.
 
 ## Commands
 
 ```sh
-# From the repository root
-just workbench-check          # install (frozen) + check + build + test
-
-# From workbench/
-bun install
-bun run dev                   # renderer only (Vite), no desktop window
-bun run check                 # tsc --noEmit + oxlint
-bun run build                 # tsc -b + vite build
-bun run test                  # vitest run
-
-# From workbench/apps/desktop
-bun run tauri dev             # launches the desktop window
-bun run tauri build           # packaged bundle (Task 14)
-cargo build --manifest-path src-tauri/Cargo.toml   # host crate only
+just workbench-check              # frozen install + renderer + host gates
+just workbench-dev-up             # renderer-only Vite server
+just workbench-dev-down
+just workbench-tauri-dev          # desktop window with debug sidecar
+just workbench-host-build         # standalone Tauri host crate
+just workbench-tauri-test         # host lint, tests, and formatting
+just workbench-contracts-generate # regenerate Rust schemas and TS/AJV projections
+just workbench-contracts-gate     # verify generated-zone and boundary drift
+just workbench-package            # release sidecar + packaged desktop bundle
 ```
 
-The kernel gates (`devbox run -- just check`, `just test`) never need Bun and
-must stay green regardless of anything in this directory.
+The kernel gates (`just check`, `just test`) never need Bun and must stay green
+regardless of anything in this directory.
 
 ## Boundaries
 
@@ -53,11 +49,10 @@ must stay green regardless of anything in this directory.
 ## Generated-zone rules
 
 - `packages/contracts/schema/*.schema.json` (from Task 3 on): JSON Schema
-  emitted by `cargo run -p sea-forge-server --bin gen_sfwp_schema` from the
-  types listed in `crates/sea-forge-server/src/sfwp/mod.rs`'s `SCHEMA_TYPES`.
-  Never hand-edit; regenerate on the Rust side, not here.
+  emitted from the types listed in `crates/sea-forge-server/src/sfwp/mod.rs`'s
+  `SCHEMA_TYPES`. Never hand-edit; run `just workbench-contracts-generate`.
 - `packages/contracts/generated/` (from Task 3 on): `@sea-forge/contracts`,
-  built from `packages/contracts/schema/` by `bun run generate:contracts`
+  built from `packages/contracts/schema/` by `just workbench-contracts-generate`
   (`packages/contracts/scripts/generate.ts`, using `json-schema-to-typescript`
   + `ajv` — see `docs/decisions/ADR-005-sfwp-schema-generation.md`). One
   `<Name>.ts` type and one `<Name>.validator.ts` AJV validator per schema,
@@ -65,13 +60,12 @@ must stay green regardless of anything in this directory.
   `crates/sea-forge-server/tests/conformance_sfwp.rs`'s
   `generated_schemas_are_committed_and_current` test fails the Rust gate if a
   contract type changes without regenerating the schema; the plan's Task 3
-  gate (`bun run generate:contracts && git diff --exit-code
-  packages/contracts/generated`) fails the frontend gate the same way on the
-  TS side.
+  gate (`just workbench-contracts-gate`) fails the frontend gate the same way
+  on the TS side.
 - `packages/sea-forge-ui-tokens/sea-forge.tokens.css` is a byte-for-byte
   copy-projection of `.agents/specs/frontend/colors_and_type.css`. Never
-  hand-edit it directly — edit the spec source and re-copy; `bun run
-  check-drift` (in that package) fails if they diverge.
+  hand-edit it directly — edit the spec source and re-copy; the contracts gate
+  fails if they diverge.
 - `apps/desktop/src-tauri/target/`, `apps/desktop/dist/`, and `node_modules/`
   are build output — see `.gitignore`, never commit.
 

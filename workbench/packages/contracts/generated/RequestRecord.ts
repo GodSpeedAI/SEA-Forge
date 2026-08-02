@@ -18,6 +18,12 @@ export interface RequestRecord {
   outcome?: {
     [k: string]: unknown;
   };
+  /**
+   * Hash of the request payload this id was first used for (SF-006).
+   * Additive and optional: records written before SF-006 have none, and a
+   * record without one is not dedupeable (see [`RequestCorrelationStore::check`]).
+   */
+  payload_hash?: string | null;
   request_id: string;
   status: RequestStatus;
   submitted_at: string;
