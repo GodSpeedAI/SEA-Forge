@@ -64,6 +64,22 @@ For Workbench work, follow `workbench/AGENTS.md`. Useful root recipes include
 `workbench-storybook-up`/`-down`. Packaging and inventory apply only to release
 or packaging tasks.
 
+For frontend development and evidence, use the recipes for their declared
+scope:
+
+```sh
+just workbench-dev-up                 # Vite renderer at http://localhost:1420
+just workbench-dev-down               # stop that Vite server
+just workbench-e2e-agent-browser      # renderer + accessibility; no Tauri IPC mock
+just workbench-e2e-real [filter]      # packaged Tauri/WebKit + real server/SFWP
+```
+
+The Vite development server has no native Tauri bridge and must therefore show
+the fail-closed unavailable state for governed data. The installed Playwright
+suite remains mocked speed evidence only; do not use it for an integrated
+Tauri/server claim. `workbench-e2e-real` requires the documented Linux native
+driver prerequisites and packages the application itself.
+
 Do not run destructive, publishing, or external-write recipes without approval:
 `just pr` pushes and opens a pull request, and `publish-bootstrap` publishes a
 crate. `clean` deletes build output. Use `secrets-*` only for an explicitly

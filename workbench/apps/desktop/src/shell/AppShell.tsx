@@ -49,7 +49,7 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
   const location = useLocation();
   // The governance context bar reads the same sources every surface does, so
   // the header can never disagree with the page under it.
-  const { identity, cellId, cellRoot, supervision } = useIdentity();
+  const { identity, cellId, cellRoot, supervision, selectActor } = useIdentity();
   const { integrityStatus } = useGuardContext();
   const approvals = useApprovals();
   const contract = useServerContract();
@@ -123,6 +123,10 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
       <GlobalHeader
         actorName={identity?.actor?.actorId}
         roleName={identity?.actor?.role}
+        availableActors={identity?.available.flatMap((actor) =>
+          actor.roles.slice(0, 1).map((role) => ({ actorId: actor.actor_id, role })),
+        )}
+        onSelectActor={selectActor}
         cellName={cellId}
         integrityStatus={integrityStatus}
         // `undefined` unless the inbox was actually read. An unread inbox, an

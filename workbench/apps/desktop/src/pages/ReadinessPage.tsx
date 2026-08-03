@@ -9,9 +9,12 @@ import {
   type GovernedStatusVariant,
   type IntegrityStatus,
 } from "@sea-forge/ui-components";
-import type { ReadinessItem, ReadinessView } from "@sea-forge/contracts";
+import type { ReadinessItem, ReadinessView, SourceRecordRef } from "@sea-forge/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useReadiness } from "../hooks/useReadiness";
+import { useIdentity } from "../hooks/useIdentity";
+import { BridgeGovernedError } from "../hooks/bridgeError";
+import { evaluateProtectedAction } from "../guards/protectedAction";
 import { useEvidenceContext } from "../shell/EvidenceContext";
 import styles from "./ReadinessPage.module.css";
 
@@ -93,23 +96,10 @@ function itemDetail(item: ReadinessItem): string {
   return item.category.replace(/_/g, " ");
 }
 
-function canCreateCase(view: ReadinessView): boolean {
-  return (
-    view.foundations.every((item) => item.status === "ready") &&
-    view.operational_capabilities.find((item) => item.id === "local_governed_execution")
-      ?.status === "ready"
-  );
-}
-
-function caseCreationReason(view: ReadinessView): string {
-  const blocker = [...view.foundations, ...view.operational_capabilities].find(
-    (item) => item.status !== "ready",
-  );
-  return blocker?.reason || "Readiness conditions are not met";
-}
-
 export function ReadinessPage() {
   const navigate = useNavigate();
+  const { identity, initializationError, initializeCell, isInitializing, supervision } =
+    useIdentity();
   const [selectedOperation, setSelectedOperation] = useState<Operation>("agent");
   const intendedOperation = useMemo(
     () => ({ method: OPERATION_METHODS[selectedOperation] }),
@@ -119,9 +109,19 @@ export function ReadinessPage() {
   const { inspectEvidence } = useEvidenceContext();
 
   const view = query.data;
+  const caseCreation = evaluateProtectedAction(identity, view, {
+    method: "case.create",
+    capabilityId: "local_governed_execution",
+    actionLabel: "case",
+  });
   const foundations = view?.foundations ?? [];
   const capabilities = view?.operational_capabilities ?? [];
   const overall = view?.overall ?? "unknown";
+  const initializationRequired = supervision?.state === "initialization_required";
+  const initializationRecovery =
+    initializationError instanceof BridgeGovernedError
+      ? initializationError.nextLawfulAction
+      : undefined;
   const limitation = [...foundations, ...capabilities].find(
     (item) => item.status !== "ready",
   );
@@ -143,20 +143,36 @@ export function ReadinessPage() {
   const readyFoundationCount = foundations.filter((item) => item.status === "ready").length;
   const foundationLimitationCount = foundations.length - readyFoundationCount;
 
-  const focusReason = view
+  const focusReason = initializationRequired
+    ? "No records have been created yet. Initialize this cell before SEA Forge starts its local server."
+    : view
     ? limitation?.reason ||
       "All projected foundations and operational capabilities are currently ready."
     : query.isFetching
       ? "Loading the source-backed readiness projection."
       : "Readiness projection unavailable. Reconnect to inspect current conditions.";
 
-  function inspectSource(sourceRef: string) {
+  function inspectSource(source: SourceRecordRef | undefined) {
+    if (!source) return;
     const evidence: EvidenceRecord = {
-      id: sourceRef,
-      kind: "readiness_source_citation",
+      id: source.entry_id,
+      kind: source.record_kind,
       disclosureStatus: "restricted",
+      rawPayload: JSON.stringify(source, null, 2),
     };
     inspectEvidence(evidence);
+  }
+
+  function inspectAllCapabilities() {
+    inspectEvidence({
+      id: "readiness.get",
+      kind: "readiness_capability_summary",
+      disclosureStatus: "permitted",
+      // This is the current validated readiness projection, not a renderer
+      // status record. The drawer identifies it as an inspection view and the
+      // server remains responsible for the source's truth and freshness.
+      rawPayload: JSON.stringify({ operational_capabilities: capabilities }, null, 2),
+    });
   }
 
   function handleWhyThisState() {
@@ -179,7 +195,7 @@ export function ReadinessPage() {
             name: f.name,
             status: f.status,
             reason: f.reason,
-            source: f.source_ref,
+            source: f.source,
           })),
         },
         null,
@@ -222,7 +238,8 @@ export function ReadinessPage() {
             <button
               className="freshness-badge"
               type="button"
-              onClick={() => inspectSource("readiness.get")}
+              disabled={!foundations[0]?.source}
+              onClick={() => inspectSource(foundations[0]?.source ?? undefined)}
             >
               Inspect source
             </button>
@@ -237,16 +254,36 @@ export function ReadinessPage() {
           >
             Why this state
           </button>
-          <button
-            className="button button--primary"
-            id="runChecksButton"
-            type="button"
-            onClick={() => void query.refetch()}
-          >
-            Run checks
-          </button>
+          {initializationRequired ? (
+            <button
+              className="button button--primary"
+              id="initializeCellButton"
+              type="button"
+              disabled={isInitializing}
+              aria-busy={isInitializing}
+              onClick={() => void initializeCell()}
+            >
+              {isInitializing ? "Initializing this cell…" : "Initialize this cell"}
+            </button>
+          ) : (
+            <button
+              className="button button--primary"
+              id="runChecksButton"
+              type="button"
+              onClick={() => void query.refetch()}
+            >
+              Run checks
+            </button>
+          )}
         </div>
       </section>
+
+      {initializationError && (
+        <p className={styles.initializationError} role="alert">
+          Cell initialization was not completed: {initializationError.message}
+          {initializationRecovery ? ` Next lawful action: ${initializationRecovery}.` : ""}
+        </p>
+      )}
 
       <div className="content-grid">
         <div className="content-primary">
@@ -333,7 +370,8 @@ export function ReadinessPage() {
                         className={styles.conditionTrigger}
                         type="button"
                         aria-label={`Inspect evidence for ${f.name}`}
-                        onClick={() => inspectSource(f.source_ref)}
+                        disabled={!f.source}
+                        onClick={() => inspectSource(f.source ?? undefined)}
                       >
                         <strong>{f.name}</strong>
                         <small>{itemDetail(f)}</small>
@@ -356,7 +394,9 @@ export function ReadinessPage() {
                     </span>
                     <span role="cell">{f.reason}</span>
                     <span role="cell" className="machine-value">
-                      {f.source_ref}
+                      {f.source
+                        ? `${f.source.record_kind} / ${f.source.entry_id}`
+                        : "No committed source available"}
                     </span>
                   </div>
                 );
@@ -370,7 +410,7 @@ export function ReadinessPage() {
                 <p className="section-kicker">Current affordances</p>
                 <h2 id="capabilities-title">Operational capabilities</h2>
               </div>
-              <button className="text-button" type="button">
+              <button className="text-button" type="button" onClick={inspectAllCapabilities}>
                 Inspect all capabilities
               </button>
             </div>
@@ -393,7 +433,8 @@ export function ReadinessPage() {
                       className="row-action"
                       type="button"
                       aria-label={`Inspect evidence for ${c.name}`}
-                      onClick={() => inspectSource(c.source_ref)}
+                      disabled={!c.source}
+                      onClick={() => inspectSource(c.source ?? undefined)}
                     >
                       {c.status === "degraded" ? "Repair path" : "Inspect"}
                     </button>
@@ -429,7 +470,8 @@ export function ReadinessPage() {
             <button
               className="button button--attention"
               type="button"
-              onClick={() => inspectSource(limitation?.source_ref ?? "readiness.get")}
+              disabled={!limitation?.source}
+              onClick={() => inspectSource(limitation?.source ?? undefined)}
             >
               Open limitation evidence
             </button>
@@ -437,17 +479,39 @@ export function ReadinessPage() {
 
           <section className="panel action-panel">
             <p className="section-kicker">Next lawful action</p>
-            <h2>Create case</h2>
-            <ProtectedActionButton
-              label="Create case"
-              onClick={() => void navigate({ to: "/cases/new" })}
-              isAllowed={view ? canCreateCase(view) : false}
-              disabledReason={
-                view ? caseCreationReason(view) : "Readiness projection unavailable"
-              }
-              variant="primary"
-              className="lawful-action"
-            />
+            {initializationRequired ? (
+              <>
+                <h2>Cell initialization required</h2>
+                <p>
+                  Case creation remains unavailable until the operator initializes this empty cell.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2>Create case</h2>
+                <ProtectedActionButton
+                  label="Create case"
+                  onClick={() => void navigate({ to: "/cases/new" })}
+                  isAllowed={caseCreation.isAllowed}
+                  disabledReason={
+                    caseCreation.refusal
+                      ? `${caseCreation.refusal.message} ${caseCreation.refusal.unchangedEffect}`
+                      : undefined
+                  }
+                  variant="primary"
+                  className="lawful-action"
+                />
+                {caseCreation.refusal && (
+                  <button
+                    className="text-button"
+                    type="button"
+                    onClick={() => void navigate({ to: caseCreation.refusal!.repairRoute })}
+                  >
+                    {caseCreation.refusal.repairLabel}
+                  </button>
+                )}
+              </>
+            )}
           </section>
 
           <section className="panel recent-panel">

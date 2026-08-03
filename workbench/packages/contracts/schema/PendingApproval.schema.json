@@ -34,6 +34,17 @@
     "expires_at": {
       "type": "string"
     },
+    "governance": {
+      "description": "Present only when this request and its escalating authority decision\nresolve to committed records in the case ledger.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ApprovalGovernanceContext"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "plan_item_id": {
       "type": "string"
     },
@@ -53,5 +64,158 @@
     "requested_at",
     "expires_at",
     "expired"
-  ]
+  ],
+  "$defs": {
+    "ApprovalGovernanceContext": {
+      "description": "The canonical governance context an approval decision must be judged\nagainst. This is a projection of the committed case ledger, not an\nexplanation composed by the renderer.",
+      "type": "object",
+      "properties": {
+        "approval_source": {
+          "$ref": "#/$defs/SourceRecordRef"
+        },
+        "boundary_constraints": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default": {}
+        },
+        "decision_source": {
+          "$ref": "#/$defs/SourceRecordRef"
+        },
+        "eligibility_standing": {
+          "type": "string"
+        },
+        "eligible_actors": {
+          "description": "The server resolves approver eligibility per connection. A list view\ncannot invent eligible actors before that identity check happens.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "matched_rule": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation_kind": {
+          "type": "string"
+        },
+        "policy_refs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "purpose_context": {
+          "description": "The declared purpose and operating context, copied verbatim from the\nauthority request that the committed decision evaluated. This remains a\nstructured value because the authority contract deliberately permits\noperation-specific purpose fields; callers must not replace it with a\nrenderer-authored summary."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "reason_codes": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "requester": {
+          "type": "string"
+        },
+        "required_next_steps": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "resource_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "side_effect_standing": {
+          "description": "An approval is pending because its side effect was not executed.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "approval_source",
+        "decision_source",
+        "reason",
+        "requester",
+        "operation_kind",
+        "purpose_context",
+        "side_effect_standing",
+        "eligible_actors",
+        "eligibility_standing"
+      ]
+    },
+    "RebuildStanding": {
+      "description": "Whether the committed source can presently be rebuilt and verified.",
+      "type": "string",
+      "enum": [
+        "verified",
+        "rebuild_required"
+      ]
+    },
+    "SourceFreshness": {
+      "description": "Freshness of the canonical record behind a projection.",
+      "type": "string",
+      "enum": [
+        "current",
+        "stale"
+      ]
+    },
+    "SourceRecordRef": {
+      "description": "A content-addressed, ledger-committed source record behind a view.\n\nThis deliberately cannot hold a source file path or code citation.  A\nrenderer may show implementation location as explanatory material, but a\nreadiness standing must resolve to a committed record and digest.",
+      "type": "object",
+      "properties": {
+        "digest": {
+          "type": "string"
+        },
+        "entry_id": {
+          "type": "string"
+        },
+        "freshness": {
+          "$ref": "#/$defs/SourceFreshness"
+        },
+        "ledger_id": {
+          "type": "string"
+        },
+        "rebuild_standing": {
+          "$ref": "#/$defs/RebuildStanding"
+        },
+        "record_id": {
+          "type": "string"
+        },
+        "record_kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ledger_id",
+        "entry_id",
+        "record_kind",
+        "record_id",
+        "digest",
+        "freshness",
+        "rebuild_standing"
+      ]
+    }
+  }
 }

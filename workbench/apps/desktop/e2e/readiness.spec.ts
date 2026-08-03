@@ -1,6 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { installTauriMock, degradedReadinessView } from "./tauriMock";
+import {
+  installTauriMock,
+  degradedReadinessView,
+  readyReadinessView,
+  unresolvedIdentity,
+} from "./tauriMock";
 
 function captureBrowserErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -217,5 +222,41 @@ test.describe("Readiness primary-path journey", () => {
       .analyze();
     expect(results.violations).toEqual([]);
     expect(browserErrors).toEqual([]);
+  });
+
+  test("unresolved identity blocks case creation and routes to the repair surface", async ({ page }) => {
+    await installTauriMock(page, degradedReadinessView(), unresolvedIdentity());
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto("/readiness");
+
+    await expect(page.getByRole("button", { name: "Create case" })).toBeDisabled();
+    await expect(page.getByTestId("disabled-reason")).toContainText("identity_unresolved");
+    await page.getByRole("button", { name: "Inspect identity bindings" }).click();
+    await expect(page).toHaveURL(/\/admin$/);
+  });
+
+  test("resolved identity can reach case creation while evidence is open", async ({ page }) => {
+    await installTauriMock(page, readyReadinessView());
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto("/readiness");
+
+    await expect(page.getByTestId("evidence-drawer")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create case" })).toBeEnabled();
+    await page.getByRole("button", { name: "Create case" }).click();
+    await expect(page).toHaveURL(/\/cases\/new$/);
+  });
+
+  test("Inspect all capabilities focuses readiness evidence while the drawer is open", async ({ page }) => {
+    const browserErrors = captureBrowserErrors(page);
+    await installTauriMock(page, degradedReadinessView());
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto("/readiness");
+
+    const drawer = page.getByTestId("evidence-drawer");
+    await expect(drawer).toBeVisible();
+    await page.getByRole("button", { name: "Inspect all capabilities" }).click();
+    await drawer.getByRole("tab", { name: "Evidence" }).click();
+    await expect(drawer).toContainText("readiness_capability_summary");
+    await expect(browserErrors).toEqual([]);
   });
 });

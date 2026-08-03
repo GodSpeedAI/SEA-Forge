@@ -13,14 +13,18 @@ import type { Page } from "@playwright/test";
 export async function installTauriMock(
   page: Page,
   readinessView: unknown,
+  identityView: unknown = resolvedIdentity(),
 ): Promise<void> {
-  await page.addInitScript((view) => {
+  await page.addInitScript(({ readiness, identity }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__TAURI_INTERNALS__ = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       invoke: (cmd: string, _args: any) => {
         if (cmd === "sfwp_query") {
-          return Promise.resolve(view);
+          return Promise.resolve(readiness);
+        }
+        if (cmd === "sfwp_identity") {
+          return Promise.resolve(identity);
         }
         if (cmd === "plugin:event|listen") {
           return Promise.resolve(1);
@@ -47,7 +51,25 @@ export async function installTauriMock(
     (window as any).__TAURI_EVENT_PLUGIN_INTERNALS__ = {
       unregisterListener: () => {},
     };
-  }, readinessView);
+  }, { readiness: readinessView, identity: identityView });
+}
+
+export function resolvedIdentity() {
+  return {
+    available: [{ actor_id: "operator_a", roles: ["operator"] }],
+    configured: true,
+  };
+}
+
+export function unresolvedIdentity() {
+  return {
+    available: [],
+    configured: false,
+    refusal: {
+      error_class: "identity_unconfigured",
+      message: "this cell configures no identity bindings",
+    },
+  };
 }
 
 /** A degraded (ready-with-limitations) readiness view for the journey. */
@@ -83,5 +105,18 @@ export function degradedReadinessView() {
       },
     ],
     recent_invalidations: [],
+  };
+}
+
+export function readyReadinessView() {
+  const view = degradedReadinessView();
+  return {
+    ...view,
+    overall: "ready",
+    operational_capabilities: view.operational_capabilities.map((capability) => ({
+      ...capability,
+      status: "ready",
+      reason: "",
+    })),
   };
 }

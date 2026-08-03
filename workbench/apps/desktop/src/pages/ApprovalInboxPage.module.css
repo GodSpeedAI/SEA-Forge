@@ -125,6 +125,21 @@
   overflow-wrap: anywhere;
 }
 
+.governance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-left: 2px solid var(--color-authority-granted, var(--fg-secondary));
+  background: var(--surface-base, transparent);
+  font-size: 12px;
+}
+
+.governance p {
+  margin: 0;
+  line-height: 1.5;
+}
+
 .noteLabel {
   color: var(--fg-secondary);
   font-size: 10px;

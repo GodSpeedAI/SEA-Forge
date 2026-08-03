@@ -552,6 +552,36 @@ async fn an_escalated_episode_opens_an_approval_and_runs_nothing() {
         "an escalation must reach the operator-visible approvals view"
     );
 
+    // The inbox projection must resolve its explanation to the same committed
+    // approval request and authority decision — no source file citation or
+    // renderer-authored reason can stand in for this chain.
+    let inbox = sea_forge_server::sfwp::approvals::list(episode.root.path(), None);
+    let context = inbox.approvals[0]
+        .governance
+        .as_ref()
+        .expect("an escalated ledger approval must project committed governance context");
+    assert_eq!(context.approval_source.record_kind, "approval_request");
+    assert_eq!(context.decision_source.record_kind, "authority_decision");
+    assert_eq!(
+        context.decision_source.record_id,
+        episode.decision()["decision_id"].as_str().unwrap()
+    );
+    assert!(context.approval_source.digest.starts_with("sha256:"));
+    assert_eq!(
+        context.side_effect_standing,
+        "not_executed_pending_approval"
+    );
+    assert_eq!(
+        context
+            .purpose_context
+            .get("plan_item_id")
+            .and_then(serde_json::Value::as_str),
+        Some("task"),
+        "purpose context must be the committed authority request, not a UI-authored summary"
+    );
+    assert!(context.eligible_actors.is_empty());
+    assert_eq!(context.eligibility_standing, "resolved_per_connection");
+
     // Pending review means nothing ran.
     for run_dir in episode.run_dirs() {
         assert!(!run_dir.join("workspace").exists());

@@ -3,8 +3,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const invokeMock = vi.fn();
+const identityMock = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invokeMock(...args),
+}));
+
+vi.mock("../hooks/useIdentity", () => ({
+  useIdentity: () => identityMock(),
+  selectedActorId: () => undefined,
 }));
 
 const navigateMock = vi.fn();
@@ -28,6 +34,13 @@ function renderWorkbench() {
 beforeEach(() => {
   invokeMock.mockReset();
   navigateMock.mockReset();
+  identityMock.mockReturnValue({
+    identity: {
+      available: [{ actor_id: "operator_a", roles: ["operator"] }],
+      actor: { actorId: "operator_a", role: "operator" },
+      configured: true,
+    },
+  });
   invokeMock.mockImplementation(async (cmd: string, args: any) => {
     if (cmd === "sfwp_query" && args.query.verb === "case_entry_options") {
       return {
@@ -87,5 +100,22 @@ describe("CaseCreationWorkbench", () => {
     expect(commitCall?.[1].command.preconditions.records).toEqual([
       { ref: "template:demo@0.1.0", expected_digest: "sha256:abc" },
     ]);
+  });
+
+  it("blocks commit with identity_unresolved even after a passing preflight", async () => {
+    identityMock.mockReturnValue({ identity: undefined });
+    renderWorkbench();
+
+    fireEvent.click(await screen.findByRole("radio", { name: /demo@0\.1\.0/i }));
+    fireEvent.change(await screen.findByLabelText(/greeting/i), { target: { value: "hello" } });
+    fireEvent.click(screen.getByRole("button", { name: /run preflight/i }));
+
+    await screen.findByText(/preflight passed/i);
+    expect(screen.getByRole("button", { name: /commit case/i })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/identity_unresolved/i);
+    expect(invokeMock).not.toHaveBeenCalledWith(
+      "sfwp_command",
+      expect.objectContaining({ command: expect.objectContaining({ verb: "case_commit" }) }),
+    );
   });
 });

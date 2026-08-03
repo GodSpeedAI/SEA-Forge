@@ -80,19 +80,25 @@
           "description": "Plain-language reason the prior determination no longer holds.",
           "type": "string"
         },
-        "source_ref": {
-          "description": "Short citation string for the invalidating change.",
-          "type": "string"
+        "source": {
+          "description": "The committed record that invalidated the prior standing, if available.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRecordRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
         "item_id",
-        "reason",
-        "source_ref"
+        "reason"
       ]
     },
     "OverallReadiness": {
-      "description": "Overall readiness verdict, derived deterministically from the worst status\namong conditions. `Stale` is a spec value this slice never derives (no cache\nlayer to determine it honestly).",
+      "description": "Overall readiness verdict, derived deterministically from the foundational\nsource standing and the worst operational condition.",
       "oneOf": [
         {
           "description": "All foundations pass and no operational capability is degraded/blocked.",
@@ -115,14 +121,19 @@
           "const": "integrity_halted"
         },
         {
-          "description": "Reserved spec value; never derived in this slice (no cache layer).",
+          "description": "A committed source remains readable but requires a rebuild before use.",
           "type": "string",
           "const": "stale"
+        },
+        {
+          "description": "No committed source record can prove the current standing.",
+          "type": "string",
+          "const": "unknown"
         }
       ]
     },
     "ReadinessItem": {
-      "description": "A single readiness condition, projected from kernel truth. Shapes the\nwireframe's `ReadinessConditionTable` row: an identity, a human label, a\ngrouping category, a status, a plain-language reason, and a short citation\n(`source_ref`) — a spec section or file, matching the kit's \"Atomic §4.4\" /\n\"DESIGN.md\" source column. `source_ref` is a citation string, **not** a\ncontent-addressed `RecordRef` digest (which this slice cannot honestly back).",
+      "description": "A single readiness condition, projected from kernel truth. Shapes the\nwireframe's `ReadinessConditionTable` row: an identity, a human label, a\ngrouping category, a status, a plain-language reason, and the committed\nsource record that proves it. A missing source is explicit and means the\nstanding is not proven; it never falls back to a code citation.",
       "type": "object",
       "properties": {
         "category": {
@@ -137,13 +148,24 @@
           "description": "Human-facing label (e.g. `\"Self-model integrity\"`).",
           "type": "string"
         },
+        "next_lawful_action": {
+          "description": "The next lawful action when this condition is not ready.",
+          "type": "string"
+        },
         "reason": {
           "description": "Plain-language reason for the status. Empty string when self-evidently ready.",
           "type": "string"
         },
-        "source_ref": {
-          "description": "Short citation string (spec section or file), not a record digest.",
-          "type": "string"
+        "source": {
+          "description": "The committed source record that proves this standing, when available.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRecordRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "status": {
           "description": "Coarse condition status.",
@@ -156,7 +178,7 @@
         "category",
         "status",
         "reason",
-        "source_ref"
+        "next_lawful_action"
       ]
     },
     "ReadinessStatus": {
@@ -182,6 +204,58 @@
           "type": "string",
           "const": "unknown"
         }
+      ]
+    },
+    "RebuildStanding": {
+      "description": "Whether the committed source can presently be rebuilt and verified.",
+      "type": "string",
+      "enum": [
+        "verified",
+        "rebuild_required"
+      ]
+    },
+    "SourceFreshness": {
+      "description": "Freshness of the canonical record behind a projection.",
+      "type": "string",
+      "enum": [
+        "current",
+        "stale"
+      ]
+    },
+    "SourceRecordRef": {
+      "description": "A content-addressed, ledger-committed source record behind a view.\n\nThis deliberately cannot hold a source file path or code citation.  A\nrenderer may show implementation location as explanatory material, but a\nreadiness standing must resolve to a committed record and digest.",
+      "type": "object",
+      "properties": {
+        "digest": {
+          "type": "string"
+        },
+        "entry_id": {
+          "type": "string"
+        },
+        "freshness": {
+          "$ref": "#/$defs/SourceFreshness"
+        },
+        "ledger_id": {
+          "type": "string"
+        },
+        "rebuild_standing": {
+          "$ref": "#/$defs/RebuildStanding"
+        },
+        "record_id": {
+          "type": "string"
+        },
+        "record_kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ledger_id",
+        "entry_id",
+        "record_kind",
+        "record_id",
+        "digest",
+        "freshness",
+        "rebuild_standing"
       ]
     }
   }

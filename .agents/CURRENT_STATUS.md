@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-08-02
+Updated: 2026-08-03
 
 > **2026-07-27 rebase recovery complete.** `main` now contains the previously
 > local full-spec/workbench history rebased onto `origin/main` (110 commits
@@ -771,6 +771,19 @@ Updated: 2026-08-02
 
 ## Objective
 
+Implement `.agents/plans/2026-08-02-workbench-product-completion-ralph-loop.md`
+in its required order. Tasks 0 and 1 are `PASSING` on the current tree: the
+evaluator packet has an exact machine-checked exclusion fixture, and protected
+renderer actions fail closed when a server-derived identity is unavailable.
+Task 2 is complete at the focused-slice level: readiness and approval standing
+resolve only to typed committed records (or explicit unknown/stale/blocked
+truth), and bridge refusals preserve their class, no-side-effect standing, and
+next lawful action. The generated-contract clean-tree gate is intentionally
+pending an eventual commit; it must not be bypassed by staging only generated
+files. Task 3 is blocked at its explicit native-driver dependency decision:
+the repository has mocked Playwright but no installed Tauri-native automation
+driver, and the plan forbids calling the mock integrated proof.
+
 Current documentation task: make `just` the agent-facing command-line interface.
 All active agent-facing guides and diagnostics must name only `just` commands;
 Devbox, Cargo, and Bun remain recipe implementations. Add generic crate-scoped
@@ -1252,6 +1265,50 @@ remain synchronous).
 
 ## Worktree State
 
+2026-08-02 Task 0: preserved unrelated dirty changes to the active completion
+plan (Markdown table formatting only) and `.jolli/jollimemory/debug.log`
+(one Jolli diagnostic line). Current Task 0 adds only evaluator-input
+documentation, its JSON exclusion fixture, and the validator/`just` recipe;
+no product behavior, dependency, persisted schema, or CI aggregation changed.
+
+2026-08-02 Task 1: added the shared renderer affordance guard, a session-only
+selector for server-advertised actors, bounded `actAs` forwarding, and usable
+identity repair links. It covers case creation and commit, approval decisions,
+delegation cancellation, and the recorded `thoth.ask` command. The unrelated
+completion-plan Markdown formatting and Jolli diagnostic remain preserved.
+
+2026-08-02 Task 2: added additive committed-source projections and regenerated
+their TypeScript/AJV contracts. The source and approval changes are intentionally
+uncommitted alongside the rest of this implementation. The contracts drift gate
+therefore reports the expected uncommitted generated projection; do not stage
+only those files merely to make that pre-commit guard pass.
+
+2026-08-03 Task 4 is in progress at the fresh-root entry slice. A missing or
+empty configured root now remains `initialization_required` until an operator
+confirms initialization through the closed host bridge; opening the application
+does not create it. The supervisor rechecks the root under its lifecycle lock
+before spawning and refuses if history appeared meanwhile, with no socket or
+record write by this path. The Readiness page exposes one initialization action,
+does not offer case creation early, and displays a retryable structured refusal
+with its next lawful action. The host gate passed all 34 lib, bridge, and
+packaged-stack tests, but its final host-wide format check remains blocked by
+pre-existing formatting drift in `bridge.rs`; it was left untouched. `just
+fmt-check`, `just context-check`, and `git diff --check` passed. `just
+workbench-check` remains blocked before renderer tests by the already-uncommitted
+Task 2 contract generation drift; selection, recognized-history migration/version negotiation,
+and the Task 4 real-cell matrix are still open. The real packaged fresh-cell
+proof is now `just workbench-e2e-real initialization`: it starts with no root or
+socket, finds and clicks the rendered initialization control through native
+WebKit/Tauri, then verifies the bundled sidecar's SFWP hello; it passed on
+2026-08-03. The earlier plan filter `cell|readiness|Thoth` matched no native
+scenario and is not valid evidence. The supervisor also now fail-closes before
+sidecar startup for a malformed or unknown fixed-path self-model manifest;
+compatible and legacy history retain the existing startup path, but no migration
+is yet claimed. `just workbench-e2e-real "hello|identity|reconnect|request
+recovery"` also passed after the fresh-root changes, preserving the seeded
+existing-history packaged path; that is regression evidence only, not an
+operator-visible selection or migration claim.
+
 The worktree contained unrelated user changes before the `AGENTS.md` refactor;
 they remain untouched. The pre-existing uncommitted additions to `AGENTS.md`
 were consolidated rather than discarded.
@@ -1291,6 +1348,42 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 289 tests). Remaining open debt: SodRule transition_kind scoping (.agents/OBSERVED_DEBT.md).
 
 ## Changed Files
+
+- `.agents/reports/workbench-completion-eval-inputs.md` — concrete independent
+  evaluator invocation, real temporary-cell/sidecar setup, and identity
+  fixture facts.
+- `.agents/reports/workbench-completion-eval-exclusions.json` — exact
+  owner-approved story and non-story exclusions for the Linux claim.
+- `scripts/check-workbench-completion-eval-inputs.sh` and `justfile` — focused
+  machine check and `just workbench-completion-eval-inputs-check` recipe;
+  intentionally outside CI until Task 12 owns release aggregation.
+- `.agents/CURRENT_STATUS.md` — this Task 0 handoff record and current DAG
+  standing.
+- `workbench/apps/desktop/src/guards/protectedAction.ts` — shared conservative
+  renderer affordance guard over validated identity and source-backed readiness.
+- `workbench/apps/desktop/src/pages/{ReadinessPage,ReadinessPage.test.tsx}` —
+  case creation now blocks on unresolved identity, names unchanged effect, and
+  exposes the identity-inspection next action.
+- `workbench/apps/desktop/src/{hooks/useIdentity.ts,shell/{AppShell,GlobalHeader}.tsx}` —
+  session-only choice among server-advertised actors, with every consumer
+  re-deriving the role from the validated current identity view.
+- `workbench/apps/desktop/src/{machines/caseAuthoringMachine.ts,hooks/{useApprovals,useDelegations}.ts}` —
+  protected host calls carry only the selected actor id as bounded `actAs`.
+- `workbench/apps/desktop/src/{hooks/useThoth.ts,pages/{ThothPage,ApprovalInboxPage,DelegationRoster,CaseCreationWorkbench}.tsx}` —
+  every remaining recorded/protected action applies the same refusal and repair
+  route; `thoth.ask` also receives only the bounded selected actor id.
+- `crates/sea-forge-server/src/{identity.rs,sfwp/{readiness,approvals}.rs}` —
+  typed committed source references, explicit unknown/stale freshness, resolved
+  approval governance context, and structured identity refusals.
+- `workbench/apps/desktop/src-tauri/src/bridge.rs` and
+  `src/hooks/bridgeError.ts` — structured governed command errors survive host
+  transport instead of collapsing to free text.
+- `workbench/packages/contracts/{generated,schema}/` — regenerated TypeScript
+  interfaces, AJV validators, and JSON schemas for the additive SFWP records.
+- `workbench/apps/desktop/e2e/{readiness.spec.ts,tauriMock.ts}` and affected
+  component tests — tests prove unresolved/resolved identities, actionable
+  repair routes, the drawer-open capability click, and no protected host call
+  on identity refusal.
 
 - `AGENTS.md` — command-first root guide using only `just` commands; Workbench
   detail remains delegated to the existing nested guide.
@@ -1409,6 +1502,53 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Completed
 
+- Task 0 evaluator-input vertical slice: created the source-owned input sheet
+  and machine-checkable owner exclusion fixture. The focused validator has
+  teeth: it failed before either input existed and failed again after removing
+  one declared exclusion; it passes with the restored exact fixture.
+- Current DAG standing after the fresh Task 0 checks: N00 is `PASSING` once
+  this task gate completes; N01 (sidecar/package inventory) is `PASSING`;
+  N05 (per-request identity) and N06 (correlation/recovery) are `PARTIAL` at
+  product level despite their focused protocol tests; N02–N04 and N07–N13 are
+  not yet broadly proven by the new Ralph gate sequence. This is deliberately
+  not a completion claim for any downstream journey.
+- Task 1 identity-safe affordances: an unresolved socket identity blocks every
+  current protected renderer action with `identity_unresolved`, an unchanged
+  effect, and an actionable `/admin` repair route. A selected actor is held
+  only in session storage, accepted only when it remains in validated
+  `identity.get.available`, and passed to the host as bounded `actAs`; no role
+  or actor claim is renderer-authored. The host revalidates identity for every
+  protected request.
+- Task 1 spendable readiness actions: resolved identity reaches `/cases/new`;
+  “Inspect all capabilities” focuses the currently validated readiness
+  capability projection in the evidence drawer even when that drawer is open.
+- Task 2 source-truth slice: replaced readiness code citations with typed
+  `SourceRecordRef` values (`ledger_id`, `entry_id`, record kind/id, digest,
+  freshness, rebuild standing). The producer now validates the server's actual
+  project root, not its parent; an uninitialized cell and an unproven endpoint
+  are `unknown`, while a stale snapshot is `stale`/rebuild-required. The
+  renderer opens the committed ledger reference rather than synthetic citation
+  evidence. Approval rows now optionally project their verified case-ledger
+  request/decision chain with reason, policy, boundary, requester, operation,
+  evidence, expiry, side-effect standing, and next lawful steps; missing chain
+  remains visibly unresolvable rather than invented.
+- Task 2 bridge and purpose completion: the approval view now exposes the
+  committed request context (including purpose and resource) instead of a UI
+  summary. `sfwp_command` returns a structured refusal across the Tauri boundary
+  (`error_class`, `no_side_effect`, `next_lawful_action`), and the renderer
+  retains those fields as `BridgeGovernedError`.
+- Task 3 automation setup: pinned `tauri-driver 2.0.6` is installed locally
+  under ignored `workbench/.tools/`; `just workbench-e2e-real [filter]` now
+  preflights Linux WebKit plus an isolated Xvfb display before packaging, seeds
+  a unique temporary cell through real operations, allocates a fresh native
+  driver-port pair per run (and rejects an exited driver before probing), and
+  uses a dependency-free W3C client to drive the compiled Workbench, capture
+  DOM/window/SFWP artifacts, then clean up only processes it started. `just workbench-e2e-agent-browser`
+  is the default browser-only desktop `e2e` command; it starts a real Vite
+  renderer without a Tauri IPC injection and proves the no-bridge state fails
+  closed. The existing Playwright suite is retained only as `e2e:mocked` speed
+  evidence.
+
 - Reconciled the root agent guide with the current `justfile`; removed stale
   implementation-status claims, circular Copilot precedence, repeated guidance,
   obsolete async-boundary wording, and direct Devbox/Cargo commands. Retained
@@ -1467,6 +1607,79 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   quarantining incomplete tails. CLI `ledger verify|prove` subcommands added.
 
 ## Verification
+
+- Task 0 focused evidence: `just workbench-completion-eval-inputs-check`
+  passes; it failed with `missing ...eval-inputs.md` before inputs were added
+  and with an invalid fixture after removing exclusion `16.3`. `just
+  workbench-package-inventory` passes for the current `.deb` (sidecar present,
+  no JavaScript runtime, no source maps). `just crate-test sea-forge-server
+  identity`, `just workbench-contracts-gate`, and `just workbench-tauri-test`
+  were rerun without a command failure; the latter covers U-06 sidecar
+  supervision and bridge recovery. After this status update, `just
+  context-check`, `just check-fast` (format + workspace typecheck), `just
+  workbench-contracts-gate`, `just workbench-completion-eval-inputs-check`,
+  and `git diff --check` all pass.
+- Task 1 TDD evidence: `ReadinessPage.test.tsx` gained the unresolved-identity
+  regression, which failed against the former readiness-only action check.
+  After the shared guard landed, `just workbench-check` completed its contracts,
+  host, renderer typecheck, build, and test sequence without a reported
+  failure.
+- Actor-session evidence: `GlobalHeader.test.tsx` proves explicit actor choice;
+  `ApprovalInboxPage.test.tsx` proves `operator_b` is forwarded as `actAs` to
+  the closed host bridge. `just workbench-check` passed after the selection and
+  forwarding slice.
+- Task 1 final evidence: focused component tests (34 assertions) pass for
+  case commit, approvals, cancellation, Thoth, and repair routes; the complete
+  desktop suite passes through the final Workbench gate; Playwright `bun run e2e -- --grep "identity|Inspect
+  all capabilities"` passes 3 scenarios. `just crate-test sea-forge-server
+  identity`, `just workbench-tauri-test`, `just check`, `just test`, `just
+  proof`, and final `just workbench-check` all completed without a reported
+  failure. Cargo emitted the pre-existing `license`/`license-file` manifest
+  warnings. These browser scenarios use the declared Tauri mock and are only
+  Task 1 interaction evidence, never a real-stack claim.
+- Task 2 focused evidence: `just workbench-contracts-generate` regenerated 57
+  schemas; `just crate-test sea-forge-server readiness` covers uninitialized,
+  committed, and stale snapshots; `just crate-test sea-forge-server approval`
+  passed 3 unit, 6 approval conformance, 2 identity, and relevant escalation
+  tests. Focused desktop tests passed: `ReadinessPage.test.tsx` plus
+  `protectedAction.test.ts` (9 assertions), and `ApprovalInboxPage.test.tsx`
+  (11 assertions). Desktop typecheck passed with two pre-existing lint warnings
+  in `router.tsx` and `useIdentity.ts`; `just fmt-check` and `git diff --check`
+  passed after this slice.
+- Task 2 approval-chain conformance: the real escalated case episode now proves
+  `approval.list` resolves its row to committed `approval_request` and
+  `authority_decision` entries with SHA-256 digest and
+  `not_executed_pending_approval`; `just crate-test sea-forge-server
+  an_escalated_episode_opens_an_approval_and_runs_nothing` passes.
+- Task 2 final focused evidence: `just workbench-contracts-generate`, `just
+  workbench-tauri-test`, the `identity`, `readiness`, `approval`, denied-episode,
+  and `stale_precondition_on_approve_is_rejected_with_no_side_effect` server
+  slices, and the focused ApprovalInbox/bridge-error renderer tests all passed.
+  `bun run --cwd workbench/apps/desktop check` passed. The prescribed
+  `just crate-test sea-forge-server conformance` filter selects no tests (Cargo
+  filters function names, which do not contain that word), so the named focused
+  conformance tests above are the actual coverage. `just workbench-contracts-gate`
+  correctly fails while regenerated contracts remain uncommitted; no index
+  manipulation was used to hide that drift.
+- Task 3 automation evidence: `agent-browser 0.33.2` with Chrome 151 is
+  installed; `just workbench-e2e-agent-browser` passes the no-bridge assertion
+  and a `#main-content` accessibility scan. Owner-installed `webkit2gtk-driver`
+  and `xvfb`, plus the pinned ignored `tauri-driver 2.0.6`, support the real
+  path. A strict Tauri CSP initially left the packaged WebKit renderer blank:
+  Astryx's `defineTheme` extension and the generated AJV validators both
+  required runtime code generation. The application now consumes the prebuilt
+  neutral projection with static scoped SEA Forge tokens, and the contract
+  generator emits Ajv standalone validators with unchanged typed `validate`
+  exports (no browser-time `ajv.compile()` or `Function(...)`). The focused
+  prebuilt-theme and mockup-fidelity tests pass. `just workbench-package`, the
+  direct real WebKit smoke, and the complete `just workbench-e2e-real` recipe
+  pass: it packages the app, seeds real records, launches the real
+  server/socket and compiled app under isolated Xvfb, confirms the mounted
+  readiness document, then exercises SFWP hello, identity, reconnect, and
+  request recovery. The runner only observes the loaded application; temporary
+  diagnostic module reruns were removed. `bash -n` for both runners, Python
+  compilation, `just workbench-e2e-agent-browser`, `just context-check`, and
+  `git diff --check` pass.
 
 - `git diff --check` for the command-surface paths: passed.
 - `just --show` for `crate-check`, `crate-test`, `workbench-tauri-dev`,
@@ -1730,6 +1943,10 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Remaining
 
+- Continue the plan's next bounded Workbench task. Task 3's real-stack native
+  automation gate is satisfied; the installed Playwright suite remains only
+  mocked speed evidence and is not used for the integrated claim.
+
 - No remaining work for the Just command-surface refactor.
 
 - Run the ignored real ACP release gate when
@@ -1820,6 +2037,17 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   `devbox run -- just test` passed after ledger-verification hardening.
 
 ## Blockers
+
+- No external blocker for Task 0. Native evaluator automation remains an
+  environment capability to be assessed in Task 3; the evaluator input names
+  the required integrated behavior and explicitly forbids a mocked fallback.
+
+- **Task 3 native OS prerequisite:** resolved. `tauri-driver 2.0.6` is installed
+  in ignored Workbench tooling; `WebKitWebDriver` and `xvfb-run` are present.
+  The runner uses its own software-rendered X display and the compiled renderer
+  now mounts successfully without weakening the Tauri CSP. The existing
+  Playwright harness remains explicitly mocked and is not a substitute for the
+  passing real-stack gate.
 
 - No blockers for the Just command-surface refactor.
 
@@ -2001,6 +2229,16 @@ Remaining M12 gaps (before cumulative gate):
 - Spec §5 claim table update + cumulative gate + this status refresh.
 
 ## Decisions
+
+- Task 0 records the owner-approved exclusions as a JSON evaluator fixture,
+  rather than duplicating an informal list in the evaluator prompt. The
+  validator requires its exact story-ID set, nonempty owner reasons, Linux
+  claim, package/start commands, and no protocol placeholders. It is a local
+  Workbench command only; Task 12 is the authorized CI aggregation point.
+- Task 1 keeps actor selection renderer-local and session-only, while the host
+  resolves and validates the authoritative actor again for each protected
+  request. The shared guard is intentionally a conservative affordance check;
+  it never decides policy or authority.
 
 - Keep the root guide at approximately 150 lines, expose only `just` commands,
   and route Workbench-specific commands and generated-zone detail through

@@ -54,9 +54,11 @@ regardless of anything in this directory.
 - `packages/contracts/generated/` (from Task 3 on): `@sea-forge/contracts`,
   built from `packages/contracts/schema/` by `just workbench-contracts-generate`
   (`packages/contracts/scripts/generate.ts`, using `json-schema-to-typescript`
-  + `ajv` — see `docs/decisions/ADR-005-sfwp-schema-generation.md`). One
-  `<Name>.ts` type and one `<Name>.validator.ts` AJV validator per schema,
-  plus a barrel `index.ts`. Never hand-edit; regenerate and commit the diff.
+  + Ajv standalone generation — see `docs/decisions/ADR-005-sfwp-schema-generation.md`).
+  One `<Name>.ts` type and one static `<Name>.validator.ts` per schema, plus a
+  barrel `index.ts`. Validators must not compile schemas at browser runtime:
+  the packaged Tauri renderer has a strict CSP. Never hand-edit; regenerate and
+  commit the diff.
   `crates/sea-forge-server/tests/conformance_sfwp.rs`'s
   `generated_schemas_are_committed_and_current` test fails the Rust gate if a
   contract type changes without regenerating the schema; the plan's Task 3

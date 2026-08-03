@@ -24,6 +24,12 @@ const negotiated: ServerContract = {
 const settled = { contract: negotiated, isLoading: false, error: undefined };
 
 describe("connection state", () => {
+  it("reports a fresh root as awaiting explicit initialization, never as connected", () => {
+    const state = describeConnection({ state: "initialization_required" }, settled);
+    expect(state.ready).toBe(false);
+    expect(state.label).toContain("initialization required");
+  });
+
   it("reports no cell, and why, when supervision could not produce one", () => {
     const state = describeConnection(
       {

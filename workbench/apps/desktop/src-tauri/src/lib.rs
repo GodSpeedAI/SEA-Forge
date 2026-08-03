@@ -112,6 +112,7 @@ pub fn run() {
             bridge::sfwp_command,
             bridge::sfwp_identity,
             bridge::sfwp_cell,
+            bridge::sfwp_initialize_cell,
             bridge::sfwp_request_status,
             bridge::draft_save,
             bridge::draft_load,

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { validateIdentityView, type IdentityView } from "@sea-forge/contracts";
@@ -21,6 +22,8 @@ import { toError } from "./bridgeError";
 
 export const IDENTITY_QUERY_KEY = ["sfwp", "identity"] as const;
 export const CELL_QUERY_KEY = ["sfwp", "cell"] as const;
+const ACTING_IDENTITY_STORAGE_KEY = "sea-forge.acting-identity";
+const ACTING_IDENTITY_EVENT = "sea-forge:acting-identity-changed";
 
 /** The actor this session acts as, once one has been resolved. */
 export interface ResolvedActor {
@@ -47,6 +50,35 @@ export interface IdentityState {
   uid?: number | null;
 }
 
+/**
+ * The renderer may remember only which server-advertised actor the operator
+ * selected for this window. It never stores a role or a fabricated identity;
+ * every render derives those again from the validated `identity.get` answer,
+ * and the host repeats the same check immediately before each protected call.
+ */
+export function selectedActorId(): string | undefined {
+  try {
+    return window.sessionStorage.getItem(ACTING_IDENTITY_STORAGE_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function persistSelectedActor(actorId: string | undefined): void {
+  try {
+    if (actorId) {
+      window.sessionStorage.setItem(ACTING_IDENTITY_STORAGE_KEY, actorId);
+    } else {
+      window.sessionStorage.removeItem(ACTING_IDENTITY_STORAGE_KEY);
+    }
+    window.dispatchEvent(new Event(ACTING_IDENTITY_EVENT));
+  } catch {
+    // Session presentation may be unavailable (privacy mode/test host). The
+    // local state still works in this component; a new window honestly starts
+    // unresolved rather than inheriting an invented actor.
+  }
+}
+
 async function fetchIdentity(): Promise<IdentityView> {
   const raw = await invoke<unknown>("sfwp_identity");
   if (!validateIdentityView(raw)) {
@@ -70,6 +102,7 @@ async function fetchIdentity(): Promise<IdentityView> {
 export type SupervisionState =
   | { state: "adopted" }
   | { state: "supervised"; pid: number }
+  | { state: "initialization_required" }
   | { state: "unavailable"; error_class: string; message: string };
 
 export interface CellInfo {
@@ -127,15 +160,41 @@ export function useIdentity() {
 
   const view = identity.data;
   const available = view?.available ?? [];
+  const [selectedActorIdState, setSelectedActorIdState] = useState(selectedActorId);
+  const [initializationError, setInitializationError] = useState<Error>();
+  const [isInitializing, setIsInitializing] = useState(false);
+
+  useEffect(() => {
+    const synchronize = () => setSelectedActorIdState(selectedActorId());
+    window.addEventListener(ACTING_IDENTITY_EVENT, synchronize);
+    return () => window.removeEventListener(ACTING_IDENTITY_EVENT, synchronize);
+  }, []);
+
+  const selectActor = useCallback(
+    (actorId: string | undefined) => {
+      const valid = actorId
+        ? available.some((actor) => actor.actor_id === actorId && actor.roles.length > 0)
+        : true;
+      if (!valid) return;
+      setSelectedActorIdState(actorId);
+      persistSelectedActor(actorId);
+    },
+    [available],
+  );
+
   const sole = available.length === 1 ? available[0] : undefined;
+  const selected = selectedActorIdState
+    ? available.find((actor) => actor.actor_id === selectedActorIdState)
+    : undefined;
+  const acting = selected ?? sole;
 
   const state: IdentityState | undefined = view && {
     available,
     // A bound actor holding no role can claim nothing, so it yields no actor
     // here either — the cell records who they are while authorizing nothing.
     actor:
-      sole && sole.roles.length > 0
-        ? { actorId: sole.actor_id, role: sole.roles[0] }
+      acting && acting.roles.length > 0
+        ? { actorId: acting.actor_id, role: acting.roles[0] }
         : undefined,
     configured: view.configured,
     refusal: view.refusal,
@@ -144,6 +203,8 @@ export function useIdentity() {
 
   return {
     identity: state,
+    selectedActorId: state?.actor?.actorId,
+    selectActor,
     socketPath: cell.data?.socketPath,
     cellRoot: cell.data?.root,
     cellId: cell.data?.root ? cellNameFromRoot(cell.data.root) : undefined,
@@ -157,6 +218,20 @@ export function useIdentity() {
     refresh: () => {
       void identity.refetch();
       void cell.refetch();
+    },
+    initializationError,
+    isInitializing,
+    initializeCell: async () => {
+      setInitializationError(undefined);
+      setIsInitializing(true);
+      try {
+        await invoke("sfwp_initialize_cell");
+        await Promise.all([identity.refetch(), cell.refetch()]);
+      } catch (reason) {
+        setInitializationError(toError(reason));
+      } finally {
+        setIsInitializing(false);
+      }
     },
   };
 }

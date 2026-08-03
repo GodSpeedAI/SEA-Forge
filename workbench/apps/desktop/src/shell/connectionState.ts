@@ -16,6 +16,9 @@ export function describeConnection(
   supervision: ReturnType<typeof useIdentity>["supervision"],
   contract: Pick<ReturnType<typeof useServerContract>, "contract" | "isLoading" | "error">,
 ): { label: string; ready: boolean } {
+  if (supervision?.state === "initialization_required") {
+    return { label: "Cell initialization required", ready: false };
+  }
   if (supervision?.state === "unavailable") {
     return { label: `No cell — ${supervision.message}`, ready: false };
   }

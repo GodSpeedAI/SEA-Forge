@@ -1493,3 +1493,43 @@
 [2026-08-02T14:31:12.086Z] INFO  [StorageFactory] [trace=c6d89b6b40a2b5e7cb3e7a8ca82dfec0] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
 [2026-08-02T14:31:12.100Z] INFO  [StorageFactory] [trace=c6d89b6b40a2b5e7cb3e7a8ca82dfec0] Storage mode: dual-write (primary=orphan, shadow=folder)
 [2026-08-02T14:31:12.626Z] INFO  [McpServer] [trace=c6d89b6b40a2b5e7cb3e7a8ca82dfec0] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-02T15:35:53.862Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-02T18:06:25.308Z] INFO  [StorageFactory] [trace=2a0f94cf99caca3a91c686220cf68059] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-08-02T18:06:25.326Z] INFO  [StorageFactory] [trace=2a0f94cf99caca3a91c686220cf68059] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-08-02T18:06:26.000Z] INFO  [McpServer] [trace=2a0f94cf99caca3a91c686220cf68059] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-02T18:08:31.694Z] INFO  [StorageFactory] [trace=b35230fb07ff626e5c86655fa5e8298b] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-08-02T18:08:31.713Z] INFO  [StorageFactory] [trace=b35230fb07ff626e5c86655fa5e8298b] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-08-02T18:08:32.573Z] INFO  [McpServer] [trace=b35230fb07ff626e5c86655fa5e8298b] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-02T18:08:34.580Z] INFO  [StorageFactory] [trace=f218ca24d0832f741983b92ab32ec767] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-08-02T18:08:34.591Z] INFO  [StorageFactory] [trace=f218ca24d0832f741983b92ab32ec767] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-08-02T18:08:35.123Z] INFO  [McpServer] [trace=f218ca24d0832f741983b92ab32ec767] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-02T18:08:41.749Z] INFO  [StorageFactory] [trace=62c9e3e7544987a63f78cc38c4c4d06c] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-08-02T18:08:41.759Z] INFO  [StorageFactory] [trace=62c9e3e7544987a63f78cc38c4c4d06c] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-08-02T18:08:42.238Z] INFO  [McpServer] [trace=62c9e3e7544987a63f78cc38c4c4d06c] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-03T16:15:36.636Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:15:39.032Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:15:46.968Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:15:50.538Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:15:52.110Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:15:56.357Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:15:58.631Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:07.752Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:08.653Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:11.354Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:14.048Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:15.920Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:18.855Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:21.483Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:23.008Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:16:24.400Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:21:12.302Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:22:02.925Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:23:03.743Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:27:54.413Z] INFO  [notes] detectNotes found 0 notes (0 in registry)
+[2026-08-03T16:29:08.925Z] INFO  [UpdateCheck] [trace=214d87db86dad99fc55924b607ed1cf2] Spawned detached update-check refresh (PID: 2587795)
+[2026-08-03T16:29:08.934Z] INFO  [StorageFactory] [trace=214d87db86dad99fc55924b607ed1cf2] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-08-03T16:29:08.952Z] INFO  [StorageFactory] [trace=214d87db86dad99fc55924b607ed1cf2] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-08-03T16:29:09.565Z] INFO  [McpServer] [trace=214d87db86dad99fc55924b607ed1cf2] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-03T16:29:35.368Z] INFO  [StorageFactory] [trace=93538a75b27336edbaaf9b066117a0f1] StorageFactory.create: storageMode=dual-write, projectPath=/home/sprime01/projects/sea-rs
+[2026-08-03T16:29:35.398Z] INFO  [StorageFactory] [trace=93538a75b27336edbaaf9b066117a0f1] Storage mode: dual-write (primary=orphan, shadow=folder)
+[2026-08-03T16:29:36.041Z] INFO  [McpServer] [trace=93538a75b27336edbaaf9b066117a0f1] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)

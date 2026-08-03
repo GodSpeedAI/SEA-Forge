@@ -2,6 +2,15 @@
   min-width: 0;
 }
 
+.initializationError {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-readiness-blocked);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-readiness-blocked) 12%, var(--surface-panel));
+  color: var(--fg-primary);
+}
+
 .page :global(.status-pill) {
   min-height: 22px;
   width: max-content;

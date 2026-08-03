@@ -70,6 +70,20 @@
         },
         "message": {
           "type": "string"
+        },
+        "next_lawful_action": {
+          "description": "The server-owned repair path for this error class.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "no_side_effect": {
+          "description": "Inspect clients can state the effect of a prospective refusal without\nattempting a protected command.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "required": [

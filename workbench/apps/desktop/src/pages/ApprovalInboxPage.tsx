@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { GovernedStatusPill } from "@sea-forge/ui-components";
 import type { PendingApproval } from "@sea-forge/contracts";
 import { useApprovals, VERDICT_PAST, type Verdict } from "../hooks/useApprovals";
+import { useIdentity } from "../hooks/useIdentity";
+import { evaluateProtectedAction, type ProtectedActionDecision } from "../guards/protectedAction";
 import styles from "./ApprovalInboxPage.module.css";
 
 /**
@@ -16,10 +19,12 @@ import styles from "./ApprovalInboxPage.module.css";
 function ApprovalRow({
   approval,
   busy,
+  action,
   onDecide,
 }: {
   approval: PendingApproval;
   busy: boolean;
+  action: ProtectedActionDecision;
   onDecide: (verdict: Verdict, note: string) => void;
 }) {
   const [note, setNote] = useState("");
@@ -73,6 +78,49 @@ function ApprovalRow({
         </p>
       )}
 
+      {approval.governance ? (
+        <section className={styles.governance} aria-label="Committed governance context">
+          <p>
+            <strong>Why review is required:</strong> {approval.governance.reason}
+          </p>
+          <dl className={styles.detail}>
+            <div>
+              <dt>Requester</dt>
+              <dd className={styles.mono}>{approval.governance.requester}</dd>
+            </div>
+            <div>
+              <dt>Operation</dt>
+              <dd>{approval.governance.operation_kind}</dd>
+            </div>
+            <div>
+              <dt>Resource</dt>
+              <dd className={styles.mono}>{approval.governance.resource_ref ?? "none recorded"}</dd>
+            </div>
+            <div>
+              <dt>Purpose context</dt>
+              <dd className={styles.mono}>{JSON.stringify(approval.governance.purpose_context)}</dd>
+            </div>
+            <div>
+              <dt>Side effect</dt>
+              <dd>{approval.governance.side_effect_standing}</dd>
+            </div>
+            <div>
+              <dt>Decision record</dt>
+              <dd className={styles.mono}>{approval.governance.decision_source.entry_id}</dd>
+            </div>
+          </dl>
+          {(approval.governance.required_next_steps ?? []).length > 0 && (
+            <p>Next lawful action: {(approval.governance.required_next_steps ?? []).join("; ")}</p>
+          )}
+        </section>
+      ) : (
+        <p className={styles.expiredNote} role="alert">
+          This approval has no resolvable committed governance context. Re-read the case ledger
+          before deciding; the server will continue to enforce eligibility and no-side-effect
+          refusal rules.
+        </p>
+      )}
+
       {approval.expired && (
         <p className={styles.expiredNote} role="status">
           This approval&rsquo;s window has closed. It stays listed so the reason dependent
@@ -97,7 +145,7 @@ function ApprovalRow({
         <button
           type="button"
           className={styles.approve}
-          disabled={busy}
+          disabled={busy || !action.isAllowed}
           onClick={() => onDecide("approve", note)}
         >
           {busy ? "Recording…" : "Approve"}
@@ -105,7 +153,7 @@ function ApprovalRow({
         <button
           type="button"
           className={styles.reject}
-          disabled={busy}
+          disabled={busy || !action.isAllowed}
           onClick={() => onDecide("reject", note)}
         >
           {busy ? "Recording…" : "Reject"}
@@ -116,8 +164,14 @@ function ApprovalRow({
 }
 
 export function ApprovalInboxPage() {
+  const { identity } = useIdentity();
   const { approvals, unreadable, isLoading, error, deciding, lastOutcome, decide, refresh } =
     useApprovals();
+  const action = evaluateProtectedAction(identity, undefined, {
+    method: "approval.decide",
+    actionLabel: "approval decision",
+    requiresReadiness: false,
+  });
 
   return (
     <div className={styles.page}>
@@ -158,6 +212,13 @@ export function ApprovalInboxPage() {
         </div>
       )}
 
+      {action.refusal && (
+        <p role="alert" className={styles.alert}>
+          {action.refusal.message} {action.refusal.unchangedEffect}{" "}
+          <Link to={action.refusal.repairRoute}>{action.refusal.repairLabel}</Link>.
+        </p>
+      )}
+
       {isLoading && <p className={styles.muted}>Reading the approvals journal…</p>}
 
       {!isLoading && approvals.length === 0 && !error && !unreadable && (
@@ -174,6 +235,7 @@ export function ApprovalInboxPage() {
               key={approval.approval_id}
               approval={approval}
               busy={deciding === approval.approval_id}
+              action={action}
               onDecide={(verdict, note) =>
                 void decide(approval.approval_id, approval.case_id, verdict, note || undefined)
               }

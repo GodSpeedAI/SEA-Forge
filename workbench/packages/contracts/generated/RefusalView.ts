@@ -9,4 +9,13 @@
 export interface RefusalView {
   error_class: string;
   message: string;
+  /**
+   * The server-owned repair path for this error class.
+   */
+  next_lawful_action?: string | null;
+  /**
+   * Inspect clients can state the effect of a prospective refusal without
+   * attempting a protected command.
+   */
+  no_side_effect?: boolean | null;
 }

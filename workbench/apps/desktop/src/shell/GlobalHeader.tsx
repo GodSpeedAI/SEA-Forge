@@ -18,6 +18,9 @@ export interface GlobalHeaderProps {
   /** Resolved from `identity.get`; absent when this cell resolved no actor. */
   actorName?: string;
   roleName?: string;
+  /** Actors the cell bound to this socket; never renderer-invented. */
+  availableActors?: { actorId: string; role: string }[];
+  onSelectActor?: (actorId: string | undefined) => void;
   /** The cell this window is attached to, from the host's resolved socket. */
   cellName?: string;
   integrityStatus?: "verified" | "compromised" | "checking" | "unverified";
@@ -34,6 +37,8 @@ const UNRESOLVED = "Unresolved";
 export function GlobalHeader({
   actorName,
   roleName,
+  availableActors,
+  onSelectActor,
   cellName,
   integrityStatus,
   inboxCount,
@@ -74,6 +79,23 @@ export function GlobalHeader({
           <span>Actor</span>
           <strong>{actorLabel}</strong>
         </button>
+        {availableActors && availableActors.length > 1 && onSelectActor && (
+          <label className={`${styles.contextChip} context-chip`}>
+            <span>Act as</span>
+            <select
+              aria-label="Choose acting identity"
+              value={actorName ?? ""}
+              onChange={(event) => onSelectActor(event.target.value || undefined)}
+            >
+              <option value="">Choose actor</option>
+              {availableActors.map((actor) => (
+                <option key={actor.actorId} value={actor.actorId}>
+                  {actor.actorId} · {actor.role}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button
           className={`${styles.contextChip} context-chip`}
           type="button"

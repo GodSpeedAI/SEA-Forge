@@ -6,6 +6,7 @@ import { toError } from "./bridgeError";
 import { queryGoverned } from "./governedQuery";
 import { affectsDelegations } from "./eventKinds";
 import { useGovernedEventInvalidation } from "./useGovernedEventInvalidation";
+import { selectedActorId } from "./useIdentity";
 
 /**
  * The delegation roster over `delegation.list`, and the cancel command that
@@ -71,6 +72,7 @@ export function useDelegations() {
       try {
         const raw = await invoke<unknown>("sfwp_command", {
           command: { verb: "cancel_delegation", run_id: runId },
+          ...(selectedActorId() ? { actAs: selectedActorId() } : {}),
         });
         const body = raw as { error?: unknown; state?: unknown } | undefined;
         const outcome: CancelOutcome =

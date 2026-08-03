@@ -6,6 +6,7 @@ import { toError } from "./bridgeError";
 import { queryGoverned } from "./governedQuery";
 import { affectsApprovals } from "./eventKinds";
 import { useGovernedEventInvalidation } from "./useGovernedEventInvalidation";
+import { selectedActorId } from "./useIdentity";
 
 /**
  * The approval inbox over `approval.list` and `approval.decide`.
@@ -77,6 +78,7 @@ export function useApprovals(caseId?: string) {
             decision: verdict,
             ...(note ? { note } : {}),
           },
+          ...(selectedActorId() ? { actAs: selectedActorId() } : {}),
         });
         const body = raw as { error?: unknown } | undefined;
         const outcome: DecisionOutcome =

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const invokeMock = vi.fn();
 const commandMock = vi.fn();
+const identityMock = vi.fn();
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (command: string, args: unknown) =>
@@ -24,6 +25,11 @@ vi.mock("@tanstack/react-router", () => ({
     params?: Record<string, string>;
     children: React.ReactNode;
   }) => <a href={to.replace("$runId", params?.runId ?? "")}>{children}</a>,
+}));
+
+vi.mock("../hooks/useIdentity", () => ({
+  useIdentity: () => identityMock(),
+  selectedActorId: () => window.sessionStorage.getItem("sea-forge.acting-identity") ?? undefined,
 }));
 
 import { DelegationRoster } from "./DelegationRoster";
@@ -64,6 +70,13 @@ async function cancelRun(runId: string) {
 beforeEach(() => {
   invokeMock.mockReset();
   commandMock.mockReset();
+  identityMock.mockReturnValue({
+    identity: {
+      available: [{ actor_id: "operator_a", roles: ["operator"] }],
+      actor: { actorId: "operator_a", role: "operator" },
+      configured: true,
+    },
+  });
   commandMock.mockResolvedValue({ run_id: "run-1", state: "cancellation_requested" });
 });
 
@@ -148,6 +161,20 @@ describe("DelegationRoster", () => {
     renderRoster();
 
     expect(await screen.findByRole("button", { name: "Cancel run-1" })).toBeDisabled();
+  });
+
+  it("blocks cancellation with identity_unresolved before opening confirmation", async () => {
+    identityMock.mockReturnValue({ identity: undefined });
+    respondWith([delegation()]);
+    renderRoster();
+
+    expect(await screen.findByRole("button", { name: "Cancel run-1" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/identity_unresolved/i);
+    expect(screen.getByRole("link", { name: "Inspect identity bindings" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+    expect(commandMock).not.toHaveBeenCalled();
   });
 
   /**

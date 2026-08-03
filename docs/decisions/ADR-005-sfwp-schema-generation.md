@@ -58,8 +58,13 @@ alongside `ajv` (`8.20.0`, matching the version already locked for
 `apps/desktop` in ADR-004). `workbench/packages/contracts/scripts/generate.ts`
 reads every `../schema/*.schema.json`, emits a TypeScript interface per type
 via `json-schema-to-typescript`'s `compile()`, and a paired `<Name>.validator.ts`
-that compiles the same raw schema with `ajv` — both written deterministically
-into `workbench/packages/contracts/generated/`, wired as
+using Ajv's standalone-code generator. The generator compiles the raw schema
+once and writes the resulting static validation function deterministically into
+`workbench/packages/contracts/generated/`; it does not call `ajv.compile()` in
+the browser. This is required by the packaged Tauri renderer's strict CSP,
+which must not allow runtime `Function(...)`/`unsafe-eval`. The generated
+validator keeps the same typed `validate` export, so frontend contract
+consumers do not change. The pipeline is wired as
 `bun run generate:contracts` from the workbench root. No other JS package
 gained this dependency; `apps/desktop` consumes the generated output as a
 plain workspace package (`@sea-forge/contracts`), not the generator itself.
@@ -86,6 +91,9 @@ what makes drift visible in code review instead of discovered at runtime.
 - Any future SFWP transport type must be added to both `SCHEMA_TYPES` (Rust)
   and picked up automatically by the generator (it globs `schema/*.schema.json`,
   so no TypeScript-side registration is needed beyond re-running the script).
+- The generated validators are static JavaScript with a typed export. They may
+  use `// @ts-nocheck` for their internal generated implementation; handwritten
+  frontend code remains type-checked and consumes `ValidateFunction<T>`.
 
 ## References
 

@@ -9,7 +9,9 @@
 
 use schemars::schema_for;
 use sea_forge_server::identity::{AvailableActor, IdentityView, RefusalView};
-use sea_forge_server::sfwp::approvals::{ApprovalListResult, PendingApproval};
+use sea_forge_server::sfwp::approvals::{
+    ApprovalGovernanceContext, ApprovalListResult, PendingApproval,
+};
 use sea_forge_server::sfwp::assets::{AssetKind, AssetListResult, AssetRow};
 use sea_forge_server::sfwp::case::{
     EntryOptionsResult, PlanItemSummary, PreflightParams, PreflightResult, TemplateOption,
@@ -30,7 +32,9 @@ use sea_forge_server::sfwp::events::EventFrame;
 use sea_forge_server::sfwp::precondition::{
     ChangedRecord, Precondition, RecordDigest, RejectedAsStale,
 };
-use sea_forge_server::sfwp::readiness::{ReadinessGetParams, ReadinessItem, ReadinessView};
+use sea_forge_server::sfwp::readiness::{
+    ReadinessGetParams, ReadinessItem, ReadinessView, SourceRecordRef,
+};
 use sea_forge_server::sfwp::run_views::{
     AuthorityProjection, CriterionCheck, DeclarationRow, EvidenceRow, RecordPresence,
     RunListResult, RunRecord, RunSummary, RunTermination, SettlementDetail, TraceRow,
@@ -68,6 +72,7 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(MethodDescriptor, "MethodDescriptor"),
         schema!(ReadinessView, "ReadinessView"),
         schema!(ReadinessItem, "ReadinessItem"),
+        schema!(SourceRecordRef, "SourceRecordRef"),
         schema!(ReadinessGetParams, "ReadinessGetParams"),
         schema!(IdentityView, "IdentityView"),
         schema!(AvailableActor, "AvailableActor"),
@@ -88,6 +93,7 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(RunSettlement, "RunSettlement"),
         schema!(ApprovalListResult, "ApprovalListResult"),
         schema!(PendingApproval, "PendingApproval"),
+        schema!(ApprovalGovernanceContext, "ApprovalGovernanceContext"),
         schema!(RunListResult, "RunListResult"),
         schema!(RunSummary, "RunSummary"),
         schema!(RunRecord, "RunRecord"),

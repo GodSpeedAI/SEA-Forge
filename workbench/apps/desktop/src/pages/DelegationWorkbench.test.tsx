@@ -24,6 +24,19 @@ vi.mock("@tanstack/react-router", () => ({
   }) => <a href={to.replace("$runId", params?.runId ?? "")}>{children}</a>,
 }));
 
+// DelegationRoster has its own identity-guard coverage. Keep this contract
+// preview suite focused on the inspect-only workflow it is asserting.
+vi.mock("../hooks/useIdentity", () => ({
+  useIdentity: () => ({
+    identity: {
+      available: [{ actor_id: "operator_a", roles: ["operator"] }],
+      actor: { actorId: "operator_a", role: "operator" },
+      configured: true,
+    },
+  }),
+  selectedActorId: () => undefined,
+}));
+
 import { DelegationWorkbench } from "./DelegationWorkbench";
 
 const ENDPOINT_ROW = {

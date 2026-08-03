@@ -12,7 +12,7 @@
 
 use std::sync::Arc;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 
@@ -260,6 +260,45 @@ pub enum SfwpCommand {
     },
 }
 
+/// A structured failure crossing the closed host bridge.
+///
+/// The server's refusal class must not be flattened into a string before the
+/// renderer can decide whether a retry is lawful or whether a side effect is
+/// known not to have happened.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub struct BridgeCommandError {
+    pub error_class: String,
+    pub error: String,
+    pub no_side_effect: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_lawful_action: Option<String>,
+}
+
+impl BridgeCommandError {
+    fn refusal(
+        error_class: impl Into<String>,
+        error: impl Into<String>,
+        next_lawful_action: impl Into<Option<String>>,
+    ) -> Self {
+        Self {
+            error_class: error_class.into(),
+            error: error.into(),
+            no_side_effect: true,
+            next_lawful_action: next_lawful_action.into(),
+        }
+    }
+
+    fn uncertain(error: impl std::fmt::Display) -> Self {
+        Self {
+            error_class: "bridge_transport_error".into(),
+            error: error.to_string(),
+            no_side_effect: false,
+            next_lawful_action: Some("Reconnect and inspect the request outcome before retrying".into()),
+        }
+    }
+}
+
 /// Issue a read-only SFWP query. Serialize the closed enum to a wire line and
 /// pass it through the socket's single `call()` chokepoint.
 #[tauri::command]
@@ -296,6 +335,32 @@ pub fn sfwp_cell(
     })
 }
 
+/// Confirm initialization of the fresh root selected at application start.
+/// This is deliberately a host action, not an SFWP command: no server exists
+/// yet, and the host is the component that owns its lifecycle. The supervisor
+/// rechecks the root while holding its lifecycle lock before any directory is
+/// created, so a concurrent history write cannot be overwritten.
+#[tauri::command]
+pub async fn sfwp_initialize_cell(
+    supervisor: State<'_, Arc<CellSupervisor>>,
+) -> Result<Value, BridgeCommandError> {
+    let supervisor = Arc::clone(&*supervisor);
+    let supervision = tauri::async_runtime::spawn_blocking(move || supervisor.initialize())
+        .await
+        .map_err(BridgeCommandError::uncertain)?
+        .map_err(|error| {
+            BridgeCommandError::refusal(
+                "cell_initialization_refused",
+                error,
+                Some(
+                    "Inspect the cell root and open a different empty root or its existing history"
+                        .into(),
+                ),
+            )
+        })?;
+    serde_json::to_value(supervision).map_err(BridgeCommandError::uncertain)
+}
+
 /// Ask the cell which actors this connection may claim (`identity.get`).
 ///
 /// Inspect verb, so it needs no actor of its own — which is what makes it
@@ -323,8 +388,8 @@ pub async fn sfwp_command(
     state: State<'_, Arc<SocketHandle>>,
     command: SfwpCommand,
     act_as: Option<String>,
-) -> Result<Value, String> {
-    let mut request = serde_json::to_value(&command).map_err(|e| e.to_string())?;
+) -> Result<Value, BridgeCommandError> {
+    let mut request = serde_json::to_value(&command).map_err(BridgeCommandError::uncertain)?;
 
     // ponytail: resolved per command rather than cached. These are
     // human-initiated actions over a local Unix socket, so the extra round trip
@@ -334,7 +399,7 @@ pub async fn sfwp_command(
     let identity = state
         .call(serde_json::json!({"verb": "identity_get"}))
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(BridgeCommandError::uncertain)?;
     let actor = choose_actor(&identity, act_as.as_deref())?;
 
     if let Some(object) = request.as_object_mut() {
@@ -349,7 +414,7 @@ pub async fn sfwp_command(
         }
     }
 
-    state.call(request).await.map_err(|e| e.to_string())
+    state.call(request).await.map_err(BridgeCommandError::uncertain)
 }
 
 /// Pick the actor block to send, from what the cell says this connection holds.
@@ -357,7 +422,7 @@ pub async fn sfwp_command(
 /// Refuses rather than guesses in every ambiguous case. Acting as an
 /// unspecified one of several identities would be the same fabrication SF-005
 /// removed, just chosen by array order instead of by a constant.
-fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, String> {
+fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, BridgeCommandError> {
     let available = identity
         .get("available")
         .and_then(Value::as_array)
@@ -366,12 +431,20 @@ fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, String>
 
     if available.is_empty() {
         let refusal = identity.get("refusal");
-        return Err(format!(
-            "no actor is available on this connection: {}",
+        let message = refusal
+            .and_then(|r| r.get("message"))
+            .and_then(Value::as_str)
+            .unwrap_or("this cell reported no identity bindings");
+        return Err(BridgeCommandError::refusal(
             refusal
-                .and_then(|r| r.get("message"))
+                .and_then(|r| r.get("error_class"))
                 .and_then(Value::as_str)
-                .unwrap_or("this cell reported no identity bindings")
+                .unwrap_or("identity_unresolved"),
+            message,
+            refusal
+                .and_then(|r| r.get("next_lawful_action"))
+                .and_then(Value::as_str)
+                .map(str::to_owned),
         ));
     }
 
@@ -379,12 +452,17 @@ fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, String>
         Some(wanted) => available
             .iter()
             .find(|entry| entry.get("actor_id").and_then(Value::as_str) == Some(wanted))
-            .ok_or_else(|| format!("this connection may not act as `{wanted}`"))?,
+            .ok_or_else(|| BridgeCommandError::refusal(
+                "identity_not_bound",
+                format!("this connection may not act as `{wanted}`"),
+                Some("Select a server-advertised actor".into()),
+            ))?,
         None if available.len() == 1 => &available[0],
         None => {
-            return Err(format!(
-                "this connection may act as {} different actors; choose one explicitly",
-                available.len()
+            return Err(BridgeCommandError::refusal(
+                "identity_ambiguous",
+                format!("this connection may act as {} different actors; choose one explicitly", available.len()),
+                Some("Select one of the server-advertised actors".into()),
             ))
         }
     };
@@ -392,13 +470,21 @@ fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, String>
     let actor_id = chosen
         .get("actor_id")
         .and_then(Value::as_str)
-        .ok_or("identity.get returned an actor with no id")?;
+        .ok_or_else(|| BridgeCommandError::refusal(
+            "identity_unresolved",
+            "identity.get returned an actor with no id",
+            Some("Refresh identity bindings and choose an actor".into()),
+        ))?;
     let role = chosen
         .get("roles")
         .and_then(Value::as_array)
         .and_then(|roles| roles.first())
         .and_then(Value::as_str)
-        .ok_or_else(|| format!("actor `{actor_id}` holds no role in this cell"))?;
+        .ok_or_else(|| BridgeCommandError::refusal(
+            "identity_role_not_held",
+            format!("actor `{actor_id}` holds no role in this cell"),
+            Some("Select an actor with an eligible role".into()),
+        ))?;
 
     Ok(serde_json::json!({"actor_id": actor_id, "role": role}))
 }
@@ -575,9 +661,11 @@ mod tests {
 
         let refused = choose_actor(&bound, Some("operator_c")).unwrap_err();
         assert!(
-            refused.contains("may not act as `operator_c`"),
-            "unexpected refusal: {refused}"
+            refused.error.contains("may not act as `operator_c`"),
+            "unexpected refusal: {refused:?}"
         );
+        assert_eq!(refused.error_class, "identity_not_bound");
+        assert!(refused.no_side_effect);
     }
 
     /// Ambiguity must refuse, not default. Picking `available[0]` would
@@ -590,7 +678,8 @@ mod tests {
             None,
         )
         .unwrap_err();
-        assert!(error.contains("choose one explicitly"), "{error}");
+        assert!(error.error.contains("choose one explicitly"), "{error:?}");
+        assert_eq!(error.error_class, "identity_ambiguous");
     }
 
     /// An unconfigured cell must surface the kernel's own reason, not a
@@ -607,7 +696,8 @@ mod tests {
             }
         });
         let error = choose_actor(&unconfigured, None).unwrap_err();
-        assert!(error.contains("configures no identity bindings"), "{error}");
+        assert!(error.error.contains("configures no identity bindings"), "{error:?}");
+        assert_eq!(error.error_class, "identity_unconfigured");
     }
 
     /// A suspended actor — bound, but holding no role — authorizes nothing.
@@ -615,7 +705,8 @@ mod tests {
     #[test]
     fn an_actor_holding_no_role_is_refused() {
         let error = choose_actor(&identity(&[("suspended", &[])]), None).unwrap_err();
-        assert!(error.contains("holds no role"), "{error}");
+        assert!(error.error.contains("holds no role"), "{error:?}");
+        assert_eq!(error.error_class, "identity_role_not_held");
     }
 
     /// The roster query and the cancel command are two halves of one control

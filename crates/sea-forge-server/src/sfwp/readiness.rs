@@ -20,15 +20,16 @@
 //!   The shapes below are the minimal honest fields backed by the Readiness UI
 //!   kit's `ReadinessConditionTable` / capability-row markup
 //!   (`.agents/specs/frontend/ui_kits/app/index.html`): `id`, `name`,
-//!   `category`, `status`, `reason`, `source_ref`.
+//!   `category`, `status`, `reason`, and a typed committed source reference.
 //! - `recent_invalidations` is shipped as an **empty array** in this slice: no
 //!   honest source for invalidation records exists yet (no cache/invalidation
 //!   layer). This is intentional partial scope, recorded as `PARTIAL` in the
 //!   task report — never fabricated.
-//! - The `stale` value of `overall` is deliberately **not derived**: this slice
-//!   has no cache layer to make that determination honestly. Recorded as a gap.
+//! - `overall: stale` is derived only from the self-model manifest's explicit
+//!   stale standing; renderer cache freshness is a separate concern.
 
 use schemars::JsonSchema;
+use sea_forge_ledger::LedgerStream;
 use serde::{Deserialize, Serialize};
 
 use crate::config::ServerConfig;
@@ -48,12 +49,43 @@ pub enum ReadinessStatus {
     Unknown,
 }
 
+/// Freshness of the canonical record behind a projection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceFreshness {
+    Current,
+    Stale,
+}
+
+/// Whether the committed source can presently be rebuilt and verified.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RebuildStanding {
+    Verified,
+    RebuildRequired,
+}
+
+/// A content-addressed, ledger-committed source record behind a view.
+///
+/// This deliberately cannot hold a source file path or code citation.  A
+/// renderer may show implementation location as explanatory material, but a
+/// readiness standing must resolve to a committed record and digest.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SourceRecordRef {
+    pub ledger_id: String,
+    pub entry_id: String,
+    pub record_kind: String,
+    pub record_id: String,
+    pub digest: String,
+    pub freshness: SourceFreshness,
+    pub rebuild_standing: RebuildStanding,
+}
+
 /// A single readiness condition, projected from kernel truth. Shapes the
 /// wireframe's `ReadinessConditionTable` row: an identity, a human label, a
-/// grouping category, a status, a plain-language reason, and a short citation
-/// (`source_ref`) — a spec section or file, matching the kit's "Atomic §4.4" /
-/// "DESIGN.md" source column. `source_ref` is a citation string, **not** a
-/// content-addressed `RecordRef` digest (which this slice cannot honestly back).
+/// grouping category, a status, a plain-language reason, and the committed
+/// source record that proves it. A missing source is explicit and means the
+/// standing is not proven; it never falls back to a code citation.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ReadinessItem {
     /// Stable machine identity for this condition (e.g. `"self_model_integrity"`).
@@ -66,8 +98,11 @@ pub struct ReadinessItem {
     pub status: ReadinessStatus,
     /// Plain-language reason for the status. Empty string when self-evidently ready.
     pub reason: String,
-    /// Short citation string (spec section or file), not a record digest.
-    pub source_ref: String,
+    /// The committed source record that proves this standing, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<SourceRecordRef>,
+    /// The next lawful action when this condition is not ready.
+    pub next_lawful_action: String,
 }
 
 /// The operation the operator intends to perform next, if any. Lets the view
@@ -92,9 +127,8 @@ pub struct ReadinessGetParams {
     pub intended_operation: Option<IntendedOperation>,
 }
 
-/// Overall readiness verdict, derived deterministically from the worst status
-/// among conditions. `Stale` is a spec value this slice never derives (no cache
-/// layer to determine it honestly).
+/// Overall readiness verdict, derived deterministically from the foundational
+/// source standing and the worst operational condition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OverallReadiness {
@@ -106,8 +140,10 @@ pub enum OverallReadiness {
     Blocked,
     /// A foundation failed specifically on ledger/snapshot integrity verification.
     IntegrityHalted,
-    /// Reserved spec value; never derived in this slice (no cache layer).
+    /// A committed source remains readable but requires a rebuild before use.
     Stale,
+    /// No committed source record can prove the current standing.
+    Unknown,
 }
 
 /// The `readiness.get` view body — a read-only projection, not source truth.
@@ -135,8 +171,9 @@ pub struct Invalidation {
     pub item_id: String,
     /// Plain-language reason the prior determination no longer holds.
     pub reason: String,
-    /// Short citation string for the invalidating change.
-    pub source_ref: String,
+    /// The committed record that invalidated the prior standing, if available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<SourceRecordRef>,
 }
 
 /// Distinguish an integrity-verification failure (ledger hash-chain / snapshot
@@ -160,57 +197,74 @@ fn is_integrity_failure(message: &str) -> bool {
 /// Build the `readiness.get` view. Infallible: validation failure is reported
 /// as a status inside the view, never propagated.
 ///
-/// `config.root` is the server's `.sea-forge` directory; `store::validate`
-/// expects a *project root* and appends `.sea-forge` itself, so we hand it the
-/// parent (falling back to `config.root` when there is no parent).
+/// `config.root` is the project root; `store::validate` appends `.sea-forge`
+/// itself. Treating its parent as the project root would validate a different
+/// cell and make a fresh server look ready without a local committed snapshot.
 pub fn get(config: &ServerConfig, params: ReadinessGetParams) -> ReadinessView {
     let intended_operation = params.intended_operation;
 
     // --- Foundation: self-model / integrity substrate. ---------------------
-    let project_root = config
-        .root
-        .parent()
-        .map(std::path::Path::to_path_buf)
-        .unwrap_or_else(|| config.root.clone());
-
-    let (self_model_item, foundation_failure) =
-        match sea_forge_self_model::store::validate(&project_root) {
-            Ok(()) => (
+    let (self_model_item, foundation_failure) = match committed_snapshot_source(&config.root) {
+        Ok(Some(source)) if source.freshness == SourceFreshness::Current => (
+            ReadinessItem {
+                id: "self_model_integrity".into(),
+                name: "Self-model integrity".into(),
+                category: "foundation".into(),
+                status: ReadinessStatus::Ready,
+                reason: String::new(),
+                source: Some(source),
+                next_lawful_action: "Continue with a governed operation".into(),
+            },
+            None,
+        ),
+        Ok(Some(source)) => (
+            ReadinessItem {
+                id: "self_model_integrity".into(),
+                name: "Self-model integrity".into(),
+                category: "foundation".into(),
+                status: ReadinessStatus::Degraded,
+                reason: "The committed self-model snapshot is stale".into(),
+                source: Some(source),
+                next_lawful_action: "Rebuild and verify the self-model snapshot".into(),
+            },
+            Some(OverallReadiness::Stale),
+        ),
+        Ok(None) => (
+            ReadinessItem {
+                id: "self_model_integrity".into(),
+                name: "Self-model integrity".into(),
+                category: "foundation".into(),
+                status: ReadinessStatus::Unknown,
+                reason: "No committed self-model snapshot is available to prove this standing"
+                    .into(),
+                source: None,
+                next_lawful_action: "Initialize or rebuild the self-model, then re-check readiness"
+                    .into(),
+            },
+            Some(OverallReadiness::Unknown),
+        ),
+        Err(error) => {
+            let message = error.to_string();
+            let integrity = is_integrity_failure(&message);
+            (
                 ReadinessItem {
                     id: "self_model_integrity".into(),
                     name: "Self-model integrity".into(),
                     category: "foundation".into(),
-                    status: ReadinessStatus::Ready,
-                    reason: String::new(),
-                    source_ref: "sea-forge-self-model/src/store.rs::validate".into(),
+                    status: ReadinessStatus::Blocked,
+                    reason: message,
+                    source: None,
+                    next_lawful_action:
+                        "Repair the reported integrity failure, then re-check readiness".into(),
                 },
-                None,
-            ),
-            Err(error) => {
-                let message = error.to_string();
-                let integrity = is_integrity_failure(&message);
-                // A blocked foundation renders `blocked` at the item level
-                // regardless; the integrity distinction only sharpens `overall`
-                // into `integrity_halted`.
-                (
-                    ReadinessItem {
-                        id: "self_model_integrity".into(),
-                        name: "Self-model integrity".into(),
-                        category: "foundation".into(),
-                        status: ReadinessStatus::Blocked,
-                        reason: message,
-                        source_ref: "sea-forge-self-model/src/store.rs::validate".into(),
-                    },
-                    Some(if integrity {
-                        OverallReadiness::IntegrityHalted
-                    } else {
-                        OverallReadiness::Blocked
-                    }),
-                )
-            }
-        };
-
-    let foundations = vec![self_model_item];
+                Some(if integrity {
+                    OverallReadiness::IntegrityHalted
+                } else {
+                    OverallReadiness::Blocked
+                }),
+            )
+        }
+    };
 
     // --- Operational capabilities. -----------------------------------------
     // Local governed execution is ready whenever the self-model substrate is
@@ -227,32 +281,35 @@ pub fn get(config: &ServerConfig, params: ReadinessGetParams) -> ReadinessView {
         category: "operational_capability".into(),
         status: local_status,
         reason: if foundation_failure.is_some() {
-            "Blocked: self-model foundation is not trusted".into()
+            "Blocked: self-model foundation is not currently proven".into()
         } else {
             String::new()
         },
-        source_ref: "sea-forge-server::case_dispatch".into(),
+        source: self_model_item.source.clone(),
+        next_lawful_action: if foundation_failure.is_some() {
+            self_model_item.next_lawful_action.clone()
+        } else {
+            "Create or inspect a governed case".into()
+        },
     };
 
-    // External delegation readiness: derived from whether any agent endpoint is
-    // configured. No endpoints ⇒ degraded (external delegation cannot proceed)
-    // with a named reason sourced from the endpoint-verification requirement.
-    let external_configured = !config.agent.endpoints.is_empty();
+    let foundations = vec![self_model_item];
+
+    // External delegation requires a committed probe/settlement record, not
+    // merely a configured endpoint.
     let external_capability = ReadinessItem {
         id: "external_delegation".into(),
         name: "External delegation".into(),
         category: "operational_capability".into(),
-        status: if external_configured {
-            ReadinessStatus::Ready
-        } else {
-            ReadinessStatus::Degraded
-        },
-        reason: if external_configured {
-            String::new()
-        } else {
-            "Endpoint verification has not been recorded".into()
-        },
-        source_ref: "sea-forge-agent::AgentConfig::endpoints".into(),
+        // Endpoint configuration is intent, not evidence that an endpoint is
+        // reachable or approved. There is no committed endpoint-probe record
+        // behind this projection yet, so both configured and unconfigured
+        // cases remain explicitly unknown.
+        status: ReadinessStatus::Unknown,
+        reason: "No committed endpoint verification record is available".into(),
+        source: None,
+        next_lawful_action: "Run a governed endpoint probe and inspect its committed settlement"
+            .into(),
     };
 
     // Operation-sensitivity: when the intended operation needs external
@@ -291,6 +348,54 @@ pub fn get(config: &ServerConfig, params: ReadinessGetParams) -> ReadinessView {
     }
 }
 
+/// Resolve the currently selected self-model snapshot to its ledger entry.
+///
+/// A materialized snapshot file alone is not authoritative: it must also be
+/// present in the verified self-model ledger. `None` is therefore an honest
+/// unknown, not a reason to substitute an implementation citation.
+fn committed_snapshot_source(
+    project_root: &std::path::Path,
+) -> Result<Option<SourceRecordRef>, sea_forge_core::errors::ForgeError> {
+    sea_forge_self_model::store::validate(project_root)?;
+    let Some(snapshot) = sea_forge_self_model::store::current_snapshot(project_root)? else {
+        return Ok(None);
+    };
+    let stale = sea_forge_self_model::store::is_stale(project_root)?;
+    let ledger_root = project_root.join(".sea-forge");
+    let ledger_dir = ledger_root.join("ledgers").join("self-model");
+    if !ledger_dir.exists() {
+        return Ok(None);
+    }
+    let stream = LedgerStream::open(&ledger_root, "self-model", "readiness-inspect")?;
+    let Some(entry) = stream.read_entries()?.into_iter().find(|entry| {
+        entry.record_kind == "self_model_snapshot"
+            && entry
+                .payload
+                .get("snapshot_id")
+                .and_then(|value| value.as_str())
+                == Some(snapshot.snapshot_id.as_str())
+    }) else {
+        return Ok(None);
+    };
+    Ok(Some(SourceRecordRef {
+        ledger_id: entry.ledger_id,
+        entry_id: entry.entry_ulid,
+        record_kind: entry.record_kind,
+        record_id: snapshot.snapshot_id,
+        digest: entry.payload_hash,
+        freshness: if stale {
+            SourceFreshness::Stale
+        } else {
+            SourceFreshness::Current
+        },
+        rebuild_standing: if stale {
+            RebuildStanding::RebuildRequired
+        } else {
+            RebuildStanding::Verified
+        },
+    }))
+}
+
 /// Whether an intended-operation method depends on external agent delegation.
 /// Kept intentionally small for v1; extended as the method catalog grows.
 fn operation_requires_delegation(method: &str) -> bool {
@@ -299,4 +404,100 @@ fn operation_requires_delegation(method: &str) -> bool {
         || lowered.contains("agent_run")
         || lowered.contains("agent_task")
         || lowered.contains("agent.")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config(root: &std::path::Path) -> ServerConfig {
+        ServerConfig {
+            root: root.to_path_buf(),
+            ..ServerConfig::default()
+        }
+    }
+
+    #[test]
+    fn an_uninitialized_cell_is_unknown_without_a_synthetic_source_citation() {
+        let root = tempfile::tempdir().unwrap();
+        let view = get(&config(root.path()), ReadinessGetParams::default());
+        let foundation = &view.foundations[0];
+
+        assert_eq!(view.overall, OverallReadiness::Unknown);
+        assert_eq!(foundation.status, ReadinessStatus::Unknown);
+        assert!(foundation.source.is_none());
+        assert!(foundation
+            .reason
+            .contains("No committed self-model snapshot"));
+        assert!(foundation
+            .next_lawful_action
+            .contains("Initialize or rebuild"));
+    }
+
+    #[test]
+    fn a_verified_snapshot_is_projected_as_a_committed_digest_not_a_code_location() {
+        let root = tempfile::tempdir().unwrap();
+        let snapshot = sea_forge_self_model::store::rebuild(
+            root.path(),
+            &sea_forge_self_model::store::RebuildInputs {
+                cell_id: "cell_readiness_test",
+                created_at: "2026-08-02T00:00:00Z",
+                capability_projection_sha256: "sha256:readiness-capability-projection",
+                actor_id: "operator_test",
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let view = get(&config(root.path()), ReadinessGetParams::default());
+        let source = view.foundations[0]
+            .source
+            .as_ref()
+            .expect("a rebuilt snapshot must resolve to its committed ledger entry");
+
+        assert_eq!(view.foundations[0].status, ReadinessStatus::Ready);
+        assert_eq!(source.ledger_id, "self-model");
+        assert_eq!(source.record_kind, "self_model_snapshot");
+        assert_eq!(source.record_id, snapshot.snapshot_id);
+        assert_eq!(source.entry_id.len(), 26, "{source:?}");
+        assert!(
+            source
+                .entry_id
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric()),
+            "{source:?}"
+        );
+        assert!(source.digest.starts_with("sha256:"), "{source:?}");
+        assert_eq!(source.freshness, SourceFreshness::Current);
+        assert_eq!(source.rebuild_standing, RebuildStanding::Verified);
+    }
+
+    #[test]
+    fn a_stale_snapshot_never_reports_readiness_as_success() {
+        let root = tempfile::tempdir().unwrap();
+        sea_forge_self_model::store::rebuild(
+            root.path(),
+            &sea_forge_self_model::store::RebuildInputs {
+                cell_id: "cell_readiness_test",
+                created_at: "2026-08-02T00:00:00Z",
+                capability_projection_sha256: "sha256:readiness-capability-projection",
+                actor_id: "operator_test",
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        sea_forge_self_model::store::mark_current_stale(root.path(), "test_drift").unwrap();
+
+        let view = get(&config(root.path()), ReadinessGetParams::default());
+        assert_eq!(view.overall, OverallReadiness::Stale);
+        assert_eq!(view.foundations[0].status, ReadinessStatus::Degraded);
+        assert_eq!(
+            view.foundations[0]
+                .source
+                .as_ref()
+                .unwrap()
+                .rebuild_standing,
+            RebuildStanding::RebuildRequired
+        );
+    }
 }

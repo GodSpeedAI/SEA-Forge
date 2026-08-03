@@ -69,6 +69,18 @@ fn scratch_cell() -> (tempfile::TempDir, Cell) {
     (dir, cell)
 }
 
+/// Unlike [`scratch_cell`], this names a child that `TempDir` has not created.
+/// It is the only honest fixture for the "opening creates nothing" assertion.
+fn absent_scratch_cell() -> (tempfile::TempDir, Cell) {
+    let dir = tempfile::TempDir::with_prefix_in("sf-pkg-", "/tmp").unwrap();
+    let root = dir.path().join("fresh-cell");
+    let cell = Cell {
+        socket: root.join("server.sock"),
+        root,
+    };
+    (dir, cell)
+}
+
 /// Bind the current uid so protected verbs are answerable. A cell that
 /// configures no identity refuses every protected verb (SF-005), which is
 /// correct but would make this test prove only that refusals work.
@@ -110,18 +122,28 @@ fn wait_until_gone(socket: &std::path::Path) -> bool {
     false
 }
 
-/// The headline claim of U-06: install the product, open it, and there is a
-/// kernel — no second binary to find, no service to start, no source tree.
+/// The headline claim of U-06: after the operator explicitly initializes a
+/// fresh cell, the packaged product starts its own kernel — no second binary
+/// to find, no service to start, no source tree.
 #[tokio::test]
-async fn a_cold_cell_is_started_by_the_workbench_and_serves_sfwp() {
-    let (_dir, cell) = scratch_cell();
-    write_identity(&cell);
+async fn a_fresh_cell_is_initialized_by_the_workbench_and_serves_sfwp() {
+    let (_dir, cell) = absent_scratch_cell();
     assert!(!is_listening(&cell.socket), "the cell must start cold");
 
     let supervisor = CellSupervisor::start_with(cell.clone(), Ok(sidecar()));
-    match supervisor.supervision() {
-        Supervision::Supervised { pid } => assert!(*pid > 0),
-        other => panic!("expected a supervised cell, got {other:?}"),
+    assert_eq!(
+        supervisor.supervision(),
+        Supervision::InitializationRequired,
+        "opening a fresh cell must wait for explicit initialization"
+    );
+    assert!(
+        !cell.root.exists(),
+        "opening a fresh cell must not create its root before confirmation"
+    );
+
+    match supervisor.initialize().unwrap() {
+        Supervision::Supervised { pid } => assert!(pid > 0),
+        other => panic!("expected a supervised cell after confirmation, got {other:?}"),
     }
 
     let hello = call(
@@ -169,7 +191,7 @@ async fn a_second_window_adopts_the_running_cell() {
     let second = CellSupervisor::start_with(cell.clone(), Ok(sidecar()));
     assert_eq!(
         second.supervision(),
-        &Supervision::Adopted,
+        Supervision::Adopted,
         "a live cell must be adopted, not restarted"
     );
 
@@ -322,7 +344,8 @@ async fn a_cell_that_cannot_start_reports_the_reason_and_the_remedy() {
 
     let started = Instant::now();
     let supervisor = CellSupervisor::start_with(cell, Ok(sidecar()));
-    match supervisor.supervision() {
+    let supervision = supervisor.initialize().unwrap();
+    match supervision {
         Supervision::Unavailable {
             error_class,
             message,

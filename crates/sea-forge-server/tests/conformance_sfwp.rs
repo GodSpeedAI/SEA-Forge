@@ -505,44 +505,45 @@ async fn live_subscriber_receives_pushed_event() {
 // configuration honestly, and that switching the intended operation changes
 // which capability is foregrounded (operation-sensitivity).
 
-/// (a) No agent endpoint configured: local governed execution is `ready`,
-/// external delegation is `degraded` with the named reason, and `overall`
-/// reflects the limitation (not a hard block) since foundations pass.
+/// (a) A fresh cell has no committed self-model snapshot and no endpoint probe,
+/// so readiness must be explicitly `unknown`; implementation configuration and
+/// source locations cannot masquerade as evidence.
 #[tokio::test]
-async fn readiness_get_no_endpoint_local_ready_external_degraded() {
+async fn readiness_get_no_committed_sources_is_unknown() {
     let (_root, socket) = boot().await;
     let mut client = Client::connect(&socket).await;
 
     let view = client.call(json!({"verb": "readiness_get"})).await;
 
-    // Foundations pass on a fresh root (bundled models verify; no committed
-    // self-model ledger/snapshot to fail).
     let foundations = view["foundations"].as_array().unwrap();
     let self_model = foundations
         .iter()
         .find(|i| i["id"] == "self_model_integrity")
         .expect("self_model_integrity foundation present");
-    assert_eq!(self_model["status"], "ready", "{view}");
+    assert_eq!(self_model["status"], "unknown", "{view}");
+    assert!(
+        self_model.get("source").is_none(),
+        "an uninitialized cell must not substitute a code citation for a committed record: {view}"
+    );
 
     let caps = view["operational_capabilities"].as_array().unwrap();
     let local = caps
         .iter()
         .find(|c| c["id"] == "local_governed_execution")
         .expect("local capability present");
-    assert_eq!(local["status"], "ready", "{view}");
+    assert_eq!(local["status"], "blocked", "{view}");
 
     let external = caps
         .iter()
         .find(|c| c["id"] == "external_delegation")
         .expect("external capability present");
-    assert_eq!(external["status"], "degraded", "{view}");
+    assert_eq!(external["status"], "unknown", "{view}");
     assert_eq!(
-        external["reason"], "Endpoint verification has not been recorded",
-        "named reason must be sourced, not invented: {view}"
+        external["reason"], "No committed endpoint verification record is available",
+        "configuration cannot be reported as endpoint evidence: {view}"
     );
 
-    // Overall: foundations pass but a capability is degraded ⇒ limited.
-    assert_eq!(view["overall"], "ready_with_limitations", "{view}");
+    assert_eq!(view["overall"], "unknown", "{view}");
 
     // Partial scope is honest, not fabricated.
     assert!(
@@ -551,10 +552,11 @@ async fn readiness_get_no_endpoint_local_ready_external_degraded() {
     );
 }
 
-/// (b) With a stub endpoint registered, external delegation capability improves
-/// to `ready` and the overall verdict becomes `ready`.
+/// (b) Registering an endpoint remains intent rather than a verified probe.
+/// It cannot upgrade the readiness verdict until a committed probe/settlement
+/// record exists.
 #[tokio::test]
-async fn readiness_get_with_endpoint_external_ready() {
+async fn readiness_get_endpoint_configuration_is_not_readiness_evidence() {
     let (endpoint, stub) =
         stub_endpoint(r#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#);
     let (_root, socket) = boot_with_endpoint(Some(endpoint)).await;
@@ -567,11 +569,8 @@ async fn readiness_get_with_endpoint_external_ready() {
         .iter()
         .find(|c| c["id"] == "external_delegation")
         .expect("external capability present");
-    assert_eq!(
-        external["status"], "ready",
-        "registering an endpoint must improve external delegation: {view}"
-    );
-    assert_eq!(view["overall"], "ready", "{view}");
+    assert_eq!(external["status"], "unknown", "{view}");
+    assert_eq!(view["overall"], "unknown", "{view}");
 
     stub.abort();
 }

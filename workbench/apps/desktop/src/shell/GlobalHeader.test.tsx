@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { GlobalHeader } from "./GlobalHeader";
 
 /**
@@ -75,5 +75,23 @@ describe("GlobalHeader governance context", () => {
       "data-resolved",
       "true",
     );
+  });
+
+  it("lets an operator explicitly select only an actor the cell advertised", () => {
+    const selectActor = vi.fn();
+    render(
+      <GlobalHeader
+        availableActors={[
+          { actorId: "operator_a", role: "operator" },
+          { actorId: "operator_b", role: "operator" },
+        ]}
+        onSelectActor={selectActor}
+      />,
+    );
+
+    const selector = screen.getByLabelText("Choose acting identity");
+    expect(selector).toHaveValue("");
+    fireEvent.change(selector, { target: { value: "operator_b" } });
+    expect(selectActor).toHaveBeenCalledWith("operator_b");
   });
 });

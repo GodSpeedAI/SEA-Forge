@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { GovernedStatusPill, ProtectedActionButton } from "@sea-forge/ui-components";
 import type { DelegationRow } from "@sea-forge/contracts";
 import { useDelegations } from "../hooks/useDelegations";
+import { useIdentity } from "../hooks/useIdentity";
+import { evaluateProtectedAction, type ProtectedActionDecision } from "../guards/protectedAction";
 import { DELEGATION_STANDING_VARIANT, SETTLEMENT_VARIANT, humanize } from "./standing";
 import styles from "./RunRecordPage.module.css";
 
@@ -57,10 +59,12 @@ function RosterRow({
   delegation,
   onCancel,
   cancelling,
+  action,
 }: {
   delegation: DelegationRow;
   onCancel: (runId: string) => void;
   cancelling: boolean;
+  action: ProtectedActionDecision;
 }) {
   return (
     <tr>
@@ -109,9 +113,11 @@ function RosterRow({
         <ProtectedActionButton
           label={`Cancel ${delegation.run_id}`}
           variant="danger"
-          isAllowed={delegation.cancellable}
+          isAllowed={delegation.cancellable && action.isAllowed}
           disabledReason={
-            delegation.standing === "cancellation_requested"
+            action.refusal
+              ? `${action.refusal.message} ${action.refusal.unchangedEffect}`
+              : delegation.standing === "cancellation_requested"
               ? "A cancellation has already been requested for this delegation."
               : "This delegation is not active in this server, so there is nothing to cancel."
           }
@@ -126,6 +132,7 @@ function RosterRow({
 }
 
 export function DelegationRoster() {
+  const { identity } = useIdentity();
   const {
     delegations,
     unreadable,
@@ -137,6 +144,11 @@ export function DelegationRoster() {
     cancel,
     refresh,
   } = useDelegations();
+  const action = evaluateProtectedAction(identity, undefined, {
+    method: "delegation.cancel",
+    actionLabel: "cancellation request",
+    requiresReadiness: false,
+  });
 
   return (
     <section className={styles.section} aria-label="Delegation roster" data-od-id="delegation-roster">
@@ -176,6 +188,13 @@ export function DelegationRoster() {
         </p>
       )}
 
+      {action.refusal && (
+        <p role="alert" className={styles.alert}>
+          {action.refusal.message} {action.refusal.unchangedEffect}{" "}
+          <Link to={action.refusal.repairRoute}>{action.refusal.repairLabel}</Link>.
+        </p>
+      )}
+
       {isLoading && <p className={styles.muted}>Reading the delegation roster…</p>}
 
       {!isLoading && !error && delegations.length === 0 && (
@@ -205,6 +224,7 @@ export function DelegationRoster() {
                 delegation={delegation}
                 onCancel={(runId) => void cancel(runId)}
                 cancelling={cancelling === delegation.run_id}
+                action={action}
               />
             ))}
           </tbody>

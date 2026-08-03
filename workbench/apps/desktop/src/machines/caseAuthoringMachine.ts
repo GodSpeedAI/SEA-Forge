@@ -1,5 +1,6 @@
 import { assign, fromPromise, setup } from "xstate";
 import { invoke } from "@tauri-apps/api/core";
+import { selectedActorId } from "../hooks/useIdentity";
 import {
   validatePreflightResult,
   type PreflightResult,
@@ -137,6 +138,7 @@ const commitActor = fromPromise<
           ? { preconditions: { records: [input.precondition] } }
           : {}),
       },
+      ...(selectedActorId() ? { actAs: selectedActorId() } : {}),
     },
   );
 });

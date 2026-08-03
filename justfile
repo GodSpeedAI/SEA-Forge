@@ -108,6 +108,13 @@ check:
 context-check:
     scripts/check-agent-context.sh
 
+# Verify the handoff a cold independent Workbench evaluator needs: concrete
+# commands and fixtures, exact owner-approved exclusions, and no protocol
+# placeholders. This stays outside CI until Task 12 owns release aggregation.
+[group('workbench')]
+workbench-completion-eval-inputs-check:
+    scripts/check-workbench-completion-eval-inputs.sh
+
 # Run the test suite (Shell-SPEC §10.3).
 [group('quality')]
 test:
@@ -313,6 +320,30 @@ workbench-demo root='':
     SEA_FORGE_ROOT="$cell" \
       SEA_FORGE_SOCKET="${SEA_FORGE_DEMO_SOCKET:-/tmp/sea-forge-demo.sock}" \
       "$app"
+
+# Browser-only renderer evidence, driven by agent-browser without injecting
+# `__TAURI_INTERNALS__`. This is deliberately not an integrated Tauri claim:
+# Chrome cannot exercise Tauri's Linux WebKit bridge. It proves the renderer
+# fails closed when no native bridge is present and records screenshot/a11y
+# evidence for that condition.
+[group('workbench')]
+workbench-e2e-agent-browser:
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/workbench-e2e-agent-browser.sh
+
+# Native Linux integration evidence. This packages the app, seeds a temporary
+# cell through real kernel/server operations, and drives the compiled WebKit
+# Workbench through Tauri's native WebDriver intermediary. It fails closed when
+# the machine lacks the documented `webkit2gtk-driver` prerequisite; it never
+# substitutes the mocked Playwright harness.
+[group('workbench')]
+workbench-e2e-real filter='':
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/workbench-e2e-real.sh --preflight
+    just workbench-package
+    scripts/workbench-e2e-real.sh "{{filter}}"
 
 # The desktop host's own Rust tests.
 #

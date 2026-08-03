@@ -33,6 +33,8 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use serde::Deserialize;
+
 /// The socket file name inside a cell root. Must match
 /// `sea_forge_server::config::SOCKET_FILE_NAME`; `src-tauri` is a separate
 /// Cargo workspace (ADR-004 / K-06), so the constant is duplicated rather than
@@ -49,6 +51,13 @@ const SERVER_BIN_NAME: &str = "sea-forge-server";
 /// The operator needs the reason a spawn failed, and a windowed application has
 /// nowhere else to put it.
 const SERVER_LOG_NAME: &str = "workbench-server.log";
+
+/// The persisted schema that this build can inspect without starting a server.
+/// The server remains the authority for rebuilding a compatible self-model;
+/// this host-side check only stops an unknown future schema from being treated
+/// as a blank or compatible cell before the sidecar would write to it.
+const SELF_MODEL_SCHEMA_VERSION: &str = "self_model.v1";
+const SELF_MODEL_MANIFEST: &str = ".sea-forge/self-model/manifest.json";
 
 /// How long to wait for a freshly spawned server to publish its socket.
 ///
@@ -123,6 +132,9 @@ pub enum Supervision {
     Adopted,
     /// This process started the server and owns its lifetime.
     Supervised { pid: u32 },
+    /// A fresh root has no records to open. Starting it is a durable effect, so
+    /// the renderer must obtain an explicit operator confirmation first.
+    InitializationRequired,
     /// No server is reachable and this process could not start one. The app
     /// still opens: every surface already resolves its own standing from a
     /// catalog it cannot negotiate, so an unreachable cell renders honestly
@@ -131,6 +143,11 @@ pub enum Supervision {
         error_class: String,
         message: String,
     },
+}
+
+struct SupervisionState {
+    supervision: Supervision,
+    child: Option<Child>,
 }
 
 /// Is something accepting connections on `socket` right now?
@@ -207,8 +224,8 @@ pub fn resolve_server_binary_from(
 /// reach a process it did not create.
 pub struct CellSupervisor {
     cell: Cell,
-    supervision: Supervision,
-    child: Mutex<Option<Child>>,
+    binary: Result<PathBuf, String>,
+    state: Mutex<SupervisionState>,
 }
 
 impl CellSupervisor {
@@ -221,48 +238,29 @@ impl CellSupervisor {
     /// adopt/spawn/refuse decision is testable without a binary on `PATH` or a
     /// particular `current_exe()`.
     pub fn start_with(cell: Cell, binary: Result<PathBuf, String>) -> Self {
-        // Probe first. Spawning into a live cell would be refused by the
-        // server's own socket lock, but the refusal would be indistinguishable
-        // from a real startup failure — so ask before acting.
-        if is_listening(&cell.socket) {
-            return Self {
-                cell,
-                supervision: Supervision::Adopted,
-                child: Mutex::new(None),
-            };
-        }
-
-        let binary = match binary {
-            Ok(binary) => binary,
-            Err(message) => {
-                return Self {
-                    cell,
+        let state = if is_listening(&cell.socket) {
+            supervise_existing(&cell, &binary)
+        } else {
+            match inspect_cell_root(&cell.root) {
+                Ok(CellRootState::Fresh) => SupervisionState {
+                    supervision: Supervision::InitializationRequired,
+                    child: None,
+                },
+                Ok(CellRootState::Existing) => supervise_existing(&cell, &binary),
+                Err((error_class, message)) => SupervisionState {
                     supervision: Supervision::Unavailable {
-                        error_class: "server_binary_not_found".into(),
+                        error_class,
                         message,
                     },
-                    child: Mutex::new(None),
-                }
+                    child: None,
+                },
             }
         };
 
-        match spawn_server(&binary, &cell) {
-            Ok(child) => {
-                let pid = child.id();
-                Self {
-                    cell,
-                    supervision: Supervision::Supervised { pid },
-                    child: Mutex::new(Some(child)),
-                }
-            }
-            Err((error_class, message)) => Self {
-                cell,
-                supervision: Supervision::Unavailable {
-                    error_class,
-                    message,
-                },
-                child: Mutex::new(None),
-            },
+        Self {
+            cell,
+            binary,
+            state: Mutex::new(state),
         }
     }
 
@@ -270,8 +268,41 @@ impl CellSupervisor {
         &self.cell
     }
 
-    pub fn supervision(&self) -> &Supervision {
-        &self.supervision
+    pub fn supervision(&self) -> Supervision {
+        self.state
+            .lock()
+            .map(|state| state.supervision.clone())
+            .unwrap_or_else(|_| Supervision::Unavailable {
+                error_class: "supervisor_state_unavailable".into(),
+                message: "the cell supervisor state could not be read".into(),
+            })
+    }
+
+    /// Start a pending fresh cell after explicit operator confirmation. If a
+    /// second process created history while the confirmation was open, refuse
+    /// rather than treating that now-populated root as the blank directory the
+    /// user originally inspected.
+    pub fn initialize(&self) -> Result<Supervision, String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "the cell supervisor state could not be locked".to_string())?;
+        if !matches!(state.supervision, Supervision::InitializationRequired) {
+            return Ok(state.supervision.clone());
+        }
+
+        if !matches!(
+            inspect_cell_root(&self.cell.root).map_err(|(_, message)| message)?,
+            CellRootState::Fresh
+        ) {
+            return Err(format!(
+                "{} now contains history; refuse to initialize over an existing cell",
+                self.cell.root.display()
+            ));
+        }
+
+        *state = supervise_existing(&self.cell, &self.binary);
+        Ok(state.supervision.clone())
     }
 
     /// Stop a server this process started. Adopted servers are left running:
@@ -286,13 +317,132 @@ impl CellSupervisor {
     /// OPERATIONS_AND_STARTUP.md. Upgrade path if graceful drain is ever
     /// wanted: send SIGTERM via `nix`/`libc` and wait, falling back to kill.
     pub fn shutdown(&self) {
-        let Ok(mut guard) = self.child.lock() else {
+        let Ok(mut state) = self.state.lock() else {
             return;
         };
-        if let Some(mut child) = guard.take() {
+        if let Some(mut child) = state.child.take() {
             let _ = child.kill();
             let _ = child.wait();
         }
+    }
+}
+
+/// The only self-model manifest fields the host needs to inspect before a
+/// sidecar exists. The kernel owns its full shape and all migration work.
+#[derive(Deserialize)]
+struct SelfModelManifestHeader {
+    schema_version: String,
+}
+
+/// Whether a resolved root is fresh or recognizable history, without creating
+/// it. A missing/empty directory is fresh; a non-empty root remains compatible
+/// unless it explicitly declares an unknown or malformed self-model schema.
+///
+/// That narrow refusal prevents a newer cell from being silently written by an
+/// older Workbench. It deliberately does not invent a separate host migration:
+/// a compatible self-model migration belongs to the kernel's append-only
+/// `ensure_init` lifecycle, not this process supervisor.
+enum CellRootState {
+    Fresh,
+    Existing,
+}
+
+fn inspect_cell_root(root: &Path) -> Result<CellRootState, (String, String)> {
+    match std::fs::read_dir(root) {
+        Ok(mut entries) => {
+            if entries.next().is_none() {
+                Ok(CellRootState::Fresh)
+            } else {
+                inspect_existing_cell_root(root)
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(CellRootState::Fresh),
+        Err(error) => Err((
+            "cell_root_unreadable".into(),
+            format!("cannot inspect cell root {}: {error}", root.display()),
+        )),
+    }
+}
+
+fn inspect_existing_cell_root(root: &Path) -> Result<CellRootState, (String, String)> {
+    let manifest = root.join(SELF_MODEL_MANIFEST);
+    let bytes = match std::fs::read(&manifest) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(CellRootState::Existing)
+        }
+        Err(error) => {
+            return Err((
+                "cell_history_unreadable".into(),
+                format!(
+                    "cannot inspect self-model history at {}: {error}",
+                    manifest.display()
+                ),
+            ))
+        }
+    };
+    let header: SelfModelManifestHeader = serde_json::from_slice(&bytes).map_err(|error| {
+        (
+            "cell_history_incompatible".into(),
+            format!(
+                "self-model history at {} is malformed ({error}); open it with a compatible SEA Forge build instead of initializing it as a new cell",
+                manifest.display()
+            ),
+        )
+    })?;
+    if header.schema_version != SELF_MODEL_SCHEMA_VERSION {
+        return Err((
+            "cell_history_incompatible".into(),
+            format!(
+                "self-model history at {} uses unsupported schema {}; this Workbench supports {}. Open it with a compatible SEA Forge build instead of initializing it as a new cell",
+                manifest.display(),
+                header.schema_version,
+                SELF_MODEL_SCHEMA_VERSION,
+            ),
+        ));
+    }
+    Ok(CellRootState::Existing)
+}
+
+fn supervise_existing(cell: &Cell, binary: &Result<PathBuf, String>) -> SupervisionState {
+    // Probe first. Spawning into a live cell would be refused by the server's
+    // own socket lock, but the refusal would be indistinguishable from a real
+    // startup failure — so ask before acting.
+    if is_listening(&cell.socket) {
+        return SupervisionState {
+            supervision: Supervision::Adopted,
+            child: None,
+        };
+    }
+
+    let binary = match binary {
+        Ok(binary) => binary,
+        Err(message) => {
+            return SupervisionState {
+                supervision: Supervision::Unavailable {
+                    error_class: "server_binary_not_found".into(),
+                    message: message.clone(),
+                },
+                child: None,
+            }
+        }
+    };
+
+    match spawn_server(binary, cell) {
+        Ok(child) => {
+            let pid = child.id();
+            SupervisionState {
+                supervision: Supervision::Supervised { pid },
+                child: Some(child),
+            }
+        }
+        Err((error_class, message)) => SupervisionState {
+            supervision: Supervision::Unavailable {
+                error_class,
+                message,
+            },
+            child: None,
+        },
     }
 }
 
@@ -587,8 +737,8 @@ mod tests {
             // decided by the probe, never by whether a spawn was possible.
             Ok(PathBuf::from("/bin/false")),
         );
-        assert_eq!(supervisor.supervision(), &Supervision::Adopted);
-        assert!(supervisor.child.lock().unwrap().is_none());
+        assert_eq!(supervisor.supervision(), Supervision::Adopted);
+        assert!(supervisor.state.lock().unwrap().child.is_none());
     }
 
     /// A missing binary must leave the app usable and say what to do, not
@@ -603,7 +753,7 @@ mod tests {
             },
             resolve_server_binary_from(None, None, None),
         );
-        match supervisor.supervision() {
+        match supervisor.initialize().unwrap() {
             Supervision::Unavailable {
                 error_class,
                 message,
@@ -613,6 +763,104 @@ mod tests {
             }
             other => panic!("expected Unavailable, got {other:?}"),
         }
+    }
+
+    /// A missing root is a user choice, not an implicit side effect of opening
+    /// the desktop application. The host must wait for the explicit Initialize
+    /// action before it creates a record directory or starts a server there.
+    #[test]
+    fn a_missing_cell_root_waits_for_explicit_initialization_without_writing() {
+        let parent = tempfile::tempdir().unwrap();
+        let root = parent.path().join("new-cell");
+        let supervisor = CellSupervisor::start_with(
+            Cell {
+                socket: root.join(SOCKET_FILE_NAME),
+                root: root.clone(),
+            },
+            Ok(PathBuf::from("/bin/false")),
+        );
+
+        assert!(matches!(
+            supervisor.supervision(),
+            Supervision::InitializationRequired
+        ));
+        assert!(
+            !root.exists(),
+            "opening a new cell must not create its root before confirmation"
+        );
+    }
+
+    /// The blank-root check happens again at the commit point. A history that
+    /// appears while the operator is reading the confirmation must survive
+    /// untouched, and the supervisor must not start a server against it.
+    #[test]
+    fn initialization_refuses_if_history_appears_after_the_fresh_root_check() {
+        let parent = tempfile::tempdir().unwrap();
+        let root = parent.path().join("new-cell");
+        let supervisor = CellSupervisor::start_with(
+            Cell {
+                socket: root.join(SOCKET_FILE_NAME),
+                root: root.clone(),
+            },
+            Ok(PathBuf::from("/bin/false")),
+        );
+
+        std::fs::create_dir_all(&root).unwrap();
+        let history = root.join("history.jsonl");
+        std::fs::write(&history, "committed history\n").unwrap();
+
+        let error = supervisor.initialize().unwrap_err();
+        assert!(error.contains("refuse to initialize"), "{error}");
+        assert_eq!(
+            std::fs::read_to_string(history).unwrap(),
+            "committed history\n"
+        );
+        assert!(!root.join(SOCKET_FILE_NAME).exists());
+    }
+
+    /// A non-empty directory is not automatically a SEA Forge cell. An unknown
+    /// persisted self-model schema must be refused before the sidecar gets a
+    /// chance to write any new ledgers or views into it.
+    #[test]
+    fn an_incompatible_cell_history_is_refused_before_server_start() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = root.path().join(".sea-forge/self-model/manifest.json");
+        std::fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        std::fs::write(
+            &manifest,
+            r#"{
+                "schema_version": "self_model.v999",
+                "release_id": "future-release",
+                "kernel_version": "999.0.0",
+                "current_snapshot_id": null,
+                "initialized_at": "2026-08-03T00:00:00Z"
+            }"#,
+        )
+        .unwrap();
+
+        let socket = root.path().join(SOCKET_FILE_NAME);
+        let supervisor = CellSupervisor::start_with(
+            Cell {
+                root: root.path().to_path_buf(),
+                socket: socket.clone(),
+            },
+            Ok(PathBuf::from("/bin/false")),
+        );
+
+        match supervisor.supervision() {
+            Supervision::Unavailable {
+                error_class,
+                message,
+            } => {
+                assert_eq!(error_class, "cell_history_incompatible");
+                assert!(message.contains("self_model.v999"), "{message}");
+            }
+            other => panic!("expected incompatible-history refusal, got {other:?}"),
+        }
+        assert!(
+            !socket.exists(),
+            "a refused history must not start a server"
+        );
     }
 
     /// A binary that starts and immediately exits must be reported as a refusal
@@ -650,9 +898,9 @@ mod tests {
         );
     }
 
-    /// The whole point of the sidecar: a cell with nothing listening ends up
-    /// with a live socket, and the supervisor owns the process that published
-    /// it.
+    /// The whole point of the sidecar: a confirmed fresh cell with nothing
+    /// listening ends up with a live socket, and the supervisor owns the process
+    /// that published it.
     #[test]
     fn a_cold_cell_gets_a_supervised_server() {
         let dir = tempfile::tempdir().unwrap();
@@ -693,9 +941,9 @@ mod tests {
             },
             Ok(fake),
         );
-        match supervisor.supervision() {
-            Supervision::Supervised { pid } => assert!(*pid > 0),
-            other => panic!("expected Supervised, got {other:?}"),
+        match supervisor.initialize().unwrap() {
+            Supervision::Supervised { pid } => assert!(pid > 0),
+            other => panic!("expected Supervised after confirmation, got {other:?}"),
         }
         assert!(is_listening(&socket));
 

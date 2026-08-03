@@ -23,11 +23,53 @@
 //! to see why an item is stuck (epic invariant 7: a blocked state must expose
 //! the next lawful path).
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use schemars::JsonSchema;
-use sea_forge_core::types::ApprovalRequest;
+use sea_forge_core::types::{ApprovalRequest, AuthorityAction, AuthorityDecision};
+use sea_forge_ledger::{LedgerEntry, LedgerStream};
 use serde::{Deserialize, Serialize};
+
+use super::readiness::{RebuildStanding, SourceFreshness, SourceRecordRef};
+
+/// The canonical governance context an approval decision must be judged
+/// against. This is a projection of the committed case ledger, not an
+/// explanation composed by the renderer.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ApprovalGovernanceContext {
+    pub approval_source: SourceRecordRef,
+    pub decision_source: SourceRecordRef,
+    pub reason: String,
+    #[serde(default)]
+    pub reason_codes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matched_rule: Option<String>,
+    #[serde(default)]
+    pub policy_refs: Vec<String>,
+    #[serde(default)]
+    pub boundary_constraints: BTreeMap<String, Vec<String>>,
+    pub requester: String,
+    pub operation_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_ref: Option<String>,
+    /// The declared purpose and operating context, copied verbatim from the
+    /// authority request that the committed decision evaluated. This remains a
+    /// structured value because the authority contract deliberately permits
+    /// operation-specific purpose fields; callers must not replace it with a
+    /// renderer-authored summary.
+    pub purpose_context: serde_json::Value,
+    #[serde(default)]
+    pub evidence_refs: Vec<String>,
+    #[serde(default)]
+    pub required_next_steps: Vec<String>,
+    /// An approval is pending because its side effect was not executed.
+    pub side_effect_standing: String,
+    /// The server resolves approver eligibility per connection. A list view
+    /// cannot invent eligible actors before that identity check happens.
+    pub eligible_actors: Vec<String>,
+    pub eligibility_standing: String,
+}
 
 /// One pending approval, shaped for the inbox.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -50,6 +92,10 @@ pub struct PendingApproval {
     /// shown are the ones the approval was raised against.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub criteria_sha256: Option<String>,
+    /// Present only when this request and its escalating authority decision
+    /// resolve to committed records in the case ledger.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub governance: Option<ApprovalGovernanceContext>,
 }
 
 /// `approval.list` result body.
@@ -65,7 +111,96 @@ pub struct ApprovalListResult {
     pub unreadable: Option<String>,
 }
 
-fn shape(request: ApprovalRequest, now: &str) -> PendingApproval {
+fn source_ref(entry: &LedgerEntry, record_id: String) -> SourceRecordRef {
+    SourceRecordRef {
+        ledger_id: entry.ledger_id.clone(),
+        entry_id: entry.entry_ulid.clone(),
+        record_kind: entry.record_kind.clone(),
+        record_id,
+        digest: entry.payload_hash.clone(),
+        freshness: SourceFreshness::Current,
+        rebuild_standing: RebuildStanding::Verified,
+    }
+}
+
+fn operation_resource(action: &AuthorityAction) -> Option<String> {
+    match action {
+        AuthorityAction::WriteFile { path, .. } => Some(path.clone()),
+        AuthorityAction::ExecuteCommand { cwd, .. } => Some(cwd.clone()),
+        AuthorityAction::ExternalApi { host } => Some(host.clone()),
+        AuthorityAction::AgentProbe { endpoint_ref, .. }
+        | AuthorityAction::AgentTask { endpoint_ref, .. } => Some(endpoint_ref.clone()),
+        AuthorityAction::GitCommit { paths } => Some(paths.join(",")),
+        AuthorityAction::Reserved { resource_id, .. } => Some(resource_id.clone()),
+        AuthorityAction::GithubPr { .. } | AuthorityAction::Unclassified { .. } => None,
+    }
+}
+
+fn operation_kind(action: &AuthorityAction) -> &'static str {
+    match action {
+        AuthorityAction::WriteFile { .. } => "write_file",
+        AuthorityAction::ExecuteCommand { .. } => "execute_command",
+        AuthorityAction::ExternalApi { .. } => "external_api",
+        AuthorityAction::AgentProbe { .. } => "agent_probe",
+        AuthorityAction::AgentTask { .. } => "agent_task",
+        AuthorityAction::GitCommit { .. } => "git_commit",
+        AuthorityAction::GithubPr { .. } => "github_pr",
+        AuthorityAction::Reserved { .. } => "reserved",
+        AuthorityAction::Unclassified { .. } => "unclassified",
+    }
+}
+
+fn governance_context(root: &Path, request: &ApprovalRequest) -> Option<ApprovalGovernanceContext> {
+    let ledger_root = root
+        .join("ledgers")
+        .join(format!("case-{}", request.case_id));
+    if !ledger_root.exists() {
+        return None;
+    }
+    let stream =
+        LedgerStream::open(root, format!("case-{}", request.case_id), "approval-list").ok()?;
+    stream.verify().ok()?;
+    let entries = stream.read_entries().ok()?;
+    let approval_entry = entries.iter().rev().find(|entry| {
+        entry.record_kind == "approval_request"
+            && entry
+                .payload
+                .get("approval_id")
+                .and_then(|value| value.as_str())
+                == Some(request.approval_id.as_str())
+    })?;
+    let decision_entry = entries.iter().rev().find(|entry| {
+        entry.record_kind == "authority_decision"
+            && entry
+                .payload
+                .get("decision_id")
+                .and_then(|value| value.as_str())
+                == Some(request.decision_id.as_str())
+    })?;
+    let decision: AuthorityDecision =
+        serde_json::from_value(decision_entry.payload.clone()).ok()?;
+    Some(ApprovalGovernanceContext {
+        approval_source: source_ref(approval_entry, request.approval_id.clone()),
+        decision_source: source_ref(decision_entry, decision.decision_id.clone()),
+        reason: decision.reason,
+        reason_codes: decision.reason_codes,
+        matched_rule: decision.matched_rule,
+        policy_refs: decision.policy_refs,
+        boundary_constraints: decision.boundary_constraints,
+        requester: decision.identity_binding.principal,
+        operation_kind: operation_kind(&decision.operation).into(),
+        resource_ref: operation_resource(&decision.operation),
+        purpose_context: decision.action_request.context,
+        evidence_refs: decision.audit_record.evidence_refs,
+        required_next_steps: decision.required_next_steps,
+        side_effect_standing: "not_executed_pending_approval".into(),
+        eligible_actors: Vec::new(),
+        eligibility_standing: "resolved_per_connection".into(),
+    })
+}
+
+fn shape(root: &Path, request: ApprovalRequest, now: &str) -> PendingApproval {
+    let governance = governance_context(root, &request);
     PendingApproval {
         expired: request.expires_at.as_str() <= now,
         approval_id: request.approval_id,
@@ -77,6 +212,7 @@ fn shape(request: ApprovalRequest, now: &str) -> PendingApproval {
         expires_at: request.expires_at,
         criteria_ref: request.criteria_ref,
         criteria_sha256: request.criteria_sha256,
+        governance,
     }
 }
 
@@ -99,7 +235,7 @@ pub fn list(root: &Path, case_id: Option<&str>) -> ApprovalListResult {
     let mut approvals: Vec<PendingApproval> = pending
         .into_iter()
         .filter(|request| case_id.is_none_or(|id| request.case_id == id))
-        .map(|request| shape(request, &now))
+        .map(|request| shape(root, request, &now))
         .collect();
 
     approvals.sort_by(|a, b| {

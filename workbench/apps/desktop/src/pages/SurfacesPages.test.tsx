@@ -3,8 +3,21 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const invokeMock = vi.fn();
+const identityMock = vi.fn();
+const navigateMock = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invokeMock(...args),
+}));
+
+vi.mock("@tanstack/react-router", async () => {
+  const actual =
+    await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
+  return { ...actual, useNavigate: () => navigateMock };
+});
+
+vi.mock("../hooks/useIdentity", () => ({
+  useIdentity: () => identityMock(),
+  selectedActorId: () => undefined,
 }));
 
 import { ModelsPage, ThothPage } from "./SurfacesPages";
@@ -44,7 +57,15 @@ function catalog(methods: string[]) {
 
 beforeEach(() => {
   invokeMock.mockClear();
+  navigateMock.mockClear();
   invokeMock.mockResolvedValue(catalog(["readiness.get"]));
+  identityMock.mockReturnValue({
+    identity: {
+      available: [{ actor_id: "operator_a", roles: ["operator"] }],
+      actor: { actorId: "operator_a", role: "operator" },
+      configured: true,
+    },
+  });
 });
 
 afterEach(cleanup);
@@ -90,6 +111,18 @@ describe("Thoth", () => {
     renderPage(ThothPage);
 
     expect(await screen.findByRole("button", { name: "Ask" })).toBeDisabled();
+  });
+
+  it("blocks a recorded question with identity_unresolved before a host call", async () => {
+    identityMock.mockReturnValue({ identity: undefined });
+    invokeMock.mockResolvedValue(catalog(["thoth.ask"]));
+    renderPage(ThothPage);
+
+    expect(await screen.findByRole("button", { name: "Ask" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/identity_unresolved/i);
+    fireEvent.click(screen.getByRole("button", { name: "Inspect identity bindings" }));
+    expect(navigateMock).toHaveBeenCalledWith({ to: "/admin" });
+    expect(invokeMock).not.toHaveBeenCalledWith("sfwp_command", expect.anything());
   });
 
   it("asks the kernel and renders the answer it receives", async () => {

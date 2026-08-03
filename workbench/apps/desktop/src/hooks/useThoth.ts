@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { validateThothAnswerView, type ThothAnswerView } from "@sea-forge/contracts";
 import { describeAjv, rejectGovernedError, GovernedViewError } from "./governedQuery";
 import { toError } from "./bridgeError";
+import { selectedActorId } from "./useIdentity";
 
 /**
  * Ask the cell a grounded question (`thoth.ask`, epic journey 3).
@@ -83,6 +84,7 @@ export function useThoth() {
           subject: input.subject,
           purpose: input.purpose,
         },
+        ...(selectedActorId() ? { actAs: selectedActorId() } : {}),
       });
       // A denial is a governed answer with its own shape, not an error — but a
       // *refusal* (unknown kind, unverifiable identity) is the typed error

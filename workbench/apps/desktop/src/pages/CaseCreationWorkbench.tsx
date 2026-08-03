@@ -4,6 +4,8 @@ import { useMachine } from "@xstate/react";
 import { useNavigate } from "@tanstack/react-router";
 import { ProtectedActionButton, GovernedStatusPill } from "@sea-forge/ui-components";
 import { useCaseEntryOptions } from "../hooks/useCaseEntryOptions";
+import { evaluateProtectedAction } from "../guards/protectedAction";
+import { useIdentity } from "../hooks/useIdentity";
 import { caseAuthoringMachine } from "../machines/caseAuthoringMachine";
 import styles from "./CaseCreationWorkbench.module.css";
 
@@ -20,6 +22,7 @@ type ParamValues = Record<string, string>;
  */
 export function CaseCreationWorkbench() {
   const { query: entryOptions } = useCaseEntryOptions();
+  const { identity } = useIdentity();
   const navigate = useNavigate();
   const [snapshot, send] = useMachine(caseAuthoringMachine);
 
@@ -42,7 +45,12 @@ export function CaseCreationWorkbench() {
   const state = snapshot.value as string;
   const preflight = snapshot.context.preflight;
   const canPreflight = templateRef.length > 0 && (state === "draft" || state === "rejected_as_stale");
-  const canCommit = state === "preflight_ok";
+  const commitAction = evaluateProtectedAction(identity, undefined, {
+    method: "case.commit",
+    actionLabel: "case",
+    requiresReadiness: false,
+  });
+  const canCommit = state === "preflight_ok" && commitAction.isAllowed;
 
   function handlePreflight() {
     if (state === "rejected_as_stale") {
@@ -53,6 +61,7 @@ export function CaseCreationWorkbench() {
   }
 
   function handleCommit() {
+    if (!commitAction.isAllowed) return;
     send({ type: "COMMIT" });
   }
 
@@ -205,11 +214,27 @@ export function CaseCreationWorkbench() {
               onClick={handleCommit}
               isAllowed={canCommit}
               disabledReason={
-                canCommit ? undefined : "Run a passing preflight before committing"
+                commitAction.refusal
+                  ? `${commitAction.refusal.message} ${commitAction.refusal.unchangedEffect}`
+                  : canCommit
+                    ? undefined
+                    : "Run a passing preflight before committing"
               }
               variant="primary"
               className="lawful-action"
             />
+            {commitAction.refusal && (
+              <p role="alert">
+                {commitAction.refusal.message} {commitAction.refusal.unchangedEffect}{" "}
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() => void navigate({ to: commitAction.refusal!.repairRoute })}
+                >
+                  {commitAction.refusal.repairLabel}
+                </button>
+              </p>
+            )}
             {state === "committed" && snapshot.context.commitResult && (
               <p>Case {snapshot.context.commitResult.case_id} committed.</p>
             )}

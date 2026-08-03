@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { GovernedStatusPill } from "@sea-forge/ui-components";
+import { evaluateProtectedAction } from "../guards/protectedAction";
+import { useIdentity } from "../hooks/useIdentity";
 import { useEvidenceContext } from "../shell/EvidenceContext";
 import {
   QUESTION_KINDS,
@@ -28,7 +31,9 @@ import styles from "./SurfacesPages.module.css";
  * that the answer they are reading is partial.
  */
 export function ThothPage() {
+  const navigate = useNavigate();
   const { contract } = useServerContract();
+  const { identity } = useIdentity();
   const { inspectEvidence } = useEvidenceContext();
   const { ask, answer, error, asking } = useThoth();
 
@@ -39,6 +44,11 @@ export function ThothPage() {
   const standing = standingOf("thoth.ask", contract);
   const presentation = STANDING_PRESENTATION[standing];
   const reachable = standing === "live";
+  const askAction = evaluateProtectedAction(identity, undefined, {
+    method: "thoth.ask",
+    actionLabel: "recorded question",
+    requiresReadiness: false,
+  });
 
   const dispositionVariant =
     answer?.disposition === "answered"
@@ -125,12 +135,27 @@ export function ThothPage() {
               <button
                 type="button"
                 className="button button--primary"
-                disabled={asking || !reachable || !subject.trim()}
-                onClick={() => void ask({ kind, subject, purpose })}
+                disabled={asking || !reachable || !subject.trim() || !askAction.isAllowed}
+                onClick={() => {
+                  if (askAction.isAllowed) void ask({ kind, subject, purpose });
+                }}
               >
                 {asking ? "Asking…" : "Ask"}
               </button>
             </div>
+
+            {askAction.refusal ? (
+              <p className="operational-copy" role="alert">
+                {askAction.refusal.message} {askAction.refusal.unchangedEffect}{" "}
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => void navigate({ to: askAction.refusal!.repairRoute })}
+                >
+                  {askAction.refusal.repairLabel}
+                </button>
+              </p>
+            ) : null}
 
             {error ? (
               <p className="operational-copy" role="alert">

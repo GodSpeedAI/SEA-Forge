@@ -214,6 +214,21 @@ impl IdentityRefusal {
         }
     }
 
+    /// The only lawful repair for this refusal, kept beside the error-class
+    /// vocabulary so inspect and command surfaces cannot drift into separate
+    /// remediation stories.
+    pub fn next_lawful_action(&self) -> &'static str {
+        match self {
+            Self::Missing => "Select a server-advertised actor and retry the protected operation",
+            Self::UnknownPeer => "Reconnect through a transport that exposes peer credentials",
+            Self::Unconfigured => "Configure an identity binding for this operating-system user",
+            Self::NotBound { .. } => "Use an actor bound to this operating-system user",
+            Self::RoleNotHeld { .. } => "Select a role held by the bound actor",
+            Self::EntityMismatch { .. } => "Attribute the operation to the verified actor",
+            Self::SelfApproval { .. } => "Ask an independently bound approver to decide",
+        }
+    }
+
     /// The SFWP error body. `no_side_effect` is stated rather than implied:
     /// SF-005 requires a refusal to leave nothing behind, and an operator
     /// reading the response should not have to infer that from the absence of
@@ -223,6 +238,7 @@ impl IdentityRefusal {
             "error": self.message(),
             "error_class": self.error_class(),
             "no_side_effect": true,
+            "next_lawful_action": self.next_lawful_action(),
         })
     }
 }
@@ -293,6 +309,8 @@ impl IdentityBindings {
             Some(RefusalView {
                 error_class: refusal.error_class().into(),
                 message: refusal.message(),
+                no_side_effect: Some(true),
+                next_lawful_action: Some(refusal.next_lawful_action().into()),
             })
         };
 
@@ -330,6 +348,8 @@ impl IdentityBindings {
         let refusal = available.is_empty().then(|| RefusalView {
             error_class: "identity_not_bound".into(),
             message: format!("no actor is bound to uid {} in this cell", peer.uid),
+            no_side_effect: Some(true),
+            next_lawful_action: Some("Use an actor bound to this operating-system user".into()),
         });
 
         IdentityView {
@@ -438,6 +458,13 @@ pub struct AvailableActor {
 pub struct RefusalView {
     pub error_class: String,
     pub message: String,
+    /// Inspect clients can state the effect of a prospective refusal without
+    /// attempting a protected command.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_side_effect: Option<bool>,
+    /// The server-owned repair path for this error class.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_lawful_action: Option<String>,
 }
 
 /// What this cell believes about the identity on the other end of this

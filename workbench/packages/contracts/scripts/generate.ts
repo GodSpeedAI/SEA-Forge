@@ -4,7 +4,7 @@
  * Reads the Rust-emitted JSON Schemas in `../schema/*.schema.json` (the single
  * source of truth — never hand-edited) and, for each one, emits:
  *   - `generated/<Name>.ts`          — a TypeScript interface (json-schema-to-typescript)
- *   - `generated/<Name>.validator.ts` — an AJV `ValidateFunction<Name>` bound to the schema
+ *   - `generated/<Name>.validator.ts` — a precompiled AJV `ValidateFunction<Name>`
  * plus a `generated/index.ts` barrel re-exporting every type and validator.
  *
  * Output MUST be deterministic (stable ordering, no timestamps) so that running
@@ -16,6 +16,8 @@ import { readdirSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "nod
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compile } from "json-schema-to-typescript";
+import Ajv2020 from "ajv/dist/2020.js";
+import standaloneCode from "ajv/dist/standalone/index.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const schemaDir = join(here, "..", "schema");
@@ -53,19 +55,32 @@ async function main(): Promise<void> {
 
     writeFileSync(join(outDir, `${name}.ts`), BANNER + "\n" + ts);
 
-    // Per-type AJV validator. The schema JSON is imported (not re-serialized)
-    // so the validator is always bound to the exact committed schema.
+    // Ajv normally generates the validator with `Function(...)` at module load.
+    // Emit that generated code here instead: the packaged Tauri renderer has a
+    // strict CSP and must never need `unsafe-eval` merely to validate trusted
+    // server responses. The generated validator still carries the exact schema
+    // and retains the same `validate` export used by the frontend.
+    const ajv = new Ajv2020({
+      allErrors: true,
+      strict: false,
+      code: { esm: true, source: true },
+    });
+    const compiledValidator = ajv.compile(schema);
+    const validatorCode = standaloneCode(ajv, compiledValidator).replace(
+      "export const validate =",
+      `export const validate: ValidateFunction<${name}> =`,
+    );
     const validator =
       BANNER +
       "\n" +
-      // schemars emits draft 2020-12 (`$schema`), so compile with Ajv's 2020
-      // build — the default `ajv` entry only knows draft-07 and rejects the
-      // 2020-12 meta-schema at compile time.
-      `import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";\n` +
-      `import schema from "../schema/${name}.schema.json" with { type: "json" };\n` +
+      // Ajv standalone output is JavaScript. Its generated local variables do
+      // not carry TypeScript annotations, while the exported validator below
+      // remains precisely typed for all renderer consumers.
+      "// @ts-nocheck\n" +
+      `import type { ValidateFunction } from "ajv";\n` +
       `import type { ${name} } from "./${name}.js";\n\n` +
-      `const ajv = new Ajv2020({ allErrors: true, strict: false });\n` +
-      `export const validate = ajv.compile(schema) as ValidateFunction<${name}>;\n`;
+      validatorCode +
+      "\n";
 
     writeFileSync(join(outDir, `${name}.validator.ts`), validator);
   }

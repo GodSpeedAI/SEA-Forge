@@ -1,3 +1,4 @@
 [tools]
 "npm:@jolli.ai/cli" = "latest"
+"npm:agent-browser" = "latest"
 "npm:command-code" = "latest"

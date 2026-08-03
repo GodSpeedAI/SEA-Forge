@@ -150,7 +150,7 @@ release`; they must not advertise a spendable action, generate fake records, or
 block the representative journey.
 
 | Excluded story IDs | Accepted reason |
-|---|---|
+| --- | --- |
 | `2.3` | Automated actors and sponsorship are not advertised in the first product claim. |
 | `4.2`, `4.5`, `4.6` | ADLC/ODI/orchestration catalogs and agent endpoint browsing/probing are deferred; one real local template/environment/executor path remains required. |
 | `6.1`, `6.3`–`6.6` | Known-intent, external-plan, ADLC/ODI, multi-agent, and spec-to-code case-entry families are deferred; the versioned-template path remains required. |
@@ -225,7 +225,7 @@ named below; they are intentionally slower.
 ## Key facts already discovered (do not re-derive)
 
 | Thing | Location |
-|---|---|
+| --- | --- |
 | Governing completion claim and 12-step representative journey | `docs/execution/PRODUCT_COMPLETION_DEFINITION.md` §§Completion Claim Levels, Primary User Journey |
 | Accepted architectural and owner decisions, including U-06/U-07 and agent authority | `docs/execution/DECISION_REGISTER.md` §§Resolved Decisions, U-06, U-07, Agent Authority Classification |
 | Ordered cross-layer completion nodes N08–N13 | `docs/execution/EXECUTION_DAG.md` |
