@@ -37,7 +37,7 @@
 - `.sea/interaction/validation/diagnostics.md` — commands, results, revisions, output inspection, and skipped checks.
 - `.sea/interaction/validation/limitations.md` — recurring grammar limitations and justified future directions.
 - `.agents/reports/2026-08-03-sea-forge-interaction-model.md` — consolidated completion report linking the canonical artifacts.
-- `.agents/CURRENT_STATUS.md` — short resumable handoff appended without rewriting unrelated active-work entries.
+- `.agents/STATUS_CACHE.md` — temporary resumable handoff for later owner migration; the dirty `.agents/CURRENT_STATUS.md` remains untouched.
 
 ---
 
@@ -557,7 +557,7 @@ git commit -m "docs(interaction): record DomainForge validation"
 
 **Files:**
 - Create: `.agents/reports/2026-08-03-sea-forge-interaction-model.md`
-- Modify: `.agents/CURRENT_STATUS.md`
+- Create: `.agents/STATUS_CACHE.md`
 - Modify as corrections require: `.sea/interaction/*`
 
 **Interfaces:**
@@ -595,11 +595,12 @@ canonical `.sea/interaction/` artifacts rather than copying them.
 
 End with exactly one required stability statement from the mission.
 
-- [ ] **Step 4: Update the durable project handoff carefully**
+- [ ] **Step 4: Write the temporary project-status handoff**
 
-Append a compact dated section to `.agents/CURRENT_STATUS.md` with objective,
-branch/worktree, files, verification, remaining issues, and decisions. Preserve
-all unrelated status edits. Record `just context-check` as owner-skipped.
+Write `.agents/STATUS_CACHE.md` with a migration notice plus objective,
+branch/worktree, files, verification, remaining issues, and decisions. Record
+`just context-check` as owner-skipped. Do not read, edit, stage, or commit
+`.agents/CURRENT_STATUS.md`; the owner will migrate the cache later.
 
 - [ ] **Step 5: Run final applicable checks**
 
@@ -622,7 +623,7 @@ Report unrelated dirty files without modifying or claiming them.
 
 ```bash
 git add .agents/reports/2026-08-03-sea-forge-interaction-model.md \
-  .agents/CURRENT_STATUS.md .sea/interaction
+  .agents/STATUS_CACHE.md .sea/interaction
 git commit -m "docs(interaction): hand off canonical journey model"
 ```
 
