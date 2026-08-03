@@ -1,0 +1,161 @@
+DomainForge validation transcript
+=================================
+
+$ /home/sprime01/projects/domainforge/target/debug/domainforge --version
+domainforge 0.15.0
+
+$ /home/sprime01/projects/domainforge/target/debug/domainforge validate --help
+Validate SEA files
+
+Usage: domainforge validate [OPTIONS] <TARGET>
+
+Arguments:
+  <TARGET>
+
+Options:
+      --format <FORMAT>  [default: human] [possible values: json, human, lsp]
+      --no-color
+      --show-source
+      --verbose
+      --quiet
+      --color <COLOR>    [default: auto] [possible values: auto, always, never]
+  -h, --help             Print help
+
+$ /home/sprime01/projects/domainforge/target/debug/domainforge parse --help
+Parse SEA files and output AST or Graph
+
+Usage: domainforge parse [OPTIONS] <INPUT>
+
+Arguments:
+  <INPUT>
+          Input SEA file to parse
+
+Options:
+      --format <FORMAT>
+          Output format
+
+          Possible values:
+          - human: Human-readable summary
+          - json:  JSON output
+
+          [default: human]
+
+  -o, --out <OUT>
+          Output file (stdout if not specified)
+
+      --ast
+          Output AST instead of Graph (preserves source structure and line numbers)
+
+      --ast-v3
+          Output AST v3 (alias for --ast)
+
+      --verbose
+
+      --quiet
+
+      --color <COLOR>
+          [default: auto]
+          [possible values: auto, always, never]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+$ /home/sprime01/projects/domainforge/target/debug/domainforge project --help
+Project/Export to other formats
+
+Usage: domainforge project [OPTIONS] --format <FORMAT> <INPUT> <OUTPUT>
+
+Arguments:
+  <INPUT>
+  <OUTPUT>
+
+Supported formats (complete `Possible values` list from help):
+  calm              Architecture operator: CALM architecture JSON (single-file output)
+  kg                Semantic-graph operator (legacy): knowledge-graph Turtle/RDF-XML (single-file output; prefer `rdf`)
+  protobuf          Interface operator: Protobuf schema + optional gRPC services (single-file output)
+  proto             Interface operator: alias for `protobuf`
+  ai-llm            Learning-loop operator: LLM JSONL dataset (directory output)
+  ai-graph-ml       Learning-loop operator: graph-ML dataset (directory output)
+  cep-eval          Learning-loop operator: CEP evaluation dataset (directory output)
+  ai-learning       Learning-loop operator: all enabled AI datasets via recipe (directory output)
+  lean              Formal-verification operator: Lean 4 Lake package (`lake build`-checkable defs/proofs; directory output)
+  rdf               Semantic graph operator: RDF/OWL dataset (Turtle + JSON-LD + OWL, directory output)
+  bpmn              Ordered-process operator: BPMN 2.0 XML (non-executable subset, directory output)
+  cmmn              Adaptive-work/case operator: CMMN 1.1 XML (directory output)
+  archimate         Enterprise-architecture operator: ArchiMate 3.0 Model Exchange File (directory output)
+  otel-semconv      Runtime-observation operator: OpenTelemetry SemConv registry + attribute constants (directory output)
+  baml              AI-representation operator: BAML capability (typed classes/enums, policy-decision function, resolver-seeded tests; directory output)
+  dspy              AI-optimization operator: DSPy program (authority-decision signature, decision-label metric, optimizer config with regression gate; directory output)
+  zenml             Learning-loop operator: ZenML pipeline package (@step load/train/eval/register wired into a @pipeline DAG, model version keyed to the model hash; directory output)
+  cloudevents       Event operator: CloudEvents 1.0 stream — one envelope per Flow (directory output)
+  asyncapi          Event-API operator: AsyncAPI 2.6 document — one channel per Flow (directory output)
+  devbox            Activation operator: Devbox manifest — domain-aware dev shell with the namespace/entities/resources/flows pre-loaded as env vars (directory output)
+  cell              Activation operator: Cell environment — hermetic agent execution environment (Devbox + Mise + dependency-set + sandbox/network + authority + evidence + cell.lock; directory output)
+  dagger            Activation operator: Dagger module — one @dagger.function per Flow so `dagger call` can activate each step (directory output)
+  cedar             Authority operator: Cedar schema + policies — each Flow becomes an Action with principal=from, resource=resource (directory output)
+  gauge             Verification operator: Gauge spec — one scenario per Flow with Given/When/Then steps (directory output)
+  alloy             Verification operator: Alloy model — signatures for entities/resources, a Flow sig with one fact per declared flow (directory output)
+  tla               Verification operator: TLA+ spec — flows become state-machine transitions, model-checkable with TLC (directory output)
+  domain-python     Code operator: Python DDD/CQRS domain layer — complete package up to the ports (directory output)
+  domain-typescript Code operator: TypeScript DDD/CQRS domain layer — complete package up to the ports (directory output)
+  domain-rust       Code operator: Rust DDD/CQRS domain layer — complete crate up to the ports (directory output)
+
+Relevant projection options (unrelated option blocks omitted):
+      --namespace <NAMESPACE>
+          Optional namespace filter (project only entities from this namespace)
+      --created-at <CREATED_AT>
+          Fixed RFC3339 created_at timestamp for byte-identical output (all directory-output projections: ai-*, rdf, bpmn, cmmn, archimate, otel-semconv, baml, dspy, zenml)
+      --base-iri <BASE_IRI>
+          Base IRI the `sea:` prefix expands to (rdf format only; defaults to the canonical SEA vocabulary namespace)
+  -h, --help
+          Print help (see a summary with '-h')
+
+$ /home/sprime01/projects/domainforge/target/debug/domainforge validate --format human --no-color .sea/interaction/interaction-model.sea
+Validation succeeded: 0 violations total
+
+$ /home/sprime01/projects/domainforge/target/debug/domainforge validate --format json --no-color .sea/interaction/interaction-model.sea
+{
+  "error_count": 0,
+  "violations": []
+}
+
+$ git rev-parse cc9e3f5:.sea/interaction/interaction-model.sea
+e72347845b0304c55f89e74428d75c4b15784e76
+
+$ tmp_root=$(mktemp -d /tmp/sea-forge-interaction-task6-committed.XXXXXX); tmp_root=$(realpath -e -- "$tmp_root"); case "$tmp_root" in /tmp/sea-forge-interaction-task6-committed.*) ;; *) exit 1 ;; esac
+
+$ printf 'TMP_ROOT=%s\n' "$tmp_root"
+TMP_ROOT=/tmp/sea-forge-interaction-task6-committed.nmhUVX
+
+$ git archive cc9e3f5 -- .sea/interaction/interaction-model.sea | tar -x -C "$tmp_root"
+
+$ source_file="$tmp_root/.sea/interaction/interaction-model.sea"; git hash-object "$source_file"
+e72347845b0304c55f89e74428d75c4b15784e76
+
+$ wc -l "$source_file"
+1059 /tmp/sea-forge-interaction-task6-committed.nmhUVX/.sea/interaction/interaction-model.sea
+
+$ (cd "$tmp_root" && /home/sprime01/projects/domainforge/target/debug/domainforge validate --format human --no-color .sea/interaction/interaction-model.sea)
+Validation succeeded: 0 violations total
+
+$ (cd "$tmp_root" && /home/sprime01/projects/domainforge/target/debug/domainforge parse --ast --format json --out interaction-model.ast.json .sea/interaction/interaction-model.sea)
+Wrote output to: interaction-model.ast.json
+
+$ wc -c "$tmp_root/interaction-model.ast.json"
+174179 /tmp/sea-forge-interaction-task6-committed.nmhUVX/interaction-model.ast.json
+
+$ /home/sprime01/projects/domainforge/target/debug/domainforge project --format rdf --created-at 2026-08-03T00:00:00Z .sea/interaction/interaction-model.sea /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf
+Projected RDF dataset to /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf (3 files); validate with `domainforge validate-kg /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.ttl`
+
+$ find /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf -maxdepth 2 -type f -print -exec wc -c {} \;
+/tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/ontology.owl.ttl
+6272 /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/ontology.owl.ttl
+/tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.ttl
+14522 /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.ttl
+/tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.jsonld
+15384 /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.jsonld
+
+$ sha256sum /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.ttl /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.jsonld /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/ontology.owl.ttl
+81151858911f43a6630df04e2ddf57388aff30c9883d7bfaa5c5146dbc65ebd9  /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.ttl
+24f4f2bde31572a77eaaa99cf8964242b09a6d192d15cfa898cf221fb69c8815  /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/model.jsonld
+eb840b3f0a374f4f396b43bc7bdd19474787ac8414038a1563930013ebf80b68  /tmp/sea-forge-interaction-task6-rdf.qQPBKf/rdf/ontology.owl.ttl
