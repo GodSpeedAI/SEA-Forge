@@ -15,7 +15,11 @@
   },
   "shell": {
     "init_hook": [
-      "direnv allow 2>/dev/null || true"
-    ]
+      "direnv allow 2>/dev/null || true",
+      "export PATH=\"$HOME/.cargo/bin:$PATH\""
+    ],
+    "scripts": {
+      "install-domainforge": "cargo install domainforge-core --version 0.16.0 --features cli --locked --force"
+    }
   }
 }

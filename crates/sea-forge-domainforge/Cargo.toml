@@ -9,7 +9,7 @@ repository.workspace = true
 description = "SEA Forge first-party DomainForge semantic adapter."
 
 [dependencies]
-domainforge-core = { version = "=0.15.0", default-features = false }
+domainforge-core = { version = "=0.16.0", default-features = false }
 sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
