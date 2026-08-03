@@ -4,7 +4,7 @@
 
 **Goal:** Account for all 128 governed Workbench stories in a validated SEA interaction model built from 12 canonical human-intention journeys.
 
-**Architecture:** Keep one import-root model at `.sea/interaction/interaction-model.sea` and split ontology, canonical journeys, variant vocabulary, and interface bindings into same-namespace SEA modules. Keep exhaustive row-level evidence in CSV and explain the stable model in focused Markdown artifacts; use DomainForge 0.15.0 to validate, parse, and inspect only semantically useful projections.
+**Architecture:** Keep all semantic declarations in the single validated source `.sea/interaction/interaction-model.sea`. DomainForge 0.15.0 cannot resolve an instance whose entity type is imported from another file, so the smaller `.sea` files are valid explanatory companions that identify conceptual sections without duplicating declarations. Keep exhaustive row-level evidence in CSV and explain the stable model in focused Markdown artifacts; use DomainForge 0.15.0 to validate, parse, and inspect only semantically useful projections.
 
 **Tech Stack:** SEA DSL, DomainForge CLI 0.15.0, Markdown, CSV, repository shell tools.
 
@@ -23,11 +23,11 @@
 
 ## File Structure
 
-- `.sea/interaction/interaction-model.sea` — sole validation/import entry point.
-- `.sea/interaction/interaction-domain.sea` — interaction ontology, actor roles, resources, reusable steps, relations, and enforceable graph invariants.
-- `.sea/interaction/canonical-journeys.sea` — 12 canonical journey instances and their entry-to-completion flows.
-- `.sea/interaction/journey-variants.sea` — classification and recurring variation-dimension instances.
-- `.sea/interaction/interaction-projections.sea` — UI, API, CLI, and agent bindings represented as ordinary concepts.
+- `.sea/interaction/interaction-model.sea` — sole semantic source and validation entry point.
+- `.sea/interaction/interaction-domain.sea` — valid explanatory companion pointing to ontology declarations in the canonical source.
+- `.sea/interaction/canonical-journeys.sea` — valid explanatory companion pointing to the 12 journey instances and flows in the canonical source.
+- `.sea/interaction/journey-variants.sea` — valid explanatory companion pointing to classification and variation instances in the canonical source.
+- `.sea/interaction/interaction-projections.sea` — valid explanatory companion pointing to UI, API, CLI, and agent bindings in the canonical source.
 - `.sea/interaction/canonicalization-matrix.csv` — exhaustive 128-row mapping and evidence ledger.
 - `.sea/interaction/canonical-journey-catalog.md` — full human-readable specification of each canonical journey.
 - `.sea/interaction/journey-grammar.md` — fundamental verbs, nouns, composition rules, and projection boundary.
@@ -251,28 +251,31 @@ git commit -m "docs(interaction): define canonical journey grammar"
 **Files:**
 - Create: `.sea/interaction/interaction-domain.sea`
 - Create: `.sea/interaction/interaction-model.sea`
+- Create: `.sea/interaction/canonical-journeys.sea`
+- Create: `.sea/interaction/journey-variants.sea`
+- Create: `.sea/interaction/interaction-projections.sea`
 
 **Interfaces:**
-- Produces: exported ontology symbols in namespace `sea_forge.interaction` and one canonical import root.
-- Consumed by: Tasks 4 and 5 through relative named or wildcard imports.
+- Produces: ontology symbols in namespace `sea_forge.interaction` inside one canonical semantic source.
+- Consumed by: Tasks 4 and 5 through additions to `interaction-model.sea`; companion files remain explanatory and declaration-free.
 
-- [ ] **Step 1: Prove the current relative-import pattern in a temporary directory**
+- [ ] **Step 1: Record the proven module limitation as a source-boundary decision**
 
-Create a minimal two-module fixture under a `mktemp -d` directory using
-`@namespace "sea_forge.interaction"`, one exported entity, one relative import,
-and one instance of that entity. Validate the importing file with:
+Task 3's risk-first proof already established that both relative wildcard and
+named imports fail when an instance uses an entity declared in the imported
+same-namespace file:
 
-```bash
-/home/sprime01/projects/domainforge/target/debug/domainforge \
-  validate --format human --no-color "$fixture_dir/model.sea"
+```text
+Entity 'ReusableStep' not found in namespace 'sea_forge.interaction'
 ```
 
-Expected: `Validation succeeded: 0 violations total`. Remove only the validated
-temporary directory after recording the result.
+Use the design-approved fallback: no imports, no duplicated declarations, and
+one semantic source. Preserve the exact proof and its cost for Task 6's
+diagnostics and limitation report.
 
 - [ ] **Step 2: Declare the stable interaction ontology**
 
-Define and export these concepts in `interaction-domain.sea`:
+Define these concepts in `interaction-model.sea`:
 
 ```text
 Roles: Operator, CaseOwner, Approver, DomainAuthor, AgentSponsor,
@@ -296,26 +299,31 @@ as the presence of flows and evidence resources. Keep instance-reference,
 variant-cardinality, recovery, and terminal-decision constraints out of policy
 syntax when DomainForge cannot evaluate them.
 
-- [ ] **Step 4: Make `interaction-model.sea` the only import root**
+- [ ] **Step 4: Make `interaction-model.sea` the sole semantic source**
 
-Use relative wildcard imports with aliases for the four modules. The root file
-contains metadata and imports only; it does not redeclare ontology or journey
-concepts.
+Make `interaction-model.sea` the sole semantic source with no imports. Give each
+companion file the same namespace/version metadata plus comments that name its
+conceptual responsibility, point to `interaction-model.sea`, and explain that
+declarations are intentionally consolidated because DomainForge 0.15.0 cannot
+resolve imported entity types for instances. The companions must contain no
+semantic declaration and must validate independently.
 
-- [ ] **Step 5: Validate both the ontology and entry root**
+- [ ] **Step 5: Validate the canonical source and all companions**
 
 Run:
 
 ```bash
 df=/home/sprime01/projects/domainforge/target/debug/domainforge
-"$df" validate --format human --no-color .sea/interaction/interaction-domain.sea
-"$df" validate --format human --no-color .sea/interaction/interaction-model.sea
+for file in \
+  interaction-model.sea interaction-domain.sea canonical-journeys.sea \
+  journey-variants.sea interaction-projections.sea; do
+  "$df" validate --format human --no-color ".sea/interaction/$file"
+done
 ```
 
-Expected: both commands report zero validation errors. The entry-root command
-may remain incomplete until Tasks 4 and 5 create its imported modules; if so,
-commit Task 3 only after adding syntactically valid empty modules with namespace
-metadata and comments, then replace those modules in Tasks 4 and 5.
+Expected: all five commands report zero validation errors. Inspect AST output
+for `interaction-model.sea` to confirm the ontology declarations exist there;
+the four companions intentionally contribute no declarations.
 
 - [ ] **Step 6: Commit the model boundary**
 
@@ -333,11 +341,12 @@ git commit -m "feat(interaction): establish SEA model ontology"
 ### Task 4: Encode Canonical Journeys and Variation Semantics
 
 **Files:**
+- Modify: `.sea/interaction/interaction-model.sea`
 - Modify: `.sea/interaction/canonical-journeys.sea`
 - Modify: `.sea/interaction/journey-variants.sea`
 
 **Interfaces:**
-- Consumes: exported ontology symbols from `interaction-domain.sea` and the exact `CJ01`-`CJ12` catalog from Task 2.
+- Consumes: ontology symbols already present in `interaction-model.sea` and the exact `CJ01`-`CJ12` catalog from Task 2.
 - Produces: 12 canonical journey instances, end-to-end transition flows, and reusable classification/variation instances.
 
 - [ ] **Step 1: Encode all 12 canonical journeys as instances**
@@ -366,15 +375,19 @@ Create `JourneyVariant` instances for the eight required classifications and
 for each variation dimension that occurs across materially different catalog
 areas. Do not create 128 SEA instances; the CSV remains exhaustive.
 
+Keep all declarations in `interaction-model.sea`. Update the two companion
+files only to describe which canonical-source sections they index; do not copy
+or import declarations.
+
 - [ ] **Step 4: Validate semantic references after each module change**
 
 Run:
 
 ```bash
 df=/home/sprime01/projects/domainforge/target/debug/domainforge
+"$df" validate --format human --no-color .sea/interaction/interaction-model.sea
 "$df" validate --format human --no-color .sea/interaction/canonical-journeys.sea
 "$df" validate --format human --no-color .sea/interaction/journey-variants.sea
-"$df" validate --format human --no-color .sea/interaction/interaction-model.sea
 ```
 
 Expected: all three commands succeed with zero errors.
@@ -399,7 +412,8 @@ temporary AST.
 
 ```bash
 git add .sea/interaction/canonical-journeys.sea \
-  .sea/interaction/journey-variants.sea
+  .sea/interaction/journey-variants.sea \
+  .sea/interaction/interaction-model.sea
 git commit -m "feat(interaction): model canonical journeys and variants"
 ```
 
@@ -408,6 +422,7 @@ git commit -m "feat(interaction): model canonical journeys and variants"
 ### Task 5: Bind Interface Projections and Document the Canonical Source
 
 **Files:**
+- Modify: `.sea/interaction/interaction-model.sea`
 - Modify: `.sea/interaction/interaction-projections.sea`
 - Create: `.sea/interaction/README.md`
 
@@ -417,11 +432,14 @@ git commit -m "feat(interaction): model canonical journeys and variants"
 
 - [ ] **Step 1: Encode interface kinds and evidence-backed bindings**
 
-Create projection instances with fields for `interface_kind`, `canonical_journey_ids`,
+Create projection instances in `interaction-model.sea` with fields for `interface_kind`, `canonical_journey_ids`,
 `entry_or_method`, `binding_role`, `implementation_maturity`, `source_ref`, and
 `limitations`. Include the 17 Workbench routes, implemented SFWP method families,
 major CLI entry points, and Thoth/delegation agent surfaces at the semantic
 family level rather than one instance per button.
+
+Keep `interaction-projections.sea` declaration-free and update its comments to
+index the corresponding canonical-source section.
 
 - [ ] **Step 2: Preserve unavailable and preview-only distinctions**
 
@@ -444,21 +462,25 @@ what UI/API/CLI/agent bindings mean
 how the next Journey & Capability Map agent should consume each artifact
 ```
 
-- [ ] **Step 4: Validate the complete import root again**
+- [ ] **Step 4: Validate the complete canonical source again**
 
 Run:
 
 ```bash
-/home/sprime01/projects/domainforge/target/debug/domainforge \
-  validate --format human --no-color .sea/interaction/interaction-model.sea
+df=/home/sprime01/projects/domainforge/target/debug/domainforge
+"$df" validate --format human --no-color .sea/interaction/interaction-model.sea
+"$df" validate --format human --no-color .sea/interaction/interaction-projections.sea
 ```
 
-Expected: zero errors and no unresolved imports.
+Expected: zero errors; the canonical source has no imports and the companion has
+no declarations.
 
 - [ ] **Step 5: Commit interface bindings and source guidance**
 
 ```bash
-git add .sea/interaction/interaction-projections.sea .sea/interaction/README.md
+git add .sea/interaction/interaction-model.sea \
+  .sea/interaction/interaction-projections.sea \
+  .sea/interaction/README.md
 git commit -m "docs(interaction): bind interface projections"
 ```
 
