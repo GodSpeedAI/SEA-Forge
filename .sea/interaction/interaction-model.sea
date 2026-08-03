@@ -671,3 +671,389 @@ Instance dimension_recovery_and_next_decision of "JourneyVariant" {
     recurring_values: "repair, revalidate, reprobe, retry, resume, replan, reactivate, change provider or environment, rebuild, escalate, stop"
     evidence: "journey-grammar.md Recurring Variation Dimensions; canonicalization-matrix.csv"
 }
+
+// Interface projection bindings
+//
+// These ordinary instances bind implemented or intended interfaces to CJ IDs.
+// They do not define canonical identity and they are not runtime availability
+// claims beyond the cited repository evidence.
+
+Instance workbench_readiness_routes of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ01; CJ02"
+    entry_or_method: "/; /readiness"
+    binding_role: "The root route and its named alias render the same operation-sensitive readiness projection and lawful case-creation affordance."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx indexRoute and readinessRoute; workbench/apps/desktop/src/pages/ReadinessPage.tsx; workbench/apps/desktop/src/pages/ReadinessPage.test.tsx"
+    limitations: "Both paths are aliases for one screen, not separate journeys. Readiness covers implemented self-model, endpoint, identity, and cell-state inputs; it is not the complete cataloged startup, policy, lifecycle, or maintenance surface."
+}
+
+Instance workbench_thoth_route of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ02; CJ09; CJ10"
+    entry_or_method: "/thoth"
+    binding_role: "Compose typed self-description, affordance, failure, evidence, and capability questions through the governed Thoth answer surface."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx thothRoute; workbench/apps/desktop/src/pages/ThothPage.tsx; crates/sea-forge-server/src/sfwp/thoth.rs; crates/sea-forge-server/tests/conformance_m11_ask.rs"
+    limitations: "The route invokes thoth.ask only. Catalog targets thoth.list_question_kinds, thoth.get_answer, and thoth.replay_answer are not advertised by the server. An answer confers no execution authority and this route is not the bounded manager loop."
+}
+
+Instance workbench_assets_route of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ02"
+    entry_or_method: "/assets"
+    binding_role: "Browse source-backed template, agent-endpoint, and extension assets while preserving their distinct standing vocabularies."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx assetsRoute; workbench/apps/desktop/src/pages/AssetCatalogPage.tsx; crates/sea-forge-server/src/sfwp/assets.rs; crates/sea-forge-server/tests/conformance_assets.rs"
+    limitations: "The live asset.list projection is a combined catalog, not the catalog's full asset.get, asset.compare, endpoint lifecycle, environment, or adapter-detail family. Endpoint standing must be reread after probe or configuration changes."
+}
+
+Instance workbench_delegation_route of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ02; CJ07; CJ08; CJ09"
+    entry_or_method: "/delegate"
+    binding_role: "Inspect a prospective job contract, browse recorded delegation episodes, and request cancellation for one live delegation."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx delegateRoute; workbench/apps/desktop/src/pages/DelegationWorkbench.tsx; workbench/apps/desktop/src/pages/DelegationRoster.tsx; crates/sea-forge-server/src/sfwp/delegation_preview.rs; crates/sea-forge-server/src/sfwp/delegations.rs"
+    limitations: "The workbench deliberately offers no Delegate or Commit action: delegation.preview creates no case, run, authority decision, or ledger record. Execution and cancellation use legacy delegate and cancel_delegation wire verbs outside IMPLEMENTED_METHODS; live turn progress is not published, and real compatible-host release proofs remain skipped."
+}
+
+Instance workbench_domain_models_route of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ03; CJ11"
+    entry_or_method: "/models"
+    binding_role: "Reserve the governed model-inspection route while making missing server support visible."
+    implementation_maturity: "specified"
+    source_ref: "workbench/apps/desktop/src/router.tsx modelsRoute; workbench/apps/desktop/src/pages/SurfacesPages.tsx ModelsPage; workbench/apps/desktop/src/pages/UnbackedSurface.tsx; .agents/specs/frontend/sea-forge-workbench-api-method-catalog-v0.1.yaml domain_model.list"
+    limitations: "This is an unavailable surface, not an implemented journey. The renderer probes the name domain.list_models while the target catalog names domain_model.list, and neither name appears in IMPLEMENTED_METHODS."
+}
+
+Instance workbench_case_routes of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ04; CJ05; CJ06; CJ08"
+    entry_or_method: "/cases; /cases/new"
+    binding_role: "Form and preflight a template-backed case, commit it with staleness protection, then inspect committed case overview, horizon, runs, and approvals."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx casesRoute and caseCreationRoute; workbench/apps/desktop/src/pages/CaseCreationWorkbench.tsx; workbench/apps/desktop/src/pages/CaseHorizonPage.tsx; crates/sea-forge-server/tests/conformance_case_authoring.rs; crates/sea-forge-server/tests/conformance_case_views.rs"
+    limitations: "The routes do not implement the target catalog's complete draft editor, timeline, plan graph, item start, discretionary mutation, replan, reopen, or terminate surfaces. Implemented case.entry_options drifts from target case.get_entry_options."
+}
+
+Instance workbench_inbox_route of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ06"
+    entry_or_method: "/inbox"
+    binding_role: "List pending approvals and resolve an eligible approval through the common governed decision path."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx inboxRoute; workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx; crates/sea-forge-server/src/sfwp/approvals.rs; crates/sea-forge-server/tests/conformance_approvals.rs"
+    limitations: "The route covers approval.list and approval.decide, not the target approval.get or human_task list, get, complete, and reject family. Eligibility and separation remain server-owned; rendering a button grants nothing."
+}
+
+Instance workbench_operations_route of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ08; CJ09"
+    entry_or_method: "/operations"
+    binding_role: "Follow durable events, recover cursor gaps, and inspect correlated request status without making the live channel authoritative."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx operationsRoute; workbench/apps/desktop/src/pages/OperationsPage.tsx; workbench/apps/desktop/src/hooks/useOperationsStream.ts; crates/sea-forge-server/tests/conformance_sfwp.rs"
+    limitations: "This is an event and correlation view, not the target operations.get_overview, notification center, or full cancellation and restart-reconciliation workbench. Held data is explicitly stale rather than current."
+}
+
+Instance workbench_evidence_and_run_routes of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ08; CJ09"
+    entry_or_method: "/evidence; /runs/$runId"
+    binding_role: "List committed run records and resolve one run into linked criteria, authority, trace, evidence, declarations, termination, and settlement views."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx evidenceRoute and runRecordRoute; workbench/apps/desktop/src/pages/EvidencePage.tsx; workbench/apps/desktop/src/pages/RunRecordPage.tsx; crates/sea-forge-server/src/sfwp/run_views.rs; crates/sea-forge-server/tests/conformance_run_views.rs"
+    limitations: "The two routes project run.list and run.get. They do not implement the target evidence search/content/verify, integrity proof, audit search, run output/trace, retry, or cancel method families."
+}
+
+Instance workbench_unavailable_record_routes of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ10; CJ11; CJ12"
+    entry_or_method: "/memory -> memory.recall; /capabilities -> capability.list; /artifacts -> artifact.list; /federation -> federation.preview_export"
+    binding_role: "Reserve explicit routes for governed memory, capability, artifact, and federation projections while negotiating whether each target method exists."
+    implementation_maturity: "specified"
+    source_ref: "workbench/apps/desktop/src/router.tsx memoryRoute, capabilitiesRoute, artifactsRoute, and federationRoute; workbench/apps/desktop/src/pages/SurfacesPages.tsx; workbench/apps/desktop/src/pages/UnbackedSurface.tsx"
+    limitations: "All four routes are unavailable in this server and must not be described as implemented journeys. Their named target methods are absent from IMPLEMENTED_METHODS even though related kernel or CLI capabilities exist."
+}
+
+Instance workbench_administration_route of "InterfaceProjection" {
+    interface_kind: "web_ui"
+    canonical_journey_ids: "CJ01; CJ02; CJ08; CJ09"
+    entry_or_method: "/admin"
+    binding_role: "Inspect the negotiated SFWP protocol and implemented method catalog for the connected cell."
+    implementation_maturity: "exercised"
+    source_ref: "workbench/apps/desktop/src/router.tsx adminRoute; workbench/apps/desktop/src/pages/SystemContractPage.tsx; crates/sea-forge-server/src/sfwp/mod.rs system.describe"
+    limitations: "The live system contract is narrower than the epic's administration and maintenance journeys. Policy reload, extension and endpoint lifecycle, integrity operations, and maintenance repair remain absent from this route and the advertised server catalog."
+}
+
+Instance sfwp_system_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ01; CJ02"
+    entry_or_method: "system.hello; system.describe; system.get_schema"
+    binding_role: "Negotiate protocol compatibility, enumerate advertised methods and interaction classes, and locate generated transport schemas."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/mod.rs IMPLEMENTED_METHODS, hello, describe, get_schema, and SCHEMA_TYPES; crates/sea-forge-server/tests/conformance_sfwp.rs"
+    limitations: "system.get_schema currently returns the shared schema set for any known method rather than a precise per-method subset. Catalog presence proves reachability, not that a higher-level journey is complete."
+}
+
+Instance sfwp_request_correlation_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ04; CJ06; CJ08"
+    entry_or_method: "request.get_status"
+    binding_role: "Recover the pending or recorded outcome of a correlated protected request after response ambiguity or reconnect."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/correlation.rs; crates/sea-forge-server/src/sfwp/mod.rs IMPLEMENTED_METHODS; crates/sea-forge-server/tests/conformance_sfwp.rs"
+    limitations: "Correlation is not a general operation history. Only request-id-aware paths record recoverable outcomes, and a crash in the pending window may remain explicitly pending rather than being guessed complete."
+}
+
+Instance sfwp_event_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ08; CJ09"
+    entry_or_method: "events.subscribe; events.unsubscribe; events.get_range"
+    binding_role: "Stream committed events, stop a live subscription, and recover missed frames by durable cursor range."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/events.rs; crates/sea-forge-server/src/sfwp/mod.rs IMPLEMENTED_METHODS; crates/sea-forge-server/tests/conformance_sfwp.rs"
+    limitations: "The stream is a projection over committed records, never a second truth channel. Subscribe and unsubscribe require live connection handling, while get_range is the durable recovery surface."
+}
+
+Instance sfwp_context_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ01; CJ02"
+    entry_or_method: "readiness.get; identity.get"
+    binding_role: "Project operation-sensitive readiness and the calling connection's attributable actor choices before protected work."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/readiness.rs; crates/sea-forge-server/src/identity.rs; crates/sea-forge-server/src/sfwp/mod.rs IMPLEMENTED_METHODS; crates/sea-forge-server/tests/conformance_identity.rs"
+    limitations: "identity.get is implemented but absent from the target method catalog, which instead specifies context.get and context.list_roles. readiness.get does not implement readiness.check or the complete target cell, sponsorship, authority, policy, and self-model command families."
+}
+
+Instance sfwp_thoth_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ02; CJ09; CJ10"
+    entry_or_method: "thoth.ask"
+    binding_role: "Submit one typed, disclosure-controlled self-model question and return a grounded answer with omitted classes, freshness, assurance, limitations, and an authority notice."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/thoth.rs; crates/sea-forge-server/src/lib.rs Request::Ask handler; crates/sea-forge-server/tests/conformance_m11_ask.rs"
+    limitations: "Only thoth.ask is advertised. The target list-question-kinds, get-answer, and replay-answer methods are absent, and the API is an epistemic interface rather than autonomous planning, execution, settlement, or capability promotion."
+}
+
+Instance sfwp_case_authoring_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ04"
+    entry_or_method: "case.entry_options; case.preflight; case.commit"
+    binding_role: "List materialized templates, dry-run the canonical proposal validator, pin the template digest, and commit through the existing case-submit path."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/case.rs; crates/sea-forge-server/src/lib.rs CaseCommit handler; crates/sea-forge-server/tests/conformance_case_authoring.rs"
+    limitations: "Implemented case.entry_options is named case.get_entry_options in the target catalog. There is no target case.validate_draft implementation, and preflight returns the implemented summary rather than the epic's complete all-fields preview."
+}
+
+Instance sfwp_case_navigation_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ05; CJ08"
+    entry_or_method: "case.list; case.get_overview; case.get_horizon"
+    binding_role: "Project committed case identity, purpose, run settlement summary, and horizon standing folded from trace events."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/case_views.rs; crates/sea-forge-server/tests/conformance_case_views.rs"
+    limitations: "These are read-only projections. The target timeline, plan, start-item, discretionary-item, replan, reopen, and terminate methods are not advertised, and folded standing is not persisted as a second status authority."
+}
+
+Instance sfwp_approval_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ06"
+    entry_or_method: "approval.list; approval.decide"
+    binding_role: "Enumerate open approvals and resolve one approve or reject verdict through the established authority and append-only approval path."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/approvals.rs; crates/sea-forge-server/src/lib.rs ApprovalDecide handler; crates/sea-forge-server/tests/conformance_approvals.rs"
+    limitations: "approval.get and the human_task method family remain target-only. approval.decide is an envelope over the same decision path as the legacy approve and reject wire verbs, not a second authority mechanism."
+}
+
+Instance sfwp_run_record_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ08; CJ09"
+    entry_or_method: "run.list; run.get"
+    binding_role: "Enumerate committed run records and resolve one run into source-backed execution, evidence, criteria, declaration, and settlement detail."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/run_views.rs; crates/sea-forge-server/tests/conformance_run_views.rs"
+    limitations: "Target run.get_output, run.get_trace, run.cancel, run.retry, agent_run detail and transcript, settlement, evidence, audit, and integrity families are not advertised as SFWP methods."
+}
+
+Instance sfwp_asset_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ02"
+    entry_or_method: "asset.list"
+    binding_role: "Project materialized templates, configured agent endpoints, extension registry entries, and endpoint probe evidence into one inspect catalog."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/assets.rs; crates/sea-forge-server/tests/conformance_assets.rs"
+    limitations: "Only asset.list is advertised. Target asset.get and asset.compare plus separate endpoint, extension, environment, adapter, and capability catalogs remain absent or narrower than the combined implementation."
+}
+
+Instance sfwp_delegation_family of "InterfaceProjection" {
+    interface_kind: "api"
+    canonical_journey_ids: "CJ02; CJ07; CJ08; CJ09"
+    entry_or_method: "delegation.preview; delegation.list"
+    binding_role: "Inspect the exact prospective job contract and enumerate live, cancellation-requested, settled, or unresolved delegation episodes."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-server/src/sfwp/delegation_preview.rs; crates/sea-forge-server/src/sfwp/delegations.rs; crates/sea-forge-server/tests/conformance_delegation_preview.rs; crates/sea-forge-server/tests/conformance_delegations.rs"
+    limitations: "The target method catalog contains no delegation family. The advertised methods are inspect-only; execution and cancellation remain the legacy delegate and cancel_delegation verbs, preview eligibility is not authority, and unresolved standing must not be rendered as failure."
+}
+
+Instance cli_execution_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ04; CJ07; CJ08"
+    entry_or_method: "sea-forge run; sea-forge resume"
+    binding_role: "Normalize intent or a supplied plan, execute governed work, and resume a committed case from its recorded state."
+    implementation_maturity: "evidenced"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Run and Command::Resume; crates/sea-forge-cli/tests/lifecycle.rs; crates/sea-forge-cli/tests/conformance_m13.rs"
+    limitations: "The CLI is a one-shot interface and does not provide the Workbench's live projections. Process exit follows typed command and settlement outcomes; it is never evidence that a declared journey completed by itself."
+}
+
+Instance cli_run_inspection_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ08; CJ09"
+    entry_or_method: "sea-forge runs; sea-forge inspect"
+    binding_role: "List runs, optionally narrow to unsettled episodes, and inspect one run's committed record chain."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Runs and Command::Inspect; crates/sea-forge-cli/tests/lifecycle.rs"
+    limitations: "These commands are human-readable projections over records, not canonical truth or the complete SFWP run-detail contract."
+}
+
+Instance cli_memory_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ10"
+    entry_or_method: "sea-forge recall; sea-forge memory rebuild"
+    binding_role: "Recall governed memory or capability envelopes under policy and rebuild the derived memory index from authoritative records."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Recall and Command::Memory; crates/sea-forge-cli/tests/conformance_m4b.rs; crates/sea-forge-cli/tests/lifecycle.rs"
+    limitations: "The Workbench memory.recall and capability.list methods remain unavailable. Index rebuild changes access speed, never source truth or capability standing."
+}
+
+Instance cli_cell_and_self_model_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ01; CJ09"
+    entry_or_method: "sea-forge migrate; sea-forge self-model validate|rebuild|show"
+    binding_role: "Migrate compatible history and validate, realize, or inspect the release-and-cell self-model snapshot."
+    implementation_maturity: "evidenced"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Migrate and Command::SelfModel; crates/sea-forge-cli/tests/conformance_m0_migrate.rs; crates/sea-forge-cli/tests/self_model_cli.rs"
+    limitations: "These commands do not implement the target cell browser, context, sponsorship, readiness-check, or full lifecycle-management API. A shown snapshot may be stale and must retain that label."
+}
+
+Instance cli_semantic_and_environment_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ02; CJ03; CJ11"
+    entry_or_method: "sea-forge project; sea-forge env list|show"
+    binding_role: "Run the governed spec-to-code and semantic projection pipeline and inspect available environment contracts."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Project and Command::Env; crates/sea-forge-cli/tests/conformance_m5.rs; crates/sea-forge-domainforge/tests/projection.rs"
+    limitations: "CLI environment inspection does not make target environment.list or domain_model methods available through SFWP. Generated output and runtime readiness remain separately settled."
+}
+
+Instance cli_case_and_human_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ04; CJ05; CJ06; CJ08"
+    entry_or_method: "sea-forge case reopen|add-task|manager-iterate; sea-forge task complete; sea-forge approve; sea-forge reject"
+    binding_role: "Append governed case adaptations, complete human work, resolve approvals, and invoke one bounded Thoth manager iteration."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Case, Command::Task, Command::Approve, and Command::Reject; crates/sea-forge-cli/src/commands/manager.rs; crates/sea-forge-cli/tests/conformance_m15.rs"
+    limitations: "The manager is explicitly invoked rather than autonomous, proposes only catalog-bound discretionary work, and cannot approve, settle, or promote its own proposal. CLI subcommands are not equivalent to the broader target SFWP case and human-task families."
+}
+
+Instance cli_ledger_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ09"
+    entry_or_method: "sea-forge ledger verify|prove|replay"
+    binding_role: "Verify a ledger stream, prove record inclusion, and replay persisted case dispatch and settlement ordering without re-execution."
+    implementation_maturity: "evidenced"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Ledger; crates/sea-forge-cli/tests/conformance_m0_migrate.rs; crates/sea-forge-cli/tests/conformance_m13.rs"
+    limitations: "Replay applies to persisted ordering and does not re-run work. Pre-ordinal cases cannot be replayed through the newer ordering command without migration."
+}
+
+Instance cli_federation_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ12"
+    entry_or_method: "sea-forge export; sea-forge import; sea-forge adopt"
+    binding_role: "Export a hash-verifiable bundle, verify and import it atomically, and separately adopt an inert imported asset."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Export, Command::Import, and Command::Adopt; crates/sea-forge-cli/tests/task17_closeout.rs; crates/sea-forge-cell/tests/conformance_m6.rs"
+    limitations: "The Workbench federation route and target federation SFWP family remain unavailable. Import never grants local use, and imported history does not count as local capability proof."
+}
+
+Instance cli_artifact_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ11"
+    entry_or_method: "sea-forge artifact synthesize|productize|capitalize|attest"
+    binding_role: "Request governed artifact maturity transitions and record the evidence or attestation required by their gates."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Artifact; crates/sea-forge-cli/tests/conformance_m8_artifact.rs"
+    limitations: "The Workbench artifact route and target artifact.list/get/verify/preview/request methods remain unavailable. A command cannot skip predecessor, evidence, authority, or separation-of-duty gates."
+}
+
+Instance cli_thoth_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ02; CJ09; CJ10"
+    entry_or_method: "sea-forge ask"
+    binding_role: "Submit a typed Thoth question and render the governed answer as human-readable text or JSON."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Ask; crates/sea-forge-cli/src/commands/ask.rs; crates/sea-forge-cli/tests/ask_cli.rs"
+    limitations: "Exit 4 represents a disclosure denial as a successful governance outcome, not an internal failure. The command does not expose a free-form graph query, conversational agent, or execution grant."
+}
+
+Instance cli_agent_family of "InterfaceProjection" {
+    interface_kind: "cli"
+    canonical_journey_ids: "CJ02; CJ07; CJ08; CJ09"
+    entry_or_method: "sea-forge agent list|probe|delegate|cancel"
+    binding_role: "Enumerate configured endpoints, run an authority-gated probe, execute bounded agent work, and request cancellation of one delegation."
+    implementation_maturity: "exercised"
+    source_ref: "crates/sea-forge-cli/src/main.rs Command::Agent; crates/sea-forge-cli/src/commands/agent.rs; crates/sea-forge-cli/tests/conformance_m13.rs; crates/sea-forge-server/tests/conformance_m16.rs"
+    limitations: "The commands use legacy server wire verbs not all advertised by IMPLEMENTED_METHODS. Portable HTTP, ACP, and SWE_SEED evidence is green, while real compatible ACP and projected SWE_SEED host release tests remain skipped pending operator configuration."
+}
+
+Instance agent_thoth_epistemic_surface of "InterfaceProjection" {
+    interface_kind: "agent"
+    canonical_journey_ids: "CJ02; CJ09; CJ10"
+    entry_or_method: "Thoth typed question and answer protocol via thoth.ask, sea-forge ask, and /thoth"
+    binding_role: "Give operators and external agents a bounded, disclosure-before-retrieval interpreter over the verified self-model."
+    implementation_maturity: "exercised"
+    source_ref: ".agents/specs/spec-adlc-thoth-minimum.md §§7.3-7.4 and 9-10; crates/sea-forge-thoth/src/service.rs; crates/sea-forge-server/src/sfwp/thoth.rs; crates/sea-forge-thoth/tests/conformance_m11_service.rs"
+    limitations: "Thoth is not the canonical self-model, a raw graph-query surface, a general conversational LLM, an authority source, or a settlement and capability-promotion actor."
+}
+
+Instance agent_thoth_manager_surface of "InterfaceProjection" {
+    interface_kind: "agent"
+    canonical_journey_ids: "CJ04; CJ05; CJ08"
+    entry_or_method: "sea-forge case manager-iterate"
+    binding_role: "Classify one case deterministically and propose bounded catalog-backed discretionary agent work through normal plan mutation."
+    implementation_maturity: "exercised"
+    source_ref: ".agents/specs/spec-agent-orchestration.md §§7.6, 10.3, and 16.2; crates/sea-forge-cli/src/commands/manager.rs; crates/sea-forge-cli/tests/conformance_m15.rs"
+    limitations: "The manager is invoked, never a hidden daemon; the grant bounds iterations; exhaustion parks and escalates. It cannot invent arbitrary work, auto-route endpoints, approve, execute privately, settle, or promote its own proposal."
+}
+
+Instance agent_endpoint_surface of "InterfaceProjection" {
+    interface_kind: "agent"
+    canonical_journey_ids: "CJ02; CJ07"
+    entry_or_method: "asset.list endpoint rows; sea-forge agent list|probe; HTTP-compatible and ACP endpoint descriptors"
+    binding_role: "Discover configured agent providers and demonstrate endpoint compatibility through an exact authority-gated probe."
+    implementation_maturity: "exercised"
+    source_ref: ".agents/specs/spec-agent-orchestration.md §§7.1-7.2 and 10.1; crates/sea-forge-server/src/sfwp/assets.rs; crates/sea-forge-server/tests/conformance_m12.rs"
+    limitations: "Configured, syntactically valid, available, and demonstrated remain separate. Endpoint identifiers do not grant network, process, model, credential, or secret access, and the complete target endpoint lifecycle API is absent."
+}
+
+Instance agent_delegation_execution_surface of "InterfaceProjection" {
+    interface_kind: "agent"
+    canonical_journey_ids: "CJ04; CJ07; CJ09"
+    entry_or_method: "delegation.preview; legacy delegate; agent_task case episodes; HTTP, ACP, and SWE_SEED executors"
+    binding_role: "Bind a job contract, authorize exact external action and secrets, execute bounded agent work, capture transcript and harness evidence, and submit the episode to independent settlement."
+    implementation_maturity: "exercised"
+    source_ref: ".agents/specs/spec-agent-orchestration.md §§7.3-7.5, 10.1-10.2, and 17.2; crates/sea-forge-server/src/delegation.rs; crates/sea-forge-server/src/sfwp/delegation_preview.rs; crates/sea-forge-server/tests/conformance_m13.rs"
+    limitations: "Preview eligibility is not authority and agent narration is not proof. Real compatible-host ACP and SWE_SEED release evidence remains skipped; portable fixtures and harvest paths are exercised. Every termination still requires retained evidence and separate settlement."
+}
+
+Instance agent_delegation_control_surface of "InterfaceProjection" {
+    interface_kind: "agent"
+    canonical_journey_ids: "CJ06; CJ08; CJ09"
+    entry_or_method: "delegation.list; legacy cancel_delegation; ACP permission-to-approval bridge; run.get"
+    binding_role: "Observe delegation standing separately from settlement, cancel one live episode without its siblings, and route ACP permission requests through ordinary governed decisions."
+    implementation_maturity: "exercised"
+    source_ref: ".agents/specs/spec-agent-orchestration.md §§7.5, 10.4, and 17.5; crates/sea-forge-server/src/sfwp/delegations.rs; crates/sea-forge-server/src/delegation.rs; crates/sea-forge-server/tests/conformance_m16.rs"
+    limitations: "CancellationRequested is not a terminal outcome; Unresolved is not failed; and Settled does not imply accepted. The kernel publishes no per-turn live count. ACP denial leaves a session alive unless cancellation or termination separately ends it."
+}

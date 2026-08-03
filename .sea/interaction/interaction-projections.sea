@@ -1,7 +1,11 @@
 @namespace "sea_forge.interaction"
 @version "0.1.0"
 
-// Conceptual responsibility: UI, API, CLI, and agent interface bindings added
-// by the interface-projection modeling task.
-// Canonical declarations live only in interaction-model.sea because
+// Explanatory index for the "Interface projection bindings" section in
+// interaction-model.sea. That section binds all 17 Workbench routes, every
+// advertised SFWP method family, all visible major CLI entry points, and the
+// implemented Thoth/delegation agent surfaces to existing CJ01-CJ12 IDs.
+// Bindings are ordinary InterfaceProjection instances, never canonical journey
+// identities or runtime availability claims beyond their cited evidence.
+// This companion intentionally has no imports or semantic declarations because
 // DomainForge 0.15.0 cannot resolve imported entity types for instances.
