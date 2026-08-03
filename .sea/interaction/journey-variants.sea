@@ -1,7 +1,9 @@
 @namespace "sea_forge.interaction"
 @version "0.1.0"
 
-// Conceptual responsibility: journey classifications and recurring variation
-// dimensions added by the canonical-journey modeling task.
-// Canonical declarations live only in interaction-model.sea because
+// Explanatory index for the "Closed canonicalization classifications" and
+// "Recurring journey variation dimensions" sections in interaction-model.sea.
+// Those sections define the eight closed classification values and the eleven
+// evidence-backed variation families shared across the canonical catalog.
+// This companion intentionally has no imports or semantic declarations because
 // DomainForge 0.15.0 cannot resolve imported entity types for instances.

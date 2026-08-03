@@ -1,7 +1,9 @@
 @namespace "sea_forge.interaction"
 @version "0.1.0"
 
-// Conceptual responsibility: canonical journey instances and transformation
-// flows added by the canonical-journey modeling task.
-// Canonical declarations live only in interaction-model.sea because
+// Explanatory index for the "Canonical journey instances", "Canonical journey
+// transition states", and "Canonical journey transformation flows" sections
+// in interaction-model.sea. Those sections define CJ01-CJ12, their unique
+// entry and completion states, and one InteractionProgress flow per journey.
+// This companion intentionally has no imports or semantic declarations because
 // DomainForge 0.15.0 cannot resolve imported entity types for instances.
