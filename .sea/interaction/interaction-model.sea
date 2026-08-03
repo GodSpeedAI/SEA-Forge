@@ -1,0 +1,112 @@
+@namespace "sea_forge.interaction"
+@version "0.1.0"
+
+// This file is the sole semantic source. DomainForge 0.15.0 cannot resolve an
+// imported entity type for a same-namespace instance, so declarations remain
+// consolidated here rather than duplicated across explanatory companions.
+
+export Role "Operator"
+export Role "CaseOwner"
+export Role "Approver"
+export Role "DomainAuthor"
+export Role "AgentSponsor"
+export Role "Auditor"
+export Role "CellAdministrator"
+export Role "ExternalActor"
+export Role "AutomatedActor"
+
+export Entity "ProductPurpose"
+export Entity "UserIntent"
+export Entity "CanonicalJourney"
+export Entity "JourneyVariant"
+export Entity "JourneyStep"
+export Entity "UserAction"
+export Entity "InteractionState"
+export Entity "SystemCapability"
+export Entity "Artifact"
+export Entity "Evidence"
+export Entity "Decision"
+export Entity "RecoveryPath"
+export Entity "InterfaceProjection"
+
+export Resource "InteractionProgress"
+export Resource "GovernedEvidence"
+export Resource "GovernedArtifact"
+export Resource "DecisionContext"
+export Resource "LawfulAffordance"
+
+Relation "Sponsorship"
+    subject: "AgentSponsor"
+    predicate: "is accountable sponsor for"
+    object: "AutomatedActor"
+
+Relation "ApprovalJudgment"
+    subject: "Approver"
+    predicate: "renders governed judgment for"
+    object: "CaseOwner"
+
+Relation "AuditReview"
+    subject: "Auditor"
+    predicate: "reviews governed activity of"
+    object: "Operator"
+
+Instance context_selection_step of "JourneyStep" {
+    phase: "context_selection",
+    purpose: "Select or supply governed cell, actor, case, semantic, and work context."
+}
+
+Instance preflight_step of "JourneyStep" {
+    phase: "preflight",
+    purpose: "Validate readiness, availability, and constraints before a protected action."
+}
+
+Instance authority_resolution_step of "JourneyStep" {
+    phase: "authority_resolution",
+    purpose: "Resolve disclosure, policy, eligibility, and the exact grant before an effect."
+}
+
+Instance capability_invocation_step of "JourneyStep" {
+    phase: "capability_invocation",
+    purpose: "Invoke one typed and bounded behavior within the granted boundary."
+}
+
+Instance evidence_inspection_step of "JourneyStep" {
+    phase: "evidence_inspection",
+    purpose: "Expose evidence, provenance, freshness, assurance, and limitations."
+}
+
+Instance settlement_decision_step of "JourneyStep" {
+    phase: "settlement_or_decision",
+    purpose: "Settle declared criteria or reach an accountable decision from evidence."
+}
+
+Instance next_affordance_selection_step of "JourneyStep" {
+    phase: "next_affordance_selection",
+    purpose: "Offer only a lawful next action or an explicit terminal condition."
+}
+
+Flow "InteractionProgress"
+    @phase "intent_normalization"
+    from "UserIntent" to "CanonicalJourney"
+    quantity 1
+
+Flow "GovernedEvidence"
+    @phase "evidence_capture"
+    from "SystemCapability" to "Evidence"
+    quantity 1
+
+Flow "DecisionContext"
+    @phase "settlement_or_decision"
+    from "Evidence" to "Decision"
+    quantity 1
+
+Flow "LawfulAffordance"
+    @phase "next_affordance_selection"
+    from "Decision" to "UserAction"
+    quantity 1
+
+Policy has_interaction_flow as:
+    count(flows) > 0
+
+Policy has_governed_evidence_resource as:
+    exists r in resources: (r.name = "GovernedEvidence")

@@ -1,0 +1,7 @@
+@namespace "sea_forge.interaction"
+@version "0.1.0"
+
+// Conceptual responsibility: UI, API, CLI, and agent interface bindings added
+// by the interface-projection modeling task.
+// Canonical declarations live only in interaction-model.sea because
+// DomainForge 0.15.0 cannot resolve imported entity types for instances.
