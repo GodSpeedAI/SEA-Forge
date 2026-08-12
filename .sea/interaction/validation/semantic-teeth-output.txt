@@ -1,0 +1,43 @@
+domainforge: domainforge 0.16.0
+model:       /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+-- baseline
+PASS T00      accepted as expected
+
+-- typed instance validation
+PASS T01      is not a member of enum 'ImplementationMaturity'
+PASS T02      is not a member of enum 'InterfaceKind'
+PASS T03      is not a member of enum 'CanonicalizationClass'
+PASS T04      contains dangling typed reference
+PASS T05      contains dangling typed reference
+PASS T06      must be unique for entity 'CanonicalJourney'
+PASS T07      has unknown field
+PASS T08      is missing required field 'slug'
+PASS T09      violates its pattern constraint
+PASS T10      violates its pattern constraint
+PASS T11      does not satisfy its int type
+PASS T12      violates its max constraint
+PASS T13      violates its min_length constraint
+
+-- graph invariants (instance-aware policies)
+PASS T14      contains dangling typed reference
+PASS T14b     value 'CJ13' does not match pattern 'JourneyId'
+PASS T14c     'twelve_canonical_journeys' was violated
+PASS T15      'all_observed_stories_accounted' was violated
+PASS T16      'exercised_stories_reconcile' was violated
+PASS T17      'interface_bindings_reconcile' was violated
+PASS T18      'eight_interaction_steps' was violated
+PASS T19      'interaction_step_ordinals_complete' was violated
+PASS T20      contains dangling typed reference
+PASS T20b     'thirty_eight_interface_surfaces' was violated
+PASS T21      'eleven_variation_dimensions' was violated
+PASS T22      'classification_rows_account_for_all_stories' was violated
+PASS T23      'eight_canonicalization_classifications' was violated
+PASS T23b     'exactly_one_product_purpose' was violated
+
+-- module closure (DomainForge 0.16.0 transitive filesystem closure)
+PASS T24      accepted as expected
+PASS T25      imported enum still enforced across the closure
+PASS T26      unresolved import specifier rejected
+
+==== 31 passed, 0 failed ====

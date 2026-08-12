@@ -10,26 +10,46 @@ may bind to the grammar, but none defines a new canonical journey by itself.
 
 ## Common Skeleton
 
+Intention is not a phase. It is the journey's own declared purpose, carried by
+the `intention` field of each `CanonicalJourney` instance. Every journey then
+traverses these eight phases in order:
+
 ```text
-intention -> context -> authority/availability -> capability -> state/artifact
--> evidence/limitations -> settlement/decision -> next lawful affordance
+context selection -> preflight -> authority resolution -> capability invocation
+-> state and artifact effect -> evidence inspection -> settlement or decision
+-> next affordance selection
 ```
 
 The phases mean:
 
-1. **Intention:** State the actor's job and desired outcome independently of an interface.
-2. **Context:** Select or supply the cell, actor, case, semantic model, source, provider, and relevant immutable snapshots.
-3. **Authority/availability:** Resolve identity, disclosure, policy, eligibility, dependencies, compatibility, and the exact grant before a protected effect.
-4. **Capability:** Invoke one typed, bounded behavior. Intent is never interpolated into an untyped command or path.
-5. **State/artifact:** Append a governed transition or create an attributable artifact. Read-only interaction produces a source-linked projection rather than new truth.
-6. **Evidence/limitations:** Expose records, hashes, provenance, freshness, assurance, missing conditions, and disclosure limits. Process exit and narration are evidence inputs, not acceptance.
-7. **Settlement/decision:** Evaluate the declared completion rule or reach an explicit allow, deny, escalate, approve, reject, park, quarantine, adopt, or other governed decision.
-8. **Next lawful affordance:** Offer only actions that are visible, reachable, permitted, and settleable in the new context, or end at an explicit terminal condition.
+1. **Context selection:** Select or supply the governed cell, actor, case, semantic model, source, provider, and work context, together with the immutable snapshots that context depends on.
+2. **Preflight:** Validate readiness, availability, dependency, compatibility, and limit constraints before a protected action is attempted.
+3. **Authority resolution:** Resolve disclosure, policy, eligibility, separation of duty, and the exact grant before any effect, including read-only disclosure.
+4. **Capability invocation:** Invoke exactly one typed, bounded behavior inside the granted boundary. Intent is never interpolated into an untyped command or path.
+5. **State and artifact effect:** Append a governed transition or create an attributable artifact. Read-only interaction produces a source-linked projection rather than new truth.
+6. **Evidence inspection:** Expose records, hashes, provenance, freshness, assurance, missing conditions, and disclosure limits. Process exit and narration are evidence inputs, not acceptance.
+7. **Settlement or decision:** Evaluate the declared completion rule or reach an explicit allow, deny, escalate, approve, reject, park, quarantine, adopt, or other governed decision.
+8. **Next affordance selection:** Offer only actions that are simultaneously visible, reachable, permitted, and settleable in the new context, or end at an explicit terminal condition.
 
 Denial, escalation, expiry, interruption, timeout, cancellation, stale state,
 quarantine, and unsupported state use the same skeleton. They retain evidence
 and close with recovery or terminal semantics instead of becoming generic
 errors.
+
+These eight phases are the `JourneyStep` instances in `interaction-model.sea`,
+carrying the closed `InteractionPhase` enum and an enforced `ordinal` from 1 to
+8. Two policies keep the skeleton honest: `eight_interaction_steps` and
+`interaction_step_ordinals_complete`. Earlier revisions of this document named
+eight narrative phases while the model declared seven steps, splitting
+availability out of authority and folding the state effect into capability
+invocation; the two artifacts now name the same eight phases.
+
+All twelve journeys traverse all eight phases. What varies between journeys is
+emphasis, not membership, which is why the model declares the ordered skeleton
+once rather than emitting ninety-six journey-to-step rows that would carry no
+information. If a journey is ever found that legitimately skips a phase, that
+universal claim breaks and an explicit journey-to-step binding becomes
+justified (`validation/limitations.md` L8).
 
 ## Fundamental Verbs
 
@@ -185,3 +205,26 @@ a new journey:
 New dimensions belong in the grammar only when multiple observed stories need
 them and they change how a canonical tuple is described. A one-off interface
 detail remains a binding, not a grammar extension.
+
+The eleven families above are `VariationDimension` instances in
+`interaction-model.sea`, and the `eleven_variation_dimensions` policy fails
+validation if one is added or removed without revisiting this table.
+
+## What the Grammar Enforces and What It Only Describes
+
+The grammar is a modeling contract, and DomainForge now enforces part of it
+directly. Keeping the two apart prevents a reader from mistaking prose for proof.
+
+| Grammar claim | Enforced by | Enforcement |
+| --- | --- | --- |
+| Exactly twelve canonical journeys, `CJ01`–`CJ12` | `JourneyId` pattern, key uniqueness, `twelve_canonical_journeys` | DomainForge rejects a thirteenth, a duplicate, or an eleventh |
+| Eight ordered skeleton phases | `InteractionPhase` enum, `ordinal`, two policies | DomainForge rejects a missing, extra, or misordered phase |
+| Classification is a closed eight-value vocabulary | `CanonicalizationClass` enum | DomainForge rejects any other value |
+| Maturity is a closed five-value vocabulary, independent of classification | `ImplementationMaturity` enum on surfaces; four counts on journeys | DomainForge rejects any other value |
+| Interfaces are projections, never journey identity | `InterfaceBinding` with two typed references | DomainForge rejects a binding to a journey or surface that does not exist |
+| Every canonical journey is projected by at least one surface | `interface_binding_count (min 1)` and `interface_bindings_reconcile` | DomainForge rejects an unprojected journey or an orphaned binding |
+| All 128 observed stories remain accounted for | `all_observed_stories_accounted` and the four maturity reconciliations | DomainForge rejects a count that no longer totals 128 |
+| Composition retains one primary mapping | — | `canonicalization-matrix.csv` review, checked by `reconcile.py` |
+| Settlement is distinct from execution termination | — | prose; not structurally checkable (`validation/limitations.md` L7) |
+| A journey has a reachable terminal or recovery path | — | prose; not structurally checkable (`validation/limitations.md` L7) |
+| Authority precedes every effect, including disclosure | — | prose here; enforced by SEA Forge's runtime, not by this model |

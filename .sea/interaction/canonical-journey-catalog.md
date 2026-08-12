@@ -20,6 +20,16 @@ does not claim that a whole journey has reached the strongest maturity found in
 one of its rows. Routes, views, methods, and records are entry points or
 evidence; they do not define journey identity.
 
+Every entry below has a typed counterpart in `interaction-model.sea`. The
+"Implementation maturity" line is carried there verbatim as `maturity_note`,
+and its four numbers are carried as enforced integer fields, so a distribution
+that stops totalling 128 fails `domainforge validate`. The prose fields —
+intention, job, conditions, steps, capabilities, transitions, artifacts,
+evidence, completion, decisions, recovery, and variants — are typed strings with
+enforced minimum lengths; DomainForge proves they are present and non-trivial,
+not that they are correct. Correctness of the mapping remains the reviewed
+matrix's responsibility.
+
 ## CJ01 — Establish Trusted Cell Context
 
 - User intention: Enter a cell whose identity, configuration, integrity, semantic self-model, and operation-specific readiness are explicit.

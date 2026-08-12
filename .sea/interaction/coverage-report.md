@@ -159,3 +159,44 @@ The count pipeline applies these checks to the reviewed CSV:
 The catalog-to-matrix check confirms that all twelve catalog headings exist and
 all 128 rows map into the same twelve-ID set. These figures supersede the
 pre-review maturity totals and use the reviewed matrix at commit `b83b25d`.
+
+## Enforcement of These Counts
+
+The totals above are no longer only a report. Since the model was
+re-canonicalized against DomainForge 0.16.0, most of them are enforced.
+
+DomainForge enforces, and `domainforge validate` fails if any of these drifts:
+
+| Count | Policy |
+| --- | --- |
+| 12 canonical journeys | `twelve_canonical_journeys` |
+| 128 observed stories, summed across journeys | `all_observed_stories_accounted` |
+| 13 specified rows | `specified_stories_reconcile` |
+| 6 implemented rows | `implemented_stories_reconcile` |
+| 85 exercised rows | `exercised_stories_reconcile` |
+| 24 evidenced rows | `evidenced_stories_reconcile` |
+| 128 classified rows | `classification_rows_account_for_all_stories` |
+| 8 classification values | `eight_canonicalization_classifications` |
+| 11 variation dimensions | `eleven_variation_dimensions` |
+| 38 interface surfaces | `thirty_eight_interface_surfaces` |
+| 8 skeleton phases with ordinals 1–8 | `eight_interaction_steps`, `interaction_step_ordinals_complete` |
+
+`validation/reconcile.py` closes the remaining gap, because DomainForge cannot
+read the CSV and cannot evaluate arithmetic inside a policy `where` predicate
+(`validation/limitations.md` L5). It checks, row by row against
+`canonicalization-matrix.csv`:
+
+- 128 rows with 128 unique observed IDs;
+- every row maps to a journey the model declares;
+- every classification and maturity value is inside the model's closed enums;
+- each journey's `observed_story_count` equals its actual CSV row count;
+- each journey's four maturity counts equal its actual CSV distribution and sum
+  to its `observed_story_count`;
+- each classification's `observed_rows` equals its actual CSV count;
+- each journey's `interface_binding_count` equals the number of
+  `InterfaceBinding` instances that reference it.
+
+Confidence counts and the variation-dimension occurrence table remain
+report-only: confidence is a reviewer judgment carried on CSV rows and is not
+modeled as a SEA field, and the occurrence table counts free-text keys inside
+the matrix's `Variation Dimensions` column rather than declared concepts.

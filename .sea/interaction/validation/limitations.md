@@ -1,109 +1,207 @@
-# Interaction Grammar and Projection Limitations
+# Interaction Model Limitations
 
-## Assessment Rule
+Every entry below was re-tested against the local DomainForge build described in
+`domainforge-change-review.md`. Nothing is carried forward from the previous
+report on the strength of that report alone. Each limitation is classified as a
+**grammar**, **resolver**, **evaluator**, **projector**, **tooling**, or
+**product-model** limitation, because the right owner differs in each case.
 
-A future grammar direction is recommended only when the concept recurs, carries an enforceable invariant, benefits multiple projections, and is represented poorly today. The assessment below separates general grammar candidates from resolver and projector defects. It does not propose SEA Forge-specific syntax where a general typed construct would suffice.
+## Resolved since the previous report
 
-## 1. First-Class Journey, Step, and Composition Identity
+These are recorded so the next agent does not re-derive them or reinstate a
+workaround. Proof for each is in `semantic-teeth.md`.
 
-- **interaction concept:** Canonical journey identity, reusable step identity, and composition between journeys.
-- **desired semantics:** A journey should own typed steps and composition links while retaining one stable identity across UI, API, CLI, agent, RDF, process, and case projections.
-- **current workaround:** Twelve `CanonicalJourney` instances, seven `JourneyStep` instances, `JourneyVariant` records with `classification: "composition"`, and string-valued fields and flow annotations.
-- **cost:** The model cannot prove that a journey uses a declared step or composes declared journeys; RDF drops all journey and step instances; downstream consumers must reconstruct identity from conventions and prose.
-- **local or recurring:** Recurring locally across all 12 journeys, 7 steps, 21 composition-classified observed stories, 12 transformation flows, and 38 interface bindings. Cross-domain recurrence has not yet been demonstrated.
-- **evidence for first-class support:** Identity is stable, repeated, projection-relevant, and currently lossy, but the evidence does not yet justify a domain-specific `journey` keyword in the base grammar. General typed references and transition constructs below can address most invariants first.
-- **possible future direction:** **Not yet a dedicated grammar candidate.** Add the general reference, transition, condition, and binding primitives below; revisit first-class journey syntax only if the same aggregate recurs outside this interaction model.
+| Previous limitation | Status | Proof |
+| --- | --- | --- |
+| 2 — instance-to-instance typed relations | **Resolved.** `ref<Entity>` with dangling-reference rejection replaced `"CJ01; CJ02"` strings | T04, T05, T14, T20 |
+| 5 — cardinality and integrity policies over instances | **Resolved.** `entity_instances` gives 14 enforced counting invariants | T14c–T23b |
+| 8 — classification and maturity vocabularies | **Resolved.** Four closed enums; illegal values rejected | T01–T03 |
+| 9 — same-namespace imported-instance resolution | **Resolved.** Deterministic transitive filesystem closure | T24–T26 |
+| 1 — journey and step identity | **Substantially resolved.** Typed keys, patterns, and required fields give journeys and steps enforced identity. A dedicated `journey` keyword remains unjustified and is not recommended | T06, T08, T09 |
+| 4 — entry and completion conditions | **Partly resolved.** Presence and non-emptiness are enforced by `min_length`; the conditions themselves remain prose. See L6 | T13 |
+| 6 — interface binding declarations | **Resolved for integrity.** `InterfaceSurface` + `InterfaceBinding` give typed kinds, closed maturity, validated references, and enforced counts. A dedicated binding keyword remains unjustified | T02, T05, T17, T20b |
+| 3 — ordered steps and transitions | **Superseded by the model.** The eight-phase skeleton is ordered by an enforced `ordinal`; branching remains prose. See L7 | T12, T19 |
 
-## 2. Instance-to-Instance Typed Relations and References
+## Current limitations
 
-- **interaction concept:** References from journeys to reusable steps, variants, projections, capabilities, evidence, and other journey instances.
-- **desired semantics:** Instance fields and relations should point to declared instances or types, fail on dangling references, and survive semantic projections.
-- **current workaround:** Semicolon-separated identifiers such as `"CJ01; CJ02"` and descriptive strings such as `reusable_steps`, plus external checks against the CSV and catalog.
-- **cost:** Validation accepts misspelled or nonexistent IDs; relations cannot be traversed reliably; 76 instance records disappear from RDF; every consumer must parse conventions independently.
-- **local or recurring:** Recurring across 12 journeys, 19 variant/dimension records, 38 interface bindings, and the exhaustive 128-row mapping.
-- **evidence for first-class support:** Referential integrity is enforceable, useful to RDF/OWL, CMMN, BPMN, API/schema, and graph consumers, and poorly represented as strings.
-- **possible future direction:** **Credible general grammar candidate:** typed instance references and instance-to-instance relations with declared cardinality and namespace-aware resolution.
+### L1 — RDF still drops instances and policies in released DomainForge
 
-## 3. Ordered Steps and Conditional or Recovery Transitions
+- **Class:** projector.
+- **What was tested:** `domainforge project --format rdf` on the canonical model
+  with both the released `~/.cargo/bin/domainforge` 0.16.0 and the local
+  worktree build.
+- **Result:** released 0.16.0 emits 333 lines of `model.ttl` and contains none
+  of `workbench_readiness_routes`, `twelve_canonical_journeys`, or `IB001`. The
+  local build on branch `feat/rdf-instance-policy-projection` emits 2101 lines
+  and contains all of them.
+- **Consequence:** instance and policy preservation is real but **unreleased**.
+  Until that branch lands, RDF is usable only for the ontology spine — entities,
+  roles, resources, relations, and flow edges. It is never a source for journey,
+  binding, capability, or policy identity.
+- **Use instead:** the Canonical Semantic Envelope, which preserves all 266
+  semantic declarations including every instance and policy.
+- **Owner:** DomainForge. No SEA Forge change is required; do not model around it.
 
-- **interaction concept:** Ordered journey steps, branching authority outcomes, denial/escalation paths, and recovery transitions.
-- **desired semantics:** A transition graph should express sequence, branch guards, outcome kinds, retry/recovery edges, and composition without treating order as narration.
-- **current workaround:** Each canonical flow stores `action_sequence` and `recovery` as long annotations; each journey stores a prose `state_transition`.
-- **cost:** DomainForge cannot validate order or reachability; RDF drops the annotations; BPMN/CMMN cannot lower the real journey structure; recovery is unqueryable prose.
-- **local or recurring:** Recurring in every canonical journey and throughout denial, escalation, timeout, cancellation, stale, quarantine, retry, replan, and terminal variants.
-- **evidence for first-class support:** Order and branching encode safety invariants, and the same structure would improve graph, process, case, verification, event, and interface projections.
-- **possible future direction:** **Credible general grammar candidate:** typed transition nodes and edges with explicit order, outcome, guard, recovery, and composition semantics.
+### L2 — `list<T>` fields cannot be instantiated
 
-## 4. Entry and Completion Conditions and Terminal Decisions
+- **Class:** grammar.
+- **What was tested:** an instance field holding `["CJ01"]`.
+- **Result:** `Syntax error: expected primary_expr`. The `expression` rule
+  reaches `literal`, which has no array form (`sea.pest` 444); `string_array`
+  exists only for annotations and policy metadata.
+- **Consequence:** an entity may declare `list<ref<T>>` or `list<string>`, but no
+  concrete instance can supply a value, so the field is unusable in practice.
+- **How this model responds:** multi-valued relationships are normalized into
+  their own entity. `InterfaceBinding` exists because one surface projecting
+  four journeys cannot be one instance with a list. This is a better model in any
+  case — it makes each binding independently addressable and validated — so the
+  limitation is currently costless here.
+- **Credible general grammar candidate:** an array literal in `expression`, so
+  declared `list` types are authorable. This is a real gap in the language, not a
+  SEA Forge-specific need.
 
-- **interaction concept:** Preconditions, entry conditions, acceptance conditions, accountable decisions, next decisions, and explicit terminal outcomes.
-- **desired semantics:** Entry and completion should be evaluable expressions over typed state and evidence; terminal decisions should be distinguishable from recoverable states and execution termination.
-- **current workaround:** `preconditions`, `completion_condition`, and `next_decisions` string fields duplicated in flow annotations, with only two unrelated graph-wide policies evaluated.
-- **cost:** Validation cannot prove that a journey has a terminal or recovery path, cannot distinguish settlement from termination structurally, and cannot project real sentries or acceptance criteria.
-- **local or recurring:** Recurring across all 12 journeys and the common interaction skeleton; central to authority, settlement, approval, quarantine, adoption, and recovery.
-- **evidence for first-class support:** These are enforceable state and evidence predicates with value across CMMN, BPMN, TLA+, Alloy, Gauge, Cedar, event, and UI affordance projections.
-- **possible future direction:** **Credible general grammar candidate:** typed entry, completion, and terminal-decision expressions referencing declared state, evidence, and policy concepts.
+### L3 — role-to-entity binding is still not authorable in SEA text
 
-## 5. Cardinality and Integrity Policies over Instance Fields
+- **Class:** grammar.
+- **What was tested:** `entity "Case" in governance` alongside `role "Approver"`.
+- **Result:** parses and validates, but `graph.entity_roles` is `{}`. The `in
+  <identifier>` clause sets a domain, not a role binding. The graph model
+  supports entity role bindings; the text surface cannot author them.
+- **Consequence:** the model states role responsibilities through three honest
+  role-to-role `relation` declarations and through prose on journeys and
+  surfaces. CMMN `performerRef` is normally absent from projections, and
+  responsibility cannot be validated.
+- **Credible general grammar candidate, unchanged:** expose the graph's existing
+  role-to-entity binding through text syntax with explicit cardinality and
+  responsibility kind. Recurring well beyond interaction modeling.
 
-- **interaction concept:** Exactly 12 uniquely identified canonical journeys, valid `CJ01`–`CJ12` bindings, required interface fields, and valid classification/maturity values.
-- **desired semantics:** Policies should quantify over instances, inspect typed fields, enforce uniqueness and cardinality, and validate referenced instance identities.
-- **current workaround:** External Python and `jq` checks enforce counts and vocabularies. SEA policies are limited to `count(flows) > 0` and existence of the `GovernedEvidence` resource.
-- **cost:** DomainForge validation can report zero violations even if a journey ID is duplicated, an interface points to `CJ99`, or a required instance field is absent or malformed.
-- **local or recurring:** Recurring across the ontology, all 76 instances, all 128 mappings, and every downstream interface binding.
-- **evidence for first-class support:** The invariants are deterministic and enforceable, and one policy surface would benefit validation plus RDF/SHACL, schema, formal verification, and code projections.
-- **possible future direction:** **Credible general evaluator/grammar candidate:** expose instance collections and typed fields to policy expressions; add uniqueness, required-field, reference, and cardinality predicates rather than interaction-specific policy syntax.
+### L4 — the Application Contract and Semantic Envelope have no CLI path
 
-## 6. UI, API, CLI, and Agent Projection Targets
+- **Class:** tooling.
+- **What was tested:** every `domainforge` subcommand and
+  `grep -rn "application\|envelope" domainforge-core/src/cli/*.rs`.
+- **Result:** `parse`, `validate`, and `project` call
+  `application::resolve::resolve_filesystem_graph` for module closure only. No
+  subcommand calls `resolve_application_contract` or `resolve_semantic_envelope`.
+  `domainforge parse --format json` returns a Graph with no `operations` or
+  `records` key; `domainforge validate` therefore never emits an `APP` diagnostic.
+- **Consequence:** the declared `get_canonical_journey` operation is **not**
+  checked by the command an ordinary editor runs. It is checked only by the
+  harness in `application-contract-harness.rs`. An editor who breaks the
+  operation will see `Validation succeeded` from the CLI.
+- **Mitigation in this repository:** `semantic-teeth.sh` and the harness are
+  documented together in `README.md`; both must be run before the model is
+  considered validated. Treat CLI-green as necessary, not sufficient.
+- **Owner:** DomainForge. A `domainforge contract` / `domainforge envelope`
+  subcommand would close this.
 
-- **interaction concept:** Interface surfaces binding to canonical journeys and steps without becoming canonical identity or availability proof.
-- **desired semantics:** Typed interface kinds, entries or methods, source evidence, maturity, limitations, and references to the journey semantics they project.
-- **current workaround:** Thirty-eight ordinary `InterfaceProjection` instances with seven untyped string fields. DomainForge's projection target list names output generators, not these product-interface bindings.
-- **cost:** Binding IDs and maturity values are unchecked; target-versus-implemented naming drift remains prose; RDF drops all bindings; consumers cannot distinguish an unavailable preview from an exercised surface without custom parsing.
-- **local or recurring:** Recurring across 17 Workbench routes, 23 advertised SFWP methods, major CLI families, and Thoth/delegation agent surfaces.
-- **evidence for first-class support:** The same typed binding has enforceable reference and vocabulary rules and serves RDF, documentation, API catalogs, UI navigation, capability maps, and availability reporting.
-- **possible future direction:** **Credible general grammar candidate:** a typed interface-binding declaration separate from code-generation `projection` targets, with references, availability/maturity state, source evidence, and limitations.
+### L5 — arithmetic inside a policy `where` predicate silently matches nothing
 
-## 7. Role-to-Entity Binding
+- **Class:** evaluator. This is a correctness defect, not a missing feature.
+- **What was tested:**
+  `count(i in entity_instances where i.entity = "J" and i.a + i.b != i.total: i.jid) = 0`
+  over data that violates the predicate.
+- **Result:** the policy **passes**. Field-to-field and field-to-literal
+  comparisons in `where` work correctly (verified separately); only arithmetic
+  over instance fields fails, and it fails silently by matching no rows. The same
+  arithmetic in the projection position fails loudly with
+  `Projection in aggregation comprehension must reduce to a literal`.
+- **Consequence:** per-row arithmetic invariants cannot be trusted in SEA. A
+  policy written that way looks green and proves nothing.
+- **How this model responds:** no policy uses arithmetic in a `where` predicate.
+  The one per-row arithmetic invariant this model needs — that each journey's
+  four maturity counts sum to its `observed_story_count` — is enforced by
+  `reconcile.py` instead, and the reason is recorded there.
+- **Owner:** DomainForge. Silent falsehood is worse than an error; this should
+  either evaluate or raise.
 
-- **interaction concept:** Binding actors and accountable roles to interaction concepts, journey steps, decisions, or executable work.
-- **desired semantics:** A declared role-to-entity association that can identify performers, owners, approvers, sponsors, and auditors without pretending all relations are role-to-role responsibilities.
-- **current workaround:** Three honest role-to-role `Relation` declarations plus actor and responsibility prose inside journey and interface instances.
-- **cost:** DomainForge's graph supports entity role bindings but the SEA text surface cannot author them; CMMN `performerRef` is therefore normally absent; role responsibilities cannot be validated or projected consistently.
-- **local or recurring:** Recurring across 9 roles, every governed journey, approval and separation-of-duty rules, agent sponsorship, audit, and human work.
-- **evidence for first-class support:** The binding is enforceable, already supported in the graph model, and directly benefits CMMN, BPMN, Cedar, RDF, API, and UI responsibility projections.
-- **possible future direction:** **Credible general grammar candidate:** expose the existing graph's role-to-entity binding through text syntax with explicit cardinality and responsibility kind.
+### L6 — `forall` / `exists` over `entity_instances` cannot be scoped to one entity type
 
-## 8. Classification and Maturity Vocabularies
+- **Class:** evaluator.
+- **What was tested:** `forall i in entity_instances: (i.rank > 0)` in a model
+  with two entity types, and the guarded form
+  `forall i in entity_instances: (i.entity != "Journey" or i.rank > 0)`.
+- **Result:** both evaluate to `UNKNOWN (NULL)` and fail validation, because a
+  field absent on other entity types produces NULL and the `or` guard does not
+  rescue it. Only the aggregation form with a `where` filter
+  (`count(i in entity_instances where i.entity = "X": i.field)`) filters before
+  projection and therefore works.
+- **Consequence:** every invariant in this model is expressed as a counting or
+  summing aggregation. Genuine universal quantification over a typed field —
+  "every canonical journey has a non-empty completion condition" — is not
+  expressible as a policy; it is enforced by the `min_length` field constraint
+  instead, which is stronger anyway.
+- **Owner:** DomainForge. A typed collection (`entity_instances of "X"`) or
+  Kleene-correct `or` would resolve it.
 
-- **interaction concept:** The closed classification axis (`canonical`, `specialization`, `variant`, `composition`, `duplicate`, `obsolete`, `ambiguous`, `unsupported`) and independent maturity axis (`declared`, `specified`, `implemented`, `exercised`, `evidenced`).
-- **desired semantics:** Closed, typed values with allowed transitions and no accidental promotion of classification into implementation proof.
-- **current workaround:** Nineteen `JourneyVariant` instances and string fields in journey, interface, CSV, and Markdown artifacts; external scripts validate the CSV vocabulary.
-- **cost:** SEA validation cannot reject a misspelling or illegal maturity transition, and RDF omits the vocabulary instances. Separate axes are maintained only by author discipline and external checks.
-- **local or recurring:** Recurring across all 128 observed stories, 12 journey summaries, and 38 interface bindings; closed vocabularies also recur broadly outside interaction modeling.
-- **evidence for first-class support:** Closed values and transitions are enforceable and projection-relevant, but they do not justify interaction-specific keywords.
-- **possible future direction:** **Credible general grammar candidate:** reusable enum/value declarations and constrained typed fields, with transition rules expressed through the general policy surface.
+### L7 — branching, guards, and recovery edges remain prose
 
-## 9. Same-Namespace Imported-Instance Resolution
+- **Class:** grammar, with a product-model component.
+- **Current representation:** the eight-phase skeleton is ordered and enforced
+  (`ordinal`, `interaction_step_ordinals_complete`). Within a journey,
+  `state_transition`, `recovery_paths`, and `next_decisions` are validated
+  non-empty strings but are not a transition graph. DomainForge cannot prove that
+  a journey has a terminal or a recovery path, and cannot distinguish settlement
+  from execution termination structurally.
+- **Why no workaround is attempted:** encoding a transition graph in typed
+  entities would produce a large table that DomainForge still could not check for
+  reachability, guard satisfaction, or terminal coverage. That is churn without
+  teeth.
+- **Credible general grammar candidate, unchanged:** typed transition nodes and
+  edges with explicit order, outcome, guard, recovery, and composition semantics.
+  This would also improve BPMN, CMMN, TLA+, and event projections.
 
-- **interaction concept:** Modular reuse of an entity type by an instance declared in another file under the same namespace.
-- **desired semantics:** Both named and wildcard relative imports should make an exported entity available to same-namespace instance resolution exactly as documented.
-- **current workaround:** One 1,059-line committed semantic source with no imports; four declaration-free companion indexes.
-- **cost:** Semantic modules cannot be maintained independently; source navigation and ownership are poorer; any future declaration must be added to the consolidated file.
-- **local or recurring:** Immediately local to this model but fundamental to every modular model that shares a namespace and instances exported entity types.
-- **evidence for first-class support:** Both wildcard and named imports parse but fail graph construction with the exact same `Entity 'ReusableStep' not found` diagnostic. The grammar already accepts the intended syntax.
-- **possible future direction:** **Not a grammar candidate:** correct namespace-aware imported symbol resolution and add a regression test for named and wildcard same-namespace imported instances. Do not invent another import form.
+### L8 — per-journey step emphasis is not provable
 
-## 10. RDF Preservation of Instances, Policies, and Annotations
+- **Class:** product-model.
+- **Statement:** all twelve journeys traverse all eight skeleton phases; what
+  varies is emphasis, not membership. The model therefore declares the ordered
+  skeleton once and does not emit ninety-six journey-to-step rows that would
+  carry no information.
+- **Consequence:** the per-journey `reusable_steps` prose is the only record of
+  which phases dominate a given journey, and it is not machine-checkable beyond
+  non-emptiness.
+- **When to revisit:** if a future journey is found that legitimately skips a
+  phase, the universal claim breaks and an explicit `JourneyStepUse` binding
+  entity becomes justified. Until then it would be churn.
 
-- **interaction concept:** Semantic graph projection of authored journeys, reusable steps, interface bindings, policy constraints, and annotated flow meaning.
-- **desired semantics:** RDF/OWL should retain stable instance identities, typed fields and references, policies, and flow annotations so projected journey meaning remains traceable to source.
-- **current workaround:** Use RDF only for the ontology spine, role relations, resources, and state-to-state flow edges; return to SEA AST, CSV, and Markdown for journey identity and interaction semantics.
-- **cost:** All 76 instances, 2 policies, and all flow annotations disappear. The 12 journey edges receive generated flow IDs without `journey_id`; OWL additionally omits flow and relation individuals.
-- **local or recurring:** Recurring for any instance-heavy or annotation-heavy SEA model and every consumer expecting RDF to represent more than declared entity/role/resource topology.
-- **evidence for first-class support:** Fixed-time inspection found 70 Turtle/JSON-LD nodes but none of the representative journey, step, interface, policy, or annotation identifiers. The AST proves those constructs were parsed before projection.
-- **possible future direction:** **Not primarily a grammar candidate:** extend the RDF projection IR and vocabulary to serialize instances, typed fields/references, policies, and annotations; add projection teeth checks before claiming lossless semantic-graph output.
+### L9 — an operation's `policy_governed` access breaks graph validation
 
-## Candidate Summary
+- **Class:** evaluator, surfacing as a real authoring constraint.
+- **What was tested:** DomainForge's own flagship fixture
+  `fixtures/application_generation/flagship/command-write.sea`, and a minimal
+  reproduction.
+- **Result:** both fail `domainforge validate` with
+  `Policy 'order_total_within_limit' evaluation is UNKNOWN (NULL)`. A policy
+  written to be evaluated in an operation's typed precondition context is not
+  evaluable against the semantic graph, and the graph validator evaluates every
+  policy in the file.
+- **Consequence:** in one `.sea` file you may have graph-evaluable policies or
+  operation-precondition policies, not both. This model declares
+  `access public` on its single read operation, so no conflict arises, and it
+  keeps all fifteen policies graph-evaluable.
+- **Owner:** DomainForge. Policies bound to an operation should be excluded from
+  graph evaluation, or marked so the graph validator can skip them.
 
-Seven general additions have credible evidence now: typed instance references, typed transition graphs, typed entry/completion/terminal conditions, instance-aware integrity policies, interface-binding declarations, role-to-entity binding syntax, and reusable constrained vocabularies. A dedicated journey keyword remains premature; same-namespace imports need a resolver fix; and RDF loss needs a projector fix.
+### L10 — an entity key must be `string` or `uuid`
+
+- **Class:** grammar, by design (APP005).
+- **Effect here:** `CanonicalizationClassification` carries both
+  `classification_id: string` (the key) and `class_value: CanonicalizationClass`
+  (the enum-checked value), because the enum cannot itself be the key. The
+  redundancy is small and the enum still has teeth (T03).
+- **Assessment:** not a defect. Recorded so the duplication is not mistaken for
+  an oversight.
+
+## Not limitations, recorded to prevent regression
+
+- **A green `domainforge validate` is not sufficient.** It does not check the
+  operation (L4), and it will happily accept a policy whose `where` arithmetic is
+  meaningless (L5). The model is validated only when `semantic-teeth.sh`,
+  `reconcile.py`, and the harness have all run.
+- **Consolidating the model into one file is now a choice, not a constraint.**
+  The 0.15.0 resolver bug that forced consolidation is fixed and proven fixed
+  (T24–T26). Consolidation is retained on the architectural grounds in
+  `README.md`, and can be revisited on its merits.
+- **A generated artifact does not prove runtime behavior.** Interface maturity
+  values describe the surface, never the journey.
