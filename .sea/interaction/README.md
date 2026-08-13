@@ -93,25 +93,36 @@ DomainForge resolves operations through the Application Contract library boundar
 ## Validate and Inspect
 
 ```bash
+DOMAINFORGE=/home/sprime01/projects/domainforge/target/release/domainforge \
+  .sea/interaction/validation/check-all.sh
+```
+
+`check-all.sh` runs all four checks below and returns one exit status, so "all four must pass" is enforceable rather than aspirational. It detects whether the local `domainforge` build has landed the `--application`/`contract`/`envelope` CLI additions (`validation/limitations.md` L4) and adjusts step 4 accordingly, falling back to the harness only if neither is present.
+
+What it runs, if you need a single step in isolation:
+
+```bash
 df=/home/sprime01/projects/domainforge/target/release/domainforge
 # built with: cargo build --release --bin domainforge --features cli
 
 # 1. semantic validation — necessary, not sufficient
 "$df" validate --format human --no-color .sea/interaction/interaction-model.sea
 
-# 2. semantic teeth: 30 negative cases against the real model
+# 2. semantic teeth: 31 negative cases against the real model
 DOMAINFORGE="$df" .sea/interaction/validation/semantic-teeth.sh
 
 # 3. reconcile the model against the 128-row matrix
 python3 .sea/interaction/validation/reconcile.py
 
 # 4. application contract and canonical semantic envelope
-#    build the harness first — see validation/application-contract-harness.rs
-dfharness envelope .sea/interaction/interaction-model.sea
-dfharness contract .sea/interaction/interaction-model.sea
+"$df" validate --format human --no-color --application .sea/interaction/interaction-model.sea
+# or, on a domainforge build predating that flag:
+#   dfharness envelope .sea/interaction/interaction-model.sea
+#   dfharness contract .sea/interaction/interaction-model.sea
+#   (build the harness first — see validation/application-contract-harness.rs)
 ```
 
-All four must pass. Step 1 alone proves less than it appears to: it does not reach the operation, and it will accept a policy whose `where` arithmetic is meaningless. Inspect the resulting objects rather than trusting an exit status; `validation/domainforge-output.txt` is the captured evidence and `validation/diagnostics.md` reads it.
+All four must pass. Step 1 alone proves less than it appears to: on a `domainforge` build predating `validation/limitations.md` L4's fix, it does not reach the operation, and on a build predating L5's fix, it will accept a policy whose `where` arithmetic is meaningless. Inspect the resulting objects rather than trusting an exit status; `validation/domainforge-output.txt` is the captured evidence and `validation/diagnostics.md` reads it.
 
 Keep generated AST, RDF, or projection output temporary. It is not a source artifact.
 
