@@ -25,6 +25,8 @@ pub mod readiness;
 pub mod run_views;
 pub mod thoth;
 
+use std::path::Path;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -32,6 +34,43 @@ use serde::{Deserialize, Serialize};
 /// supported; a client requesting an unsupported major is rejected with a
 /// structured `unsupported_version` error (never a panic).
 pub const SFWP_PROTOCOL_VERSION: &str = "1";
+
+/// Ceiling on any single JSON record a view reads whole (`case.json`,
+/// `plan.json`, `settlement.json`, …), checked via `fs::metadata` before the
+/// read (SUP-09c).
+///
+/// Runtime files under a cell are child-inflatable: a child process or a
+/// crashed episode can leave a record far larger than anything the kernel
+/// writes, and an unbounded `fs::read` would size its allocation from that
+/// attacker-influenced length — allocation amplification against the server's
+/// view layer. A record above the cap is treated as unreadable by every
+/// reader, so the view degrades exactly as it does for any broken record
+/// instead of OOMing the server.
+pub(crate) const MAX_RECORD_BYTES: u64 = 4 * 1024 * 1024;
+
+/// Ceiling on any append-only JSONL journal a view reads whole
+/// (`case-events.jsonl`, `trace.jsonl`, …), checked via `fs::metadata` before
+/// the read (SUP-09c).
+///
+/// Journals legitimately grow with event count, so their ceiling is wider
+/// than [`MAX_RECORD_BYTES`]; the rationale is the same, and so is the
+/// failure stance — an oversized journal folds to nothing rather than being
+/// read.
+pub(crate) const MAX_JOURNAL_BYTES: u64 = 64 * 1024 * 1024;
+
+/// True when `path` exists, stats, and is at most `cap` bytes.
+///
+/// The single enforcement point for the two caps above, shared by
+/// `case_views` and `run_views` so the modules cannot drift about what
+/// "within cap" means. A stat failure folds into the caller's existing
+/// absence path (`NotFound`, `None`, or an empty fold), never a new error
+/// class; readers that must distinguish oversized from absent match on
+/// `fs::metadata` themselves.
+pub(crate) fn size_within_cap(path: &Path, cap: u64) -> bool {
+    std::fs::metadata(path)
+        .map(|meta| meta.len() <= cap)
+        .unwrap_or(false)
+}
 
 /// Interaction class for an SFWP method, mirroring the classes named in
 /// `.claude/skills/building-sea-forge-workbench/reference/api-and-event-contracts.md`.

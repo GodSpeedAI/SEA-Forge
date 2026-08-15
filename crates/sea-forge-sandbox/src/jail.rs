@@ -258,6 +258,28 @@ impl ExecutionSandbox for JailSandbox {
     }
 }
 
+/// Cap on the child-written stderr scanned by the sandbox-violation heuristic.
+///
+/// Child-written stderr is untrusted: without a cap, a jailed child could
+/// force an unbounded parent-side read. 64 KiB + 1 mirrors settlement's
+/// stderr cap idiom (the +1 keeps an over-cap stream distinguishable from an
+/// exactly-at-cap one).
+#[cfg(target_os = "linux")]
+const MAX_STDERR_SCAN_BYTES: u64 = 65_537;
+
+/// Read at most [`MAX_STDERR_SCAN_BYTES`] bytes of the child's stderr file,
+/// lossily decoded. Open/read failure yields an empty string, matching the
+/// pre-cap `read_to_string(..).unwrap_or_default()` behavior.
+#[cfg(target_os = "linux")]
+fn read_capped_stderr(path: &std::path::Path) -> String {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    if let Ok(file) = std::fs::File::open(path) {
+        let _ = file.take(MAX_STDERR_SCAN_BYTES).read_to_end(&mut bytes);
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
 #[cfg(target_os = "linux")]
 fn execute_linux(
     h: &SandboxHandle,
@@ -332,7 +354,7 @@ fn execute_linux(
     // Heuristic: detect jail violation from non-zero exit + "Permission denied".
     let mut result = result;
     if result.status == ExecutionStatus::Completed && result.exit_code != Some(0) {
-        let stderr_text = fs::read_to_string(&stderr_path).unwrap_or_default();
+        let stderr_text = read_capped_stderr(&stderr_path);
         if stderr_text.to_lowercase().contains("permission denied") {
             result.status = ExecutionStatus::SandboxViolation;
         }

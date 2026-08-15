@@ -74,6 +74,7 @@ use sea_forge_core::types::{
 use serde::{Deserialize, Serialize};
 
 use super::case_views::{ExecutionStanding, SettlementStanding};
+use super::{size_within_cap, MAX_JOURNAL_BYTES, MAX_RECORD_BYTES};
 
 /// Canonical per-run record files, in the order an operator reads them:
 /// what was planned, what it had to satisfy, what authorized it, what it did,
@@ -400,10 +401,16 @@ fn case_run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
         .find(|candidate| candidate.is_dir())
 }
 
-/// Read one JSON record, treating any failure (absent, unreadable, malformed)
-/// as absence. Shared with [`crate::sfwp::assets`] rather than copied: both
-/// projections must agree that a half-written record is *not* a record.
+/// Read one JSON record, treating any failure (absent, unreadable, malformed,
+/// or above the read cap) as absence. Shared with [`crate::sfwp::assets`]
+/// rather than copied: both projections must agree that a half-written record
+/// is *not* a record — and, since SUP-09c, that a child-inflated one is not
+/// either. The cap lives here so every caller inherits it without each having
+/// to remember it.
 pub(crate) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
+    if !size_within_cap(path, MAX_RECORD_BYTES) {
+        return None;
+    }
     serde_json::from_slice(&std::fs::read(path).ok()?).ok()
 }
 
@@ -412,8 +419,13 @@ pub(crate) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T
 /// A truncated tail is the expected shape after a crash mid-append. Rendering
 /// everything up to the crash serves an operator diagnosing that crash better
 /// than failing the whole view — the same choice `case_views` makes for
-/// `case-events.jsonl`, for the same reason.
+/// `case-events.jsonl`, for the same reason. A journal above the journal cap
+/// folds to nothing instead: it is append-only and child-inflatable, and
+/// reading it would size the allocation from that influence (SUP-09c).
 fn read_jsonl<T: serde::de::DeserializeOwned>(path: &Path) -> Vec<T> {
+    if !size_within_cap(path, MAX_JOURNAL_BYTES) {
+        return Vec::new();
+    }
     let Ok(text) = std::fs::read_to_string(path) else {
         return Vec::new();
     };

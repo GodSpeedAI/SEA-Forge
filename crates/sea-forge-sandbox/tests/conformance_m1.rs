@@ -114,6 +114,148 @@ fn jail_unavailable_on_unsupported_platform_returns_error() {
 }
 
 // ---------------------------------------------------------------------------
+// SUP-09c: the sandbox-violation stderr heuristic must be a bounded read.
+//
+// The heuristic reclassifies a non-clean completion as SandboxViolation when
+// the child's stderr contains "permission denied". That stderr is child
+// written and therefore untrusted, so the parent-side scan is capped at
+// 64 KiB + 1 (matching settlement's stderr cap idiom) and decoded lossily:
+// a jailed child must not be able to force an unbounded parent-side read,
+// and non-UTF-8 bytes must not blind the heuristic to an ASCII denial.
+
+/// Run one jailed `sh -c` fixture and return its result plus the raw stderr
+/// bytes the child left on disk, or `None` when this host cannot enforce the
+/// jail (skip, never a pass — mirrors `run_probe`).
+#[cfg(target_os = "linux")]
+fn run_jailed_stderr_fixture(
+    tag: &str,
+    script: &str,
+) -> Option<(sea_forge_core::types::ExecutionResult, Vec<u8>)> {
+    let parent = temp_dir(tag);
+    let workspace = parent.join("workspace");
+    let artifacts = parent.join("artifacts");
+    fs::create_dir_all(&workspace).unwrap();
+    fs::create_dir_all(&artifacts).unwrap();
+
+    let jail = match JailSandbox::new() {
+        Ok(j) => j,
+        Err(e) => {
+            eprintln!("Skipping stderr heuristic test ({tag}): {e}");
+            fs::remove_dir_all(&parent).ok();
+            return None;
+        }
+    };
+    let spec = SandboxSpec {
+        workspace_root: workspace,
+        artifacts_root: artifacts.clone(),
+        network: NetworkPosture::default(),
+    };
+    let handle = jail.prepare(&spec).unwrap();
+    let result = jail.execute(
+        &handle,
+        &request(vec!["sh".into(), "-c".into(), script.into()]),
+    );
+    let _ = jail.destroy(handle);
+
+    let outcome = match result {
+        Ok(r) => r,
+        Err(e) => {
+            // Fail-closed setup (e.g. `jail_unavailable`) — never a fallback
+            // to `local`. Assert that it is the fail-closed class, then skip.
+            assert_eq!(
+                e.class, "jail_unavailable",
+                "jail must fail closed, not fall back to local (got {})",
+                e.class
+            );
+            eprintln!("Skipping stderr heuristic test ({tag}): {e}");
+            fs::remove_dir_all(&parent).ok();
+            return None;
+        }
+    };
+    let stderr_bytes = fs::read(artifacts.join("stderr.txt")).unwrap_or_default();
+    fs::remove_dir_all(&parent).ok();
+    Some((outcome, stderr_bytes))
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn jail_stderr_heuristic_flags_permission_denied_within_cap() {
+    let Some((result, stderr_bytes)) = run_jailed_stderr_fixture(
+        "stderr-in-cap",
+        "echo 'sh: cannot open /etc/shadow: Permission denied' >&2; exit 3",
+    ) else {
+        return;
+    };
+    let needle = b"Permission denied";
+    assert!(
+        stderr_bytes.windows(needle.len()).any(|w| w == needle),
+        "fixture must write the marker to stderr"
+    );
+    assert_eq!(result.exit_code, Some(3));
+    assert_eq!(
+        result.status,
+        ExecutionStatus::SandboxViolation,
+        "non-zero exit with 'Permission denied' inside the first 64 KiB of stderr must be reclassified"
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn jail_stderr_heuristic_ignores_permission_denied_past_cap() {
+    // 7000 lines of 16 filler chars + newline = ~119 KiB, placing the marker
+    // well past the 64 KiB + 1 scan cap.
+    let script = r#"i=0
+while [ "$i" -lt 7000 ]; do
+  echo '0123456789abcdef' >&2
+  i=$((i+1))
+done
+echo 'permission denied' >&2
+exit 1"#;
+    let Some((result, stderr_bytes)) = run_jailed_stderr_fixture("stderr-past-cap", script) else {
+        return;
+    };
+    let needle = b"permission denied";
+    let marker_pos = stderr_bytes
+        .windows(needle.len())
+        .position(|w| w == needle)
+        .expect("fixture must write the marker");
+    assert!(
+        marker_pos >= 65_537,
+        "fixture must place the marker past the scan cap (at {marker_pos})"
+    );
+    assert_eq!(result.exit_code, Some(1));
+    assert_eq!(
+        result.status,
+        ExecutionStatus::Completed,
+        "'permission denied' past the scan cap must not reclassify the run"
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn jail_stderr_heuristic_survives_non_utf8_prefix() {
+    // Octal \377\376 emits raw 0xFF 0xF6 bytes: a whole-file read_to_string
+    // would discard ALL stderr on the invalid byte and blind the heuristic;
+    // lossy decoding still sees the ASCII denial that follows.
+    let Some((result, stderr_bytes)) = run_jailed_stderr_fixture(
+        "stderr-lossy",
+        "printf '\\377\\376garbage ' >&2; echo 'permission denied' >&2; exit 1",
+    ) else {
+        return;
+    };
+    assert!(
+        std::str::from_utf8(&stderr_bytes).is_err(),
+        "fixture must emit non-UTF-8 stderr bytes"
+    );
+    assert_eq!(result.exit_code, Some(1));
+    assert_eq!(
+        result.status,
+        ExecutionStatus::SandboxViolation,
+        "an ASCII 'permission denied' after non-UTF-8 bytes must still be detected"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // M1 network-denial conformance (Task 3).
 //
 // A jail-class run must not be able to open ungranted outbound TCP connections

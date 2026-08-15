@@ -327,6 +327,151 @@ async fn a_traversing_case_id_is_refused_rather_than_resolved() {
     }
 }
 
+/// Rewrite `path` as its current contents padded with trailing whitespace to
+/// `bytes` total bytes.
+///
+/// Trailing whitespace keeps the document valid JSON (and a padded journal's
+/// extra lines are blank), so the *only* property that changed is size. A pad
+/// of malformed bytes would degrade identically through the parse-error path
+/// and prove nothing about the cap; this way the fixture would still render
+/// if the cap were missing, which is what makes the tests below differential.
+fn pad_to(path: &Path, bytes: usize) {
+    let mut body = std::fs::read(path).unwrap();
+    assert!(
+        body.len() < bytes,
+        "fixture must start below the cap to prove the cap is what fires"
+    );
+    body.resize(bytes, b' ');
+    std::fs::write(path, body).unwrap();
+}
+
+/// SUP-09c: `case.json` is a runtime file a child run (or a crashed episode)
+/// can inflate before the server projects it. A record past the view read cap
+/// must surface through the existing unreadable path — the integrity signal an
+/// operator needs — not as an allocation sized by the attacker-influenced
+/// length, and not as a silent skip.
+#[tokio::test]
+async fn an_oversized_case_record_surfaces_as_unreadable_not_as_an_oom() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path()).await;
+
+    pad_to(
+        &root.path().join("cases").join(&case_id).join("case.json"),
+        4 * 1024 * 1024 + 1,
+    );
+
+    let overview = client
+        .call(json!({"verb": "case_get_overview", "case_id": case_id}))
+        .await;
+    assert_eq!(
+        overview["error_class"], "record_unreadable",
+        "an oversized record is present-but-unreadable, not absent: {overview}"
+    );
+
+    let horizon = client
+        .call(json!({"verb": "case_get_horizon", "case_id": case_id}))
+        .await;
+    assert_eq!(horizon["error_class"], "record_unreadable", "{horizon}");
+
+    let list = client.call(json!({"verb": "case_list"})).await;
+    assert!(
+        list["unreadable"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|c| c.as_str() == Some(case_id.as_str())),
+        "the list must carry the integrity signal: {list}"
+    );
+    assert!(
+        !list["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|c| c["case_id"] == case_id.as_str()),
+        "an unreadable case must not render as a presentable row: {list}"
+    );
+}
+
+/// SUP-09c: an oversized `plan.json` must degrade exactly as a missing one
+/// does — no template ref, no item count — because the plan-derived fields are
+/// optional by contract. The case itself stays readable.
+#[tokio::test]
+async fn an_oversized_plan_degrades_to_absence_exactly_like_a_missing_plan() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path()).await;
+
+    pad_to(
+        &root.path().join("cases").join(&case_id).join("plan.json"),
+        4 * 1024 * 1024 + 1,
+    );
+
+    let overview = client
+        .call(json!({"verb": "case_get_overview", "case_id": case_id}))
+        .await;
+    assert!(overview.get("error").is_none(), "{overview}");
+    assert!(
+        overview.get("template_ref").is_none(),
+        "plan-derived fields must be absent, not guessed: {overview}"
+    );
+    assert_eq!(overview["item_count"].as_u64(), Some(0), "{overview}");
+
+    let horizon = client
+        .call(json!({"verb": "case_get_horizon", "case_id": case_id}))
+        .await;
+    assert!(horizon.get("error").is_none(), "{horizon}");
+    assert_eq!(
+        horizon["items"].as_array().unwrap().len(),
+        0,
+        "no readable plan means no seeded rows: {horizon}"
+    );
+}
+
+/// SUP-09c: `case-events.jsonl` is an append-only journal living where a child
+/// run can inflate it. Past the journal cap the fold must come back empty —
+/// the same shape an unreadable journal produces — rather than reading
+/// attacker-influenced gigabytes into memory to fold them.
+#[tokio::test]
+async fn an_oversized_case_events_journal_folds_to_nothing_rather_than_reading_it() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path()).await;
+
+    // One well-formed event, then padded past the journal cap: trailing
+    // whitespace keeps the line stream valid, so only the size changed.
+    let events_path = root
+        .path()
+        .join("cases")
+        .join(&case_id)
+        .join("case-events.jsonl");
+    std::fs::write(
+        &events_path,
+        concat!(
+            "{\"version\":\"0.1\",\"event_id\":\"evt-cap-1\",\"run_id\":\"run-0\",",
+            "\"plan_item_id\":null,\"kind\":\"run_started\",",
+            "\"actor_id\":\"operator_local\",",
+            "\"timestamp\":\"2026-01-01T00:00:00Z\",\"payload\":{}}\n"
+        ),
+    )
+    .unwrap();
+    pad_to(&events_path, 64 * 1024 * 1024 + 1);
+
+    let horizon = client
+        .call(json!({"verb": "case_get_horizon", "case_id": case_id}))
+        .await;
+    assert!(horizon.get("error").is_none(), "{horizon}");
+    assert_eq!(
+        horizon["events_folded"].as_u64(),
+        Some(0),
+        "an oversized journal must fold nothing: {horizon}"
+    );
+    assert!(
+        horizon.get("last_event_id").is_none(),
+        "no folded event may leak into the cursor: {horizon}"
+    );
+}
+
 /// The new methods must be discoverable through negotiation, or the workbench
 /// has no lawful way to learn they exist.
 #[tokio::test]

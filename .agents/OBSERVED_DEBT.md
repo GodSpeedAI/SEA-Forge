@@ -13,6 +13,30 @@ entry when resolved; do not use this file as a backlog of ideas.
 - Scope: why it was not fixed in the discovering task
 -->
 
+## Open: Unbounded whole-file reads remain in sea-forge-server beyond SUP-09c's audited sites
+
+- Observed: 2026-08-15
+- Evidence: while capping the audit's named view-read sites (SUP-09c), a
+  `rg "fs::read|read_to_string"` sweep of the same crate found more unbounded
+  whole-file reads: `sfwp/correlation.rs:278` (runtime state under a run dir),
+  `sfwp/assets.rs:155`, `sfwp/case.rs:157` (template/config reads), `lib.rs:329`
+  and `lib.rs:427` plus `case_dispatch.rs:49` (plan files), `delegation.rs:1384`
+  (canonical transcript bytes), `transcript_seal.rs:96/103` (sealed key and
+  ciphertext). The SUP-09c caps landed only in `sfwp/mod.rs`
+  (`MAX_RECORD_BYTES`/`MAX_JOURNAL_BYTES` via `size_within_cap`) and its view
+  consumers.
+- Impact: same allocation-amplification class as SUP-09c for whichever of
+  these paths read child-inflatable runtime files (notably `correlation.rs`
+  and `delegation.rs`); the config/template readers are lower risk but
+  unbounded all the same.
+- Next move: extend the `size_within_cap` guard to the runtime-file readers
+  first (`correlation.rs`, `delegation.rs`, `transcript_seal.rs`), then decide
+  per-site for operator-config readers whether a cap or a documented trust
+  boundary is the honest answer.
+- Scope: the audit remediation plan scopes SUP-09c to its five enumerated
+  sites; sweeping the rest of the crate is new surface belonging to the
+  hardening sweep (Batch 9) rather than this slice.
+
 ## Open: Case-authoring proof scenarios (6, 7) have no Playwright e2e coverage
 
 - Observed: 2026-07-26

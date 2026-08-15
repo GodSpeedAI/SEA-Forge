@@ -8,7 +8,7 @@ use sea_forge_core::{
 use serde_json::Value;
 use std::{
     fs::{File, OpenOptions},
-    io::{BufWriter, Write},
+    io::{BufRead, BufReader, BufWriter, Write},
     path::Path,
 };
 
@@ -20,21 +20,41 @@ pub struct JsonlTraceRecorder {
 }
 
 pub fn append_internal_error(path: &Path, run_id: &str, actor_id: &str, error_class: &str) {
-    let Ok(bytes) = std::fs::read(path) else {
+    let Ok(file) = File::open(path) else {
         return;
     };
-    if !bytes.ends_with(b"\n") {
-        return;
-    }
+    // Stream the journal instead of slurping it: this runs on the error path,
+    // where a whole-file allocation is an OOM vector. Memory stays bounded by
+    // a single line.
+    let mut reader = BufReader::new(file);
+    let mut line = Vec::new();
     let mut sequence = 0;
-    for line in bytes
-        .split(|byte| *byte == b'\n')
-        .filter(|line| !line.is_empty())
-    {
-        if serde_json::from_slice::<TraceEvent>(line).is_err() {
+    let mut newline_terminated = false;
+    loop {
+        line.clear();
+        let Ok(read) = reader.read_until(b'\n', &mut line) else {
+            return;
+        };
+        if read == 0 {
+            break;
+        }
+        if !line.ends_with(b"\n") {
+            // Torn tail: the journal does not end in a newline.
+            return;
+        }
+        newline_terminated = true;
+        let content = &line[..line.len() - 1];
+        if content.is_empty() {
+            continue;
+        }
+        if serde_json::from_slice::<TraceEvent>(content).is_err() {
             return;
         }
         sequence += 1;
+    }
+    if !newline_terminated {
+        // An empty journal is not newline-terminated either.
+        return;
     }
     let event = TraceEvent {
         version: RECORD_VERSION.into(),
@@ -333,5 +353,127 @@ mod sink_tests {
         assert_eq!(sink.correlation_id.as_deref(), Some("pi_2"));
         assert_eq!(sink.source_agent, "agent_x");
         assert_eq!(sink.subject, "sea.run.lifecycle.finished");
+    }
+}
+
+#[cfg(test)]
+mod append_internal_error_tests {
+    use super::*;
+    use sea_forge_core::types::TraceKind;
+
+    const RUN_ID: &str = "run_test";
+    const ACTOR_ID: &str = "actor";
+
+    fn record_events(path: &Path, count: usize) {
+        let mut recorder = JsonlTraceRecorder::create(path, RUN_ID, ACTOR_ID).unwrap();
+        for i in 0..count {
+            recorder
+                .append(TraceKind::RunStarted, None, serde_json::json!({ "n": i }))
+                .unwrap();
+        }
+    }
+
+    fn last_event(path: &Path) -> TraceEvent {
+        let contents = std::fs::read_to_string(path).unwrap();
+        let last = contents
+            .lines()
+            .rfind(|line| !line.is_empty())
+            .expect("journal must hold at least one line");
+        serde_json::from_str(last).unwrap()
+    }
+
+    #[test]
+    fn appends_after_existing_events_with_next_sequence() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trace.jsonl");
+        record_events(&path, 2);
+
+        append_internal_error(&path, RUN_ID, ACTOR_ID, "execution_failed");
+
+        let event = last_event(&path);
+        assert_eq!(event.kind, TraceKind::InternalError);
+        assert_eq!(event.event_id, seq_id("tev", 4, 3));
+        assert_eq!(event.event_id, "tev_0003");
+        assert_eq!(event.run_id, RUN_ID);
+        assert_eq!(event.actor_id, ACTOR_ID);
+        assert_eq!(event.payload["error_class"], "execution_failed");
+    }
+
+    #[test]
+    fn no_trailing_newline_refuses_append() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trace.jsonl");
+        record_events(&path, 1);
+        let mut torn = std::fs::read(&path).unwrap();
+        torn.pop();
+        std::fs::write(&path, &torn).unwrap();
+
+        append_internal_error(&path, RUN_ID, ACTOR_ID, "execution_failed");
+
+        assert_eq!(std::fs::read(&path).unwrap(), torn);
+    }
+
+    #[test]
+    fn malformed_line_refuses_append() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trace.jsonl");
+        record_events(&path, 1);
+        let mut corrupted = std::fs::read(&path).unwrap();
+        corrupted.extend_from_slice(b"not a trace event\n");
+        std::fs::write(&path, &corrupted).unwrap();
+
+        append_internal_error(&path, RUN_ID, ACTOR_ID, "execution_failed");
+
+        assert_eq!(std::fs::read(&path).unwrap(), corrupted);
+    }
+
+    #[test]
+    fn many_events_still_count_correctly() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trace.jsonl");
+        record_events(&path, 2_000);
+
+        append_internal_error(&path, RUN_ID, ACTOR_ID, "execution_failed");
+
+        let event = last_event(&path);
+        assert_eq!(event.kind, TraceKind::InternalError);
+        assert_eq!(event.event_id, seq_id("tev", 4, 2_001));
+        assert_eq!(event.event_id, "tev_2001");
+    }
+
+    #[test]
+    fn missing_journal_never_creates_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("absent-trace.jsonl");
+
+        append_internal_error(&path, RUN_ID, ACTOR_ID, "execution_failed");
+
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn empty_journal_refuses_append() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trace.jsonl");
+        std::fs::write(&path, b"").unwrap();
+
+        append_internal_error(&path, RUN_ID, ACTOR_ID, "execution_failed");
+
+        assert_eq!(std::fs::read(&path).unwrap(), b"");
+    }
+
+    #[test]
+    fn blank_lines_are_skipped_not_counted() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trace.jsonl");
+        record_events(&path, 1);
+        let mut padded = std::fs::read(&path).unwrap();
+        padded.extend_from_slice(b"\n\n");
+        std::fs::write(&path, &padded).unwrap();
+
+        append_internal_error(&path, RUN_ID, ACTOR_ID, "execution_failed");
+
+        let event = last_event(&path);
+        assert_eq!(event.event_id, seq_id("tev", 4, 2));
     }
 }

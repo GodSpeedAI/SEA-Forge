@@ -45,6 +45,8 @@ use schemars::JsonSchema;
 use sea_forge_core::types::{Case, CasePlan, ItemKind, SettlementEvent, TraceEvent, TraceKind};
 use serde::{Deserialize, Serialize};
 
+use super::{size_within_cap, MAX_JOURNAL_BYTES, MAX_RECORD_BYTES};
+
 /// How far an item has progressed *as execution* — derived only from the trace
 /// events the case runner appended. Deliberately disjoint from
 /// [`SettlementStanding`] so no consumer can conflate the two.
@@ -249,6 +251,20 @@ fn read_case(root: &Path, case_id: &str) -> Result<Case, CaseViewError> {
         return Err(CaseViewError::NotFound(case_id.to_string()));
     }
     let path = root.join("cases").join(case_id).join("case.json");
+    // Stat before reading (SUP-09c): `fs::read` would size its allocation
+    // from the file length, and this record is child-inflatable. Oversized is
+    // *present but unreadable* — the integrity signal — while a stat failure
+    // is the same absence a read failure already was.
+    match std::fs::metadata(&path) {
+        Ok(meta) if meta.len() > MAX_RECORD_BYTES => {
+            return Err(CaseViewError::Unreadable(format!(
+                "case {case_id} record is unreadable: {} bytes exceeds the {MAX_RECORD_BYTES}-byte view read cap",
+                meta.len()
+            )));
+        }
+        Err(_) => return Err(CaseViewError::NotFound(case_id.to_string())),
+        Ok(_) => {}
+    }
     let bytes = std::fs::read(&path).map_err(|_| CaseViewError::NotFound(case_id.to_string()))?;
     serde_json::from_slice(&bytes).map_err(|error| {
         CaseViewError::Unreadable(format!("case {case_id} record is unreadable: {error}"))
@@ -257,6 +273,11 @@ fn read_case(root: &Path, case_id: &str) -> Result<Case, CaseViewError> {
 
 fn read_plan(root: &Path, case_id: &str) -> Option<CasePlan> {
     let path = root.join("cases").join(case_id).join("plan.json");
+    if !size_within_cap(&path, MAX_RECORD_BYTES) {
+        // An oversized plan degrades exactly as an unreadable one: the
+        // plan-derived fields go absent rather than the view failing.
+        return None;
+    }
     let bytes = std::fs::read(path).ok()?;
     serde_json::from_slice(&bytes).ok()
 }
@@ -270,6 +291,12 @@ fn read_plan(root: &Path, case_id: &str) -> Option<CasePlan> {
 /// operator diagnosing that crash than an error page.
 fn read_case_events(root: &Path, case_id: &str) -> Vec<TraceEvent> {
     let path = root.join("cases").join(case_id).join("case-events.jsonl");
+    if !size_within_cap(&path, MAX_JOURNAL_BYTES) {
+        // An oversized journal (SUP-09c — this file is append-only and
+        // child-inflatable) folds to nothing, the same shape an unreadable
+        // journal already produces.
+        return Vec::new();
+    }
     let Ok(text) = std::fs::read_to_string(path) else {
         return Vec::new();
     };
@@ -360,6 +387,12 @@ fn read_settlement(root: &Path, run_id: &str) -> Option<RunSettlement> {
     // case-owned layout, so reading `<root>/runs/` alone made a case view
     // unable to see the settlements of the runs that case created.
     let path = crate::sfwp::run_views::run_dir(root, run_id)?.join("settlement.json");
+    // Same read cap as every whole-record read (SUP-09c): an oversized
+    // settlement is absent here, which leaves the run honestly `unsettled`
+    // rather than reading attacker-influenced bytes.
+    if !size_within_cap(&path, MAX_RECORD_BYTES) {
+        return None;
+    }
     let bytes = std::fs::read(path).ok()?;
     let event: SettlementEvent = serde_json::from_slice(&bytes).ok()?;
     Some(RunSettlement {

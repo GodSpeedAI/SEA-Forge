@@ -79,6 +79,24 @@ fn write_jsonl(path: &Path, values: &[Value]) {
     std::fs::write(path, body).unwrap();
 }
 
+/// Rewrite `path` as its current contents padded with trailing whitespace to
+/// `bytes` total bytes.
+///
+/// Trailing whitespace keeps the document valid JSON (and a padded journal's
+/// extra lines are blank), so the *only* property that changed is size. A pad
+/// of malformed bytes would degrade identically through the parse-error path
+/// and prove nothing about the cap; this way the fixture would still render
+/// if the cap were missing, which is what makes the tests below differential.
+fn pad_to(path: &Path, bytes: usize) {
+    let mut body = std::fs::read(path).unwrap();
+    assert!(
+        body.len() < bytes,
+        "fixture must start below the cap to prove the cap is what fires"
+    );
+    body.resize(bytes, b' ');
+    std::fs::write(path, body).unwrap();
+}
+
 fn trace_event(run_id: &str, event_id: &str, kind: &str, timestamp: &str, payload: Value) -> Value {
     json!({
         "version": "0.1",
@@ -404,4 +422,85 @@ async fn the_run_methods_are_advertised_in_the_negotiated_catalog() {
 
     assert!(methods.contains(&"run.list"), "methods: {methods:?}");
     assert!(methods.contains(&"run.get"), "methods: {methods:?}");
+}
+
+/// SUP-09c: `settlement.json` is a child-inflatable runtime file read whole.
+/// Past the record cap it must degrade to the exact shape an absent
+/// settlement produces — `unsettled`, no settlement record, criteria
+/// `unavailable` — never an OOM, and never a verdict it did not read.
+#[tokio::test]
+async fn an_oversized_settlement_record_degrades_to_an_unsettle_run() {
+    let (root, socket) = boot().await;
+    seed_rejected_despite_exit_zero(root.path(), "case-1", "run-1");
+    pad_to(
+        &root
+            .path()
+            .join("runs")
+            .join("run-1")
+            .join("settlement.json"),
+        4 * 1024 * 1024 + 1,
+    );
+    let mut client = Client::connect(&socket).await;
+
+    let record = client
+        .call(json!({"verb": "run_get", "run_id": "run-1"}))
+        .await;
+    assert!(record.get("error").is_none(), "unexpected error: {record}");
+    assert_eq!(record["settlement"], "unsettled", "{record}");
+    assert!(
+        record.get("settlement_record").is_none(),
+        "no settlement may render from an unread record: {record}"
+    );
+    assert_eq!(
+        record["criteria"][0]["standing"], "unavailable",
+        "an unread settlement decides nothing: {record}"
+    );
+    // Execution is untouched by the settlement cap: the trace still folds.
+    assert_eq!(record["execution"], "completed", "{record}");
+}
+
+/// SUP-09c: `trace.jsonl` is an append-only journal a child can inflate. Past
+/// the journal cap the fold must come back empty — the run renders as
+/// never-having-started rather than the server reading the inflated bytes —
+/// while records within the cap (here the evidence journal) keep folding.
+#[tokio::test]
+async fn an_oversized_trace_journal_folds_to_nothing_rather_than_reading_it() {
+    let (root, socket) = boot().await;
+    seed_rejected_despite_exit_zero(root.path(), "case-1", "run-1");
+    pad_to(
+        &root.path().join("runs").join("run-1").join("trace.jsonl"),
+        64 * 1024 * 1024 + 1,
+    );
+    let mut client = Client::connect(&socket).await;
+
+    let record = client
+        .call(json!({"verb": "run_get", "run_id": "run-1"}))
+        .await;
+    assert!(record.get("error").is_none(), "unexpected error: {record}");
+    assert_eq!(
+        record["trace"].as_array().unwrap().len(),
+        0,
+        "an oversized journal must fold nothing: {record}"
+    );
+    assert_eq!(
+        record["execution"], "pending",
+        "no events means no execution standing was ever observed: {record}"
+    );
+    assert!(
+        record.get("started_at").is_none(),
+        "no folded event may leak a timestamp: {record}"
+    );
+    // The untouched evidence journal still folds — the cap degrades only the
+    // file that exceeded it.
+    assert_eq!(record["evidence"].as_array().unwrap().len(), 1, "{record}");
+
+    // `run.list` folds the same journal and must degrade the same way: the
+    // row stays (the settlement record is within cap) but shows no start.
+    let list = client
+        .call(json!({"verb": "run_list", "case_id": "case-1"}))
+        .await;
+    let runs = list["runs"].as_array().unwrap();
+    assert_eq!(runs.len(), 1, "{list}");
+    assert_eq!(runs[0]["execution"], "pending", "{list}");
+    assert!(runs[0].get("started_at").is_none(), "{list}");
 }

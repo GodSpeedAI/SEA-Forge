@@ -500,6 +500,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             }
             let mut request = Vec::new();
             std::io::stdin()
+                .take(1_048_577)
                 .read_to_end(&mut request)
                 .map_err(|error| {
                     (
@@ -507,6 +508,12 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                         sea_forge_core::ForgeError::io("read SWE_SEED request", error),
                     )
                 })?;
+            if request.len() > 1_048_576 {
+                return Err((
+                    1,
+                    sea_forge_core::ForgeError::Input("SWE_SEED request exceeds 1 MiB cap".into()),
+                ));
+            }
             serde_json::from_slice::<sea_forge_core::types::SettlementDeclarationRequest>(&request)
                 .map_err(|error| {
                     (
