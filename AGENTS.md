@@ -71,13 +71,15 @@ scope:
 just workbench-dev-up                 # Vite renderer at http://localhost:1420
 just workbench-dev-down               # stop that Vite server
 just workbench-e2e-agent-browser      # renderer + accessibility; no Tauri IPC mock
+just workbench-e2e-case-authoring     # case-authoring proof journeys; mocked Tauri IPC
 just workbench-e2e-real [filter]      # packaged Tauri/WebKit + real server/SFWP
 ```
 
 The Vite development server has no native Tauri bridge and must therefore show
 the fail-closed unavailable state for governed data. The installed Playwright
-suite remains mocked speed evidence only; do not use it for an integrated
-Tauri/server claim. `workbench-e2e-real` requires the documented Linux native
+suite and `workbench-e2e-case-authoring` remain mocked-IPC evidence only; do
+not use either for an integrated Tauri/server claim. `workbench-e2e-real`
+requires the documented Linux native
 driver prerequisites and packages the application itself.
 
 Do not run destructive, publishing, or external-write recipes without approval:

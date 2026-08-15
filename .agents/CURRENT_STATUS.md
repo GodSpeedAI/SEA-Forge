@@ -5,11 +5,24 @@ Updated: 2026-08-15
 > **Deep-project-audit remediation is active on `ultracode/sea-forge-completion`.**
 > Preserve both protected stashes (`stash@{0}` and `stash@{1}`); do not pop
 > either without reviewing it. The governing plan is
-> `.agents/plans/deep-project-audit-remediation-2026-08-14.md`. The latest
-> slice (SUP-09b/SUP-09c, completing Batch 4) changed `sea-forge-cli`
-> (`migrate.rs`, `main.rs`), `sea-forge-server` sfwp view readers,
-> `sea-forge-trace`, `sea-forge-sandbox` `jail.rs`, the plan, this handoff,
-> and `OBSERVED_DEBT.md`.
+> `.agents/plans/deep-project-audit-remediation-2026-08-14.md`.
+>
+> **Latest slice (Workbench, owner-directed):** the "Case-authoring proof
+> scenarios (6, 7) have no e2e coverage" debt is resolved — per the owner's
+> direction the coverage is driven by **agent-browser**, not Playwright. New
+> `just workbench-e2e-case-authoring` → `scripts/workbench-e2e-case-authoring.sh`
+> + `workbench/apps/desktop/e2e-agent-browser/sfwp-case-authoring-mock.js`
+> (mocked-IPC shim; agent-browser counterpart of `e2e/tauriMock.ts`). Both
+> journeys pass against the real renderer: stale-precondition repair (commit
+> #1 rejected stale carrying digest A, re-preflight pins B, commit #2 carries
+> B, zero status recovery) and dropped-commit recovery (one `case_commit`
+> total, forced click on the disabled control never reaches the bridge, one
+> `request.get_status`, zero axe violations, zero page errors). Evidence and
+> method: `.agents/reports/2026-08-15-case-authoring-agent-browser-e2e/`.
+> Two new debt entries filed from this work: the authoring pill keeps
+> "Preflight passed" in `rejected_as_stale`, and the Playwright
+> `tauriMock.ts` readiness fixtures fail the current `ReadinessView`
+> contract (`next_lawful_action` required).
 >
 > **Completed:** Batch 1 (path/generated-zone), Batch 2 (ledger
 > crash-consistency/corruption handling), Batch 3 (dispatcher completion
@@ -26,7 +39,7 @@ Updated: 2026-08-15
 > (`ActorRole` into all `Actor` construction sites), F-23 (thoth actor id→role),
 > F-25.e, SUP-09f (release-id pinning), per the dependency-ordered plan.
 >
-> **Latest verified checkpoint (this slice):** `cargo fmt --all -- --check`
+> **Latest verified checkpoint (kernel slice):** `cargo fmt --all -- --check`
 > clean; `cargo clippy -p sea-forge-cli -p sea-forge-server -p sea-forge-trace
 > -p sea-forge-sandbox --all-targets -- -D warnings` clean; new suites green
 > (migrate_safety 3, swe_seed_cli 2, conformance_case_views 9,
@@ -34,7 +47,10 @@ Updated: 2026-08-15
 > conformance_m1 15/15; conformance_m0_migrate 2 regression intact); full
 > workspace `cargo test --workspace --all-features --locked --no-fail-fast`
 > exit 0 — 109 test binaries, 907 passed, 0 failed, 4 ignored (documented
-> real-host release gates).
+> real-host release gates). **Workbench slice:** `just
+> workbench-e2e-case-authoring` exit 0 (both journeys; recipe wiring
+> verified end-to-end); workbench deps installed via
+> `bun install --frozen-lockfile` (667 packages).
 
 
 > **2026-07-27 rebase recovery complete.** `main` now contains the previously

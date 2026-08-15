@@ -37,29 +37,47 @@ entry when resolved; do not use this file as a backlog of ideas.
   sites; sweeping the rest of the crate is new surface belonging to the
   hardening sweep (Batch 9) rather than this slice.
 
-## Open: Case-authoring proof scenarios (6, 7) have no Playwright e2e coverage
+## Open: Authoring status pill keeps "Preflight passed" in the stale state
 
-- Observed: 2026-07-26
-- Evidence: Task 6's e2e proof scenarios ("ambiguous commit has no duplicate
-  side effect", "stale preflight repairs via re-preflight") are proven at the
-  Rust conformance level (`crates/sea-forge-server/tests/conformance_case_authoring.rs`)
-  and the XState machine level (`workbench/apps/desktop/src/machines/caseAuthoringMachine.test.ts`),
-  but not as a Playwright journey against the mocked-IPC harness
-  (`workbench/apps/desktop/e2e/`) that Tasks 5/7's readiness/horizon specs use.
-- Impact: no proof that the real `CaseCreationWorkbench` UI (not just the
-  machine in isolation) correctly disables/re-enables its buttons and renders
-  the repair/recovery affordances across these two scenarios end to end in a
-  browser.
-- Next move: either extend the mocked-IPC e2e harness with `case_preflight`/
-  `case_commit` fixtures that can simulate a stale precondition and a dropped
-  commit response, or decide (as this task's skill review note flagged for
-  every prior authoring-adjacent task) that a real-server e2e harness is
-  needed before trusting a mocked one for exactly this class of timing-
-  dependent scenario, and build that harness once rather than per-task.
-- Scope: building or deciding the real-server-vs-mock e2e harness question is
-  a cross-cutting decision affecting Tasks 5–13 equally (already flagged in
-  this file's task-review notes since Task 5); resolving it inside Task 6
-  alone would be scope creep onto a decision the plan defers explicitly.
+- Observed: 2026-08-15
+- Evidence: `workbench/apps/desktop/src/pages/CaseCreationWorkbench.tsx`'s
+  pill label ternary tests `preflight?.ok` before `state === "rejected_as_stale"`,
+  so after a successful preflight the pill reads "Preflight passed" even while
+  the machine is `rejected_as_stale` (alert and "Re-run preflight" button do
+  render correctly). Confirmed live in the agent-browser journey evidence
+  (`.agents/reports/2026-08-15-case-authoring-agent-browser-e2e/
+  journey7-rejected-as-stale.png`).
+- Impact: the pill understates the stale rejection — the operator's most
+  glanceable status element contradicts the alert beside it.
+- Next move: order the label/variant ternaries by machine state first
+  (`rejected_as_stale` → "Rejected as stale"/blocked, then `preflight?.ok`),
+  and pin it in `CaseCreationWorkbench.test.tsx`.
+- Scope: the e2e-debt slice this was found in covers evidence harness work;
+  changing component render logic with its component test belongs to its own
+  focused change.
+
+## Open: Playwright readiness fixtures fail the current ReadinessView contract
+
+- Observed: 2026-08-15
+- Evidence: `workbench/apps/desktop/e2e/tauriMock.ts`'s
+  `degradedReadinessView()` omits `next_lawful_action`, which the generated
+  `ReadinessItem` schema now requires (`packages/contracts/schema/
+  ReadinessItem.schema.json` required list). Validated directly:
+  `validateReadinessView(readyReadinessView())` fails with
+  "must have required property 'next_lawful_action'" per item, so
+  `fetchReadiness` throws and the page renders "Readiness projection
+  unavailable" — the ready/degraded journeys the specs assert cannot pass
+  as written.
+- Impact: the mocked Playwright readiness suite is red (or would be, next
+  run) against the current contracts; anyone trusting it for renderer
+  regression evidence gets a fail-closed page instead of the fixture view.
+- Next move: add `next_lawful_action` to the fixture items and re-run
+  `bunx playwright test e2e/readiness.spec.ts`; consider having the suite
+  validate fixtures against the generated AJV validators so schema drift
+  fails loudly at the fixture, not as a wrong-page assertion.
+- Scope: discovered while building the agent-browser mock's readiness
+  fixture (which validated correctly); fixing the Playwright suite is its
+  own change with its own verification run.
 
 ## Open: No visual-fidelity pass exists for the case-creation screen
 

@@ -332,6 +332,17 @@ workbench-e2e-agent-browser:
     {{set}}
     scripts/workbench-e2e-agent-browser.sh
 
+# Case-authoring proof journeys (stale-precondition repair; dropped-commit
+# recovery without duplicate side effects) driven by agent-browser against the
+# real renderer with a mocked Tauri IPC bridge — the agent-browser counterpart
+# of the Playwright mocked-IPC harness, not real-stack coverage. Boots its own
+# ephemeral Vite server; requires `just workbench-check`-installed deps.
+[group('workbench')]
+workbench-e2e-case-authoring:
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/workbench-e2e-case-authoring.sh
+
 # Native Linux integration evidence. This packages the app, seeds a temporary
 # cell through real kernel/server operations, and drives the compiled WebKit
 # Workbench through Tauri's native WebDriver intermediary. It fails closed when
