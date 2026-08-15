@@ -90,6 +90,12 @@ pub const MAX_SOURCE_COUNT: usize = 64;
 pub const MAX_AGGREGATE_BYTES: usize = 1_048_576; // 1 MiB
 pub const MAX_IMPORT_DEPTH: usize = 16;
 pub const MAX_AST_NODES: usize = 10_000;
+/// Maximum lexical expression-nesting depth (bracket depth, unary `-` chain,
+/// or `not` chain) accepted before parsing. Bounds the external pest parser's
+/// recursion so a crafted model cannot overflow the stack and abort the
+/// process (SUP-01). Well below the ~1,000-level depth that still parses, and
+/// far above any legitimate model.
+pub const MAX_NESTING_DEPTH: usize = 256;
 
 /// The pinned DomainForge version this adapter expects.
 pub const EXPECTED_DOMAINFORGE_VERSION: &str = "0.16.0";
@@ -105,6 +111,25 @@ fn sha256_content(content: &str) -> String {
 fn sha256_json(value: &Value) -> Result<String, ForgeError> {
     let bytes = serde_json::to_vec(value).map_err(|e| ForgeError::Serialization(e.to_string()))?;
     Ok(sha256_hex(&bytes))
+}
+
+/// Normalize an entry-spelling for identity hashing (SUP-02). DomainForge
+/// resolves `model.sea` and `./model.sea` to the same canonical closure root,
+/// so the semantic identity must not depend on the caller's raw spelling.
+/// Strips a single leading `./` and collapses duplicate `/` segments so
+/// aliases (`./entry.sea`, `entry//./x.sea`) never fork the hash. Used only
+/// for the semantic-model identity — the resolved graph, not this spelling,
+/// is the authority for resolution.
+fn normalize_entry_uri(uri: &str) -> String {
+    let stripped = uri.strip_prefix("./").unwrap_or(uri);
+    let parts: Vec<&str> = stripped.split('/').filter(|s| !s.is_empty()).collect();
+    if parts.is_empty() {
+        return "".into();
+    }
+    if uri == "." {
+        return ".".into();
+    }
+    parts.join("/")
 }
 
 /// Load and validate a `SeaSourceSet` through `domainforge-core`.
@@ -176,6 +201,22 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
             return Err(domain_model_error(format!(
                 "source hash drift for {}: declared={} computed={computed}",
                 file.uri, file.sha256
+            )));
+        }
+    }
+
+    // ── Pre-parse nesting-depth guard (SUP-01) ──
+    // The external pest parser is recursive-descent with no depth cap, and the
+    // AST-node budget runs *after* `parse_source`. A few KB of nested unary
+    // (`-----…`) or parenthesized expressions overflows the stack and aborts
+    // the whole process before the budget can reject it. Bound the lexical
+    // nesting depth *before* parsing so pathological input yields a typed
+    // error instead of a SIGABRT.
+    for file in &source_set.files {
+        if nesting_depth_exceeded(&file.content) {
+            return Err(domain_model_error(format!(
+                "expression nesting depth exceeds limit {MAX_NESTING_DEPTH} in {}",
+                file.uri
             )));
         }
     }
@@ -252,7 +293,9 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
     // ── Build parse_options_sha256 (includes version + limits) ──
     let parse_options_value = serde_json::json!({
         "namespace_registry": null,
-        "entry_path": source_set.entry_uri,
+        // SUP-02: hash the normalized entry spelling so `x.sea` and
+        // `./x.sea` share one semantic identity.
+        "entry_path": normalize_entry_uri(&source_set.entry_uri),
         "domainforge_version": domainforge_core::VERSION,
         "limits": {
             "max_source_count": MAX_SOURCE_COUNT,
@@ -379,6 +422,84 @@ fn max_import_depth(
 /// Leaves count as 1; containers count themselves plus their children. Used
 /// by the AST node budget so nesting depth, not just declaration count,
 /// determines cost.
+/// Lexically bound the expression-nesting depth of a `.sea` source before it
+/// reaches the recursive-descent parser. Tracks three recursion drivers in the
+/// grammar — bracket depth (`(`, `[`, `{`), consecutive unary `-`, and
+/// consecutive `not` — skipping string literals so a long `"-----"` string is
+/// not miscounted. Returns true when any driver exceeds `MAX_NESTING_DEPTH`.
+fn nesting_depth_exceeded(content: &str) -> bool {
+    let bytes = content.as_bytes();
+    let mut i = 0usize;
+    let mut bracket_depth = 0usize;
+    let mut dash_run = 0usize;
+    let mut not_run = 0usize;
+    let mut in_string = false;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if in_string {
+            match c {
+                b'\\' => i += 2,
+                b'"' => {
+                    in_string = false;
+                    i += 1;
+                }
+                _ => i += 1,
+            }
+            continue;
+        }
+        match c {
+            b'"' => {
+                in_string = true;
+                dash_run = 0;
+                not_run = 0;
+                i += 1;
+            }
+            b'(' | b'[' | b'{' => {
+                bracket_depth += 1;
+                if bracket_depth > MAX_NESTING_DEPTH {
+                    return true;
+                }
+                dash_run = 0;
+                not_run = 0;
+                i += 1;
+            }
+            b')' | b']' | b'}' => {
+                bracket_depth = bracket_depth.saturating_sub(1);
+                dash_run = 0;
+                not_run = 0;
+                i += 1;
+            }
+            b'-' => {
+                dash_run += 1;
+                if dash_run > MAX_NESTING_DEPTH {
+                    return true;
+                }
+                not_run = 0;
+                i += 1;
+            }
+            _ => {
+                if c == b'n' && content[i..].starts_with("not") {
+                    let after = i + 3;
+                    let boundary = after >= bytes.len()
+                        || !(bytes[after].is_ascii_alphanumeric() || bytes[after] == b'_');
+                    if boundary {
+                        not_run += 1;
+                        if not_run > MAX_NESTING_DEPTH {
+                            return true;
+                        }
+                        i += 3;
+                        continue;
+                    }
+                }
+                not_run = 0;
+                dash_run = 0;
+                i += 1;
+            }
+        }
+    }
+    false
+}
+
 fn count_ast_nodes(ast: &domainforge_core::parser::ast::Ast) -> usize {
     ast.declarations
         .iter()

@@ -120,12 +120,19 @@ impl CaseRunner {
             case.run_ids.push(run_id.into());
         }
         let accepted = settlement.status == SettlementStatus::Accepted;
+        // F-03: an escalation is not a failure. It parks the item pending
+        // approval (`ItemTerminated`) rather than mislabeling it `ItemFailed`,
+        // which would drive a required item to `TerminateCase` and orphan the
+        // just-opened approval.
+        let escalated = settlement.status == SettlementStatus::Escalated;
         Self::append_event(
             case_events,
             stream,
             events,
             if accepted {
                 TraceKind::ItemCompleted
+            } else if escalated {
+                TraceKind::ItemTerminated
             } else {
                 TraceKind::ItemFailed
             },
@@ -335,6 +342,7 @@ fn run_stage_episode(
             authority_verdicts: vec![decision.verdict.clone()],
             evaluator_scores: BTreeMap::new(),
             batch: None,
+            write_only: false,
         },
         &workspace,
         &run_dir,

@@ -420,12 +420,19 @@ fn ensure_trusted_dir(parent: &Path, name: &str) -> Result<PathBuf, ForgeError> 
     }
 }
 
-/// Parse a `name@version` template reference.
+/// Parse a `name@version` template reference. Rejects empty names/versions and
+/// characters outside the template grammar, so a traversal-shaped reference
+/// (`../x@1`) cannot escape the templates directory.
 pub(crate) fn parse_template_ref(reference: &str) -> Result<(String, String), ForgeError> {
     let (name, version) = reference
         .split_once('@')
         .ok_or_else(|| ForgeError::Input(format!("invalid template reference {reference}")))?;
-    if name.is_empty() || version.is_empty() {
+    let valid = |s: &str| {
+        !s.is_empty()
+            && s.chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+    };
+    if !valid(name) || !valid(version) {
         return Err(ForgeError::Input(format!(
             "invalid template reference {reference}"
         )));

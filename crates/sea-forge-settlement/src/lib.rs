@@ -28,6 +28,30 @@ pub fn settle(
     } else {
         basis.push("authority_allow".into());
         match &claim.execution {
+            None if claim.write_only => {
+                // F-10: a write-only item has no process result to settle
+                // against. Accept on the materialized artifacts and record an
+                // honest `write_only` basis — never a fabricated process result.
+                basis.push("write_only".into());
+                let mut accepted = true;
+                for path in &claim.criteria.required_artifacts {
+                    let present =
+                        safe_existing(workspace, path).is_ok_and(|candidate| candidate.is_file());
+                    basis.push(format!(
+                        "required_artifact_{}:{path}",
+                        if present { "present" } else { "missing" }
+                    ));
+                    accepted &= present;
+                }
+                (
+                    if accepted {
+                        SettlementStatus::Accepted
+                    } else {
+                        SettlementStatus::Rejected
+                    },
+                    false,
+                )
+            }
             None => (SettlementStatus::Rejected, false),
             Some(execution) => match execution.status {
                 ExecutionStatus::SpawnFailed => {
@@ -89,6 +113,15 @@ pub fn settle(
                             let q_dir = run_dir.join("quarantine");
                             std::fs::create_dir_all(&q_dir)
                                 .map_err(|e| ForgeError::io("create quarantine dir", e))?;
+                            // The plan-item id is interpolated into a filesystem path;
+                            // validate it as a single safe segment (F-17) so a
+                            // traversal-shaped id cannot write outside `run_dir`.
+                            if !sea_forge_core::path::valid_id_segment(&claim.plan_item_id, 128) {
+                                return Err(ForgeError::Input(format!(
+                                    "unsafe plan item id: {}",
+                                    claim.plan_item_id
+                                )));
+                            }
                             let q_path = q_dir.join(format!("{}.jsonl", claim.plan_item_id));
                             let mut buf = Vec::new();
                             for failure in &batch.failures {
@@ -402,6 +435,7 @@ mod tests {
             authority_verdicts: vec![Verdict::Deny, Verdict::Escalate],
             evaluator_scores: BTreeMap::new(),
             batch: None,
+            write_only: false,
         };
         assert_eq!(
             settle(&claim, Path::new("."), Path::new("."))
@@ -422,6 +456,7 @@ mod tests {
             authority_verdicts: vec![Verdict::Deny],
             evaluator_scores: BTreeMap::new(),
             batch: None,
+            write_only: false,
         };
         let first = settle(&claim, Path::new("."), Path::new(".")).unwrap();
         let second = settle(&claim, Path::new("."), Path::new(".")).unwrap();
@@ -460,6 +495,7 @@ mod tests {
             authority_verdicts: vec![Verdict::Allow],
             evaluator_scores: BTreeMap::new(),
             batch: None,
+            write_only: false,
         };
         let event = settle(&claim, &workspace, &root).unwrap();
         assert_eq!(event.status, SettlementStatus::Rejected);

@@ -15,6 +15,7 @@ fn legacy_claim() -> SettlementClaim {
         authority_verdicts: vec![Verdict::Allow],
         evaluator_scores: BTreeMap::new(),
         batch: None,
+        write_only: false,
     }
 }
 
@@ -31,6 +32,7 @@ fn modern_claim() -> SettlementClaim {
         authority_verdicts: vec![Verdict::Allow],
         evaluator_scores: BTreeMap::new(),
         batch: None,
+        write_only: false,
     }
 }
 
@@ -169,4 +171,88 @@ fn thoth_sod_replayed_claim_cannot_bypass() {
             DeclarationStatus::Rejected
         );
     }
+}
+
+#[test]
+fn traversal_plan_item_id_cannot_escape_quarantine_dir() {
+    // F-17 regression: a traversal-shaped plan-item id must be rejected before
+    // the quarantine write, never written outside `run_dir`.
+    let dir = tempfile::tempdir().unwrap();
+    let run_dir = dir.path().join("run");
+    let workspace = run_dir.join("workspace");
+    std::fs::create_dir_all(&workspace).unwrap();
+    let claim = SettlementClaim {
+        run_id: "run_x".into(),
+        plan_item_id: "../../evil_item".into(),
+        criteria_ref: None,
+        criteria: SettlementCriteria {
+            records: Some("records.jsonl".into()),
+            per_record_evaluator: Some("demo.score".into()),
+            min_pass_ratio: Some(1.0),
+            ..Default::default()
+        },
+        execution: Some(ExecutionResult {
+            status: ExecutionStatus::Completed,
+            exit_code: Some(0),
+            stdout_path: "artifacts/stdout.txt".into(),
+            stderr_path: "artifacts/stderr.txt".into(),
+            started_at: "2026-01-01T00:00:00Z".into(),
+            finished_at: "2026-01-01T00:00:01Z".into(),
+        }),
+        authority_verdicts: vec![Verdict::Allow],
+        evaluator_scores: BTreeMap::new(),
+        batch: Some(BatchEvaluationResult {
+            total: 1,
+            passed: 0,
+            pass_ratio: 0.0,
+            min_pass_ratio: 1.0,
+            failures: vec![BatchFailure {
+                record: serde_json::json!({"bad": true}),
+                score: 0.0,
+                evidence_ref: "ev".into(),
+            }],
+        }),
+        write_only: false,
+    };
+    let result = settle(&claim, &workspace, &run_dir);
+    assert!(result.is_err(), "traversal plan_item_id must be rejected");
+    assert!(
+        !dir.path().join("evil_item.jsonl").exists(),
+        "no quarantine file may escape run_dir"
+    );
+}
+
+#[test]
+fn write_only_item_settles_without_fabricated_process_result() {
+    // F-10 regression: a write-only item (no process ran) must settle on its
+    // materialized artifacts with a `write_only` basis, never a fabricated
+    // `Completed`/`exit 0` process result.
+    let dir = tempfile::tempdir().unwrap();
+    let run_dir = dir.path().join("run");
+    let workspace = run_dir.join("workspace");
+    std::fs::create_dir_all(&workspace).unwrap();
+    std::fs::write(workspace.join("out.txt"), b"ok").unwrap();
+
+    let claim = SettlementClaim {
+        run_id: "run".into(),
+        plan_item_id: "item_01".into(),
+        criteria_ref: None,
+        criteria: SettlementCriteria {
+            require_exit_zero: false,
+            required_artifacts: vec!["out.txt".into()],
+            ..Default::default()
+        },
+        execution: None,
+        authority_verdicts: vec![Verdict::Allow],
+        evaluator_scores: BTreeMap::new(),
+        batch: None,
+        write_only: true,
+    };
+    let event = settle(&claim, &workspace, &run_dir).unwrap();
+    assert_eq!(event.status, SettlementStatus::Accepted);
+    assert!(
+        event.basis.iter().any(|b| b == "write_only"),
+        "basis must record write_only: {:?}",
+        event.basis
+    );
 }

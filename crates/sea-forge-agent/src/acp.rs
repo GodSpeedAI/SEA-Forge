@@ -44,6 +44,25 @@ const ERR_METHOD_NOT_FOUND: i32 = -32601;
 const ERR_INVALID_PARAMS: i32 = -32602;
 const ERR_INTERNAL: i32 = -32603;
 
+/// Bound retained tool-call updates from an untrusted ACP peer. Once this cap
+/// is reached, later updates still consume a turn but cannot grow state.
+const MAX_TRACKED_TOOL_CALLS: usize = 256;
+/// No agent episode may exceed this wall-clock duration, even when a peer
+/// continuously sends notifications before each per-turn timeout.
+const MAX_EPISODE_DURATION: Duration = Duration::from_secs(15 * 60);
+
+fn episode_timeout(max_turns: u32, per_turn_timeout: Duration) -> Duration {
+    per_turn_timeout
+        .checked_mul(max_turns.max(1))
+        .unwrap_or(MAX_EPISODE_DURATION)
+        .min(MAX_EPISODE_DURATION)
+}
+
+fn consume_turn(turns_used: &mut u32, max_turns: u32) -> bool {
+    *turns_used = turns_used.saturating_add(1);
+    *turns_used >= max_turns
+}
+
 /// A resolved permission decision handed back into the live session.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PermissionDecision {
@@ -558,8 +577,9 @@ impl AcpSession {
     /// `instruction` is the task packet (untrusted-content rules apply).
     /// `cancel` is polled between pump iterations. `per_turn_timeout` bounds
     /// how long we wait for the next incoming message; `max_turns` bounds
-    /// accumulated output (ACP turn accounting is coarse; we count one turn
-    /// per prompt dispatch and rely on stop_reason for the rest).
+    /// tool-call and text updates. Their product, capped at fifteen minutes,
+    /// is also a wall-clock episode deadline so notifications cannot keep an
+    /// episode alive indefinitely.
     pub async fn run_episode(
         self,
         instruction: &str,
@@ -751,7 +771,17 @@ impl AcpSession {
         #[allow(unused_assignments)]
         let mut terminal = AcpTermination::Completed;
         let mut incoming = self.incoming_rx.take().expect("incoming_rx present");
+        let episode_deadline = time::Instant::now() + episode_timeout(max_turns, per_turn_timeout);
         loop {
+            if time::Instant::now() >= episode_deadline {
+                terminal = AcpTermination::TurnCapExceeded;
+                self.notify(
+                    "session/cancel",
+                    serde_json::json!({"sessionId": session_id}),
+                )
+                .await;
+                break;
+            }
             if cancel() {
                 self.notify(
                     "session/cancel",
@@ -764,16 +794,22 @@ impl AcpSession {
                 let _ = drained;
                 break;
             }
-            let msg = match time::timeout(per_turn_timeout, incoming.recv()).await {
+            let remaining = episode_deadline.saturating_duration_since(time::Instant::now());
+            let wait_timeout = per_turn_timeout.min(remaining);
+            let msg = match time::timeout(wait_timeout, incoming.recv()).await {
                 Ok(Some(msg)) => msg,
                 Ok(None) => {
                     terminal = AcpTermination::Disconnect;
                     break;
                 }
                 Err(_) => {
-                    // No message within the turn window; treat as disconnect
-                    // (agent stalled). A real per-turn timeout is grant-bound.
-                    terminal = AcpTermination::Disconnect;
+                    // The receive timeout can be the remaining episode budget;
+                    // preserve that distinction from an ordinary stalled turn.
+                    terminal = if time::Instant::now() >= episode_deadline {
+                        AcpTermination::TurnCapExceeded
+                    } else {
+                        AcpTermination::Disconnect
+                    };
                     break;
                 }
             };
@@ -809,7 +845,16 @@ impl AcpSession {
                 }
                 Incoming::Notification(note) => {
                     if note.method == "session/update" {
-                        remember_tool_call(&note.params, &mut tool_calls);
+                        let tool_call_update = remember_tool_call(&note.params, &mut tool_calls);
+                        if tool_call_update && consume_turn(&mut turns_used, max_turns) {
+                            terminal = AcpTermination::TurnCapExceeded;
+                            self.notify(
+                                "session/cancel",
+                                serde_json::json!({"sessionId": session_id}),
+                            )
+                            .await;
+                            break;
+                        }
                         if let Some(text) = extract_agent_text(&note.params) {
                             if assistant_bytes.saturating_add(text.len()) > self.max_response_bytes
                             {
@@ -833,8 +878,7 @@ impl AcpSession {
                                 terminal = AcpTermination::EndpointError;
                                 break;
                             }
-                            turns_used = turns_used.saturating_add(1);
-                            if turns_used >= max_turns {
+                            if !tool_call_update && consume_turn(&mut turns_used, max_turns) {
                                 terminal = AcpTermination::TurnCapExceeded;
                                 self.notify(
                                     "session/cancel",
@@ -1072,16 +1116,22 @@ fn append_transcript(
     true
 }
 
-fn remember_tool_call(params: &Value, calls: &mut HashMap<String, Value>) {
+/// Retain at most `MAX_TRACKED_TOOL_CALLS` tool-call descriptions for later
+/// permission enrichment. Every syntactically identified tool-call update is a
+/// turn, including updates we decline to retain at the memory cap.
+fn remember_tool_call(params: &Value, calls: &mut HashMap<String, Value>) -> bool {
     let Some(update) = params.get("update") else {
-        return;
+        return false;
     };
     if update["sessionUpdate"].as_str() != Some("tool_call") {
-        return;
+        return false;
     }
     if let Some(id) = update["toolCallId"].as_str() {
-        calls.insert(id.to_string(), update.clone());
+        if calls.contains_key(id) || calls.len() < MAX_TRACKED_TOOL_CALLS {
+            calls.insert(id.to_string(), update.clone());
+        }
     }
+    true
 }
 
 fn enrich_permission_request(params: &mut Value, calls: &HashMap<String, Value>) {
@@ -1186,12 +1236,12 @@ fn extract_agent_text(params: &Value) -> Option<String> {
             .and_then(Value::as_str)
             .map(str::to_owned),
         "tool_call" => {
-            // A tool call surfaces as a permission request next; record a
-            // neutral marker so transcript accounting stays bounded.
+            // Tool-call updates are charged independently from this marker so
+            // title-less updates cannot bypass the turn budget.
             update
                 .get("title")
                 .and_then(Value::as_str)
-                .map(|t| format!("[tool_call:{t}]"))
+                .map(|title| format!("[tool_call:{title}]"))
         }
         _ => None,
     }
@@ -1485,6 +1535,182 @@ mod tests {
         // both are non-Completed terminal outcomes.
         assert_ne!(outcome.termination, AcpTermination::Completed);
         let _ = _ca_read;
+    }
+
+    async fn fixture_notification_stream() -> AcpSession {
+        let (ca_read, ca_write) = duplex(8 * 1024);
+        let (ac_read, ac_write) = duplex(8 * 1024);
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(ca_read);
+            let mut writer = ac_write;
+            let mut line = String::new();
+            'agent: loop {
+                line.clear();
+                if reader.read_line(&mut line).await.is_err() {
+                    break;
+                }
+                let Ok(value) = serde_json::from_str::<Value>(line.trim()) else {
+                    continue;
+                };
+                let Some(id) = value.get("id").and_then(Value::as_u64) else {
+                    continue;
+                };
+                match value.get("method").and_then(Value::as_str) {
+                    Some("initialize") => {
+                        let _ = writer
+                            .write_all(
+                                response_line(
+                                    id,
+                                    &serde_json::json!({
+                                        "protocolVersion": ACP_PROTOCOL_VERSION
+                                    }),
+                                )
+                                .as_bytes(),
+                            )
+                            .await;
+                    }
+                    Some("session/new") => {
+                        let _ = writer
+                            .write_all(
+                                response_line(
+                                    id,
+                                    &serde_json::json!({
+                                        "sessionId": "streaming-session"
+                                    }),
+                                )
+                                .as_bytes(),
+                            )
+                            .await;
+                    }
+                    Some("session/prompt") => loop {
+                        let update = notify_line(
+                            "session/update",
+                            &serde_json::json!({
+                                "sessionId": "streaming-session",
+                                "update": {"sessionUpdate": "available_commands_update"}
+                            }),
+                        );
+                        if writer.write_all(update.as_bytes()).await.is_err()
+                            || writer.flush().await.is_err()
+                        {
+                            break 'agent;
+                        }
+                        time::sleep(Duration::from_millis(1)).await;
+                    },
+                    _ => {}
+                }
+            }
+        });
+        AcpSession::over_streams(
+            Box::new(ac_read),
+            Box::new(ca_write),
+            None,
+            None,
+            None,
+            4 * 1024 * 1024,
+            8 * 1024 * 1024,
+        )
+    }
+
+    #[tokio::test]
+    async fn titleless_tool_call_update_counts_against_turn_cap() {
+        let script = vec![
+            serde_json::json!({"protocolVersion": ACP_PROTOCOL_VERSION}),
+            serde_json::json!({"sessionId": "sess-tool-turn"}),
+            serde_json::json!({"method":"session/update","params":{
+                "sessionId":"sess-tool-turn",
+                "update":{"sessionUpdate":"tool_call","toolCallId":"titleless","kind":"read"}
+            }}),
+            serde_json::json!({"stopReason":"end_turn"}),
+        ];
+        let (session, _done) = fixture_agent(script).await;
+        let outcome = session
+            .run_episode(
+                "task",
+                1,
+                Duration::from_secs(1),
+                || false,
+                &DenyAllMediator,
+            )
+            .await;
+        assert_eq!(outcome.turns_used, 1);
+        assert_eq!(outcome.termination, AcpTermination::TurnCapExceeded);
+    }
+
+    #[tokio::test]
+    async fn titled_tool_call_is_recorded_and_charged_once() {
+        let script = vec![
+            serde_json::json!({"protocolVersion": ACP_PROTOCOL_VERSION}),
+            serde_json::json!({"sessionId": "sess-titled-tool"}),
+            serde_json::json!({"method":"session/update","params":{
+                "sessionId":"sess-titled-tool",
+                "update":{
+                    "sessionUpdate":"tool_call",
+                    "toolCallId":"titled",
+                    "kind":"read",
+                    "title":"inspect evidence"
+                }
+            }}),
+            serde_json::json!({"stopReason":"end_turn"}),
+        ];
+        let (session, _done) = fixture_agent(script).await;
+        let outcome = session
+            .run_episode(
+                "task",
+                2,
+                Duration::from_secs(1),
+                || false,
+                &DenyAllMediator,
+            )
+            .await;
+        assert_eq!(outcome.termination, AcpTermination::Completed);
+        assert_eq!(outcome.turns_used, 1);
+        assert!(outcome
+            .transcript
+            .iter()
+            .any(|(_, content)| content == "[tool_call:inspect evidence]"));
+    }
+
+    #[tokio::test]
+    async fn notifications_cannot_outlive_episode_wall_clock_budget() {
+        let session = fixture_notification_stream().await;
+        let started = std::time::Instant::now();
+        let outcome = time::timeout(
+            Duration::from_millis(300),
+            session.run_episode(
+                "task",
+                4,
+                Duration::from_millis(10),
+                || false,
+                &DenyAllMediator,
+            ),
+        )
+        .await
+        .expect("a notification stream must stop at the episode deadline");
+        assert_eq!(outcome.termination, AcpTermination::TurnCapExceeded);
+        assert_eq!(outcome.turns_used, 0);
+        assert!(
+            started.elapsed() < Duration::from_millis(200),
+            "episode must not wait for the outer test timeout"
+        );
+    }
+
+    #[test]
+    fn retained_tool_calls_are_capped_without_ignoring_updates() {
+        let mut calls = HashMap::new();
+        for index in 0..=MAX_TRACKED_TOOL_CALLS {
+            let params = serde_json::json!({
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": format!("tool-{index}"),
+                    "kind": "read"
+                }
+            });
+            assert!(remember_tool_call(&params, &mut calls));
+        }
+        assert_eq!(calls.len(), MAX_TRACKED_TOOL_CALLS);
+        assert!(calls.contains_key("tool-0"));
+        assert!(!calls.contains_key(&format!("tool-{MAX_TRACKED_TOOL_CALLS}")));
     }
 
     /// Confirm the harness compiles against AsyncRead trait import.

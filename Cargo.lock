@@ -2126,6 +2126,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "wait-timeout",
  "zeroize",
 ]
 

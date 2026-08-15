@@ -10,6 +10,11 @@ use crate::bundle::parse_template_ref;
 /// After adoption, `sea_forge_planner::templates::load_pinned` finds it.
 /// Authority approval is evaluated at the CLI layer before calling this.
 pub fn adopt(root: &Path, cell_id: &str, reference: &str) -> Result<PathBuf, ForgeError> {
+    // `cell_id` is joined into a filesystem path; reject traversal-shaped ids at
+    // the boundary (F-14).
+    if !sea_forge_core::path::valid_id_segment(cell_id, 128) {
+        return Err(ForgeError::Input(format!("unsafe cell id: {cell_id}")));
+    }
     let (name, version) = parse_template_ref(reference)?;
     let src = crate::bundle::imported_template_path(root, cell_id, &name, &version);
     if !src.exists() {

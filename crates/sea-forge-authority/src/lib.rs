@@ -2558,7 +2558,12 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
     match action {
         AuthorityAction::WriteFile { path, .. } => {
             let prefix = rule.path_prefix.as_deref().unwrap_or("");
-            rule.operation_kind == "write_file" && (prefix.is_empty() || path.starts_with(prefix))
+            // Segment-aware prefix: `docs` matches `docs` and `docs/x` but not
+            // `docs-private/x`. The path is normalized first so a non-canonical
+            // spelling cannot dodge the prefix boundary.
+            let normalized = sea_forge_core::path::normalize_relative_path(path);
+            rule.operation_kind == "write_file"
+                && sea_forge_core::path::path_prefix_matches(&normalized, prefix)
         }
         AuthorityAction::ExecuteCommand { .. } => rule.operation_kind == "execute_command",
         AuthorityAction::Reserved {
@@ -2754,8 +2759,11 @@ fn hard_denied(action: &AuthorityAction, patterns: &[String]) -> bool {
                 "docs/specs/**/*.ir.json",
                 "docs/specs/**/*.manifest.json",
                 "docs/specs/**/fixtures/semantic/*.semantic.fixture.yaml",
-                ".git/**",
-                ".env*",
+                // Anchored with `**/` so a nested spelling (`sub/.git/config`,
+                // `subdir/.env`) is still a hard-boundary hit, not just the
+                // root-level one.
+                "**/.git/**",
+                "**/.env*",
                 "**/*secret*",
             ];
             BUILT_INS.iter().any(|pattern| path_denied(path, pattern))
@@ -2904,7 +2912,12 @@ fn protected_git_commit(action: &AuthorityAction, configured: &[String]) -> bool
     matches!(action, AuthorityAction::GitCommit { paths } if paths.iter().any(|path| BUILT_INS.iter().any(|pattern| path_denied(path, pattern)) || configured.iter().any(|pattern| path_denied(path, pattern))))
 }
 fn path_denied(path: &str, pattern: &str) -> bool {
-    let path = path.to_ascii_lowercase();
+    // Normalize the path lexically before matching so `a//b`, `a/./b`, and
+    // `a/` alias `a/b` and a deny pattern can never be bypassed by a
+    // non-canonical spelling (spec §7.5: comparisons happen after lexical
+    // normalization).
+    let normalized = sea_forge_core::path::normalize_relative_path(path);
+    let path = normalized.to_ascii_lowercase();
     let pattern = pattern.to_ascii_lowercase();
     path == ".git"
         || wildcard_match(pattern.as_bytes(), path.as_bytes())
@@ -4025,6 +4038,40 @@ mod tests {
         assert!(!serde_json::to_string(&secret)
             .unwrap()
             .contains("super-secret-token"));
+    }
+
+    #[test]
+    fn non_canonical_spellings_cannot_bypass_hard_boundaries() {
+        // F-01 regression: `//` and `.` segments must not let a write land in a
+        // hard-denied zone under an empty-prefix allow rule. The hard boundary
+        // normalizes before matching, so the deny keeps its reason code.
+        for path in [
+            "src//gen//model.rs",
+            "src/./gen/model.rs",
+            "subdir/.env",
+            "sub/.git/config",
+            "sub/dir/.git/config",
+        ] {
+            let decision = evaluate(&AuthorityAction::WriteFile {
+                path: path.into(),
+                content_hint: "fixed".into(),
+            });
+            assert_eq!(decision.verdict, Verdict::Deny, "{path} must be denied");
+        }
+        // The generated-zone deny keeps its hard-boundary reason code.
+        let aliased = evaluate(&AuthorityAction::WriteFile {
+            path: "src//gen//model.rs".into(),
+            content_hint: "fixed".into(),
+        });
+        assert!(aliased
+            .reason_codes
+            .contains(&"generated_zone_denied".into()));
+        // A distinct `src` segment is not over-blocked.
+        let ok = evaluate(&AuthorityAction::WriteFile {
+            path: "mysrc/gen/x.rs".into(),
+            content_hint: "fixed".into(),
+        });
+        assert_eq!(ok.verdict, Verdict::Allow);
     }
 
     #[test]

@@ -746,6 +746,11 @@ pub struct SettlementClaim {
     pub evaluator_scores: BTreeMap<String, f64>,
     /// Pre-computed batch evaluation result (if batch criteria set).
     pub batch: Option<BatchEvaluationResult>,
+    /// True when the item's operations are all writes (no process ran). The
+    /// settlement must then accept on the materialized artifacts and record a
+    /// `write_only` basis, never fabricate a `Completed`/`exit 0` process
+    /// result (F-10).
+    pub write_only: bool,
 }
 
 /// Result of batch evaluation over a JSONL records file (§7.6).

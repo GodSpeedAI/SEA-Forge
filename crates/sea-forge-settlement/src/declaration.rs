@@ -587,20 +587,28 @@ fn compute_weight(conf: &str, exposure: &str, blindness: &str) -> String {
 fn parse_fixed(s: &str) -> Result<i64, ()> {
     let s = s.trim();
     let (sign, rest) = if let Some(stripped) = s.strip_prefix('-') {
-        (-1, stripped)
+        (-1_i64, stripped)
     } else {
-        (1, s)
+        (1_i64, s)
     };
     let parts: Vec<&str> = rest.split('.').collect();
     let int_part: i64 = parts
         .first()
         .filter(|p| !p.is_empty())
-        .map(|p| p.parse::<i64>().unwrap_or(0))
+        .and_then(|p| p.parse::<i64>().ok())
         .unwrap_or(0);
     let frac_part = parts.get(1).unwrap_or(&"");
-    let frac_padded = format!("{:0<6}", &frac_part[..frac_part.len().min(6)]);
+    // SUP-05: char-boundary-safe truncation and checked arithmetic — a
+    // pathological magnitude is a typed parse failure, not a panic or wrap.
+    let frac_chars: String = frac_part.chars().take(6).collect();
+    let frac_padded = format!("{frac_chars:0<6}");
     let frac: i64 = frac_padded.parse().unwrap_or(0);
-    Ok(sign * (int_part * 1_000_000 + frac))
+    let scaled = int_part
+        .checked_mul(1_000_000)
+        .and_then(|v| v.checked_add(frac))
+        .and_then(|v| v.checked_mul(sign))
+        .ok_or(())?;
+    Ok(scaled)
 }
 
 /// Format millionths (800000) as a fixed-scale decimal string ("0.800000").

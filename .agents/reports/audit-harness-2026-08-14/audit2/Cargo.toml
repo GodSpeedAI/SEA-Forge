@@ -1,0 +1,15 @@
+[package]
+name = "audit2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sea-forge-domainforge = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-domainforge" }
+sea-forge-spec-pipeline = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-spec-pipeline" }
+sea-forge-core = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-core" }
+sea-forge-capability = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-capability" }
+sea-forge-extension = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-extension" }
+serde_json = "1"
+sha2 = "0.10"
+
+[workspace]

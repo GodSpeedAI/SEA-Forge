@@ -150,7 +150,7 @@ pub fn resolve_template_digest_source(
     root: &Path,
     template_ref: &str,
 ) -> Option<serde_json::Value> {
-    let (name, version) = template_ref.split_once('@')?;
+    let (name, version) = sea_forge_planner::templates::parse_template_ref(template_ref).ok()?;
     let path = root
         .join("templates")
         .join(format!("{name}@{version}.yaml"));
@@ -168,9 +168,7 @@ fn load_template_for_preflight(
     root: &Path,
     template_ref: &str,
 ) -> Result<PlanTemplate, sea_forge_core::errors::ForgeError> {
-    let (name, version) = template_ref.split_once('@').ok_or_else(|| {
-        sea_forge_core::errors::ForgeError::Input("template ref must be name@version".into())
-    })?;
+    let (name, version) = templates::parse_template_ref(template_ref)?;
     let path = root
         .join("templates")
         .join(format!("{name}@{version}.yaml"));

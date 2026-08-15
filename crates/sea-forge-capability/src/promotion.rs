@@ -15,20 +15,27 @@ const SCALE: i64 = 1_000_000;
 pub fn parse_fixed(s: &str) -> i64 {
     let s = s.trim();
     let (sign, rest) = if let Some(stripped) = s.strip_prefix('-') {
-        (-1, stripped)
+        (-1_i64, stripped)
     } else {
-        (1, s)
+        (1_i64, s)
     };
     let parts: Vec<&str> = rest.split('.').collect();
     let int_part: i64 = parts
         .first()
         .filter(|p| !p.is_empty())
-        .map(|p| p.parse::<i64>().unwrap_or(0))
+        .and_then(|p| p.parse::<i64>().ok())
         .unwrap_or(0);
     let frac_part = parts.get(1).copied().unwrap_or("");
-    let frac_padded = format!("{:0<6}", &frac_part[..frac_part.len().min(6)]);
+    // SUP-05: truncate on char boundaries (never a UTF-8 byte slice) and use
+    // saturating arithmetic so a pathological magnitude clamps rather than
+    // panicking (debug) or silently wrapping (release).
+    let frac_chars: String = frac_part.chars().take(6).collect();
+    let frac_padded = format!("{frac_chars:0<6}");
     let frac: i64 = frac_padded.parse().unwrap_or(0);
-    sign * (int_part * SCALE + frac)
+    int_part
+        .saturating_mul(SCALE)
+        .saturating_add(frac)
+        .saturating_mul(sign)
 }
 
 pub fn format_fixed(v: i64) -> String {
@@ -534,4 +541,24 @@ pub fn append_capability_record(path: &Path, record: &CapabilityRecord) -> Resul
     file.write_all(&encoded)
         .and_then(|_| file.flush())
         .map_err(|e| ForgeError::io("append capability record", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_fixed_is_char_boundary_and_overflow_safe() {
+        // SUP-05 regression: multibyte fractional input and pathological
+        // magnitudes must not panic or silently wrap.
+        assert_eq!(parse_fixed("1.5"), 1_500_000);
+        assert_eq!(parse_fixed("0.800000"), 800_000);
+        // Multibyte chars after the decimal point are truncated on char
+        // boundaries (the non-numeric remainder parses to 0, never a panic).
+        assert_eq!(parse_fixed("1.ab\u{2200}\u{2200}"), 1_000_000);
+        // A magnitude that would overflow i64 saturates rather than wrapping.
+        assert_eq!(parse_fixed("9300000000000"), i64::MAX);
+        // Negative sign still applies on sane inputs.
+        assert_eq!(parse_fixed("-0.5"), -500_000);
+    }
 }

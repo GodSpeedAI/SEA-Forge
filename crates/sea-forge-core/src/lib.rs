@@ -5,6 +5,7 @@
 pub mod approvals;
 pub mod errors;
 pub mod ids;
+pub mod path;
 pub mod types;
 
 pub const RECORD_VERSION: &str = "0.1";

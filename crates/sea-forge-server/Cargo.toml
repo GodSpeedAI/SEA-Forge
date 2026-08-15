@@ -33,6 +33,7 @@ sha2.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "process", "sync", "time", "fs", "macros"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+wait-timeout.workspace = true
 zeroize.workspace = true
 
 [lints]

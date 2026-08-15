@@ -249,12 +249,21 @@ pub fn quarantine_stage(stage: &mut SpecPipelineStage, reason: &str) -> Result<(
 // ── Generated-zone guard ──
 
 /// Check if a path is in a generated zone (read-only per §10.7).
+///
+/// The path is normalized lexically first, and the zone is matched on
+/// *segments* rather than substrings, so `src//gen//model.rs`, `src/./gen/…`,
+/// bare `src/gen`, and root-level `fixtures/semantic/…` are all caught, while
+/// `mysrc/gen/…` (a different `src` segment) is not over-blocked.
 pub fn is_generated_zone(path: &str) -> bool {
-    path.contains("src/gen/")
-        || path.ends_with(".ast.json")
-        || path.ends_with(".ir.json")
-        || path.ends_with(".manifest.json")
-        || path.contains("/fixtures/semantic/")
+    let normalized = sea_forge_core::path::normalize_relative_path(path);
+    let segments: Vec<&str> = normalized.split('/').collect();
+    let has_src_gen = segments.windows(2).any(|w| w == ["src", "gen"]);
+    let has_fixtures_semantic = segments.windows(2).any(|w| w == ["fixtures", "semantic"]);
+    has_src_gen
+        || has_fixtures_semantic
+        || normalized.ends_with(".ast.json")
+        || normalized.ends_with(".ir.json")
+        || normalized.ends_with(".manifest.json")
 }
 
 /// Deny direct edits to generated zones.
@@ -509,6 +518,30 @@ mod tests {
         assert!(check_generated_zone_edit("src/gen/model.rs").is_err());
         assert!(check_generated_zone_edit("docs/model.ast.json").is_err());
         assert!(check_generated_zone_edit("docs/model.ir.json").is_err());
+        assert!(check_generated_zone_edit("src/authored.rs").is_ok());
+    }
+
+    #[test]
+    fn generated_zone_spelling_aliases_are_denied() {
+        // SUP-03 regression: non-canonical spellings and root-level
+        // `fixtures/semantic` must not escape the generated-zone guard, while a
+        // different `src` segment must not be over-blocked.
+        for path in [
+            "src/gen/model.rs",
+            "src//gen//model.rs",
+            "src/./gen/model.rs",
+            "src/gen",
+            "fixtures/semantic/m.semantic.fixture.yaml",
+            "docs/specs/fixtures/semantic/thing.semantic.fixture.yaml",
+        ] {
+            assert!(
+                is_generated_zone(path),
+                "{path:?} must be classified generated"
+            );
+            assert!(check_generated_zone_edit(path).is_err(), "{path}");
+        }
+        assert!(!is_generated_zone("mysrc/gen/x.rs"));
+        assert!(check_generated_zone_edit("mysrc/gen/x.rs").is_ok());
         assert!(check_generated_zone_edit("src/authored.rs").is_ok());
     }
 

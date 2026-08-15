@@ -770,6 +770,7 @@ fn run_plan_inner(
                                 .collect(),
                             evaluator_scores,
                             batch: None,
+                            write_only: false,
                         },
                         &workspace,
                         &run_dir,

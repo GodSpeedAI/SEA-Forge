@@ -1,6 +1,45 @@
 # Current Status
 
-Updated: 2026-08-03
+Updated: 2026-08-15
+
+> **Deep-project-audit remediation is active on `ultracode/sea-forge-completion`.**
+> Preserve the broadly dirty worktree and both protected stashes (`stash@{0}` and
+> `stash@{1}`); do not pop either without reviewing it. The governing plan is
+> `.agents/plans/deep-project-audit-remediation-2026-08-14.md`. This slice
+> changed `crates/sea-forge-agent/src/acp.rs`, the plan, and this handoff; it
+> also retains unrelated in-flight remediation across the workspace and Jolli
+> recall metadata.
+>
+> **Completed in the current worktree:** Batch 1 (path/generated-zone), Batch 2
+> (ledger crash-consistency/corruption handling), and Batch 3 (dispatcher
+> completion invariants). Subsequent verified remediation includes F-07, F-10,
+> F-19/SUP-09a, SUP-01, SUP-05, SUP-02, and F-21. F-21 rebuilds the server's
+> in-memory status cache from durable case views at startup; its restart/status
+> regression test passes. SUP-02 normalizes entry URI spelling before semantic
+> identity hashing; its 21-test DomainForge conformance suite passes.
+>
+> **Current task completed:** F-18 is remediated. ACP now has an episode
+> wall-clock cap (`max_turns × per_turn_timeout`, at most 15 minutes), a
+> 256-entry retained tool-call cap, and title-less tool-call updates consume a
+> turn. The existing `turn_cap_exceeded` termination expresses either resource
+> bound; no public termination vocabulary changed. Tests prove a continuous
+> notification stream stops at the deadline, title-less updates hit the turn
+> cap, and the retained map cannot grow past 256.
+>
+> **Next task:** finish Batch 4’s SUP-09b (symlink-safe bounded CLI migration
+> traversal) and SUP-09c (caps for untrusted whole-file reads), then continue
+> the dependency-ordered remediation plan.
+>
+> **Latest verified checkpoint:** `cargo fmt --all -- --check` clean;
+> `cargo test -p sea-forge-agent` (46 tests) and
+> `cargo clippy -p sea-forge-agent --all-targets -- -D warnings` clean;
+> `cargo test -p sea-forge-domainforge` (21 conformance + 5 unit) clean;
+> `cargo test -p sea-forge-settlement` (28 tests) clean;
+> `cargo test -p sea-forge-server --lib status_rebuild` and
+> `--test conformance_dispatch_remediation` (3 tests) clean. A full workspace
+> test run earlier in this remediation passed (`cargo test --workspace
+> --all-features --locked --no-fail-fast`).
+
 
 > **2026-07-27 rebase recovery complete.** `main` now contains the previously
 > local full-spec/workbench history rebased onto `origin/main` (110 commits

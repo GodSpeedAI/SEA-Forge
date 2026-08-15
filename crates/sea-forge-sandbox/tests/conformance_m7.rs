@@ -43,6 +43,7 @@ fn make_claim(
         authority_verdicts: vec![Verdict::Allow],
         evaluator_scores,
         batch,
+        write_only: false,
     }
 }
 

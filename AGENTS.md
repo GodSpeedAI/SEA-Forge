@@ -163,3 +163,5 @@ Record only concrete out-of-scope debt in `OBSERVED_DEBT.md`, verified reusable
 project lessons in `LESSONS.md`, and unresolved owner choices in
 `OPEN_QUESTIONS.md`. Update existing entries instead of duplicating them. Run
 `just context-check` before handoff.
+
+**Build-lock discipline:** only one agent may compile at a time, and target/ must be watched (du -sh target; cargo clean if it grows past ~4 GiB).

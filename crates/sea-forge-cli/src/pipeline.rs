@@ -752,6 +752,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             authority_verdicts: decisions.iter().map(|d| d.verdict.clone()).collect(),
             evaluator_scores,
             batch: batch_result,
+            write_only: false,
         };
         let settled = settlement::settle(&claim, &workspace, &run_dir)?;
         authority_stream.commit_typed(

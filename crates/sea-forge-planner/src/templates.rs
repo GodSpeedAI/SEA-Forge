@@ -501,7 +501,10 @@ pub fn load(path: &Path) -> Result<PlanTemplate, ForgeError> {
     Ok(template)
 }
 
-fn parse_template_ref(reference: &str) -> Result<(&str, &str), ForgeError> {
+/// Parse and validate a `name@version` template reference. Rejects empty
+/// names/versions and characters outside the template grammar, so a
+/// traversal-shaped ref (`../x@1`) can never escape the templates directory.
+pub fn parse_template_ref(reference: &str) -> Result<(&str, &str), ForgeError> {
     let (name, version) = reference
         .split_once('@')
         .ok_or_else(|| ForgeError::Input("template ref must be name@version".into()))?;

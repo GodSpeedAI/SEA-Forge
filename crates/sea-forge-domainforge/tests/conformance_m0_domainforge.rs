@@ -28,6 +28,24 @@ fn demo_source_set() -> SeaSourceSet {
 }
 
 #[test]
+fn equivalent_entry_spellings_produce_the_same_semantic_identity() {
+    // SUP-02: `model.sea` and `./model.sea` name the same canonical entry, so
+    // they must yield the same `semantic_model_sha256` (identity is derived
+    // from resolved content, never the raw caller spelling).
+    let canonical = load_validate(&demo_source_set()).unwrap();
+
+    let mut aliased = demo_source_set();
+    // The demo fixture's file stays `demo.sea`; only the entry spelling differs.
+    aliased.entry_uri = "./demo.sea".into();
+    let aliased_model = load_validate(&aliased).unwrap();
+
+    assert_eq!(
+        canonical.model_ref.semantic_model_sha256, aliased_model.model_ref.semantic_model_sha256,
+        "equivalent entry spellings must hash to the same semantic identity"
+    );
+}
+
+#[test]
 fn valid_fixture_produces_stable_domain_model_ref() {
     let model = load_validate(&demo_source_set()).unwrap();
     assert!(!model.model_ref.semantic_model_sha256.is_empty());
@@ -341,4 +359,62 @@ fn source_refs_include_all_verified_files() {
         uris.contains(&"entry.sea"),
         "source_refs must include entry.sea"
     );
+}
+
+#[test]
+fn deep_nesting_is_rejected_before_parse_not_abort() {
+    // SUP-01 regression: a few KB of nested unary expressions must yield a
+    // typed domain_model_error, never a stack-overflow SIGABRT.
+    let depth = 100_000usize;
+    let content = format!(
+        "@namespace \"t\"\n@version \"1.0.0\"\npolicy p as: {}1\n",
+        "-".repeat(depth)
+    );
+    let ss = SeaSourceSet {
+        entry_uri: "model.sea".into(),
+        files: vec![source_file("model.sea", &content)],
+    };
+    let result = load_validate(&ss);
+    assert!(result.is_err(), "deep nesting must be rejected");
+    let err = result.unwrap_err().to_string();
+    assert!(
+        err.contains("nesting depth"),
+        "expected a nesting-depth error: {err}"
+    );
+
+    // Deep parenthesized nesting is also rejected.
+    let parens = format!(
+        "@namespace \"t\"\n@version \"1.0.0\"\npolicy p as: {}1{}\n",
+        "(".repeat(depth),
+        ")".repeat(depth)
+    );
+    let ss2 = SeaSourceSet {
+        entry_uri: "model.sea".into(),
+        files: vec![source_file("model.sea", &parens)],
+    };
+    assert!(load_validate(&ss2).is_err(), "deep parens must be rejected");
+}
+
+#[test]
+fn modest_nesting_still_parses() {
+    // A depth well under the cap must still parse (and fail semantically, not
+    // on a nesting guard).
+    let content = format!(
+        "@namespace \"t\"\n@version \"1.0.0\"\npolicy p as: {}1\n",
+        "-".repeat(100)
+    );
+    let ss = SeaSourceSet {
+        entry_uri: "model.sea".into(),
+        files: vec![source_file("model.sea", &content)],
+    };
+    let result = load_validate(&ss);
+    // Either parses (and fails semantic validation) or is rejected for some
+    // other typed reason — but must not be a nesting-depth rejection.
+    match result {
+        Ok(_) => {}
+        Err(e) => assert!(
+            !e.to_string().contains("nesting depth"),
+            "modest nesting must not trip the guard: {e}"
+        ),
+    }
 }

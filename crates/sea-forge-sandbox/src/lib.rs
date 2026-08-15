@@ -170,28 +170,11 @@ pub fn select_sandbox(class: SandboxClass) -> Result<Box<dyn ExecutionSandbox>, 
 }
 
 pub fn validate_relative_path(path: &str) -> Result<(), ForgeError> {
-    let value = Path::new(path);
-    if value.is_absolute()
-        || path.is_empty()
-        // `@` is permitted: it is a safe, non-traversal character used in this
-        // workspace's legitimate template filenames (`name@version.yaml`) and
-        // cannot form an escape (that still requires `..`, `/`, or an
-        // absolute/prefix component, all rejected below).
-        || !path
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || "._/-@".contains(c))
-        || value.components().any(|c| {
-            matches!(
-                c,
-                Component::ParentDir | Component::RootDir | Component::Prefix(_)
-            )
-        })
-    {
-        return Err(ForgeError::UnsafePath(format!(
-            "unsafe workspace-relative path: {path}"
-        )));
-    }
-    Ok(())
+    // Delegates to the shared canonical-path primitive (sea_forge_core::path).
+    // In addition to the permissive charset/component checks, it rejects the
+    // ambiguous spellings `a//b`, `a/./b`, and `a/` so a non-canonical path
+    // can never alias a canonical one through materialization.
+    sea_forge_core::path::validate_relative_path(path)
 }
 
 /// Purely lexical safe join for paths that may not exist yet.
@@ -367,6 +350,25 @@ mod tests {
         assert!(validate_relative_path("/x").is_err());
         assert!(validate_relative_path("bad path").is_err());
         assert!(validate_relative_path("ok/model.sea").is_ok());
+    }
+
+    #[test]
+    fn ambiguous_spellings_are_rejected() {
+        // F-01 regression: `//`, `.` segments, and trailing `/` must not be
+        // materialized as aliases of a canonical path.
+        for bad in [
+            "src//gen//model.rs",
+            "src/./gen/model.rs",
+            "src/gen/",
+            "a/./b",
+        ] {
+            assert!(
+                validate_relative_path(bad).is_err(),
+                "{bad:?} must be rejected"
+            );
+        }
+        // A bare `.` remains valid (workspace-root cwd marker).
+        assert!(validate_relative_path(".").is_ok());
     }
 
     #[cfg(unix)]

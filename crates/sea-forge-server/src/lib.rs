@@ -126,10 +126,28 @@ impl ServerState {
         let correlation = RequestCorrelationStore::open(&config.root)?;
         let events_ledger = sfwp::events::open_events_ledger(&config.root)?;
         let (event_bus, _) = broadcast::channel::<EventFrame>(256);
+        // F-21: rebuild the in-memory `cases` map from disk at startup. Without
+        // this, a restart answers `"case not found"` on the `status` verb for
+        // every pre-restart case even though disk-backed `case.list` shows it.
+        // `exit_code`/`run_dir` are re-derived per-dispatch and are not
+        // reconstructible from the single `case.json` row, so they start `None`
+        // (the map is a liveness cache; `case.list` remains disk authority).
+        let mut cases = HashMap::new();
+        for row in sfwp::case_views::list(&config.root).cases {
+            cases.insert(
+                row.case_id.clone(),
+                CaseEntry {
+                    case_id: row.case_id,
+                    state: row.case_state,
+                    exit_code: None,
+                    run_dir: None,
+                },
+            );
+        }
         Ok(Self {
             root: config.root.clone(),
             config: std::sync::RwLock::new(Arc::new(config)),
-            cases: Mutex::new(HashMap::new()),
+            cases: Mutex::new(cases),
             delegations: Mutex::new(HashMap::new()),
             permission_broker: delegation::AcpApprovalBroker::default(),
             semaphore: Arc::new(Semaphore::new(max)),
@@ -1996,7 +2014,11 @@ async fn commit_plan(state: &Arc<ServerState>, payload: SubmitPayload) -> serde_
                         "event": "run_finished",
                         "case_id": case_id,
                     });
-                    let _ = fire_notify(argv, event);
+                    let argv = argv.clone();
+                    // F-07: run the (bounded) notify hook on a blocking thread
+                    // rather than the async worker, so a slow hook cannot park
+                    // the runtime.
+                    let _ = tokio::task::spawn_blocking(move || fire_notify(&argv, event)).await;
                 }
             }
 
@@ -2034,9 +2056,7 @@ async fn instantiate_plan_file(
     let template_ref = template_ref.to_string();
     let params = params.clone();
     tokio::task::spawn_blocking(move || {
-        let (name, version) = template_ref
-            .split_once('@')
-            .ok_or_else(|| ForgeError::Input("template ref must be name@version".into()))?;
+        let (name, version) = sea_forge_planner::templates::parse_template_ref(&template_ref)?;
         let path = root
             .join("templates")
             .join(format!("{name}@{version}.yaml"));
@@ -2584,23 +2604,39 @@ async fn run_cli(_root: &Path, args: &[&str], note: Option<&str>) -> Result<Stri
     Ok(stdout)
 }
 
+/// Wall-clock bound for the operator-configured `notify_command` hook.
+const NOTIFY_TIMEOUT_SECS: u64 = 30;
+
 fn fire_notify(argv: &[String], event: serde_json::Value) -> Result<(), String> {
     if argv.is_empty() {
         return Ok(());
     }
     let mut cmd = std::process::Command::new(&argv[0]);
     cmd.args(&argv[1..]);
+    // F-07: the notify hook's stdout/stderr are unused, so point them at
+    // /dev/null rather than a pipe. A chatty hook that fills a 64 KiB pipe
+    // would otherwise deadlock the parent in `wait()` while the child blocks
+    // on write.
     cmd.stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
     let mut child = cmd.spawn().map_err(|e| format!("spawn notify: {e}"))?;
     if let Some(mut stdin) = child.stdin.take() {
         use std::io::Write;
         let _ = serde_json::to_writer(&mut stdin, &event);
         let _ = stdin.write_all(b"\n");
     }
-    let _ = child.wait();
-    Ok(())
+    // F-07: bound the wait so a hung hook cannot park the worker forever.
+    // `wait_timeout` kills (SIGKILL) and reaps the child on timeout.
+    use wait_timeout::ChildExt;
+    match child
+        .wait_timeout(std::time::Duration::from_secs(NOTIFY_TIMEOUT_SECS))
+        .map_err(|e| format!("wait notify: {e}"))?
+    {
+        Some(status) if status.success() => Ok(()),
+        Some(_) => Err("notify hook exited nonzero".into()),
+        None => Err("notify hook timed out".into()),
+    }
 }
 
 #[cfg(test)]
@@ -2801,5 +2837,103 @@ mod lifecycle_contract_tests {
     fn a_bare_name_is_preflighted_against_path_not_the_cwd() {
         let argv = ["definitely-not-a-real-program-xyzzy".to_string()];
         assert!(check_notify_command(Some(&argv)).is_err());
+    }
+}
+
+#[cfg(test)]
+mod notify_tests {
+    use super::*;
+
+    #[test]
+    fn fire_notify_chatty_hook_does_not_deadlock() {
+        // F-07 regression: a hook that writes far more than a pipe capacity to
+        // stdout must not deadlock the parent in `wait()`.
+        let argv = vec![
+            "/bin/sh".to_string(),
+            "-c".to_string(),
+            "head -c 1048576 /dev/zero; exit 0".to_string(),
+        ];
+        let result = fire_notify(&argv, serde_json::json!({"event": "run_finished"}));
+        assert!(result.is_ok(), "chatty hook must complete: {result:?}");
+    }
+
+    #[test]
+    fn fire_notify_hung_hook_times_out() {
+        // F-07 regression: a hook that sleeps forever must be killed by the
+        // timeout, not park the caller indefinitely.
+        let argv = vec![
+            "/bin/sh".to_string(),
+            "-c".to_string(),
+            "sleep 3600".to_string(),
+        ];
+        let start = std::time::Instant::now();
+        let result = fire_notify(&argv, serde_json::json!({"event": "run_finished"}));
+        let elapsed = start.elapsed();
+        assert!(result.is_err(), "hung hook must time out");
+        assert!(
+            elapsed < std::time::Duration::from_secs(60),
+            "timeout must be bounded: {elapsed:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod status_rebuild_tests {
+    use super::*;
+    use sea_forge_core::types::{Case, CaseState, Intent};
+    use serde_json::json;
+
+    // A runnable helper to drop a pre-existing on-disk case into a temp root
+    // before a fresh `ServerState` is constructed (F-21).
+    fn seed_case_on_disk(root: &std::path::Path, case_id: &str, state: CaseState) {
+        let case = Case {
+            version: "0.2".to_string(),
+            case_id: case_id.to_string(),
+            intent: Intent {
+                intent_id: "int_x".into(),
+                summary: "seeded".into(),
+                actor_id: "operator_local".into(),
+                process_id: "test".into(),
+                created_at: "2026-08-14T00:00:00Z".into(),
+            },
+            state,
+            plan_ref: "plan_x".into(),
+            run_ids: vec![],
+            stages: vec![],
+            close_reason: None,
+            created_at: "2026-08-14T00:00:00Z".into(),
+            closed_at: None,
+        };
+        let dir = root.join("cases").join(case_id);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("case.json"), serde_json::to_vec(&case).unwrap()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn status_resolves_a_pre_restart_case_from_disk() {
+        // F-21: a fresh `ServerState` (a "restart") must answer `status` for a
+        // case that exists only on disk, instead of "case not found".
+        let root = tempfile::tempdir().unwrap();
+        let case_id = sea_forge_core::ids::case_id().unwrap();
+        seed_case_on_disk(root.path(), &case_id, CaseState::Active);
+
+        let config = ServerConfig {
+            root: root.path().to_path_buf(),
+            ..ServerConfig::default()
+        };
+        let state = Arc::new(ServerState::new(config).unwrap());
+
+        let request: Request = serde_json::from_value(json!({
+            "verb": "status",
+            "case_id": case_id,
+        }))
+        .unwrap();
+        let response = handle_request(request, &state).await;
+        assert_eq!(response["case_id"], case_id, "{response}");
+        assert_eq!(response["state"], "active", "{response}");
+        assert!(
+            response.get("error").is_none(),
+            "status must not report case not found after restart: {response}"
+        );
     }
 }

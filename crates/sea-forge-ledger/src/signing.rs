@@ -17,23 +17,38 @@ pub fn load_or_create_signing_key(key_dir: &Path, key_id: &str) -> Result<Signin
     } else {
         let signing_key = SigningKey::generate(&mut rand::thread_rng());
         fs::create_dir_all(key_dir).map_err(|e| ForgeError::io("create key directory", e))?;
-        fs::write(&path, signing_key.to_bytes())
-            .map_err(|e| ForgeError::io("write signing key", e))?;
-        // Restrict permissions on the private key file.
+        // Create the private key file with mode 0600 from the start (F-22): no
+        // world-readable window between `write` and a later `chmod`.
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&path).unwrap().permissions();
-            perms.set_mode(0o600);
-            let _ = fs::set_permissions(&path, perms);
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
         }
+        let mut file = options
+            .open(&path)
+            .map_err(|e| ForgeError::io("create signing key", e))?;
+        use std::io::Write;
+        file.write_all(&signing_key.to_bytes())
+            .and_then(|_| file.sync_all())
+            .map_err(|e| ForgeError::io("write signing key", e))?;
         Ok(signing_key)
     }
 }
 
+/// Load only the verifying (public) key. Unlike the signing path, this must
+/// not mint a new key: a *verify* operation creating and persisting a signing
+/// key is a side effect that also destroys recoverability of the real key
+/// (F-22). Returns a typed error when the key file is absent.
 pub fn load_verifying_key(key_dir: &Path, key_id: &str) -> Result<VerifyingKey, ForgeError> {
-    let signing_key = load_or_create_signing_key(key_dir, key_id)?;
-    Ok(signing_key.verifying_key())
+    let path = key_dir.join(format!("{key_id}.key"));
+    if !path.exists() {
+        return Err(ForgeError::Internal(format!(
+            "verifying key {key_id} is missing"
+        )));
+    }
+    read_verifying_key(key_dir, key_id)
 }
 
 pub fn read_verifying_key(key_dir: &Path, key_id: &str) -> Result<VerifyingKey, ForgeError> {
@@ -111,7 +126,14 @@ fn base64_decode(s: &str) -> Result<Vec<u8>, String> {
         if c == '=' {
             break;
         }
-        let idx = ALPHABET[c as usize];
+        // F-06: the lookup table is 256 entries. Any code point ≥ 256 must be
+        // rejected before indexing, or `c as usize` is out of range and panics
+        // on the very corruption path verification exists to detect.
+        let code = c as u32;
+        if code >= 256 {
+            return Err(format!("invalid base64 character: {c}"));
+        }
+        let idx = ALPHABET[code as usize];
         if idx < 0 {
             return Err(format!("invalid base64 character: {c}"));
         }
@@ -160,5 +182,26 @@ mod tests {
         let encoded = base64_encode(data);
         let decoded = base64_decode(&encoded).unwrap();
         assert_eq!(decoded, data);
+    }
+}
+
+#[cfg(test)]
+mod non_ascii_tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn signature_verification_rejects_wide_chars_without_panic() {
+        // F-06 regression: code points ≥ U+0100 must produce a typed error on
+        // the verification path, never an index-out-of-bounds panic.
+        let dir = tempdir().unwrap();
+        let key = load_or_create_signing_key(dir.path(), "audit").unwrap();
+        let vk = key.verifying_key();
+        for sig in ["ed25519:中", "ed25519:AAAAĀ", "ed25519:\u{100}"] {
+            let result = verify_signature(&vk, b"msg", sig);
+            assert!(result.is_err(), "signature {sig:?} must be rejected");
+        }
+        // In-range non-ASCII (é, U+00E9) is a typed error too.
+        assert!(verify_signature(&vk, b"msg", "ed25519:abcé").is_err());
     }
 }

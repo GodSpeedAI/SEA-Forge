@@ -1,0 +1,23 @@
+[package]
+name = "audit-harness"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+sea-forge-authority = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-authority" }
+sea-forge-sandbox = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-sandbox" }
+sea-forge-ledger = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-ledger" }
+sea-forge-settlement = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-settlement" }
+sea-forge-core = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-core" }
+serde_json = "1"
+tempfile = "3"
+sha2 = "0.10"
+sea-forge-server = { path = "/home/sprime01/projects/sea-rs/crates/sea-forge-server" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde_yaml = "0.9"
+
+
+[workspace]

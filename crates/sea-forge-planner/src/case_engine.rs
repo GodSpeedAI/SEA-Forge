@@ -5,7 +5,6 @@ use sea_forge_core::{
     },
 };
 use std::collections::{HashMap, HashSet};
-use std::path::{Component, Path};
 
 /// Check whether a sentry's `on` trigger has fired in the given events.
 /// Returns the matching event if found.
@@ -196,15 +195,10 @@ fn valid_id(value: &str) -> bool {
 }
 
 fn valid_relative_path(value: &str) -> bool {
-    let path = Path::new(value);
-    !value.is_empty()
-        && !path.is_absolute()
-        && !path.components().any(|component| {
-            matches!(
-                component,
-                Component::ParentDir | Component::RootDir | Component::Prefix(_)
-            )
-        })
+    // The shared canonical-path primitive: rejects `..`, absolute paths, and
+    // the ambiguous spellings `//`/`.` segments/trailing `/` (bare `.` is
+    // accepted as the workspace-root marker used by `ExecuteCommand.cwd`).
+    sea_forge_core::path::validate_relative_path(value).is_ok()
 }
 
 /// Validate and normalize a plan proposal before any case state is created.

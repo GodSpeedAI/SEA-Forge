@@ -516,6 +516,14 @@ pub fn current_snapshot(root: &Path) -> Result<Option<SelfModelSnapshot>, ForgeE
     let Some(sid) = manifest.current_snapshot_id else {
         return Ok(None);
     };
+    // The manifest is persisted data and therefore untrusted; a traversal-shaped
+    // snapshot id must fail closed rather than escape the snapshots directory
+    // (SUP-09g).
+    if !sea_forge_core::path::valid_id_segment(&sid, 128) {
+        return Err(ForgeError::SelfModel(format!(
+            "self_model_error: unsafe current_snapshot_id in manifest: {sid}"
+        )));
+    }
     let path = snapshot_path(root, &sid);
     if !path.exists() {
         return Ok(None);

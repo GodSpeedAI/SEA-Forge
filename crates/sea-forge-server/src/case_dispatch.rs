@@ -25,15 +25,23 @@ struct Completion {
     instance: u32,
     run_id: String,
     settlement: SettlementEvent,
+    required: bool,
 }
 
 /// Server-owned, case-local dispatch. Active tasks and their permits live only
 /// in this function; all scheduling decisions are re-derived from case events.
+/// Upper bound for client-controlled episode/approval timeouts, clamped at the
+/// protocol boundary (F-19/SUP-09a). Keeps a pathological `u64` from flipping
+/// negative through `as i64`, pinning a semaphore permit, or creating an
+/// already-expired approval.
+pub(crate) const MAX_TIMEOUT_SECS: u64 = 7 * 24 * 60 * 60;
+
 pub(crate) async fn submit(
-    payload: SubmitPayload,
+    mut payload: SubmitPayload,
     state: &Arc<ServerState>,
 ) -> Result<DispatchOutcome, ForgeError> {
     let _ = &payload.intent;
+    payload.timeout = payload.timeout.min(MAX_TIMEOUT_SECS);
     let plan_path = payload
         .plan
         .ok_or_else(|| ForgeError::Input("submit requires a plan".into()))?;
@@ -90,6 +98,16 @@ pub(crate) async fn submit(
     let mut active = JoinSet::new();
 
     'dispatch: loop {
+        // F-03: a required escalated item has parked the case; return the
+        // parked state (approval resolution re-drives via the CLI resume flow).
+        if case.state == CaseState::AwaitingApproval {
+            write_json(&case_dir.join("case.json"), &case)?;
+            return Ok(DispatchOutcome {
+                case_id,
+                state: "awaiting_approval",
+                exit_code: 5,
+            });
+        }
         let actions = CaseRunner::next_ready_actions(&plan.items, &events);
         if actions.is_empty() {
             if active.is_empty() {
@@ -114,6 +132,29 @@ pub(crate) async fn submit(
             )?;
             write_json(&case_dir.join("case.json"), &case)?;
             continue;
+        }
+        // F-02: pre-validate dispatchability of the whole batch *before* any
+        // spawn. A batch mixing an executable item with a non-executable one
+        // (e.g. `[SandboxedTask, Stage]`) must reject with a typed error while
+        // `active` is still empty, so no already-activated episode is aborted
+        // mid-dispatch and left without a terminal settlement.
+        for action in &actions {
+            if let CaseAction::Activate(item_id) = action {
+                let item = plan
+                    .items
+                    .iter()
+                    .find(|item| item.plan_item_id == *item_id)
+                    .ok_or_else(|| ForgeError::Internal("missing plan item".into()))?;
+                if !matches!(
+                    item.item_kind,
+                    ItemKind::SandboxedTask | ItemKind::AgentTask
+                ) {
+                    return Err(ForgeError::Input(format!(
+                        "non_executable item kind cannot be dispatched: {:?}",
+                        item.item_kind
+                    )));
+                }
+            }
         }
         let mut dispatched = false;
         let mut park_human = false;
@@ -271,6 +312,7 @@ pub(crate) async fn submit(
                     let state_for_task = Arc::clone(state);
                     let case_for_task = case_id.clone();
                     let run_for_task = run_id.clone();
+                    let required = item.markers.required;
                     active.spawn(async move {
                         let _permit = permit;
                         let criteria_ref = item.settlement_criteria_ref.clone();
@@ -346,6 +388,7 @@ pub(crate) async fn submit(
                             instance,
                             run_id,
                             settlement,
+                            required,
                         }
                     });
                     dispatched = true;
@@ -401,6 +444,13 @@ fn record_completion(
     case: &mut Case,
     completion: Completion,
 ) -> Result<(), ForgeError> {
+    // F-03: a required item that escalated parks the case as awaiting approval
+    // instead of being folded into `ItemFailed` → `TerminateCase`. The approval
+    // stays resolvable and the CLI `resume` flow re-drives the case.
+    if completion.settlement.status == SettlementStatus::Escalated && completion.required {
+        case.state = CaseState::AwaitingApproval;
+        case.close_reason = Some(format!("awaiting_approval:{}", completion.item_id));
+    }
     stream.commit_typed(
         "settlement_event",
         vec![
@@ -820,6 +870,7 @@ fn execute_sandbox(
             authority_verdicts: vec![decision.verdict.clone()],
             evaluator_scores: BTreeMap::new(),
             batch: None,
+            write_only: false,
         },
         &workspace,
         &run_dir,

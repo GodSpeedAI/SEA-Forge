@@ -1,16 +1,10 @@
 {
 	"version": 1,
 	"sessions": {
-		"cd3163b8-486f-4867-9b0a-d975a39701d1": {
-			"sessionId": "cd3163b8-486f-4867-9b0a-d975a39701d1",
-			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/cd3163b8-486f-4867-9b0a-d975a39701d1.jsonl",
-			"updatedAt": "2026-07-31T12:51:49.125Z",
-			"source": "claude"
-		},
-		"14ddc642-4465-4b67-8d70-e9567e226aec": {
-			"sessionId": "14ddc642-4465-4b67-8d70-e9567e226aec",
-			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/14ddc642-4465-4b67-8d70-e9567e226aec.jsonl",
-			"updatedAt": "2026-08-01T13:06:44.917Z",
+		"31966c97-7e43-4067-b47a-a1741eac44a9": {
+			"sessionId": "31966c97-7e43-4067-b47a-a1741eac44a9",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/31966c97-7e43-4067-b47a-a1741eac44a9.jsonl",
+			"updatedAt": "2026-08-14T13:29:27.793Z",
 			"source": "claude"
 		}
 	}

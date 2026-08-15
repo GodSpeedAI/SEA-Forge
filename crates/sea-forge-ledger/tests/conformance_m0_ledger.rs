@@ -738,3 +738,59 @@ fn m0_crash_recovery_quarantines_incomplete_tail() {
         .collect();
     assert!(!q_files.is_empty(), "quarantine file should exist");
 }
+
+#[test]
+fn m0_crash_recovery_rebuilds_mmr_ahead_of_entries() {
+    // F-04 regression: simulate the crash window where `mmr.json` holds more
+    // leaves than `entries.jsonl` has records (the pre-fix commit order). The
+    // repair must rebuild the derived MMR cache from entries so `verify()` is
+    // Ok, rather than failing forever.
+    let tmp = tempdir().unwrap();
+    let a = LedgerStream::open(tmp.path(), "aaa", "w1").unwrap();
+    for i in 0..3 {
+        a.append("test", vec![], serde_json::json!({"n": i}), vec![])
+            .unwrap();
+    }
+    let b = LedgerStream::open(tmp.path(), "bbb", "w1").unwrap();
+    for i in 0..2 {
+        b.append("test", vec![], serde_json::json!({"n": i}), vec![])
+            .unwrap();
+    }
+    // Crash-window state for stream b: mmr from the 3-entry stream, 2 entries.
+    fs::copy(
+        tmp.path().join("ledgers/aaa/mmr.json"),
+        tmp.path().join("ledgers/bbb/mmr.json"),
+    )
+    .unwrap();
+
+    assert!(b.verify().is_err(), "desynced mmr must be detected");
+
+    let quarantined = b.quarantine_incomplete_tail().unwrap();
+    assert_eq!(quarantined, 0, "no torn entries lines to quarantine");
+
+    b.verify().unwrap();
+}
+
+#[test]
+fn m0_prove_entry_under_desync_is_typed_error_not_panic() {
+    // F-05 regression: a desynced mmr/entries state must yield a typed error
+    // from `prove_entry`, never a slice-out-of-range panic.
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "audit", "w1").unwrap();
+    let e2 = stream
+        .append("test", vec![], serde_json::json!({"n": 2}), vec![])
+        .unwrap();
+    let mmr_path = tmp.path().join("ledgers/audit/mmr.json");
+    let mut mmr: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&mmr_path).unwrap()).unwrap();
+    mmr["leaf_count"] = serde_json::json!(7);
+    mmr["peaks"] = serde_json::json!(["sha256:aa", "sha256:bb", "sha256:cc"]);
+    fs::write(&mmr_path, serde_json::to_string(&mmr).unwrap()).unwrap();
+
+    let result = stream.prove_entry(&e2.entry_ulid);
+    assert!(result.is_err(), "desynced state must be a typed error");
+    assert!(
+        result.unwrap_err().to_string().contains("desynced"),
+        "error must describe the desync"
+    );
+}

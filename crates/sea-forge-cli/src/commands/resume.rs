@@ -120,6 +120,14 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
         .root
         .canonicalize()
         .map_err(|e| ForgeError::io("canonicalize root", e))?;
+    // The case id is joined into a filesystem path; reject traversal-shaped ids
+    // at the boundary (F-14).
+    if !sea_forge_core::path::valid_id_segment(&options.case_id, 128) {
+        return Err(ForgeError::Input(format!(
+            "unsafe case id: {}",
+            options.case_id
+        )));
+    }
     let case_dir = root.join("cases").join(&options.case_id);
     if !case_dir.exists() {
         return Err(ForgeError::Input(format!(
@@ -500,20 +508,11 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                             }
                         }
                     }
-                    if execution.is_none() && allowed {
-                        execution = Some(ExecutionResult {
-                            status: ExecutionStatus::Completed,
-                            exit_code: Some(0),
-                            stdout_path: "artifacts/stdout.txt".into(),
-                            stderr_path: "artifacts/stderr.txt".into(),
-                            started_at: Utc::now().to_rfc3339(),
-                            finished_at: Utc::now().to_rfc3339(),
-                        });
-                        fs::write(artifacts.join("stdout.txt"), b"")
-                            .map_err(|error| ForgeError::io("write stdout", error))?;
-                        fs::write(artifacts.join("stderr.txt"), b"")
-                            .map_err(|error| ForgeError::io("write stderr", error))?;
-                    }
+                    // F-10: a write-only item (no ExecuteCommand ran) must not be
+                    // settled against a fabricated `Completed`/`exit 0` process
+                    // result. `write_only: true` makes `settle` accept on the
+                    // materialized artifacts and record a `write_only` basis.
+                    let write_only = execution.is_none() && allowed;
                     let settlement = sea_forge_settlement::settle(
                         &SettlementClaim {
                             run_id: run_id.clone(),
@@ -527,6 +526,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                                 .collect(),
                             evaluator_scores: BTreeMap::new(),
                             batch: None,
+                            write_only,
                         },
                         &workspace,
                         &run_dir,
@@ -947,6 +947,7 @@ fn resume_artifact_transition(
                 authority_verdicts: vec![Verdict::Allow],
                 evaluator_scores: BTreeMap::from([(verifier_ref.clone(), score)]),
                 batch: None,
+                write_only: false,
             },
             &workspace,
             &run_dir,

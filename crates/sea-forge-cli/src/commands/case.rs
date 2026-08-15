@@ -73,6 +73,9 @@ pub(crate) fn append_case_event(
 }
 
 pub fn reopen(root: &Path, policy: &Path, actor: &str, case_id: &str) -> Result<u8, ForgeError> {
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
+    }
     let (case_path, _, _) = paths(root, case_id);
     let mut case: Case = read_json(&case_path)?;
     if !matches!(case.state, CaseState::Completed | CaseState::Terminated) {
@@ -112,6 +115,9 @@ pub fn add_task(
     case_id: &str,
     item_path: &Path,
 ) -> Result<u8, ForgeError> {
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
+    }
     let item: PlanItem = read_json(item_path)?;
     propose_item(root, policy, actor, case_id, item)
 }

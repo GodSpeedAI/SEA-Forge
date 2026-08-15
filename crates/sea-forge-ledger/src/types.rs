@@ -494,6 +494,13 @@ impl LedgerStream {
         writer_identity_ref: impl Into<String>,
     ) -> Result<Self, ForgeError> {
         let ledger_id = ledger_id.into();
+        // The ledger id is joined into the filesystem path; validate it as a
+        // single safe segment before any mutation (F-14). Server-minted ids
+        // (`case-<id>`, `run-<id>`) and internal names (`self-model`) satisfy
+        // this grammar; traversal-shaped ids are rejected with a typed error.
+        if !sea_forge_core::path::valid_id_segment(&ledger_id, 128) {
+            return Err(ForgeError::Input(format!("unsafe ledger id: {ledger_id}")));
+        }
         let dir = root.join("ledgers").join(&ledger_id);
         fs::create_dir_all(&dir).map_err(|e| ForgeError::io("create ledger directory", e))?;
         fs::create_dir_all(root.join("ledgers").join("quarantine"))
@@ -755,6 +762,18 @@ impl LedgerStream {
         Ok(())
     }
 
+    /// Rebuild the derived MMR cache from the entries on disk and persist it.
+    /// `entries.jsonl` is the single source of truth; this repairs the crash
+    /// state where `mmr.json` is ahead of (or behind) the surviving entries.
+    fn rebuild_mmr(&self) -> Result<(), ForgeError> {
+        let entries = self.read_entries()?;
+        let mut mmr = MmrState::empty();
+        for entry in &entries {
+            mmr = mmr.append(&entry.entry_hash)?;
+        }
+        self.save_mmr(&mmr)
+    }
+
     fn read_last_entry(&self) -> Result<Option<LedgerEntry>, ForgeError> {
         let path = self.entries_path();
         if !path.exists() {
@@ -926,6 +945,17 @@ impl LedgerStream {
             .position(|e| e.entry_ulid == entry_ulid)
             .ok_or_else(|| ForgeError::Internal("entry not found".into()))?
             as u64;
+        // F-05: the MMR is a derived cache and may be ahead of `entries.jsonl`
+        // after a crash. Validate the entry count against the MMR leaf count
+        // *before* slicing so a desynced cache yields a typed error, never a
+        // slice-out-of-range panic.
+        if entries.len() as u64 != mmr.leaf_count {
+            return Err(ForgeError::Internal(format!(
+                "ledger_integrity_error: entries ({}) and mmr leaves ({}) are desynced",
+                entries.len(),
+                mmr.leaf_count
+            )));
+        }
         if leaf_index >= mmr.leaf_count {
             return Err(ForgeError::Internal(
                 "ledger_integrity_error: leaf index out of range".into(),
@@ -1025,8 +1055,14 @@ impl LedgerStream {
         entry.payload_hash = payload_hash_value;
         entry.entry_hash = entry_hash(&entry)?;
         let mmr_state = mmr_state.append(&entry.entry_hash)?;
-        self.save_mmr(&mmr_state)?;
+        // F-04: `entries.jsonl` is the single source of truth; `mmr.json` is a
+        // derived cache. Writing the entry first makes the crash window leave
+        // `entries` ahead of `mmr` — the recoverable direction (rebuild the
+        // cache) — rather than `mmr` ahead of `entries`, which had no repair
+        // path. `mmr.json` is rebuilt from entries by
+        // `quarantine_incomplete_tail` and `verify`'s mismatch message.
         self.write_entry(&entry)?;
+        self.save_mmr(&mmr_state)?;
         Ok(entry)
     }
 
@@ -1311,27 +1347,32 @@ impl LedgerStream {
             }
             last_valid = i + 1;
         }
-        if last_valid >= lines.len() {
-            return Ok(0); // No incomplete tail.
+        let quarantined = lines.len() - last_valid;
+        if quarantined > 0 {
+            let quarantined_lines = &lines[last_valid..];
+            let q_path = self.root.join("ledgers").join("quarantine").join(format!(
+                "{}-{}.jsonl",
+                self.ledger_id,
+                ulid()?
+            ));
+            let q_content = quarantined_lines.join("\n");
+            fs::write(&q_path, q_content.as_bytes())
+                .map_err(|e| ForgeError::io("write quarantine", e))?;
+            // Truncate entries file to valid lines only.
+            let valid_content = lines[..last_valid].join("\n");
+            if valid_content.is_empty() {
+                fs::write(&path, b"").map_err(|e| ForgeError::io("truncate entries", e))?;
+            } else {
+                fs::write(&path, format!("{valid_content}\n").as_bytes())
+                    .map_err(|e| ForgeError::io("truncate entries", e))?;
+            }
         }
-        let quarantined_lines = &lines[last_valid..];
-        let q_path = self.root.join("ledgers").join("quarantine").join(format!(
-            "{}-{}.jsonl",
-            self.ledger_id,
-            ulid()?
-        ));
-        let q_content = quarantined_lines.join("\n");
-        fs::write(&q_path, q_content.as_bytes())
-            .map_err(|e| ForgeError::io("write quarantine", e))?;
-        // Truncate entries file to valid lines only.
-        let valid_content = lines[..last_valid].join("\n");
-        if valid_content.is_empty() {
-            fs::write(&path, b"").map_err(|e| ForgeError::io("truncate entries", e))?;
-        } else {
-            fs::write(&path, format!("{valid_content}\n").as_bytes())
-                .map_err(|e| ForgeError::io("truncate entries", e))?;
-        }
-        Ok(quarantined_lines.len())
+        // F-04: always reconcile the derived MMR cache with the surviving
+        // entries, so a crash that left `mmr.json` ahead of `entries.jsonl`
+        // (the pre-fix commit order) is repaired rather than failing `verify()`
+        // forever.
+        self.rebuild_mmr()?;
+        Ok(quarantined)
     }
 
     // ---- Key rotation ----
@@ -1750,6 +1791,21 @@ mod tests {
         let h = payload_hash(&value).unwrap();
         assert!(h.starts_with("sha256:"));
         assert_eq!(h.len(), 7 + 64);
+    }
+
+    #[test]
+    fn open_rejects_traversal_ledger_id() {
+        // F-14 regression: a traversal-shaped ledger id must be rejected before
+        // any directory is created.
+        let tmp = tempfile::tempdir().unwrap();
+        let result = LedgerStream::open(tmp.path(), "esc/../../outside_ledger", "audit");
+        assert!(result.is_err(), "traversal ledger id must be rejected");
+        assert!(
+            !tmp.path().join("outside_ledger").exists(),
+            "no directory may be created outside the ledgers dir"
+        );
+        // A normal server-minted style id still works.
+        LedgerStream::open(tmp.path(), "case-case_20260710T120000Z_ab12cd34", "audit").unwrap();
     }
 
     #[test]
