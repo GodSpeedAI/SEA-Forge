@@ -11,6 +11,10 @@ use std::{
 const MIGRATION_STREAM: &str = "legacy-import";
 const LEGACY_RECORD_VERSION: &str = "0.1";
 
+/// Bounded traversal: a legacy tree nested deeper than this is rejected
+/// rather than recursing, so a symlink cycle can never exhaust the stack.
+const MAX_MIGRATION_DEPTH: usize = 32;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct LegacyImportPayload {
     path: String,
@@ -83,7 +87,11 @@ fn read_case_mapping(root: &Path) -> Result<BTreeMap<String, String>, ForgeError
         .flatten()
     {
         let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|s| s.to_str()) != Some("json") {
+        let is_regular_file = entry
+            .file_type()
+            .map_err(|e| ForgeError::io("stat case entry", e))?
+            .is_file();
+        if !is_regular_file || path.extension().and_then(|s| s.to_str()) != Some("json") {
             continue;
         }
         let content = fs::read_to_string(&path).map_err(|e| ForgeError::io("read case file", e))?;
@@ -188,15 +196,35 @@ fn sha256_file_with_prefix(path: &Path) -> Result<String, ForgeError> {
     Ok(format!("sha256:{hash}"))
 }
 
-fn enumerate_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), ForgeError> {
+fn enumerate_files_recursive(
+    dir: &Path,
+    files: &mut Vec<PathBuf>,
+    depth: usize,
+) -> Result<(), ForgeError> {
+    if depth > MAX_MIGRATION_DEPTH {
+        return Err(ForgeError::Input(format!(
+            "migration tree exceeds maximum depth {}: {}",
+            MAX_MIGRATION_DEPTH,
+            dir.display()
+        )));
+    }
     for entry in
         fs::read_dir(dir).map_err(|e| ForgeError::io(format!("read dir {}", dir.display()), e))?
     {
         let entry = entry.map_err(|e| ForgeError::io(format!("dir entry {}", dir.display()), e))?;
         let path = entry.path();
-        if path.is_dir() {
-            enumerate_files_recursive(&path, files)?;
-        } else if path.is_file() {
+        let file_type = entry
+            .file_type()
+            .map_err(|e| ForgeError::io(format!("stat {}", path.display()), e))?;
+        if file_type.is_symlink() {
+            return Err(ForgeError::Input(format!(
+                "refusing to migrate through symlink: {}",
+                path.display()
+            )));
+        }
+        if file_type.is_dir() {
+            enumerate_files_recursive(&path, files, depth + 1)?;
+        } else if file_type.is_file() {
             files.push(path);
         }
     }
@@ -209,7 +237,7 @@ fn enumerate_files(root: &Path, prefix: &Path) -> Result<Vec<PathBuf>, ForgeErro
     if !dir.is_dir() {
         return Ok(files);
     }
-    enumerate_files_recursive(&dir, &mut files)?;
+    enumerate_files_recursive(&dir, &mut files, 0)?;
     files.sort();
     Ok(files)
 }
@@ -225,14 +253,26 @@ fn move_file_atomicish(src: &Path, dst: &Path) -> Result<(), ForgeError> {
 }
 
 fn is_empty_dir(path: &Path) -> bool {
-    path.is_dir()
+    fs::symlink_metadata(path)
+        .map(|metadata| metadata.is_dir())
+        .unwrap_or(false)
         && fs::read_dir(path)
             .map(|mut d| d.next().is_none())
             .unwrap_or(false)
 }
 
-fn remove_empty_dirs_recursive(dir: &Path) -> Result<(), ForgeError> {
-    if !dir.is_dir() {
+fn remove_empty_dirs_recursive(dir: &Path, depth: usize) -> Result<(), ForgeError> {
+    if depth > MAX_MIGRATION_DEPTH {
+        return Err(ForgeError::Input(format!(
+            "migration tree exceeds maximum depth {}: {}",
+            MAX_MIGRATION_DEPTH,
+            dir.display()
+        )));
+    }
+    let is_real_dir = fs::symlink_metadata(dir)
+        .map(|metadata| metadata.is_dir())
+        .unwrap_or(false);
+    if !is_real_dir {
         return Ok(());
     }
     for entry in fs::read_dir(dir)
@@ -240,8 +280,12 @@ fn remove_empty_dirs_recursive(dir: &Path) -> Result<(), ForgeError> {
         .flatten()
     {
         let path = entry.path();
-        if path.is_dir() {
-            remove_empty_dirs_recursive(&path)?;
+        let is_dir = entry
+            .file_type()
+            .map_err(|e| ForgeError::io(format!("stat {}", path.display()), e))?
+            .is_dir();
+        if is_dir {
+            remove_empty_dirs_recursive(&path, depth + 1)?;
             if is_empty_dir(&path) {
                 fs::remove_dir(&path).map_err(|e| {
                     ForgeError::io(format!("remove empty dir {}", path.display()), e)
@@ -254,7 +298,7 @@ fn remove_empty_dirs_recursive(dir: &Path) -> Result<(), ForgeError> {
 
 fn remove_empty_run_dirs(root: &Path) -> Result<(), ForgeError> {
     let legacy_runs = root.join("runs");
-    remove_empty_dirs_recursive(&legacy_runs)?;
+    remove_empty_dirs_recursive(&legacy_runs, 0)?;
     if is_empty_dir(&legacy_runs) {
         fs::remove_dir(&legacy_runs)
             .map_err(|e| ForgeError::io("remove empty legacy runs dir", e))?;
@@ -275,11 +319,13 @@ pub fn execute(options: MigrateOptions<'_>) -> Result<u8, ForgeError> {
         .map_err(|e| ForgeError::io("canonicalize root", e))?;
     ensure_not_migrated(&root)?;
 
-    let (key_dir, key_id) = resolve_key_config(&options)?;
-    let signing_key = load_or_create_signing_key(&key_dir, &key_id)?;
-
+    // Traverse the legacy tree before touching key material so symlink and
+    // depth rejections happen before any filesystem side effect.
     let run_to_case = read_case_mapping(&root)?;
     let files = enumerate_files(&root, Path::new("."))?;
+
+    let (key_dir, key_id) = resolve_key_config(&options)?;
+    let signing_key = load_or_create_signing_key(&key_dir, &key_id)?;
 
     let mut entries: Vec<(String, LegacyImportPayload)> = Vec::new();
     for file in &files {
