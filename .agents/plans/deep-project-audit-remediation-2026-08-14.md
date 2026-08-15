@@ -58,7 +58,7 @@ Legend for disposition columns (filled in as work proceeds):
 | SUP-06 | Med | B + E | server `agent_probe.rs` descriptor version | Derive version from config hash; settle failed probe | T |
 | SUP-07 | Med | G: root convention | self-model/thoth/readiness double-nested reads | Unify root; absent-registry → degraded not zero | T |
 | SUP-08 | Med | J: registry trust | extension `lib.rs` load/replace | Verify registry vs ledger; guard replace path | T |
-| SUP-09a–i | Low | mixed | various | Sweep items (see §4) | T |
+| SUP-09a–i | Low | mixed | various | Sweep items (see §4) | P (a with F-19, b, c, g landed; d/e/f/h/i open) |
 
 ---
 
@@ -301,7 +301,7 @@ here once and cross-referenced from their batch when it is finalized.
   F-16 (constrain server policy/plan path resolution to workspace-relative
   under cell root).
 
-### Batch 4 — Resource bounds + panic/overflow (class F) — PARTIAL (F-18 landed)
+### Batch 4 — Resource bounds + panic/overflow (class F) — COMPLETE
 - F-18: ACP prompt pumps now have a wall-clock deadline derived from the
   `max_turns × per_turn_timeout` budget and capped at 15 minutes. The deadline
   wins over a receive timeout exactly at budget exhaustion, so a peer streaming
@@ -311,5 +311,71 @@ here once and cross-referenced from their batch when it is finalized.
   budget. No public termination vocabulary changed: both resource bounds settle
   as the existing `turn_cap_exceeded` outcome. Regressions cover notification
   streaming, title-less tool calls, and retained-map capping.
-- Remaining Batch 4: SUP-09b (CLI recursive migration must reject symlink
-  traversal/cycles) and SUP-09c (cap untrusted whole-file reads).
+- SUP-09b: `sea-forge migrate` traversal is symlink-safe and bounded. Both
+  recursive walkers (`enumerate_files_recursive`,
+  `remove_empty_dirs_recursive`) type every directory entry with
+  `DirEntry::file_type()`/`fs::symlink_metadata` (lstat semantics — never
+  follow), reject any symlink in the enumeration tree with a typed
+  `ForgeError::Input` (`refusing to migrate through symlink: …`), and enforce
+  `MAX_MIGRATION_DEPTH = 32` (deeper trees are rejected, not recursed).
+  `execute()` now traverses and validates the legacy tree *before*
+  `resolve_key_config`/`load_or_create_signing_key`, so a rejection happens
+  with zero filesystem side effects (no key material, no `ledgers/`, no
+  `migration.json`). En route finding: the pre-fix cycle fixture did not
+  stack-overflow but silently collected ~800 PATH_MAX-bounded junk entries
+  (`runs/loop/loop/…/plan.json`) into the migration Vec — both that silent
+  junk-ingest and the deeper-layout overflow are closed by the same rejection.
+  Tests: `crates/sea-forge-cli/tests/migrate_safety.rs` — symlink-directory
+  cycle, symlinked-file, and depth-cap rejections, each asserting nonzero
+  exit, the typed message on stderr, and zero side effects including the
+  default key dir. The full migrate happy path
+  (`conformance_m0_migrate`, 2 tests) still passes unchanged.
+- SUP-09c: every audited untrusted whole-file read is bounded.
+  - Server views: `sfwp/mod.rs` defines `MAX_RECORD_BYTES = 4 MiB` (single
+    JSON records) and `MAX_JOURNAL_BYTES = 64 MiB` (append-only JSONL
+    journals) with one shared `size_within_cap` enforcement predicate.
+    `case_views::read_case` stats first and reports oversized records as
+    `Unreadable` (present-but-unreadable is the integrity signal) while stat
+    failures keep the absent/read-failure mapping; `read_plan`,
+    `read_case_events`, `read_settlement` (a site the audit's line list
+    missed), `run_views::read_json` (shared `pub(crate)` helper, so
+    `sfwp::assets`/`sfwp::delegations` inherit the cap), and `read_jsonl`
+    degrade oversized inputs exactly as unreadable ones already did. Tests:
+    5 new conformance tests (`conformance_case_views` 3, `conformance_run_views`
+    2) using valid-JSON(L) fixtures padded past each cap so the *only* changed
+    property is size (a cap on malformed bytes would prove nothing) —
+    differential red runs confirmed the padded records rendered normally
+    pre-fix.
+  - `sea-forge-trace::append_internal_error` streams the journal
+    (`BufReader::read_until`) instead of slurping it — memory bounded by one
+    line on the internal-error path — while preserving every observable
+    semantic: torn tail (no trailing newline) refuses, blank lines are skipped
+    not counted, the first malformed line refuses, an empty journal refuses
+    (a naive streaming rewrite would have silently begun appending; pinned by
+    test), and the appended event keeps `seq_id("tev", 4, n+1)`. 7 new
+    in-crate tests (10/10 total).
+  - `sea-forge-sandbox::jail` permission-denied heuristic reads at most
+    `MAX_STDERR_SCAN_BYTES = 65_537` bytes (mirroring settlement's
+    `declaration.rs` cap idiom) with lossy UTF-8 decoding — strictly better
+    than the old `read_to_string().unwrap_or_default()`, which discarded *all*
+    stderr when any byte was non-UTF-8 and blinded the heuristic. 3 new
+    real-jailed-spawn conformance tests: within-cap marker still classifies
+    `SandboxViolation`; marker past the cap does not (fixture asserts the
+    on-disk offset really is ≥ the cap); non-UTF-8 prefix no longer blinds.
+  - `sea-forge-cli` `internal-test-swe-seed` caps stdin at 1 MiB
+    (`take(1_048_577)`, typed `Input` error past the cap), mirroring the
+    settlement transport idiom. Tests: `tests/swe_seed_cli.rs` — oversize
+    rejects with the cap message; a small valid `SettlementDeclarationRequest`
+    still succeeds.
+  - Out-of-scope follow-up filed in `OBSERVED_DEBT.md`: further unbounded
+    whole-file reads exist elsewhere in `sea-forge-server`
+    (`correlation.rs`, `delegation.rs`, `transcript_seal.rs`, `lib.rs`,
+    `case_dispatch.rs`, `sfwp/assets.rs`, `sfwp/case.rs`) — deferred to the
+    Batch 9 hardening sweep, not part of the audited site list.
+- Verified: `cargo fmt --all -- --check` clean; `cargo clippy -p sea-forge-cli
+  -p sea-forge-server -p sea-forge-trace -p sea-forge-sandbox --all-targets --
+  -D warnings` clean; per-crate suites green (`sea-forge-cli` migrate_safety 3,
+  swe_seed_cli 2, conformance_m0_migrate 2; `sea-forge-server`
+  conformance_case_views 9, conformance_run_views 11; `sea-forge-trace` 10;
+  `sea-forge-sandbox` full crate incl. conformance_m1 15/15); full workspace
+  `cargo test --workspace --all-features --locked --no-fail-fast` green.
