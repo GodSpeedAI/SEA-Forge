@@ -11,6 +11,7 @@ use sea_forge_core::types::{
 };
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+use std::path::Path;
 
 const ADAPTER_REF: &str = "sea-forge-self-model";
 
@@ -182,9 +183,15 @@ pub fn project_self(
 }
 
 /// Recompute the rebuild_hash of a projection record from its stored fields and
-/// confirm it matches. Drift ⇒ `self_model_error` (used to reject a pre-generated
-/// projection whose output hash no longer matches its bytes).
-pub fn verify_projection(record: &ProjectionRecord) -> Result<(), ForgeError> {
+/// confirm it matches, then hash every *materialized* output file under
+/// `outputs_dir` and compare against the record's `output_refs`. Drift anywhere
+/// ⇒ `self_model_error`.
+///
+/// SUP-04: the rebuild_hash alone was checkable against a record whose declared
+/// hashes were never compared with the files on disk — a replaced or corrupted
+/// output validated clean. The doc promise is now the implementation: recorded
+/// refs must match materialized bytes.
+pub fn verify_projection(record: &ProjectionRecord, outputs_dir: &Path) -> Result<(), ForgeError> {
     let rebuild_input = serde_json::json!({
         "adapter_ref": record.adapter_ref,
         "source_refs": record.source_refs,
@@ -197,6 +204,23 @@ pub fn verify_projection(record: &ProjectionRecord) -> Result<(), ForgeError> {
             "self_model_error: projection rebuild_hash mismatch for {}: declared={} computed={expected}",
             record.projection_id, record.rebuild_hash
         )));
+    }
+    for output in &record.output_refs {
+        let path = outputs_dir.join(&output.path);
+        let bytes = std::fs::read(&path).map_err(|error| {
+            sea_forge_core::ForgeError::SelfModel(format!(
+                "self_model_error: projected output {} of {} is unreadable: {error}",
+                output.path, record.projection_id
+            ))
+        })?;
+        let actual = format!("sha256:{}", sha256_hex(&bytes));
+        if actual != output.sha256 {
+            return Err(sea_forge_core::ForgeError::SelfModel(format!(
+                "self_model_error: projected output {} of {} does not match its recorded \
+                 ref: declared={} materialized={actual}",
+                output.path, record.projection_id, output.sha256
+            )));
+        }
     }
     Ok(())
 }

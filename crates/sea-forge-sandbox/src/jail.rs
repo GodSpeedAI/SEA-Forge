@@ -245,12 +245,18 @@ impl ExecutionSandbox for JailSandbox {
         }
     }
 
+    // F-25.k: this backend does not implement artifact collection. Returning
+    // an empty vec silently would make a future caller mistake "unsupported"
+    // for "nothing was requested", so the stub fails closed instead.
     fn collect_artifacts(
         &self,
         _h: &SandboxHandle,
         _paths: &[RelPath],
     ) -> Result<Vec<ArtifactRef>, SandboxError> {
-        Ok(Vec::new())
+        Err(SandboxError::new(
+            "artifact_collection_unsupported",
+            "collect_artifacts is not implemented for this sandbox backend",
+        ))
     }
 
     fn destroy(&self, _h: SandboxHandle) -> Result<(), SandboxError> {
@@ -351,12 +357,16 @@ fn execute_linux(
         .recv()
         .map_err(|e| SandboxError::new("internal_error", e.to_string()))??;
 
-    // Heuristic: detect jail violation from non-zero exit + "Permission denied".
+    // F-20: the jail does not *observe* this violation — a nonzero exit plus
+    // a child-controlled stderr substring is only evidence of one. Recording
+    // it as a definite `SandboxViolation` asserted more than ran; the
+    // suspected classification keeps settlement rejected while leaving the
+    // durable basis honest about what the heuristic actually saw.
     let mut result = result;
     if result.status == ExecutionStatus::Completed && result.exit_code != Some(0) {
         let stderr_text = read_capped_stderr(&stderr_path);
         if stderr_text.to_lowercase().contains("permission denied") {
-            result.status = ExecutionStatus::SandboxViolation;
+            result.status = ExecutionStatus::SuspectedSandboxViolation;
         }
     }
     Ok(result)

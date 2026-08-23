@@ -794,3 +794,111 @@ fn m0_prove_entry_under_desync_is_typed_error_not_panic() {
         "error must describe the desync"
     );
 }
+
+// ── F-25.q: append refuses to chain onto an unverified predecessor ──
+
+#[test]
+fn appending_onto_a_forged_tail_is_refused() {
+    let tmp = tempdir().unwrap();
+    let stream = LedgerStream::open(tmp.path(), "forged-tail", "writer_01").unwrap();
+    stream
+        .commit_typed(
+            "case_plan",
+            vec!["case_q".into()],
+            &serde_json::json!({"n": 1}),
+            vec![],
+        )
+        .unwrap();
+    stream
+        .commit_typed(
+            "settlement_event",
+            vec!["case_q".into()],
+            &serde_json::json!({"n": 2}),
+            vec![],
+        )
+        .unwrap();
+
+    // Tamper with the stored tail's `entry_hash` (variant A).
+    let entries_path = tmp
+        .path()
+        .join("ledgers")
+        .join("forged-tail")
+        .join("entries.jsonl");
+    let text = fs::read_to_string(&entries_path).unwrap();
+    let mut lines: Vec<String> = text.lines().map(str::to_owned).collect();
+    let last = lines.last_mut().unwrap();
+    *last = last.replace(r#""entry_hash":"#, r#""entry_hash_x":"#);
+    // Restore the field so the line still parses but carries a wrong hash.
+    *last = last
+        .replacen(r#""entry_hash_x":"#, r#""entry_hash":"#, 1)
+        .replacen("sha256:", "sha256:0", 1);
+    fs::write(&entries_path, lines.join("\n") + "\n").unwrap();
+
+    let error = stream
+        .commit_typed(
+            "note",
+            vec!["case_q".into()],
+            &serde_json::json!({"n": 3}),
+            vec![],
+        )
+        .expect_err("append must refuse a forged predecessor");
+    assert!(
+        error
+            .to_string()
+            .contains("predecessor entry hash mismatch"),
+        "{error}"
+    );
+
+    // Variant B: rewrite the payload, leaving the stale stored hash.
+    let stream2 = LedgerStream::open(tmp.path(), "forged-payload", "writer_01").unwrap();
+    stream2
+        .commit_typed(
+            "case_plan",
+            vec!["case_q".into()],
+            &serde_json::json!({"n": 1}),
+            vec![],
+        )
+        .unwrap();
+    let entries_path2 = tmp
+        .path()
+        .join("ledgers")
+        .join("forged-payload")
+        .join("entries.jsonl");
+    let text2 = fs::read_to_string(&entries_path2)
+        .unwrap()
+        .replace(r#""n":1"#, r#""n":999"#);
+    fs::write(&entries_path2, text2).unwrap();
+    let error2 = stream2
+        .commit_typed(
+            "note",
+            vec!["case_q".into()],
+            &serde_json::json!({"n": 4}),
+            vec![],
+        )
+        .expect_err("append must refuse a rewritten payload tail");
+    assert!(
+        error2
+            .to_string()
+            .contains("predecessor entry hash mismatch"),
+        "{error2}"
+    );
+
+    // Control: an honest append on a clean stream still works.
+    let clean = LedgerStream::open(tmp.path(), "clean-tail", "writer_01").unwrap();
+    clean
+        .commit_typed(
+            "case_plan",
+            vec!["case_q".into()],
+            &serde_json::json!({"n": 1}),
+            vec![],
+        )
+        .unwrap();
+    clean
+        .commit_typed(
+            "note",
+            vec!["case_q".into()],
+            &serde_json::json!({"n": 2}),
+            vec![],
+        )
+        .unwrap();
+}

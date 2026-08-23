@@ -22,7 +22,7 @@ pub fn adopt(root: &Path, cell_id: &str, reference: &str) -> Result<PathBuf, For
             "imported template {reference} not found under cell {cell_id}"
         )));
     }
-    let templates_dir = root.join(".sea-forge/templates");
+    let templates_dir = root.join("templates");
     fs::create_dir_all(&templates_dir).map_err(|e| ForgeError::io("create templates dir", e))?;
     let dest = templates_dir.join(format!("{name}@{version}.yaml"));
     // ponytail: copy, not move — preserves the imported provenance trail under

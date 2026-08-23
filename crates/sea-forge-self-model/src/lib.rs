@@ -23,7 +23,6 @@ use sea_forge_domainforge::{load_validate, DomainModel, DomainModelRef, SeaSourc
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use unicode_normalization::UnicodeNormalization;
 
 // ── Release-owned model assets (source of truth under models/) ───────────────
 
@@ -53,30 +52,19 @@ fn sha256_hex(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
-/// Canonical JSON: object keys sorted lexicographically, strings NFC-normalized,
-/// arrays ordered. Matches the ledger's `jcs-nfc-v1` profile so domain hashes
-/// agree with payload hashes on the same content shape.
+/// Canonical JSON for self-model identity hashes. SUP-09d: this now
+/// delegates to the one shared implementation in core — the `jcs-nfc-v1`
+/// profile (sorted keys, NFC string values, ordered arrays), which is *not*
+/// RFC 8785 JCS and whose object keys are deliberately not NFC'd.
 fn canonical_json(value: &serde_json::Value) -> Result<Vec<u8>, ForgeError> {
-    fn sorted(value: serde_json::Value) -> serde_json::Value {
-        match value {
-            serde_json::Value::Object(map) => {
-                let mut entries: Vec<_> = map.into_iter().collect();
-                entries.sort_by(|a, b| a.0.cmp(&b.0));
-                let map: serde_json::Map<String, serde_json::Value> = entries.into_iter().collect();
-                serde_json::Value::Object(map)
-            }
-            serde_json::Value::Array(items) => {
-                serde_json::Value::Array(items.into_iter().map(sorted).collect())
-            }
-            serde_json::Value::String(s) => serde_json::Value::String(s.chars().nfc().collect()),
-            other => other,
-        }
-    }
-    let sorted = sorted(value.clone());
-    serde_json::to_vec(&sorted).map_err(|e| ForgeError::Serialization(e.to_string()))
+    sea_forge_core::canonical::canonical_json(value)
 }
 
-/// Domain-separated canonical sha256 over a serializable value.
+/// Canonical sha256 over a serializable value. NOT domain-separated — the
+/// digest is a bare `sha256:` over the canonical bytes. (The doc previously
+/// claimed domain separation that never existed; domain-tagged hashing lives
+/// in `sea_forge_ledger`'s `payload_hash`/`entry_hash`, e.g.
+/// `sha256_domain("sea-forge/payload/v1", …)`.)
 pub fn canonical_sha256<T: Serialize>(value: &T) -> Result<String, ForgeError> {
     let v = serde_json::to_value(value)?;
     let bytes = canonical_json(&v)?;
@@ -176,6 +164,27 @@ impl ComposedModel {
     pub fn concept_exists(&self, name: &str) -> bool {
         self.system.model_ref.concept_refs.iter().any(|c| c == name)
             || self.seed.model_ref.concept_refs.iter().any(|c| c == name)
+    }
+
+    /// SUP-09e: concept names declared by BOTH constituents of the overlay —
+    /// sorted. `concepts()` deliberately keeps collapsing them (the seed
+    /// overlay may re-declare a name as specialization/linkage), but this
+    /// disclosure makes the collision observable instead of silent, so a
+    /// future release whose shared definitions diverge cannot slip through
+    /// review unnoticed. Disclosure only: composition precedence remains an
+    /// owner decision (see OBSERVED_DEBT).
+    pub fn dual_declared_concepts(&self) -> Vec<String> {
+        let mut shared: Vec<String> = self
+            .system
+            .model_ref
+            .concept_refs
+            .iter()
+            .filter(|name| self.seed.model_ref.concept_refs.contains(name))
+            .cloned()
+            .collect();
+        shared.sort();
+        shared.dedup();
+        shared
     }
 
     /// Sorted, de-duplicated concept names across both composed sources.
@@ -573,5 +582,62 @@ mod tests {
         assert!(!snap.capability_projection_sha256.is_empty());
         assert!(!snap.snapshot_hash.is_empty());
         assert!(!snap.system_model_ref.semantic_model_sha256.is_empty());
+    }
+    // SUP-09e: the reviewed overlay-collision allowlist. Fails loudly when a
+    // bundled model change alters the set of dual-declared names, forcing a
+    // conscious definition-divergence review instead of a silent collapse.
+    #[test]
+    fn dual_declared_concepts_matches_reviewed_allowlist() {
+        let models = bundled();
+        let composed = load_composed(&models).unwrap();
+
+        // Reviewed 2026-08-23 against seaforge-system@0.1.0 and
+        // adlc-odi-case@0.1.0: entities plus the seed's relationship concepts
+        // (Contains, Specializes, …) that overlay system names.
+        let expected = vec![
+            "AuthorityDecision",
+            "AuthorizedAction",
+            "Authorizes",
+            "CapabilityRecord",
+            "Case",
+            "CaseFile",
+            "CasePlanModel",
+            "Composes",
+            "Constrains",
+            "Contains",
+            "DiscretionaryItem",
+            "DomainModelRef",
+            "Emits",
+            "EvidenceRecord",
+            "Governs",
+            "Ledger",
+            "Milestone",
+            "PlanItem",
+            "Projects",
+            "Promotes",
+            "RebuildableProjection",
+            "Records",
+            "SandboxRuntime",
+            "Sentry",
+            "SettlementDeclaration",
+            "Settles",
+            "Specializes",
+            "Stage",
+            "Supports",
+            "TraceEvent",
+        ];
+
+        let actual = composed.dual_declared_concepts();
+        assert_eq!(
+            actual, expected,
+            "the dual-declared concept set changed; review whether the new \
+             definitions diverge and update this allowlist consciously"
+        );
+        assert!(
+            composed.concepts().starts_with(&actual[..]) || {
+                let all = composed.concepts();
+                actual.iter().all(|n| all.binary_search(n).is_ok())
+            }
+        );
     }
 }

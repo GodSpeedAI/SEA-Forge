@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 pub mod approvals;
+pub mod canonical;
 pub mod errors;
 pub mod ids;
 pub mod path;

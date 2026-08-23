@@ -18,7 +18,8 @@ pub use sea_forge_core::types::{ContractRef, ProjectionKind, ProjectionRef, Proj
 
 // ---- Registry ----
 
-/// Extension registry persisted at `.sea-forge/extensions/registry.json`.
+/// Extension registry persisted at `<root>/extensions/registry.json`, where
+/// `root` is the state root (F-12).
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ExtensionRegistry {
     pub version: String,
@@ -65,7 +66,7 @@ pub struct ExtensionAuthorization<'a> {
 }
 
 impl ExtensionRegistry {
-    /// Load from `.sea-forge/extensions/registry.json`, or return an empty registry.
+    /// Load from `<root>/extensions/registry.json`, or return an empty registry.
     pub fn load(root: &Path) -> Result<Self, ForgeError> {
         let path = Self::path(root);
         if !path.exists() {
@@ -76,11 +77,66 @@ impl ExtensionRegistry {
             });
         }
         let bytes = fs::read(&path).map_err(|e| ForgeError::io("read registry", e))?;
-        serde_json::from_slice(&bytes)
-            .map_err(|e| ForgeError::Serialization(format!("parse registry: {e}")))
+        let registry: Self = serde_json::from_slice(&bytes)
+            .map_err(|e| ForgeError::Serialization(format!("parse registry: {e}")))?;
+        registry.validate_no_duplicates()?;
+        Ok(registry)
     }
 
-    /// Save to `.sea-forge/extensions/registry.json`.
+    /// Load the registry and prove the file is what the ledger committed
+    /// (SUP-08): the bytes' payload hash must equal the newest
+    /// `extension_registry` record in `stream`. A rewritten or rolled-back
+    /// `registry.json` — e.g. `quarantined` flipped back to `active`, or a
+    /// stripped trust level — is refused instead of silently honored. The
+    /// ledger, not raw disk, is the read authority.
+    ///
+    /// An absent registry file is still a fresh installation (no record can
+    /// exist for it either); verification applies only to present files.
+    pub fn load_verified(root: &Path, stream: &LedgerStream) -> Result<Self, ForgeError> {
+        let registry = Self::load(root)?;
+        if !Self::path(root).exists() {
+            return Ok(registry);
+        }
+        let last_committed = stream
+            .read_entries()?
+            .into_iter()
+            .rfind(|entry| entry.record_kind == "extension_registry");
+        let Some(entry) = last_committed else {
+            return Err(ForgeError::Input(
+                "extension registry exists but no `extension_registry` ledger record ever \
+                 committed it; refusing to trust unattested registry bytes"
+                    .into(),
+            ));
+        };
+        let value = serde_json::to_value(&registry)
+            .map_err(|e| ForgeError::Serialization(e.to_string()))?;
+        let actual = sea_forge_ledger::types::payload_hash(&value)?;
+        if entry.payload_hash != actual {
+            return Err(ForgeError::Input(format!(
+                "extension registry does not match its latest ledger record \
+                 (declared {}, committed {}); refusing to honor modified registry bytes",
+                entry.payload_hash, actual
+            )));
+        }
+        Ok(registry)
+    }
+
+    /// SUP-08: two entries sharing `(id, version)` make "which descriptor is
+    /// installed" ambiguous; reject at the boundary rather than first-match.
+    fn validate_no_duplicates(&self) -> Result<(), ForgeError> {
+        let mut seen = std::collections::BTreeSet::new();
+        for entry in &self.extensions {
+            if !seen.insert(format!("{}@{}", entry.extension_id, entry.version)) {
+                return Err(ForgeError::Input(format!(
+                    "registry holds duplicate entries for {}@{}",
+                    entry.extension_id, entry.version
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Save to `<root>/extensions/registry.json`.
     pub fn save(
         &self,
         root: &Path,
@@ -107,6 +163,16 @@ impl ExtensionRegistry {
         root.join("extensions").join("registry.json")
     }
 
+    /// Whether a registry file exists under this state root.
+    ///
+    /// SUP-07: callers must be able to distinguish "registry absent" (the
+    /// cell's extension state has never been attested) from "registry
+    /// present and empty" — collapsing both into zero extensions fabricated
+    /// a coherent-looking cell that nothing had ever attested.
+    pub fn exists(root: &Path) -> bool {
+        Self::path(root).exists()
+    }
+
     /// Register a built-in extension descriptor.
     pub fn register_built_in(
         &mut self,
@@ -114,13 +180,23 @@ impl ExtensionRegistry {
     ) -> Result<(), ForgeError> {
         validate_descriptor(descriptor)?;
         let descriptor_hash = hash_descriptor(descriptor)?;
-        // Check if already registered.
-        if self
+        // SUP-09i: idempotent only when the descriptor is byte-identical —
+        // same `(id, version)` with a different hash is a build bug (a
+        // built-in changed under a pinned version) and must fail loudly, not
+        // silently keep the old implementation.
+        if let Some(existing) = self
             .extensions
             .iter()
-            .any(|e| e.extension_id == descriptor.extension_id && e.version == descriptor.version)
+            .find(|e| e.extension_id == descriptor.extension_id && e.version == descriptor.version)
         {
-            return Ok(()); // Idempotent.
+            if existing.descriptor_sha256 == descriptor_hash {
+                return Ok(()); // Idempotent re-registration.
+            }
+            return Err(ForgeError::Input(format!(
+                "built-in {}@{} changed content without a version bump; \
+                 this is a compile-time pinning bug",
+                descriptor.extension_id, descriptor.version
+            )));
         }
         self.extensions.push(RegistryEntry {
             extension_id: descriptor.extension_id.clone(),
@@ -163,6 +239,17 @@ impl ExtensionRegistry {
                     "registered runtime adapter is immutable for a given version; bump the version to change the descriptor".into(),
                 ));
             }
+            // SUP-08: this path has no authority check of its own — a
+            // quarantined entry must never be resurrected here as
+            // FirstParty+Active. Resolution runs through the authority-checked
+            // `adopt`/`import_authorized` paths instead.
+            if existing.status == ExtensionStatus::Quarantined {
+                return Err(ForgeError::Input(format!(
+                    "{}@{} is quarantined and cannot be replaced by registration; \
+                     resolve the quarantine through the authorized adoption path",
+                    descriptor.extension_id, descriptor.version
+                )));
+            }
             // Versioned change: replace in place.
             self.extensions[existing_idx] = RegistryEntry {
                 extension_id: descriptor.extension_id.clone(),
@@ -195,6 +282,29 @@ impl ExtensionRegistry {
     ) -> Result<(), ForgeError> {
         validate_descriptor(descriptor)?;
         let descriptor_hash = hash_descriptor(descriptor)?;
+        // SUP-09i: imports must not create duplicate `(id, version)` entries —
+        // since the duplicate guard at load, a second import of the same
+        // descriptor would permanently brick `registry.json` for every later
+        // reader. Identical content is idempotent; differing content and any
+        // quarantined/superseded target are refused.
+        if let Some(existing) = self
+            .extensions
+            .iter()
+            .find(|e| e.extension_id == descriptor.extension_id && e.version == descriptor.version)
+        {
+            if existing.descriptor_sha256 == descriptor_hash
+                && matches!(
+                    existing.status,
+                    ExtensionStatus::Active | ExtensionStatus::Disabled
+                )
+            {
+                return Ok(());
+            }
+            return Err(ForgeError::Input(format!(
+                "cannot import {}@{}: an entry already exists (status {:?}) with a                  different hash or terminal standing",
+                descriptor.extension_id, descriptor.version, existing.status
+            )));
+        }
         self.extensions.push(RegistryEntry {
             extension_id: descriptor.extension_id.clone(),
             version: descriptor.version.clone(),
@@ -403,6 +513,27 @@ pub fn validate_descriptor(descriptor: &ExtensionDescriptor) -> Result<(), Forge
     if !canonical_surfaces.contains(&descriptor.authority_surface.as_str()) {
         return Err(ForgeError::Input(
             "extension authority_surface is not canonical".into(),
+        ));
+    }
+    // SUP-09i: identity grammar. `extension_id` joins registry keys and
+    // filesystem-adjacent projections, so it uses the shared id-segment
+    // grammar; versions get their own predicate (they legitimately carry
+    // dots, which the path-safety grammar forbids).
+    if !sea_forge_core::path::valid_id_segment(&descriptor.extension_id, 128) {
+        return Err(ForgeError::Input(
+            "extension_id must be a safe id segment ([A-Za-z0-9_-], <=128)".into(),
+        ));
+    }
+    let valid_version = |version: &str| {
+        version.len() <= 64
+            && version.starts_with(|c: char| c.is_ascii_alphanumeric())
+            && version
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+    };
+    if !valid_version(&descriptor.version) {
+        return Err(ForgeError::Input(
+            "extension version must be alphanumeric with . _ - separators (<=64)".into(),
         ));
     }
     if !valid_hash(&descriptor.input_contract.sha256)
@@ -737,5 +868,194 @@ mod tests {
             .register_immutable_runtime_adapter(&descriptor)
             .unwrap_err();
         assert!(matches!(err, ForgeError::Input(ref m) if m.contains("runtime_adapter")));
+    }
+
+    // SUP-08: a rewritten registry.json is refused when it disagrees with its
+    // latest `extension_registry` ledger record — raw-disk trust on load was
+    // the defect (quarantined→active rollbacks were silently honored).
+    #[test]
+    fn load_verified_refuses_registry_bytes_the_ledger_never_committed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let stream = LedgerStream::open(root, "extension-test", "tester").unwrap();
+
+        let mut reg = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        reg.register_immutable_runtime_adapter(&runtime_adapter(
+            "agent_endpoint_a",
+            "0.1",
+            &"aa".repeat(32),
+        ))
+        .unwrap();
+        let authority = stream
+            .commit_typed("authority_decision", vec![], &serde_json::json!({}), vec![])
+            .unwrap();
+        reg.save(root, &stream, &authority).unwrap();
+        ExtensionRegistry::load_verified(root, &stream).unwrap(); // honest state passes
+
+        // Tamper: flip the entry to Active after a quarantine-style rewrite.
+        reg.extensions[0].status = ExtensionStatus::Quarantined;
+        reg.save(root, &stream, &authority).unwrap();
+        // Now forge the file back to Active without committing.
+        reg.extensions[0].status = ExtensionStatus::Active;
+        let path = ExtensionRegistry::path(root);
+        fs::write(&path, serde_json::to_vec_pretty(&reg).unwrap()).unwrap();
+        let err = ExtensionRegistry::load_verified(root, &stream)
+            .expect_err("forged registry bytes must not pass ledger verification");
+        assert!(
+            err.to_string()
+                .contains("does not match its latest ledger record"),
+            "{err}"
+        );
+
+        // A registry file with NO ledger record at all is refused outright.
+        let tmp2 = tempfile::tempdir().unwrap();
+        let stream2 = LedgerStream::open(tmp2.path(), "extension-test2", "tester").unwrap();
+        let root2 = tmp2.path().join("state");
+        fs::create_dir_all(root2.join("extensions")).unwrap();
+        fs::write(
+            root2.join("extensions").join("registry.json"),
+            br#"{"version":"0.2","updated_at":"now","extensions":[]}"#,
+        )
+        .unwrap();
+        let err = ExtensionRegistry::load_verified(&root2, &stream2)
+            .expect_err("an unattested registry must be refused");
+        assert!(
+            err.to_string().contains("unattested registry bytes"),
+            "{err}"
+        );
+    }
+
+    // SUP-08: registration can never resurrect a quarantined runtime adapter
+    // as FirstParty+Active — that replace path has no authority check of its
+    // own; resolution belongs to the authorized adoption paths.
+    #[test]
+    fn quarantined_runtime_adapter_cannot_be_replaced_by_registration() {
+        let mut reg = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        reg.register_immutable_runtime_adapter(&runtime_adapter(
+            "agent_endpoint_a",
+            "0.1",
+            &"aa".repeat(32),
+        ))
+        .unwrap();
+        reg.extensions[0].status = ExtensionStatus::Quarantined;
+
+        // Same version + same bytes: the idempotent no-op must NOT resurrect
+        // the entry either.
+        reg.register_immutable_runtime_adapter(&runtime_adapter(
+            "agent_endpoint_a",
+            "0.1",
+            &"aa".repeat(32),
+        ))
+        .unwrap();
+        assert_eq!(
+            reg.extensions[0].status,
+            ExtensionStatus::Quarantined,
+            "an idempotent re-registration must never clear a quarantine"
+        );
+
+        // A versioned change over a quarantined entry would have replaced it
+        // wholesale with FirstParty+Active; it is refused outright now.
+        let err = reg
+            .register_immutable_runtime_adapter(&runtime_adapter(
+                "agent_endpoint_a",
+                "0.2",
+                &"bb".repeat(32),
+            ))
+            .unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("is quarantined and cannot be replaced"),
+            "{err}"
+        );
+        assert_eq!(reg.extensions[0].status, ExtensionStatus::Quarantined);
+    }
+    // ── SUP-09i: identity grammar + registration/import invariants ──
+
+    #[test]
+    fn validate_descriptor_rejects_unsafe_extension_id() {
+        let mut d = runtime_adapter("../escape", "0.1", &"aa".repeat(32));
+        let error = validate_descriptor(&d).expect_err("traversal id");
+        assert!(error.to_string().contains("safe id segment"), "{error}");
+        d.extension_id = "".into();
+        let error = validate_descriptor(&d).expect_err("empty id");
+        assert!(error.to_string().contains("safe id segment"), "{error}");
+    }
+
+    #[test]
+    fn validate_descriptor_rejects_unsafe_version() {
+        for bad in ["", "../1", "v 1", "0.1 x"] {
+            let d = runtime_adapter("ext_demo", bad, &"aa".repeat(32));
+            let error = validate_descriptor(&d)
+                .err()
+                .unwrap_or_else(|| panic!("version {bad:?}"));
+            assert!(
+                error.to_string().contains("version must be alphanumeric"),
+                "{bad}: {error}"
+            );
+        }
+        // Dots and underscores are legitimate version spellings.
+        assert!(
+            validate_descriptor(&runtime_adapter("ext_demo", "0.2_rc-1", &"aa".repeat(32))).is_ok()
+        );
+    }
+
+    #[test]
+    fn register_built_in_hash_mismatch_is_error_not_silent_idempotence() {
+        let mut reg = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        reg.register_built_in(&runtime_adapter("ext_builtin", "1.0", &"aa".repeat(32)))
+            .unwrap();
+        // Same id/version, different content → hard error, not silent success.
+        let error = reg
+            .register_built_in(&runtime_adapter("ext_builtin", "1.0", &"bb".repeat(32)))
+            .expect_err("content change without a version bump must fail");
+        assert!(
+            error
+                .to_string()
+                .contains("changed content without a version bump"),
+            "{error}"
+        );
+        // Identical re-registration stays idempotent.
+        reg.register_built_in(&runtime_adapter("ext_builtin", "1.0", &"aa".repeat(32)))
+            .unwrap();
+    }
+
+    #[test]
+    fn import_same_id_version_twice_is_rejected_and_never_duplicates() {
+        let mut reg = ExtensionRegistry {
+            version: "0.2".into(),
+            updated_at: "now".into(),
+            extensions: Vec::new(),
+        };
+        reg.import(
+            &runtime_adapter("ext_imp", "0.3", &"cc".repeat(32)),
+            TrustLevel::FirstParty,
+        )
+        .unwrap();
+        let error = reg
+            .import(
+                &runtime_adapter("ext_imp", "0.3", &"dd".repeat(32)),
+                TrustLevel::FirstParty,
+            )
+            .expect_err("a second import with different content must be refused");
+        assert!(error.to_string().contains("cannot import"), "{error}");
+        // Idempotent identical import is allowed and adds no entry.
+        reg.import(
+            &runtime_adapter("ext_imp", "0.3", &"cc".repeat(32)),
+            TrustLevel::FirstParty,
+        )
+        .unwrap();
+        assert_eq!(reg.extensions.len(), 1);
     }
 }

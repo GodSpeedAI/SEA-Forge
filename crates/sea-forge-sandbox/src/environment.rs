@@ -178,8 +178,8 @@ pub fn materialize_base(spec: &EnvironmentSpec, workspace: &Path) -> Result<(), 
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent).map_err(|e| ForgeError::io("create base parent", e))?;
         }
-        fs::write(&dest, &file.content)
-            .map_err(|e| ForgeError::io(format!("write base file {}", file.path), e))?;
+        crate::safe_write(&dest, file.content.as_bytes())
+            .map_err(|e| ForgeError::Internal(format!("write base file {}: {e}", file.path)))?;
     }
     Ok(())
 }

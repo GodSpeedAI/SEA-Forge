@@ -14,7 +14,6 @@ use std::{
     io::{BufWriter, Read, Write},
     path::Path,
 };
-use unicode_normalization::UnicodeNormalization;
 
 pub fn sha256_bytes(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
@@ -35,18 +34,10 @@ pub fn sha256_file(path: &Path) -> Result<String, ForgeError> {
     }
     Ok(format!("{:x}", hash.finalize()))
 }
+/// SUP-09d: delegates to the single shared canonical primitive in core.
 pub fn canonical_json<T: Serialize>(value: &T) -> Result<Vec<u8>, ForgeError> {
-    fn sorted(value: Value) -> Value {
-        match value {
-            Value::Object(map) => {
-                Value::Object(map.into_iter().map(|(k, v)| (k, sorted(v))).collect())
-            }
-            Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
-            Value::String(s) => Value::String(s.nfc().collect()),
-            other => other,
-        }
-    }
-    Ok(serde_json::to_vec(&sorted(serde_json::to_value(value)?))?)
+    let json = serde_json::to_value(value).map_err(|e| ForgeError::Serialization(e.to_string()))?;
+    sea_forge_core::canonical::canonical_json(&json)
 }
 pub fn hash_canonical<T: Serialize>(value: &T) -> Result<String, ForgeError> {
     Ok(format!("sha256:{}", sha256_bytes(&canonical_json(value)?)))
@@ -119,6 +110,13 @@ impl JsonlEvidenceWriter {
             .write_all(b"\n")
             .and_then(|_| self.writer.flush())
             .map_err(|e| ForgeError::io("flush evidence", e))?;
+        // F-25.r: match the ledger's durability discipline — flush alone is
+        // kill-9-safe, not power-loss-safe. `sync_data` (not `sync_all`) is
+        // sufficient for an append-only record.
+        self.writer
+            .get_ref()
+            .sync_data()
+            .map_err(|e| ForgeError::io("sync evidence journal", e))?;
         self.refs.push(record.evidence_id.clone());
         Ok(record)
     }
@@ -138,8 +136,12 @@ pub fn capture_file(
     fs::create_dir_all(artifacts).map_err(|e| ForgeError::io("create artifacts directory", e))?;
     let destination = safe_join(artifacts, name)?;
     if source != destination {
-        fs::copy(source, &destination)
-            .map_err(|e| ForgeError::io(format!("copy artifact {name}"), e))?;
+        // F-25.i: copy through the no-follow write so a symlink swapped in
+        // at the artifact path cannot redirect the capture.
+        let bytes = std::fs::read(source)
+            .map_err(|e| ForgeError::io(format!("read artifact source {name}"), e))?;
+        sea_forge_sandbox::safe_write(&destination, &bytes)
+            .map_err(|e| ForgeError::Internal(format!("copy artifact {name}: {e}")))?;
     }
     let digest = sha256_file(&destination)?;
     let mut metadata = BTreeMap::new();

@@ -116,9 +116,10 @@ fn jail_unavailable_on_unsupported_platform_returns_error() {
 // ---------------------------------------------------------------------------
 // SUP-09c: the sandbox-violation stderr heuristic must be a bounded read.
 //
-// The heuristic reclassifies a non-clean completion as SandboxViolation when
-// the child's stderr contains "permission denied". That stderr is child
-// written and therefore untrusted, so the parent-side scan is capped at
+// The heuristic reclassifies a non-clean completion as a *suspected* jail
+// violation (F-20: child-controlled stderr cannot prove the jail denied
+// anything) when the child's stderr contains "permission denied". That stderr
+// is child written and therefore untrusted, so the parent-side scan is capped at
 // 64 KiB + 1 (matching settlement's stderr cap idiom) and decoded lossily:
 // a jailed child must not be able to force an unbounded parent-side read,
 // and non-UTF-8 bytes must not blind the heuristic to an ASCII denial.
@@ -194,8 +195,9 @@ fn jail_stderr_heuristic_flags_permission_denied_within_cap() {
     assert_eq!(result.exit_code, Some(3));
     assert_eq!(
         result.status,
-        ExecutionStatus::SandboxViolation,
-        "non-zero exit with 'Permission denied' inside the first 64 KiB of stderr must be reclassified"
+        ExecutionStatus::SuspectedSandboxViolation,
+        "non-zero exit with 'Permission denied' inside the first 64 KiB of stderr must be \
+         reclassified as SUSPECTED — the heuristic cannot prove a definite violation"
     );
 }
 
@@ -250,9 +252,29 @@ fn jail_stderr_heuristic_survives_non_utf8_prefix() {
     assert_eq!(result.exit_code, Some(1));
     assert_eq!(
         result.status,
-        ExecutionStatus::SandboxViolation,
-        "an ASCII 'permission denied' after non-UTF-8 bytes must still be detected"
+        ExecutionStatus::SuspectedSandboxViolation,
+        "an ASCII 'permission denied' after non-UTF-8 bytes must still be detected (as suspected)"
     );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn jail_stderr_heuristic_never_asserts_a_definite_violation() {
+    // F-20 distinction: the same nonzero exit with a permission-flavored
+    // failure that did NOT come from the jail must stay out of the definite
+    // `SandboxViolation` vocabulary entirely. There is no fixture in this
+    // suite that produces a *definite* violation from this heuristic, so the
+    // assertion is simply that every stderr-heuristic classification lands on
+    // the suspected variant.
+    let Some((result, _)) = run_jailed_stderr_fixture(
+        "stderr-suspected-only",
+        "echo 'remote returned 403: Permission denied' >&2; exit 7",
+    ) else {
+        return;
+    };
+    assert_eq!(result.exit_code, Some(7));
+    assert_eq!(result.status, ExecutionStatus::SuspectedSandboxViolation);
+    assert_ne!(result.status, ExecutionStatus::SandboxViolation);
 }
 
 // ---------------------------------------------------------------------------
@@ -754,4 +776,89 @@ fn untrusted_argv0_on_local_is_schema_error() {
     assert_eq!(err.class(), "schema_error");
 
     fs::remove_dir_all(tmp).unwrap();
+}
+// ── F-25.k: collect_artifacts fails closed instead of returning empty ──
+
+#[test]
+fn collect_artifacts_refuses_instead_of_returning_empty() {
+    use sea_forge_sandbox::{LocalSandbox, RelPath};
+
+    let parent = temp_dir("collect_local");
+    let workspace = parent.join("workspace");
+    let artifacts = parent.join("artifacts");
+    fs::create_dir_all(&workspace).unwrap();
+    fs::create_dir_all(&artifacts).unwrap();
+
+    let local = LocalSandbox;
+    let spec = SandboxSpec {
+        workspace_root: workspace.clone(),
+        artifacts_root: artifacts.clone(),
+        network: NetworkPosture::default(),
+    };
+    let handle = local.prepare(&spec).unwrap();
+    let result = local.collect_artifacts(&handle, &[RelPath("artifacts/out.txt".into())]);
+    let error = result.expect_err("stub must not report empty success");
+    assert_eq!(error.class, "artifact_collection_unsupported", "{error:?}");
+    local.destroy(handle).unwrap();
+
+    if let Ok(jail) = JailSandbox::new() {
+        let parent = temp_dir("collect_jail");
+        let workspace = parent.join("workspace");
+        let artifacts = parent.join("artifacts");
+        fs::create_dir_all(&workspace).unwrap();
+        fs::create_dir_all(&artifacts).unwrap();
+        let spec = SandboxSpec {
+            workspace_root: workspace.clone(),
+            artifacts_root: artifacts.clone(),
+            network: NetworkPosture::Denied,
+        };
+        let handle = jail.prepare(&spec).unwrap();
+        let result = jail.collect_artifacts(&handle, &[RelPath("artifacts/out.txt".into())]);
+        let error = result.expect_err("jail stub must not report empty success");
+        assert_eq!(error.class, "artifact_collection_unsupported", "{error:?}");
+        jail.destroy(handle).unwrap();
+    }
+}
+
+// ── F-25.i: a symlink swapped in after validation cannot capture the write ──
+
+#[test]
+fn destination_swapped_to_symlink_between_check_and_write_is_refused() {
+    use sea_forge_sandbox::{safe_join, safe_write};
+
+    let parent = temp_dir("nofollow");
+    let workspace = parent.join("workspace");
+    let outside = parent.join("outside.txt");
+    fs::create_dir_all(&workspace).unwrap();
+    fs::write(&outside, "original").unwrap();
+
+    // The TOCTOU window: `safe_join` validates while the destination is a
+    // regular file, and the symlink is swapped in *after* validation but
+    // *before* the write opens the path.
+    let victim = workspace.join("planned.txt");
+    fs::write(&victim, "placeholder").unwrap();
+    let checked = safe_join(&workspace, "planned.txt").expect("lexical join is valid");
+    #[cfg(unix)]
+    {
+        fs::remove_file(&victim).unwrap();
+        std::os::unix::fs::symlink(&outside, &victim).unwrap();
+    }
+
+    let result = safe_write(&checked, b"captured content");
+    assert!(result.is_err(), "write-through-symlink must be refused");
+    assert_eq!(
+        fs::read_to_string(&outside).unwrap(),
+        "original",
+        "the outside target must be untouched"
+    );
+
+    // Control: writing a regular file still succeeds (create + truncate).
+    let plain = safe_join(&workspace, "regular.txt").unwrap();
+    safe_write(&plain, b"hello").unwrap();
+    assert_eq!(fs::read_to_string(&plain).unwrap(), "hello");
+    // And overwriting an existing regular file works (truncate semantics).
+    safe_write(&plain, b"second").unwrap();
+    assert_eq!(fs::read_to_string(&plain).unwrap(), "second");
+
+    fs::remove_dir_all(parent).unwrap();
 }

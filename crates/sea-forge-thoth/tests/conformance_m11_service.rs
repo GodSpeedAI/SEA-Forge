@@ -65,7 +65,7 @@ fn init_self_model(root: &Path, probes: Vec<ToolchainProbe>) {
 /// `Demonstrated` without needing to satisfy the full `default_v02_policy`
 /// promotion thresholds (proving is exercised in `conformance_m4a.rs`).
 fn append_qualifying_declaration(root: &Path, capability_name: &str) {
-    let dir = root.join(".sea-forge/settlement");
+    let dir = root.join("settlement");
     fs::create_dir_all(&dir).unwrap();
     let decl = SettlementDeclaration {
         version: "0.1".into(),
@@ -73,7 +73,7 @@ fn append_qualifying_declaration(root: &Path, capability_name: &str) {
         settlement_ref: "set_test_01".into(),
         run_id: "run_test_01".into(),
         case_id: "case_test_01".into(),
-        plan_item_id: format!("item_{capability_name}"),
+        plan_item_id: capability_name.to_string(),
         claim_manifest_sha256: "sha256:manifest".into(),
         status: DeclarationStatus::Accepted,
         strength: SettlementStrength::Strong,
@@ -368,5 +368,76 @@ fn t14a_replay_is_stable_and_ledgered() {
 
     assert_eq!(a1.disposition, a2.disposition);
     assert_eq!(a1.claims, a2.claims);
+    fs::remove_dir_all(root).ok();
+}
+
+const ROLE_BOUND_GRANT: &str = r#"
+version: "0.1"
+rules: []
+identity_bindings:
+  - principal: agent_test
+    actor_type: human
+    role: R-SO
+policy_surfaces:
+  self_disclosure:
+    mode: deny-by-default
+    grants:
+      - name: so-role-grant
+        actor_role: R-SO
+        claim_classes:
+          - declared_capability
+"#;
+
+// F-23 regression: a grant authored for a ROLE must permit an actor the
+// bundle binds to that role. Before the fix the asker's *id* was matched
+// against `grant.actor_role`, so this lawfully granted disclosure was denied.
+#[test]
+fn t23_role_authored_grant_permits_a_bound_actor() {
+    let root = temp_root("role_bound");
+    init_self_model(&root, vec![]);
+    let name = real_capability_name();
+    write_policy(&root, ROLE_BOUND_GRANT);
+
+    let ans = ask(
+        &root,
+        ACTOR,
+        QuestionKind::AskCapability,
+        &name,
+        "test",
+        None,
+    )
+    .unwrap();
+
+    // The role matched, so the granted class discloses; classes outside the
+    // grant stay withheld, which is exactly `Partial`, not `Answered`.
+    assert_eq!(ans.disposition, Disposition::Partial);
+    assert!(!ans.claims.is_empty(), "the granted class must disclose");
+    assert!(
+        !ans.omitted_claim_classes.is_empty(),
+        "classes outside the grant must stay withheld"
+    );
+    fs::remove_dir_all(root).ok();
+}
+
+// F-23 flip side: the role-authored grant must NOT leak to an actor the
+// bundle does not bind to that role — deny-by-default still governs.
+#[test]
+fn t23_unbound_actor_cannot_use_another_principals_role_grant() {
+    let root = temp_root("role_unbound");
+    init_self_model(&root, vec![]);
+    let name = real_capability_name();
+    write_policy(&root, ROLE_BOUND_GRANT);
+
+    let ans = ask(
+        &root,
+        "someone_else",
+        QuestionKind::AskCapability,
+        &name,
+        "test",
+        None,
+    )
+    .unwrap();
+
+    assert_eq!(ans.disposition, Disposition::Denied);
     fs::remove_dir_all(root).ok();
 }

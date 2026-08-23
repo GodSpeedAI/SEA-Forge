@@ -142,8 +142,9 @@ fn success_submit(root: &Path, request_id: Option<&str>) -> Value {
     std::fs::write(&plan_path, serde_json::to_vec(&plan).unwrap()).unwrap();
     let mut request = json!({
         "verb": "submit", "actor": {"actor_id": "operator_local", "role": "operator"},
-        "plan": plan_path.to_str().unwrap(),
-        "policy": policy_path.to_str().unwrap(),
+        // F-16: plan/policy references are cell-relative spellings.
+        "plan": plan_path.strip_prefix(root).unwrap().to_str().unwrap(),
+        "policy": policy_path.strip_prefix(root).unwrap().to_str().unwrap(),
         "entity": "operator_local",
         "process": "test",
     });
@@ -895,4 +896,86 @@ async fn a_terminal_outcome_and_its_dedupe_key_survive_a_restart() {
 
     second.abort();
     stub.abort();
+}
+
+// ── F-24: resource-bound availability guards ──
+
+/// F-24: a precondition bundle over the record cap must fail with a typed
+/// input error before any resolution (and therefore before any side effect) —
+/// each record costs a full ledger scan, so an unbounded bundle is an
+/// amplification vector.
+#[tokio::test]
+async fn oversized_precondition_records_fail_with_typed_error_before_any_side_effect() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+
+    let records: Vec<serde_json::Value> = (0..17)
+        .map(|i| json!({"ref": format!("case:case_cap_{i}"), "expected_digest": "sha256:deadbeef"}))
+        .collect();
+    let response = client
+        .call(json!({
+            "verb": "approve", "actor": {"actor_id": "operator_local", "role": "operator"},
+            "case_id": "case_cap",
+            "approval_id": "appr_cap",
+            "preconditions": { "records": records }
+        }))
+        .await;
+
+    assert_eq!(response["error_class"], "input_error", "{response}");
+    assert!(
+        response["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("too many precondition records"),
+        "{response}"
+    );
+    // Rejection precedes any ledger touch for the referenced case.
+    assert!(
+        !root.path().join("ledgers").join("case-case_cap").exists(),
+        "the cap rejection must be pre-side-effect"
+    );
+}
+
+// ── F-25.o: an unknown events cursor errors instead of replaying from start ──
+
+#[tokio::test]
+async fn unknown_events_cursor_errors_instead_of_replaying_from_start() {
+    let (_root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+
+    // A cursor that no ledger entry ever carried.
+    let bogus = "01J00000000000000000000000";
+    let response = client
+        .call(json!({
+            "verb": "events_get_range",
+            "from_cursor": bogus,
+        }))
+        .await;
+    assert_eq!(response["error_class"], "input_error", "{response}");
+    assert!(
+        response["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("events_unknown_cursor"),
+        "{response}"
+    );
+    let delivered = response
+        .get("events")
+        .and_then(|e| e.as_array())
+        .is_some_and(|a| !a.is_empty());
+    assert!(
+        !delivered,
+        "an unknown cursor must not deliver stale frames: {response}"
+    );
+
+    // The subscribe catch-up path refuses the same way.
+    let replay = client
+        .call(json!({ "verb": "events_subscribe", "from_cursor": bogus }))
+        .await;
+    let refused = replay["error_class"] == "input_error"
+        || replay
+            .get("error")
+            .and_then(|e| e.as_str())
+            .is_some_and(|e| e.contains("events_unknown_cursor"));
+    assert!(refused, "{replay}");
 }

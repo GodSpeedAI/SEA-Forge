@@ -280,7 +280,11 @@ fn projection_record_rebuild_is_byte_identical() {
         "same inputs must produce identical rebuild_hash"
     );
     assert_eq!(record1.output_refs, record2.output_refs);
-    assert_eq!(record1.validation.status, ProjectionStatus::Accepted);
+    // SUP-04: without a real validator the record is Declared with the
+    // unvalidated basis — never a stamped `Accepted`.
+    assert_eq!(record1.validation.status, ProjectionStatus::Declared);
+    assert_eq!(record1.validation.basis, vec!["projection_unvalidated"]);
+    assert_eq!(record1.validation.validator_ref, "none");
 }
 
 // ── 7. Quarantine completeness ──

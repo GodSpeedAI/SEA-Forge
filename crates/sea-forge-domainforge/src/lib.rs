@@ -652,7 +652,16 @@ pub fn evaluate_authority(
     Ok(DomainForgeTrace {
         raw_decision: raw_decision.into(),
         normalized_disposition: normalize_authority(raw_decision),
-        reason: "DomainForge evaluated validated model against canonical action".into(),
+        // SUP-09h: this is a filename-stem approximation, not the real
+        // domainforge-core authority subsystem. The evidence string must
+        // describe what actually ran — an ASCII-case-insensitive stem match
+        // of `resource_id` against declared entity/resource names — so a
+        // durable record never asserts "evaluated validated model against
+        // canonical action" until that evaluator is wired.
+        reason: "DomainForge stem-heuristic authority approximation: write_file allowed iff \
+                 the resource_id file stem ASCII-case-insensitively matches a declared \
+                 entity/resource name; full policy evaluation not yet wired"
+            .into(),
         evidence_refs,
     })
 }

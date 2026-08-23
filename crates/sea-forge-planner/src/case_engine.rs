@@ -201,12 +201,28 @@ fn valid_relative_path(value: &str) -> bool {
     sea_forge_core::path::validate_relative_path(value).is_ok()
 }
 
+/// F-25.m: maximum number of items a single submitted plan may carry.
+pub const MAX_PLAN_ITEMS: usize = 256;
+
 /// Validate and normalize a plan proposal before any case state is created.
 pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
     if plan.items.is_empty() {
         return Err(ForgeError::Plan {
             class: "plan_schema_error",
             message: "plan must contain at least one item".into(),
+        });
+    }
+    // F-25.m: an upper bound on plan size. The template path is already
+    // bounded (MAX_REPEATED_ENTRIES), but a directly submitted adversarial
+    // plan is not — and every downstream derivation (replay, satisfiability,
+    // cycle check) is at least linear in item count.
+    if plan.items.len() > MAX_PLAN_ITEMS {
+        return Err(ForgeError::Plan {
+            class: "plan_schema_error",
+            message: format!(
+                "plan exceeds maximum item count: {} > {MAX_PLAN_ITEMS}",
+                plan.items.len()
+            ),
         });
     }
     let ids = plan
@@ -238,6 +254,24 @@ pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
         }
         if item.item_kind == ItemKind::SandboxedTask && item.sandbox_class.is_none() {
             item.sandbox_class = Some("local".into());
+        }
+        // F-25.m: a SandboxedTask with no operations would dispatch as a
+        // silent no-op episode (activate → settle nothing) while consuming a
+        // permit and a settlement record. Exception: an item whose settlement
+        // criteria declare an evaluator executes *through* that evaluator
+        // (e.g. governed artifact transitions) rather than through item
+        // operations, so it is not a no-op.
+        if item.item_kind == ItemKind::SandboxedTask
+            && item.operations.is_empty()
+            && item.settlement_criteria.evaluator.is_none()
+        {
+            return Err(ForgeError::Plan {
+                class: "plan_schema_error",
+                message: format!(
+                    "sandboxed task {} must declare at least one operation",
+                    item.plan_item_id
+                ),
+            });
         }
         // AgentTask items carry exactly one Operation::AgentTask (validated below).
         if !matches!(
@@ -360,28 +394,38 @@ pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
     check_satisfiability(&plan.items)
 }
 
+/// F-25.m: iterative DFS. The recursive form could overflow the stack on an
+/// adversarial ~10^5-node dependency chain submitted straight to `submit`
+/// (an abort-class DoS the server cannot contain); the explicit stack makes
+/// depth a heap concern instead.
 fn has_cycle(
-    node: &str,
+    root: &str,
     graph: &HashMap<String, Vec<String>>,
     visited: &mut HashSet<String>,
-    stack: &mut HashSet<String>,
+    stack_set: &mut HashSet<String>,
 ) -> bool {
-    if stack.contains(node) {
-        return true;
-    }
-    if visited.contains(node) {
-        return false;
-    }
-    visited.insert(node.into());
-    stack.insert(node.into());
-    if let Some(neighbors) = graph.get(node) {
-        for neighbor in neighbors {
-            if has_cycle(neighbor, graph, visited, stack) {
+    // Each frame: (node, next neighbor index). `on_path` marks the current
+    // DFS path; `visited` marks fully-explored nodes.
+    let mut frames: Vec<(String, usize)> = vec![(root.to_string(), 0)];
+    stack_set.insert(root.to_string());
+    while let Some((node, ref mut next)) = frames.last_mut() {
+        let neighbors = graph.get(node.as_str()).map(Vec::as_slice).unwrap_or(&[]);
+        if *next < neighbors.len() {
+            let neighbor = &neighbors[*next];
+            *next += 1;
+            if stack_set.contains(neighbor) {
                 return true;
             }
+            if !visited.contains(neighbor) {
+                stack_set.insert(neighbor.clone());
+                frames.push((neighbor.clone(), 0));
+            }
+        } else {
+            let done = frames.pop().expect("frame stack cannot be empty here");
+            stack_set.remove(&done.0);
+            visited.insert(done.0);
         }
     }
-    stack.remove(node);
     false
 }
 

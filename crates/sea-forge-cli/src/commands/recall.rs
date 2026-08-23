@@ -134,11 +134,23 @@ fn execute_memory_recall(
         &action,
         false,
         |grant| {
-            // v0.1 policies with no recall_memory rule fall back to a
-            // scope-free legacy allow (same permissiveness as inspect_run /
-            // validate_model); treat that as "any", matching the unscoped
-            // legacy capability-envelope path's behavior.
-            let scope = grant.memory_scope().unwrap_or("any").to_string();
+            // F-25.g: a v0.1 policy with no recall_memory rule falls back to
+            // the legacy scope-free allow. That fallback now authorizes only
+            // the requester's *own* memory: cross-entity recall requires an
+            // explicit `memory_scope` rule, because "any" would let a silent
+            // policy read every entity's memory unscoped.
+            let scope = match grant.memory_scope() {
+                Some(scope) => scope.to_string(),
+                None => {
+                    if target_entity != actor_id {
+                        return Err(ForgeError::Input(
+                            "cross-entity recall requires an explicit memory_scope rule;                              the legacy implicit allow covers only the acting entity's own memory"
+                                .into(),
+                        ));
+                    }
+                    "own".to_string()
+                }
+            };
             grant.authorize(&action, "read_ingress", "read_ingress", root)?;
             Ok(scope)
         },

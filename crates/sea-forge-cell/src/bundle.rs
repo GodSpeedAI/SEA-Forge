@@ -58,6 +58,11 @@ fn read_bundle_bytes(bundle: &Path) -> Result<Vec<u8>, ForgeError> {
 
 /// Export selected runs (and optionally templates) to a tar bundle at `out_path`.
 /// Returns the manifest. Caller is responsible for authority approval.
+///
+/// F-12: export fails closed when runs were requested but zero run-evidence
+/// files resolve under the state root — a bundle that silently contains no
+/// evidence while reporting success is worse than an error, because the
+/// operator believes the runs traveled.
 pub fn export(
     root: &Path,
     run_ids: &[String],
@@ -78,17 +83,14 @@ pub fn export(
         builder.mode(tar::HeaderMode::Deterministic);
         for run_id in run_ids {
             for evidence_file in RUN_EVIDENCE_FILES {
-                let src = root
-                    .join(".sea-forge/runs")
-                    .join(run_id)
-                    .join(evidence_file);
+                let src = root.join("runs").join(run_id).join(evidence_file);
                 let arc = format!("runs/{run_id}/{evidence_file}");
                 if src.exists() {
                     push_file(&mut builder, &src, &arc, &mut files)?;
                 }
             }
             // Recurse artifacts/ (real evidence). Skip workspace/ (scratch).
-            let artifacts_dir = root.join(".sea-forge/runs").join(run_id).join("artifacts");
+            let artifacts_dir = root.join("runs").join(run_id).join("artifacts");
             if artifacts_dir.is_dir() {
                 push_tree(
                     &mut builder,
@@ -101,7 +103,7 @@ pub fn export(
         for reference in templates {
             let (name, version) = parse_template_ref(reference)?;
             let src = root
-                .join(".sea-forge/templates")
+                .join("templates")
                 .join(format!("{name}@{version}.yaml"));
             if !src.exists() {
                 return Err(ForgeError::Input(format!("template {reference} not found")));
@@ -112,6 +114,15 @@ pub fn export(
         builder
             .finish()
             .map_err(|e| ForgeError::io("finalize tar bundle", e))?;
+    }
+    // F-12: fail closed when requested runs contributed no evidence at all.
+    if !run_ids.is_empty() && !files.iter().any(|file| file.path.starts_with("runs/")) {
+        return Err(ForgeError::Input(format!(
+            "no run evidence found for the {} requested run(s) under {}; refusing to \
+             export a silently empty bundle",
+            run_ids.len(),
+            root.display()
+        )));
     }
     let manifest = BundleManifest {
         schema_version: schema_version().into(),
@@ -160,7 +171,7 @@ pub fn export(
     Ok(manifest)
 }
 
-/// Import a bundle into `<root>/.sea-forge/imported/<exporter_cell_id>/`.
+/// Import a bundle into `<root>/imported/<exporter_cell_id>/`.
 /// Atomic per §14.8: any hash mismatch or structural error rejects the whole
 /// bundle — no partial state remains. Imported runs NEVER merge into local
 /// `capabilities.jsonl` (§7.4).
@@ -255,20 +266,19 @@ pub fn import(root: &Path, bundle: &Path) -> Result<BundleManifest, ForgeError> 
     // A single hostile path aborts the whole import with `bundle_integrity_error`
     // and leaves the import root and anything outside it byte-identical.
     //
-    // Establish the trusted import-root hierarchy beneath the canonical root:
-    // `.sea-forge` and `imported` must each be a real directory (created if
-    // absent), never a symlink whose target escapes root. A pre-existing
-    // symlink at either level is an import-time escape vector and fails
-    // closed with `bundle_integrity_error` before any per-entry write. All
-    // later staging/final paths derive from the canonical `imported_root`,
-    // so they inherit the trusted root rather than trusting lexical joins
-    // over untrusted parent segments.
+    // Establish the trusted import root beneath the canonical root:
+    // `imported` must be a real directory (created if absent), never a
+    // symlink whose target escapes root. A pre-existing symlink is an
+    // import-time escape vector and fails closed with
+    // `bundle_integrity_error` before any per-entry write. All later
+    // staging/final paths derive from the canonical `imported_root`, so they
+    // inherit the trusted root rather than trusting lexical joins over
+    // untrusted parent segments. F-12: the passed root is the state root;
+    // imports land directly under `<root>/imported/`.
     let canonical_root = root
         .canonicalize()
         .map_err(|e| ForgeError::io("canonicalize import root", e))?;
-    let sea_forge_dir = ensure_trusted_dir(&canonical_root, ".sea-forge")
-        .map_err(|e| tamper_error(bundle, format!("unsafe .sea-forge: {e}")))?;
-    let imported_root = ensure_trusted_dir(&sea_forge_dir, "imported")
+    let imported_root = ensure_trusted_dir(&canonical_root, "imported")
         .map_err(|e| tamper_error(bundle, format!("unsafe imported root: {e}")))?;
     // The `bundle_id`/`cell_id` are single directory-name segments joined under
     // `imported/`; reuse the canonical lexical validator (the staging/final
@@ -397,7 +407,7 @@ fn tamper_error(bundle: &Path, message: String) -> ForgeError {
 /// beneath `parent` (never a symlink). If absent, the lexical path is
 /// returned unchanged — creation is deferred to the staging step so a
 /// rejected import leaves zero filesystem side effects. Used to harden
-/// `.sea-forge` and `imported` against pre-existing symlink escapes at
+/// `imported` against pre-existing symlink escapes at
 /// import time.
 fn ensure_trusted_dir(parent: &Path, name: &str) -> Result<PathBuf, ForgeError> {
     let candidate = parent.join(name);
@@ -441,9 +451,9 @@ pub(crate) fn parse_template_ref(reference: &str) -> Result<(String, String), Fo
 }
 
 /// Path where an imported template lives before adoption.
-/// `<root>/.sea-forge/imported/<cell_id>/templates/<name>@<version>.yaml`
+/// `<root>/imported/<cell_id>/templates/<name>@<version>.yaml`
 pub fn imported_template_path(root: &Path, cell_id: &str, name: &str, version: &str) -> PathBuf {
-    root.join(".sea-forge/imported")
+    root.join("imported")
         .join(cell_id)
         .join("templates")
         .join(format!("{name}@{version}.yaml"))

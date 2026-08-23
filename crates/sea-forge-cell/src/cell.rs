@@ -1,4 +1,5 @@
-//! Cell identity: load or generate `.sea-forge/cell.json` (spec-full §7.4).
+//! Cell identity: load or generate `<root>/cell.json` under the state root
+//! (spec-full §7.4, F-12).
 
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids};
@@ -15,10 +16,14 @@ pub struct CellRecord {
 
 const SCHEMA_VERSION: &str = "cell.v1";
 
-/// Load the cell id from `<root>/.sea-forge/cell.json`, returning `None` if it
-/// does not exist (legacy root). Stamps a fresh `cell_<8hex>` on first call.
+/// Load the cell id from `<root>/cell.json`, returning `None` if it does not
+/// exist. Stamps a fresh `cell_<8hex>` on first call.
+///
+/// F-12: the passed root is the *state root* (the same directory the ledger,
+/// runs, and cases join under) — the extra `.sea-forge` prefix that made
+/// `.sea-forge/.sea-forge/cell.json` a second cell identity is gone.
 pub fn ensure(root: &Path) -> Result<String, ForgeError> {
-    let path = root.join(".sea-forge/cell.json");
+    let path = root.join("cell.json");
     if let Some(record) = read(root)? {
         return Ok(record.cell_id);
     }
@@ -28,8 +33,7 @@ pub fn ensure(root: &Path) -> Result<String, ForgeError> {
         created_at: Utc::now().to_rfc3339(),
     };
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| ForgeError::io("create .sea-forge directory", e))?;
+        std::fs::create_dir_all(parent).map_err(|e| ForgeError::io("create state root", e))?;
     }
     let bytes = serde_json::to_vec_pretty(&record)?;
     let mut file = OpenOptions::new()
@@ -44,9 +48,9 @@ pub fn ensure(root: &Path) -> Result<String, ForgeError> {
     Ok(cell_id)
 }
 
-/// Read the existing `cell.json`. Returns `Ok(None)` if absent (legacy).
+/// Read the existing `cell.json`. Returns `Ok(None)` if absent.
 pub fn read(root: &Path) -> Result<Option<CellRecord>, ForgeError> {
-    let path = root.join(".sea-forge/cell.json");
+    let path = root.join("cell.json");
     let mut file = match OpenOptions::new().read(true).open(&path) {
         Ok(f) => f,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),

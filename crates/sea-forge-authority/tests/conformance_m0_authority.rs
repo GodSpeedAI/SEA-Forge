@@ -631,3 +631,157 @@ fn memory_scope_grant_carries_boundary() {
         "grant must carry the matched memory_scope boundary"
     );
 }
+
+// ── F-25.f: misspelled top-level bundle keys are rejected, not dropped ──
+
+#[test]
+fn misspelled_top_level_bundle_key_is_rejected() {
+    let result: Result<AuthorityPolicyBundle, _> = serde_yaml::from_str(
+        r#"version: "0.1"
+polcy_rules:
+  - name: typo
+    verdict: deny
+    actor_role: operator
+    operation_kind: execute_command
+"#,
+    );
+    let error = result.expect_err("unknown top-level keys must fail deserialization");
+    assert!(
+        error.to_string().to_lowercase().contains("unknown"),
+        "{error}"
+    );
+
+    // Control: the correctly spelled minimal bundle parses.
+    let ok: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+rules:
+  - name: rule
+    verdict: deny
+    actor_role: operator
+    operation_kind: execute_command
+"#,
+    )
+    .unwrap();
+    assert_eq!(ok.version, "0.1");
+}
+
+// ── F-25.j: reserved mutators hit the hard boundary before any rule ──
+
+#[test]
+fn reserved_mutator_into_generated_zone_denies_even_under_allow_all_policy() {
+    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        r#"version: "0.1"
+policy_surfaces:
+  file:
+    deny_write: []
+rules:
+  - name: allow-everything
+    verdict: allow
+    actor_role: operator
+    operation_kind: delete_file
+  - name: allow-everything-2
+    verdict: allow
+    actor_role: operator
+    operation_kind: generated_zone_mutation
+  - name: allow-everything-3
+    verdict: allow
+    actor_role: operator
+    operation_kind: spec_mutation
+  - name: allow-everything-4
+    verdict: allow
+    actor_role: operator
+    operation_kind: settlement_authority_mutation
+  - name: allow-everything-5
+    verdict: allow
+    actor_role: operator
+    operation_kind: policy_mutation
+  - name: allow-everything-6
+    verdict: allow
+    actor_role: operator
+    operation_kind: evidence_mutation
+"#,
+    )
+    .unwrap();
+    let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+    let actor = Actor {
+        actor_id: "operator_local".into(),
+        role: ActorRole::Operator,
+    };
+
+    for resource_type in [
+        "delete_file",
+        "generated_zone_mutation",
+        "spec_mutation",
+        "settlement_authority_mutation",
+        "policy_mutation",
+        "evidence_mutation",
+    ] {
+        let decision = engine
+            .evaluate(AuthorityEvaluation {
+                actor: &actor,
+                binding: bundle.resolve_identity(&actor.actor_id, actor.role.clone()),
+                run_id: "run_j",
+                case_id: "case_j",
+                plan_item_id: "item_j",
+                sequence: 1,
+                action: &sea_forge_core::types::AuthorityAction::Reserved {
+                    resource_type: resource_type.into(),
+                    resource_id: "gen-model".into(),
+                    parameters: serde_json::json!({"path": "src/gen/model.rs"}),
+                },
+                workspace_root: std::path::Path::new("/tmp/f25j"),
+                evidence_refs: vec![],
+                artifacts_root: None,
+                timeout_secs: None,
+                env_keys: Default::default(),
+                domainforge_candidate: None,
+                environment: None,
+            })
+            .unwrap();
+        assert_eq!(
+            decision.verdict,
+            sea_forge_core::types::Verdict::Deny,
+            "{resource_type} into a generated zone must deny"
+        );
+        assert!(
+            decision.matched_rule.as_deref() == Some("reserved_mutator_hard_boundary"),
+            "{resource_type}: rule {:?} reasons {:?}",
+            decision.matched_rule,
+            decision.reason_codes
+        );
+        assert!(
+            decision
+                .reason_codes
+                .iter()
+                .any(|r| r.contains("hard_boundary") || r.contains("generated_zone_denied")),
+            "{resource_type}: {:?}",
+            decision.reason_codes
+        );
+    }
+
+    // Control: the same mutator outside the boundary is NOT hard-denied —
+    // it proceeds to normal rule evaluation (allowed here by allow-all).
+    let outside = engine
+        .evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding: bundle.resolve_identity(&actor.actor_id, actor.role.clone()),
+            run_id: "run_j",
+            case_id: "case_j",
+            plan_item_id: "item_j",
+            sequence: 2,
+            action: &sea_forge_core::types::AuthorityAction::Reserved {
+                resource_type: "delete_file".into(),
+                resource_id: "scratch".into(),
+                parameters: serde_json::json!({"path": "workspace/scratch.txt"}),
+            },
+            workspace_root: std::path::Path::new("/tmp/f25j"),
+            evidence_refs: vec![],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            environment: None,
+        })
+        .unwrap();
+    assert_ne!(outside.verdict, sea_forge_core::types::Verdict::Deny);
+}

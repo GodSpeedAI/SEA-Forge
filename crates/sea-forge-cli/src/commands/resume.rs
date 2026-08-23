@@ -2,7 +2,7 @@ use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids, types::*};
 use sea_forge_ledger::{LedgerEntry, LedgerStream};
 use serde_json::{json, Value};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::PathBuf;
 
@@ -192,9 +192,15 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
         return resume_artifact_transition(options, root, case_dir, case, pending);
     }
 
-    if case.state != CaseState::AwaitingApproval {
+    // F-11: an `Active` case is resumable as crash recovery. Episodes that
+    // were activated but never settled are terminal-settled as
+    // rejected/interrupted (see `settle_interrupted_episodes`) before the
+    // case loop re-derives its actions from events, so a kill between
+    // activation and settlement no longer strands the case forever.
+    let recovering_active = case.state == CaseState::Active;
+    if case.state != CaseState::AwaitingApproval && !recovering_active {
         return Err(ForgeError::Input(format!(
-            "case {} is {} — only awaiting_approval can resume",
+            "case {} is {} — only awaiting_approval or active can resume",
             options.case_id,
             serde_json::to_string(&case.state)
                 .unwrap_or_default()
@@ -246,7 +252,17 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
         .iter()
         .any(|a| a.status == ApprovalStatus::Expired || a.status == ApprovalStatus::Rejected);
 
-    if !has_approved {
+    if recovering_active {
+        // F-11 recovery: settle activated-but-unsettled episodes as
+        // rejected/interrupted, then re-drive the loop below. The
+        // approval-expiry termination below must not fire for a recovered
+        // Active case — it never escalated.
+        let recovered =
+            settle_interrupted_episodes(&case_events, &case_stream, &plan, &mut events)?;
+        if recovered > 0 {
+            println!("recovered_interrupted_episodes={recovered}");
+        }
+    } else if !has_approved {
         // If rejected or expired, terminate the case.
         let mut case = case;
         case.state = CaseState::Terminated;
@@ -608,6 +624,50 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
             }
         }
     }
+}
+
+/// F-11: terminal-settle episodes that were activated but never reached a
+/// terminal trace event — the crash window between `ItemActivated` (appended
+/// before execution) and the post-settlement completion/failure event. Each
+/// stranded episode settles as rejected with basis `interrupted`, so the case
+/// loop can re-derive a lawful action (terminate on a required item, re-drive
+/// a repeating one) instead of answering exit 5 forever. A genuinely parked
+/// human task activates with an explicit `human_task` marker; its Active
+/// standing is the designed park state, not a crashed episode, and is left
+/// untouched.
+fn settle_interrupted_episodes(
+    case_events: &std::path::Path,
+    stream: &LedgerStream,
+    plan: &CasePlan,
+    events: &mut Vec<TraceEvent>,
+) -> Result<usize, ForgeError> {
+    let projection = sea_forge_planner::case_engine::replay_case(&plan.items, events);
+    let mut settled = BTreeSet::new();
+    for state in &projection.items {
+        if state.status != sea_forge_planner::case_engine::ItemStatus::Active
+            || settled.contains(&state.item_id)
+        {
+            continue;
+        }
+        let parked_human_task = events.iter().rev().any(|event| {
+            event.plan_item_id.as_deref() == Some(state.item_id.as_str())
+                && event.kind == TraceKind::ItemActivated
+                && event.payload.get("human_task").and_then(Value::as_bool) == Some(true)
+        });
+        if parked_human_task {
+            continue;
+        }
+        append_event(
+            case_events,
+            stream,
+            events,
+            TraceKind::ItemFailed,
+            Some(&state.item_id),
+            json!({"instance": state.instances.max(1), "basis": "interrupted"}),
+        )?;
+        settled.insert(state.item_id.clone());
+    }
+    Ok(settled.len())
 }
 
 fn resume_artifact_transition(

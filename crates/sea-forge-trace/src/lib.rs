@@ -113,6 +113,11 @@ impl JsonlTraceRecorder {
             .write_all(b"\n")
             .and_then(|_| self.writer.flush())
             .map_err(|e| ForgeError::io("flush trace event", e))?;
+        // F-25.r: power-loss-safe appends, matching the ledger discipline.
+        self.writer
+            .get_ref()
+            .sync_data()
+            .map_err(|e| ForgeError::io("sync trace journal", e))?;
         Ok(event_id)
     }
 }

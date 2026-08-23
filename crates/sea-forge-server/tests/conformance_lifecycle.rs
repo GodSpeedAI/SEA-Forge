@@ -394,7 +394,7 @@ async fn round_trip(socket: &Path, request: Value, wait: Duration) -> Value {
 async fn a_hung_endpoint_is_bounded_and_the_server_keeps_serving() {
     let (address, listener) = hung_endpoint().await;
     let (root, socket) = boot_with_hung_endpoint(address.port()).await;
-    let policy = hung_policy(root.path());
+    hung_policy(root.path());
 
     let started = Instant::now();
     let response = round_trip(
@@ -403,7 +403,8 @@ async fn a_hung_endpoint_is_bounded_and_the_server_keeps_serving() {
             "verb": "agent_probe", "actor": {"actor_id": "operator_local", "role": "operator"},
             "endpoint": "hung",
             "prompt": "health check",
-            "policy": policy.to_str().unwrap(),
+            // F-16: the policy reference is a cell-relative spelling.
+            "policy": "policy.yaml",
             "entity": "operator_local",
             "process": "test",
         }),

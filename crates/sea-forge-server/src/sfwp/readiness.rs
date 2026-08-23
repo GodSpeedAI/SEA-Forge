@@ -197,9 +197,10 @@ fn is_integrity_failure(message: &str) -> bool {
 /// Build the `readiness.get` view. Infallible: validation failure is reported
 /// as a status inside the view, never propagated.
 ///
-/// `config.root` is the project root; `store::validate` appends `.sea-forge`
-/// itself. Treating its parent as the project root would validate a different
-/// cell and make a fresh server look ready without a local committed snapshot.
+/// `config.root` is the state root (F-12): self-model ledgers, snapshots, and
+/// projections all join directly beneath it. Treating any parent or nested
+/// `.sea-forge` as the root would validate a different cell and make a fresh
+/// server look ready without a local committed snapshot.
 pub fn get(config: &ServerConfig, params: ReadinessGetParams) -> ReadinessView {
     let intended_operation = params.intended_operation;
 
@@ -361,12 +362,11 @@ fn committed_snapshot_source(
         return Ok(None);
     };
     let stale = sea_forge_self_model::store::is_stale(project_root)?;
-    let ledger_root = project_root.join(".sea-forge");
-    let ledger_dir = ledger_root.join("ledgers").join("self-model");
+    let ledger_dir = project_root.join("ledgers").join("self-model");
     if !ledger_dir.exists() {
         return Ok(None);
     }
-    let stream = LedgerStream::open(&ledger_root, "self-model", "readiness-inspect")?;
+    let stream = LedgerStream::open(project_root, "self-model", "readiness-inspect")?;
     let Some(entry) = stream.read_entries()?.into_iter().find(|entry| {
         entry.record_kind == "self_model_snapshot"
             && entry

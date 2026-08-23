@@ -8,6 +8,7 @@
 use sea_forge_core::types::{
     ArtifactRef, Attribution, CapabilityDelta, Intent, SemanticEnvelope, SettlementStatus,
 };
+use sea_forge_core::ForgeError;
 use sea_forge_extension::cep0008::{
     project_to_cep0008_flat_v1, Cep0008FlatEnvelopeV1, Cep0008ProjectionInput,
 };
@@ -56,7 +57,7 @@ fn test_input<'a>(env: &'a SemanticEnvelope) -> Cep0008ProjectionInput<'a> {
         envelope: env,
         ledger_id: "ledger_main",
         entry_ulid: "01J9XKQZ8GTDNR4P3SMQVWHJEY",
-        payload_hash: "sha256:abcdef0123456789",
+        payload_hash: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
         settlement_timestamp: "2026-07-16T12:00:00Z",
     }
 }
@@ -337,5 +338,56 @@ fn cep0008_idempotency_and_event_id_mapped() {
     let env = test_envelope();
     let result = project(&env);
     assert_eq!(result.event_id, "01J9XKQZ8GTDNR4P3SMQVWHJEY");
-    assert_eq!(result.idempotency_key, "sha256:abcdef0123456789");
+    assert_eq!(
+        result.idempotency_key,
+        "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+    );
+}
+
+// ── SUP-09i: identity grammar on the projection inputs ──
+
+fn f09i_input(mutate: impl FnOnce(Cep0008ProjectionInput) -> Cep0008ProjectionInput) -> ForgeError {
+    let env = test_envelope();
+    let input = mutate(test_input(&env));
+    project_to_cep0008_flat_v1(&input).expect_err("malformed input must fail closed")
+}
+
+#[test]
+fn cep0008_malformed_entry_ulid_fails_closed() {
+    let error = f09i_input(|mut i| {
+        i.entry_ulid = "not-a-ulid";
+        i
+    });
+    assert!(
+        error.to_string().contains("entry_ulid is not a valid"),
+        "{error}"
+    );
+}
+
+#[test]
+fn cep0008_malformed_payload_hash_fails_closed() {
+    let error = f09i_input(|mut i| {
+        i.payload_hash = "deadbeef";
+        i
+    });
+    assert!(
+        error
+            .to_string()
+            .contains("payload_hash must be sha256:<64 lowercase hex>"),
+        "{error}"
+    );
+}
+
+#[test]
+fn cep0008_malformed_ledger_id_fails_closed() {
+    let error = f09i_input(|mut i| {
+        i.ledger_id = "../escape";
+        i
+    });
+    assert!(
+        error
+            .to_string()
+            .contains("ledger_id is not a safe id segment"),
+        "{error}"
+    );
 }

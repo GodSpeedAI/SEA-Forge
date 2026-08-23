@@ -28,11 +28,12 @@ fn default_cell_id(root: &Path) -> Result<String, ForgeError> {
 }
 
 /// Real active-extension state from the installation's own extension registry
-/// (`.sea-forge/extensions/registry.json`), replacing the caller-supplied
-/// empty vec (Task 11 audit remediation). An absent registry is a fresh
-/// installation with zero extensions, not an error.
+/// (`<root>/extensions/registry.json`, F-12 state root), replacing the
+/// caller-supplied empty vec (Task 11 audit remediation). Callers use
+/// [`ExtensionRegistry::exists`] to disclose an *absent* registry as a stale
+/// cell instead of silently asserting zero extensions (SUP-07).
 fn active_extensions_from_registry(root: &Path) -> Result<Vec<ExtensionState>, ForgeError> {
-    let registry = ExtensionRegistry::load(&root.join(".sea-forge"))?;
+    let registry = ExtensionRegistry::load(root)?;
     Ok(registry
         .extensions
         .into_iter()
@@ -71,7 +72,7 @@ fn real_sandbox_classes_available() -> Vec<String> {
 /// remediation). An absent or empty file hashes to a well-defined, still-real
 /// "no capability data yet" digest rather than a fabricated placeholder.
 fn real_capability_projection_sha256(root: &Path) -> Result<String, ForgeError> {
-    let path = root.join(".sea-forge").join("capabilities.jsonl");
+    let path = root.join("capabilities.jsonl");
     let envelopes = if path.exists() {
         sea_forge_capability::load_envelopes(&path)?
     } else {
@@ -111,6 +112,18 @@ pub fn rebuild(root: &Path, _probe: bool, actor_id: &str) -> Result<u8, ForgeErr
         actor_id,
     };
     let snapshot = store::rebuild(root, &inputs)?;
+    // SUP-07: a rebuild over an *absent* registry attested nothing about the
+    // cell's extensions. The snapshot still lands (its model content is real)
+    // but is disclosed stale — degraded, never a clean "zero extensions"
+    // cell — until a rebuild runs against an existing registry.
+    if !ExtensionRegistry::exists(root) {
+        store::mark_current_stale(root, "extension_registry_absent")?;
+        println!("snapshot_id={}", snapshot.snapshot_id);
+        println!("release_id={}", snapshot.release_id);
+        println!("snapshot_hash={}", snapshot.snapshot_hash);
+        println!("freshness=Stale (extension_registry_absent)");
+        return Ok(0);
+    }
     println!("snapshot_id={}", snapshot.snapshot_id);
     println!("release_id={}", snapshot.release_id);
     println!("snapshot_hash={}", snapshot.snapshot_hash);

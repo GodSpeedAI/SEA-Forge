@@ -109,21 +109,23 @@ impl SnapshotView for LedgerSnapshotView {
         // side effect of a read-only disclosure query, and tolerates an
         // installation that has never attempted this capability (no
         // `capabilities.jsonl` yet).
-        let envelopes_path = self.root.join(".sea-forge/capabilities.jsonl");
+        // F-12: the passed root is the state root; capabilities join directly.
+        let envelopes_path = self.root.join("capabilities.jsonl");
         let envelopes = if envelopes_path.exists() {
             load_envelopes(&envelopes_path).ok()?
         } else {
             vec![]
         };
         let declarations =
-            load_declarations(&self.root.join(".sea-forge/settlement/declarations.jsonl")).ok()?;
+            load_declarations(&self.root.join("settlement/declarations.jsonl")).ok()?;
         let record = build_capability_record(
             name,
             &envelopes,
             &declarations,
             &self.policy,
             &chrono::Utc::now().to_rfc3339(),
-        );
+        )
+        .ok()?;
         // Evidence comes from whichever ledgered source actually backs the
         // status: envelope run IDs (attempt history) and, since a capability
         // can be qualifying-demonstrated from declarations alone with zero
@@ -138,10 +140,7 @@ impl SnapshotView for LedgerSnapshotView {
             .iter()
             .filter_map(|e| e.declaration_id.clone())
             .collect();
-        for decl in declarations
-            .iter()
-            .filter(|d| d.plan_item_id.contains(name) || name == "*")
-        {
+        for decl in declarations.iter().filter(|d| d.plan_item_id == name) {
             evidence_refs.extend(decl.verification_evidence_refs.iter().cloned());
             evidence_refs.extend(decl.source_evidence_refs.iter().cloned());
             settlement_refs.push(decl.declaration_id.clone());
@@ -203,15 +202,45 @@ impl SnapshotView for LedgerSnapshotView {
 /// surface, bound to one actor for the lifetime of one `ask` call. Absent
 /// policy file ⇒ an empty (deny-all) surface, matching the surface's own
 /// documented deny-by-default absence rule (§8.2).
+/// The grant keys one asker may match: the raw actor id (a grant may be
+/// authored against a principal directly) plus the wire spelling of every role
+/// the authority bundle binds to that principal. Grants are keyed by *role*
+/// (`SelfDisclosureGrant.actor_role`); matching them against an actor id was
+/// exactly the F-23 over-denial — a bundle binding `operator_local` to
+/// `operator` authorized nothing, because `"operator_local" != "operator"`, so
+/// lawfully granted disclosures came back denied.
+fn grant_keys_for(bundle: &AuthorityPolicyBundle, actor_id: &str) -> Vec<String> {
+    let mut keys = vec![actor_id.to_string()];
+    for binding in &bundle.identity_bindings {
+        if binding.principal == actor_id {
+            // The same spelling the server identity gate reports (`operator`,
+            // `R-SO`, …): serde's serialization of the typed enum, so the key
+            // vocabulary stays defined once, by the enum's own attributes.
+            if let Some(wire) = serde_json::to_value(&binding.role)
+                .ok()
+                .and_then(|value| value.as_str().map(str::to_owned))
+            {
+                if !keys.contains(&wire) {
+                    keys.push(wire);
+                }
+            }
+        }
+    }
+    keys
+}
+
 struct SurfacePolicy {
     surface: sea_forge_authority::SelfDisclosureSurface,
-    actor_role: String,
+    /// Every key this asker may match a grant on (see [`grant_keys_for`]).
+    grant_keys: Vec<String>,
 }
 
 impl DisclosurePolicy for SurfacePolicy {
-    fn permits(&self, actor_id: &str, class: &ClaimClass) -> bool {
-        self.surface
-            .permits(actor_id, claim_class_to_surface_str(class))
+    fn permits(&self, _actor_id: &str, class: &ClaimClass) -> bool {
+        let class = claim_class_to_surface_str(class);
+        self.grant_keys
+            .iter()
+            .any(|key| self.surface.permits(key, class))
     }
 
     fn requires_fresh(&self) -> bool {
@@ -220,25 +249,27 @@ impl DisclosurePolicy for SurfacePolicy {
         // the trait to carry the class into `requires_fresh`, which would
         // change `answer_question`'s established single-gate shape; failing
         // toward "requires fresh" is always safe, never a wider disclosure.
-        self.surface
-            .grants
-            .iter()
-            .any(|g| g.actor_role == self.actor_role && g.require_fresh_snapshot == Some(true))
+        self.surface.grants.iter().any(|g| {
+            self.grant_keys.contains(&g.actor_role) && g.require_fresh_snapshot == Some(true)
+        })
     }
 }
 
 fn load_surface_policy(root: &Path, actor_id: &str) -> Result<SurfacePolicy, ForgeError> {
     let path = policy_path(root);
-    let surface = if path.exists() {
-        AuthorityPolicyBundle::load(&path)?
-            .policy_surfaces
-            .self_disclosure
+    let (surface, grant_keys) = if path.exists() {
+        let bundle = AuthorityPolicyBundle::load(&path)?;
+        let keys = grant_keys_for(&bundle, actor_id);
+        (bundle.policy_surfaces.self_disclosure, keys)
     } else {
-        sea_forge_authority::SelfDisclosureSurface::default()
+        (
+            sea_forge_authority::SelfDisclosureSurface::default(),
+            vec![actor_id.to_string()],
+        )
     };
     Ok(SurfacePolicy {
         surface,
-        actor_role: actor_id.to_string(),
+        grant_keys,
     })
 }
 

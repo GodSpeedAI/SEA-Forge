@@ -115,12 +115,18 @@ impl ExecutionSandbox for LocalSandbox {
         })
     }
 
+    // F-25.k: this backend does not implement artifact collection. Returning
+    // an empty vec silently would make a future caller mistake "unsupported"
+    // for "nothing was requested", so the stub fails closed instead.
     fn collect_artifacts(
         &self,
         _h: &SandboxHandle,
         _paths: &[RelPath],
     ) -> Result<Vec<ArtifactRef>, SandboxError> {
-        Ok(Vec::new())
+        Err(SandboxError::new(
+            "artifact_collection_unsupported",
+            "collect_artifacts is not implemented for this sandbox backend",
+        ))
     }
 
     fn destroy(&self, _h: SandboxHandle) -> Result<(), SandboxError> {

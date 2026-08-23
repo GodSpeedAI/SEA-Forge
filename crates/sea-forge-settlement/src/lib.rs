@@ -66,6 +66,14 @@ pub fn settle(
                     basis.push("jail_violation".into());
                     (SettlementStatus::Rejected, false)
                 }
+                // F-20: the stderr heuristic cannot prove the jail denied
+                // anything — the child may have failed on its own permission
+                // error. Rejected either way, but the durable basis says
+                // suspected, never definite.
+                ExecutionStatus::SuspectedSandboxViolation => {
+                    basis.push("suspected_jail_violation".into());
+                    (SettlementStatus::Rejected, false)
+                }
                 ExecutionStatus::Completed => {
                     let mut accepted = true;
                     if claim.criteria.require_exit_zero {

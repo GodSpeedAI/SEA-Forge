@@ -13,29 +13,16 @@ use std::{
     path::{Component, Path, PathBuf},
     sync::Mutex,
 };
-use unicode_normalization::UnicodeNormalization;
 
 fn sha256_bytes(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
+/// SUP-09d: delegates to the single shared canonical primitive in core.
 fn hash_canonical<T: Serialize>(value: &T) -> Result<String, ForgeError> {
-    fn sorted(value: Value) -> Value {
-        match value {
-            Value::Object(map) => Value::Object(
-                map.into_iter()
-                    .map(|(key, value)| (key, sorted(value)))
-                    .collect(),
-            ),
-            Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
-            Value::String(value) => Value::String(value.nfc().collect()),
-            other => other,
-        }
-    }
-    let value = sorted(serde_json::to_value(value)?);
     Ok(format!(
         "sha256:{}",
-        sha256_bytes(&serde_json::to_vec(&value)?)
+        sha256_bytes(&sea_forge_core::canonical::canonical_bytes(value)?)
     ))
 }
 
@@ -93,6 +80,10 @@ pub struct ActionGrant {
     compensating_controls: Vec<String>,
     expires_at: chrono::DateTime<Utc>,
     memory_scope: Option<String>,
+    /// F-25.h: the canonical executable identity the decision verified
+    /// (`untrusted_executable`), carried so the spawn path can re-check it.
+    /// Never serialized — grants are move-only, in-memory artifacts.
+    _resolved_executable: Option<PathBuf>,
 }
 
 impl ActionGrant {
@@ -105,6 +96,14 @@ impl ActionGrant {
     /// this filter without rereading policy.
     pub fn memory_scope(&self) -> Option<&str> {
         self.memory_scope.as_deref()
+    }
+
+    /// F-25.h: the canonical argv[0] identity this grant's decision verified,
+    /// when the granted action is an `execute_command`. The executor re-checks
+    /// it immediately before spawning to shrink the decision→spawn swap
+    /// window to a same-instant race.
+    pub fn resolved_executable(&self) -> Option<&PathBuf> {
+        self._resolved_executable.as_ref()
     }
 
     /// Authority-derived TCP ports this grant permits a jail-class run to bind
@@ -847,11 +846,23 @@ impl AuthorityPolicyBundle {
         Ok(descriptor)
     }
 
+    /// The content identity of a policy bundle: one canonical hash over every
+    /// governed field, excluding the self-describing `policy_bundle_hash` and
+    /// the location-bound `source_base`. The hash names *what the policy says*,
+    /// never where the file sat on disk (F-25.e) — the same policy must hash
+    /// identically wherever a cell happens to mount it. Every producer of a
+    /// bundle hash goes through this one primitive, so two sites cannot drift
+    /// into different answers for identical content.
+    fn content_hash(&self) -> Result<String, ForgeError> {
+        let mut canonical = self.clone();
+        canonical.policy_bundle_hash = None;
+        canonical.source_base = None;
+        hash_canonical(&canonical)
+            .map_err(|error| schema(format!("cannot hash policy bundle: {error}")))
+    }
+
     pub fn refresh_policy_bundle_hash(&mut self) -> Result<(), ForgeError> {
-        self.policy_bundle_hash = None;
-        let source_base = self.source_base.take();
-        self.policy_bundle_hash = Some(hash_canonical(self)?);
-        self.source_base = source_base;
+        self.policy_bundle_hash = Some(self.content_hash()?);
         Ok(())
     }
     pub fn load_domainforge_model(&self) -> Result<Option<DomainModel>, ForgeError> {
@@ -1066,11 +1077,7 @@ impl AuthorityPolicyBundle {
             {
                 return Err(schema("incomplete v0.2 authority policy bundle".into()));
             }
-            let mut canonical = self.clone();
-            canonical.policy_bundle_hash = None;
-            canonical.source_base = None;
-            let computed = hash_canonical(&canonical)
-                .map_err(|error| schema(format!("cannot hash policy bundle: {error}")))?;
+            let computed = self.content_hash()?;
             if self.policy_bundle_hash.as_deref() != Some(computed.as_str()) {
                 return Err(schema("policy_bundle_hash mismatch".into()));
             }
@@ -1385,7 +1392,12 @@ pub struct AuthorityEvaluation<'a> {
 impl PolicyAuthorityEngine {
     pub fn new(bundle: AuthorityPolicyBundle) -> Result<Self, ForgeError> {
         bundle.validate(Path::new("<in-memory-policy>"))?;
-        let bundle_hash = hash_canonical(&bundle)?;
+        // F-25.e: the engine's hash comes from the same content-hash primitive
+        // `refresh_policy_bundle_hash` uses, so a recorded decision's
+        // `policy_bundle_hash` matches the bundle's own stamp — and two cells
+        // loading the same policy from different absolute paths evaluate under
+        // the same identity instead of path-derived ones.
+        let bundle_hash = bundle.content_hash()?;
         Ok(Self {
             bundle,
             bundle_hash,
@@ -1831,6 +1843,12 @@ impl PolicyAuthorityEngine {
                 .ok_or_else(|| ForgeError::Input("authority decision grants no sandbox".into()))?,
             boundaries: decision.boundary_constraints.clone(),
             compensating_controls: decision.compensating_controls.clone(),
+            _resolved_executable: match &action {
+                AuthorityAction::ExecuteCommand { argv, .. } => argv
+                    .first()
+                    .and_then(|argv0| std::fs::canonicalize(argv0).ok()),
+                _ => None,
+            },
             expires_at,
             memory_scope: decision.matched_rule.as_deref().and_then(|name| {
                 self.bundle
@@ -2064,6 +2082,17 @@ impl PolicyAuthorityEngine {
                 Some("policy_surfaces.file.deny_write".into()),
                 vec!["file_policy_deny".into(), "generated_zone_denied".into()],
                 vec!["file-access-policy:deny".into()],
+                vec![],
+            )
+        } else if hard_denied_reserved(action) {
+            // F-25.j: reserved mutators get the same unconditional boundary
+            // as WriteFile — before their first executor exists, so no future
+            // delete_file/generated_zone executor lands outside the wall.
+            (
+                Verdict::Deny,
+                Some("reserved_mutator_hard_boundary".into()),
+                vec!["generated_zone_denied".into(), "hard_boundary".into()],
+                vec!["authority:reserved-mutator-boundary".into()],
                 vec![],
             )
         } else if let AuthorityAction::ExternalApi { host } = action {
@@ -2772,6 +2801,46 @@ fn hard_denied(action: &AuthorityAction, patterns: &[String]) -> bool {
         _ => false,
     }
 }
+/// F-25.j: mutation-class reserved actions whose target path hits a built-in
+/// hard boundary are denied regardless of any rule. The kinds listed here are
+/// exactly the ones with no executor yet; registering the boundary now means
+/// their first executor inherits the wall on day one instead of shipping an
+/// unguarded mutator.
+fn hard_denied_reserved(action: &AuthorityAction) -> bool {
+    const MUTATION_CLASS: &[&str] = &[
+        "delete_file",
+        "generated_zone_mutation",
+        "spec_mutation",
+        "settlement_authority_mutation",
+        "policy_mutation",
+        "evidence_mutation",
+    ];
+    const BUILT_INS: &[&str] = &[
+        "**/src/gen/**",
+        "docs/specs/**/*.ast*.json",
+        "docs/specs/**/*.ir.json",
+        "docs/specs/**/*.manifest.json",
+        "**/.git/**",
+        "**/.env*",
+        "**/*secret*",
+    ];
+    let AuthorityAction::Reserved {
+        resource_type,
+        parameters,
+        ..
+    } = action
+    else {
+        return false;
+    };
+    if !MUTATION_CLASS.contains(&resource_type.as_str()) {
+        return false;
+    }
+    let Some(path) = parameters.get("path").and_then(Value::as_str) else {
+        return false;
+    };
+    BUILT_INS.iter().any(|pattern| path_denied(path, pattern))
+}
+
 fn malformed_action(action: &AuthorityAction) -> bool {
     match action {
         AuthorityAction::WriteFile { path, .. } => invalid_relative_path(path),
@@ -3881,6 +3950,42 @@ mod tests {
         assert!(PolicyAuthorityEngine::new(invalid).is_err());
     }
 
+    // F-25.e: the bundle hash identifies policy *content*, never the absolute
+    // path the bundle was loaded from. `refresh_policy_bundle_hash` and
+    // `PolicyAuthorityEngine::new` must agree, and two copies of one policy at
+    // different `source_base` locations must hash — and therefore evaluate,
+    // compare across cells, and settle — identically.
+    #[test]
+    fn policy_bundle_hash_is_independent_of_source_base_path() {
+        let base: AuthorityPolicyBundle = serde_yaml::from_str(
+            "version: \"0.2\"\nallow_degraded: true\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: mutate-policy\n    verdict: allow\n    actor_role: operator\n    operation_kind: policy_mutation\n",
+        )
+        .unwrap();
+        let mut here = complete_v02(base.clone());
+        here.source_base = Some(PathBuf::from("/opt/cell-a"));
+        here.refresh_policy_bundle_hash().unwrap();
+        let engine_here = PolicyAuthorityEngine::new(here.clone()).unwrap();
+
+        let mut there = complete_v02(base);
+        there.source_base = Some(PathBuf::from("/var/lib/other-cell/deeper/still"));
+        there.refresh_policy_bundle_hash().unwrap();
+        let engine_there = PolicyAuthorityEngine::new(there.clone()).unwrap();
+
+        assert_eq!(
+            here.policy_bundle_hash, there.policy_bundle_hash,
+            "the same policy must stamp the same hash from any location"
+        );
+        assert_eq!(
+            engine_here.bundle_hash, engine_there.bundle_hash,
+            "engine evaluation identity must not be path-derived"
+        );
+        assert_eq!(
+            engine_there.bundle_hash,
+            there.policy_bundle_hash.unwrap(),
+            "the engine hash and the refreshed bundle stamp are one primitive"
+        );
+    }
+
     #[test]
     fn rule_disposition_cannot_override_rbac_or_sod() {
         let base: AuthorityPolicyBundle = serde_yaml::from_str(
@@ -4090,6 +4195,49 @@ mod tests {
             assert_eq!(decision.verdict, Verdict::Deny);
             assert_eq!(decision.reason_codes, ["unclassified"]);
         }
+    }
+
+    #[test]
+    fn f25h_grant_binds_the_decision_time_executable_identity() {
+        // The harness policy only allows write_file; add an execute_command
+        // allow bound to the trusted self-executable so the decision is an
+        // Allow under the `untrusted_executable` gate.
+        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&format!(
+            "version: \"0.1\"\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self-cmd\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: {}\n",
+            std::env::current_exe()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+        ))
+        .unwrap();
+        let engine = PolicyAuthorityEngine::new(bundle).unwrap();
+        // The decision-time rule (`untrusted_executable`) only allows
+        // execute_command actions whose argv[0] resolves to this very
+        // binary, so the bound identity is current_exe's canonical path.
+        let action = AuthorityAction::ExecuteCommand {
+            argv: vec![std::env::current_exe()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned()],
+            cwd: ".".into(),
+        };
+        let decision = evaluate_with(&engine, &action);
+        assert_eq!(
+            decision.verdict,
+            Verdict::Allow,
+            "{:?}",
+            decision.reason_codes
+        );
+        let (_root, committed) = commit(&decision);
+        let grant = engine.grant(&decision, &committed, &action, None).unwrap();
+        let bound = grant
+            .resolved_executable()
+            .expect("execute_command grants must carry the resolved executable");
+        assert_eq!(
+            bound.as_path(),
+            std::fs::canonicalize(std::env::current_exe().unwrap()).unwrap()
+        );
     }
 
     #[test]

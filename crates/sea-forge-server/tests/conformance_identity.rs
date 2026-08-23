@@ -325,14 +325,17 @@ async fn a_request_cannot_verify_one_actor_and_attribute_its_work_to_another() {
 #[tokio::test]
 async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
     let (root, socket) = boot(two_actors()).await;
-    let plan = escalating_plan(root.path());
-    let policy = escalating_policy(root.path());
+    // Fixtures land at `<root>/plan.json` and `<root>/escalate.yaml`, the
+    // cell-relative spellings the submit below references.
+    escalating_plan(root.path());
+    escalating_policy(root.path());
     let mut client = Client::connect(&socket).await;
 
     let submitted = client
         .call(json!({"verb": "submit",
                      "actor": {"actor_id": "operator_a", "role": "operator"},
-                     "plan": plan, "policy": policy,
+                     // F-16: plan/policy references are cell-relative spellings.
+                     "plan": "plan.json", "policy": "escalate.yaml",
                      "entity": "operator_a", "process": "test", "timeout": 60}))
         .await;
     let case_id = submitted["case_id"]
@@ -445,14 +448,17 @@ async fn the_catalog_advertises_every_method_a_client_can_call() {
 #[tokio::test]
 async fn an_escalated_approval_is_bound_to_committed_criteria() {
     let (root, socket) = boot(two_actors()).await;
-    let plan = escalating_plan(root.path());
-    let policy = escalating_policy(root.path());
+    // Fixtures land at `<root>/plan.json` and `<root>/escalate.yaml`, the
+    // cell-relative spellings the submit below references.
+    escalating_plan(root.path());
+    escalating_policy(root.path());
     let mut client = Client::connect(&socket).await;
 
     let submitted = client
         .call(json!({"verb": "submit",
                      "actor": {"actor_id": "operator_a", "role": "operator"},
-                     "plan": plan, "policy": policy,
+                     // F-16: plan/policy references are cell-relative spellings.
+                     "plan": "plan.json", "policy": "escalate.yaml",
                      "entity": "operator_a", "process": "test", "timeout": 60}))
         .await;
     let case_id = submitted["case_id"].as_str().expect("a case").to_owned();
@@ -499,14 +505,17 @@ async fn an_escalated_approval_is_bound_to_committed_criteria() {
 #[tokio::test]
 async fn reconnecting_does_not_launder_a_self_approval() {
     let (root, socket) = boot(two_actors()).await;
-    let plan = escalating_plan(root.path());
-    let policy = escalating_policy(root.path());
+    // Fixtures land at `<root>/plan.json` and `<root>/escalate.yaml`, the
+    // cell-relative spellings the submit below references.
+    escalating_plan(root.path());
+    escalating_policy(root.path());
 
     let mut first = Client::connect(&socket).await;
     let submitted = first
         .call(json!({"verb": "submit",
                      "actor": {"actor_id": "operator_a", "role": "operator"},
-                     "plan": plan, "policy": policy,
+                     // F-16: plan/policy references are cell-relative spellings.
+                     "plan": "plan.json", "policy": "escalate.yaml",
                      "entity": "operator_a", "process": "test", "timeout": 60}))
         .await;
     let case_id = submitted["case_id"].as_str().unwrap().to_owned();

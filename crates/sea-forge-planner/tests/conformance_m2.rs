@@ -46,7 +46,10 @@ fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -
     PlanItem {
         plan_item_id: id.into(),
         name: id.into(),
-        operations: vec![],
+        operations: vec![Operation::WriteFile {
+            path: format!("out/{id}.txt"),
+            content_hint: "x".into(),
+        }],
         entry_criteria: entry,
         entry_criteria_mode: Default::default(),
         exit_criteria: vec![],
@@ -498,4 +501,73 @@ fn m10_or_of_sentries_behavior_unchanged() {
     let ws = HashSet::new();
     let activated = evaluate_sentries(&items, &events, &ws);
     assert!(activated.contains(&"C".to_string()));
+}
+
+// ── F-25.m: plan bounds — size cap, empty-ops rejection, iterative cycles ──
+
+fn linear_chain_plan(length: usize) -> CasePlan {
+    let items: Vec<PlanItem> = (0..length)
+        .map(|i| PlanItem {
+            plan_item_id: format!("item_{i:06}"),
+            name: format!("item {i}"),
+            operations: vec![Operation::WriteFile {
+                path: format!("out/{i}.txt"),
+                content_hint: "x".into(),
+            }],
+            entry_criteria: vec![],
+            entry_criteria_mode: Default::default(),
+            exit_criteria: vec![],
+            settlement_criteria: SettlementCriteria::default(),
+            settlement_criteria_ref: None,
+            item_kind: ItemKind::SandboxedTask,
+            sandbox_class: Some("local".into()),
+            parent_stage: None,
+            markers: ItemMarkers {
+                required: true,
+                ..Default::default()
+            },
+            max_instances: 1,
+            depends_on: i
+                .checked_sub(1)
+                .map(|p| vec![format!("item_{p:06}")])
+                .unwrap_or_default(),
+            environment: None,
+            proposed_by: None,
+        })
+        .collect();
+    CasePlan {
+        version: "0.2".into(),
+        plan_id: "plan_chain".into(),
+        case_id: "case_placeholder".into(),
+        run_id: "run_placeholder".into(),
+        intent_id: "int_chain".into(),
+        template_ref: None,
+        job_contract_ref: None,
+        items,
+    }
+}
+
+#[test]
+fn deep_linear_dependency_chain_validates_without_stack_overflow() {
+    // 100k nodes would overflow the old recursive has_cycle.
+    let mut plan = linear_chain_plan(100_000);
+    let error = validate_proposal(&mut plan).expect_err("over the cap");
+    assert!(error.to_string().contains("maximum item count"), "{error}");
+
+    // Under the cap, the same chain shape validates cleanly (iterative DFS).
+    let mut small = linear_chain_plan(sea_forge_planner::case_engine::MAX_PLAN_ITEMS);
+    validate_proposal(&mut small).expect("cap-sized linear chain must validate");
+}
+
+#[test]
+fn sandboxed_task_without_operations_is_rejected() {
+    let mut plan = linear_chain_plan(1);
+    plan.items[0].operations.clear();
+    let error = validate_proposal(&mut plan).expect_err("no ops");
+    assert!(
+        error
+            .to_string()
+            .contains("must declare at least one operation"),
+        "{error}"
+    );
 }

@@ -5,7 +5,7 @@
 //! never be recomputed. ADR-002 selects `XChaCha20Poly1305` (RustCrypto
 //! `chacha20poly1305`, already workspace-approved) for this: seal the exact
 //! canonical redacted transcript bytes with a fresh per-run key, store the
-//! key at `.sea-forge/sealed/<run_id>.key` (outside the public `full`
+//! key at `<root>/sealed/<run_id>.key` (outside the public `full`
 //! artifact surface), and verify by decrypting immediately after sealing.
 //! Deleting the key file is the crypto-shred operation — the ciphertext
 //! alone is permanently unrecoverable without it.
@@ -41,7 +41,7 @@ pub struct SealedTranscript {
 }
 
 /// Seal `plaintext` for `run_id` under `root`. Writes a fresh random key to
-/// `.sea-forge/sealed/<run_id>.key` (mode 0600 on unix) and `nonce ||
+/// `<root>/sealed/<run_id>.key` (mode 0600 on unix) and `nonce ||
 /// ciphertext` to `ciphertext_path`. Returns before verification — callers
 /// must call `verify_sealed_transcript` before treating the seal as durable
 /// evidence (M13 T16 step 4: "verify before completion").
@@ -62,7 +62,8 @@ pub fn seal_transcript(
         .encrypt(&nonce, plaintext)
         .map_err(|_| ForgeError::Internal("transcript seal failed".into()))?;
 
-    let sealed_dir = root.join(".sea-forge").join("sealed");
+    // F-12: the server root is the state root; sealed keys join directly.
+    let sealed_dir = root.join("sealed");
     std::fs::create_dir_all(&sealed_dir)
         .map_err(|e| ForgeError::io("create sealed transcript dir", e))?;
     let key_path = sealed_dir.join(format!("{run_id}.key"));

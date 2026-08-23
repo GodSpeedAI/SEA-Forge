@@ -26,26 +26,14 @@ fn sha256_domain(domain: &str, bytes: &[u8]) -> String {
 
 /// Canonicalize a serde value using the jcs-nfc-v1 profile.
 /// - Object keys are sorted lexicographically.
-/// - Strings are NFC-normalized.
+/// - String values are NFC-normalized; keys are not (documented asymmetry).
 /// - Arrays retain order.
+///
+/// SUP-09d: this is the shared `sea_forge_core::canonical` primitive — the
+/// single implementation behind every hash producer in the workspace. The
+/// `jcs-nfc-v1` label names *this* profile, which is not RFC 8785 JCS.
 pub fn canonical_json(value: &Value) -> Result<Vec<u8>, ForgeError> {
-    fn sorted(value: Value) -> Value {
-        match value {
-            Value::Object(map) => {
-                let mut entries: Vec<_> = map.into_iter().collect();
-                entries.sort_by(|a, b| a.0.cmp(&b.0));
-                let map: serde_json::Map<String, Value> = entries.into_iter().collect();
-                Value::Object(map)
-            }
-            Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
-            Value::String(s) => Value::String(
-                unicode_normalization::UnicodeNormalization::nfc(s.as_str()).collect(),
-            ),
-            other => other,
-        }
-    }
-    let sorted = sorted(value.clone());
-    serde_json::to_vec(&sorted).map_err(|e| ForgeError::Serialization(e.to_string()))
+    sea_forge_core::canonical::canonical_json(value)
 }
 
 /// Compute a canonical SHA-256 hash for arbitrary serializable data.
@@ -1024,6 +1012,20 @@ impl LedgerStream {
     ) -> Result<LedgerEntry, ForgeError> {
         check_redaction(&payload)?;
         let last = self.read_last_entry()?;
+        // F-25.q: refuse to chain onto an unverified predecessor. Recompute
+        // the tail's content hash and require it to equal the stored
+        // `entry_hash`, or the file was tampered with between appends and
+        // building on it would silently legitimize forged history. (A
+        // *consistently* rewritten tail is undetectable here by definition;
+        // that class is what verify() and checkpoint signatures exist for.)
+        if let Some(tail) = &last {
+            if tail.entry_hash != entry_hash(tail)? {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: predecessor entry hash mismatch; run verify() before appending"
+                        .into(),
+                ));
+            }
+        }
         let append_ordinal = last.as_ref().map(|e| e.append_ordinal + 1).unwrap_or(0);
         let previous_entry_hash = last.as_ref().map(hash_entry);
         let entry_ulid = ulid()?;

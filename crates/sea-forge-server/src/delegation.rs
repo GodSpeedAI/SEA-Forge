@@ -29,14 +29,13 @@ use serde::Serialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex as AsyncMutex};
 use zeroize::Zeroizing;
 
 /// Governed delegation request.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct DelegationRequest<'a> {
     pub endpoint_id: &'a str,
     pub instruction: &'a str,
@@ -47,6 +46,11 @@ pub struct DelegationRequest<'a> {
     pub policy_path: &'a str,
     pub entity: &'a str,
     pub process: &'a str,
+    /// The verified role of the principal this delegation is attributed to.
+    /// Every authority decision inside the episode is evaluated for this role;
+    /// a hardcoded default would make role-keyed policy rules meaningless
+    /// (F-08). Callers without a socket identity keep the local-operator shape.
+    pub actor_role: ActorRole,
     /// Optional JSON Schema (M13 T15, spec §7.3): a schema-valid final
     /// output becomes a named evidence field and can accept an otherwise
     /// cap-terminated episode; a schema-invalid one never accepts.
@@ -54,6 +58,28 @@ pub struct DelegationRequest<'a> {
     /// Effective retention mode, already resolved through the full
     /// precedence chain by the caller (M13 T16, spec §8.1).
     pub transcript_retention: sea_forge_agent::TranscriptRetentionMode,
+}
+
+impl Default for DelegationRequest<'_> {
+    fn default() -> Self {
+        Self {
+            endpoint_id: "",
+            instruction: "",
+            model: None,
+            max_turns: 0,
+            token_budget: None,
+            criteria: Default::default(),
+            policy_path: "",
+            entity: "",
+            process: "",
+            // The documented fallback for in-process callers and test fixtures
+            // that never crossed the socket identity gate; production callers
+            // set the verified role explicitly.
+            actor_role: ActorRole::Operator,
+            response_schema: None,
+            transcript_retention: Default::default(),
+        }
+    }
 }
 
 #[derive(Clone, Default)]
@@ -329,12 +355,14 @@ pub async fn execute_with_permission_broker(
         request.max_turns,
         request.token_budget,
     );
-    let policy = resolve_policy_path(&config.root, request.policy_path);
+    let policy = resolve_policy_path(&config.root, request.policy_path)?;
     let bundle = AuthorityPolicyBundle::load(&policy)?;
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
     let actor = Actor {
         actor_id: request.entity.into(),
-        role: ActorRole::Operator,
+        // F-08: evaluated for the verified role the caller propagated, never
+        // an assumed operator default.
+        role: request.actor_role.clone(),
     };
     let binding = bundle.resolve_identity(&actor.actor_id, actor.role.clone());
     let decision = engine.evaluate(AuthorityEvaluation {
@@ -402,6 +430,7 @@ pub async fn execute_with_permission_broker(
             &bundle,
             request.entity,
             request.process,
+            request.actor_role.clone(),
             run,
             case,
             item,
@@ -851,7 +880,7 @@ async fn submit_swe_seed_declaration(
     settlement_id: &str,
     execution_started_at: &str,
 ) -> Result<(), ForgeError> {
-    let policy = resolve_policy_path(root, policy_path);
+    let policy = resolve_policy_path(root, policy_path)?;
     let bundle = AuthorityPolicyBundle::load(&policy)?;
     let descriptor = bundle.strong_settlement_authority()?.clone();
     let declarer_role = descriptor
@@ -1157,6 +1186,7 @@ async fn run_acp_episode(
     bundle: &AuthorityPolicyBundle,
     entity: &str,
     process: &str,
+    actor_role: ActorRole,
     run: &str,
     case: &str,
     item: &str,
@@ -1218,24 +1248,24 @@ async fn run_acp_episode(
             let workspace_for_jail = workspace.clone();
             let argv = spawn.argv.clone();
             let env = spawn.env.clone();
-            let (sender, receiver) = std::sync::mpsc::channel();
-            std::thread::spawn(move || {
+            // F-24: the jail spawn blocks on process setup — run it on a
+            // blocking thread instead of parking this tokio worker (the old
+            // thread+mpsc shape blocked in recv() all the same).
+            let child = tokio::task::spawn_blocking(move || {
                 // Jail-class ACP agents default to network denial (fail-closed).
                 // No scoped egress grant is plumbed to this path yet; the jail
                 // must not open ungranted outbound/listening TCP sockets.
-                let result = sea_forge_sandbox::jail::spawn_interactive(
+                sea_forge_sandbox::jail::spawn_interactive(
                     &workspace_for_jail,
                     &artifacts,
                     &argv,
                     &workspace_for_jail,
                     &env,
                     &sea_forge_sandbox::NetworkPosture::Denied,
-                );
-                let _ = sender.send(result);
-            });
-            let child = receiver
-                .recv()
-                .map_err(|error| ForgeError::Internal(error.to_string()))??;
+                )
+            })
+            .await
+            .map_err(|error| ForgeError::Internal(format!("jail spawn task panic: {error}")))??;
             AcpSession::from_std_child(
                 child.child,
                 child.stdin,
@@ -1264,6 +1294,9 @@ async fn run_acp_episode(
         item_id: item.into(),
         entity: entity.into(),
         process: process.into(),
+        // F-08: permission mediations are authority decisions for the
+        // verified principal, so they carry its verified role.
+        role: actor_role,
         bundle: Arc::new(bundle.clone()),
         timeout_secs: snapshot.timeout.as_secs(),
         decision_sequence: Arc::new(std::sync::atomic::AtomicUsize::new(3)),
@@ -1272,7 +1305,21 @@ async fn run_acp_episode(
         criteria_ref,
     };
     let per_turn = snapshot.timeout;
-    let prior_continuation = latest_disconnected_continuation(root, case, item, &snapshot.id)?;
+    // F-24: ledger scan for a prior continuation is blocking fs work.
+    let resume_root = root.to_path_buf();
+    let resume_case = case.to_string();
+    let resume_item = item.to_string();
+    let resume_snapshot_id = snapshot.id.clone();
+    let prior_continuation = tokio::task::spawn_blocking(move || {
+        latest_disconnected_continuation(
+            &resume_root,
+            &resume_case,
+            &resume_item,
+            &resume_snapshot_id,
+        )
+    })
+    .await
+    .map_err(|error| ForgeError::Internal(format!("continuation scan task panic: {error}")))??;
     let acp_outcome = session
         .run_episode_with_continuation(
             instruction,
@@ -1285,9 +1332,18 @@ async fn run_acp_episode(
         .await;
     let continuation_key = acp_outcome.continuation_key.clone();
     let mut outcome = acp_outcome_to_delegation(acp_outcome);
-    let harvested = match harvest_swe_seed(snapshot, &workspace, run) {
-        Ok(refs) => refs,
-        Err(_) => {
+    // F-24: the SWE_SEED harvest runs git subprocesses and walks the
+    // workspace tree — keep that off the async worker.
+    let harvest_snapshot = snapshot.clone();
+    let harvest_workspace = workspace.clone();
+    let harvest_run = run.to_string();
+    let harvested = match tokio::task::spawn_blocking(move || {
+        harvest_swe_seed(&harvest_snapshot, &harvest_workspace, &harvest_run)
+    })
+    .await
+    {
+        Ok(Ok(refs)) => refs,
+        Ok(Err(_)) | Err(_) => {
             outcome.termination = DelegationTermination::EndpointError;
             outcome.error_subcode = Some("swe_seed_harvest_error".into());
             Vec::new()
@@ -1553,6 +1609,9 @@ struct AcpAuthorityMediator {
     entity: String,
     #[allow(dead_code)]
     process: String,
+    /// The verified role of the delegating principal (F-08); every mediated
+    /// permission decision is evaluated for this role.
+    role: ActorRole,
     bundle: Arc<AuthorityPolicyBundle>,
     timeout_secs: u64,
     decision_sequence: Arc<std::sync::atomic::AtomicUsize>,
@@ -1565,20 +1624,10 @@ pub(crate) fn append_approval_view(
     root: &Path,
     approval: &ApprovalRequest,
 ) -> Result<(), ForgeError> {
-    let path = root.join("approvals.jsonl");
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|error| ForgeError::io("create approvals parent", error))?;
-    }
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .map_err(|error| ForgeError::io("open approvals.jsonl", error))?;
-    serde_json::to_writer(&mut file, approval)?;
-    file.write_all(b"\n")
-        .map_err(|error| ForgeError::io("flush approval", error))?;
-    Ok(())
+    // F-25.l: one owner for the journal write — the core helper appends
+    // record+newline in a single write, so a concurrent approval.list can
+    // never observe a torn line.
+    sea_forge_core::approvals::append(root, approval)
 }
 
 impl AcpPermissionMediator for AcpAuthorityMediator {
@@ -1610,7 +1659,7 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
             };
             let actor = Actor {
                 actor_id: self.entity.clone(),
-                role: ActorRole::Operator,
+                role: self.role.clone(),
             };
             let binding = self
                 .bundle

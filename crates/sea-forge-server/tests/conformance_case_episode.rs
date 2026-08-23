@@ -221,8 +221,9 @@ async fn dispatch_under(
     );
     let request: Request = serde_json::from_value(serde_json::json!({
         "verb": "submit",
-        "plan": plan_path,
-        "policy": policy_path,
+        // F-16: plan/policy references are cell-relative spellings.
+        "plan": "plan.json",
+        "policy": policy_path.strip_prefix(root.path()).unwrap().to_string_lossy(),
         "entity": "operator_local",
         "process": "test",
         "timeout": 60,

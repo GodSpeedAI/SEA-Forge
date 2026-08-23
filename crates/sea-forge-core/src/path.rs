@@ -156,7 +156,7 @@ mod tests {
     fn id_segment_grammar() {
         assert!(valid_id_segment("case_20260710T120000Z_ab12cd34", 128));
         assert!(valid_id_segment("self-model", 128));
-        assert!(valid_id_segment("name@version", 128) == false);
+        assert!(!valid_id_segment("name@version", 128));
         assert!(!valid_id_segment("", 128));
         assert!(!valid_id_segment("a/b", 128));
         assert!(!valid_id_segment("../x", 128));

@@ -76,9 +76,9 @@ pub fn compute_policy_hash(policy: &CapabilityPromotionPolicy) -> Result<String,
     hash_canonical(&copy)
 }
 
-/// Save a policy snapshot to `.sea-forge/capabilities/policies/<sha256>.json`.
+/// Save a policy snapshot to `<root>/capabilities/policies/<sha256>.json` (F-12 state root).
 pub fn save_policy(root: &Path, policy: &CapabilityPromotionPolicy) -> Result<(), ForgeError> {
-    let dir = root.join(".sea-forge/capabilities/policies");
+    let dir = root.join("capabilities/policies");
     std::fs::create_dir_all(&dir).map_err(|e| ForgeError::io("create policy dir", e))?;
     let path = dir.join(format!("{}.json", policy.policy_sha256));
     let json = serde_json::to_vec_pretty(policy)?;
@@ -91,7 +91,7 @@ pub fn load_policy(
     policy_sha256: &str,
 ) -> Result<CapabilityPromotionPolicy, ForgeError> {
     let path = root
-        .join(".sea-forge/capabilities/policies")
+        .join("capabilities/policies")
         .join(format!("{policy_sha256}.json"));
     let data = std::fs::read(&path)
         .map_err(|e| ForgeError::io(format!("read policy {policy_sha256}"), e))?;
@@ -179,22 +179,31 @@ pub fn load_envelopes(path: &Path) -> Result<Vec<SemanticEnvelope>, ForgeError> 
 /// Build a CapabilityRecord from envelopes, declarations, and a promotion policy.
 /// This is the pure projection — same inputs always produce the same record
 /// modulo `rebuilt_at`.
+/// Build a capability record from envelopes, declarations, and policy.
+///
+/// F-13: declarations map to the capability by *exact* `plan_item_id`
+/// equality — the same identity rule envelopes already apply to
+/// `attempted_capability`. Substring or wildcard (`"*"`) aggregation would
+/// inflate provenance (a capability named `test` must never aggregate
+/// `itm_contest_7`), and inflated provenance gates `require_proven`
+/// side-effect authority, so `"*"` is rejected outright.
 pub fn build_capability_record(
     capability_name: &str,
     envelopes: &[SemanticEnvelope],
     declarations: &[SettlementDeclaration],
     policy: &CapabilityPromotionPolicy,
     rebuilt_at: &str,
-) -> CapabilityRecord {
-    // Filter declarations for this capability (by plan_item_id match)
+) -> Result<CapabilityRecord, ForgeError> {
+    if capability_name == "*" {
+        return Err(ForgeError::Input(
+            "capability_name \"*\" is not a capability identity; promotion matching is exact"
+                .into(),
+        ));
+    }
+    // Filter declarations for this capability (exact plan-item mapping)
     let cap_decls: Vec<&SettlementDeclaration> = declarations
         .iter()
-        .filter(|d| {
-            // Declaration's plan_item_id should map to the capability.
-            // For now, we match on capability_name appearing in plan_item_id or
-            // match all declarations if capability_name is "*".
-            d.plan_item_id.contains(capability_name) || capability_name == "*"
-        })
+        .filter(|d| d.plan_item_id == capability_name)
         .collect();
 
     // Filter envelopes for this capability
@@ -431,7 +440,7 @@ pub fn build_capability_record(
         .max()
         .unwrap_or_default();
 
-    CapabilityRecord {
+    Ok(CapabilityRecord {
         version: RECORD_VERSION.into(),
         capability_name: capability_name.into(),
         first_seen,
@@ -448,28 +457,30 @@ pub fn build_capability_record(
         contraction_reasons,
         evidence_sample,
         rebuilt_at: rebuilt_at.into(),
-    }
+    })
 }
 
 /// Rebuild all capability records from envelopes + declarations + policy.
-/// Writes to `.sea-forge/capabilities/<name>.json`.
+/// Writes to `<root>/capabilities/<name>.json`.
 /// Same inputs always produce byte-identical output modulo `rebuilt_at`.
 pub fn rebuild_capability(
     root: &Path,
     capability_name: &str,
     policy: &CapabilityPromotionPolicy,
 ) -> Result<CapabilityRecord, ForgeError> {
-    let envelopes = load_envelopes(&root.join(".sea-forge/capabilities.jsonl"))?;
-    let declarations = load_declarations(&root.join(".sea-forge/settlement/declarations.jsonl"))?;
+    // F-12/SUP-07: state-root joins — the same `<root>/capabilities.jsonl`
+    // the pipeline writes, not a double-nested shadow copy.
+    let envelopes = load_envelopes(&root.join("capabilities.jsonl"))?;
+    let declarations = load_declarations(&root.join("settlement/declarations.jsonl"))?;
     let record = build_capability_record(
         capability_name,
         &envelopes,
         &declarations,
         policy,
         &chrono::Utc::now().to_rfc3339(),
-    );
+    )?;
     // Write the record
-    let dir = root.join(".sea-forge/capabilities");
+    let dir = root.join("capabilities");
     std::fs::create_dir_all(&dir).map_err(|e| ForgeError::io("create capability dir", e))?;
     let path = dir.join(format!("{capability_name}.json"));
     let json = serde_json::to_vec_pretty(&record)?;

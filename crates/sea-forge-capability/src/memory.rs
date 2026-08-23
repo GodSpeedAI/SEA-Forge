@@ -96,11 +96,24 @@ pub fn append_memory_items(path: &Path, items: &[MemoryItem]) -> Result<(), Forg
 pub fn load_memory_items(path: &Path) -> Result<Vec<MemoryItem>, ForgeError> {
     let file = File::open(path).map_err(|e| ForgeError::io("open memory items", e))?;
     let mut items = Vec::new();
-    for line in BufReader::new(file).lines() {
-        let line = line.map_err(|e| ForgeError::io("read memory items", e))?;
-        match serde_json::from_str::<MemoryItem>(&line) {
-            Ok(item) => items.push(item),
-            Err(_) => { /* skip malformed */ }
+    let mut reader = BufReader::new(file);
+    let mut raw = Vec::new();
+    loop {
+        // F-25.r: one non-UTF-8 byte must not abort a whole recall scan;
+        // undecodable lines are skipped exactly like malformed-JSON lines.
+        raw.clear();
+        let read = reader
+            .read_until(b'\n', &mut raw)
+            .map_err(|e| ForgeError::io("read memory items", e))?;
+        if read == 0 {
+            break;
+        }
+        match std::str::from_utf8(&raw)
+            .ok()
+            .and_then(|line| serde_json::from_str::<MemoryItem>(line.trim()).ok())
+        {
+            Some(item) => items.push(item),
+            None => { /* skip malformed */ }
         }
     }
     Ok(deduplicate(items))
@@ -342,5 +355,70 @@ pub fn recall_with_fallback(
         Ok(indexed)
     } else {
         recall_memory(items_path, query)
+    }
+}
+
+#[cfg(test)]
+mod f25r_tests {
+    use super::*;
+    use sea_forge_core::types::{
+        Attribution, CapabilityDelta, Intent, SemanticEnvelope, SettlementStatus,
+    };
+
+    // F-25.r: one non-UTF-8 byte degrades to a skipped line, never a failed
+    // recall scan — the same tolerance malformed-JSON lines already had.
+    #[test]
+    fn non_utf8_line_degrades_to_skipped_not_scan_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("items.jsonl");
+
+        let make = |statement: &str, capability: &str| {
+            let envelope = SemanticEnvelope {
+                version: "0.1".into(),
+                run_id: format!("run_{statement}"),
+                case_ref: "case_r".into(),
+                intent: Intent {
+                    intent_id: "int_r".into(),
+                    summary: statement.into(),
+                    actor_id: "entity_a".into(),
+                    process_id: "proc".into(),
+                    created_at: "2026-08-23T00:00:00Z".into(),
+                },
+                plan_ref: "plan_r".into(),
+                template_ref: None,
+                authority_decisions: vec![],
+                evidence_refs: vec!["evd_1".into()],
+                settlement_ref: "set_1".into(),
+                capability_delta: CapabilityDelta {
+                    attempted_capability: capability.into(),
+                    result: SettlementStatus::Accepted,
+                },
+                attribution: Attribution {
+                    entity_id: "entity_a".into(),
+                    process_id: "proc".into(),
+                    session_id: "sess".into(),
+                },
+                artifact_refs: vec![],
+                extension_refs: vec![],
+                projection_refs: vec![],
+                cell_id: None,
+            };
+            extract_from_envelope(&envelope, "2026-08-23T00:00:00Z").remove(0)
+        };
+
+        append_memory_items(&path, &[make("first statement", "cap-one")]).unwrap();
+        use std::io::Write as _;
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap();
+        file.write_all(b"\xff\xfe not utf8\n").unwrap();
+        drop(file);
+        append_memory_items(&path, &[make("second statement", "cap-two")]).unwrap();
+
+        // Deduplication unions same-key items; distinct capabilities keep the
+        // two records apart, so exactly the two valid lines survive.
+        let items = load_memory_items(&path).expect("scan must not fail on bad bytes");
+        assert_eq!(items.len(), 2, "{items:?}");
     }
 }

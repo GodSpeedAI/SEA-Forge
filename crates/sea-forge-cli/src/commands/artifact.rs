@@ -337,6 +337,10 @@ fn transition_plan(
                 "{:?} {:?} {} through {}",
                 input.transition_kind, input.mode, input.result_artifact_id, profile.profile_ref
             ),
+            // F-25.m: empty operations are lawful here because this item is
+            // evaluator-driven (see validate_proposal's exemption) — the
+            // governed transition executes through the evaluator, not item
+            // operations.
             operations: vec![],
             entry_criteria: vec![],
             entry_criteria_mode: Default::default(),

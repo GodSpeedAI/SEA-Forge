@@ -362,9 +362,16 @@ pub fn build_projection_record(
         output_refs,
         quarantine_refs: vec![],
         validation: ProjectionValidation {
-            status: ProjectionStatus::Accepted,
-            validator_ref: descriptor_sha256.into(),
-            basis: vec!["projection_validated".into()],
+            // SUP-04 (plan §4.5): no validator runs over the projected bytes
+            // yet, so the record must not stamp `Accepted` /
+            // `projection_validated` — that asserted validation that never
+            // happened. The interaction model's own vocabulary distinguishes
+            // declared from demonstrated; until the real validator is wired,
+            // the projection is Declared with the unvalidated basis, and
+            // `validator_ref` names no validator because none ran.
+            status: ProjectionStatus::Declared,
+            validator_ref: "none".into(),
+            basis: vec!["projection_unvalidated".into()],
         },
         authority_refs: vec![],
         evidence_refs: vec![],

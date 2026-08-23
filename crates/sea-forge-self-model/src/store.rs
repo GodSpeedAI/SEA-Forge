@@ -1,7 +1,7 @@
 //! Self-model persistence and lifecycle (spec-adlc-thoth §3.1, §7.1, §8.5,
 //! slice 1.0 + 1.5).
 //!
-//! Layout under `<root>/.sea-forge/self-model/`:
+//! Layout under `<root>/self-model/` (F-12 state-root convention):
 //!   manifest.json                     — installation manifest (release, current
 //!                                        snapshot id, staleness); the lifecycle
 //!                                        discriminator, never an immutable record.
@@ -17,10 +17,10 @@
 
 use crate::projections::{project_self, verify_projection, SelfModelProjection};
 use crate::{
-    build_cell_realization, build_snapshot, bundled, load_composed, release_realization,
-    verify_bundled, verify_snapshot, CellRealization, ComposedModel, ExtensionState,
-    ReleaseRealization, SelfModelSnapshot, SnapshotFreshness, ToolchainProbe, KERNEL_VERSION,
-    RELEASE_ID,
+    build_cell_realization, build_snapshot, bundled, load_composed, realization_sha256,
+    release_realization, verify_bundled, verify_snapshot, CellRealization, ComposedModel,
+    ExtensionState, ReleaseRealization, SelfModelSnapshot, SnapshotFreshness, ToolchainProbe,
+    KERNEL_VERSION, RELEASE_ID,
 };
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::ids;
@@ -41,7 +41,7 @@ const LEDGER_STREAM: &str = "self-model";
 const SCHEMA_VERSION: &str = "self_model.v1";
 
 fn dir(root: &Path) -> PathBuf {
-    root.join(".sea-forge").join("self-model")
+    root.join("self-model")
 }
 fn snapshots_dir(root: &Path) -> PathBuf {
     dir(root).join("snapshots")
@@ -375,7 +375,7 @@ pub fn rebuild(root: &Path, inputs: &RebuildInputs<'_>) -> Result<SelfModelSnaps
     // own hash is never ledgered or settled accepted.
     verify_snapshot(&snapshot)?;
 
-    let stream = LedgerStream::open(&root.join(".sea-forge"), LEDGER_STREAM, inputs.actor_id)?;
+    let stream = LedgerStream::open(root, LEDGER_STREAM, inputs.actor_id)?;
 
     let evidence = build_verification_evidence(inputs, &snapshot);
     let evidence_committed = stream.commit_typed(
@@ -434,9 +434,16 @@ pub fn rebuild(root: &Path, inputs: &RebuildInputs<'_>) -> Result<SelfModelSnaps
     materialize_projections(root, &stream, &projections)?;
 
     let release = release_realization();
+    // SUP-09f: pin the idempotency key to the realization's canonical
+    // *content*, not the constant release id. The payload legitimately varies
+    // between build environments (`generated_at` honors SOURCE_DATE_EPOCH) and
+    // across realization edits; keying on the constant turned every such
+    // difference into an unrecoverable idempotency-conflict error, while
+    // keying on content makes identical realizations dedupe (same key, same
+    // bytes → existing record returned) and differing ones commit cleanly.
     let release_committed = stream.commit_typed_once(
         "self_model_release_realization",
-        release.release_id.clone(),
+        realization_sha256(&release)?,
         vec![],
         &release,
         vec![],
@@ -561,9 +568,9 @@ pub fn validate(root: &Path) -> Result<(), ForgeError> {
     let models = bundled();
     verify_bundled(&models)?;
     let _composed = load_composed(&models)?;
-    let ledger_dir = root.join(".sea-forge").join("ledgers").join(LEDGER_STREAM);
+    let ledger_dir = root.join("ledgers").join(LEDGER_STREAM);
     if ledger_dir.exists() {
-        LedgerStream::open(&root.join(".sea-forge"), LEDGER_STREAM, "validator")?.verify()?;
+        LedgerStream::open(root, LEDGER_STREAM, "validator")?.verify()?;
     }
     if let Some(snap) = current_snapshot(root)? {
         verify_snapshot(&snap)?;
@@ -586,7 +593,10 @@ pub fn validate(root: &Path) -> Result<(), ForgeError> {
                             "self_model_error: bad projection record: {e}"
                         ))
                     })?;
-                verify_projection(&record)?;
+                // SUP-04: validation hashes the materialized outputs against
+                // the record's refs — a replaced or corrupted view file is a
+                // validation failure, not a clean pass.
+                verify_projection(&record, &pdir)?;
             }
         }
     }

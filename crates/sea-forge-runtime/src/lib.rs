@@ -25,6 +25,11 @@ pub fn execute(
     // from child-controlled request input.
     let network = NetworkPosture::from_granted_ports(grant.network_tcp_ports());
 
+    // F-25.h: capture the decision-time executable identity, then re-resolve
+    // argv[0] immediately before the spawn. A binary swapped in between the
+    // authority decision and this point no longer matches and is refused —
+    // shrinking the old decision→spawn window to a same-instant race.
+    let resolved_executable = grant.resolved_executable().cloned();
     grant.authorize_execution(
         &sea_forge_core::types::AuthorityAction::from(&request.operation),
         sea_forge_authority::ExecutionGrantContext {
@@ -37,6 +42,27 @@ pub fn execute(
             compensating_controls: &request.compensating_controls,
         },
     )?;
+    if let sea_forge_core::types::Operation::ExecuteCommand { argv, .. } = &request.operation {
+        match (&resolved_executable, argv.first()) {
+            (Some(bound), Some(argv0)) => {
+                let current = std::fs::canonicalize(argv0).map_err(|e| {
+                    ForgeError::Input(format!(
+                        "authority grant executable is unresolvable at spawn: {e}"
+                    ))
+                })?;
+                if current != *bound {
+                    return Err(ForgeError::Input(
+                        "authority grant executable identity changed since the decision".into(),
+                    ));
+                }
+            }
+            _ => {
+                return Err(ForgeError::Input(
+                    "authority grant carries no executable identity for an execute_command".into(),
+                ));
+            }
+        }
+    }
 
     let sandbox = select_sandbox(sandbox_class).map_err(|e: sea_forge_sandbox::SandboxError| {
         ForgeError::Config {

@@ -1,12 +1,132 @@
 # Current Status
 
-Updated: 2026-08-15
+Updated: 2026-08-23
 
 > **Deep-project-audit remediation is active on `ultracode/sea-forge-completion`.**
-> Preserve both protected stashes (`stash@{0}` and `stash@{1}`); do not pop
+> Preserve the protected stashes (`stash@{0}` and `stash@{1}`); do not pop
 > either without reviewing it. The governing plan is
 > `.agents/plans/deep-project-audit-remediation-2026-08-14.md`.
 >
+> **Latest slices: Batch 8 remainder (F-13, F-16) and Batch 9 hardening sweep
+> COMPLETE — the deep-project-audit remediation plan is now fully executed.**
+> Every finding row in the plan inventory is now R (remediated), AR, P with a
+> recorded disposition, or D/NA; remaining follow-ups live in
+> `OBSERVED_DEBT.md` (F-25.n idempotency-for-request-less-mutations,
+> CEP-0008 inbound causation_id, dead Compatibility/ExtensionInstallRecord
+> types, true RFC 8785 JCS profile, ComposedModel overlay precedence) — each
+> with its trigger/owner decision.
+>
+> Batch 8 remainder — **F-13**: promotion matches declarations by *exact*
+> `plan_item_id` equality and rejects `"*"` outright (typed error), so a
+> capability named `test` can no longer aggregate `itm_contest_7` evidence;
+> thoth disclosure uses the same exact rule. Tests: m4a f13_*. **F-16**:
+> policy/plan references resolve strictly workspace-relative under the cell
+> root (`resolve_policy_path` via core lexical validation; typed UnsafePath on
+> absolute/traversal), wired through submit/delegate/probe/cancel/SWE_SEED +
+> CLI client spellings; nine server suites + CLI m13 fixtures converted and
+> now double as boundary proofs.
+>
+> Batch 9 — **F-11**: CLI `resume` recovers stranded `Active` cases
+> (activated-but-unsettled episodes terminal-settle as rejected/interrupted,
+> parked human tasks untouched, loop re-drives lawfully). resume_recovery.rs
+> (5 tests). **SUP-06**: probe adapter version derived from config identity
+> (`cfg-<12 hex>`); fabricated output digest replaced with a real schema hash;
+> failed registration settles Rejected (`agent_endpoint_registration_failed`)
+> after authority commits; en-route fix: registry attestation moved from
+> per-probe case ledgers to a dedicated cell-scoped `extension-registry`
+> ledger (cross-case/restart verification now actually works). Tests: m12
+> t12_7_* (4). **F-24**: precondition record cap (16, pre-side-effect typed
+> error), resolver opens the ledger once per bundle, jail spawn/harvest/
+> continuation-scan/cancellation/events publish/get_range/replay/case minting
+> + settlement recording all moved off tokio workers onto blocking threads;
+> events ledger mutex-across-fsync eliminated (Arc + ledger flock remains the
+> serializer). Tail-cache/paged events deferred with triggers. **F-25
+> kernel items**: f pinning test; g narrowed per owner (legacy silent-policy
+> recall = own-entity only; cross-entity requires explicit memory_scope);
+> h grants bind decision-time canonical argv[0] and runtime re-checks at
+> spawn; i shared O_NOFOLLOW `safe_write` through materialize/env/artifact
+> paths; j mutation-class reserved mutators hit the hard generated-zone/.git/
+> .env/secret boundary before any rule; k collect_artifacts fails closed in
+> both backends; l approvals journal single-write append (one core owner);
+> m MAX_PLAN_ITEMS=256 + empty-ops SandboxedTask rejection (evaluator-driven
+> items exempt) + iterative has_cycle (100k-chain validated); q ledger append
+> refuses forged/rewritten tails (predecessor content-hash re-check);
+> r sync_data after flush in evidence/trace/capability writers + byte-oriented
+> recall scans (non-UTF8 degrades to malformed count). Workbench items a–d
+> landed in the separate Tauri workspace (frozen lockfile, sidecar env
+> allowlist + no-PATH fallback fail-closed, PID-file-scoped down recipes).
+> **SUP-09d**: one canonical primitive (`sea_forge_core::canonical`) behind
+> all four former copies with golden vectors — en-route discovery: the copies
+> diverged on nested-value NFC; shared primitive recurses at all depths (ASCII
+> data ⇒ historical hashes stable; F-25.q would surface any divergence
+> loudly). **SUP-09e**: `dual_declared_concepts()` discloses the reviewed
+> 30-name overlay-collision set (allowlist-pinned). **SUP-09i**: CEP-0008 ULID/
+> sha256/id-segment grammar, descriptor id/version grammar,
+> register_built_in hash-mismatch is a loud build bug, import dedupe/terminal-
+> standing refusal (registry-brick vector closed).
+>
+> **Verified after both batches:** `cargo fmt --all -- --check` clean;
+> `cargo clippy --workspace --all-targets --all-features --locked -- -D
+> warnings` clean; full workspace `cargo test --workspace --all-features
+> --locked --no-fail-fast`: **112 suites / 953 passed / 0 failed / 4 ignored**
+> (documented real-host release gates); `just context-check` passed.
+> Workbench src-tauri gate (after operator installed the Tauri system
+> prerequisites): `cargo fmt --check` clean (scoped fmt applied to pre-existing
+> drift in bridge.rs/drafts.rs), `cargo clippy --all-targets -- -D warnings`
+> clean, `cargo test` green — 27 lib + 4 bridge + 4 packaged_stack; the F-16
+> boundary also caught the host bridge test's absolute plan/policy spellings,
+> now cell-relative.
+> **Latest slices: Batch 5 (identity/role propagation) and Batch 6 (evidence
+> integrity) COMPLETE.**
+> Batch 5 — F-08: verified `ResolvedActor` (id + role) flows from
+> `dispatch_bounded` through `handle_request_as` into all five authority
+> evaluation sites; one documented operator fallback for in-process callers.
+> F-23: thoth matches disclosure grants against actor id **plus** every role
+> the bundle binds to that principal. F-25.e: one `content_hash` primitive
+> behind both bundle-hash producers — policy identity no longer path-derived.
+> SUP-09f: self-model rebuild idempotency keyed on realization content hash
+> (teeth-checked pre-fix). Regression tests:
+> `conformance_role_propagation.rs`, thoth `t23_*`,
+> `policy_bundle_hash_is_independent_of_source_base_path`,
+> `conformance_rebuild_identity.rs`.
+> Batch 6 — SUP-04: projection records stamp `Declared`/
+> `projection_unvalidated`/`validator_ref "none"`; `verify_projection` now
+> hashes materialized outputs against `output_refs` (replaced view file ⇒
+> `self_model_error`, teeth-tested in t93). SUP-09h: domainforge authority
+> trace honestly describes the stem-heuristic approximation. F-20: jail's
+> stderr heuristic classifies as new `SuspectedSandboxViolation`
+> (`suspected_jail_violation` basis, still Rejected); definite
+> `SandboxViolation` reserved for observed violations.
+>
+> **Verified after both batches:** fmt clean; clippy `-D warnings` clean on
+> all touched crates; full workspace suite 111 suites / 914 passed / 0 failed
+> / 4 ignored (documented real-host release gates).
+>
+> **Latest slice: Batch 7 (root convention + registry trust) COMPLETE.**
+> F-12/SUP-07: the state-root convention is now universal — cell.json,
+> self-model, thoth capability/declaration reads, transcript-seal keys, bundle
+> export/import, template adopt, and the capability promotion readers all join
+> directly under the passed root; the CLI default root directory (`.sea-forge`)
+> is simply the state root. Export fails closed on zero-resolving requested
+> runs; an absent extension registry discloses the snapshot stale
+> (`extension_registry_absent`) instead of fabricating a zero-extension cell.
+> SUP-08: `ExtensionRegistry::load_verified` proves registry bytes against the
+> newest `extension_registry` ledger record; quarantined runtime adapters can
+> no longer be replaced/resurrected by registration; duplicate `(id,version)`
+> entries rejected at load. Tests: `export_with_unresolvable_runs_fails_closed_not_silently_empty`,
+> `legacy_sea_forge_symlink_is_inert_to_import`, extension `load_verified_*` /
+> `quarantined_runtime_adapter_*`. Verified: fmt clean, clippy `-D warnings`
+> clean on all seven touched crates, full workspace 111 suites / 917 passed /
+> 0 failed / 4 ignored.
+>
+> **Next task:** Batch 8 remainder — governance metadata + operability:
+> F-13 (exact capability↔plan-item mapping in promotion matching, reject `*`)
+> and F-16 (constrain server policy/plan path resolution to workspace-relative
+> under cell root). F-21 already landed cross-batch. Then Batch 9 hardening
+> sweep (F-24, remaining F-25.a–d/f–i items, SUP-09d/e/i) plus the still-open
+> F-11 (stranded-`Active` recovery verb) and SUP-06.
+
+
 > **Latest slice (Workbench, owner-directed):** the "Case-authoring proof
 > scenarios (6, 7) have no e2e coverage" debt is resolved — per the owner's
 > direction the coverage is driven by **agent-browser**, not Playwright. New

@@ -480,6 +480,11 @@ pub enum ExecutionStatus {
     SpawnFailed,
     TimedOut,
     SandboxViolation,
+    /// A jail violation *inferred* from child-controlled stderr rather than
+    /// observed from the jail itself. The child may have failed for its own
+    /// permission reasons (a remote 403, a user-facing message), so this
+    /// status records a suspected — never a definite — violation (F-20).
+    SuspectedSandboxViolation,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ExecutionResult {
@@ -1224,6 +1229,11 @@ pub enum ProjectionKind {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectionStatus {
+    /// Declared but never validated: recorded honestly as a projection that
+    /// was produced, while no validator has run over its bytes (SUP-04 —
+    /// `Declared` is the interaction model's vocabulary for "asserted, not
+    /// demonstrated"). Promote to `Accepted` only when real validation runs.
+    Declared,
     Accepted,
     Rejected,
     Quarantined,

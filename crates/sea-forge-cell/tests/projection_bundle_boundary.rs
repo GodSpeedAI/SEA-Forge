@@ -61,7 +61,7 @@ fn self_model_projections_round_trip_through_federation() {
     let dst = tempfile::tempdir().unwrap();
 
     let run_id = "run_20260716T000000Z_aaaaaa";
-    let run_dir = src.path().join(".sea-forge/runs").join(run_id);
+    let run_dir = src.path().join("runs").join(run_id);
     fs::create_dir_all(run_dir.join("artifacts/self-model")).unwrap();
     for name in RUN_FILES {
         fs::write(run_dir.join(name), b"{}\n").unwrap();
@@ -77,7 +77,7 @@ fn self_model_projections_round_trip_through_federation() {
     )
     .unwrap();
 
-    let bundle = src.path().join(".sea-forge/export/boundary.tar");
+    let bundle = src.path().join("export/boundary.tar");
     let manifest = cell::export(src.path(), &[run_id.to_string()], &[], &bundle).unwrap();
 
     // The two self-model projection files are bundled.
@@ -93,10 +93,7 @@ fn self_model_projections_round_trip_through_federation() {
     // Import on a fresh root succeeds — files are verified by hash, not by
     // deserializing ProjectionKind, so the new variants are irrelevant here.
     let imported = cell::import(dst.path(), &bundle).unwrap();
-    let imported_root = dst
-        .path()
-        .join(".sea-forge/imported")
-        .join(&imported.cell_id);
+    let imported_root = dst.path().join("imported").join(&imported.cell_id);
 
     let round_tripped_kg = fs::read(
         imported_root
@@ -138,7 +135,7 @@ fn federation_proof_is_by_hash_not_enum_deserialization() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
     let run_id = "run_20260716T000001Z_bbbbbb";
-    let run_dir = src.path().join(".sea-forge/runs").join(run_id);
+    let run_dir = src.path().join("runs").join(run_id);
     fs::create_dir_all(run_dir.join("artifacts")).unwrap();
     for name in RUN_FILES {
         fs::write(run_dir.join(name), b"{}\n").unwrap();
@@ -150,7 +147,7 @@ fn federation_proof_is_by_hash_not_enum_deserialization() {
     )
     .unwrap();
 
-    let bundle = src.path().join(".sea-forge/export/alien.tar");
+    let bundle = src.path().join("export/alien.tar");
     cell::export(src.path(), &[run_id.to_string()], &[], &bundle).unwrap();
     cell::import(dst.path(), &bundle).expect("import is hash-based, enum-agnostic");
 }

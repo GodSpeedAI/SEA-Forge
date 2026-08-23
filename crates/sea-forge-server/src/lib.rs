@@ -73,9 +73,11 @@ pub struct ServerState {
     /// across reconnects.
     pub(crate) correlation: RequestCorrelationStore,
     /// The single durable SFWP events ledger; its `entry_ulid` is the event
-    /// cursor. Guarded so concurrent connection tasks serialize their appends
-    /// on top of the ledger's own file lock.
-    events_ledger: Mutex<LedgerStream>,
+    /// cursor. F-24: shared behind an `Arc` and accessed from blocking
+    /// threads — the ledger's own `flock` serializes concurrent appends, so a
+    /// tokio mutex (which used to be held across the blocking append) is not
+    /// needed and would stall every publisher/subscriber on one slow fsync.
+    events_ledger: Arc<LedgerStream>,
     /// Live SFWP event fan-out. Subscribers ride on top of the durable ledger;
     /// the broadcast is never source truth.
     pub(crate) event_bus: broadcast::Sender<EventFrame>,
@@ -152,7 +154,7 @@ impl ServerState {
             permission_broker: delegation::AcpApprovalBroker::default(),
             semaphore: Arc::new(Semaphore::new(max)),
             correlation,
-            events_ledger: Mutex::new(events_ledger),
+            events_ledger: Arc::new(events_ledger),
             event_bus,
         })
     }
@@ -168,10 +170,23 @@ impl ServerState {
         run_id: Option<&str>,
         detail: serde_json::Value,
     ) -> Result<EventFrame, ForgeError> {
-        let frame = {
-            let ledger = self.events_ledger.lock().await;
-            sfwp::events::append_event(&ledger, kind, case_id, run_id, detail)?
-        };
+        // F-24: the append does flock + fsync + a tail scan — blocking work
+        // belongs on a blocking thread, never on a tokio worker.
+        let ledger = Arc::clone(&self.events_ledger);
+        let kind = kind.to_string();
+        let case_id = case_id.map(str::to_owned);
+        let run_id = run_id.map(str::to_owned);
+        let frame = tokio::task::spawn_blocking(move || {
+            sfwp::events::append_event(
+                &ledger,
+                &kind,
+                case_id.as_deref(),
+                run_id.as_deref(),
+                detail,
+            )
+        })
+        .await
+        .map_err(|error| ForgeError::Internal(format!("events append task panic: {error}")))??;
         let _ = self.event_bus.send(frame.clone());
         Ok(frame)
     }
@@ -183,8 +198,14 @@ impl ServerState {
         to_cursor: Option<&str>,
         limit: Option<u32>,
     ) -> Result<Vec<EventFrame>, ForgeError> {
-        let ledger = self.events_ledger.lock().await;
-        sfwp::events::get_range(&ledger, from_cursor, to_cursor, limit)
+        let ledger = Arc::clone(&self.events_ledger);
+        let from_cursor = from_cursor.map(str::to_owned);
+        let to_cursor = to_cursor.map(str::to_owned);
+        tokio::task::spawn_blocking(move || {
+            sfwp::events::get_range(&ledger, from_cursor.as_deref(), to_cursor.as_deref(), limit)
+        })
+        .await
+        .map_err(|error| ForgeError::Internal(format!("events read task panic: {error}")))?
     }
 
     /// Replay durable events after a cursor for a subscribe catch-up burst.
@@ -192,8 +213,13 @@ impl ServerState {
         &self,
         from_cursor: Option<&str>,
     ) -> Result<Vec<EventFrame>, ForgeError> {
-        let ledger = self.events_ledger.lock().await;
-        sfwp::events::replay_after(&ledger, from_cursor)
+        let ledger = Arc::clone(&self.events_ledger);
+        let from_cursor = from_cursor.map(str::to_owned);
+        tokio::task::spawn_blocking(move || {
+            sfwp::events::replay_after(&ledger, from_cursor.as_deref())
+        })
+        .await
+        .map_err(|error| ForgeError::Internal(format!("events replay task panic: {error}")))?
     }
 
     /// The current configuration snapshot.
@@ -1157,8 +1183,10 @@ async fn dispatch_bounded(
 
     // Carried past the gate so the records this request produces name the actor
     // that was actually verified, rather than whatever default a downstream
-    // component would otherwise pick.
-    let mut verified_actor: Option<String> = None;
+    // component would otherwise pick. The whole `ResolvedActor` is carried —
+    // id *and* verified role (F-08) — because every authority evaluation this
+    // request triggers must be made for the principal as authenticated.
+    let mut verified_actor: Option<crate::identity::ResolvedActor> = None;
 
     if crate::identity::is_protected(&request) {
         let claim = crate::identity::ActorClaim::parse(raw_line);
@@ -1223,7 +1251,7 @@ async fn dispatch_bounded(
                         }
                     }
                 }
-                verified_actor = Some(actor.actor_id().to_owned());
+                verified_actor = Some(actor);
             }
             Err(refusal) => {
                 tracing::warn!(
@@ -1312,7 +1340,7 @@ async fn dispatch_bounded(
 
     let state = Arc::clone(state);
     bounded(
-        async move { handle_request_as(request, &state, verified_actor.as_deref()).await },
+        async move { handle_request_as(request, &state, verified_actor.as_ref()).await },
         REQUEST_TIMEOUT,
         raw_line,
     )
@@ -1533,19 +1561,35 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
 /// only knowable at the connection level (`SO_PEERCRED`), and every in-process
 /// caller — the CLI-facing paths and the test suites — legitimately has none.
 /// Those callers get `None` and the behaviour they always had; a socket request
-/// carries the verified actor through to the records it produces.
+/// carries the verified actor — id *and* role — through to the records it
+/// produces.
 pub async fn handle_request_as(
     request: Request,
     state: &Arc<ServerState>,
-    actor_id: Option<&str>,
+    verified: Option<&crate::identity::ResolvedActor>,
 ) -> serde_json::Value {
+    // F-08: the gate verified this principal *and* its role on the socket
+    // peer, so every authority evaluation below must see both. A request that
+    // never crossed the socket (`handle_request`) legitimately has no verified
+    // identity and keeps the historical local-operator shape — the fallback is
+    // spelled once here rather than re-assumed at each evaluation site.
+    let verified_role = verified
+        .map(|actor| actor.role().clone())
+        .unwrap_or_else(|| {
+            tracing::debug!(
+                "no verified socket identity for this request; \
+             authority evaluations use the local-default operator role"
+            );
+            ActorRole::Operator
+        });
+    let actor_id = verified.map(|actor| actor.actor_id());
     match request {
         Request::Submit {
             payload,
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "case.submit");
-            let response = commit_plan(state, payload).await;
+            let response = commit_plan(state, payload, verified_role).await;
             record_outcome(state, request_id.as_deref(), "case.submit", &response);
             response
         }
@@ -1621,6 +1665,7 @@ pub async fn handle_request_as(
                     policy_path: &policy,
                     entity: &entity,
                     process: &process,
+                    actor_role: verified_role.clone(),
                 },
                 &agent_probe::EnvironmentCredentialResolver,
             )
@@ -1661,6 +1706,7 @@ pub async fn handle_request_as(
                 &policy,
                 &entity,
                 &process,
+                verified_role.clone(),
             )
             .await;
             record_outcome(
@@ -1679,7 +1725,8 @@ pub async fn handle_request_as(
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "agent_run.cancel_delegation");
-            let response = cancel_delegation(state, &run_id, &policy, &entity, &process).await;
+            let response =
+                cancel_delegation(state, &run_id, &policy, &entity, &process, verified_role).await;
             record_outcome(
                 state,
                 request_id.as_deref(),
@@ -1958,7 +2005,7 @@ pub async fn handle_request_as(
                         process,
                         timeout,
                     };
-                    commit_plan(state, payload).await
+                    commit_plan(state, payload, verified_role).await
                 }
                 Err(error) => serde_json::json!({
                     "error": error.to_string(),
@@ -1976,7 +2023,11 @@ pub async fn handle_request_as(
 /// governance path that mints the case, validates the plan, and drives the
 /// dispatch loop), then record the case entry, fire the notify hook, and
 /// publish the durable `case.submitted` event on success.
-async fn commit_plan(state: &Arc<ServerState>, payload: SubmitPayload) -> serde_json::Value {
+async fn commit_plan(
+    state: &Arc<ServerState>,
+    payload: SubmitPayload,
+    actor_role: ActorRole,
+) -> serde_json::Value {
     // The swap has already happened by the time this returns, so the dispatch
     // below runs on the reloaded snapshot. An invalid file keeps the previous
     // one and is reported to the operator — a silent log line would let a cell
@@ -1996,7 +2047,7 @@ async fn commit_plan(state: &Arc<ServerState>, payload: SubmitPayload) -> serde_
             .await;
     }
 
-    match case_dispatch::submit(payload, state).await {
+    match case_dispatch::submit(payload, state, actor_role).await {
         Ok(output) => {
             let case_id = output.case_id;
             let entry = CaseEntry {
@@ -2073,7 +2124,13 @@ async fn instantiate_plan_file(
             serde_json::to_vec(&plan).map_err(|e| ForgeError::Serialization(e.to_string()))?,
         )
         .map_err(|e| ForgeError::io("write draft plan", e))?;
-        Ok(scratch.to_string_lossy().into_owned())
+        // F-16: `SubmitPayload.plan` resolves strictly workspace-relative
+        // under the state root, so the scratch draft is returned as its
+        // cell-relative spelling rather than an absolute path.
+        Ok(format!(
+            "drafts/{}",
+            scratch.file_name().unwrap_or_default().to_string_lossy()
+        ))
     })
     .await
     .map_err(|e| ForgeError::Internal(format!("instantiate_plan_file task panic: {e}")))
@@ -2157,6 +2214,9 @@ fn record_outcome(
 struct LedgerRecordResolver<'a> {
     root: &'a Path,
     case_id: &'a str,
+    /// F-24: the case ledger is opened and read once per resolver — one scan
+    /// covers a whole precondition bundle instead of one scan per record.
+    entries: std::cell::RefCell<Option<Vec<sea_forge_ledger::types::LedgerEntry>>>,
 }
 
 impl sfwp::precondition::RecordResolver for LedgerRecordResolver<'_> {
@@ -2176,12 +2236,17 @@ impl sfwp::precondition::RecordResolver for LedgerRecordResolver<'_> {
         if !ledger_dir.exists() {
             return Ok(None);
         }
-        let ledger = LedgerStream::open(
-            self.root,
-            format!("case-{}", self.case_id),
-            "sea-forge-server",
-        )?;
-        let entries = ledger.read_entries()?;
+        if self.entries.borrow().is_none() {
+            let ledger = LedgerStream::open(
+                self.root,
+                format!("case-{}", self.case_id),
+                "sea-forge-server",
+            )?;
+            *self.entries.borrow_mut() = Some(ledger.read_entries()?);
+        }
+        let entries_guard = self.entries.borrow();
+        let entries: &[sea_forge_ledger::types::LedgerEntry] =
+            entries_guard.as_deref().unwrap_or_default();
         match kind {
             "case" => {
                 // A `case:<id>` ref must name this resolver's own case; a
@@ -2248,6 +2313,7 @@ async fn decide(
         let resolver = LedgerRecordResolver {
             root: &state.root,
             case_id,
+            entries: std::cell::RefCell::new(None),
         };
         match sfwp::precondition::evaluate(precondition, &resolver) {
             Ok(Some(rejected)) => {
@@ -2319,6 +2385,7 @@ async fn delegate_inner(
     policy: &str,
     entity: &str,
     process: &str,
+    actor_role: ActorRole,
 ) -> serde_json::Value {
     let delegation_run_id = match requested_run_id {
         Some(value) if valid_run_id(&value) => value,
@@ -2388,6 +2455,8 @@ async fn delegate_inner(
             policy_path: policy,
             entity,
             process,
+            // F-08: the delegation is evaluated for the verified role.
+            actor_role,
             transcript_retention: resolved_retention,
             ..Default::default()
         },
@@ -2438,6 +2507,7 @@ async fn cancel_delegation(
     policy_path: &str,
     entity: &str,
     process: &str,
+    actor_role: ActorRole,
 ) -> serde_json::Value {
     let handle = match state.delegations.lock().await.get(run_id).cloned() {
         Some(handle) => handle,
@@ -2455,14 +2525,32 @@ async fn cancel_delegation(
         });
     }
 
-    let result = record_cancellation(
-        &state.config(),
-        run_id,
-        &handle.case_id,
-        policy_path,
-        entity,
-        process,
-    );
+    // F-24: the cancellation decision loads the policy bundle and commits to
+    // the case ledger — blocking work belongs on a blocking thread.
+    let config_snapshot = state.config();
+    let handle_case = handle.case_id.clone();
+    let run = run_id.to_string();
+    let pol = policy_path.to_string();
+    let ent = entity.to_string();
+    let proc_ = process.to_string();
+    let result = match tokio::task::spawn_blocking(move || {
+        record_cancellation(
+            &config_snapshot,
+            &run,
+            &handle_case,
+            &pol,
+            &ent,
+            &proc_,
+            actor_role,
+        )
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(error) => Err(ForgeError::Internal(format!(
+            "cancellation task panic: {error}"
+        ))),
+    };
     match result {
         Ok(control_id) => {
             handle.cancel.store(true, Ordering::SeqCst);
@@ -2494,13 +2582,15 @@ fn record_cancellation(
     policy_path: &str,
     entity: &str,
     process: &str,
+    actor_role: ActorRole,
 ) -> Result<String, sea_forge_core::ForgeError> {
-    let policy = agent_probe::resolve_policy_path(&config.root, policy_path);
+    let policy = agent_probe::resolve_policy_path(&config.root, policy_path)?;
     let bundle = AuthorityPolicyBundle::load(&policy)?;
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
     let actor = Actor {
         actor_id: entity.into(),
-        role: ActorRole::Operator,
+        // F-08: the cancellation decision is evaluated for the verified role.
+        role: actor_role,
     };
     let action = AuthorityAction::Reserved {
         resource_type: "run_cancel".into(),
@@ -2668,8 +2758,15 @@ mod cancellation_tests {
             },
         );
 
-        let response =
-            cancel_delegation(&state, &run, "policy.yaml", "operator_local", "test").await;
+        let response = cancel_delegation(
+            &state,
+            &run,
+            "policy.yaml",
+            "operator_local",
+            "test",
+            ActorRole::Operator,
+        )
+        .await;
 
         assert!(response.get("error").is_none(), "{response}");
         assert_eq!(response["state"], "cancellation_requested");

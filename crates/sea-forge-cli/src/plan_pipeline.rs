@@ -60,6 +60,24 @@ struct AuthorizedOperation {
     committed: CommittedRecordRef,
 }
 
+/// F-16: render a reference the server will accept — a workspace-relative
+/// spelling under the cell state root. Absolute paths inside the root are
+/// relativized; anything outside (or unresolvable against the root) is a
+/// typed input error before any request leaves the client.
+fn cell_relative_reference(root: &Path, reference: &Path) -> Result<String, ForgeError> {
+    if let Ok(rest) = reference.strip_prefix(root) {
+        return Ok(rest.to_string_lossy().into_owned());
+    }
+    if reference.is_relative() {
+        return Ok(reference.to_string_lossy().into_owned());
+    }
+    Err(ForgeError::Input(format!(
+        "reference {} must be workspace-relative under the cell root {}",
+        reference.display(),
+        root.display()
+    )))
+}
+
 fn load_plan(path: &Path) -> Result<CasePlan, ForgeError> {
     let bytes = fs::read(path).map_err(|error| ForgeError::io("read plan proposal", error))?;
     serde_json::from_slice(&bytes).map_err(|error| ForgeError::Plan {
@@ -562,6 +580,11 @@ fn run_plan_inner(
                     // settlement are handled by the server delegation
                     // service (spec §10.2, T13.1).
                     if item.item_kind == ItemKind::AgentTask {
+                        // F-16: policy references are cell-owned artifacts —
+                        // the delegate request carries the cell-relative
+                        // spelling under the state root, never an absolute
+                        // or outside-the-cell path.
+                        let policy_ref = cell_relative_reference(&root, &options.policy)?;
                         let (endpoint_ref, instruction, max_turns, token_budget) =
                             match &item.operations[0] {
                                 Operation::AgentTask {
@@ -587,7 +610,7 @@ fn run_plan_inner(
                                 "max_turns": max_turns,
                                 "token_budget": token_budget,
                                 "criteria": item.settlement_criteria,
-                                "policy": options.policy.to_string_lossy(),
+                                "policy": policy_ref,
                                 "entity": options.entity,
                                 "process": options.process,
                             }),

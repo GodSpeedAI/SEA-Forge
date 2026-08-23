@@ -59,6 +59,11 @@ pub struct ProbeRequest<'a> {
     pub policy_path: &'a str,
     pub entity: &'a str,
     pub process: &'a str,
+    /// The verified role of the probing principal (F-08). The probe's
+    /// authority decision is evaluated for this role, never a hardcoded
+    /// default; callers without a socket identity keep the local-operator
+    /// shape.
+    pub actor_role: ActorRole,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -180,12 +185,13 @@ pub async fn probe(
         vec![intent_ref.entry_ulid().into()],
     )?;
     let action = action_for(&snapshot, endpoint_id, &model, &prompt_hash)?;
-    let policy = resolve_policy_path(&config.root, request.policy_path);
+    let policy = resolve_policy_path(&config.root, request.policy_path)?;
     let bundle = AuthorityPolicyBundle::load(&policy)?;
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
     let actor = Actor {
         actor_id: request.entity.into(),
-        role: ActorRole::Operator,
+        // F-08: the role the identity gate verified for this request.
+        role: request.actor_role.clone(),
     };
     let binding = bundle.resolve_identity(&actor.actor_id, actor.role.clone());
     let decision = engine.evaluate(AuthorityEvaluation {
@@ -278,7 +284,24 @@ pub async fn probe(
         None => Zeroizing::new(String::new()),
     };
 
-    register_endpoint(&config.root, &ledger, &snapshot, &decision_ref)?;
+    // SUP-06: a registration failure after the authority decision was
+    // committed must not strand the run allowed-but-unsettled. It settles
+    // Rejected with the flat error-class vocabulary — the provider is never
+    // contacted, and no fabricated success exists to launder the failure.
+    if let Err(registration_error) = register_endpoint(&config.root, &snapshot, &decision_ref) {
+        tracing::warn!(
+            "agent endpoint {endpoint_id} registration failed: {registration_error}; \
+             run {run} settles rejected"
+        );
+        return finish_rejected(
+            &ledger,
+            &config.root,
+            &run,
+            endpoint_id,
+            decision_ref.entry_ulid(),
+            "agent_endpoint_registration_failed",
+        );
+    }
 
     let request = CompletionRequest {
         model,
@@ -455,9 +478,30 @@ fn action_for(
     })
 }
 
+/// SUP-06: the registered runtime adapter's version is *derived* from the
+/// endpoint's configuration identity instead of a hardcoded literal. A
+/// config edit therefore produces a new `(id, version)` pair — the
+/// registry's replace-in-place path — instead of permanently failing
+/// immutability against a stale `0.1.0`. Grammar-safe (`[a-z0-9-]`),
+/// deterministic across restarts, and stable for identical configs; the full
+/// hash stays available in `input_contract.sha256`.
+pub fn endpoint_adapter_version(endpoint: &sea_forge_agent::EndpointSnapshot) -> String {
+    let hex = endpoint
+        .descriptor_config_sha256
+        .strip_prefix("sha256:")
+        .unwrap_or_default();
+    format!("cfg-{}", hex.get(..12).unwrap_or_default())
+}
+
+/// SUP-06: the probe output contract hashes the declared empty-completion
+/// schema. It binds a real, stable shape — a fabricated digest would be
+/// provenance theater on a record that gates side-effect authority.
+fn empty_probe_output_sha256() -> String {
+    format!("sha256:{:x}", Sha256::digest(br#"{"type":"object"}"#))
+}
+
 fn register_endpoint(
     root: &Path,
-    ledger: &LedgerStream,
     endpoint: &sea_forge_agent::EndpointSnapshot,
     authority_ref: &sea_forge_ledger::CommittedRecordRef,
 ) -> Result<(), ForgeError> {
@@ -465,7 +509,7 @@ fn register_endpoint(
         extension_id: format!("agent_endpoint_{}", endpoint.id),
         kind: ExtensionKind::RuntimeAdapter,
         name: format!("agent endpoint {}", endpoint.id),
-        version: "0.1.0".into(),
+        version: endpoint_adapter_version(endpoint),
         provider: "sea-forge-agent".into(),
         capabilities: vec![
             "agent_probe".into(),
@@ -478,17 +522,31 @@ fn register_endpoint(
         },
         output_contract: ContractRef {
             schema: "sea-forge-agent.probe.v1".into(),
-            sha256: format!("sha256:{}", "b".repeat(64)),
+            sha256: empty_probe_output_sha256(),
         },
         deterministic: false,
         installed_at: None,
     };
-    let mut registry = ExtensionRegistry::load(root)?;
+    // SUP-08: the registration read goes through the ledger-verified loader,
+    // so tampered or rolled-back registry bytes are refused before this
+    // mutation builds on them.
+    //
+    // SUP-06: attestation lives in a dedicated cell-scoped ledger rather than
+    // each probe's freshly minted case ledger — a per-case record would make
+    // every later probe (and every server restart) fail verification against
+    // bytes an earlier case ledger committed.
+    let registry_ledger = LedgerStream::open(root, "extension-registry", "sea-forge-server")?;
+    let mut registry = ExtensionRegistry::load_verified(root, &registry_ledger)?;
+    // SUP-06: "new" keys on the derived (id, version) pair — an identical
+    // config reproduces the same version (idempotent re-probe, no staleness
+    // marking), while an edited config derives a different version, takes
+    // the registry's replace-in-place path, and marks the self-model stale
+    // like any install/change.
     let was_new = !registry.extensions.iter().any(|entry| {
         entry.extension_id == descriptor.extension_id && entry.version == descriptor.version
     });
     registry.register_immutable_runtime_adapter(&descriptor)?;
-    registry.save(root, ledger, authority_ref)?;
+    registry.save(root, &registry_ledger, authority_ref)?;
     // Slice 4.2: an endpoint install/change is an extension mutation that
     // invalidates the current self-model snapshot. Mark stale only when a
     // snapshot already exists (marking before init is an error); this never
@@ -504,13 +562,16 @@ fn register_endpoint(
     Ok(())
 }
 
-pub fn resolve_policy_path(root: &Path, configured: &str) -> PathBuf {
-    let path = PathBuf::from(configured);
-    if path.is_absolute() || path.exists() {
-        path
-    } else {
-        root.join(path)
-    }
+/// F-16: request- or configuration-supplied policy and plan references are
+/// cell-owned artifacts. They resolve strictly workspace-relative under the
+/// cell state root after lexical validation (`sea_forge_core::path`), so a
+/// requester can never aim the bundle that authorizes its own action — or the
+/// plan that names its operations — at an absolute path or a traversal
+/// spelling outside the cell. Absolute and ambiguous spellings are rejected
+/// with a typed error before any read.
+pub fn resolve_policy_path(root: &Path, configured: &str) -> Result<PathBuf, ForgeError> {
+    sea_forge_core::path::validate_relative_path(configured)?;
+    Ok(root.join(configured))
 }
 
 pub fn commit_view<T: Serialize>(

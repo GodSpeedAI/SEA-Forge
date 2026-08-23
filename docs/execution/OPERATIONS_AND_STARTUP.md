@@ -49,11 +49,16 @@ Consequences worth knowing before you rely on them:
   binds a staging path and renames it into place, atomically replacing the dead
   file, so the next launch starts cleanly.
 
-The server binary is located, in order: `SEA_FORGE_SERVER_BIN`, then a sibling
-of the application executable (where the package puts the sidecar), then
-`PATH`. An override naming a missing file is an error rather than a fallback —
-starting a different server than the one named would be worse than starting
-none.
+The server binary is located, in order: `SEA_FORGE_SERVER_BIN` (the operator's
+or E2E harness's explicit override), then a sibling of the application
+executable (where the package puts the sidecar, and where `tauri dev` stages
+it). There is deliberately **no** `PATH` rung: whatever a `PATH` search finds
+is not the kernel this build was packaged with (F-25.c). When neither rung
+names a file, startup fails closed with `server_binary_not_found`. An override
+naming a missing file is an error rather than a fallback — starting a different
+server than the one named would be worse than starting none. The supervised
+sidecar runs with a cleared environment plus an explicit allowlist (`HOME`,
+`PATH`, `RUST_LOG`, `TMPDIR`) — never inherit-and-add (F-25.b).
 
 Pinned by `workbench/apps/desktop/src-tauri/tests/packaged_stack.rs`, which
 drives the staged sidecar — the same file the `.deb` ships — through the real

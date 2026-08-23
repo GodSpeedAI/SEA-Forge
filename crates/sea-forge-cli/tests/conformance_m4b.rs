@@ -321,3 +321,39 @@ fn cli_recall_is_identical_with_and_without_the_sqlite_index() {
     );
     fs::remove_dir_all(parent).unwrap();
 }
+
+// ── F-25.g: the legacy scope-free allow covers only the acting entity ──
+
+#[test]
+fn f25g_legacy_silent_policy_refuses_cross_entity_recall() {
+    let parent = temp_root("f25g-cross");
+    let root = parent.join("cell");
+    fs::create_dir_all(&root).unwrap();
+
+    // A v0.1 policy with NO recall_memory rule at all — the legacy implicit
+    // allow path. BASE_RULES carries only write/execute allowances.
+    let policy = root.join("policy.yaml");
+    fs::write(&policy, format!("version: \"0.1\"\nrules:\n{BASE_RULES}")).unwrap();
+    run_intent(&root, &policy, "team_a", "proc_a");
+
+    // Cross-entity recall under a silent policy must be refused with the
+    // typed narrowing message — never an unscoped read.
+    let output = recall_memory(&root, &policy, "team_a", Some("team_b"), None);
+    assert_ne!(output.status.code(), Some(0));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("cross-entity recall requires an explicit memory_scope rule"),
+        "{stderr}"
+    );
+
+    // Self-recall under the same silent policy still works (compatibility).
+    let own = recall_memory(&root, &policy, "team_a", None, None);
+    assert_eq!(
+        own.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&own.stderr)
+    );
+
+    fs::remove_dir_all(parent).unwrap();
+}

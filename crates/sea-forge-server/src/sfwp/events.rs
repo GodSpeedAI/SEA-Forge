@@ -107,6 +107,19 @@ fn frame_from_entry(entry: &sea_forge_ledger::LedgerEntry) -> EventFrame {
     }
 }
 
+/// F-25.o: the typed rejection for a provided-but-unknown events cursor.
+fn unknown_cursor_error(cursor: &str, entries: &[sea_forge_ledger::LedgerEntry]) -> ForgeError {
+    let head = entries
+        .iter()
+        .filter(|entry| entry.record_kind == EVENT_RECORD_KIND)
+        .rfind(|_| true)
+        .map(|entry| entry.entry_ulid.as_str())
+        .unwrap_or("<empty>");
+    ForgeError::Input(format!(
+        "events_unknown_cursor: cursor {cursor} is not a known event; current head is {head}"
+    ))
+}
+
 /// Resolve a cursor (`entry_ulid`) to its `append_ordinal` by scanning the
 /// (bounded) entry list. Returns `None` if the cursor is unknown.
 fn ordinal_for_cursor(entries: &[sea_forge_ledger::LedgerEntry], cursor: &str) -> Option<u64> {
@@ -119,13 +132,21 @@ fn ordinal_for_cursor(entries: &[sea_forge_ledger::LedgerEntry], cursor: &str) -
 /// Replay events strictly *after* `from_cursor` (exclusive), capped at
 /// [`EVENTS_REPLAY_CAP`]. If `from_cursor` is `None`, replays from the start.
 /// Used by `events.subscribe` for its initial catch-up burst.
+///
+/// F-25.o: a *provided* cursor that resolves to nothing is a typed error, not
+/// a silent replay from the beginning — a typo would otherwise deliver up to
+/// [`EVENTS_REPLAY_CAP`] stale frames as if they were new. The head cursor is
+/// named in the error so the client can resynchronize explicitly.
 pub fn replay_after(
     ledger: &LedgerStream,
     from_cursor: Option<&str>,
 ) -> Result<Vec<EventFrame>, ForgeError> {
     let entries = ledger.read_entries()?;
     let start_ordinal = match from_cursor {
-        Some(cursor) => ordinal_for_cursor(&entries, cursor),
+        Some(cursor) => Some(
+            ordinal_for_cursor(&entries, cursor)
+                .ok_or_else(|| unknown_cursor_error(cursor, &entries))?,
+        ),
         None => None,
     };
     let frames = entries
@@ -152,8 +173,20 @@ pub fn get_range(
     limit: Option<u32>,
 ) -> Result<Vec<EventFrame>, ForgeError> {
     let entries = ledger.read_entries()?;
-    let from_ordinal = from_cursor.and_then(|cursor| ordinal_for_cursor(&entries, cursor));
-    let to_ordinal = to_cursor.and_then(|cursor| ordinal_for_cursor(&entries, cursor));
+    // F-25.o: provided-but-unknown cursors error instead of degrading to an
+    // unbounded window edge (from=None ⇒ everything, to=None ⇒ open end).
+    let from_ordinal = from_cursor
+        .map(|cursor| {
+            ordinal_for_cursor(&entries, cursor)
+                .ok_or_else(|| unknown_cursor_error(cursor, &entries))
+        })
+        .transpose()?;
+    let to_ordinal = to_cursor
+        .map(|cursor| {
+            ordinal_for_cursor(&entries, cursor)
+                .ok_or_else(|| unknown_cursor_error(cursor, &entries))
+        })
+        .transpose()?;
     let cap = limit
         .map(|value| (value as usize).min(EVENTS_REPLAY_CAP))
         .unwrap_or(EVENTS_REPLAY_CAP);

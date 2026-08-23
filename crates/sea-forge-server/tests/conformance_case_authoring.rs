@@ -108,8 +108,9 @@ async fn boot() -> (tempfile::TempDir, PathBuf) {
     (root, socket)
 }
 
-fn policy_path(root: &Path) -> String {
-    root.join("policy.yaml").to_str().unwrap().to_string()
+fn policy_path(_root: &Path) -> String {
+    // F-16: the policy reference is a cell-relative spelling.
+    "policy.yaml".to_string()
 }
 
 /// A minimal line-delimited JSON client over the Unix socket (copied from

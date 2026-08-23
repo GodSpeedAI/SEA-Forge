@@ -38,9 +38,14 @@ pub fn append(root: &Path, request: &ApprovalRequest) -> Result<(), ForgeError> 
         .append(true)
         .open(&path)
         .map_err(|e| ForgeError::io("open approvals.jsonl", e))?;
-    serde_json::to_writer(&mut file, request)?;
-    file.write_all(b"\n")
-        .map_err(|e| ForgeError::io("flush approval", e))?;
+    // F-25.l: one `write_all` of record + newline on the O_APPEND handle. Two
+    // separate writes let a concurrent reader observe a torn last line, and
+    // this journal's reader treats a malformed line as a hard error — a torn
+    // decision would hide a resolution.
+    let mut line = serde_json::to_vec(request)?;
+    line.push(b'\n');
+    file.write_all(&line)
+        .map_err(|e| ForgeError::io("append approval", e))?;
     Ok(())
 }
 

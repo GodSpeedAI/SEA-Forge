@@ -126,7 +126,7 @@ async fn t13_delegation_completes_with_transcript_evidence() {
     .await;
     let root = tempfile::tempdir().unwrap();
     let endpoint = endpoint(address.port());
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint),
@@ -137,7 +137,8 @@ async fn t13_delegation_completes_with_transcript_evidence() {
             max_turns: 3,
             token_budget: None,
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -180,7 +181,7 @@ async fn t13_delegation_completes_with_transcript_evidence() {
 async fn t13_delegation_denied_without_agent_task_policy() {
     // ponytail: no stub needed — denial happens before any network I/O.
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), false, true);
+    policy(root.path(), false, true);
     let (res, reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint(1)),
@@ -191,7 +192,8 @@ async fn t13_delegation_denied_without_agent_task_policy() {
             max_turns: 1,
             token_budget: None,
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -212,7 +214,7 @@ async fn t13_delegation_denied_without_agent_task_policy() {
 #[tokio::test]
 async fn t13_delegation_denied_secret_access_no_credential_read() {
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, false);
+    policy(root.path(), true, false);
     let (res, reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint(1)),
@@ -223,7 +225,8 @@ async fn t13_delegation_denied_secret_access_no_credential_read() {
             max_turns: 1,
             token_budget: None,
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -258,7 +261,7 @@ async fn t13_endpoint_error_settles_rejected_with_transcript() {
     });
 
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint(address.port())),
@@ -269,7 +272,8 @@ async fn t13_endpoint_error_settles_rejected_with_transcript() {
             max_turns: 1,
             token_budget: None,
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -298,7 +302,7 @@ async fn t13_token_budget_breach_settles_turn_cap_exceeded() {
         stub(r#"{"choices":[{"message":{"content":"response"}}],"usage":{"total_tokens":42}}"#)
             .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint(address.port())),
@@ -309,7 +313,8 @@ async fn t13_token_budget_breach_settles_turn_cap_exceeded() {
             max_turns: 5,
             token_budget: Some(25),
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -341,7 +346,7 @@ async fn t13_agent_success_with_failed_output_criteria_settles_rejected() {
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint(address.port())),
@@ -355,7 +360,8 @@ async fn t13_agent_success_with_failed_output_criteria_settles_rejected() {
                 agent_output_must_contain: Some("proof artifact committed".into()),
                 ..SettlementCriteria::default()
             },
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -390,7 +396,7 @@ async fn t13_transcript_artifact_hash_verifies() {
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint(address.port())),
@@ -401,7 +407,8 @@ async fn t13_transcript_artifact_hash_verifies() {
             max_turns: 1,
             token_budget: None,
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             transcript_retention: sea_forge_agent::TranscriptRetentionMode::Full,
@@ -448,7 +455,7 @@ async fn t15_schema_valid_response_settles_accepted_with_named_evidence() {
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let schema = serde_json::json!({
         "type": "object",
@@ -462,7 +469,8 @@ async fn t15_schema_valid_response_settles_accepted_with_named_evidence() {
             instruction: "report status",
             max_turns: 1,
             response_schema: Some(&schema),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -499,7 +507,7 @@ async fn t15_schema_invalid_response_settles_rejected_without_payload_leak() {
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let schema = serde_json::json!({
         "type": "object",
@@ -513,7 +521,8 @@ async fn t15_schema_invalid_response_settles_rejected_without_payload_leak() {
             instruction: "report status",
             max_turns: 1,
             response_schema: Some(&schema),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -552,7 +561,7 @@ async fn t15_turn_cap_exceeded_with_satisfied_criteria_accepts_and_retains_basis
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let outcome = delegation::execute(
         &config(root.path(), endpoint(address.port())),
@@ -565,7 +574,8 @@ async fn t15_turn_cap_exceeded_with_satisfied_criteria_accepts_and_retains_basis
                 agent_output_must_contain: Some("proof artifact committed".into()),
                 ..SettlementCriteria::default()
             },
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -599,7 +609,7 @@ async fn t15_case_dispatch_settlement_reuses_real_basis_not_synthetic() {
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy_path = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     // Case dispatch resolves credentials via the real environment resolver
     // (unlike the fixture `CountingResolver` used by direct-delegation
     // tests); an endpoint with no credential_ref skips that resolution
@@ -652,9 +662,9 @@ async fn t15_case_dispatch_settlement_reuses_real_basis_not_synthetic() {
 
     let state = std::sync::Arc::new(ServerState::new(config(root.path(), ep)).unwrap());
     let request: Request = serde_json::from_str(&format!(
-        r#"{{"verb":"submit","plan":{:?},"policy":{:?},"entity":"operator_local","process":"test"}}"#,
-        plan_path.to_str().unwrap(),
-        policy_path.to_str().unwrap(),
+        // F-16: cell-relative spellings.
+        r#"{{"verb":"submit","plan":"plan.json","policy":{:?},"entity":"operator_local","process":"test"}}"#,
+        "policy.yaml",
     ))
     .unwrap();
     let response = handle_request(request, &state).await;
@@ -693,7 +703,7 @@ async fn t15_case_dispatch_settlement_reuses_real_basis_not_synthetic() {
 async fn t16_redaction_digest_identical_across_full_and_summarized_modes() {
     let response = r#"{"choices":[{"message":{"content":"secret test-secret leaked? no: redacted-check"}}],"usage":{"total_tokens":1}}"#;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
 
     let (address, _connections, task) = stub(response).await;
     let (res, _reads) = resolver();
@@ -703,7 +713,8 @@ async fn t16_redaction_digest_identical_across_full_and_summarized_modes() {
             endpoint_id: "local-test",
             instruction: "report",
             max_turns: 1,
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             transcript_retention: sea_forge_agent::TranscriptRetentionMode::Full,
@@ -723,7 +734,8 @@ async fn t16_redaction_digest_identical_across_full_and_summarized_modes() {
             endpoint_id: "local-test",
             instruction: "report",
             max_turns: 1,
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             transcript_retention: sea_forge_agent::TranscriptRetentionMode::Summarized,
@@ -807,7 +819,7 @@ async fn t16_case_dispatch_retention_precedence_item_endpoint_global_default() {
         )
         .await;
         let root = tempfile::tempdir().unwrap();
-        let policy_path = policy(root.path(), true, true);
+        policy(root.path(), true, true);
         let mut ep = endpoint(address.port());
         ep.credential_ref = None;
         ep.transcript_retention = endpoint_override;
@@ -858,9 +870,9 @@ async fn t16_case_dispatch_retention_precedence_item_endpoint_global_default() {
         config.agent.transcript_retention = global_default;
         let state = std::sync::Arc::new(ServerState::new(config).unwrap());
         let request: Request = serde_json::from_str(&format!(
-            r#"{{"verb":"submit","plan":{:?},"policy":{:?},"entity":"operator_local","process":"test"}}"#,
-            plan_path.to_str().unwrap(),
-            policy_path.to_str().unwrap(),
+            // F-16: cell-relative spellings.
+            r#"{{"verb":"submit","plan":"plan.json","policy":{:?},"entity":"operator_local","process":"test"}}"#,
+            "policy.yaml",
         ))
         .unwrap();
         let response = handle_request(request, &state).await;
@@ -923,12 +935,11 @@ async fn t16_sealed_verification_failure_settles_rejected_never_summary_only_suc
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
-    // Force `seal_transcript` to fail: `.sea-forge/sealed` exists as a
+    // Force `seal_transcript` to fail: `sealed` exists as a
     // *file*, so its `create_dir_all` for the key directory cannot succeed.
-    fs::create_dir_all(root.path().join(".sea-forge")).unwrap();
-    fs::write(root.path().join(".sea-forge").join("sealed"), b"not a dir").unwrap();
+    fs::write(root.path().join("sealed"), b"not a dir").unwrap();
 
     let outcome = delegation::execute(
         &config(root.path(), endpoint(address.port())),
@@ -936,7 +947,8 @@ async fn t16_sealed_verification_failure_settles_rejected_never_summary_only_suc
             endpoint_id: "local-test",
             instruction: "publish proof",
             max_turns: 1,
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             transcript_retention: sea_forge_agent::TranscriptRetentionMode::Summarized,
@@ -970,7 +982,7 @@ async fn planned_agent_episode_uses_case_context() {
     )
     .await;
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, true);
+    policy(root.path(), true, true);
     let (res, _reads) = resolver();
     let submitted_case_id = sea_forge_core::ids::case_id().unwrap();
     let dispatched_run_id = sea_forge_core::ids::run_id().unwrap();
@@ -984,7 +996,8 @@ async fn planned_agent_episode_uses_case_context() {
             max_turns: 1,
             token_budget: None,
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -1033,7 +1046,7 @@ async fn planned_agent_episode_uses_case_context() {
 #[tokio::test]
 async fn planned_agent_rejection_uses_case_context_once() {
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), false, true);
+    policy(root.path(), false, true);
     let (res, _reads) = resolver();
     let submitted_case_id = sea_forge_core::ids::case_id().unwrap();
     let dispatched_run_id = sea_forge_core::ids::run_id().unwrap();
@@ -1047,7 +1060,8 @@ async fn planned_agent_rejection_uses_case_context_once() {
             max_turns: 1,
             token_budget: None,
             criteria: SettlementCriteria::default(),
-            policy_path: policy.to_str().unwrap(),
+            // F-16: cell-relative policy spelling.
+            policy_path: "policy.yaml",
             entity: "operator_local",
             process: "test",
             ..Default::default()
@@ -1143,7 +1157,7 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
     });
 
     let root = tempfile::tempdir().unwrap();
-    let policy = policy(root.path(), true, false);
+    policy(root.path(), true, false);
     let mut ep = endpoint(address.port());
     ep.credential_ref = None;
     let config = ServerConfig {
@@ -1160,7 +1174,7 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
     let mut handles = vec![];
     for _ in 0..4 {
         let state = Arc::clone(&state);
-        let policy = policy.to_string_lossy().into_owned();
+        let policy = "policy.yaml".to_string();
         handles.push(tokio::spawn(async move {
             sea_forge_server::handle_request(
                 Request::Delegate {
@@ -1268,7 +1282,8 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
     let run_a = sea_forge_core::ids::run_id().unwrap();
     let run_b = sea_forge_core::ids::run_id().unwrap();
     let run_c = sea_forge_core::ids::run_id().unwrap();
-    let policy_str = policy_path.to_string_lossy().into_owned();
+    // F-16: cell-relative policy spelling for wire references.
+    let policy_str = "policy.yaml".to_string();
 
     let mk_delegate = |rid: String| {
         let state = Arc::clone(&state);
@@ -1460,8 +1475,9 @@ async fn t13_2_mixed_episodes_share_server_cap() {
 
     let request: Request = serde_json::from_value(serde_json::json!({
         "verb": "submit",
-        "plan": plan_path,
-        "policy": policy_path,
+        // F-16: cell-relative spellings.
+        "plan": "mixed-plan.json",
+        "policy": "policy.yaml",
         "entity": "operator_local",
         "process": "test",
         "timeout": 5,
@@ -1590,7 +1606,7 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
         }
     });
     let root = tempfile::tempdir().unwrap();
-    let policy_path = policy(root.path(), true, false);
+    policy(root.path(), true, false);
     let mut agent_endpoint = endpoint(address.port());
     agent_endpoint.credential_ref = None;
     let state = Arc::new(
@@ -1606,7 +1622,7 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
         .unwrap(),
     );
     let direct_state = Arc::clone(&state);
-    let direct_policy = policy_path.to_string_lossy().into_owned();
+    let direct_policy = "policy.yaml".to_string();
     let direct = tokio::spawn(async move {
         handle_request(
             Request::Delegate {
@@ -1676,7 +1692,7 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
         .unwrap(),
     )
     .unwrap();
-    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":"one-agent.json", "policy":"policy.yaml", "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
     let mut submit = tokio::spawn({
         let state = Arc::clone(&state);
         async move { handle_request(request, &state).await }
@@ -1694,7 +1710,7 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
 #[tokio::test]
 async fn t13_2_post_dispatch_failure_settles_and_drains_siblings() {
     let root = tempfile::tempdir().unwrap();
-    let policy_path = policy(root.path(), true, false);
+    policy(root.path(), true, false);
     let state = Arc::new(
         ServerState::new(ServerConfig {
             root: root.path().to_path_buf(),
@@ -1748,7 +1764,7 @@ async fn t13_2_post_dispatch_failure_settles_and_drains_siblings() {
         .unwrap(),
     )
     .unwrap();
-    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":"failure-plan.json", "policy":"policy.yaml", "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
     let response = handle_request(request, &state).await;
     assert_eq!(response["state"], "terminated", "{response}");
     let events: Vec<TraceEvent> = fs::read_to_string(
@@ -1800,7 +1816,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
         }
     });
     let root = tempfile::tempdir().unwrap();
-    let policy_path = policy(root.path(), true, false);
+    policy(root.path(), true, false);
     let mut agent_endpoint = endpoint(address.port());
     agent_endpoint.credential_ref = None;
     let state = Arc::new(
@@ -1878,7 +1894,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
         .unwrap(),
     )
     .unwrap();
-    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":"agent-and-human.json", "policy":"policy.yaml", "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
     let response = handle_request(request, &state).await;
     assert_eq!(response["state"], "active");
     let events: Vec<TraceEvent> = fs::read_to_string(
@@ -1908,7 +1924,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
     reversed.items.reverse();
     let reversed_path = root.path().join("human-and-agent.json");
     fs::write(&reversed_path, serde_json::to_vec(&reversed).unwrap()).unwrap();
-    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":reversed_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":reversed_path.strip_prefix(root.path()).unwrap().to_string_lossy(), "policy":"policy.yaml", "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
     let response = handle_request(request, &state).await;
     assert_eq!(response["state"], "active");
     let events: Vec<TraceEvent> = fs::read_to_string(
@@ -1940,7 +1956,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
 #[tokio::test]
 async fn t13_2_permit_completion_rederives_before_stale_action() {
     let root = tempfile::tempdir().unwrap();
-    let policy_path = policy(root.path(), true, false);
+    policy(root.path(), true, false);
     let state = Arc::new(
         ServerState::new(ServerConfig {
             root: root.path().to_path_buf(),
@@ -1994,7 +2010,7 @@ async fn t13_2_permit_completion_rederives_before_stale_action() {
         .unwrap(),
     )
     .unwrap();
-    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":plan_path, "policy":policy_path, "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
+    let request: Request = serde_json::from_value(serde_json::json!({"verb":"submit", "plan":"stale-actions.json", "policy":"policy.yaml", "entity":"operator_local", "process":"test", "timeout":5})).unwrap();
     let response = handle_request(request, &state).await;
     assert_eq!(response["state"], "terminated", "{response}");
     let events: Vec<TraceEvent> = fs::read_to_string(
@@ -2029,7 +2045,7 @@ async fn t13_2_non_executable_activation_returns_typed_error() {
     // non-HumanTask item without manual_activation, including ItemKind::Stage.
     // The dispatcher must not panic; it returns a typed Input error instead.
     let root = tempfile::tempdir().unwrap();
-    let policy_path = policy(root.path(), false, false);
+    policy(root.path(), false, false);
     let state = Arc::new(
         ServerState::new(ServerConfig {
             root: root.path().to_path_buf(),
@@ -2076,8 +2092,9 @@ async fn t13_2_non_executable_activation_returns_typed_error() {
     .unwrap();
     let request: Request = serde_json::from_value(serde_json::json!({
         "verb": "submit",
-        "plan": plan_path,
-        "policy": policy_path,
+        // F-16: cell-relative spellings.
+        "plan": "stage-item.json",
+        "policy": "policy.yaml",
         "entity": "operator_local",
         "process": "test",
         "timeout": 5

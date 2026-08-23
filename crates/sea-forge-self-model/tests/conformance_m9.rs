@@ -238,6 +238,18 @@ fn t93_projections_rebuild_deterministically_and_reject_drift() {
         .iter()
         .any(|k| matches!(k, sea_forge_core::types::ProjectionKind::SelfModelSnapshot)));
 
+    // Materialize every projection's outputs exactly as
+    // `materialize_projections` does (`<dir>/<output_ref.path>`), so
+    // `verify_projection` can check recorded refs against real bytes.
+    let outputs_dir = tempfile::tempdir().unwrap();
+    for projection in &p1 {
+        for (path, content) in &projection.outputs {
+            let full = outputs_dir.path().join(path);
+            std::fs::create_dir_all(full.parent().unwrap()).unwrap();
+            std::fs::write(&full, content).unwrap();
+        }
+    }
+
     for (a, b) in p1.iter().zip(p2.iter()) {
         // Same projection id (deterministic), same rebuild_hash, same output bytes.
         assert_eq!(a.record.projection_id, b.record.projection_id);
@@ -252,7 +264,7 @@ fn t93_projections_rebuild_deterministically_and_reject_drift() {
         assert!(!a.record.output_refs.is_empty());
         assert!(!a.record.rebuild_hash.is_empty());
         assert_eq!(a.record.adapter_ref, "sea-forge-self-model");
-        verify_projection(&a.record).unwrap();
+        verify_projection(&a.record, outputs_dir.path()).unwrap();
         // Task 11: governance refs are populated and the projection is Accepted.
         assert!(!a.record.authority_refs.is_empty());
         assert!(!a.record.evidence_refs.is_empty());
@@ -266,8 +278,27 @@ fn t93_projections_rebuild_deterministically_and_reject_drift() {
     // A pre-generated projection whose rebuild_hash drifts is rejected, not trusted.
     let mut tampered = p1[0].record.clone();
     tampered.rebuild_hash = "sha256:deadbeef".into();
-    let err = verify_projection(&tampered).unwrap_err();
+    let err = verify_projection(&tampered, outputs_dir.path()).unwrap_err();
     assert_eq!(err.class(), "self_model_error");
+
+    // SUP-04: a *replaced output file* — hashes still consistent inside the
+    // record, bytes no longer matching on disk — is a validation failure too,
+    // not a clean pass. This is exactly the gap the old verify never closed.
+    let mut replaced = p1[0].outputs.clone();
+    let first_path = replaced.keys().next().unwrap().clone();
+    replaced.insert(first_path.clone(), "garbage not validated at all".into());
+    let outputs_dir2 = tempfile::tempdir().unwrap();
+    for (path, content) in &replaced {
+        let full = outputs_dir2.path().join(path);
+        std::fs::create_dir_all(full.parent().unwrap()).unwrap();
+        std::fs::write(&full, content).unwrap();
+    }
+    let err = verify_projection(&p1[0].record, outputs_dir2.path()).unwrap_err();
+    assert_eq!(err.class(), "self_model_error");
+    assert!(
+        err.to_string().contains("does not match its recorded ref"),
+        "the materialized-bytes check must name the drifted output: {err}"
+    );
 }
 
 /// T9.4: disabling an extension then rebuild produces a new snapshot; the cell
@@ -335,7 +366,7 @@ fn t94_extension_disable_rebuild_keeps_prior_snapshot() {
     // The prior snapshot file is still present (immutable, not rewritten).
     let prior_path = root
         .path()
-        .join(".sea-forge/self-model/snapshots")
+        .join("self-model/snapshots")
         .join(format!("{}.json", snap1.snapshot_id));
     assert!(prior_path.exists(), "prior snapshot must remain on disk");
 

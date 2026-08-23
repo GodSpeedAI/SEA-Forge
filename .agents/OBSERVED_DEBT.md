@@ -873,3 +873,64 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   kind exists to narrow against. Not worth a predicate today, since the two
   `agent_run.*` kinds are already the only runs-relevant ones and both are in
   the case set.
+
+## Open: request-less protected mutations have no idempotency (F-25.n)
+
+- Observed: 2026-08-23 (audit finding F-25.n; verified against the current
+  correlation store)
+- Evidence: `sfwp::correlation` dedupes only requests carrying `request_id`;
+  `dedupe_key` returns `None` for the rest, so a replayed `submit` without an
+  id creates a second case.
+- Impact: latent. The machinery itself is sound (atomic per-id records,
+  fail-closed hash-mismatch refusals); the gap is exactly "protected verb +
+  no id".
+- Next move: requiring `request_id` on all protected verbs is a wire-contract
+  change needing owner approval; deriving a server-side synthetic key changes
+  observable semantics. Trigger: the first external multi-client SFWP
+  consumer. Until then, document "send `request_id` for exactly-once
+  mutations" in client guidance.
+
+## Open: CEP-0008 inbound envelopes carrying `causation_id` cannot deserialize
+
+- Observed: 2026-08-23 (SUP-09i remainder)
+- Evidence: `cep0008.rs` struct uses `deny_unknown_fields` and omits
+  `causation_id`, while the copied schema's `ALLOWED_TOP_LEVEL` includes it.
+  The adapter is outbound-only today, so nothing deserializes untrusted
+  CEP-0008 input yet.
+- Next move: when an inbound consumer appears, add
+  `#[serde(default, skip_serializing_if = "Option::is_none")]
+  causation_id: Option<String>` — that keeps serialized bytes stable.
+
+## Open: dead CEP/extension spec surface (`Compatibility`, `ExtensionInstallRecord`)
+
+- Observed: 2026-08-23 (SUP-09i remainder)
+- Evidence: declared in `sea-forge-extension`, zero constructors repo-wide;
+  version-compare enforcement therefore absent by absence of callers.
+- Next move: delete-vs-implement is a public-interface decision for the owner;
+  revisit with the first extension-distribution feature.
+
+## Open: true RFC 8785 JCS compliance would shift every persisted hash
+
+- Observed: 2026-08-23 (SUP-09d remainder)
+- Evidence: the consolidated `jcs-nfc-v1` profile in
+  `sea_forge_core::canonical` is deliberately *not* RFC 8785 (no UTF-16 key
+  ordering, no ECMAScript number canonicalization); the label is hashed into
+  committed ledger records, so renaming/re-profiling breaks verification.
+- Consolidation note: pre-fix copies diverged on nested-value NFC (ledger/
+  self-model normalized only top-level strings; evidence/authority recursed).
+  The shared primitive now recurses at all depths. All kernel-committed data
+  is ASCII today, so historical hashes are byte-stable in practice; if any old
+  ledger entry ever carried decomposed non-ASCII nested strings, the F-25.q
+  append-time predecessor check now refuses loudly instead of silently
+  diverging.
+- Next move: a real JCS profile needs a new `canonicalization` label plus a
+  migration story — an owner-level spec decision.
+
+## Open: ComposedModel overlay precedence is undefined (SUP-09e remainder)
+
+- Observed: 2026-08-23
+- Evidence: `ComposedModel::dual_declared_concepts()` now discloses the 30
+  dual-declared names (allowlist-pinned test), but which constituent's
+  definition wins on conflict is still unspecified.
+- Next move: owner decision (precedence, merge, or rejection on divergence) in
+  spec-adlc-thoth terms before any release ships diverging definitions.

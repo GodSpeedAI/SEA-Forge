@@ -39,62 +39,92 @@ pub(crate) const MAX_TIMEOUT_SECS: u64 = 7 * 24 * 60 * 60;
 pub(crate) async fn submit(
     mut payload: SubmitPayload,
     state: &Arc<ServerState>,
+    actor_role: ActorRole,
 ) -> Result<DispatchOutcome, ForgeError> {
     let _ = &payload.intent;
     payload.timeout = payload.timeout.min(MAX_TIMEOUT_SECS);
-    let plan_path = payload
+    // F-16: the dispatched plan is a cell-owned artifact — the reference is
+    // resolved strictly workspace-relative under the state root (absolute or
+    // traversal spellings are a typed error), never read from an arbitrary
+    // requester-chosen filesystem path.
+    let plan_ref = payload
         .plan
         .ok_or_else(|| ForgeError::Input("submit requires a plan".into()))?;
-    let mut plan: CasePlan = serde_json::from_slice(
-        &fs::read(&plan_path).map_err(|e| ForgeError::io("read plan proposal", e))?,
-    )?;
-    validate_proposal(&mut plan)?;
-    fs::create_dir_all(&state.root).map_err(|e| ForgeError::io("create state root", e))?;
-    let root = state
-        .root
-        .canonicalize()
-        .map_err(|e| ForgeError::io("canonicalize state root", e))?;
-    let case_id = ids::case_id()?;
-    plan.case_id.clone_from(&case_id);
-    let case_dir = root.join("cases").join(&case_id);
-    let (_runs_dir, case_events) = CaseRunner::initialize_case(&case_dir)?;
-    let stream = LedgerStream::open(&root, format!("case-{case_id}"), &payload.entity)?;
-    stream.commit_typed("case_plan", vec![case_id.clone()], &plan, vec![])?;
-    let intent = sea_forge_core::types::Intent {
-        intent_id: ids::random_id("int")?,
-        summary: format!("Execute plan {plan_path}"),
-        actor_id: payload.entity.clone(),
-        process_id: payload.process.clone(),
-        created_at: Utc::now().to_rfc3339(),
-    };
-    let mut case = Case {
-        version: RECORD_VERSION.into(),
-        case_id: case_id.clone(),
-        intent,
-        state: CaseState::Active,
-        plan_ref: plan.plan_id.clone(),
-        run_ids: vec![],
-        stages: plan
-            .items
-            .iter()
-            .filter(|item| item.item_kind == ItemKind::Stage)
-            .map(|item| item.plan_item_id.clone())
-            .collect(),
-        close_reason: None,
-        created_at: Utc::now().to_rfc3339(),
-        closed_at: None,
-    };
-    write_json(&case_dir.join("case.json"), &case)?;
-    write_json(&case_dir.join("plan.json"), &plan)?;
-    let mut events = vec![];
-    CaseRunner::append_event(
-        &case_events,
-        &stream,
-        &mut events,
-        TraceKind::CaseCreated,
-        None,
-        serde_json::json!({"case_id": case_id}),
-    )?;
+    // F-24: minting the case — plan read/validate, directory + ledger setup,
+    // and the first durable writes — is blocking fs work. It runs on one
+    // blocking thread as a unit; nothing here awaits between steps.
+    let mint_root = state.root.clone();
+    let mint_entity = payload.entity.clone();
+    let mint_process = payload.process.clone();
+    let (root, case_id, case_dir, case_events, stream, plan, mut case, mut events) =
+        tokio::task::spawn_blocking(move || -> Result<_, ForgeError> {
+            let plan_path = crate::agent_probe::resolve_policy_path(&mint_root, &plan_ref)?;
+            let mut plan: CasePlan = serde_json::from_slice(
+                &fs::read(&plan_path).map_err(|e| ForgeError::io("read plan proposal", e))?,
+            )?;
+            validate_proposal(&mut plan)?;
+            fs::create_dir_all(&mint_root).map_err(|e| ForgeError::io("create state root", e))?;
+            let root = mint_root
+                .canonicalize()
+                .map_err(|e| ForgeError::io("canonicalize state root", e))?;
+            let case_id = ids::case_id()?;
+            plan.case_id.clone_from(&case_id);
+            let case_dir = root.join("cases").join(&case_id);
+            let (_runs_dir, case_events) = CaseRunner::initialize_case(&case_dir)?;
+            let stream = Arc::new(LedgerStream::open(
+                &root,
+                format!("case-{case_id}"),
+                &mint_entity,
+            )?);
+            stream.commit_typed("case_plan", vec![case_id.clone()], &plan, vec![])?;
+            let intent = sea_forge_core::types::Intent {
+                intent_id: ids::random_id("int")?,
+                summary: format!("Execute plan {plan_ref}"),
+                actor_id: mint_entity,
+                process_id: mint_process,
+                created_at: Utc::now().to_rfc3339(),
+            };
+            let case = Case {
+                version: RECORD_VERSION.into(),
+                case_id: case_id.clone(),
+                intent,
+                state: CaseState::Active,
+                plan_ref: plan.plan_id.clone(),
+                run_ids: vec![],
+                stages: plan
+                    .items
+                    .iter()
+                    .filter(|item| item.item_kind == ItemKind::Stage)
+                    .map(|item| item.plan_item_id.clone())
+                    .collect(),
+                close_reason: None,
+                created_at: Utc::now().to_rfc3339(),
+                closed_at: None,
+            };
+            write_json(&case_dir.join("case.json"), &case)?;
+            write_json(&case_dir.join("plan.json"), &plan)?;
+            let mut events = vec![];
+            CaseRunner::append_event(
+                &case_events,
+                &stream,
+                &mut events,
+                TraceKind::CaseCreated,
+                None,
+                serde_json::json!({"case_id": case_id}),
+            )?;
+            Ok((
+                root,
+                case_id,
+                case_dir,
+                case_events,
+                stream,
+                plan,
+                case,
+                events,
+            ))
+        })
+        .await
+        .map_err(|error| ForgeError::Internal(format!("case mint task panic: {error}")))??;
     let mut active = JoinSet::new();
 
     'dispatch: loop {
@@ -122,14 +152,15 @@ pub(crate) async fn submit(
                 .await
                 .ok_or_else(|| ForgeError::Internal("missing active episode".into()))?
                 .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))?;
-            record_completion(
-                &stream,
-                &case_id,
-                &case_events,
-                &mut events,
-                &mut case,
+            (events, case) = record_completion_blocking(
+                Arc::clone(&stream),
+                case_id.clone(),
+                case_events.clone(),
+                events,
+                case,
                 completion,
-            )?;
+            )
+            .await?;
             write_json(&case_dir.join("case.json"), &case)?;
             continue;
         }
@@ -199,14 +230,15 @@ pub(crate) async fn submit(
                         let completion = completion.map_err(|error| {
                             ForgeError::Internal(format!("episode task panic: {error}"))
                         })?;
-                        record_completion(
-                            &stream,
-                            &case_id,
-                            &case_events,
-                            &mut events,
-                            &mut case,
+                        (events, case) = record_completion_blocking(
+                            Arc::clone(&stream),
+                            case_id.clone(),
+                            case_events.clone(),
+                            events,
+                            case,
                             completion,
-                        )?;
+                        )
+                        .await?;
                     }
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
@@ -269,7 +301,15 @@ pub(crate) async fn submit(
                                 let completion = completion
                                     .ok_or_else(|| ForgeError::Internal("missing active episode".into()))?
                                     .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))?;
-                                record_completion(&stream, &case_id, &case_events, &mut events, &mut case, completion)?;
+                                (events, case) = record_completion_blocking(
+                                    Arc::clone(&stream),
+                                    case_id.clone(),
+                                    case_events.clone(),
+                                    events,
+                                    case,
+                                    completion,
+                                )
+                                .await?;
                                 write_json(&case_dir.join("case.json"), &case)?;
                                 continue 'dispatch;
                             }
@@ -306,6 +346,10 @@ pub(crate) async fn submit(
                     let policy = payload.policy.clone();
                     let entity = payload.entity.clone();
                     let process = payload.process.clone();
+                    // F-08: the verified role rides with the episode, so the
+                    // authority decision inside the spawned task is made for
+                    // the principal that was actually authenticated.
+                    let role_for_task = actor_role.clone();
                     let timeout = payload.timeout;
                     let root = root.clone();
                     let permission_broker = state.permission_broker.clone();
@@ -331,6 +375,7 @@ pub(crate) async fn submit(
                                             &process,
                                             &case_for_task,
                                             &run_id,
+                                            role_for_task.clone(),
                                             permission_broker,
                                             cancel,
                                         )
@@ -352,6 +397,7 @@ pub(crate) async fn submit(
                                     &run_for_task,
                                     root,
                                     timeout,
+                                    role_for_task,
                                 )
                             })
                             .await
@@ -400,14 +446,15 @@ pub(crate) async fn submit(
                 let completion = completion.map_err(|error| {
                     ForgeError::Internal(format!("episode task panic: {error}"))
                 })?;
-                record_completion(
-                    &stream,
-                    &case_id,
-                    &case_events,
-                    &mut events,
-                    &mut case,
+                (events, case) = record_completion_blocking(
+                    Arc::clone(&stream),
+                    case_id.clone(),
+                    case_events.clone(),
+                    events,
+                    case,
                     completion,
-                )?;
+                )
+                .await?;
             }
             write_json(&case_dir.join("case.json"), &case)?;
             return Ok(DispatchOutcome {
@@ -423,17 +470,45 @@ pub(crate) async fn submit(
                 .await
                 .ok_or_else(|| ForgeError::Internal("missing active episode".into()))?
                 .map_err(|error| ForgeError::Internal(format!("episode task panic: {error}")))?;
-            record_completion(
-                &stream,
-                &case_id,
-                &case_events,
-                &mut events,
-                &mut case,
+            (events, case) = record_completion_blocking(
+                Arc::clone(&stream),
+                case_id.clone(),
+                case_events.clone(),
+                events,
+                case,
                 completion,
-            )?;
+            )
+            .await?;
             write_json(&case_dir.join("case.json"), &case)?;
         }
     }
+}
+
+/// F-24: settlement recording commits to the ledger and appends trace
+/// events — blocking work that must not park a tokio worker mid-dispatch.
+async fn record_completion_blocking(
+    stream: Arc<LedgerStream>,
+    case_id: String,
+    case_events: std::path::PathBuf,
+    events: Vec<sea_forge_core::types::TraceEvent>,
+    case: Case,
+    completion: Completion,
+) -> Result<(Vec<sea_forge_core::types::TraceEvent>, Case), ForgeError> {
+    tokio::task::spawn_blocking(move || {
+        let mut events = events;
+        let mut case = case;
+        record_completion(
+            &stream,
+            &case_id,
+            &case_events,
+            &mut events,
+            &mut case,
+            completion,
+        )
+        .map(|_| (events, case))
+    })
+    .await
+    .map_err(|error| ForgeError::Internal(format!("completion task panic: {error}")))?
 }
 
 fn record_completion(
@@ -495,6 +570,7 @@ async fn execute_agent(
     process: &str,
     case_id: &str,
     run_id: &str,
+    actor_role: ActorRole,
     permission_broker: delegation::AcpApprovalBroker,
     cancel: Arc<std::sync::atomic::AtomicBool>,
 ) -> Result<SettlementEvent, ForgeError> {
@@ -532,6 +608,9 @@ async fn execute_agent(
             policy_path: policy,
             entity,
             process,
+            // F-08: the episode is evaluated for the verified role, not a
+            // hardcoded default.
+            actor_role,
             response_schema: response_schema.as_ref(),
             transcript_retention: resolved_retention,
         },
@@ -633,6 +712,7 @@ fn execute_sandbox(
     run_id: &str,
     root: PathBuf,
     timeout: u64,
+    actor_role: ActorRole,
 ) -> Result<SettlementEvent, ForgeError> {
     let operation = item
         .operations
@@ -657,12 +737,15 @@ fn execute_sandbox(
     let mut trace = JsonlTraceRecorder::create(&run_dir.join("trace.jsonl"), run_id, entity)?;
     let mut evidence = JsonlEvidenceWriter::create(&run_dir.join("evidence.jsonl"), run_id)?;
 
-    let policy = agent_probe::resolve_policy_path(&config.root, policy_path);
+    let policy = agent_probe::resolve_policy_path(&config.root, policy_path)?;
     let bundle = AuthorityPolicyBundle::load(&policy)?;
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
     let actor = Actor {
         actor_id: entity.into(),
-        role: ActorRole::Operator,
+        // F-08: the role the identity gate verified for this request — never
+        // an assumed default. Role-keyed policy rules are meaningless if every
+        // principal is evaluated as `operator`.
+        role: actor_role,
     };
     let action = sea_forge_core::types::AuthorityAction::from(&operation);
     // DOM-03: the domain model judges the action *before* policy authority
@@ -685,7 +768,7 @@ fn execute_sandbox(
         .transpose()?;
     let decision = engine.evaluate(AuthorityEvaluation {
         actor: &actor,
-        binding: bundle.resolve_identity(entity, ActorRole::Operator),
+        binding: bundle.resolve_identity(&actor.actor_id, actor.role.clone()),
         run_id,
         case_id,
         plan_item_id: &item.plan_item_id,

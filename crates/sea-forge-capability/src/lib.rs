@@ -68,7 +68,10 @@ pub fn append(path: &Path, envelope: &SemanticEnvelope) -> Result<(), ForgeError
     encoded.push(b'\n');
     file.write_all(&encoded)
         .and_then(|_| file.flush())
-        .map_err(|e| ForgeError::io("append capability envelope", e))
+        .map_err(|e| ForgeError::io("append capability envelope", e))?;
+    // F-25.r: power-loss-safe appends, matching the ledger discipline.
+    file.sync_data()
+        .map_err(|e| ForgeError::io("sync capability memory", e))
 }
 pub struct RecallQuery<'a> {
     pub query: &'a str,
@@ -84,9 +87,23 @@ pub fn recall(
     let file = File::open(path).map_err(|error| ForgeError::io("open capability memory", error))?;
     let mut malformed = 0;
     let mut values: Vec<SemanticEnvelope> = Vec::new();
-    for line in BufReader::new(file).lines() {
-        let line = line.map_err(|error| ForgeError::io("read capability memory", error))?;
-        match serde_json::from_str(&line) {
+    let mut reader = BufReader::new(file);
+    let mut raw = Vec::new();
+    loop {
+        // F-25.r: byte-oriented reads — one non-UTF-8 byte must not abort a
+        // whole recall scan. Undecodable lines degrade to the same
+        // malformed counter the JSON-parse failures already use.
+        raw.clear();
+        let read = reader
+            .read_until(b'\n', &mut raw)
+            .map_err(|error| ForgeError::io("read capability memory", error))?;
+        if read == 0 {
+            break;
+        }
+        match std::str::from_utf8(&raw)
+            .map_err(|_| ())
+            .and_then(|line| serde_json::from_str::<SemanticEnvelope>(line.trim()).map_err(|_| ()))
+        {
             Ok(e) => values.push(e),
             Err(_) => malformed += 1,
         }

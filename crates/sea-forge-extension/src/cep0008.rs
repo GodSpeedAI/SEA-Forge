@@ -122,6 +122,44 @@ pub fn project_to_cep0008_flat_v1(
     require("case_ref", &env.case_ref)?;
     require("settlement_timestamp", input.settlement_timestamp)?;
 
+    // SUP-09i: emptiness alone is not grammar. These fields ride the wire as
+    // `event_id` and `idempotency_key`, so a malformed value would poison
+    // downstream consumers that trust the envelope's own identifiers.
+    // Crockford base32: digits plus A-Z minus I, L, O, U.
+    let valid_ulid = |v: &str| {
+        v.len() == 26
+            && v.chars().all(|c| {
+                c.is_ascii_digit()
+                    || (c.is_ascii_uppercase() && !matches!(c, 'I' | 'L' | 'O' | 'U'))
+            })
+    };
+    if !valid_ulid(input.entry_ulid) {
+        return Err(schema_error(format!(
+            "cep0008: entry_ulid is not a valid 26-char ULID: {}",
+            input.entry_ulid
+        )));
+    }
+    let valid_sha = |v: &str| {
+        v.strip_prefix("sha256:").is_some_and(|hex| {
+            hex.len() == 64
+                && hex
+                    .chars()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        })
+    };
+    if !valid_sha(input.payload_hash) {
+        return Err(schema_error(format!(
+            "cep0008: payload_hash must be sha256:<64 lowercase hex>: {}",
+            input.payload_hash
+        )));
+    }
+    if !sea_forge_core::path::valid_id_segment(input.ledger_id, 128) {
+        return Err(schema_error(format!(
+            "cep0008: ledger_id is not a safe id segment: {}",
+            input.ledger_id
+        )));
+    }
+
     // Validate RFC 3339 timestamp.
     if chrono::DateTime::parse_from_rfc3339(input.settlement_timestamp).is_err() {
         return Err(schema_error(format!(

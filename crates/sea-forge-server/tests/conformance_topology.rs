@@ -93,9 +93,9 @@ fn submit_plan(root: &Path, policy_path: &Path, plan: &CasePlan) -> Request {
     let plan_path = root.join("plan.json");
     fs::write(&plan_path, serde_json::to_vec(plan).unwrap()).unwrap();
     serde_json::from_str(&format!(
-        r#"{{"verb":"submit","plan":{:?},"policy":{:?},"entity":"operator_local","process":"test"}}"#,
-        plan_path.to_str().unwrap(),
-        policy_path.to_str().unwrap(),
+        // F-16: cell-relative spellings.
+        r#"{{"verb":"submit","plan":"plan.json","policy":{:?},"entity":"operator_local","process":"test"}}"#,
+        policy_path.strip_prefix(root).unwrap().to_str().unwrap(),
     ))
     .unwrap()
 }

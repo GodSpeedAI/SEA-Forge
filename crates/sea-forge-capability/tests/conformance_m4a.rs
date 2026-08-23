@@ -150,12 +150,12 @@ fn make_decl_req(
 }
 
 fn setup_root(root: &Path) {
-    fs::create_dir_all(root.join(".sea-forge/settlement")).unwrap();
-    fs::create_dir_all(root.join(".sea-forge/capabilities/policies")).unwrap();
+    fs::create_dir_all(root.join("settlement")).unwrap();
+    fs::create_dir_all(root.join("capabilities/policies")).unwrap();
 }
 
 fn write_envelopes(root: &Path, envelopes: &[SemanticEnvelope]) {
-    let path = root.join(".sea-forge/capabilities.jsonl");
+    let path = root.join("capabilities.jsonl");
     let mut data = String::new();
     for env in envelopes {
         data.push_str(&serde_json::to_string(env).unwrap());
@@ -219,11 +219,7 @@ fn m4a_local_declaration_zero_qualifying_weight() {
     assert_eq!(decl.strength, SettlementStrength::Local);
     assert!(!decl.qualifies_for_capability);
 
-    append_declaration(
-        &root.path().join(".sea-forge/settlement/declarations.jsonl"),
-        &decl,
-    )
-    .unwrap();
+    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -270,11 +266,7 @@ fn m4a_post_hoc_criteria_integrity_failure() {
     assert_eq!(decl.status, DeclarationStatus::Rejected);
     assert!(!decl.qualifies_for_capability);
 
-    append_declaration(
-        &root.path().join(".sea-forge/settlement/declarations.jsonl"),
-        &decl,
-    )
-    .unwrap();
+    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -316,11 +308,7 @@ fn m4a_self_declaration_integrity_failure() {
     assert!(!decl.qualifies_for_capability);
     assert!(!decl.independence.independent);
 
-    append_declaration(
-        &root.path().join(".sea-forge/settlement/declarations.jsonl"),
-        &decl,
-    )
-    .unwrap();
+    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -366,11 +354,7 @@ fn m4a_gameable_feedback_weight_below_threshold() {
         decl.reliability.weight
     );
 
-    append_declaration(
-        &root.path().join(".sea-forge/settlement/declarations.jsonl"),
-        &decl,
-    )
-    .unwrap();
+    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -415,11 +399,7 @@ fn m4a_low_attribution_weight_below_threshold() {
         decl.reliability.weight
     );
 
-    append_declaration(
-        &root.path().join(".sea-forge/settlement/declarations.jsonl"),
-        &decl,
-    )
-    .unwrap();
+    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -444,7 +424,7 @@ fn m4a_three_qualifying_declarations_promotion_to_proven() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join(".sea-forge/settlement/declarations.jsonl");
+    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     // Three qualifying declarations spanning all required variation dimensions
     // with decreasing orchestration burden (baseline 0.9 → current 0.7)
@@ -526,7 +506,7 @@ fn m4a_repeated_variation_no_coverage_increase() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join(".sea-forge/settlement/declarations.jsonl");
+    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     // Same variation value repeated 3 times
     for i in 1..=3 {
@@ -584,7 +564,7 @@ fn m4a_regression_contraction() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join(".sea-forge/settlement/declarations.jsonl");
+    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     // 3 qualifying + 1 rejected-strong (regression)
     let variations = [
@@ -676,7 +656,7 @@ fn m4a_rebuild_byte_identical_modulo_rebuilt_at() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join(".sea-forge/settlement/declarations.jsonl");
+    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     let variations = [
         (
@@ -717,12 +697,10 @@ fn m4a_rebuild_byte_identical_modulo_rebuilt_at() {
     save_policy(root.path(), &policy).unwrap();
 
     let envelopes =
-        sea_forge_capability::load_envelopes(&root.path().join(".sea-forge/capabilities.jsonl"))
+        sea_forge_capability::load_envelopes(&root.path().join("capabilities.jsonl")).unwrap();
+    let declarations =
+        sea_forge_capability::load_declarations(&root.path().join("settlement/declarations.jsonl"))
             .unwrap();
-    let declarations = sea_forge_capability::load_declarations(
-        &root.path().join(".sea-forge/settlement/declarations.jsonl"),
-    )
-    .unwrap();
 
     // Build twice with same rebuilt_at → byte-identical
     let r1 = build_capability_record(
@@ -731,14 +709,16 @@ fn m4a_rebuild_byte_identical_modulo_rebuilt_at() {
         &declarations,
         &policy,
         "2026-07-14T12:00:00Z",
-    );
+    )
+    .unwrap();
     let r2 = build_capability_record(
         CAP,
         &envelopes,
         &declarations,
         &policy,
         "2026-07-14T12:00:00Z",
-    );
+    )
+    .unwrap();
 
     let j1 = serde_json::to_string(&r1).unwrap();
     let j2 = serde_json::to_string(&r2).unwrap();
@@ -754,7 +734,8 @@ fn m4a_rebuild_byte_identical_modulo_rebuilt_at() {
         &declarations,
         &policy,
         "2026-07-15T00:00:00Z",
-    );
+    )
+    .unwrap();
     assert_ne!(r1.rebuilt_at, r3.rebuilt_at);
     assert_eq!(r1.status, r3.status);
     assert_eq!(r1.qualifying, r3.qualifying);
@@ -810,7 +791,7 @@ fn m4a_require_proven_allows_when_proven() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join(".sea-forge/settlement/declarations.jsonl");
+    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     let variations = [
         (
@@ -875,7 +856,7 @@ fn m4a_policy_change_contraction() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join(".sea-forge/settlement/declarations.jsonl");
+    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     let variations = [
         (
@@ -1037,4 +1018,69 @@ fn thoth_sod_replayed_declaration_cannot_bypass_promotion() {
     for _ in 0..2 {
         assert!(!declaration_qualifies(&decl, &policy));
     }
+}
+
+// ── F-13: promotion matching is exact, never substring or wildcard ──
+//
+// A capability named `test` must not aggregate declarations from plan items
+// like `itm_contest_7`, and `"*"` must never sweep the whole declaration
+// store: inflated `min_declarations`/weights/coverage can flip a capability
+// to `Proven` on unrelated evidence, and `require_proven` gates side-effect
+// authority on that record.
+
+fn decl_with_plan_item(plan_item_id: &str) -> SettlementDeclaration {
+    let mut decl = qualifying_declaration("operator", None);
+    decl.declaration_id = format!("decl_f13_{plan_item_id}");
+    decl.plan_item_id = plan_item_id.into();
+    decl
+}
+
+const F13_REBUILT_AT: &str = "2026-08-23T00:00:00Z";
+
+#[test]
+fn f13_substring_plan_items_do_not_aggregate_into_unrelated_capability() {
+    let policy = default_v02_policy();
+    let envelopes = vec![make_envelope("run_001", CAP, SettlementStatus::Accepted)];
+
+    // Every one of these plan item ids *contains* CAP as a substring.
+    let overlapping = vec![
+        decl_with_plan_item(&format!("itm_{CAP}_7")),
+        decl_with_plan_item(&format!("{CAP}_regress")),
+        decl_with_plan_item(&format!("pre{CAP}")),
+    ];
+
+    let record =
+        build_capability_record(CAP, &envelopes, &overlapping, &policy, F13_REBUILT_AT).unwrap();
+    assert_eq!(
+        record.qualifying.declaration_count, 0,
+        "substring-overlapping plan items must not count toward the capability"
+    );
+}
+
+#[test]
+fn f13_wildcard_capability_identity_is_rejected() {
+    let policy = default_v02_policy();
+    let envelopes = vec![make_envelope("run_001", CAP, SettlementStatus::Accepted)];
+    // A declaration whose plan_item_id is literally "*" — under the old
+    // wildcard rule this (and every other declaration) would aggregate.
+    let declarations = vec![decl_with_plan_item("*")];
+
+    let result = build_capability_record("*", &envelopes, &declarations, &policy, F13_REBUILT_AT);
+    assert!(
+        result.is_err(),
+        "\"*\" must be rejected as a capability name"
+    );
+}
+
+#[test]
+fn f13_exact_plan_item_mapping_still_aggregates() {
+    let policy = default_v02_policy();
+    let envelopes = vec![make_envelope("run_001", CAP, SettlementStatus::Accepted)];
+    let exact = vec![decl_with_plan_item(CAP)];
+
+    let record = build_capability_record(CAP, &envelopes, &exact, &policy, F13_REBUILT_AT).unwrap();
+    assert_eq!(
+        record.qualifying.declaration_count, 1,
+        "an exact plan-item mapping still counts"
+    );
 }

@@ -24,6 +24,13 @@ pub struct Precondition {
     pub records: Vec<RecordDigest>,
 }
 
+/// F-24: an upper bound on caller-supplied precondition records. Each record
+/// costs a full ledger scan to resolve, so an unbounded 1 MiB request could
+/// otherwise drive thousands of scans; legitimate staleness guards name a
+/// handful of records. Enforced before any resolution runs (pre-side-effect,
+/// so rejection is safe by construction).
+pub const MAX_PRECONDITION_RECORDS: usize = 16;
+
 /// A single `{ref, expected_digest}` precondition entry.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct RecordDigest {
@@ -113,6 +120,12 @@ pub fn evaluate<R: RecordResolver>(
     precondition: &Precondition,
     resolver: &R,
 ) -> Result<Option<RejectedAsStale>, ForgeError> {
+    if precondition.records.len() > MAX_PRECONDITION_RECORDS {
+        return Err(ForgeError::Input(format!(
+            "too many precondition records: {} > {MAX_PRECONDITION_RECORDS}",
+            precondition.records.len()
+        )));
+    }
     let mut changed = Vec::new();
     for record in &precondition.records {
         let current = resolver.resolve(&record.r#ref)?;

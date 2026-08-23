@@ -49,7 +49,7 @@ fn import_rejects_a_bundle_over_the_size_limit() {
 
     // Fail closed: nothing was staged or imported before the rejection.
     assert!(
-        !root.join(".sea-forge/imported").exists(),
+        !root.join("imported").exists(),
         "a rejected bundle must leave no imported state behind"
     );
 }

@@ -102,10 +102,13 @@ fn state(root: &Path) -> Arc<ServerState> {
 
 fn submit(root: &Path, plan_path: &Path, policy_path: &Path) -> serde_json::Value {
     let state = state(root);
+    // F-16: plan/policy references are cell-relative spellings under the root.
+    let plan_ref = plan_path.strip_prefix(root).unwrap().to_string_lossy();
+    let policy_ref = policy_path.strip_prefix(root).unwrap().to_string_lossy();
     let request: Request = serde_json::from_value(serde_json::json!({
         "verb": "submit",
-        "plan": plan_path,
-        "policy": policy_path,
+        "plan": plan_ref,
+        "policy": policy_ref,
         "entity": "operator_local",
         "process": "test",
         "timeout": 60,
@@ -253,8 +256,8 @@ fn f19_huge_timeout_is_clamped_not_panic() {
     let state = state(root.path());
     let request: Request = serde_json::from_value(serde_json::json!({
         "verb": "submit",
-        "plan": plan_path,
-        "policy": policy_path,
+        "plan": "plan.json",
+        "policy": policy_path.strip_prefix(root.path()).unwrap().to_string_lossy(),
         "entity": "operator_local",
         "process": "test",
         "timeout": 18_446_744_073_709_551_615u64,

@@ -22,10 +22,10 @@ fn sha256_hex(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
-/// Lay down two run directories under `<root>/.sea-forge/runs/<id>/` with the
+/// Lay down two run directories under `<root>/runs/<id>/` with the
 /// canonical evidence files plus an artifact, mimicking the pipeline output.
 fn seed_two_runs(root: &Path) -> Vec<String> {
-    let runs_root = root.join(".sea-forge/runs");
+    let runs_root = root.join("runs");
     fs::create_dir_all(&runs_root).unwrap();
     let run_a = "run_20260715T000000Z_aaaaaa";
     let run_b = "run_20260715T000001Z_bbbbbb";
@@ -46,7 +46,7 @@ fn seed_two_runs(root: &Path) -> Vec<String> {
 }
 
 fn assert_manifest_files_present(root: &Path, manifest: &BundleManifest) {
-    let imported_root = root.join(".sea-forge/imported").join(&manifest.cell_id);
+    let imported_root = root.join("imported").join(&manifest.cell_id);
     assert!(imported_root.exists(), "imported dir must exist");
     for entry in &manifest.files {
         let p = imported_root.join(&entry.path);
@@ -63,7 +63,7 @@ fn export_import_verifies_hashes() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
     let run_ids = seed_two_runs(src.path());
-    let bundle = src.path().join(".sea-forge/export/bundle_test.tar");
+    let bundle = src.path().join("export/bundle_test.tar");
     let manifest = cell::export(src.path(), &run_ids, &[], &bundle).unwrap();
     assert_eq!(manifest.run_ids, run_ids);
     assert_eq!(manifest.cell_id.len(), 13);
@@ -93,7 +93,7 @@ fn local_capability_counts_unchanged() {
     let dst = tempfile::tempdir().unwrap();
     let run_ids = seed_two_runs(src.path());
     // Seed capabilities.jsonl in dst with N synthetic envelopes.
-    let caps_path = dst.path().join(".sea-forge/capabilities.jsonl");
+    let caps_path = dst.path().join("capabilities.jsonl");
     fs::create_dir_all(caps_path.parent().unwrap()).unwrap();
     let env = SemanticEnvelope {
         version: "0.1".into(),
@@ -134,7 +134,7 @@ fn local_capability_counts_unchanged() {
     let n_before = fs::read_to_string(&caps_path).unwrap().lines().count();
     assert_eq!(n_before, 5);
 
-    let bundle = src.path().join(".sea-forge/export/bundle_cap.tar");
+    let bundle = src.path().join("export/bundle_cap.tar");
     cell::export(src.path(), &run_ids, &[], &bundle).unwrap();
     cell::import(dst.path(), &bundle).unwrap();
 
@@ -153,7 +153,7 @@ fn tampered_bundle_rejected_atomically() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
     let run_ids = seed_two_runs(src.path());
-    let bundle = src.path().join(".sea-forge/export/bundle_tamper.tar");
+    let bundle = src.path().join("export/bundle_tamper.tar");
     let manifest = cell::export(src.path(), &run_ids, &[], &bundle).unwrap();
 
     // Read bundle bytes, find a known file's bytes, flip one byte in-place
@@ -172,16 +172,13 @@ fn tampered_bundle_rejected_atomically() {
     );
 
     // Atomic-reject teeth: no leftover imported dir for this cell.
-    let imported_dir = dst
-        .path()
-        .join(".sea-forge/imported")
-        .join(&manifest.cell_id);
+    let imported_dir = dst.path().join("imported").join(&manifest.cell_id);
     assert!(
         !imported_dir.exists(),
         "atomic reject must leave no partial import dir"
     );
     // No staging dir either.
-    let staging_glob = dst.path().join(".sea-forge/imported/.staging-*");
+    let staging_glob = dst.path().join("imported/.staging-*");
     let _ = staging_glob; // ponytail: a single staging path; globbed clean on err path
 }
 
@@ -226,7 +223,7 @@ fn cell_identity_is_stable() {
     let record = cell::read_cell(root.path()).unwrap().unwrap();
     assert_eq!(record.cell_id, id1);
     // cell.json must be at the canonical path.
-    assert!(root.path().join(".sea-forge/cell.json").exists());
+    assert!(root.path().join("cell.json").exists());
 }
 
 /// Cell identity absent = legacy, valid (read returns None without error).
@@ -342,7 +339,7 @@ fn re_import_replaces_prior() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
     let run_ids = seed_two_runs(src.path());
-    let bundle = src.path().join(".sea-forge/export/bundle_re.tar");
+    let bundle = src.path().join("export/bundle_re.tar");
     cell::export(src.path(), &run_ids, &[], &bundle).unwrap();
     let m1 = cell::import(dst.path(), &bundle).unwrap();
     let m2 = cell::import(dst.path(), &bundle).unwrap();
@@ -356,7 +353,7 @@ fn re_import_replaces_prior() {
 fn read_manifest_inspects_bundle() {
     let src = tempfile::tempdir().unwrap();
     let run_ids = seed_two_runs(src.path());
-    let bundle = src.path().join(".sea-forge/export/bundle_rm.tar");
+    let bundle = src.path().join("export/bundle_rm.tar");
     cell::export(src.path(), &run_ids, &[], &bundle).unwrap();
     let manifest = cell::read_manifest(&bundle).unwrap();
     assert!(!manifest.files.is_empty());
@@ -371,7 +368,7 @@ fn read_manifest_inspects_bundle() {
 // bundles whose per-file hashes/sizes are internally consistent (so integrity
 // verification passes) but whose paths / ids are hostile, then assert the
 // import rejects with `bundle_integrity_error` and mutates nothing outside
-// `<root>/.sea-forge/imported/`.
+// `<root>/imported/`.
 // ---------------------------------------------------------------------------
 
 /// Build a tar bundle from a fully attacker-controlled manifest plus matching
@@ -538,7 +535,7 @@ fn dst_with_outside_sentinel() -> (tempfile::TempDir, std::path::PathBuf, std::p
     let root = dir.path().join("root");
     fs::create_dir_all(&root).unwrap();
     // The sentinel lives in the parent of the import root; a `../` escape from
-    // `.sea-forge/imported/<cell>/` would climb toward it.
+    // `imported/<cell>/` would climb toward it.
     let sentinel = dir.path().join("sea_forge_outside_sentinel.txt");
     fs::write(&sentinel, b"do-not-touch").unwrap();
     (dir, root, sentinel)
@@ -629,7 +626,7 @@ fn traversal_symlink_parent_escape_rejected() {
     let (_dir, root, sentinel) = dst_with_outside_sentinel();
     // Precreate the imported dir and a symlink that points outside the root.
     let cell_id = "cell_deadbeef";
-    let imported = root.join(".sea-forge/imported").join(cell_id);
+    let imported = root.join("imported").join(cell_id);
     fs::create_dir_all(&imported).unwrap();
     let outside_dir = _dir.path().join("sea_forge_escape_target");
     fs::create_dir_all(&outside_dir).unwrap();
@@ -666,7 +663,7 @@ fn traversal_symlink_parent_escape_rejected() {
 
 /// The `imported` directory itself must not be a symlink pointing outside
 /// root. If a hostile pre-existing symlink sits at
-/// `<root>/.sea-forge/imported`, the import must fail closed with
+/// `<root>/imported`, the import must fail closed with
 /// `bundle_integrity_error` and write nothing — neither into the symlink's
 /// target nor anywhere else outside the canonical root.
 #[test]
@@ -674,11 +671,9 @@ fn traversal_imported_root_symlink_rejected() {
     let (dir, root, sentinel) = dst_with_outside_sentinel();
     let outside_target = dir.path().join("sea_forge_imported_escape_target");
     fs::create_dir_all(&outside_target).unwrap();
-    // Pre-create `.sea-forge` as a real dir, then plant `imported` as a
-    // symlink whose target is outside the import root.
-    fs::create_dir_all(root.join(".sea-forge")).unwrap();
+    // Plant `imported` as a symlink whose target is outside the import root.
     #[cfg(unix)]
-    std::os::unix::fs::symlink(&outside_target, root.join(".sea-forge/imported")).unwrap();
+    std::os::unix::fs::symlink(&outside_target, root.join("imported")).unwrap();
     #[cfg(not(unix))]
     return; // symlink escape is a unix-specific vector here
 
@@ -711,11 +706,12 @@ fn traversal_imported_root_symlink_rejected() {
     );
 }
 
-/// Same vector at the `.sea-forge` level: if `.sea-forge` itself is a symlink
-/// to outside the root, the import must reject with `bundle_integrity_error`
-/// before any write reaches the symlink's target.
+/// F-12: `.sea-forge` is no longer part of the import path at all. A hostile
+/// pre-existing `.sea-forge` symlink to outside the root must neither break
+/// the import nor be written through — imports land directly under
+/// `<root>/imported/`, and the outside target stays byte-identical.
 #[test]
-fn traversal_sea_forge_root_symlink_rejected() {
+fn legacy_sea_forge_symlink_is_inert_to_import() {
     let (dir, root, sentinel) = dst_with_outside_sentinel();
     let outside_target = dir.path().join("sea_forge_seaforge_escape_target");
     fs::create_dir_all(&outside_target).unwrap();
@@ -735,24 +731,24 @@ fn traversal_sea_forge_root_symlink_rejected() {
 
     let sentinel_before = fs::read(&sentinel).unwrap();
     let outside_before = snapshot_tree(&outside_target);
-    let err = cell::import(&root, &bundle_path).expect_err(".sea-forge symlink must be rejected");
+    let manifest = cell::import(&root, &bundle_path)
+        .expect("a legacy .sea-forge symlink must not affect a state-root import");
+    assert!(root.join("imported").join(&manifest.cell_id).exists());
     assert!(
-        format!("{err:?}").contains("bundle_integrity_error"),
-        ".sea-forge symlink must report bundle_integrity_error: {err:?}"
+        !root.join(".sea-forge/imported").exists(),
+        "imports must never nest under the legacy path again"
     );
     assert_eq!(sentinel_before, fs::read(&sentinel).unwrap());
     assert_eq!(
         outside_before,
         snapshot_tree(&outside_target),
-        "nothing may be written through the escaping .sea-forge symlink"
+        "nothing may be written through the legacy .sea-forge symlink"
     );
 }
 
 // Test of template adopt (test 4 from plan).
 fn seed_template(src: &Path, name: &str, version: &str, body: &str) {
-    let p = src
-        .join(".sea-forge/templates")
-        .join(format!("{name}@{version}.yaml"));
+    let p = src.join("templates").join(format!("{name}@{version}.yaml"));
     fs::create_dir_all(p.parent().unwrap()).unwrap();
     fs::write(&p, body).unwrap();
 }
@@ -765,7 +761,7 @@ fn imported_template_not_instantiable_pre_adopt() {
     let run_ids = seed_two_runs(src.path());
     let template_body = "name: foo\nversion: \"0.1\"\nplan:\n  items: []\n";
     seed_template(src.path(), "foo", "0.1", template_body);
-    let bundle = src.path().join(".sea-forge/export/bundle_tmpl.tar");
+    let bundle = src.path().join("export/bundle_tmpl.tar");
     let manifest = cell::export(src.path(), &run_ids, &["foo@0.1".into()], &bundle).unwrap();
     assert_eq!(manifest.templates, vec!["foo@0.1".to_string()]);
 
@@ -775,7 +771,7 @@ fn imported_template_not_instantiable_pre_adopt() {
     assert!(imported_tmpl.exists(), "imported template must exist");
 
     // load_pinned must NOT find it — it lives under imported/, not templates/.
-    let active_tmpl = dst.path().join(".sea-forge/templates/foo@0.1.yaml");
+    let active_tmpl = dst.path().join("templates/foo@0.1.yaml");
     assert!(
         !active_tmpl.exists(),
         "pre-adopt: template must not be active"
@@ -787,4 +783,34 @@ fn imported_template_not_instantiable_pre_adopt() {
     assert!(active_tmpl.exists(), "post-adopt: template must be active");
     let adopted_body = fs::read_to_string(&active_tmpl).unwrap();
     assert_eq!(adopted_body, template_body, "adopt must copy byte-for-byte");
+}
+
+// F-12: export must fail closed when requested runs contribute no evidence.
+// Under the old double-nested layout this exact call exported an empty bundle
+// and reported success while the operator believed the runs had traveled.
+#[test]
+fn export_with_unresolvable_runs_fails_closed_not_silently_empty() {
+    let src = tempfile::tempdir().unwrap();
+    let out = src.path().join("export/empty.tar");
+    let err = cell::export(
+        src.path(),
+        &["run_never_materialized".to_string()],
+        &[],
+        &out,
+    )
+    .expect_err("zero resolving runs must refuse the export");
+    assert!(
+        err.to_string().contains("no run evidence found"),
+        "the typed error must name the empty-evidence refusal: {err}"
+    );
+    assert!(
+        !out.exists(),
+        "a refused export must not leave a bundle behind"
+    );
+
+    // Templates-only exports remain lawful when no runs were requested.
+    fs::create_dir_all(src.path().join("templates")).unwrap();
+    fs::write(src.path().join("templates/foo@0.1.yaml"), "name: foo\n").unwrap();
+    let manifest = cell::export(src.path(), &[], &["foo@0.1".into()], &out).unwrap();
+    assert_eq!(manifest.templates, vec!["foo@0.1".to_string()]);
 }
