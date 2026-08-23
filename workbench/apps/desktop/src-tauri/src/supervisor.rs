@@ -44,7 +44,7 @@ pub const SOCKET_FILE_NAME: &str = "server.sock";
 /// The conventional cell root directory name.
 pub const DEFAULT_ROOT_DIR: &str = ".sea-forge";
 
-/// The sidecar's file name, both in the bundle and on `PATH`.
+/// The sidecar's file name beside this executable and in the bundle.
 const SERVER_BIN_NAME: &str = "sea-forge-server";
 
 /// Where a supervised server's stderr is captured, relative to the cell root.
@@ -163,10 +163,17 @@ pub fn is_listening(socket: &Path) -> bool {
 /// Locate the server binary this Workbench should supervise.
 ///
 /// Order, and why each rung exists:
-///   1. `SEA_FORGE_SERVER_BIN` — the operator's and the E2E harness's override.
+///   1. `SEA_FORGE_SERVER_BIN` — the operator's and the E2E harness's explicit
+///      override; this is also the developer loop's escape hatch when no
+///      sidecar has been staged or installed.
 ///   2. A sibling of this executable — where `bundle.externalBin` puts the
-///      sidecar in the installed package. This is the packaged path.
-///   3. `PATH` — a separately installed server, and the `cargo run` dev loop.
+///      sidecar in the installed package, and where `tauri dev` stages it.
+///
+/// There is deliberately no third rung on `PATH` (F-25.c). Whatever a `PATH`
+/// search finds is not the kernel this build was packaged with, and starting
+/// it would point an unverified binary at the operator's cell. When neither
+/// rung names a file, resolution fails closed and startup reports
+/// `server_binary_not_found`.
 pub fn resolve_server_binary() -> Result<PathBuf, String> {
     resolve_server_binary_from(
         std::env::var_os("SEA_FORGE_SERVER_BIN").map(PathBuf::from),
@@ -174,7 +181,6 @@ pub fn resolve_server_binary() -> Result<PathBuf, String> {
             let dir = exe.parent()?.to_path_buf();
             Some(dir)
         }),
-        std::env::var_os("PATH").map(PathBuf::from),
     )
 }
 
@@ -182,7 +188,6 @@ pub fn resolve_server_binary() -> Result<PathBuf, String> {
 pub fn resolve_server_binary_from(
     explicit: Option<PathBuf>,
     exe_dir: Option<PathBuf>,
-    path_var: Option<PathBuf>,
 ) -> Result<PathBuf, String> {
     if let Some(explicit) = explicit {
         if explicit.is_file() {
@@ -204,18 +209,10 @@ pub fn resolve_server_binary_from(
         }
     }
 
-    if let Some(path_var) = path_var {
-        for dir in std::env::split_paths(&path_var) {
-            let candidate = dir.join(SERVER_BIN_NAME);
-            if candidate.is_file() {
-                return Ok(candidate);
-            }
-        }
-    }
-
     Err(format!(
-        "no `{SERVER_BIN_NAME}` binary found beside this application or on PATH. \
-         Install the SEA Forge server, or set SEA_FORGE_SERVER_BIN to its path."
+        "no `{SERVER_BIN_NAME}` binary found beside this application. \
+         Install the packaged SEA Forge Workbench, or set SEA_FORGE_SERVER_BIN \
+         to the path of a sea-forge-server binary."
     ))
 }
 
@@ -489,6 +486,31 @@ pub fn watch_for_signals(supervisor: std::sync::Arc<CellSupervisor>) {
     });
 }
 
+/// Environment variables a supervised sidecar may receive, as an explicit
+/// allowlist.
+///
+/// Principle (F-25.b): clear the environment, then pass only these — never
+/// inherit-and-add. The desktop process carries whatever launched the session,
+/// including credential material the kernel has no business reading, so every
+/// name here must be something `sea-forge-server` demonstrably reads:
+///
+///   * `PATH` / `HOME` — forwarded to governed child processes at dispatch
+///     time (`case_dispatch`), and `notify_command` argv0 is resolved against
+///     `PATH` at config validation.
+///   * `TMPDIR` — honored by `std::env::temp_dir` staging (the identity probe
+///     and the sandbox's safe-join parent) instead of silently defaulting.
+///   * `RUST_LOG` — the sidecar's own log filter (`EnvFilter`); keeping it
+///     tunable keeps the captured `workbench-server.log` diagnostic.
+///
+/// A name absent from this process's environment is simply not passed. This
+/// deliberately excludes everything else: a credential reference configured on
+/// an agent endpoint resolves against the sidecar's environment, so one that
+/// pointed into the desktop session now fails closed with the server's own
+/// `missing_credential_error`, naming the variable. Operators who source
+/// credentials from their session run the server themselves and take the
+/// documented adoption path.
+const SIDECAR_ENV_ALLOWLIST: &[&str] = &["HOME", "PATH", "RUST_LOG", "TMPDIR"];
+
 /// Start the server on `cell` and wait for it to publish its socket.
 ///
 /// Both `SEA_FORGE_ROOT` and `SEA_FORGE_SOCKET` are passed explicitly: the
@@ -510,7 +532,18 @@ fn spawn_server(binary: &Path, cell: &Cell) -> Result<Child, (String, String)> {
         )
     })?;
 
-    let mut child = Command::new(binary)
+    // F-25.b: start from a cleared environment and pass only the allowlist
+    // above plus the two variables that name this cell. `Command::env` only
+    // ever adds, so without the clear the sidecar would inherit everything the
+    // desktop session carries — credential material included.
+    let mut command = Command::new(binary);
+    command.env_clear();
+    for name in SIDECAR_ENV_ALLOWLIST {
+        if let Some(value) = std::env::var_os(name) {
+            command.env(name, value);
+        }
+    }
+    let mut child = command
         .env("SEA_FORGE_ROOT", &cell.root)
         .env("SEA_FORGE_SOCKET", &cell.socket)
         .stdin(Stdio::null())
@@ -643,37 +676,26 @@ mod tests {
     }
 
     #[test]
-    fn the_packaged_sidecar_beside_the_app_is_preferred_over_path() {
+    fn the_packaged_sidecar_beside_the_app_is_found() {
         let dir = tempfile::tempdir().unwrap();
         let sidecar = dir.path().join(SERVER_BIN_NAME);
         std::fs::write(&sidecar, b"#!/bin/true").unwrap();
 
-        let other = tempfile::tempdir().unwrap();
-        std::fs::write(other.path().join(SERVER_BIN_NAME), b"#!/bin/true").unwrap();
-
-        let found = resolve_server_binary_from(
-            None,
-            Some(dir.path().to_path_buf()),
-            Some(other.path().to_path_buf()),
-        )
-        .unwrap();
+        let found = resolve_server_binary_from(None, Some(dir.path().to_path_buf())).unwrap();
         assert_eq!(found, sidecar);
     }
 
+    /// With no override and no sibling, resolution must fail closed even when
+    /// something named like the kernel exists elsewhere on the system. A
+    /// `PATH` search used to pick exactly such a stranger up.
     #[test]
-    fn path_is_used_when_no_sidecar_was_bundled() {
-        let on_path = tempfile::tempdir().unwrap();
-        let expected = on_path.path().join(SERVER_BIN_NAME);
-        std::fs::write(&expected, b"#!/bin/true").unwrap();
+    fn without_a_sibling_or_override_resolution_fails_closed() {
+        let elsewhere = tempfile::tempdir().unwrap();
+        std::fs::write(elsewhere.path().join(SERVER_BIN_NAME), b"#!/bin/true").unwrap();
 
         let empty = tempfile::tempdir().unwrap();
-        let found = resolve_server_binary_from(
-            None,
-            Some(empty.path().to_path_buf()),
-            Some(on_path.path().to_path_buf()),
-        )
-        .unwrap();
-        assert_eq!(found, expected);
+        let error = resolve_server_binary_from(None, Some(empty.path().to_path_buf())).unwrap_err();
+        assert!(error.contains("SEA_FORGE_SERVER_BIN"), "{error}");
     }
 
     /// An override naming a missing file must not fall through to some other
@@ -681,23 +703,16 @@ mod tests {
     /// than not starting one.
     #[test]
     fn a_broken_override_refuses_rather_than_falling_through() {
-        let on_path = tempfile::tempdir().unwrap();
-        std::fs::write(on_path.path().join(SERVER_BIN_NAME), b"#!/bin/true").unwrap();
-
-        let error = resolve_server_binary_from(
-            Some(PathBuf::from("/nonexistent/sea-forge-server")),
-            None,
-            Some(on_path.path().to_path_buf()),
-        )
-        .unwrap_err();
+        let error =
+            resolve_server_binary_from(Some(PathBuf::from("/nonexistent/sea-forge-server")), None)
+                .unwrap_err();
         assert!(error.contains("SEA_FORGE_SERVER_BIN"), "{error}");
     }
 
     #[test]
     fn nothing_anywhere_names_the_remedy() {
         let empty = tempfile::tempdir().unwrap();
-        let error =
-            resolve_server_binary_from(None, Some(empty.path().to_path_buf()), None).unwrap_err();
+        let error = resolve_server_binary_from(None, Some(empty.path().to_path_buf())).unwrap_err();
         assert!(error.contains("SEA_FORGE_SERVER_BIN"), "{error}");
     }
 
@@ -751,7 +766,7 @@ mod tests {
                 root: dir.path().to_path_buf(),
                 socket: dir.path().join(SOCKET_FILE_NAME),
             },
-            resolve_server_binary_from(None, None, None),
+            resolve_server_binary_from(None, None),
         );
         match supervisor.initialize().unwrap() {
             Supervision::Unavailable {

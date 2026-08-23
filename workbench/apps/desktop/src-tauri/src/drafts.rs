@@ -142,7 +142,8 @@ mod tests {
 
     #[test]
     fn draft_id_traversal_is_refused() {
-        let dir = std::env::temp_dir().join(format!("sea-forge-drafts-test-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("sea-forge-drafts-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         for id in ["../../../home/user/.config/foo", "a/b", "", "..", "a b"] {
             assert!(

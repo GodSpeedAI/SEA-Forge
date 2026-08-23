@@ -63,14 +63,23 @@ typecheck:
 crate-check crate:
     cargo check -p "{{crate}}" --locked
 
+# Standard package-scoped type-check interface; retains the established crate gate.
+[group('quality')]
+check-package package:
+    just crate-check "{{package}}"
+
 # Supply-chain + secret scan: cargo-deny then gitleaks.
 # `cargo deny check advisories` fetches the RustSec database; the other
 # categories are offline. gitleaks scans staged + committed history.
 [group('quality')]
+deny:
+    cargo deny check
+
+[group('quality')]
 security:
     #!/usr/bin/env bash
     {{set}}
-    cargo deny check
+    just deny
     gitleaks detect --no-banner --redact
 
 # Apply only safe automatic fixes (rustfmt). Clippy fixes are intentionally
@@ -125,6 +134,54 @@ test:
 [group('quality')]
 crate-test crate test_filter='':
     cargo test -p "{{crate}}" --locked "{{test_filter}}"
+
+# Standard package-scoped test interface; retains the established crate gate.
+[group('quality')]
+test-package package:
+    just crate-test "{{package}}"
+
+# Run doctests separately; the canonical test gate uses the full feature set.
+[group('quality')]
+test-doc:
+    cargo test --workspace --all-features --doc --locked
+
+# Explicit developer diagnostics. These are deliberately outside check, ci,
+# and verify: each is substantially more expensive than the normal gate.
+[group('quality')]
+timings:
+    cargo build --workspace --all-targets --locked --timings
+
+[group('quality')]
+coverage:
+    cargo llvm-cov --workspace --all-features --locked --html
+
+[group('quality')]
+mutation:
+    cargo mutants --workspace --all-features
+
+# Print compiler-cache diagnostics without making sccache a repository requirement.
+# Bound the client call so an unreachable cache daemon cannot hang a developer shell.
+[group('quality')]
+cache-stats:
+    #!/usr/bin/env bash
+    {{set}}
+    if ! command -v sccache >/dev/null 2>&1; then
+        echo "sccache is not installed or not on PATH"
+        exit 0
+    fi
+    sccache --show-stats &
+    pid=$!
+    for _ in {1..10}; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            wait "$pid"
+            exit $?
+        fi
+        sleep 1
+    done
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+    echo "sccache --show-stats timed out after 10 seconds" >&2
+    exit 1
 
 # Dependency-boundary gate (spec-full §6.1, spec-agent-orchestration G1/T12.5).
 # Kernel crates MUST stay synchronous: no async runtime and no HTTP client.
@@ -483,25 +540,39 @@ workbench-dev-up:
     fi
 
 # Stop the running Workbench Vite dev server.
+#
+# Teardown touches only the PID recorded by `workbench-dev-up`
+# (`workbench/.pid/dev.pid`; that recipe starts the server as a `setsid`
+# session leader, so signalling the recorded PID's group reaches Vite and its
+# children). Nothing is killed merely for listening on port 1420: a missing or
+# stale pid file is reported and cleaned up, never turned into collateral
+# damage (F-25.d).
 [group('workbench')]
 workbench-dev-down:
     #!/usr/bin/env bash
     {{set}}
-    if [ -f workbench/.pid/dev.pid ]; then
-        pid=$(cat workbench/.pid/dev.pid)
-        echo "[workbench-dev] stopping PID $pid"
-        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
-        for i in 1 2 3 4 5; do
-            kill -0 "$pid" 2>/dev/null || break
-            sleep 1
-        done
-        kill -0 "$pid" 2>/dev/null && kill -9 -- -"$pid" 2>/dev/null || true
-        rm -f workbench/.pid/dev.pid
-    else
-        echo "[workbench-dev] no pid file found"
+    pid_file="workbench/.pid/dev.pid"
+    if [ ! -f "$pid_file" ]; then
+        echo "[workbench-dev] warn: no pid file at $pid_file — nothing was started by workbench-dev-up; port 1420 is left untouched" >&2
+        exit 0
     fi
-    # Kill any process still holding port 1420 (e.g. orphaned Vite child)
-    fuser -k 1420/tcp 2>/dev/null || true
+    pid=$(cat "$pid_file")
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-dev] warn: recorded PID $pid is not running — removing stale $pid_file" >&2
+        rm -f "$pid_file"
+        exit 0
+    fi
+    echo "[workbench-dev] stopping PID $pid"
+    kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+    for i in 1 2 3 4 5; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 1
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-dev] PID $pid did not exit; sending SIGKILL to its group"
+        kill -9 -- -"$pid" 2>/dev/null || true
+    fi
+    rm -f "$pid_file"
     echo "[workbench-dev] stopped"
 
 # Start Storybook component explorer in the background (http://localhost:6006).
@@ -539,25 +610,36 @@ workbench-storybook-up:
     fi
 
 # Stop the running Storybook component explorer.
+#
+# Same PID-file-scoped teardown as `workbench-dev-down` (F-25.d): only the
+# process group recorded by `workbench-storybook-up` is signalled; port 6006
+# is never used to identify a victim.
 [group('workbench')]
 workbench-storybook-down:
     #!/usr/bin/env bash
     {{set}}
-    if [ -f workbench/.pid/storybook.pid ]; then
-        pid=$(cat workbench/.pid/storybook.pid)
-        echo "[workbench-storybook] stopping PID $pid"
-        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
-        for i in 1 2 3 4 5; do
-            kill -0 "$pid" 2>/dev/null || break
-            sleep 1
-        done
-        kill -0 "$pid" 2>/dev/null && kill -9 -- -"$pid" 2>/dev/null || true
-        rm -f workbench/.pid/storybook.pid
-    else
-        echo "[workbench-storybook] no pid file found"
+    pid_file="workbench/.pid/storybook.pid"
+    if [ ! -f "$pid_file" ]; then
+        echo "[workbench-storybook] warn: no pid file at $pid_file — nothing was started by workbench-storybook-up; port 6006 is left untouched" >&2
+        exit 0
     fi
-    # Kill any process still holding port 6006 (e.g. orphaned Storybook child)
-    fuser -k 6006/tcp 2>/dev/null || true
+    pid=$(cat "$pid_file")
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-storybook] warn: recorded PID $pid is not running — removing stale $pid_file" >&2
+        rm -f "$pid_file"
+        exit 0
+    fi
+    echo "[workbench-storybook] stopping PID $pid"
+    kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+    for i in 1 2 3 4 5; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 1
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-storybook] PID $pid did not exit; sending SIGKILL to its group"
+        kill -9 -- -"$pid" 2>/dev/null || true
+    fi
+    rm -f "$pid_file"
     echo "[workbench-storybook] stopped"
 
 # Convenient aliases for Workbench dev server and Storybook commands
@@ -582,6 +664,11 @@ ci:
     just no-async-kernel
     just build
     echo "[ci] all gates green"
+
+# Standard normal-verification interface; ci remains the authoritative recipe.
+[group('quality')]
+verify:
+    just ci
 
 # Re-converge after a pull that touched Cargo.toml/Cargo.lock/rust-toolchain.
 [group('setup')]

@@ -294,7 +294,9 @@ impl BridgeCommandError {
             error_class: "bridge_transport_error".into(),
             error: error.to_string(),
             no_side_effect: false,
-            next_lawful_action: Some("Reconnect and inspect the request outcome before retrying".into()),
+            next_lawful_action: Some(
+                "Reconnect and inspect the request outcome before retrying".into(),
+            ),
         }
     }
 }
@@ -414,7 +416,10 @@ pub async fn sfwp_command(
         }
     }
 
-    state.call(request).await.map_err(BridgeCommandError::uncertain)
+    state
+        .call(request)
+        .await
+        .map_err(BridgeCommandError::uncertain)
 }
 
 /// Pick the actor block to send, from what the cell says this connection holds.
@@ -452,16 +457,21 @@ fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, BridgeC
         Some(wanted) => available
             .iter()
             .find(|entry| entry.get("actor_id").and_then(Value::as_str) == Some(wanted))
-            .ok_or_else(|| BridgeCommandError::refusal(
-                "identity_not_bound",
-                format!("this connection may not act as `{wanted}`"),
-                Some("Select a server-advertised actor".into()),
-            ))?,
+            .ok_or_else(|| {
+                BridgeCommandError::refusal(
+                    "identity_not_bound",
+                    format!("this connection may not act as `{wanted}`"),
+                    Some("Select a server-advertised actor".into()),
+                )
+            })?,
         None if available.len() == 1 => &available[0],
         None => {
             return Err(BridgeCommandError::refusal(
                 "identity_ambiguous",
-                format!("this connection may act as {} different actors; choose one explicitly", available.len()),
+                format!(
+                    "this connection may act as {} different actors; choose one explicitly",
+                    available.len()
+                ),
                 Some("Select one of the server-advertised actors".into()),
             ))
         }
@@ -470,21 +480,25 @@ fn choose_actor(identity: &Value, act_as: Option<&str>) -> Result<Value, BridgeC
     let actor_id = chosen
         .get("actor_id")
         .and_then(Value::as_str)
-        .ok_or_else(|| BridgeCommandError::refusal(
-            "identity_unresolved",
-            "identity.get returned an actor with no id",
-            Some("Refresh identity bindings and choose an actor".into()),
-        ))?;
+        .ok_or_else(|| {
+            BridgeCommandError::refusal(
+                "identity_unresolved",
+                "identity.get returned an actor with no id",
+                Some("Refresh identity bindings and choose an actor".into()),
+            )
+        })?;
     let role = chosen
         .get("roles")
         .and_then(Value::as_array)
         .and_then(|roles| roles.first())
         .and_then(Value::as_str)
-        .ok_or_else(|| BridgeCommandError::refusal(
-            "identity_role_not_held",
-            format!("actor `{actor_id}` holds no role in this cell"),
-            Some("Select an actor with an eligible role".into()),
-        ))?;
+        .ok_or_else(|| {
+            BridgeCommandError::refusal(
+                "identity_role_not_held",
+                format!("actor `{actor_id}` holds no role in this cell"),
+                Some("Select an actor with an eligible role".into()),
+            )
+        })?;
 
     Ok(serde_json::json!({"actor_id": actor_id, "role": role}))
 }
@@ -696,7 +710,10 @@ mod tests {
             }
         });
         let error = choose_actor(&unconfigured, None).unwrap_err();
-        assert!(error.error.contains("configures no identity bindings"), "{error:?}");
+        assert!(
+            error.error.contains("configures no identity bindings"),
+            "{error:?}"
+        );
         assert_eq!(error.error_class, "identity_unconfigured");
     }
 

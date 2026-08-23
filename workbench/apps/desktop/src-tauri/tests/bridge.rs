@@ -122,8 +122,9 @@ fn success_submit(root: &Path, request_id: &str) -> Value {
         // out here because these tests drive the socket layer directly, below
         // the Tauri command that would add it.
         "actor": {"actor_id": "operator_local", "role": "operator"},
-        "plan": plan_path.to_str().unwrap(),
-        "policy": policy_path.to_str().unwrap(),
+        // F-16: plan/policy references are cell-relative spellings.
+        "plan": plan_path.strip_prefix(&root).unwrap().to_str().unwrap(),
+        "policy": policy_path.strip_prefix(&root).unwrap().to_str().unwrap(),
         "entity": "operator_local",
         "process": "test",
         "request_id": request_id,
