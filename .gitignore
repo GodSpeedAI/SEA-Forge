@@ -50,3 +50,5 @@ workbench/apps/desktop/src-tauri/binaries/
 # instructions live in scripts/workbench-e2e-real.sh; the executable itself is
 # a machine-local build artifact.
 workbench/.tools/
+
+.cargo/
