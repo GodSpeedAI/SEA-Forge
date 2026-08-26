@@ -1,0 +1,44 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../cep"
+		},
+		{
+			"path": "../Context_Kernel"
+		},
+		{
+			"path": "../domainforge"
+		},
+		{
+			"path": "../domainforge-lsp"
+		},
+		{
+			"path": "../edgeai"
+		},
+		{
+			"path": "../gauntlet"
+		},
+		{
+			"path": "../godspeed_agent"
+		},
+		{
+			"path": "../hassos-addon-agent-memory-ledger"
+		},
+		{
+			"path": "../NeatCode"
+		},
+		{
+			"path": "../project-topology-architect"
+		},
+		{
+			"path": "../SWE_SEED"
+		},
+		{
+			"path": "../sxr"
+		}
+	],
+	"settings": {}
+}

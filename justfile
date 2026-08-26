@@ -117,6 +117,191 @@ check:
 context-check:
     scripts/check-agent-context.sh
 
+# Verify the frozen E2E convergence preregistration (.agents/specs/
+# e2e-preregistration.yml) still matches the hash bound under
+# source.spec.sha256 in .agents/plans/e2e-plan.yml. A mismatch stops the
+# convergence/Gauntlet run until the change is reviewed and re-frozen.
+[group('quality')]
+e2e-prereg-check:
+    scripts/check-e2e-preregistration.sh
+
+# --- e2e convergence gates (plan: .agents/plans/e2e-plan.yml) ------------
+# Stable aliases bound by task T00 to the repository's real existing gates.
+# They orchestrate existing checks; they never duplicate or weaken them.
+
+# Plan global gate CHECK -> repository composite quality gate.
+[group('quality')]
+e2e-check:
+    just check
+
+# Plan global gate TEST -> repository test suite.
+[group('quality')]
+e2e-test:
+    just test
+
+# Plan global gate LINT -> formatting + lint gates.
+[group('quality')]
+e2e-lint:
+    just fmt-check
+    just lint
+
+# Plan global gate DELTA -> mechanical requirement/evidence matrix check.
+[group('quality')]
+e2e-delta-check:
+    scripts/e2e-delta-check.sh
+
+# Regenerate .agents/evidence/e2e/T00/delta0.md from the status file.
+[group('quality')]
+e2e-delta-report:
+    scripts/e2e-delta-report.sh > .agents/evidence/e2e/T00/delta0.md
+
+# Stable per-task gate entry point (plan verification.task_gate_contract).
+# Tasks bind themselves here as their contract tests land; unbound tasks fail
+# closed instead of passing vacuously.
+[group('quality')]
+e2e-gate TASK_ID:
+    #!/usr/bin/env bash
+    {{set}}
+    case "{{TASK_ID}}" in
+        T00)
+            just e2e-prereg-check
+            just e2e-delta-check
+            ;;
+        T01)
+            # Canonical semantic envelope + DomainForge identity foundation
+            # (lives in SWE_SEED swe-seed-core federation module).
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t01_envelope --test v1_contract --test federation_parity
+            ;;
+        T02)
+            # Cited context slice E2/E3/I4: canonical boundary on both sides.
+            # CK ingress gates (Context_Kernel) + SWE_SEED consumer adjudication,
+            # plus the live cross-binary MCP stdio integration (env-gated).
+            cargo test --manifest-path "${CONTEXT_KERNEL_ROOT:-$HOME/projects/Context_Kernel}/Cargo.toml" -p ck-mcp --lib --test acl_context_agent
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t02_context_slice --test context_kernel_client
+            ;;
+        T03)
+            # Navigation ingress + work contract E0/E1: GSA projector teeth +
+            # SWE_SEED canonical WorkRequested ingress incl. the cross-language
+            # golden fixture from GodSpeed-Agent's real projector.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_canonical_events.py" -q
+            GODSPEED_AGENT_ROOT="${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t03_work_ingress
+            ;;
+        T04)
+            # Governed work submission E4: SWE_SEED canonical emitter teeth
+            # (also regenerates the cross-repo golden fixture from the real
+            # producer) + SEA-Forge acceptance gate consuming that fixture.
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t04_governed_submission
+            cargo test -p sea-forge-server --test convergence_t04_governed_ingress
+            ;;
+        T05)
+            # Governed contact with reality E5A/E5B/I5: canonical
+            # AuthorizedInvocation emission from REAL authority decisions +
+            # ExecutionObservation adjudication bound to the exact authorized
+            # invocation, incl. the deny/escalate teeth through the real
+            # engine/runtime seam.
+            cargo test -p sea-forge-server --test convergence_t05_authorized_execution --test convergence_t05_execution_observation
+            ;;
+        T06)
+            # Operational settlement return E6/I6/I7: SEA-Forge settlement
+            # evaluation from ledger-settled observations against DECLARED
+            # criteria + canonical OperationalSettlement emission bound to the
+            # actual invocation chain (regenerates the cross-repo golden
+            # fixture), then SWE_SEED proof-plane adjudication consuming it —
+            # producer authority, duplicate/conflict idempotency, and no
+            # developmental promotion from operational settlement.
+            cargo test -p sea-forge-server --test convergence_t06_operational_settlement
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t06_operational_settlement
+            ;;
+        T07)
+            # Proof-to-RealityTrace boundary E7: canonical ProofCompleted
+            # emission bound to a REAL adjudicated OperationalSettlement for
+            # the SAME work_request_id (regenerates the cross-repo golden
+            # fixture), then sxr RealityTrace native ingestion consuming it —
+            # exclusive swe_seed producer authority, placeholder/drift
+            # identity gates, mandatory settlement causal parent with
+            # content-addressed reference resolution, expected-versus-observed
+            # comparison inputs preserved BY REFERENCE, and duplicate/
+            # claim-mismatch refusal so upstream facts are never rewritten.
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t07_proof_completed
+            cargo test --manifest-path "${SXR_ROOT:-$HOME/projects/sxr}/Cargo.toml" -p sxr-core --test convergence_t07_proof_ingestion
+            ;;
+        T08)
+            # Expected-versus-observed developmental evidence E8/I8/I10:
+            # canonical EvidenceRecorded emission from RealityTrace over ONLY
+            # the comparison facts its REAL T07 gate preserved BY REFERENCE
+            # (regenerates the cross-repo golden fixture), then GodSpeed-
+            # Agent's Python ingestion gate consuming that fixture — exclusive
+            # realitytrace producer authority both directions, placeholder/
+            # drift identity gates, the complete nine-required-field battery,
+            # causality presence with out-of-band parent pinning,
+            # cryptographically bound difference (I10 probes detected and
+            # named), duplicate/claim-mismatch idempotency, and STRICTLY
+            # PROVISIONAL receipt: no SettlementRecorded/CapabilityUpdated or
+            # any promotion path exists from ingestion alone.
+            cargo test --manifest-path "${SXR_ROOT:-$HOME/projects/sxr}/Cargo.toml" -p sxr-core --test convergence_t08_evidence_emission
+            SXR_ROOT="${SXR_ROOT:-$HOME/projects/sxr}" uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t08_evidence_recorded.py" -q
+            ;;
+        T09)
+            # Developmental settlement + durable memory E9/I9: canonical
+            # five-type E9 emission stamped by the EXCLUSIVE producer
+            # (godspeed_agent) carrying the four common required payload
+            # fields and caused_by provenance to the justifying evidence;
+            # the durable memory gate enforcing placeholder/drift/namespace
+            # identity gates, quarantine of stripped provenance (never
+            # persisted as authoritative developmental truth), idempotent
+            # redelivery over the flock-guarded append-only ledger with
+            # restart survival via replay-through-the-gate, and the I9
+            # promotion gate — metabolized capability requires repeated
+            # settlement under DECLARED variation, composed with
+            # infer_capability_lifecycle / Capability.from_settlements;
+            # consumes the committed golden fixture from the real emitter.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t09_developmental_memory.py" -q
+            ;;
+        T10)
+            # Developmental memory feedback E10/I12: durable DevelopmentalMemory
+            # (memory_ledger -> godspeed_agent) projected from the T09 ledger
+            # via honest lifecycle (infer_capability_lifecycle / compute_metabolization),
+            # consumable for next navigation with gate-evaluation-after-memory;
+            # historical success may reduce search burden (rank boost) but never
+            # bypasses current governance, payment, or settlement-access gates;
+            # historical capability remains distinguishable from current affordance.
+            # Also bridges LearningProposalCreated to CK's learning-proposals://
+            # corpus as cited evidence with preserved provenance.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t10_developmental_memory_feedback.py" -q
+            ;;
+        T11)
+            # Whole-loop causality, replay, and recovery I2/I11/I14/I15: deterministic
+            # golden scenario E0→E10 with one stable WR_ID and one resolvable domain
+            # hash, plus cross-wire/duplicate/late/out-of-order/interruption/restart/
+            # wrong-domain harnesses. Python harness covers E0→E10 composition and
+            # GSA-side recovery; Rust harness covers SEA-Forge E4→E6 replay/late/
+            # wrong-domain/failure-visibility via real gates. No test-only E8.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t11_whole_loop.py" -q
+            cargo test -p sea-forge-server --test convergence_t11_whole_loop
+            ;;
+        T12)
+            # Variation battery: confirms all 35 frozen requirements under 7 variation
+            # classes (prereg whole_loop_acceptance.variation_requirement.minimum_variation_classes):
+            #   success, authority_denial_or_escalation, proof_failure,
+            #   execution_failure_or_timeout, interruption_and_recovery,
+            #   duplicate_or_replayed_event, semantically_invalid_or_wrong_domain_identity.
+            # Also runs just e2e-delta-check (exit 0 required).
+            # Python harness covers E0→E10 under each variation through real GSA producers
+            # (project_desired_direction, project_work_requested, ingest_evidence_recorded,
+            # persist_developmental_event, build_developmental_memory_from_store).
+            # Rust harness covers SEA-Forge E4→E6 under each variation through real gates
+            # (accept_governed_work_request, emit_authorized_invocation, InvocationLedger,
+            # emit_operational_settlement).
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t12_variation.py" -q
+            cargo test -p sea-forge-server --test convergence_t12_variation
+            just e2e-delta-check
+            ;;
+        *)
+            echo "fail: no gate is bound for {{TASK_ID}} yet; bind it in the e2e-gate recipe when the task's contract tests land" >&2
+            exit 1
+            ;;
+    esac
+
 # Verify the handoff a cold independent Workbench evaluator needs: concrete
 # commands and fixtures, exact owner-approved exclusions, and no protocol
 # placeholders. This stays outside CI until Task 12 owns release aggregation.

@@ -1,0 +1,1160 @@
+preregistration:
+  id: godspeed-canonical-runtime-convergence
+  version: "0.1.0"
+  status: FROZEN
+  frozen_at: "2026-08-25T03:06:33Z"
+
+  purpose: >
+    Define the desired canonical GodSpeed runtime as a black-box interaction
+    topology with explicit semantic contracts at every boundary. The convergence
+    process SHALL iteratively reduce the delta between the implemented system
+    and this frozen target until every required edge and invariant has settled
+    under direct production-path evidence and adversarial testing.
+
+  governing_principle: >
+    Freeze externally observable semantics, causality, authority, evidence,
+    settlement, and identity. Do not freeze internal implementation unless an
+    implementation choice is itself required to preserve one of those contracts.
+
+  evidence_basis:
+    current_state_report:
+      path: "/home/sprime01/projects/sea-rs/.agents/reports/godspeed-runtime-integration-e2e-recon.md"
+      role: current_state_evidence_only
+    rule: >
+      The reconnaissance report describes the implementation as observed.
+      It does not override this target specification.
+
+  scope:
+    canonical_components:
+      - id: godspeed_agent
+        name: GodSpeed-Agent
+        role: >
+          Navigation, affordance selection, developmental settlement,
+          developmental memory, repetition, and capability-state authority.
+
+      - id: swe_seed
+        name: SWE_SEED
+        role: >
+          Work-contract, context-requirement, route, proof, and software-work
+          verification plane.
+
+      - id: context_kernel
+        name: Context Kernel
+        role: >
+          Context retrieval and evidence-bearing context packet production.
+          It does not own runtime authority.
+
+      - id: sea_forge
+        name: SEA-Forge
+        repository_alias: sea-rs
+        role: >
+          Governed execution authority, execution control, operational evidence,
+          and operational settlement.
+
+      - id: realitytrace
+        name: RealityTrace
+        repository_alias: sxr
+        role: >
+          Expected-versus-observed evidence binding and normalization.
+
+      - id: memory_ledger
+        name: Agent Memory Ledger
+        role: >
+          Durable developmental event and evidence persistence/projection.
+
+      - id: execution_environment
+        name: Execution Environment
+        role: >
+          Agent, tool, process, filesystem, API, or external system where
+          authorized action actually contacts reality.
+
+    cross_cutting_components:
+      - id: domainforge
+        name: DomainForge
+        role: >
+          Canonical semantic-model authority and source of resolvable domain
+          identity used by runtime envelopes and governed decisions.
+
+      - id: cep
+        name: CEP
+        role: >
+          Semantic-envelope and conformance authority. CEP validates structural
+          and semantic conformance; CEP conformance alone does not prove payload truth.
+
+    explicitly_excluded_from_canonical_runtime:
+      - project-topology-architect
+      - NeatCode
+
+    exclusions_reason:
+      project-topology-architect: >
+        Intended to become a Gauntlet skill rather than an independent runtime component.
+      NeatCode: >
+        Intended to become a SWE_SEED skill rather than an independent runtime component.
+
+  black_box_rule:
+    required: true
+    statement: >
+      Each canonical component SHALL be treated as a black box for purposes of
+      this preregistration. Conformance is determined by accepted inputs,
+      produced outputs, preserved invariants, observable effects, and failure
+      behavior. Internal APIs, languages, storage mechanisms, processes, and
+      module boundaries MAY change without reopening this preregistration.
+
+  canonical_loop:
+    ordered_flow:
+      - external_direction
+      - godspeed_agent
+      - swe_seed
+      - context_kernel
+      - swe_seed
+      - sea_forge
+      - execution_environment
+      - sea_forge
+      - swe_seed
+      - realitytrace
+      - godspeed_agent
+      - memory_ledger
+      - godspeed_agent
+
+    summary: >
+      Desired direction becomes a selected affordance. The affordance becomes
+      a work contract. Required context is retrieved with evidence. Work enters
+      governed execution. Execution contacts reality under explicit authority.
+      Operational evidence and settlement return to the work-verification plane.
+      Proof is evaluated. RealityTrace binds expected versus observed reality.
+      GodSpeed-Agent determines developmental consequence. Developmental memory
+      changes what becomes spendable in the next cycle.
+
+    mermaid: |
+      flowchart TD
+          D[Desired Direction / External Demand]
+
+          GSA[GodSpeed-Agent]
+          SWE[SWE_SEED]
+          CK[Context Kernel]
+          SF[SEA-Forge]
+          EX[Execution Environment]
+          RT[RealityTrace]
+          ML[Agent Memory Ledger]
+
+          DF[DomainForge]
+          CEP[CEP]
+
+          D -->|E0 DesiredDirection| GSA
+          GSA -->|E1 WorkRequested| SWE
+
+          SWE -->|E2 ContextRequired| CK
+          CK -->|E3 ContextPacketCreated| SWE
+
+          SWE -->|E4 GovernedWorkRequest| SF
+
+          SF -->|E5A AuthorizedInvocation| EX
+          EX -->|E5B ExecutionObservation| SF
+
+          SF -->|E6 OperationalSettlement| SWE
+          SWE -->|E7 ProofCompleted| RT
+
+          RT -->|E8 EvidenceRecorded| GSA
+
+          GSA -->|E9 DevelopmentalEvents| ML
+          ML -->|E10 DevelopmentalMemory| GSA
+
+          ML -.->|retrievable learning context| CK
+
+          DF -.->|DomainModelRef| GSA
+          DF -.->|DomainModelRef| SWE
+          DF -.->|DomainModelRef| CK
+          DF -.->|DomainModelRef| SF
+          DF -.->|DomainModelRef| RT
+
+          CEP -.->|Envelope conformance| GSA
+          CEP -.->|Envelope conformance| SWE
+          CEP -.->|Envelope conformance| CK
+          CEP -.->|Envelope conformance| SF
+          CEP -.->|Envelope conformance| RT
+
+  settlement_semantics:
+    proof:
+      owner: swe_seed
+      question: >
+        Did the declared proof execute and satisfy its declared proof criterion?
+      does_not_establish:
+        - operational_settlement
+        - developmental_settlement
+        - capability
+
+    operational_settlement:
+      owner: sea_forge
+      question: >
+        Did the governed execution satisfy its declared authority, execution,
+        evidence, and operational settlement contract?
+      does_not_establish:
+        - developmental_settlement
+        - metabolized_capability
+
+    observation_binding:
+      owner: realitytrace
+      question: >
+        What was expected, what was observed, what differs, and what evidence
+        binds that comparison to the execution?
+      does_not_establish:
+        - developmental_settlement
+        - capability
+
+    developmental_settlement:
+      owner: godspeed_agent
+      question: >
+        What developmental consequence, if any, does the observation justify
+        for memory, repetition, capability state, and future affordances?
+      rule: >
+        A developmental settlement is independently earned. Receipt of execution
+        evidence or passing proof MUST NOT itself create capability.
+
+  common_semantic_envelope:
+    schema_name: GodSpeedSemanticEnvelope
+    schema_version: "godspeed.semantic-envelope/v1"
+
+    required_fields:
+      envelope_id:
+        type: string
+        requirement: globally_unique_and_stable
+
+      event_type:
+        type: string
+        requirement: registered_event_type
+
+      occurred_at:
+        type: timestamp
+        requirement: producer_observed_or_created_time
+
+      producer:
+        type: object
+        required:
+          - component
+          - version
+
+      correlation:
+        type: object
+        required:
+          - cycle_id
+          - work_request_id
+        optional:
+          - parent_envelope_ids
+          - trace_id
+          - case_id
+          - run_id
+
+      domain:
+        type: object
+        required:
+          - namespace
+          - model_version
+          - model_hash
+
+      actor:
+        type: object
+        optional:
+          - actor_id
+          - role
+
+      authority:
+        type: object
+        optional:
+          - decision_id
+          - grant_id
+          - policy_refs
+
+      provenance:
+        type: object
+        required:
+          - parent_envelope_ids
+        optional:
+          - artifact_hashes
+          - evidence_refs
+          - trace_refs
+          - source_refs
+
+      payload:
+        type: object
+        requirement: event_specific_schema
+
+    identity_rules:
+      - id: ENV-I1
+        statement: >
+          domain.model_hash MUST resolve to an actual canonical DomainForge
+          model artifact or canonical serialization.
+
+      - id: ENV-I2
+        statement: >
+          Missing domain identity MUST fail closed or quarantine the envelope.
+          A constant, namespace-derived, placeholder, or fallback pseudo-hash
+          MUST NOT masquerade as canonical model identity.
+
+      - id: ENV-I3
+        statement: >
+          correlation.work_request_id MUST remain stable throughout one
+          canonical work cycle.
+
+      - id: ENV-I4
+        statement: >
+          Derived envelopes MUST identify their causal parent envelope or
+          envelopes.
+
+      - id: ENV-I5
+        statement: >
+          Upstream facts MAY be projected but MUST NOT be silently rewritten by
+          downstream components.
+
+      - id: ENV-I6
+        statement: >
+          Every durable envelope write MUST be idempotent under stable envelope
+          identity.
+
+      - id: ENV-I7
+        statement: >
+          Evidence references SHOULD resolve to immutable or content-addressed
+          artifacts when the underlying substrate permits it.
+
+      - id: ENV-I8
+        statement: >
+          Schema or CEP conformance establishes conformance only. It MUST NOT be
+          interpreted as evidence that the enclosed claim is true.
+
+  event_ownership:
+    rule: >
+      Every canonical event type has exactly one authoritative producer.
+      Consumers may derive new event types but may not impersonate another
+      component's authoritative event.
+
+    owners:
+      DesiredDirection:
+        producer: external_environment
+
+      WorkRequested:
+        producer: godspeed_agent
+
+      ContextRequired:
+        producer: swe_seed
+
+      ContextPacketCreated:
+        producer: context_kernel
+
+      GovernedWorkRequest:
+        producer: swe_seed
+
+      AuthorizedInvocation:
+        producer: sea_forge
+
+      ExecutionObservation:
+        producer: execution_environment
+
+      OperationalSettlement:
+        producer: sea_forge
+
+      ProofCompleted:
+        producer: swe_seed
+
+      EvidenceRecorded:
+        producer: realitytrace
+
+      SettlementRecorded:
+        producer: godspeed_agent
+
+      CapabilityUpdated:
+        producer: godspeed_agent
+
+      RepetitionPlanned:
+        producer: godspeed_agent
+
+      LearningProposalCreated:
+        producer: godspeed_agent
+
+      DevelopmentalMemory:
+        producer: memory_ledger
+
+  edges:
+
+    E0:
+      name: desired_direction_to_navigation
+      source: external_environment
+      target: godspeed_agent
+      event_type: DesiredDirection
+      priority: P1
+
+      payload:
+        required:
+          - direction_id
+          - direction_type
+          - desired_state
+        optional:
+          - current_state
+          - constraints
+          - payment_constraints
+          - governance_context
+          - settlement_expectation
+
+      postcondition: >
+        GodSpeed-Agent can evaluate the direction relative to the observer's
+        current horizon rather than treating the desired destination itself as
+        an executable affordance.
+
+      forbidden:
+        - treating_destination_as_affordance_without_path
+
+    E1:
+      name: selected_affordance_to_work_contract
+      source: godspeed_agent
+      target: swe_seed
+      event_type: WorkRequested
+      priority: P1
+
+      payload:
+        required:
+          - work_request_id
+          - affordance_id
+          - desired_outcome
+          - settlement_criteria
+          - domain_model_ref
+        optional:
+          - actor
+          - constraints
+          - payment_budget
+          - capability_requirements
+          - governance_requirements
+
+      postcondition: >
+        SWE_SEED receives a spendable work path with observable completion and
+        settlement criteria, not merely an ungrounded objective.
+
+    E2:
+      name: context_requirement
+      source: swe_seed
+      target: context_kernel
+      event_type: ContextRequired
+      priority: P1
+
+      payload:
+        required:
+          - work_request_id
+          - context_requirement_id
+          - query
+          - corpus_scope
+          - domain_model_ref
+        optional:
+          - authority_reference
+          - max_results
+
+      invariants:
+        - Context Kernel does not decide execution authority.
+        - Context requirement remains correlated to the originating work request.
+
+    E3:
+      name: evidence_bearing_context
+      source: context_kernel
+      target: swe_seed
+      event_type: ContextPacketCreated
+      priority: P0
+
+      payload:
+        required:
+          - work_request_id
+          - context_requirement_id
+          - context_packet_id
+          - citations
+          - domain_model_ref
+        optional:
+          - authority_reference
+
+      invariants:
+        - >
+          When context is declared required, successful completion requires at
+          least one valid citation or an explicit governed no-context outcome.
+        - >
+          Missing corpus configuration MUST NOT silently settle as successful
+          required-context acquisition.
+        - >
+          Citations must preserve provenance sufficient to resolve their source.
+
+    E4:
+      name: governed_work_submission
+      source: swe_seed
+      target: sea_forge
+      event_type: GovernedWorkRequest
+      priority: P0
+
+      payload:
+        required:
+          - work_request_id
+          - affordance_id
+          - actor
+          - intent
+          - context_packet_ref
+          - domain_model_ref
+          - proof_contract
+          - settlement_criteria
+        optional:
+          - route_id
+          - artifact_expectations
+          - authority_context
+          - payment_budget
+
+      invariants:
+        - >
+          SEA-Forge receives semantic work intent and governance context, not
+          merely an opaque command invocation.
+        - >
+          The domain model referenced by the request must be the model against
+          which semantic authority is evaluated.
+        - >
+          The proof contract remains distinct from SEA-Forge operational
+          settlement criteria.
+
+    E5A:
+      name: authorized_execution
+      source: sea_forge
+      target: execution_environment
+      event_type: AuthorizedInvocation
+      priority: P0
+
+      payload:
+        required:
+          - work_request_id
+          - invocation_id
+          - authority_decision_id
+          - operation
+          - resource
+          - execution_constraints
+        optional:
+          - grant_id
+          - timeout
+          - artifact_expectations
+
+      invariants:
+        - >
+          Execution MUST NOT begin before an applicable authority decision
+          permits the invocation.
+        - >
+          Execution environment cannot self-assert authority.
+
+    E5B:
+      name: execution_observation
+      source: execution_environment
+      target: sea_forge
+      event_type: ExecutionObservation
+      priority: P0
+
+      payload:
+        required:
+          - work_request_id
+          - invocation_id
+          - execution_status
+          - observed_effects
+        optional:
+          - stdout_ref
+          - stderr_ref
+          - artifact_refs
+          - side_effect_refs
+          - failure_details
+
+      invariants:
+        - >
+          Observation must correlate to the invocation identity that SEA-Forge
+          actually authorized.
+        - >
+          Late, duplicated, or cross-wired observations MUST NOT settle against
+          the wrong invocation.
+
+    E6:
+      name: operational_settlement_to_proof_plane
+      source: sea_forge
+      target: swe_seed
+      event_type: OperationalSettlement
+      priority: P0
+
+      payload:
+        required:
+          - work_request_id
+          - authority_decision_id
+          - execution_status
+          - observed_effects
+          - operational_settlement_status
+          - evidence_refs
+          - domain_model_ref
+        optional:
+          - case_id
+          - run_id
+          - artifact_refs
+          - transcript_ref
+          - failure_reason
+
+      invariants:
+        - >
+          Operational settlement is determined independently from simple process
+          exit status.
+        - >
+          An operationally successful execution does not imply proof success.
+        - >
+          An operational settlement does not directly update developmental capability.
+
+    E7:
+      name: proof_to_realitytrace
+      source: swe_seed
+      target: realitytrace
+      event_type: ProofCompleted
+      priority: P0
+
+      payload:
+        required:
+          - work_request_id
+          - proof_result_id
+          - proof_contract
+          - proof_status
+          - expected_outcome
+          - operational_settlement_ref
+          - domain_model_ref
+        optional:
+          - artifact_refs
+          - trace_root
+          - output_ref
+          - proof_evidence_refs
+
+      invariants:
+        - >
+          ProofCompleted references operational evidence rather than rewriting
+          SEA-Forge's observation history.
+        - >
+          Proof success alone MUST NOT create EvidenceRecorded developmental
+          truth without expected-versus-observed binding.
+
+    E8:
+      name: reality_evidence_to_developmental_navigation
+      source: realitytrace
+      target: godspeed_agent
+      event_type: EvidenceRecorded
+      priority: P0
+
+      payload:
+        required:
+          - event_id
+          - work_request_id
+          - affordance_id
+          - expected_outcome
+          - observed_outcome
+          - difference
+          - proof_result_ref
+          - operational_settlement_ref
+          - domain_model_ref
+        optional:
+          - authority_decision_ref
+          - artifact_refs
+          - trace_refs
+          - evidence_refs
+          - reliability_inputs
+
+      invariants:
+        - >
+          RealityTrace binds declared expectation to observed consequence and
+          preserves evidence required to inspect the comparison.
+        - >
+          EvidenceRecorded is provisional developmental evidence.
+        - >
+          EvidenceRecorded MUST NOT itself create SettlementRecorded,
+          CapabilityUpdated, or metabolized capability.
+
+    E9:
+      name: developmental_settlement_to_memory
+      source: godspeed_agent
+      target: memory_ledger
+      priority: P0
+
+      event_types:
+        - SettlementRecorded
+        - CapabilityUpdated
+        - RepetitionPlanned
+        - LearningProposalCreated
+        - CoherenceBreakDetected
+
+      common_payload_requirements:
+        - work_request_id
+        - source_evidence_refs
+        - developmental_decision
+        - domain_model_ref
+
+      invariants:
+        - >
+          GodSpeed-Agent independently evaluates whether available evidence is
+          sufficient for developmental settlement.
+        - >
+          CapabilityUpdated requires its own declared capability evidence.
+        - >
+          One successful proof or one successful execution MUST NOT establish
+          metabolized capability.
+        - >
+          Developmental records must retain provenance to the evidence that
+          justified them.
+
+    E10:
+      name: developmental_memory_to_next_navigation
+      source: memory_ledger
+      target: godspeed_agent
+      event_type: DevelopmentalMemory
+      priority: P1
+
+      payload:
+        required:
+          - observer_or_system_id
+          - capability_state
+          - settlement_history_refs
+        optional:
+          - repetitions_due
+          - learning_proposals
+          - prior_failures
+          - recovery_history
+          - horizon_updates
+          - earned_shortcuts
+          - blocked_paths
+
+      invariants:
+        - >
+          Developmental memory changes future navigation evidence; it does not
+          bypass current governance, settlement access, or payment gates.
+        - >
+          Historical capability evidence must remain distinguishable from
+          current affordance availability.
+
+  global_invariants:
+
+    I1:
+      name: canonical_domain_identity
+      priority: P0
+      statement: >
+        Every canonical cross-component work-cycle envelope resolves to a real,
+        versioned DomainForge semantic source. Fallback pseudo-identities are forbidden.
+
+    I2:
+      name: causal_continuity
+      priority: P0
+      statement: >
+        A canonical work request can be followed from selected affordance through
+        context, authority, execution, proof, RealityTrace evidence, developmental
+        settlement, and memory without losing causal identity.
+
+    I3:
+      name: exclusive_event_authority
+      priority: P0
+      statement: >
+        Canonical event types have one authoritative producer.
+
+    I4:
+      name: context_is_evidence_not_authority
+      priority: P0
+      statement: >
+        Context Kernel supplies cited context and may carry authority references
+        but cannot create execution authority.
+
+    I5:
+      name: authority_precedes_side_effect
+      priority: P0
+      statement: >
+        A governed side effect cannot legally occur before an applicable
+        SEA-Forge authority decision.
+
+    I6:
+      name: proof_is_not_operational_settlement
+      priority: P0
+      statement: >
+        SWE_SEED proof and SEA-Forge operational settlement remain distinct facts.
+
+    I7:
+      name: operational_settlement_is_not_developmental_settlement
+      priority: P0
+      statement: >
+        SEA-Forge operational settlement cannot directly promote developmental state.
+
+    I8:
+      name: evidence_is_not_capability
+      priority: P0
+      statement: >
+        RealityTrace EvidenceRecorded remains provisional until independently
+        evaluated by GodSpeed-Agent.
+
+    I9:
+      name: capability_requires_repeated_settlement
+      priority: P0
+      statement: >
+        Capability promotion requires repeated settlement under declared relevant
+        variation and cannot be inferred from tool access, explanation, imitation,
+        one proof, or one successful execution.
+
+    I10:
+      name: no_silent_semantic_rewrite
+      priority: P0
+      statement: >
+        Downstream components cannot silently mutate upstream semantic facts,
+        identities, expected results, observed results, or evidence.
+
+    I11:
+      name: failures_remain_evidence
+      priority: P1
+      statement: >
+        Failed, denied, escalated, interrupted, timed-out, or partially executed
+        work remains observable and causally linked rather than disappearing from
+        the developmental record.
+
+    I12:
+      name: memory_does_not_override_governance
+      priority: P0
+      statement: >
+        Prior developmental success may reduce future search or orchestration
+        burden but cannot override current governance, irreversible-harm,
+        payment-capacity, or settlement-access gates.
+
+    I13:
+      name: cep_conformance_not_truth
+      priority: P1
+      statement: >
+        Passing CEP structural or semantic-envelope conformance does not by itself
+        establish that the claims contained by the envelope are true.
+
+    I14:
+      name: idempotent_replay
+      priority: P0
+      statement: >
+        Replaying or redelivering the same canonical event cannot create duplicate
+        settlement, capability, side effect, or developmental history.
+
+    I15:
+      name: recovery_preserves_provenance
+      priority: P0
+      statement: >
+        Restart, retry, interruption, timeout, process death, or redelivery cannot
+        sever the provenance chain or bind evidence to the wrong work cycle.
+
+  current_state_assessment:
+    purpose: >
+      Initial Gauntlet work SHALL determine the current state of every frozen edge
+      and invariant. This section intentionally does not freeze the current verdict.
+
+    allowed_verdicts:
+      - CONFIRMED
+      - PARTIAL
+      - ABSENT
+      - CONTRADICTED
+      - UNKNOWN
+
+    verdict_meanings:
+      CONFIRMED: >
+        Direct evidence demonstrates the production-path contract and relevant
+        falsifiers fail to break it.
+
+      PARTIAL: >
+        Meaningful implementation exists but one or more frozen contract
+        requirements are not proven.
+
+      ABSENT: >
+        No production implementation of the frozen contract exists.
+
+      CONTRADICTED: >
+        Existing production behavior conflicts with the frozen target.
+
+      UNKNOWN: >
+        Available evidence is insufficient to classify the contract.
+
+    reference_implementation_rule: >
+      Legacy, synthetic, gen-1, mock-only, dynamically loaded, or test-shim paths
+      may provide design evidence but SHALL NOT produce a CONFIRMED verdict for a
+      production edge.
+
+  convergence_controller:
+
+    initial_operation:
+      name: establish_delta_zero
+      output: delta_0
+
+      delta_definition: >
+        delta_0 is the complete set of frozen edges and invariants whose current
+        verdict is not CONFIRMED.
+
+    work_selection_rule: >
+      Select the smallest dependency-complete open delta whose closure increases
+      the number of subsequently testable contracts without requiring reopening
+      already settled semantics.
+
+    preferred_priority:
+      - P0_invariant_needed_by_multiple_edges
+      - P0_edge
+      - P1_invariant
+      - P1_edge
+      - P2
+      - P3
+
+    iteration_rule: >
+      Each iteration SHALL target a bounded subset of the current open delta.
+      It SHALL NOT redesign unrelated settled edges.
+
+    search_space_rule: >
+      CONFIRMED contracts become fixed constraints for subsequent iterations.
+      Later agents search only over the remaining open delta plus any newly
+      discovered contradictions.
+
+    monotonicity_goal: >
+      The unresolved search space SHOULD monotonically shrink. It may grow only
+      when a newly observed falsifier demonstrates that an earlier assumption or
+      closure was invalid.
+
+    settlement_rule: >
+      Implementation is not complete when code lands. A delta closes only after
+      its frozen contract survives the required proof and falsification round.
+
+  closure_protocol:
+
+    edge_closure_requires:
+      - production_path_exists
+      - required_input_accepted
+      - required_output_emitted
+      - common_envelope_invariants_hold
+      - edge_specific_invariants_hold
+      - positive_path_test_passes
+      - negative_path_test_passes
+      - identity_and_provenance_test_passes
+      - duplicate_or_replay_test_passes_if_applicable
+      - interruption_or_recovery_test_passes_if_applicable
+      - no_known_counterexample_remains
+
+    invariant_closure_requires:
+      - concrete_test_or_static_proof
+      - direct_evidence
+      - at_least_one_targeted_falsifier
+      - no_unresolved_known_counterexample
+
+    reopen_rule:
+      allowed_only_when:
+        - new_counterexample
+        - downstream_composition_exposes_violation
+        - semantic_contract_version_changes
+        - source_evidence_shows_prior_confirmation_was_invalid
+
+      forbidden_reason:
+        - implementation_preference
+        - aesthetic_refactor
+        - agent_prefers_different_architecture
+        - equivalent_internal_design_exists
+
+  falsification_classes:
+    required_where_applicable:
+      - malformed_envelope
+      - wrong_domain_model_hash
+      - missing_domain_model
+      - stale_domain_model
+      - cross_wired_work_request_id
+      - cross_wired_invocation_id
+      - duplicate_delivery
+      - replay_after_restart
+      - missing_context
+      - zero_citation_required_context
+      - authority_denied
+      - authority_escalated
+      - execution_failure
+      - execution_timeout
+      - partial_side_effect
+      - proof_failure_after_execution_success
+      - operational_settlement_failure_after_exit_zero
+      - evidence_without_proof
+      - evidence_without_operational_settlement
+      - forged_parent_reference
+      - missing_evidence_artifact
+      - settlement_promotion_from_provisional_evidence
+      - capability_promotion_from_single_success
+      - process_interruption
+      - restart_and_resume
+      - late_callback
+      - out_of_order_event
+      - stale_authority_grant
+
+  expected_initial_high_value_deltas:
+    note: >
+      These are hypotheses from reconnaissance, not frozen current-state verdicts.
+      Round zero must independently confirm them.
+
+    candidates:
+      - edge: E8
+        hypothesis: >
+          No production RealityTrace -> GodSpeed-Agent EvidenceRecorded producer
+          currently closes the loop.
+
+      - invariant: I1
+        hypothesis: >
+          Domain identity currently permits fallback behavior that does not prove
+          identity of the actual semantic model.
+
+      - edge: E4
+        hypothesis: >
+          SWE_SEED -> SEA-Forge does not yet implement the complete frozen
+          GovernedWorkRequest semantic contract.
+
+      - edge: E6
+        hypothesis: >
+          SEA-Forge operational settlement is not yet fully projected back into
+          SWE_SEED under the frozen contract.
+
+      - edge: E7
+        hypothesis: >
+          SWE_SEED proof is not yet wired into RealityTrace as the canonical
+          expected-versus-observed boundary.
+
+  implementation_sequence_policy:
+    rule: >
+      Do not implement in repository order. Implement in dependency order based
+      on the frozen graph and current delta.
+
+    likely_order_if_round_zero_confirms_reconnaissance:
+      - phase: 1
+        target:
+          - I1
+          - ENV-I1
+          - ENV-I2
+        objective: >
+          Establish one real, fail-closed semantic identity contract before
+          building additional cross-component paths.
+
+      - phase: 2
+        target:
+          - E2
+          - E3
+          - I4
+        objective: >
+          Close or harden the existing SWE_SEED <-> Context Kernel slice.
+
+      - phase: 3
+        target:
+          - E4
+          - E5A
+          - E5B
+          - I5
+        objective: >
+          Establish the governed work-to-reality boundary.
+
+      - phase: 4
+        target:
+          - E6
+          - I6
+          - I7
+        objective: >
+          Return operational settlement without collapsing proof or developmental settlement.
+
+      - phase: 5
+        target:
+          - E7
+        objective: >
+          Bind declared proof to the operational settlement path.
+
+      - phase: 6
+        target:
+          - E8
+          - I8
+          - I10
+        objective: >
+          Establish RealityTrace as the expected-versus-observed evidence producer.
+
+      - phase: 7
+        target:
+          - E9
+          - E10
+          - I9
+          - I12
+        objective: >
+          Close developmental settlement, memory, and next-affordance feedback.
+
+      - phase: 8
+        target:
+          - I2
+          - I11
+          - I14
+          - I15
+        objective: >
+          Prove whole-cycle identity, failure visibility, replay safety, and recovery.
+
+  whole_loop_acceptance:
+
+    canonical_golden_scenario:
+      requirement: >
+        One deterministic work request traverses every required canonical edge
+        without semantic shims standing in for absent production integrations.
+
+      required_observations:
+        - one_work_request_id_end_to_end
+        - one_resolvable_domain_model_identity_end_to_end
+        - cited_context
+        - explicit_authority_decision
+        - observed_real_execution
+        - operational_settlement
+        - independent_proof_result
+        - expected_vs_observed_realitytrace_record
+        - provisional_developmental_evidence
+        - explicit_developmental_settlement_decision
+        - durable_developmental_memory
+        - changed_next_navigation_state
+
+      prohibited_shortcuts:
+        - synthetic_EvidenceRecorded_inserted_only_by_test
+        - direct_capability_promotion_from_proof
+        - direct_capability_promotion_from_operational_settlement
+        - mock_replacing_the_boundary_currently_under_test
+        - fallback_domain_hash
+        - undocumented_manual_state_edit
+        - gen1_reference_path_substituted_for_production_path
+
+    variation_requirement:
+      statement: >
+        Whole-loop success once proves integration, not capability. After the
+        canonical golden scenario settles, repeat under declared variation before
+        promoting any claim of durable system capability.
+
+      minimum_variation_classes:
+        - success
+        - authority_denial_or_escalation
+        - proof_failure
+        - execution_failure_or_timeout
+        - interruption_and_recovery
+        - duplicate_or_replayed_event
+        - semantically_invalid_or_wrong_domain_identity
+
+  completion_criteria:
+    all_required: true
+
+    criteria:
+      - all_P0_edges_CONFIRMED
+      - all_P1_edges_CONFIRMED
+      - all_P0_invariants_CONFIRMED
+      - all_P1_invariants_CONFIRMED
+      - canonical_golden_scenario_passes_without_test_only_semantic_bridge
+      - required_variation_scenarios_pass
+      - no_open_P0_or_P1_counterexample
+      - current_state_delta_is_empty_for_frozen_scope
+
+    final_verdicts:
+      CONFIRM: >
+        Frozen canonical runtime is implemented and has survived its required
+        integration, end-to-end, variation, provenance, recovery, and adversarial
+        evidence.
+
+      NOT_CONFIRM: >
+        One or more frozen P0/P1 edges, invariants, or whole-loop criteria remain
+        absent, partial, contradicted, unknown, or falsified.
+
+  change_control:
+    freeze_rule: >
+      After preregistration, implementation work MUST NOT modify this target merely
+      because current code differs from it.
+
+    legitimate_revision_requires:
+      - explicit_human_authorization
+      - stated_reason
+      - semantic_diff
+      - affected_edges_and_invariants
+      - migration_effect
+      - new_preregistration_version
+
+    implementation_disagreement_rule: >
+      If implementation evidence suggests the frozen model is wrong, stop and
+      report the contradiction. Do not silently adapt the target to make the run pass.

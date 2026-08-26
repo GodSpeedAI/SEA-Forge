@@ -1,0 +1,1724 @@
+# =============================================================================
+# GODSPEED CANONICAL RUNTIME CONVERGENCE PLAN
+# =============================================================================
+
+schema: agent.development_plan
+schema_version: "1.0"
+
+metadata:
+  id: "godspeed-e2e-convergence"
+  title: "GodSpeed Canonical Runtime Convergence"
+  status: "ready"
+  version: "0.1.0"
+  created: "2026-08-24"
+
+  purpose: >-
+    Project the frozen GodSpeed canonical-runtime preregistration into an
+    executable settlement graph. The plan progressively removes the delta
+    between the implemented stack and the frozen black-box runtime contract
+    until every required edge and invariant is confirmed under production-path,
+    adversarial, recovery, and end-to-end evidence.
+
+# -----------------------------------------------------------------------------
+# SOURCE AUTHORITY
+# -----------------------------------------------------------------------------
+
+source:
+  spec:
+    intended_repository_path: ".agents/specs/e2e-preregistration.yml"
+    artifact_name: "e2e-preregistration.yml"
+    spec_id: "godspeed-canonical-runtime-convergence"
+    spec_version: "0.1.0"
+    sha256: "ef5710893c5bcc569a4757371c54d4d2e5e6168e1df61d2d7433b6889eaa879f"
+    authority: normative
+
+  implementation_brief:
+    intended_repository_path: ".agents/reports/godspeed-runtime-integration-e2e-recon.md"
+    authority: non_normative_execution_context
+    conflict_rule: >-
+      The frozen preregistration governs. The reconnaissance report describes
+      observed current state only. Any conflict MUST be surfaced as a blocked
+      decision rather than silently resolved in favor of current implementation.
+
+  supporting_sources:
+    - path: "DomainForge canonical/current semantic sources discovered during T00"
+      role: >-
+        Establish the concrete semantic source and identity mechanism without
+        overriding the frozen runtime contract.
+
+    - path: "Existing repository-local architecture documents and tests"
+      role: >-
+        Supply implementation context, existing gates, and evidence. They do not
+        override the preregistration.
+
+# -----------------------------------------------------------------------------
+# TARGET SETTLEMENT
+# -----------------------------------------------------------------------------
+
+target_settlement: >-
+  One deterministic GodSpeed work cycle can begin with a desired direction,
+  become a spendable work request, acquire cited context, enter SEA-Forge as
+  semantically governed work, execute only under valid authority, return an
+  operational settlement, receive independent SWE_SEED proof, become a
+  RealityTrace expected-versus-observed evidence record, undergo independent
+  GodSpeed-Agent developmental settlement, persist into developmental memory,
+  and alter the evidence available to the next navigation cycle. One stable
+  work-request identity and one resolvable DomainForge model identity survive
+  the entire loop. Proof, operational settlement, observation, developmental
+  settlement, and capability remain distinct. The loop survives declared
+  failure, replay, interruption, semantic-identity corruption, and recovery
+  cases without false settlement or provenance loss.
+
+# -----------------------------------------------------------------------------
+# OPERATING CONTRACT
+# -----------------------------------------------------------------------------
+
+operating_contract:
+  core_principle: >-
+    Implement only the smallest currently open delta against the frozen
+    black-box contract. A component's internals MAY change, but no local repair
+    may weaken, reinterpret, bypass, or silently collapse a frozen edge,
+    identity, authority, evidence, proof, settlement, or capability distinction.
+
+  rules:
+    - "Execute tasks by dependency, not by narrative order."
+    - "Independent tasks MAY run in parallel only after all declared dependencies are settled."
+    - "Every task MUST leave the affected repositories coherent with all applicable global gates green."
+    - "A task is not complete because code exists, a process starts once, the builder reports success, or a happy-path test passes."
+    - "A passing gate proves only what that gate actually observes."
+    - "High-risk P3 work requires fresh independent/adversarial confirmation."
+    - "Do not generalize from one observation unless the normative requirement is itself general."
+    - "Do not silently widen domain, schema, API, config, service, or authority surfaces when an existing representation can preserve the required distinction."
+    - "Runtime/machine/provider-specific facts belong in established config/secret hierarchy rather than scattered hardcoding."
+    - "Preserve failed evidence and correction history."
+    - "Existing production behavior MAY settle a task without code changes when it already satisfies the task's complete closure contract."
+    - "Legacy/gen-1, synthetic, mock-only, dynamically loaded, or test-shim paths may inform implementation but MUST NOT settle a production edge."
+    - "Once a requirement is CONFIRMED it becomes a fixed constraint for later tasks unless a new falsifier legitimately reopens it."
+    - "Do not reopen settled semantics because a later agent prefers a different implementation."
+    - "Never manufacture a missing production edge inside an E2E test and count the resulting test as proof that the production edge exists."
+    - "ProofCompleted, OperationalSettlement, EvidenceRecorded, SettlementRecorded, and CapabilityUpdated remain semantically distinct."
+    - "Domain identity MUST resolve to the actual canonical semantic model; fallback pseudo-identities are forbidden."
+
+  claim_states:
+    - OBSERVED
+    - INFERRED
+    - DECIDED
+    - ASSUMED
+    - UNKNOWN
+
+  correction_protocol:
+    - "Preserve the failed evidence."
+    - "Classify the failure: implementation, oracle/test, representation, missing prerequisite, environmental confound, or source-spec ambiguity."
+    - "Determine whether the governing requirement/invariant remains valid."
+    - "Correct the smallest falsified layer."
+    - "Rerun the original teeth/falsification check."
+    - "Rerun the original confirmation path."
+    - "Append the correction round; do not erase the failed round."
+    - "Do not weaken acceptance merely because the implementation repeatedly fails it."
+
+  scope_control: >-
+    A newly discovered issue enters the current plan only when it blocks a
+    frozen requirement or is itself required to preserve that requirement.
+    Valuable independent discoveries become future debt/plans. Attractive
+    architecture with no frozen requirement is rejected from current scope.
+
+  delta_control: >-
+    T00 establishes Delta-0 as every frozen edge or invariant not CONFIRMED by
+    sufficient existing production evidence. Subsequent tasks work only on open
+    delta. After each confirmed task, recompute the open delta. The search space
+    may expand only when new evidence falsifies a previous confirmation or
+    exposes a prerequisite required by the frozen specification.
+
+# -----------------------------------------------------------------------------
+# PLAN-STATE AND EVIDENCE ARTIFACTS
+# -----------------------------------------------------------------------------
+
+artifacts:
+  current_status: ".agents/status/e2e-current-status.yml"
+  decision_log: ".agents/reports/e2e/decision-log.yml"
+
+  evidence_root: ".agents/evidence/e2e"
+  reports_root: ".agents/reports/e2e"
+  preregistration_root: ".agents/preregistrations/e2e"
+
+  status_rule: >-
+    Mutable current status is an operational projection and MUST NOT become a
+    source of desired-state or normative authority.
+
+  evidence_preservation_rule: >-
+    Each confirmation, failed confirmation, attack, correction, and
+    reconfirmation receives a distinct append-only evidence artifact. Never
+    overwrite failed rounds with later success.
+
+# -----------------------------------------------------------------------------
+# VERIFICATION MODEL
+# -----------------------------------------------------------------------------
+
+verification:
+  global_gates:
+    - id: "PREREG"
+      command: "just e2e-prereg-check"
+
+    - id: "CHECK"
+      command: "just e2e-check"
+
+    - id: "TEST"
+      command: "just e2e-test"
+
+    - id: "LINT"
+      command: "just e2e-lint"
+
+    - id: "DELTA"
+      command: "just e2e-delta-check"
+
+  gate_binding_rule: >-
+    T00 SHALL bind these stable SEA-Forge-root aliases to the real existing
+    repository-local gates. The aliases orchestrate existing checks rather than
+    duplicating their test logic or creating competing sources of truth. A
+    repository that already exposes an appropriate gate MUST be called through
+    that gate.
+
+  task_gate_contract: >-
+    `just e2e-gate <TASK_ID>` is the stable narrow-task entry point. T00 SHALL
+    bind it to the smallest existing or newly added test target that observes
+    the task's frozen contract.
+
+  proof_levels:
+    P0: >-
+      Mechanical/deterministic change. Requires a narrow direct gate plus
+      applicable global gates.
+
+    P1: >-
+      Normal behavioral work. Requires positive behavior, a meaningful
+      teeth/falsification check, and applicable global gates.
+
+    P2: >-
+      Invariant-sensitive work. Requires an explicit/preregistered claim,
+      meaningful adversarial/negative evidence, an evidence artifact,
+      applicable global gates, and review of a plausible alternate failure path.
+
+    P3: >-
+      Settlement-critical work. Requires frozen preregistration, builder
+      evidence, explicit adversarial attacks, fresh independent confirmation,
+      and correction/re-confirmation after any failed confirmation.
+
+# -----------------------------------------------------------------------------
+# DEPENDENCY GRAPH
+# -----------------------------------------------------------------------------
+
+dependency_graph:
+  edges:
+    - ["T00", "T01"]
+
+    - ["T01", "T02"]
+    - ["T01", "T03"]
+
+    - ["T02", "T04"]
+    - ["T03", "T04"]
+
+    - ["T04", "T05"]
+    - ["T05", "T06"]
+    - ["T06", "T07"]
+    - ["T07", "T08"]
+    - ["T08", "T09"]
+    - ["T09", "T10"]
+    - ["T10", "T11"]
+    - ["T11", "T12"]
+
+  critical_path:
+    - "T00"
+    - "T01"
+    - "T02"
+    - "T04"
+    - "T05"
+    - "T06"
+    - "T07"
+    - "T08"
+    - "T09"
+    - "T10"
+    - "T11"
+    - "T12"
+
+  parallel_tracks:
+    - name: "Existing context slice and navigation ingress"
+      after: "T01"
+      tasks:
+        - "T02"
+        - "T03"
+
+  settlement_sequence:
+    - "Establish Delta-0 and bind the proof surface."
+    - "Settle semantic identity and common envelope invariants."
+    - "Close navigation and cited-context ingress."
+    - "Close governed work submission and contact-with-reality authority."
+    - "Return operational settlement without collapsing proof."
+    - "Bind proof to RealityTrace expected-versus-observed evidence."
+    - "Close developmental settlement and memory feedback."
+    - "Prove whole-cycle causal continuity, replay safety, and recovery."
+    - "Run variation battery and fresh final confirmation."
+
+# -----------------------------------------------------------------------------
+# INITIAL EXECUTION STATE
+# -----------------------------------------------------------------------------
+
+initial_state:
+  current_task: "T00"
+  last_settled_task: null
+
+  ready:
+    - "T00"
+
+  blocked:
+    T01: ["T00"]
+    T02: ["T01"]
+    T03: ["T01"]
+    T04: ["T02", "T03"]
+    T05: ["T04"]
+    T06: ["T05"]
+    T07: ["T06"]
+    T08: ["T07"]
+    T09: ["T08"]
+    T10: ["T09"]
+    T11: ["T10"]
+    T12: ["T11"]
+
+# =============================================================================
+# TASK CONTRACTS
+# =============================================================================
+
+tasks:
+
+  # ---------------------------------------------------------------------------
+  # T00 — BASELINE
+  # ---------------------------------------------------------------------------
+
+  T00:
+    title: "Establish Delta-0 and Verification Surface"
+    initial_status: ready
+    depends_on: []
+
+    proof_level: P1
+    confirmation: builder_with_teeth
+    settles: []
+
+    changes: >-
+      Creates the reproducible current-state projection, requirement/evidence
+      matrix, stable cross-repository gate aliases, and initial open-delta set.
+      It changes no canonical runtime behavior.
+
+    proves: >-
+      Every frozen requirement has been classified against direct current
+      production evidence as CONFIRMED, PARTIAL, ABSENT, CONTRADICTED, or
+      UNKNOWN, and the resulting Delta-0 can be mechanically recomputed.
+
+    does_not_prove: >-
+      No runtime edge or semantic invariant becomes true merely because it was
+      discovered, classified, or represented in the status artifact.
+
+    hot_context:
+      - ".agents/specs/e2e-preregistration.yml"
+      - ".agents/reports/godspeed-runtime-integration-e2e-recon.md"
+      - "All existing repository-local test/build/lint recipes before creating aliases"
+      - "Record repository HEADs and pre-existing dirty state; never reset user work"
+
+    steps:
+      - "Verify the preregistration SHA-256 equals source.spec.sha256 in this plan."
+      - "Parse all 35 explicit frozen requirement IDs: ENV-I1..ENV-I8, E0..E10 including E5A/E5B, and I1..I15."
+      - "Record repo HEADs and pre-existing dirty/untracked state relevant to the stack."
+      - "Inspect existing production-path evidence for every requirement; do not trust prior verdicts without source evidence."
+      - "Initialize .agents/status/e2e-current-status.yml with one verdict and evidence reference per frozen requirement."
+      - "Mark a requirement CONFIRMED only when its closure requirements are already met; otherwise preserve the specific open delta."
+      - "Bind just e2e-prereg-check, e2e-check, e2e-test, e2e-lint, e2e-delta-check, and e2e-gate <TASK_ID> to real underlying gates without duplicating test logic."
+      - "Emit Delta-0 and a requirement-to-current-evidence index."
+      - "If an entire downstream task is already settled by qualifying existing evidence, record settled_by_baseline in current status rather than rewriting the implementation."
+
+    gate:
+      - "just e2e-prereg-check"
+      - "just e2e-delta-check"
+
+    teeth:
+      - attack: "Remove one frozen requirement from the current-status/evidence mapping."
+        expected: "e2e-delta-check fails with the unmapped requirement."
+
+      - attack: "Offer only a gen-1, synthetic, mock-only, or test-shim path as evidence for a production edge."
+        expected: "The edge cannot receive CONFIRMED."
+
+    redesign_trigger: >-
+      The frozen source cannot be parsed into the expected 35 stable requirement
+      IDs, or its actual repository contents differ materially from the
+      preregistration on which this plan was authored. Stop and reconcile the
+      source specification before implementation.
+
+    evidence: ".agents/evidence/e2e/T00/"
+
+    done_when:
+      - "All 35 explicit requirements have exactly one current verdict."
+      - "Delta-0 is mechanically reproducible."
+      - "Existing settled behavior has not been needlessly reimplemented."
+      - "Stable global and per-task gate aliases resolve."
+      - "No runtime implementation was changed merely to make the baseline cleaner."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T01 — SEMANTIC IDENTITY / ENVELOPE FOUNDATION
+  # ---------------------------------------------------------------------------
+
+  T01:
+    title: "Settle Canonical Semantic Envelope and Domain Identity"
+    initial_status: blocked
+    depends_on: ["T00"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "ENV-I1"
+      - "ENV-I2"
+      - "ENV-I3"
+      - "ENV-I4"
+      - "ENV-I5"
+      - "ENV-I6"
+      - "ENV-I7"
+      - "ENV-I8"
+      - "I1"
+      - "I3"
+      - "I13"
+
+    changes: >-
+      Establishes the interoperable canonical envelope/validation contract used
+      at cross-component boundaries, resolvable DomainForge model identity,
+      causal-parent representation, idempotent envelope identity, and exclusive
+      event-producer ownership.
+
+    proves: >-
+      A canonical envelope cannot masquerade as semantically grounded when its
+      DomainForge model is missing or wrong; causal identity and event ownership
+      are machine-observable; CEP/schema conformance is not interpreted as truth.
+
+    does_not_prove: >-
+      Individual runtime edges use the envelope correctly, or that the complete
+      causal chain composes end to end.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "Canonical domain identity resolves to the actual versioned semantic model."
+        - "Fallback pseudo-hashes cannot settle as valid domain identity."
+        - "Canonical event types have exclusive authoritative producers."
+        - "Envelope conformance is distinct from payload truth."
+      falsifiers:
+        - "A missing model produces an apparently valid canonical domain hash."
+        - "A wrong producer can emit another component's authoritative event and pass validation."
+        - "A derived envelope loses required causal-parent identity."
+        - "CEP/schema success alone causes an enclosed claim to be accepted as true."
+      known_confounds:
+        - "A legacy envelope schema may be valid for an excluded/reference path but not satisfy the frozen production contract."
+      confirmation_condition: >-
+        Fresh independent reviewer can forge each targeted identity/ownership
+        failure only to have it rejected or quarantined, while valid production
+        envelopes retain resolvable identity and causality.
+
+    hot_context:
+      - "Current CEP semantic-envelope schema"
+      - "SWE_SEED federation envelope implementation"
+      - "Context Kernel agentic-capability-loop envelope implementation"
+      - "GodSpeed-Agent agentic-capability-loop adapters"
+      - "SEA-Forge semantic-envelope and DomainForge integration"
+      - "RealityTrace CEP export / DomainForge binding"
+      - "Authoritative .sea model and current domain-model hash derivation"
+
+    steps:
+      - "Select/reuse the smallest existing canonical representation capable of preserving the frozen envelope contract; do not create parallel envelope families without necessity."
+      - "Replace or gate any fallback domain-model identity that can masquerade as canonical identity."
+      - "Bind model namespace, version, and hash to a resolvable canonical DomainForge artifact/serialization."
+      - "Pin authoritative producer ownership for canonical event types."
+      - "Provide causal-parent and idempotent-envelope semantics required by the preregistration."
+      - "Ensure conformance validation and truth/settlement evaluation remain separate."
+      - "Add contract tests and adversarial fixtures usable by all later edge tests."
+
+    gate:
+      - "just e2e-gate T01"
+
+    teeth:
+      - attack: "Remove the canonical DomainForge model and attempt to emit/consume an envelope using fallback identity."
+        expected: "Reject or quarantine; no canonical identity is manufactured."
+
+      - attack: "Forge EvidenceRecorded from a producer other than RealityTrace."
+        expected: "Exclusive event-authority validation rejects it."
+
+      - attack: "Provide a structurally conformant envelope containing a deliberately false payload claim."
+        expected: "Conformance may pass, but no truth/settlement consequence follows merely from conformance."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen ENV-I1..ENV-I8, I1, I3, I13 requirements"
+        - "Relevant canonical envelope/domain identity implementation"
+        - "Builder evidence and adversarial fixtures"
+        - "Exact question: can identity, causality, producer authority, or truth/conformance still collapse?"
+      verifier_should_not_receive:
+        - "Builder's claimed verdict before independent attack design"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      Existing envelope families cannot preserve the frozen contract without
+      semantic ambiguity, or there is no unique authoritative DomainForge model
+      capable of supplying canonical runtime identity. Stop rather than hiding
+      the conflict behind adapters.
+
+    evidence: ".agents/evidence/e2e/T01/"
+
+    done_when:
+      - "ENV-I1..ENV-I8, I1, I3, and I13 satisfy their frozen contracts."
+      - "Fallback pseudo-identity cannot pass as canonical."
+      - "Adversarial producer and causal-parent forgeries fail."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T02 — SWE_SEED <-> CONTEXT KERNEL
+  # ---------------------------------------------------------------------------
+
+  T02:
+    title: "Settle Cited Context Integration"
+    initial_status: blocked
+    depends_on: ["T01"]
+
+    proof_level: P2
+    confirmation: independent_if_needed
+
+    settles:
+      - "E2"
+      - "E3"
+      - "I4"
+
+    changes: >-
+      Makes the existing SWE_SEED-to-Context-Kernel production slice conform to
+      the frozen ContextRequired and ContextPacketCreated contracts, including
+      correlation, citations, provenance, domain identity, and explicit
+      authority non-ownership.
+
+    proves: >-
+      Required context can be requested and returned through the production path
+      with valid citations, while missing/invalid context cannot silently settle
+      as successful acquisition and Context Kernel cannot create execution authority.
+
+    does_not_prove: >-
+      The resulting work request can yet enter SEA-Forge or execute.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claim: >-
+        E2/E3 preserve work identity and cited evidence while keeping Context
+        Kernel outside the execution-authority role.
+      falsifier: >-
+        Required context returns successful zero-citation context, loses work
+        correlation/domain identity, or creates authority.
+      known_confounds:
+        - "Optional-context behavior must not be confused with required-context behavior."
+      confirmation_condition: >-
+        Production-path context retrieval succeeds with citations and all
+        declared negative cases fail closed or produce explicit governed outcomes.
+
+    hot_context:
+      - "SWE_SEED ContextConfig and MCP stdio client"
+      - "Context_Kernel ck-mcp context_required dispatch"
+      - "AclContextAgent.handle_context_required"
+      - "Existing SWE_SEED and Context Kernel integration tests"
+
+    steps:
+      - "Reuse the real production MCP path."
+      - "Bring E2 request shape under the canonical envelope/correlation contract."
+      - "Bring E3 response shape under the canonical envelope/citation/provenance contract."
+      - "Make required-context absence explicit rather than silent successful emptiness."
+      - "Pin authority-reference pass-through without authority creation."
+
+    gate:
+      - "just e2e-gate T02"
+
+    teeth:
+      - attack: "Unset or misconfigure required corpus root and request mandatory context."
+        expected: "No successful zero-citation settlement; fail or return explicit governed no-context result."
+
+      - attack: "Return context for a different work_request_id/context_requirement_id."
+        expected: "Consumer rejects the cross-wired packet."
+
+      - attack: "Inject an authority decision originating from Context Kernel."
+        expected: "It cannot become execution authority."
+
+    redesign_trigger: >-
+      The production Context Kernel boundary cannot distinguish required versus
+      optional context without changing frozen semantics, or authority and
+      retrieval are inseparably coupled.
+
+    evidence: ".agents/evidence/e2e/T02/"
+
+    done_when:
+      - "E2, E3, and I4 are CONFIRMED."
+      - "Required context has cited provenance."
+      - "Zero-citation false success is closed."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T03 — GSA -> SWE_SEED
+  # ---------------------------------------------------------------------------
+
+  T03:
+    title: "Settle Navigation Ingress and Work Contract"
+    initial_status: blocked
+    depends_on: ["T01"]
+
+    proof_level: P2
+    confirmation: builder_with_teeth
+
+    settles:
+      - "E0"
+      - "E1"
+
+    changes: >-
+      Establishes the production boundary by which a desired direction is
+      evaluated by GodSpeed-Agent and a selected spendable affordance becomes a
+      SWE_SEED WorkRequested contract.
+
+    proves: >-
+      The runtime begins from direction plus current constraints and hands
+      SWE_SEED a path with affordance identity, desired outcome, settlement
+      criteria, and canonical domain identity rather than an ungrounded destination.
+
+    does_not_prove: >-
+      Context acquisition, SEA-Forge governance, execution, or downstream settlement.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claim: >-
+        E0/E1 convert direction into an explicit spendable work contract without
+        conflating desired destination with affordance.
+      falsifier: >-
+        A bare destination with no selected path/settlement criteria can enter
+        SWE_SEED as a canonical WorkRequested event.
+      known_confounds:
+        - "An explicitly human-selected affordance is valid if GSA records the selection and contract."
+      confirmation_condition: >-
+        Production-path WorkRequested events contain the frozen required
+        semantics and reject incomplete/cross-wired inputs.
+
+    hot_context:
+      - "godspeed-nav desired-direction / affordance selection surfaces"
+      - "GodSpeed-Agent MCP cybernetic_nav tools"
+      - "SWE_SEED route/work-contract entry surfaces"
+
+    steps:
+      - "Identify the least invasive existing GSA affordance-selection output suitable for E1."
+      - "Project selected affordance into WorkRequested using the canonical envelope."
+      - "Preserve work_request_id, affordance_id, desired outcome, settlement criteria, and domain identity."
+      - "Reject or explicitly block destination-only inputs lacking an executable selected path."
+
+    gate:
+      - "just e2e-gate T03"
+
+    teeth:
+      - attack: "Submit a desired outcome with no affordance/path or settlement criteria and attempt canonical handoff."
+        expected: "No canonical WorkRequested event is emitted."
+
+      - attack: "Cross-wire the selected affordance to a different domain-model identity."
+        expected: "Reject or quarantine before SWE_SEED accepts the contract."
+
+    redesign_trigger: >-
+      GodSpeed-Agent currently has no semantic surface corresponding to selected
+      affordance/work request and adding one would require redefining its frozen
+      developmental responsibility rather than merely projecting existing state.
+
+    evidence: ".agents/evidence/e2e/T03/"
+
+    done_when:
+      - "E0 and E1 are CONFIRMED."
+      - "A canonical work request represents a path rather than a destination."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T04 — SWE_SEED -> SEA-FORGE
+  # ---------------------------------------------------------------------------
+
+  T04:
+    title: "Settle Governed Work Submission"
+    initial_status: blocked
+    depends_on: ["T02", "T03"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "E4"
+
+    changes: >-
+      Creates or completes the production SWE_SEED-to-SEA-Forge
+      GovernedWorkRequest boundary using the selected affordance, cited context,
+      proof contract, settlement criteria, actor, and canonical semantic identity.
+
+    proves: >-
+      SEA-Forge receives semantically grounded work under the same canonical
+      domain identity as upstream navigation/context and receives a distinct
+      proof obligation and operational settlement obligation.
+
+    does_not_prove: >-
+      SEA-Forge correctly authorizes side effects or returns correct operational settlement.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "E4 carries semantic work intent rather than an opaque command only."
+        - "E4 binds context, proof, settlement criteria, actor, affordance, and domain identity."
+      falsifiers:
+        - "An opaque command with no semantic contract passes as GovernedWorkRequest."
+        - "A context packet from another work request is accepted."
+        - "SEA-Forge evaluates against a different model identity than E4 declares."
+      known_confounds:
+        - "Internal SEA-Forge planning representation is not frozen."
+      confirmation_condition: >-
+        Fresh independent verifier cannot cross-wire work, context, or domain
+        identity and still obtain an accepted governed request.
+
+    hot_context:
+      - "SWE_SEED route/proof/context structures"
+      - "SEA-Forge CLI/server request ingress"
+      - "SEA-Forge DomainForge authority-evaluation boundary"
+      - "Existing SWE_SEED declaration reconciliation in SEA-Forge"
+
+    steps:
+      - "Prefer an existing SEA-Forge ingress surface and extend/project only what the frozen E4 contract requires."
+      - "Carry upstream WorkRequested and ContextPacket references into the governed request."
+      - "Preserve proof_contract separately from settlement_criteria."
+      - "Bind the same canonical DomainModelRef used upstream."
+      - "Add positive and cross-wire/semantic-identity integration tests through the real production boundary."
+
+    gate:
+      - "just e2e-gate T04"
+
+    teeth:
+      - attack: "Send a request containing only executable argv/command without required semantic intent."
+        expected: "It cannot settle as a canonical GovernedWorkRequest."
+
+      - attack: "Attach a valid ContextPacketCreated from another work_request_id."
+        expected: "Reject the cross-wire."
+
+      - attack: "Reference a valid but different DomainForge model."
+        expected: "Reject or quarantine before governed execution."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen E4 contract"
+        - "SWE_SEED producer implementation"
+        - "SEA-Forge consumer implementation"
+        - "Builder evidence"
+      verifier_should_not_receive:
+        - "Builder's preferred implementation rationale"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      SEA-Forge cannot accept semantic work without converting SWE_SEED into an
+      internal SEA-Forge implementation detail or otherwise violating black-box
+      ownership.
+
+    evidence: ".agents/evidence/e2e/T04/"
+
+    done_when:
+      - "E4 is CONFIRMED through the production boundary."
+      - "Cross-wired context/domain inputs fail."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T05 — SEA-FORGE <-> REALITY
+  # ---------------------------------------------------------------------------
+
+  T05:
+    title: "Settle Governed Contact With Reality"
+    initial_status: blocked
+    depends_on: ["T04"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "E5A"
+      - "E5B"
+      - "I5"
+
+    changes: >-
+      Pins the authority-to-side-effect and observation-to-authorized-invocation
+      contracts at the SEA-Forge execution boundary.
+
+    proves: >-
+      Side effects cannot legally occur before applicable SEA-Forge authority,
+      the execution environment cannot self-authorize, and observations can
+      settle only against the exact authorized invocation that produced them.
+
+    does_not_prove: >-
+      The resulting execution satisfies its operational settlement criteria or proof.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "Authority precedes governed side effect."
+        - "Execution observations remain bound to the authorized invocation."
+      falsifiers:
+        - "A denied/escalated invocation produces the governed side effect."
+        - "A late observation from invocation A settles invocation B."
+        - "Execution self-supplies a fabricated authority decision."
+      known_confounds:
+        - "External systems may have independent side effects outside SEA-Forge governance; only the governed path is in scope."
+      confirmation_condition: >-
+        Fresh attacks cannot cause unauthorized or cross-wired execution to
+        settle as valid governed execution.
+
+    hot_context:
+      - "SEA-Forge authority engine and ActionGrant semantics"
+      - "SEA-Forge runtime/sandbox execution"
+      - "SEA-Forge server delegation/ACP paths"
+      - "Existing identity/generation/late-callback tests where applicable"
+
+    steps:
+      - "Ensure AuthorizedInvocation carries the frozen execution and authority identity."
+      - "Ensure the actual production executor receives authority only from SEA-Forge."
+      - "Bind ExecutionObservation to authorized invocation identity."
+      - "Harden late, duplicated, cross-wired, denied, escalated, timeout, and cancellation paths."
+
+    gate:
+      - "just e2e-gate T05"
+
+    teeth:
+      - attack: "Force authority deny/escalate, then attempt the governed side effect."
+        expected: "No governed side effect occurs."
+
+      - attack: "Deliver a late valid observation from a previous invocation."
+        expected: "It cannot settle against the current invocation."
+
+      - attack: "Forge an authority decision inside the execution response."
+        expected: "It has no authority effect."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen E5A/E5B/I5 requirements"
+        - "Authority/execution implementation"
+        - "Attack evidence"
+      verifier_should_not_receive:
+        - "Builder's attack expectations before designing independent attacks"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      The execution substrate cannot distinguish authority identity from
+      execution response identity or cannot prevent side effects before authority.
+
+    evidence: ".agents/evidence/e2e/T05/"
+
+    done_when:
+      - "E5A, E5B, and I5 are CONFIRMED."
+      - "Denied/escalated paths cannot side-effect through the governed path."
+      - "Cross-wire and late-observation attacks fail."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T06 — SEA-FORGE -> SWE_SEED
+  # ---------------------------------------------------------------------------
+
+  T06:
+    title: "Settle Operational Settlement Return"
+    initial_status: blocked
+    depends_on: ["T05"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "E6"
+      - "I6"
+      - "I7"
+
+    changes: >-
+      Projects SEA-Forge governed execution into the frozen
+      OperationalSettlement contract and returns it to SWE_SEED without
+      collapsing execution exit status, proof, or developmental settlement.
+
+    proves: >-
+      SWE_SEED receives the authoritative operational consequence and evidence of
+      SEA-Forge execution while proof remains independent and operational
+      settlement cannot directly mutate developmental capability.
+
+    does_not_prove: >-
+      SWE_SEED proof succeeds, RealityTrace observes the result, or GSA records developmental settlement.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "Operational settlement is independently evaluated from process exit status."
+        - "Operational settlement does not establish proof or developmental settlement."
+      falsifiers:
+        - "exit_code=0 forces operational settlement success despite failed criteria."
+        - "OperationalSettlement directly creates GSA SettlementRecorded or CapabilityUpdated."
+      known_confounds:
+        - "A successful command may legitimately fail the declared operational contract."
+      confirmation_condition: >-
+        Independent attacks preserve the three-way distinction among execution
+        result, operational settlement, and developmental consequence.
+
+    hot_context:
+      - "SEA-Forge settlement evaluator"
+      - "SEA-Forge evidence/semantic-envelope output"
+      - "SWE_SEED proof input and trace ledger"
+
+    steps:
+      - "Expose/project SEA-Forge operational settlement through the canonical envelope."
+      - "Return evidence refs and observed effects to the originating SWE_SEED work request."
+      - "Keep proof execution downstream and independent."
+      - "Ensure no direct SEA-Forge-to-GSA capability promotion path is introduced."
+
+    gate:
+      - "just e2e-gate T06"
+
+    teeth:
+      - attack: "Return exit code 0 while violating declared operational settlement criteria."
+        expected: "Operational settlement records failure/non-success."
+
+      - attack: "Attempt to consume OperationalSettlement directly as developmental settlement."
+        expected: "No GSA settlement/capability promotion occurs."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen E6/I6/I7 contracts"
+        - "Settlement implementation"
+        - "Evidence"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      Existing SEA-Forge semantics make execution success and operational
+      settlement inseparable in a way that cannot represent the frozen distinction.
+
+    evidence: ".agents/evidence/e2e/T06/"
+
+    done_when:
+      - "E6, I6, and I7 are CONFIRMED."
+      - "Exit-zero false settlement is impossible."
+      - "No developmental promotion occurs from operational settlement alone."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T07 — SWE_SEED -> REALITYTRACE
+  # ---------------------------------------------------------------------------
+
+  T07:
+    title: "Settle Proof to RealityTrace Boundary"
+    initial_status: blocked
+    depends_on: ["T06"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "E7"
+
+    changes: >-
+      Makes SWE_SEED ProofCompleted a production RealityTrace input tied to the
+      declared expected outcome and SEA-Forge operational settlement evidence.
+
+    proves: >-
+      RealityTrace receives enough immutable/referenced evidence to compare what
+      was declared/proven with what operationally occurred without SWE_SEED
+      rewriting SEA-Forge's observation history.
+
+    does_not_prove: >-
+      RealityTrace produces acceptable developmental evidence or GSA settles it.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claim: >-
+        E7 binds proof to the operational evidence path while preserving upstream facts.
+      falsifier: >-
+        Proof can be accepted with a forged/missing operational settlement
+        reference or can rewrite observed execution facts.
+      known_confounds:
+        - "RealityTrace may internally normalize data; normalization may not change source facts."
+      confirmation_condition: >-
+        Fresh verifier cannot detach proof from the real operational settlement
+        or substitute altered observations.
+
+    hot_context:
+      - "SWE_SEED ProofCompleted representation"
+      - "RealityTrace expected/observed ingestion surfaces"
+      - "RealityTrace DomainForge and CEP export paths"
+
+    steps:
+      - "Create/reuse the smallest production RealityTrace ingestion surface for ProofCompleted."
+      - "Carry expected_outcome, proof contract/status, operational settlement ref, trace/evidence refs, and domain identity."
+      - "Reference upstream execution evidence instead of duplicating it as mutable truth."
+      - "Reject missing, forged, cross-work, or wrong-domain settlement references."
+
+    gate:
+      - "just e2e-gate T07"
+
+    teeth:
+      - attack: "Supply a passing proof tied to a nonexistent/forged OperationalSettlement."
+        expected: "RealityTrace cannot accept it as canonical E7 evidence."
+
+      - attack: "Alter observed execution data in ProofCompleted while the referenced SEA-Forge evidence says something else."
+        expected: "Mismatch is detected; upstream observation is not silently replaced."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen E7"
+        - "SWE_SEED and RealityTrace boundary implementation"
+        - "Evidence"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      RealityTrace's evidence model cannot preserve expected-versus-observed
+      comparison without assuming ownership of SWE_SEED or SEA-Forge source facts.
+
+    evidence: ".agents/evidence/e2e/T07/"
+
+    done_when:
+      - "E7 is CONFIRMED."
+      - "Proof cannot detach from real operational evidence."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T08 — REALITYTRACE -> GSA
+  # ---------------------------------------------------------------------------
+
+  T08:
+    title: "Settle Expected-vs-Observed Developmental Evidence"
+    initial_status: blocked
+    depends_on: ["T07"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "E8"
+      - "I8"
+      - "I10"
+
+    changes: >-
+      Establishes RealityTrace as the canonical EvidenceRecorded producer for
+      the frozen loop and connects it to GodSpeed-Agent as provisional
+      developmental evidence.
+
+    proves: >-
+      Expected versus observed reality is evidence-bound before reaching GSA,
+      upstream facts remain immutable/referenced, and receipt of EvidenceRecorded
+      does not itself establish settlement or capability.
+
+    does_not_prove: >-
+      GSA should promote the evidence, record developmental settlement, or update capability.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "RealityTrace exclusively produces the canonical E8 EvidenceRecorded event."
+        - "EvidenceRecorded preserves expected, observed, difference, proof, operational-settlement, provenance, and domain identity."
+        - "EvidenceRecorded remains provisional in GSA."
+      falsifiers:
+        - "EvidenceRecorded missing expected or observed consequence is accepted."
+        - "Forged parent/proof/settlement refs are accepted."
+        - "Receipt alone creates SettlementRecorded or CapabilityUpdated."
+      known_confounds:
+        - "A later explicit GSA settlement action may validly promote qualifying evidence."
+      confirmation_condition: >-
+        Fresh independent attacks cannot forge evidence lineage or trigger
+        developmental promotion from provisional evidence alone.
+
+    hot_context:
+      - "RealityTrace expected/observed/difference model"
+      - "GodSpeed-Agent handle_evidence_recorded"
+      - "NavigationRuntime.ingest_execution_evidence"
+
+    steps:
+      - "Produce canonical EvidenceRecorded from RealityTrace production code."
+      - "Bind proof and operational-settlement references to expected/observed/difference."
+      - "Consume E8 through GSA's provisional evidence path."
+      - "Preserve existing non-promotion semantics."
+      - "Reject forged, incomplete, cross-work, and wrong-domain evidence."
+
+    gate:
+      - "just e2e-gate T08"
+
+    teeth:
+      - attack: "Deliver valid-looking EvidenceRecorded with forged parent proof or settlement refs."
+        expected: "Reject or quarantine."
+
+      - attack: "Deliver one completely valid EvidenceRecorded event."
+        expected: "It becomes provisional evidence only; no settlement/capability promotion occurs."
+
+      - attack: "Attempt to change an upstream observed value inside E8."
+        expected: "Source mismatch is detectable and cannot silently rewrite the upstream fact."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen E8/I8/I10"
+        - "RealityTrace producer"
+        - "GSA consumer"
+        - "Attack evidence"
+      verifier_should_not_receive:
+        - "Builder's claimed proof of non-promotion"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      RealityTrace cannot generate the frozen expected-versus-observed evidence
+      without redefining settlement authority or GSA cannot preserve provisional
+      evidence separately from developmental settlement.
+
+    evidence: ".agents/evidence/e2e/T08/"
+
+    done_when:
+      - "E8, I8, and I10 are CONFIRMED."
+      - "RealityTrace is the production EvidenceRecorded producer for this loop."
+      - "One valid E8 cannot promote settlement or capability by itself."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T09 — GSA -> MEMORY
+  # ---------------------------------------------------------------------------
+
+  T09:
+    title: "Settle Developmental Consequence and Durable Memory"
+    initial_status: blocked
+    depends_on: ["T08"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "E9"
+      - "I9"
+
+    changes: >-
+      Connects explicit GodSpeed-Agent developmental settlement decisions to
+      durable developmental-memory events while preserving the repeated-
+      settlement-under-variation requirement for capability promotion.
+
+    proves: >-
+      GSA independently determines developmental consequence from evidence and
+      durable memory retains the evidence lineage; one proof, execution, or
+      settlement cannot masquerade as metabolized capability.
+
+    does_not_prove: >-
+      Stored memory safely changes future navigation or the full loop survives restart/replay.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "Developmental settlement is independently earned."
+        - "Capability promotion requires its declared repeated-settlement/variation evidence."
+      falsifiers:
+        - "One successful work cycle promotes metabolized capability."
+        - "A developmental event loses the evidence refs that justified it."
+      known_confounds:
+        - "Low-risk capability statuses below metabolized capability may have different valid thresholds if explicitly declared."
+      confirmation_condition: >-
+        Fresh verifier cannot obtain metabolized capability from a single
+        success or create developmental records detached from evidence.
+
+    hot_context:
+      - "GodSpeed-Agent record_settlement"
+      - "Capability update and repetition scheduling"
+      - "SettlementPublisher"
+      - "Agent Memory Ledger NATS/Postgres bridge and canonical routes"
+
+    steps:
+      - "Project GSA developmental decisions into canonical E9 envelopes."
+      - "Preserve evidence/proof/operational-settlement provenance."
+      - "Persist through the selected durable memory production path."
+      - "Pin capability promotion to repeated settlement under declared variation."
+      - "Ensure duplicate E9 delivery does not duplicate durable developmental state."
+
+    gate:
+      - "just e2e-gate T09"
+
+    teeth:
+      - attack: "Provide one pristine successful cycle and request metabolized capability promotion."
+        expected: "Promotion is rejected/not earned."
+
+      - attack: "Redeliver the exact same E9 envelope."
+        expected: "No duplicate settlement/capability history is created."
+
+      - attack: "Strip source evidence refs from a developmental event."
+        expected: "Reject or quarantine rather than persist as authoritative developmental truth."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen E9/I9"
+        - "GSA settlement/capability implementation"
+        - "Memory persistence path"
+        - "Evidence"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      The durable memory substrate cannot preserve event identity/provenance, or
+      GSA's capability model cannot distinguish one settled success from repeated
+      settlement under variation.
+
+    evidence: ".agents/evidence/e2e/T09/"
+
+    done_when:
+      - "E9 and I9 are CONFIRMED."
+      - "Single-success capability promotion fails."
+      - "Durable event replay is idempotent."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T10 — MEMORY -> NEXT NAVIGATION
+  # ---------------------------------------------------------------------------
+
+  T10:
+    title: "Settle Developmental Memory Feedback"
+    initial_status: blocked
+    depends_on: ["T09"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "E10"
+      - "I12"
+
+    changes: >-
+      Makes durable developmental memory available to subsequent GodSpeed-Agent
+      navigation and, when requested, Context Kernel retrieval without allowing
+      historical success to bypass current governance, payment, or settlement gates.
+
+    proves: >-
+      Settled developmental history can reduce future search/orchestration burden
+      and influence next-affordance selection while remaining evidence rather
+      than current authority.
+
+    does_not_prove: >-
+      Whole-cycle causal continuity or recovery across every component.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "Developmental memory affects future navigation."
+        - "Memory never overrides current hard gates."
+      falsifiers:
+        - "Historical success allows an action currently denied by governance."
+        - "Historical capability is treated as proof that a current affordance exists."
+      known_confounds:
+        - "Earned history may legitimately reduce search burden when current gates still pass."
+      confirmation_condition: >-
+        Fresh verifier demonstrates both beneficial memory reuse and inability
+        of memory to bypass current hard gates.
+
+    hot_context:
+      - "GSA affordance ranking/navigation"
+      - "Learning-proposals corpus path in Context Kernel"
+      - "Memory ledger read/query surfaces"
+      - "Current governance/payment/settlement gates"
+
+    steps:
+      - "Expose the minimum canonical DevelopmentalMemory projection required for subsequent navigation."
+      - "Use developmental evidence to alter ranking/search/repetition where justified."
+      - "Preserve current-state gate evaluation after memory retrieval."
+      - "Provide learning/developmental context to Context Kernel only as cited evidence."
+
+    gate:
+      - "just e2e-gate T10"
+
+    teeth:
+      - attack: "Provide strong prior capability evidence while current governance denies the action."
+        expected: "Action remains denied/escalated."
+
+      - attack: "Provide historical capability for a path whose current payment or settlement access is unavailable."
+        expected: "It is not treated as a current affordance."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen E10/I12"
+        - "Navigation/memory integration"
+        - "Evidence"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      The current navigation model cannot consume developmental history without
+      converting history into authority or collapsing current affordance with
+      historical capability.
+
+    evidence: ".agents/evidence/e2e/T10/"
+
+    done_when:
+      - "E10 and I12 are CONFIRMED."
+      - "Developmental memory measurably affects the next navigation cycle."
+      - "Hard-gate bypass attacks fail."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T11 — WHOLE PRODUCTION LOOP
+  # ---------------------------------------------------------------------------
+
+  T11:
+    title: "Settle Whole-Loop Causality, Replay, and Recovery"
+    initial_status: blocked
+    depends_on: ["T10"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "I2"
+      - "I10"
+      - "I11"
+      - "I14"
+      - "I15"
+
+    confirms:
+      - "E0"
+      - "E1"
+      - "E2"
+      - "E3"
+      - "E4"
+      - "E5A"
+      - "E5B"
+      - "E6"
+      - "E7"
+      - "E8"
+      - "E9"
+      - "E10"
+
+    changes: >-
+      Adds the deterministic production-path canonical golden scenario and the
+      cross-component recovery/replay harness required to prove composition of
+      all previously settled edges.
+
+    proves: >-
+      One causal work cycle traverses every frozen production edge with stable
+      work and semantic identity, preserves failures as evidence, rejects replay
+      duplication/cross-wiring, and survives declared interruption/recovery
+      without provenance loss or false settlement.
+
+    does_not_prove: >-
+      The loop is durable under the full declared variation battery; that is T12.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "The complete production loop composes without a test-only semantic bridge."
+        - "Causal identity survives every edge."
+        - "Replay/restart cannot create duplicate or cross-wired consequence."
+        - "Failure remains visible."
+      falsifiers:
+        - "Any required canonical edge is supplied only by test shim."
+        - "work_request_id or domain identity changes/loss goes undetected."
+        - "Duplicate/replayed event creates duplicate settlement or capability."
+        - "Restart or late event binds evidence to the wrong cycle."
+        - "Failure disappears from the causal record."
+      known_confounds:
+        - "External provider nondeterminism must be removed from the canonical deterministic scenario when a real deterministic local seam exists."
+      confirmation_condition: >-
+        Fresh independent verifier executes and attacks the production golden
+        path and returns CONFIRM with no open P0/P1 causal, provenance, replay,
+        recovery, or false-settlement defect.
+
+    hot_context:
+      - ".agents/specs/e2e-preregistration.yml whole_loop_acceptance"
+      - "All T01-T10 evidence"
+      - "Do not reconstruct closed edge design unless a whole-loop falsifier requires reopening it"
+
+    steps:
+      - "Build the smallest deterministic canonical fixture that crosses all required production edges."
+      - "Assert one work_request_id and one resolvable DomainForge identity throughout."
+      - "Capture cited context, authority, real execution observation, operational settlement, proof, RealityTrace evidence, provisional GSA evidence, developmental settlement, durable memory, and changed next-navigation state."
+      - "Ensure no test-only E8 or other missing semantic bridge exists."
+      - "Exercise duplicate delivery, out-of-order delivery, process interruption, restart/resume, late callbacks, and wrong-domain identity."
+      - "Preserve every failed run as evidence and apply correction protocol before reconfirmation."
+
+    gate:
+      - "just e2e-gate T11"
+
+    teeth:
+      - attack: "Cross-wire a valid mid-loop envelope from another work_request_id."
+        expected: "Reject/quarantine; it cannot attach to the active cycle."
+
+      - attack: "Replay a complete already-settled event sequence after restart."
+        expected: "No duplicate side effect, settlement, capability, or developmental history."
+
+      - attack: "Interrupt the loop after execution but before downstream evidence settles, then resume."
+        expected: "Recovery preserves provenance and completes or explicitly fails the same causal cycle."
+
+      - attack: "Replace the canonical domain-model identity mid-cycle with another valid model."
+        expected: "The cycle cannot silently continue as semantically coherent."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen whole-loop requirements"
+        - "Production harness"
+        - "All edge evidence"
+        - "Failure/correction history"
+        - "Exact question: does the real loop compose without semantic shims or false settlement?"
+      verifier_should_not_receive:
+        - "Builder's final verdict before independent attack generation"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      Two individually confirmed frozen edges cannot compose without violating a
+      frozen semantic distinction. Reopen only the smallest implicated edge or,
+      if the frozen contract itself is contradicted, stop for explicit
+      preregistration revision.
+
+    evidence: ".agents/evidence/e2e/T11/"
+
+    done_when:
+      - "The canonical golden scenario crosses every E0-E10 production edge."
+      - "No required semantic bridge exists only in the test harness."
+      - "I2, I10, I11, I14, and I15 are CONFIRMED."
+      - "Replay, restart, cross-wire, and semantic-identity attacks fail safely."
+      - "Fresh independent confirmation returns CONFIRM."
+      - "All applicable global gates remain green."
+
+  # ---------------------------------------------------------------------------
+  # T12 — VARIATION / FINAL CONFIRMATION
+  # ---------------------------------------------------------------------------
+
+  T12:
+    title: "Settle Canonical Runtime Under Variation"
+    initial_status: blocked
+    depends_on: ["T11"]
+
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles: []
+
+    confirms:
+      - "ENV-I1"
+      - "ENV-I2"
+      - "ENV-I3"
+      - "ENV-I4"
+      - "ENV-I5"
+      - "ENV-I6"
+      - "ENV-I7"
+      - "ENV-I8"
+      - "E0"
+      - "E1"
+      - "E2"
+      - "E3"
+      - "E4"
+      - "E5A"
+      - "E5B"
+      - "E6"
+      - "E7"
+      - "E8"
+      - "E9"
+      - "E10"
+      - "I1"
+      - "I2"
+      - "I3"
+      - "I4"
+      - "I5"
+      - "I6"
+      - "I7"
+      - "I8"
+      - "I9"
+      - "I10"
+      - "I11"
+      - "I12"
+      - "I13"
+      - "I14"
+      - "I15"
+
+    changes: >-
+      Adds only the final variation/adversarial proof surface necessary to
+      evaluate the already-integrated canonical loop under the frozen required
+      variation classes. It should not redesign settled production semantics.
+
+    proves: >-
+      The canonical runtime is not merely one happy-path composition: the same
+      frozen contracts survive success, authority denial/escalation, proof
+      failure, execution failure/timeout, interruption/recovery, duplicate/
+      replayed events, and invalid semantic identity.
+
+    does_not_prove: >-
+      Every future environment, provider, domain, workload, or capability is
+      covered. Confirmation is limited to the frozen canonical runtime scope and
+      declared variation classes.
+
+    preregistration:
+      required: true
+      artifact: ".agents/specs/e2e-preregistration.yml"
+      claims:
+        - "The frozen canonical runtime survives all preregistered variation classes."
+        - "No open P0/P1 requirement or counterexample remains."
+      falsifiers:
+        - "Any variation causes false success, false settlement, duplicate consequence, authority bypass, semantic-identity collapse, or provenance loss."
+        - "Any P0/P1 requirement remains PARTIAL, ABSENT, CONTRADICTED, or UNKNOWN."
+      known_confounds:
+        - "A provider/environment outage unrelated to the contract must be classified rather than misreported as runtime correctness."
+      confirmation_condition: >-
+        A fresh independent final verifier returns CONFIRM after inspecting the
+        frozen preregistration, production implementation, complete evidence
+        record, adversarial battery, and correction history.
+
+    hot_context:
+      - ".agents/specs/e2e-preregistration.yml falsification_classes"
+      - ".agents/evidence/e2e/T11/"
+      - ".agents/status/e2e-current-status.yml"
+
+    steps:
+      - "Execute the canonical success case."
+      - "Execute authority denial or escalation."
+      - "Execute proof failure after otherwise successful execution."
+      - "Execute execution failure or timeout."
+      - "Execute interruption and recovery."
+      - "Execute duplicate/replayed event delivery."
+      - "Execute semantically invalid/wrong-domain identity."
+      - "Add only targeted attacks required to close still-open frozen falsification classes."
+      - "Recompute final delta."
+      - "Dispatch a fresh independent verifier only after builder evidence is complete."
+      - "If any attack bites, preserve the failed round, reopen only the falsified requirement/task, correct, rerun the original attack, then repeat final confirmation."
+
+    gate:
+      - "just e2e-gate T12"
+      - "just e2e-delta-check"
+
+    teeth:
+      - attack: "Authority denial/escalation."
+        expected: "No unauthorized side effect; failure remains causally visible."
+
+      - attack: "Proof failure after operational execution succeeds."
+        expected: "Proof fails without rewriting operational settlement or promoting capability."
+
+      - attack: "Execution timeout/interruption followed by recovery."
+        expected: "No cross-wire, duplicate consequence, or provenance loss."
+
+      - attack: "Duplicate/replayed event."
+        expected: "Idempotent no-duplicate consequence."
+
+      - attack: "Wrong or unresolved DomainForge identity."
+        expected: "Fail closed or quarantine; no canonical settlement."
+
+    independent_confirmation:
+      verifier_receives:
+        - "Frozen preregistration"
+        - "Final production implementation"
+        - "Complete requirement-to-evidence index"
+        - "All T00-T12 evidence including failed/correction rounds"
+        - "Current final delta"
+        - "Exact question: does the frozen canonical runtime deserve CONFIRM?"
+      verifier_should_not_receive:
+        - "A required verdict suggested by the builder"
+      required_verdict: "CONFIRM"
+
+    redesign_trigger: >-
+      The variation battery falsifies the frozen architecture rather than an
+      implementation detail. Stop and surface the exact contradiction; do not
+      weaken the test or silently revise the preregistration.
+
+    evidence: ".agents/evidence/e2e/T12/"
+
+    done_when:
+      - "Every required variation class has direct evidence."
+      - "All 35 explicit frozen requirements are CONFIRMED."
+      - "Final open delta is empty."
+      - "No open P0/P1 counterexample remains."
+      - "Fresh independent final verifier returns CONFIRM."
+      - "All global gates exit 0."
+
+# -----------------------------------------------------------------------------
+# FINAL ACCEPTANCE
+# -----------------------------------------------------------------------------
+
+final_acceptance:
+
+  semantic_identity_and_envelopes:
+    - "Every canonical envelope uses resolvable versioned DomainForge identity."
+    - "No fallback pseudo-hash can masquerade as canonical identity."
+    - "Causal parentage and work identity survive the full loop."
+    - "Authoritative event ownership is enforced."
+    - "CEP/schema conformance remains distinct from payload truth."
+
+  runtime_topology:
+    - "Every frozen E0-E10 edge, including E5A/E5B, exists through a production path."
+    - "No required canonical edge is supplied only by gen-1/reference/mock/test-shim code."
+    - "The deterministic golden scenario crosses the complete frozen topology."
+
+  settlement_and_capability:
+    - "Proof is distinct from operational settlement."
+    - "Operational settlement is distinct from RealityTrace observation."
+    - "EvidenceRecorded is provisional developmental evidence."
+    - "Developmental settlement is independently earned."
+    - "Capability promotion requires repeated settlement under declared relevant variation."
+
+  authority_and_failure:
+    - "Authority precedes governed side effects."
+    - "Denied/escalated work cannot execute through the governed path."
+    - "Failure, timeout, interruption, and partial execution remain causally visible."
+    - "Late/cross-wired observations cannot settle against the wrong invocation."
+
+  replay_recovery_and_memory:
+    - "Duplicate/replayed events cannot duplicate side effect, settlement, capability, or developmental history."
+    - "Restart/recovery preserves provenance."
+    - "Developmental memory changes future navigation evidence."
+    - "Historical success cannot override current governance, payment, or settlement gates."
+
+  evidence_and_confirmation:
+    - "Every REQUIRED normative spec requirement maps to at least one settled task/evidence record."
+    - "Every P3 task has the required fresh independent confirmation."
+    - "Failed/correction evidence has not been erased."
+    - "Documentation/status claims do not exceed observed proof."
+    - "All global gates exit 0."
+    - "The final delta contains zero open P0/P1 requirements."
+    - "A fresh final independent verifier returns CONFIRM."
+
+# -----------------------------------------------------------------------------
+# GUARDRAILS
+# -----------------------------------------------------------------------------
+
+guardrails:
+  - "Do not modify .agents/specs/e2e-preregistration.yml during implementation."
+  - "Do not redefine the target to match current code."
+  - "Do not make project-topology-architect or NeatCode independent canonical runtime components."
+  - "Do not collapse ProofCompleted, OperationalSettlement, EvidenceRecorded, SettlementRecorded, or CapabilityUpdated."
+  - "Do not allow a namespace-derived, constant, placeholder, or fallback hash to stand in for canonical DomainForge model identity."
+  - "Do not let Context Kernel acquire execution-authority ownership."
+  - "Do not let the execution environment self-assert SEA-Forge authority."
+  - "Do not let RealityTrace acquire developmental-settlement authority."
+  - "Do not let Memory Ledger acquire navigation or governance authority."
+  - "Do not duplicate source facts downstream when immutable references can preserve provenance."
+  - "Do not count synthetic/gen-1/mock paths as production confirmation."
+  - "Do not build one giant E2E test as a substitute for closing individual edge contracts."
+  - "Do not mock away the component boundary currently being proven."
+  - "Preserve pre-existing user work and dirty repository state."
+  - "Do not clean/reset/rewrite unrelated repositories to make gates pass."
+  - "A newly discovered architectural improvement outside the frozen requirements becomes future debt, not current scope."
+
+# -----------------------------------------------------------------------------
+# HANDOFF CONTRACT
+# -----------------------------------------------------------------------------
+
+handoff_contract:
+  must_report:
+    - "settled capabilities/requirements"
+    - "explicitly unsettled or deferred items"
+    - "current operational system state"
+    - "requirement-to-evidence index"
+    - "known limitations"
+    - "rollback/recovery instructions where relevant"
+    - "important decisions/discoveries that changed the execution model"
+    - "current delta by requirement ID and verdict"
+    - "which previously settled tasks, if any, were legitimately reopened and why"
+    - "exact next executable action or 'none — plan settled'"
+
+  settled_next_action_rule: >-
+    The next executable action MUST be set to `none — plan settled` only after
+    T12 receives fresh independent CONFIRM, all global gates pass, and the final
+    frozen P0/P1 delta is empty.
+
+# -----------------------------------------------------------------------------
+# TRACEABILITY
+# -----------------------------------------------------------------------------
+
+traceability:
+  spec_requirement_count: 35
+  mapped_requirement_count: 35
+
+  unmapped_requirements: []
+  unknown_plan_requirement_ids: []
+
+  requirement_to_tasks:
+
+    ENV-I1: ["T01"]
+    ENV-I2: ["T01"]
+    ENV-I3: ["T01", "T11"]
+    ENV-I4: ["T01", "T11"]
+    ENV-I5: ["T01", "T11"]
+    ENV-I6: ["T01", "T11"]
+    ENV-I7: ["T01", "T11"]
+    ENV-I8: ["T01", "T11"]
+
+    E0: ["T03"]
+    E1: ["T03"]
+    E2: ["T02"]
+    E3: ["T02"]
+    E4: ["T04"]
+    E5A: ["T05"]
+    E5B: ["T05"]
+    E6: ["T06"]
+    E7: ["T07"]
+    E8: ["T08"]
+    E9: ["T09"]
+    E10: ["T10"]
+
+    I1: ["T01"]
+    I2: ["T11"]
+    I3: ["T01"]
+    I4: ["T02"]
+    I5: ["T05"]
+    I6: ["T06"]
+    I7: ["T06"]
+    I8: ["T08"]
+    I9: ["T09"]
+    I10: ["T08", "T11"]
+    I11: ["T11"]
+    I12: ["T10"]
+    I13: ["T01"]
+    I14: ["T11"]
+    I15: ["T11"]
+
+  coverage_rule: >-
+    Every explicit frozen requirement in the source preregistration maps to at
+    least one settlement task. Whole-loop and variation acceptance clauses are
+    additionally confirmed by T11 and T12 even where the source expresses them
+    as acceptance conditions rather than separately numbered requirement IDs.
+
+# =============================================================================
+# PLAN AUTHORING / VALIDATION CHECKLIST
+# =============================================================================
+#
+# Before changing metadata.status from draft to ready:
+#
+# SOURCE / AUTHORITY
+# [ ] Bind source.spec.sha256 to the actual frozen file.
+# [ ] Verify spec ID/version.
+# [ ] Verify the explicit requirement count is still 35.
+# [ ] Confirm the reconnaissance report remains non-normative.
+#
+# COVERAGE
+# [ ] e2e-delta-check reports zero unmapped frozen IDs.
+# [ ] No task references a nonexistent requirement.
+#
+# DAG
+# [ ] T02 and T03 remain parallel unless actual evidence establishes a new prerequisite.
+# [ ] T04 remains the join of navigation/work-contract and cited-context paths.
+# [ ] No dependency cycle exists.
+#
+# TASK QUALITY
+# [ ] Each P3 task uses the frozen preregistration and fresh independent confirmation.
+# [ ] Existing production evidence may settle already-correct behavior without rewriting it.
+# [ ] Each task has a direct falsifier for its most dangerous false-success mode.
+#
+# EVIDENCE
+# [ ] Failure/correction rounds are append-only.
+# [ ] A CONFIRMED requirement has direct evidence sufficient for its own claim.
+# [ ] Synthetic/reference paths cannot produce production confirmation.
+#
+# FINAL SETTLEMENT
+# [ ] T11 contains no test-only semantic bridge.
+# [ ] T12 exercises every frozen variation class.
+# [ ] Final P0/P1 delta is empty.
+# [ ] Fresh independent final verdict is CONFIRM.
+# [ ] All global gates are green.
+#
+# =============================================================================

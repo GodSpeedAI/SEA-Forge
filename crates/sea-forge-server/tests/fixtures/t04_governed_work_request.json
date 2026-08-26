@@ -1,0 +1,71 @@
+{
+  "context_packet": {
+    "event_id": "211f0775-fa26-4ca3-9034-7bd6ca7745ef",
+    "event_type": "ContextPacketCreated",
+    "idempotency_key": "d289c200af5f4926535933b0b6aa28e6cd1e1dc4ef621fe1d8b422e8eb351e98",
+    "occurred_at": "2026-08-26T01:26:49+00:00",
+    "payload": {
+      "citations": [
+        {
+          "sha256": "041ab86fbaaa651aba7ce051f1b5d2af69353d7f28960102fd3dd155392fbde9",
+          "source": "runbook://deploy/blue-green"
+        }
+      ],
+      "context_packet_id": "ctx_01J9T04PACKET0000000000",
+      "context_requirement_id": "cr-t04",
+      "domain_model_hash": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+      "namespace": "agentic_capability_loop",
+      "work_request_id": "wr-gsf-001"
+    },
+    "provenance": {
+      "chain": [
+        "domain_model_hash:e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18"
+      ],
+      "origin": "swe-seed"
+    },
+    "schema_version": "v1",
+    "source_agent": "context-kernel"
+  },
+  "domain_model_sha256": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+  "request": {
+    "event_id": "9650d06f-9f50-41ec-a840-494c6e6e422f",
+    "event_type": "GovernedWorkRequest",
+    "idempotency_key": "03eb6a0fb3a923888908e7af0bc4b102df3eeacd754deebecb6539d6cb7edb42",
+    "occurred_at": "2026-08-26T01:26:49+00:00",
+    "payload": {
+      "actor": {
+        "actor_id": "agent-operator",
+        "role": "R-AA"
+      },
+      "affordance_id": "aff-blue-green-001",
+      "context_packet_ref": "ctx_01J9T04PACKET0000000000",
+      "domain_model_hash": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+      "domain_model_ref": {
+        "model_hash": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+        "namespace": "agentic_capability_loop"
+      },
+      "intent": "rotate deploy to blue-green and verify health gates",
+      "namespace": "agentic_capability_loop",
+      "proof_contract": {
+        "command": "just proof --route route-blue-green",
+        "criterion": "live proof exits 0 with health checks green",
+        "proof_type": "live"
+      },
+      "settlement_criteria": [
+        "health check green",
+        "zero-downtime observed"
+      ],
+      "work_request_id": "wr-gsf-001"
+    },
+    "provenance": {
+      "chain": [
+        "domain_model_hash:e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+        "caused_by:f4867be7-fb78-4aa3-bcbb-1e2c3a22243d",
+        "caused_by:211f0775-fa26-4ca3-9034-7bd6ca7745ef"
+      ],
+      "origin": "swe-seed"
+    },
+    "schema_version": "v1",
+    "source_agent": "swe-seed"
+  }
+}

@@ -8,7 +8,7 @@ exit is never success unless settlement accepts the declared outcome.
 
 1. Follow the user's request and the nearest `AGENTS.md`; a nested guide governs
    its subtree.
-2. Read `.agents/CURRENT_STATUS.md` before continuing active work.
+2. Read `.agents/current_status.yml` before continuing active work.
 3. Read the governing spec before changing behavior:
 
    * `.agents/specs/spec-minimum.md` defines the minimum kernel, persisted
@@ -152,7 +152,7 @@ configuration changes.
 * `workbench/`: separate Bun and Tauri workspaces with a nested `AGENTS.md`.
 * `.agents/specs/`: normative behavior and conformance gates.
 * `.agents/plans/`: implementation plans aligned with the specs.
-* `.agents/{CURRENT_STATUS,OBSERVED_DEBT,LESSONS,OPEN_QUESTIONS}.md`: durable
+* `.agents/{OBSERVED_DEBT,LESSONS,OPEN_QUESTIONS}.md`, `current_status.yml`: durable
   handoff, debt, verified lessons, and owner decisions.
 * `.sea-forge/`: gitignored runtime output, never source.
 * `.ua/`: generated Understand-Anything projection; never hand-edit it.
@@ -260,7 +260,7 @@ canonical project recipe when one exists.
 
 ## Handoff
 
-Keep `.agents/CURRENT_STATUS.md` resumable: objective, worktree state, changed
+Keep `.agents/current_status.yml` resumable: objective, worktree state, changed
 files, completed work, verification, remaining steps, blockers, and decisions.
 
 Record only concrete out-of-scope debt in `OBSERVED_DEBT.md`, verified reusable

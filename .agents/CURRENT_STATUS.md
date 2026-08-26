@@ -1,6 +1,165 @@
 # Current Status
 
-Updated: 2026-08-23
+Updated: 2026-08-25
+
+> **GODSPEED CANONICAL RUNTIME CONVERGENCE — SETTLED.**
+> All 35 frozen requirements CONFIRMED. Delta = 0. Preregistration hash
+> `ef5710893c5bcc569a4757371c54d4d2e5e6168e1df61d2d7433b6889eaa879f`
+> intact. T12 fresh independent final verifier returned CONFIRM after
+> 13 independent attacks across all 7 variation classes. Evidence:
+> `.agents/evidence/e2e/T0{1..12}/`. Infrastructure docs:
+> `docs/explanations-and-references/goodspeed-loop.md`.
+> **Next executable action: none — plan settled.**
+
+> **2026-08-25 convergence plan T07 settled (subagent-built, subagent-verified).**
+> E7: canonical ProofCompleted (SWE_SEED `proof_completed.rs`) binds ONLY to
+> real T06-adjudicated settlements via content-addressed refs with mandatory
+> causality; sxr native ingestion gate (`sxr-core/src/proof_ingest.rs`)
+> preserves expected-vs-observed inputs by reference, names diverged fields
+> (`ClaimMismatch`), keeps first-record integrity, and refuses duplicates/
+> replay/cross-wire/placeholder identity. Independent adversarial confirmation
+> by fresh subagent: **CONFIRM** — 43 empirical attacks incl. content-address
+> forgery and both plan teeth; residual D1-D4 debt (out-of-band digest
+> pinning, undelivered-bundle markers) recorded for T08. Evidence:
+> `.agents/evidence/e2e/T07/`. Delta: **11 open / 24 CONFIRMED; T08 ready**
+> (Expected-vs-Observed developmental evidence — E8/I8/I10, P3).
+
+> **2026-08-25 convergence plan T06 settled (subagent-built, subagent-verified).**
+> E6/I6/I7: settlement evaluated from ledger-settled observations vs DECLARED
+> E4 criteria (exit-zero alone can never accept; non-completion rejected even
+> with criteria text present); canonical envelope with all 7 frozen fields,
+> mandatory E5A+E5B causality, content-addressed evidence_refs; SWE_SEED
+> adjudicator bound to originating work_request_id with restart-safe
+> idempotency and conflicting-resettlement refusal; operational-facts output
+> type carries zero proof/capability shape. Independent adversarial
+> confirmation by fresh subagent: **CONFIRM** — preregistered battery executed
+> empirically incl. end-to-end exit-zero coercion cross-repo; T05-A10d/A11
+> debt CLOSED here; T04-D1/D2/D3 verified not reproduced. Evidence:
+> `.agents/evidence/e2e/T06/`. Delta: **12 open / 23 CONFIRMED; T07 ready**
+> (Proof to RealityTrace boundary — P3).
+
+> **2026-08-25 convergence plan T05 settled (subagent-built, subagent-verified).**
+> E5A/E5B/I5: canonical AuthorizedInvocation emitted only from a REAL Allow
+> AuthorityDecision (deny/escalate ⇒ no envelope, no grant, no governed side
+> effect; runtime refuses foreign actions under genuine grants); InvocationLedger
+> binds ExecutionObservation to the exact invocation generation (late/cross-wired/
+> duplicate/self-asserted-authority refused). Builder: 20 tests, full
+> sea-forge-server suite green. Independent adversarial confirmation by fresh
+> subagent: **CONFIRM** — 20 empirical attacks incl. all three plan falsifiers;
+> trust/durability items (A9-A11) recorded as non-falsifying debt for composing
+> transports. Evidence: `.agents/evidence/e2e/T05/`. Delta: **15 open /
+> 20 CONFIRMED; T06 ready** (Operational Settlement Return — P3).
+
+> **2026-08-25 convergence plan T04 settled (owner-directed; subagent-built,
+> subagent-verified).** E4 GovernedWorkRequest: producer surface
+> (`SWE_SEED .../federation/governed_submission.rs` — all 8 frozen fields,
+> packet bound to same cycle, causality recorded, opaque submissions refused
+> pre-emission) + SEA-Forge ingress gate
+> (`sea-rs .../sea-forge-server/src/governed_work_ingress.rs` — producer
+> authority, identity vs locally-resolved model, semantic-intent battery,
+> distinct proof/settlement obligations, context-packet causal-parent
+> binding). Builder: 22 tests both sides, gates green. Independent
+> adversarial confirmation by fresh subagent: **CONFIRM** — 22 attacks
+> (all three plan falsifiers refused + fresh compositions), D1-D3
+> strictness gaps recorded as non-falsifying debt. Evidence:
+> `.agents/evidence/e2e/T04/`. Delta: **18 open / 17 CONFIRMED; T05 ready.**
+
+> **2026-08-25 convergence plan T02+T03 settled (owner-directed: proceed).**
+> T02 (E2/E3/I4): the SWE_SEED↔Context-Kernel MCP stdio slice now speaks the
+> canonical envelope contract on both sides — CK ingress gates (exclusive
+> swe_seed producer, identity placeholder rejection, correlation required),
+> explicit governed no-context outcomes for required context, canonical
+> ContextPacketCreated egress citing the E2 request as causal parent, and
+> consumer-side composed adjudication (producer authority + drift + cross-wire
+> + causality). Proven by dispatch teeth, unit teeth, AND a live
+> cross-binary stdio test. T03 (E0/E1): GSA `canonical_events.py` projects
+> DesiredDirection (external-environment authority) and executable affordances
+> into WorkRequested (godspeed_agent authority) fail-closed against
+> destination-only inputs and pseudo-identities; SWE_SEED `work_ingress.rs`
+> enforces the same contract at ingress; a golden fixture generated by GSA's
+> real projector is consumed by the Rust gate as cross-language evidence.
+> Gates: `just e2e-gate T02`/`T03` bound and green; swe-seed-core 363/0,
+> ck-mcp+ck-bin 48/0, GSA new tests 11/11 (5 pre-existing env failures
+> verified unrelated by ablation). Evidence:
+> `.agents/evidence/e2e/T02/t02-report.md`,
+> `.agents/evidence/e2e/T03/t03-report.md`. Delta: **19 open / 16 CONFIRMED;
+> next ready task: T04** (blocked until then: nothing — T04's deps are met).
+
+> **2026-08-25 convergence plan T01 implemented (owner-directed: proceed).**
+> Canonical semantic envelope + DomainForge identity foundation landed in
+> SWE_SEED `crates/swe-seed-core` federation module (the most complete
+> existing production binder; no new envelope family, v1 wire shape
+> unchanged, no new dependencies): `identity.rs` (VerifiedDomainIdentity
+> identity gate — fallback pseudo-hash sha256("agentic_capability_loop"),
+> all-zero, malformed, and missing/mismatching artifacts all rejected; strict
+> resolution errors instead of falling back), `producers.rs` (exclusive
+> event-producer registry per the frozen edge topology; unknown types/agents
+> fail closed), `derive_event` + `caused_by:` provenance entries (causal
+> parents without breaking v1 `additionalProperties:false`; correlation
+> `work_request_id` carried unchanged, mismatches fatal), `IdempotencyLedger`
+> (fsync-per-admission durable dedupe surviving restart), `validate_envelope`
+> composition gate, and pure `check_conformance` that cannot evaluate claim
+> truth. Tests: `tests/convergence_t01_envelope.rs` — 22 tests mapping every
+> preregistered T01 falsifier incl. all three plan teeth attacks (missing
+> model → rejected; forged EvidenceRecorded by non-RealityTrace → rejected;
+> conformant-but-false claim → zero truth consequence). Verification: full
+> swe-seed-core suite green (0 failed; 2 pre-existing ignored), touched-file
+> fmt clean, clippy clean on touched code. Gate bound: `just e2e-gate T01`
+> (runs T01 suite + v1_contract + federation_parity pins).
+> **Status: SETTLED 2026-08-25 — fresh independent adversarial confirmation
+> returned CONFIRM** (`.agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md`;
+> 13 fresh attacks, zero falsifiers; preregistration byte-for-byte intact).
+> The 11 requirement verdicts are now CONFIRMED in
+> `.agents/status/e2e-current-status.yml`; Delta recomputed (24 open);
+> **T02 and T03 are unblocked per dependency_graph and may begin in parallel.**
+
+> **2026-08-25 convergence plan T00 executed (owner-directed: implement
+> `.agents/plans/e2e-plan.yml`).** Delta-0 and the verification surface now
+> exist. (1) `.agents/status/e2e-current-status.yml`: all 35 frozen
+> requirements (12 edges E0–E10 incl. E5A/B, 15 invariants I1–I15, 8 envelope
+> rules ENV-I1–I8) classified against fresh cross-repo source evidence
+> (sea-rs, SWE_SEED, Context_Kernel, godspeed_agent, sxr, domainforge):
+> **0 CONFIRMED / 30 PARTIAL / 5 ABSENT (E4, E6, E7, E8, I2) / 0 CONTRADICTED
+> / 0 UNKNOWN — open delta = 35**, independently confirming every round-zero
+> hypothesis in the preregistration (E8 has no production producer anywhere;
+> GovernedWorkRequest/OperationalSettlement exist in no repo's code). (2)
+> Gate aliases bound per the plan's verification model: `just e2e-check`
+> →`just check`, `just e2e-test`→`just test`, `just e2e-lint`→fmt+lint,
+> `just e2e-delta-check` (new mechanical validator), `just e2e-gate <TID>`
+> (T00 bound to prereg+delta checks; other tasks fail closed until they bind),
+> plus `just e2e-delta-report`. (3) New scripts: `e2e-prereg-ids.sh` (derives
+> the frozen 35 from the preregistration itself — PyYAML + scoped fallback),
+> `e2e-delta-report.sh` (deterministic Delta-0 regeneration),
+> `e2e-delta-check.sh` (count/uniqueness/frozen-vocabulary/evidence-resolution/
+> CONFIRMED⇒production-path validation + committed-report drift detection).
+> (4) Evidence: `.agents/evidence/e2e/T00/delta0.md` (committed,
+> drift-checked). Teeth (all temp-copy isolated, real files untouched): removed
+> requirement→FAIL, illegal verdict→FAIL, CONFIRMED-on-synthetic→FAIL,
+> unresolvable evidence path→FAIL, drifted report→FAIL, unbound task
+> gate→fail-closed; real gates green after teeth (`just e2e-gate T00` exit 0).
+> Frozen preregistration byte-identical (ef571089…a879f); plan file untouched
+> (0c57e543…d0e39). Not yet run this session (alias-only, delegates to
+> untouched existing gates): `just e2e-check`/`e2e-test` full workspace cost.
+> Per plan initial_state, next executable action is **T01** (canonical
+> semantic envelope/domain identity foundation) after this handoff.
+
+
+> **2026-08-25 E2E preregistration freeze gate added (owner-requested).** New
+> root recipe `just e2e-prereg-check` →
+> `scripts/check-e2e-preregistration.sh`: recomputes the SHA-256 of the frozen
+> preregistration `.agents/specs/e2e-preregistration.yml`, reads the expected
+> hash strictly from `source.spec.sha256` in `.agents/plans/e2e-plan.yml`
+> (PyYAML when available, indentation-scoped fallback otherwise; placeholder
+> and malformed values rejected), prints expected/observed plus an explicit
+> `VERDICT: PASS|FAIL`, and exits nonzero on mismatch without ever rewriting
+> the stored hash — a mismatch stops the convergence/Gauntlet run until the
+> change is reviewed and re-frozen. Verified: real preregistration PASSes
+> (`ef571089…a879f`); teeth-checked nonzero FAIL on mismatch through `just -f`
+> against a tampered temporary mirror, and on unbound-placeholder/malformed/
+> missing-file paths; frozen file byte-identical after all checks. The plan's
+> final_acceptance item "Verify the preregistration SHA-256 equals
+> source.spec.sha256" is now executable as `just e2e-prereg-check`.
+
 
 > **Deep-project-audit remediation is active on `ultracode/sea-forge-completion`.**
 > Preserve the protected stashes (`stash@{0}` and `stash@{1}`); do not pop
@@ -1520,6 +1679,31 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Changed Files
 
+- `SWE_SEED/crates/swe-seed-core/src/federation/{identity,producers,idempotency}.rs`,
+  `{envelope,consume,mod}.rs`, `tests/convergence_t01_envelope.rs` — plan T01
+  canonical-envelope/domain-identity enforcement + 22-test falsifier suite
+  (builder evidence: `.agents/evidence/e2e/T01/t01-report.md`; independent
+  confirmation pending).
+- `.agents/evidence/e2e/T01/t01-report.md` — T01 builder evidence,
+  falsifier→proof map, honest PENDING confirmation status.
+- `.agents/status/e2e-current-status.yml` — new convergence status surface:
+  one frozen-vocabulary verdict + resolvable evidence per requirement for all
+  35 frozen requirements (Delta-0: 0 CONFIRMED / 30 PARTIAL / 5 ABSENT).
+- `scripts/e2e-prereg-ids.sh`, `scripts/e2e-delta-report.sh`,
+  `scripts/e2e-delta-check.sh` — plan T00 verification surface: frozen-ID
+  derivation, deterministic Delta-0 report, mechanical matrix validation with
+  report drift detection.
+- `.agents/evidence/e2e/T00/delta0.md` — committed, drift-checked Delta-0
+  report regenerated from the status file.
+- `justfile` — e2e convergence gate aliases added (`e2e-check`, `e2e-test`,
+  `e2e-lint`, `e2e-delta-check`, `e2e-delta-report`, `e2e-gate <TID>`); no
+  existing recipe modified.
+- `scripts/check-e2e-preregistration.sh` — new frozen-preregistration hash
+  gate (SHA-256 of `.agents/specs/e2e-preregistration.yml` vs
+  `source.spec.sha256` in `.agents/plans/e2e-plan.yml`; explicit PASS/FAIL
+  verdict, never rewrites the stored hash).
+- `justfile` — one added `[group('quality')]` recipe `e2e-prereg-check`
+  delegating to that script; no existing recipe touched.
 - `.agents/reports/workbench-completion-eval-inputs.md` — concrete independent
   evaluator invocation, real temporary-cell/sidecar setup, and identity
   fixture facts.
