@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JourneyTestContract",
+  "description": "Machine-readable contract defining the testing obligations, authority requirements, capabilities, and settlement criteria for a canonical user journey in SEA-Forge.",
+  "type": "object",
+  "required": [
+    "journey_id",
+    "canonical_journey_name",
+    "canonical_source_references",
+    "source_story_ids",
+    "source_story_classifications",
+    "actor_and_role",
+    "starting_state",
+    "preconditions",
+    "intention",
+    "job",
+    "authority_requirements",
+    "expected_capabilities",
+    "declared_interface_bindings",
+    "expected_consequential_state_transitions",
+    "required_artifacts_and_evidence",
+    "settlement_condition",
+    "expected_next_decisions_and_affordances",
+    "applicable_failure_and_recovery_behavior",
+    "expected_unavailable_states"
+  ],
+  "properties": {
+    "journey_id": {
+      "type": "string",
+      "pattern": "^CJ(0[1-9]|1[0-2])$",
+      "description": "Canonical Journey ID, CJ01 through CJ12."
+    },
+    "canonical_journey_name": {
+      "type": "string",
+      "description": "Canonical Journey name matching canonical-journey-catalog.md and interaction-model.sea."
+    },
+    "canonical_source_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_path", "sha256"],
+        "properties": {
+          "source_path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "source_story_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of observed story IDs from canonicalization-matrix.csv mapped to this journey."
+    },
+    "source_story_classifications": {
+      "type": "object",
+      "description": "Distribution of story classifications mapped to this journey.",
+      "properties": {
+        "canonical": { "type": "integer", "minimum": 0 },
+        "specialization": { "type": "integer", "minimum": 0 },
+        "variant": { "type": "integer", "minimum": 0 },
+        "composition": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["canonical", "specialization", "variant", "composition"]
+    },
+    "implementation_maturity": {
+      "type": "object",
+      "description": "Distribution of story implementation maturities mapped to this journey.",
+      "properties": {
+        "specified": { "type": "integer", "minimum": 0 },
+        "implemented": { "type": "integer", "minimum": 0 },
+        "exercised": { "type": "integer", "minimum": 0 },
+        "evidenced": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["specified", "implemented", "exercised", "evidenced"]
+    },
+    "actor_and_role": {
+      "type": "object",
+      "required": ["primary_actor", "primary_role", "allowed_roles"],
+      "properties": {
+        "primary_actor": { "type": "string" },
+        "primary_role": { "type": "string" },
+        "allowed_roles": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "starting_state": {
+      "type": "string",
+      "description": "The initial state / initiating condition required to begin the journey."
+    },
+    "preconditions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Preconditions that must hold before the journey begins."
+    },
+    "intention": {
+      "type": "string",
+      "description": "Canonical user intention."
+    },
+    "job": {
+      "type": "string",
+      "description": "Canonical user job."
+    },
+    "authority_requirements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Authority decisions, disclosure permissions, or approval gates required."
+    },
+    "expected_capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Capabilities / verbs invoked during this journey."
+    },
+    "declared_interface_bindings": {
+      "type": "object",
+      "required": ["web_ui", "api", "cli", "agent"],
+      "properties": {
+        "web_ui": { "type": "array", "items": { "type": "string" } },
+        "api": { "type": "array", "items": { "type": "string" } },
+        "cli": { "type": "array", "items": { "type": "string" } },
+        "agent": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "expected_consequential_state_transitions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Material state transitions that must occur during execution."
+    },
+    "required_artifacts_and_evidence": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Authoritative records, digests, artifacts, or ledger entries produced."
+    },
+    "settlement_condition": {
+      "type": "string",
+      "description": "Authoritative, independent settlement condition determining PASS."
+    },
+    "expected_next_decisions_and_affordances": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Affordances and decisions that must become spendable upon settlement."
+    },
+    "applicable_failure_and_recovery_behavior": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Lawful failure modes, denial explanations, and recovery paths."
+    },
+    "expected_unavailable_states": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Interfaces or features that are preview-only or canonically unavailable and must fail closed."
+    }
+  }
+}

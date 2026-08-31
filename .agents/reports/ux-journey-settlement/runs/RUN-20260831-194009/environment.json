@@ -1,0 +1,9 @@
+{
+  "run_id": "RUN-20260831-194009",
+  "timestamp": "2026-08-31T19:41:34.054700+00:00",
+  "os": "linux",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "git_commit": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "python_version": "3.14.4 (main, Jun 18 2026, 14:25:02) [GCC 15.2.0]",
+  "vite_url": "http://127.0.0.1:5173"
+}

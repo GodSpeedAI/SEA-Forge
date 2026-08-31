@@ -1,0 +1,152 @@
+{
+  "journey_id": "CJ05",
+  "canonical_journey_name": "Navigate and Adapt a Live Case",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "7.1",
+    "7.2",
+    "7.3",
+    "7.4",
+    "7.5",
+    "7.6",
+    "7.7",
+    "7.8",
+    "10.1",
+    "10.2",
+    "10.4"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 5,
+    "variant": 3,
+    "composition": 2
+  },
+  "implementation_maturity": {
+    "specified": 0,
+    "implemented": 0,
+    "exercised": 10,
+    "evidenced": 1
+  },
+  "actor_and_role": {
+    "primary_actor": "case_owner",
+    "primary_role": "case owner",
+    "allowed_roles": [
+      "case owner",
+      "operator"
+    ]
+  },
+  "starting_state": "A case is committed, its state changes, work becomes blocked or newly discovered, a retry creates another episode, or a bounded manager loop is invoked.",
+  "preconditions": [
+    "A committed `CasePlan`, attributable actor context, source-backed case and run records, and authority for any mutation."
+  ],
+  "intention": "Understand a committed case's purpose, current horizon, history, and lawful adaptation paths without rewriting prior truth.",
+  "job": "Orient to live work, explain its state, follow attempts, and append authorized changes when new work or lifecycle decisions arise.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "`case.get_overview`",
+    "`case.get_horizon`",
+    "run listing and detail",
+    "discretionary-item admission",
+    "reopen",
+    "replan",
+    "terminate",
+    "manager-loop judgment",
+    "and ordinary plan mutation."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_case_routes"
+    ],
+    "api": [
+      "sfwp_case_navigation_family"
+    ],
+    "cli": [
+      "cli_case_and_human_family"
+    ],
+    "agent": [
+      "agent_thoth_manager_surface"
+    ]
+  },
+  "expected_consequential_state_transitions": [
+    "Committed cases move among active, waiting, parked, failed, complete, reopened, replanned, or terminated states through appended events",
+    "retries create successor runs",
+    "approved proposals append new items."
+  ],
+  "required_artifacts_and_evidence": [
+    "Case overview and horizon projections",
+    "plan graph",
+    "sentry and milestone state",
+    "timelines",
+    "run-episode links",
+    "deterministic manager judgments",
+    "discretionary proposals",
+    "new plan versions",
+    "lifecycle events",
+    "actor identity",
+    "and reasons."
+  ],
+  "settlement_condition": "The user can identify the case's governing outcome, current spendable and blocked work, the evidence for every state, and each presently lawful action.",
+  "expected_next_decisions_and_affordances": [
+    "Start enabled work",
+    "resolve a blocker",
+    "add discretionary work",
+    "approve a proposal",
+    "retry as a successor episode",
+    "reopen",
+    "replan",
+    "terminate",
+    "park",
+    "or stop a bounded manager loop."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Distinguish parked from failed",
+    "preserve attempt history",
+    "append a replan or reopen event",
+    "reject unauthorized mutation",
+    "escalate after bounded manager exhaustion."
+  ],
+  "expected_unavailable_states": [
+    "direct live plan in-place mutation without reopen/replan is forbidden"
+  ]
+}

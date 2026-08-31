@@ -1,0 +1,16 @@
+{
+  "journey_id": "CJ04",
+  "oracle_name": "CJ04_GovernedCaseCommitOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Exact accepted plan, parameters, criteria, and digests committed before execution.",
+  "authoritative_record_inspected": "case.get_overview(case_01mockcase)",
+  "rationale": "Case case_01mockcase committed via 1 observed case.commit call(s); state=active; preflight pinned digest=sha256:b40f2954f5320d2...",
+  "evidence_refs": [
+    "mocked IPC command log"
+  ],
+  "carried_state": {
+    "case_id": "case_01mockcase",
+    "state": "active",
+    "stages_count": 1
+  }
+}

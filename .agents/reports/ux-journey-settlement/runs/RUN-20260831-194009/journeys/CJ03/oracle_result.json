@@ -1,0 +1,15 @@
+{
+  "journey_id": "CJ03",
+  "oracle_name": "CJ03_DomainForgeSemanticGroundingOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Semantic references resolve against exact validated model snapshot or fail closed with diagnostics.",
+  "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea",
+  "rationale": "cargo test -p sea-forge-domainforge ran 26 test(s), 0 failed, exit=0. Diagnostics:  src/lib.rs (target/debug/deps/sea_forge_domainforge-bc68c2a38ad22e07)\n     Running tests/conformance_m0_domainforge.rs (target/debug/deps/conformance_m0_domainforge-368d0ffd73d3e11d)\n     Running tests/projection.rs (target/debug/deps/projection-f700abfd1c5c7420)\n   Doc-tests sea_forge_domainforge\n",
+  "evidence_refs": [
+    ".sea/interaction/interaction-model.sea"
+  ],
+  "carried_state": {
+    "tests_run": 26,
+    "tests_failed": 0
+  }
+}

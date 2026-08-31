@@ -1,0 +1,15 @@
+{
+  "journey_id": "CJ08",
+  "oracle_name": "CJ08_OperationalMonitoringAndRecoveryOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Authoritative operational standing observed; scoped intervention or explicit recovery reached.",
+  "authoritative_record_inspected": "mocked IPC query/command transcript",
+  "rationale": "Observed 9 real IPC call(s); stale-precondition recovery attempted, succeeded=True.",
+  "evidence_refs": [
+    "mocked IPC command/query transcript"
+  ],
+  "carried_state": {
+    "observed_event_count": 9,
+    "recovery_succeeded": true
+  }
+}

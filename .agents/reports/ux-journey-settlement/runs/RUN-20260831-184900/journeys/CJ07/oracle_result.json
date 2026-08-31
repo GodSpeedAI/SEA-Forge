@@ -1,0 +1,14 @@
+{
+  "journey_id": "CJ07",
+  "oracle_name": "CJ07_GovernedExecutionOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Execution terminates within granted boundary, leaving outcome evidence; termination != settlement.",
+  "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-184900/evidence/sample_run_cj07",
+  "rationale": "Authority decision preceded execution; trace and evidence recorded; execution termination kept strictly separate from settlement.",
+  "evidence_refs": [
+    "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-184900/evidence/sample_run_cj07/authority.json",
+    "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-184900/evidence/sample_run_cj07/trace.jsonl",
+    "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-184900/evidence/sample_run_cj07/evidence.jsonl"
+  ],
+  "carried_state": {}
+}

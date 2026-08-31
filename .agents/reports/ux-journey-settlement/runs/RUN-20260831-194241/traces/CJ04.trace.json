@@ -1,0 +1,134 @@
+{
+  "run_id": "RUN-20260831-194241",
+  "timestamp": "2026-08-31T19:42:53.172022+00:00",
+  "journey_id": "CJ04",
+  "journey_name": "Form and Commit a Governed Case",
+  "source_story_ids": [
+    "6.1",
+    "6.2",
+    "6.3",
+    "6.4",
+    "6.5",
+    "6.6",
+    "6.7",
+    "6.8",
+    "6.9",
+    "10.3"
+  ],
+  "canonical_source_hashes": {
+    ".sea/interaction/canonicalization-matrix.csv": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4",
+    ".sea/interaction/canonical-journey-catalog.md": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af",
+    ".sea/interaction/journey-grammar.md": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb",
+    ".sea/interaction/interaction-model.sea": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc",
+    ".sea/interaction/journey-capability-map.md": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37",
+    ".sea/interaction/coverage-report.md": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687",
+    ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9",
+    ".agents/specs/spec-minimum.md": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3",
+    ".agents/specs/spec-full.md": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+  },
+  "implementation_revision": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "harness_revision": "v2.0.0",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "actor_and_role": {
+    "actor": "case_author",
+    "role": "case author"
+  },
+  "starting_state": "An operator or external actor has supported intent, a versioned template, an external plan proposal, a methodology or topology, a specification pipeline, or a bounded Thoth proposal.",
+  "actor_visible_observations": [],
+  "browser_actions": [],
+  "screenshot_references": [
+    {
+      "sequence": 1,
+      "name": "CJ04-001-entry-readiness.png",
+      "relative_path": "screenshots/CJ04/CJ04-001-entry-readiness.png",
+      "moment_kind": "entry",
+      "description": "Case creation workbench entry"
+    },
+    {
+      "sequence": 2,
+      "name": "CJ04-002-affordance-template-selection.png",
+      "relative_path": "screenshots/CJ04/CJ04-002-affordance-template-selection.png",
+      "moment_kind": "affordance_discovery",
+      "description": "Template selected; parameter form revealed"
+    },
+    {
+      "sequence": 3,
+      "name": "CJ04-003-preflight-passed.png",
+      "relative_path": "screenshots/CJ04/CJ04-003-preflight-passed.png",
+      "moment_kind": "state_transition",
+      "description": "Preflight passed with pinned precondition digest"
+    },
+    {
+      "sequence": 4,
+      "name": "CJ04-004-settlement-case-committed.png",
+      "relative_path": "screenshots/CJ04/CJ04-004-settlement-case-committed.png",
+      "moment_kind": "settlement_state",
+      "description": "Case committed; navigated to case horizon"
+    },
+    {
+      "sequence": 5,
+      "name": "CJ04-005-next-affordance-CJ05.png",
+      "relative_path": "screenshots/CJ04/CJ04-005-next-affordance-CJ05.png",
+      "moment_kind": "resulting_next_affordance",
+      "description": "Committed case horizon, ready for CJ05 to navigate"
+    }
+  ],
+  "snapshot_references": [],
+  "interface_projections_encountered": [
+    "workbench_case_routes"
+  ],
+  "capability_bindings_invoked": [
+    "Intent planning",
+    "template instantiation",
+    "proposal validation",
+    "topology construction",
+    "pipeline planning",
+    "delegation preview",
+    "`case.preflight`",
+    "and `case.commit`."
+  ],
+  "execution_identifiers": {
+    "case_id": "case_01mockcase",
+    "state": "active",
+    "stages_count": 1
+  },
+  "evidence_references": [
+    "mocked IPC command log"
+  ],
+  "settlement_oracle_result": {
+    "journey_id": "CJ04",
+    "oracle_name": "CJ04_GovernedCaseCommitOracle",
+    "status": "ACCEPTED",
+    "completion_condition_evaluated": "Exact accepted plan, parameters, criteria, and digests committed before execution.",
+    "authoritative_record_inspected": "case.get_overview(case_01mockcase)",
+    "rationale": "Case case_01mockcase committed via 1 observed case.commit call(s); state=active; preflight pinned digest=sha256:b40f2954f5320d2...",
+    "evidence_refs": [
+      "mocked IPC command log"
+    ],
+    "carried_state": {
+      "case_id": "case_01mockcase",
+      "state": "active",
+      "stages_count": 1
+    }
+  },
+  "gate_results": {
+    "ENTRY": "PASS",
+    "VISIBILITY": "PASS",
+    "REACHABILITY": "PASS",
+    "BINDING": "PASS",
+    "AUTHORITY": "PASS",
+    "EXECUTION": "PASS",
+    "EVIDENCE": "PASS",
+    "SETTLEMENT": "PASS",
+    "CONTINUITY": "PASS",
+    "RECOVERY": "PASS"
+  },
+  "final_status": "PASS",
+  "failure_diagnosis": {
+    "failure_code": "NONE",
+    "failure_locus": "none",
+    "expected": "",
+    "observed": "",
+    "reproducible_path": ""
+  }
+}

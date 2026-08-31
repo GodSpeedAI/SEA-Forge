@@ -1,0 +1,12 @@
+{
+  "journey_id": "CJ03",
+  "oracle_name": "CJ03_DomainForgeSemanticGroundingOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Semantic references resolve against exact validated model snapshot or fail closed with diagnostics.",
+  "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea",
+  "rationale": "DomainForge model validation returned exit 0. Diagnostics: \nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 21 filter",
+  "evidence_refs": [
+    "/home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea"
+  ],
+  "carried_state": {}
+}

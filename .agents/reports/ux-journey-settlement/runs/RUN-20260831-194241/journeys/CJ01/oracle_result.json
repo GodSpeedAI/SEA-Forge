@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ01",
+  "oracle_name": "CJ01_TrustedCellContextOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Actor is attributable, snapshots explicit, readiness classified with evidence.",
+  "authoritative_record_inspected": "/home/sprime01/projects/sea-rs",
+  "rationale": "Foundation source records exist on disk; /readiness rendered an explicit classification; /admin rendered attributable identity content.",
+  "evidence_refs": [
+    "crates/sea-forge-server/src/sfwp/readiness.rs",
+    "crates/sea-forge-self-model"
+  ],
+  "carried_state": {}
+}

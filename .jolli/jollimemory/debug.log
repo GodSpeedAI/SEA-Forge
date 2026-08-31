@@ -1572,3 +1572,18 @@
 [2026-08-23T12:04:03.390Z] INFO  [McpServer] [trace=0520a3786f07ec1bc21db47119d31a32] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
 [2026-08-23T12:04:30.314Z] INFO  [StorageFactory] [trace=4011c59d72104a9aad2c2214e2c16d37] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
 [2026-08-23T12:04:30.375Z] INFO  [McpServer] [trace=4011c59d72104a9aad2c2214e2c16d37] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-31T18:16:04.213Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-31T18:16:04.350Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-08-31T18:16:07.416Z] INFO  [StorageFactory] [trace=986234b851d28cd1ed4ac2a5d5d2db20] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-08-31T18:16:07.461Z] INFO  [McpServer] [trace=986234b851d28cd1ed4ac2a5d5d2db20] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-08-31T19:12:08.873Z] INFO  [StopHook] Stop hook triggered (session=0d5f9ad8-756c-4312-b74c-5b6120faf949)
+[2026-08-31T19:12:08.896Z] INFO  [StopHook] Hook input — session_id=0d5f9ad8-756c-4312-b74c-5b6120faf949, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/0d5f9ad8-756c-4312-b74c-5b6120faf949.jsonl
+[2026-08-31T19:12:08.919Z] INFO  [SessionTracker] Pruning stale session 31966c97-7e43-4067-b47a-a1741eac44a9 (age: 414h)
+[2026-08-31T19:12:08.939Z] INFO  [StopHook] Session saved successfully
+[2026-08-31T19:12:09.065Z] INFO  [StatsWriter] pruned 6 projected events older than 2026-08-17
+[2026-08-31T19:48:30.621Z] INFO  [StopHook] Stop hook triggered (session=0d5f9ad8-756c-4312-b74c-5b6120faf949)
+[2026-08-31T19:48:30.628Z] INFO  [StopHook] Hook input — session_id=0d5f9ad8-756c-4312-b74c-5b6120faf949, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/0d5f9ad8-756c-4312-b74c-5b6120faf949.jsonl
+[2026-08-31T19:48:30.636Z] INFO  [StopHook] Session saved successfully
+[2026-08-31T20:13:50.342Z] INFO  [StopHook] Stop hook triggered (session=0d5f9ad8-756c-4312-b74c-5b6120faf949)
+[2026-08-31T20:13:50.370Z] INFO  [StopHook] Hook input — session_id=0d5f9ad8-756c-4312-b74c-5b6120faf949, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/0d5f9ad8-756c-4312-b74c-5b6120faf949.jsonl
+[2026-08-31T20:13:50.385Z] INFO  [StopHook] Session saved successfully

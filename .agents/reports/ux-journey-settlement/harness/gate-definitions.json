@@ -1,0 +1,76 @@
+{
+  "title": "SEA-Forge 10 Required Evaluation Gates",
+  "version": "1.0.0",
+  "gates": [
+    {
+      "gate_id": "ENTRY",
+      "ordinal": 1,
+      "name": "Journey Entry",
+      "description": "The declared journey can be entered from its specified initiating condition and starting state.",
+      "oracle_check": "Actor successfully navigates to the journey entry point and initial state is established."
+    },
+    {
+      "gate_id": "VISIBILITY",
+      "ordinal": 2,
+      "name": "Affordance Visibility",
+      "description": "The actor can discover the relevant affordance through discoverable UI controls without omniscient internal knowledge.",
+      "oracle_check": "Target control exists in accessibility tree and is visually rendered."
+    },
+    {
+      "gate_id": "REACHABILITY",
+      "ordinal": 3,
+      "name": "Precondition Reachability",
+      "description": "Required preconditions are satisfied or an accurate blocker/unavailability explanation is exposed.",
+      "oracle_check": "Precondition verification passes or explicit fail-closed blocker panel is presented."
+    },
+    {
+      "gate_id": "BINDING",
+      "ordinal": 4,
+      "name": "Interface & Capability Binding",
+      "description": "The projected interface action reaches the declared capability/interface family rather than a mock, bypass, or unbound path.",
+      "oracle_check": "Dispatched request targets canonical SFWP method / CLI command / agent surface."
+    },
+    {
+      "gate_id": "AUTHORITY",
+      "ordinal": 5,
+      "name": "Governed Authority Decision",
+      "description": "Required allow, deny, escalate, approval, or separation-of-duty behavior occurs strictly before side effects.",
+      "oracle_check": "Authority decision is committed to authority.json / ledger with policy hash before any command execution or file mutation."
+    },
+    {
+      "gate_id": "EXECUTION",
+      "ordinal": 6,
+      "name": "Governed Execution",
+      "description": "The intended action or state transition actually executes within declared sandbox, resource, and time bounds.",
+      "oracle_check": "Trace events record execution within granted boundary."
+    },
+    {
+      "gate_id": "EVIDENCE",
+      "ordinal": 7,
+      "name": "Evidence Production & Integrity",
+      "description": "Required evidence is produced, attributable to actor, SHA-256 integrity-checked, and linked to execution.",
+      "oracle_check": "evidence.jsonl contains valid SHA-256 digests and semantic envelope references."
+    },
+    {
+      "gate_id": "SETTLEMENT",
+      "ordinal": 8,
+      "name": "Independent Settlement",
+      "description": "An independent oracle determines whether the canonical journey completion condition has actually been satisfied.",
+      "oracle_check": "settlement.json / authoritative records confirm completion condition is met."
+    },
+    {
+      "gate_id": "CONTINUITY",
+      "ordinal": 9,
+      "name": "Resulting Affordance Continuity",
+      "description": "Settlement exposes the correct resulting decision or next affordance with carried context.",
+      "oracle_check": "Next lawful affordance is visible and reachable with correct state."
+    },
+    {
+      "gate_id": "RECOVERY",
+      "ordinal": 10,
+      "name": "Lawful Recovery / Terminal State",
+      "description": "Where the canonical journey involves error, interruption, or failure, a lawful recovery path or explicit terminal state is exposed and exercised.",
+      "oracle_check": "Failure state offers valid retry/repreflight/recover affordance without corrupting history."
+    }
+  ]
+}

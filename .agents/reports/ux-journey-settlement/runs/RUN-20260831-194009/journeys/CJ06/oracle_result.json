@@ -1,0 +1,10 @@
+{
+  "journey_id": "CJ06",
+  "oracle_name": "CJ06_UnhandledExceptionOracle",
+  "status": "ERROR",
+  "completion_condition_evaluated": "N/A \u2014 harness raised an unhandled exception before settlement could be evaluated.",
+  "authoritative_record_inspected": "harness runtime",
+  "rationale": "AttributeError: 'str' object has no attribute 'get'\nTraceback (most recent call last):\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 289, in _run_journey_safely\n    fn()\n    ~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 636, in execute_cj06\n    command_verbs = [c.get(\"verb\") for c in state.get(\"commandLog\", [])]\n                                            ^^^^^^^^^\nAttributeError: 'str' object has no attribute 'get'\n",
+  "evidence_refs": [],
+  "carried_state": {}
+}

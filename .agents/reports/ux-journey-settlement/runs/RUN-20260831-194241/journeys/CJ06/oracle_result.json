@@ -1,0 +1,15 @@
+{
+  "journey_id": "CJ06",
+  "oracle_name": "CJ06_HumanJudgmentAndApprovalOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Eligible human decision committed with actor, evidence, rationale, and downstream effect.",
+  "authoritative_record_inspected": "approval.decide(id=appr-101)",
+  "rationale": "Approval appr-101 decided with verdict='approve' by actor='approver_alice', observed live on the IPC transcript.",
+  "evidence_refs": [
+    "mocked IPC command log"
+  ],
+  "carried_state": {
+    "approval_id": "appr-101",
+    "verdict": "approve"
+  }
+}

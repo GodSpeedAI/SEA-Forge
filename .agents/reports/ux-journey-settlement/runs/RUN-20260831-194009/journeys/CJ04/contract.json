@@ -1,0 +1,155 @@
+{
+  "journey_id": "CJ04",
+  "canonical_journey_name": "Form and Commit a Governed Case",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "6.1",
+    "6.2",
+    "6.3",
+    "6.4",
+    "6.5",
+    "6.6",
+    "6.7",
+    "6.8",
+    "6.9",
+    "10.3"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 5,
+    "variant": 2,
+    "composition": 2
+  },
+  "implementation_maturity": {
+    "specified": 1,
+    "implemented": 0,
+    "exercised": 6,
+    "evidenced": 3
+  },
+  "actor_and_role": {
+    "primary_actor": "case_author",
+    "primary_role": "case author",
+    "allowed_roles": [
+      "case author",
+      "operator",
+      "external actor"
+    ]
+  },
+  "starting_state": "An operator or external actor has supported intent, a versioned template, an external plan proposal, a methodology or topology, a specification pipeline, or a bounded Thoth proposal.",
+  "preconditions": [
+    "Trusted actor and cell context",
+    "a supported work source",
+    "resolved semantic references",
+    "available environment, evaluator, endpoint, sandbox, retention, and execution-limit declarations where required."
+  ],
+  "intention": "Turn intent, a template, or an untrusted proposal into a validated, previewed, immutable case plan.",
+  "job": "Choose the appropriate work source, declare dependencies and criteria, inspect the complete proposal, and commit it before execution side effects.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "Intent planning",
+    "template instantiation",
+    "proposal validation",
+    "topology construction",
+    "pipeline planning",
+    "delegation preview",
+    "`case.preflight`",
+    "and `case.commit`."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_case_routes"
+    ],
+    "api": [
+      "sfwp_request_correlation_family",
+      "sfwp_case_authoring_family"
+    ],
+    "cli": [
+      "cli_execution_family",
+      "cli_case_and_human_family"
+    ],
+    "agent": [
+      "agent_thoth_manager_surface",
+      "agent_delegation_execution_surface"
+    ]
+  },
+  "expected_consequential_state_transitions": [
+    "Intent, template, or untrusted proposal becomes a draft `CasePlan`",
+    "draft becomes preflighted or rejected",
+    "preflighted plan becomes an immutable committed case",
+    "stale input returns to fresh preflight rather than direct commit."
+  ],
+  "required_artifacts_and_evidence": [
+    "Intent records",
+    "templates and parameters",
+    "draft and preflight summaries",
+    "`CasePlan`",
+    "stages",
+    "items",
+    "sentries",
+    "milestones",
+    "criteria origins",
+    "environment and evaluator bindings",
+    "job-contract previews",
+    "provenance",
+    "digests",
+    "and immutable case records."
+  ],
+  "settlement_condition": "The exact accepted plan, parameters, criteria, provenance, configuration digests, and model references are committed before any execution side effect.",
+  "expected_next_decisions_and_affordances": [
+    "Start lawful work",
+    "resolve likely approvals",
+    "revise or abandon an invalid or unaffordable draft",
+    "or recover a lost commit response from recorded request status."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Treat proposals as untrusted",
+    "return validation errors without execution effects",
+    "repeat preflight after source drift",
+    "use request-status recovery for ambiguous delivery",
+    "create a new version instead of editing committed history."
+  ],
+  "expected_unavailable_states": [
+    "all-fields preflight beyond summary is preview-only"
+  ]
+}

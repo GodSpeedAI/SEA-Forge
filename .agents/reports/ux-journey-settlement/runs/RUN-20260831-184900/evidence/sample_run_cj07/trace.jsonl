@@ -1,0 +1,2 @@
+{"kind":"command_started","argv":["echo","hello"]}
+{"kind":"command_exited","exit_code":0}

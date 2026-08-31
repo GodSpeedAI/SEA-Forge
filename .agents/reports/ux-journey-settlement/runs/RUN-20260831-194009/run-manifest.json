@@ -1,0 +1,338 @@
+{
+  "run_id": "RUN-20260831-194009",
+  "timestamp": "2026-08-31T19:41:34.054806+00:00",
+  "git_commit": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "total_journeys_tested": 11,
+  "passed": 5,
+  "failed": 6,
+  "journeys": {
+    "CJ04": {
+      "journey_id": "CJ04",
+      "journey_name": "Form and Commit a Governed Case",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "FAIL",
+        "VISIBILITY": "FAIL",
+        "REACHABILITY": "FAIL",
+        "BINDING": "FAIL",
+        "AUTHORITY": "FAIL",
+        "EXECUTION": "FAIL",
+        "EVIDENCE": "FAIL",
+        "SETTLEMENT": "FAIL",
+        "CONTINUITY": "FAIL",
+        "RECOVERY": "FAIL"
+      },
+      "oracle_result": {
+        "journey_id": "CJ04",
+        "oracle_name": "CJ04_UnhandledExceptionOracle",
+        "status": "ERROR",
+        "completion_condition_evaluated": "N/A \u2014 harness raised an unhandled exception before settlement could be evaluated.",
+        "authoritative_record_inspected": "harness runtime",
+        "rationale": "AttributeError: 'str' object has no attribute 'get'\nTraceback (most recent call last):\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 289, in _run_journey_safely\n    fn()\n    ~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 335, in <lambda>\n    self._run_journey_safely(\"CJ04\", lambda: self._execute_cj04_and_cj05_impl())\n                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 379, in _execute_cj04_and_cj05_impl\n    command_verbs = [c.get(\"verb\") for c in state.get(\"commandLog\", [])]\n                                            ^^^^^^^^^\nAttributeError: 'str' object has no attribute 'get'\n",
+        "evidence_refs": [],
+        "carried_state": {}
+      },
+      "screenshot_count": 0
+    },
+    "CJ01": {
+      "journey_id": "CJ01",
+      "journey_name": "Establish Trusted Cell Context",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "FAIL",
+        "VISIBILITY": "FAIL",
+        "REACHABILITY": "FAIL",
+        "BINDING": "FAIL",
+        "AUTHORITY": "FAIL",
+        "EXECUTION": "FAIL",
+        "EVIDENCE": "FAIL",
+        "SETTLEMENT": "FAIL",
+        "CONTINUITY": "FAIL",
+        "RECOVERY": "FAIL"
+      },
+      "oracle_result": {
+        "journey_id": "CJ01",
+        "oracle_name": "CJ01_UnhandledExceptionOracle",
+        "status": "ERROR",
+        "completion_condition_evaluated": "N/A \u2014 harness raised an unhandled exception before settlement could be evaluated.",
+        "authoritative_record_inspected": "harness runtime",
+        "rationale": "AttributeError: 'str' object has no attribute 'get'\nTraceback (most recent call last):\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 289, in _run_journey_safely\n    fn()\n    ~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 487, in execute_cj01\n    query_verbs = [q.get(\"verb\") for q in state.get(\"queryLog\", [])]\n                                          ^^^^^^^^^\nAttributeError: 'str' object has no attribute 'get'\n",
+        "evidence_refs": [],
+        "carried_state": {}
+      },
+      "screenshot_count": 0
+    },
+    "CJ02": {
+      "journey_id": "CJ02",
+      "journey_name": "Discover Lawful Affordances",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "FAIL",
+        "VISIBILITY": "FAIL",
+        "REACHABILITY": "FAIL",
+        "BINDING": "FAIL",
+        "AUTHORITY": "FAIL",
+        "EXECUTION": "FAIL",
+        "EVIDENCE": "FAIL",
+        "SETTLEMENT": "FAIL",
+        "CONTINUITY": "FAIL",
+        "RECOVERY": "FAIL"
+      },
+      "oracle_result": {
+        "journey_id": "CJ02",
+        "oracle_name": "CJ02_UnhandledExceptionOracle",
+        "status": "ERROR",
+        "completion_condition_evaluated": "N/A \u2014 harness raised an unhandled exception before settlement could be evaluated.",
+        "authoritative_record_inspected": "harness runtime",
+        "rationale": "AttributeError: 'str' object has no attribute 'get'\nTraceback (most recent call last):\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 289, in _run_journey_safely\n    fn()\n    ~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 542, in execute_cj02\n    query_verbs = [q.get(\"verb\") for q in state.get(\"queryLog\", [])]\n                                          ^^^^^^^^^\nAttributeError: 'str' object has no attribute 'get'\n",
+        "evidence_refs": [],
+        "carried_state": {}
+      },
+      "screenshot_count": 0
+    },
+    "CJ03": {
+      "journey_id": "CJ03",
+      "journey_name": "Ground Work in Semantic Meaning",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ03",
+        "oracle_name": "CJ03_DomainForgeSemanticGroundingOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Semantic references resolve against exact validated model snapshot or fail closed with diagnostics.",
+        "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea",
+        "rationale": "cargo test -p sea-forge-domainforge ran 26 test(s), 0 failed, exit=0. Diagnostics:  src/lib.rs (target/debug/deps/sea_forge_domainforge-bc68c2a38ad22e07)\n     Running tests/conformance_m0_domainforge.rs (target/debug/deps/conformance_m0_domainforge-368d0ffd73d3e11d)\n     Running tests/projection.rs (target/debug/deps/projection-f700abfd1c5c7420)\n   Doc-tests sea_forge_domainforge\n",
+        "evidence_refs": [
+          ".sea/interaction/interaction-model.sea"
+        ],
+        "carried_state": {
+          "tests_run": 26,
+          "tests_failed": 0
+        }
+      },
+      "screenshot_count": 2
+    },
+    "CJ06": {
+      "journey_id": "CJ06",
+      "journey_name": "Resolve Human Judgment and Approval",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "FAIL",
+        "VISIBILITY": "FAIL",
+        "REACHABILITY": "FAIL",
+        "BINDING": "FAIL",
+        "AUTHORITY": "FAIL",
+        "EXECUTION": "FAIL",
+        "EVIDENCE": "FAIL",
+        "SETTLEMENT": "FAIL",
+        "CONTINUITY": "FAIL",
+        "RECOVERY": "FAIL"
+      },
+      "oracle_result": {
+        "journey_id": "CJ06",
+        "oracle_name": "CJ06_UnhandledExceptionOracle",
+        "status": "ERROR",
+        "completion_condition_evaluated": "N/A \u2014 harness raised an unhandled exception before settlement could be evaluated.",
+        "authoritative_record_inspected": "harness runtime",
+        "rationale": "AttributeError: 'str' object has no attribute 'get'\nTraceback (most recent call last):\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 289, in _run_journey_safely\n    fn()\n    ~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 636, in execute_cj06\n    command_verbs = [c.get(\"verb\") for c in state.get(\"commandLog\", [])]\n                                            ^^^^^^^^^\nAttributeError: 'str' object has no attribute 'get'\n",
+        "evidence_refs": [],
+        "carried_state": {}
+      },
+      "screenshot_count": 0
+    },
+    "CJ07": {
+      "journey_id": "CJ07",
+      "journey_name": "Execute Governed Work",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ07",
+        "oracle_name": "CJ07_GovernedExecutionOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Execution terminates within granted boundary, leaving outcome evidence; termination != settlement.",
+        "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194009/evidence/sample_run_cj07",
+        "rationale": "Authority decision preceded execution; 1 termination event(s) recorded; 1 evidence artifact(s) hash-verified by recomputation.",
+        "evidence_refs": [
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194009/evidence/sample_run_cj07/authority.json",
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194009/evidence/sample_run_cj07/trace.jsonl",
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194009/evidence/sample_run_cj07/evidence.jsonl"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    },
+    "CJ08": {
+      "journey_id": "CJ08",
+      "journey_name": "Monitor, Intervene, and Recover",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "FAIL",
+        "VISIBILITY": "FAIL",
+        "REACHABILITY": "FAIL",
+        "BINDING": "FAIL",
+        "AUTHORITY": "FAIL",
+        "EXECUTION": "FAIL",
+        "EVIDENCE": "FAIL",
+        "SETTLEMENT": "FAIL",
+        "CONTINUITY": "FAIL",
+        "RECOVERY": "FAIL"
+      },
+      "oracle_result": {
+        "journey_id": "CJ08",
+        "oracle_name": "CJ08_UnhandledExceptionOracle",
+        "status": "ERROR",
+        "completion_condition_evaluated": "N/A \u2014 harness raised an unhandled exception before settlement could be evaluated.",
+        "authoritative_record_inspected": "harness runtime",
+        "rationale": "AttributeError: 'str' object has no attribute 'get'\nTraceback (most recent call last):\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 289, in _run_journey_safely\n    fn()\n    ~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 763, in execute_cj08\n    observed_event_count = len(state.get(\"commandLog\", [])) + len(state.get(\"queryLog\", []))\n                               ^^^^^^^^^\nAttributeError: 'str' object has no attribute 'get'\n",
+        "evidence_refs": [],
+        "carried_state": {}
+      },
+      "screenshot_count": 0
+    },
+    "CJ09": {
+      "journey_id": "CJ09",
+      "journey_name": "Evaluate, Settle, and Audit Outcomes",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "FAIL",
+        "VISIBILITY": "FAIL",
+        "REACHABILITY": "FAIL",
+        "BINDING": "FAIL",
+        "AUTHORITY": "FAIL",
+        "EXECUTION": "FAIL",
+        "EVIDENCE": "FAIL",
+        "SETTLEMENT": "FAIL",
+        "CONTINUITY": "FAIL",
+        "RECOVERY": "FAIL"
+      },
+      "oracle_result": {
+        "journey_id": "CJ09",
+        "oracle_name": "CJ09_UnhandledExceptionOracle",
+        "status": "ERROR",
+        "completion_condition_evaluated": "N/A \u2014 harness raised an unhandled exception before settlement could be evaluated.",
+        "authoritative_record_inspected": "harness runtime",
+        "rationale": "AttributeError: 'str' object has no attribute 'get'\nTraceback (most recent call last):\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 289, in _run_journey_safely\n    fn()\n    ~~^^\n  File \"/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py\", line 808, in execute_cj09\n    query_verbs = [q.get(\"verb\") for q in state.get(\"queryLog\", [])]\n                                          ^^^^^^^^^\nAttributeError: 'str' object has no attribute 'get'\n",
+        "evidence_refs": [],
+        "carried_state": {}
+      },
+      "screenshot_count": 0
+    },
+    "CJ10": {
+      "journey_id": "CJ10",
+      "journey_name": "Reuse Demonstrated Knowledge and Capability",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ10",
+        "oracle_name": "CJ10_DemonstratedKnowledgeReuseOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Reused knowledge/capability is disclosure-safe, traceable to source settlements, and unauthoritative projections fail closed.",
+        "authoritative_record_inspected": "sea-forge memory CLI / /capabilities, /memory routes",
+        "rationale": "Recall CLI source exists and is source-attributable; Workbench capability.list preview correctly fails closed (system.hello did not list it implemented).",
+        "evidence_refs": [
+          "crates/sea-forge-cli/src/commands/recall.rs",
+          "workbench/apps/desktop/src/pages/SurfacesPages.tsx",
+          "workbench/apps/desktop/src/pages/UnbackedSurface.tsx"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    },
+    "CJ11": {
+      "journey_id": "CJ11",
+      "journey_name": "Transform and Mature Governed Artifacts",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ11",
+        "oracle_name": "CJ11_ArtifactTransformationAndMaturityOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Output is validated, hash-linked, settled at actual maturity or quarantined; file creation alone != runtime readiness.",
+        "authoritative_record_inspected": "crates/sea-forge-domainforge / /artifacts route",
+        "rationale": "DomainForge crate exists with deterministic-projection tests passing (see CJ03); Workbench artifact.list preview correctly fails closed.",
+        "evidence_refs": [
+          "crates/sea-forge-domainforge",
+          "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    },
+    "CJ12": {
+      "journey_id": "CJ12",
+      "journey_name": "Transfer and Adopt Governed Assets",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ12",
+        "oracle_name": "CJ12_AssetTransferAndAdoptionOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Transfer rejected atomically or admitted with assets inert; authorized adoption required before usability.",
+        "authoritative_record_inspected": "crates/sea-forge-cell/src/bundle.rs / /federation route",
+        "rationale": "Cell bundle source exists; Workbench federation.preview_export preview correctly fails closed rather than claiming live transfer capability.",
+        "evidence_refs": [
+          "crates/sea-forge-cell/src/bundle.rs",
+          "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    }
+  }
+}

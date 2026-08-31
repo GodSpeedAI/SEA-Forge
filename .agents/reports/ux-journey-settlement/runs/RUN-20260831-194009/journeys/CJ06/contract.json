@@ -1,0 +1,145 @@
+{
+  "journey_id": "CJ06",
+  "canonical_journey_name": "Resolve Human Judgment and Approval",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "8.1",
+    "8.2",
+    "8.3",
+    "8.4",
+    "8.5",
+    "8.6",
+    "8.7"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 3,
+    "variant": 3,
+    "composition": 0
+  },
+  "implementation_maturity": {
+    "specified": 2,
+    "implemented": 0,
+    "exercised": 3,
+    "evidenced": 2
+  },
+  "actor_and_role": {
+    "primary_actor": "approver",
+    "primary_role": "approver",
+    "allowed_roles": [
+      "approver",
+      "human task assignee",
+      "operator"
+    ]
+  },
+  "starting_state": "An approval, human plan item, or ACP permission request becomes pending, or an existing request is denied or expires.",
+  "preconditions": [
+    "Resolved actor identity",
+    "an existing request or assigned human item",
+    "visible policy, resource, purpose, evidence, boundaries, expiry, and downstream effect",
+    "separation-of-duty eligibility."
+  ],
+  "intention": "Admit accountable human decisions and work into the governed record through the same authority and evidence fabric as other work.",
+  "job": "Find pending action, inspect its full context, act only when eligible, and record the decision or human-task evidence durably.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "`approval.list`",
+    "approval context inspection",
+    "`approval.decide`",
+    "human-task listing and completion",
+    "ACP permission handling",
+    "identity and separation-of-duty checks",
+    "and case reevaluation."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_case_routes",
+      "workbench_inbox_route"
+    ],
+    "api": [
+      "sfwp_request_correlation_family",
+      "sfwp_approval_family"
+    ],
+    "cli": [
+      "cli_case_and_human_family"
+    ],
+    "agent": [
+      "agent_delegation_control_surface"
+    ]
+  },
+  "expected_consequential_state_transitions": [
+    "Pending request becomes approved, rejected, expired, or refused for ineligible actor",
+    "a human item becomes criterion-backed complete",
+    "dependent session, run, item, or case becomes enabled, parked, blocked, or terminal."
+  ],
+  "required_artifacts_and_evidence": [
+    "Approval requests",
+    "governance context",
+    "actor and eligibility records",
+    "notes",
+    "decision records",
+    "human-task evidence or artifacts",
+    "ACP permission records",
+    "expiry markers",
+    "and dependent case events."
+  ],
+  "settlement_condition": "An eligible human decision or contribution is committed with its actor, context, evidence, rationale, and downstream effect, or refusal, denial, or expiry is recorded without unauthorized side effects.",
+  "expected_next_decisions_and_affordances": [
+    "Resume dependent work",
+    "reject or revise the path",
+    "reassign or request an eligible approver",
+    "escalate",
+    "or stop when the governed outcome is terminal."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Preserve pending state for unauthorized actors",
+    "show expiry and denial effects",
+    "obtain a fresh request or eligible decision",
+    "keep ACP inside the common approval fabric",
+    "never infer human completion from off-system conversation."
+  ],
+  "expected_unavailable_states": [
+    "human_task.complete standalone route is preview-only"
+  ]
+}

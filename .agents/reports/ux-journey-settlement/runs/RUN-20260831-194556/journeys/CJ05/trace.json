@@ -1,0 +1,120 @@
+{
+  "run_id": "RUN-20260831-194556",
+  "timestamp": "2026-08-31T19:46:11.412263+00:00",
+  "journey_id": "CJ05",
+  "journey_name": "Navigate and Adapt a Live Case",
+  "source_story_ids": [
+    "7.1",
+    "7.2",
+    "7.3",
+    "7.4",
+    "7.5",
+    "7.6",
+    "7.7",
+    "7.8",
+    "10.1",
+    "10.2",
+    "10.4"
+  ],
+  "canonical_source_hashes": {
+    ".sea/interaction/canonicalization-matrix.csv": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4",
+    ".sea/interaction/canonical-journey-catalog.md": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af",
+    ".sea/interaction/journey-grammar.md": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb",
+    ".sea/interaction/interaction-model.sea": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc",
+    ".sea/interaction/journey-capability-map.md": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37",
+    ".sea/interaction/coverage-report.md": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687",
+    ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9",
+    ".agents/specs/spec-minimum.md": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3",
+    ".agents/specs/spec-full.md": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+  },
+  "implementation_revision": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "harness_revision": "v2.0.0",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "actor_and_role": {
+    "actor": "case_owner",
+    "role": "case owner"
+  },
+  "starting_state": "A case is committed, its state changes, work becomes blocked or newly discovered, a retry creates another episode, or a bounded manager loop is invoked.",
+  "actor_visible_observations": [],
+  "browser_actions": [],
+  "screenshot_references": [
+    {
+      "sequence": 1,
+      "name": "CJ05-001-entry-case-horizon.png",
+      "relative_path": "screenshots/CJ05/CJ05-001-entry-case-horizon.png",
+      "moment_kind": "entry",
+      "description": "Live case horizon, continued from CJ04's committed case"
+    },
+    {
+      "sequence": 2,
+      "name": "CJ05-002-affordance-item-standing.png",
+      "relative_path": "screenshots/CJ05/CJ05-002-affordance-item-standing.png",
+      "moment_kind": "affordance_discovery",
+      "description": "Active, waiting, and completed plan items"
+    },
+    {
+      "sequence": 3,
+      "name": "CJ05-003-next-affordance-execution.png",
+      "relative_path": "screenshots/CJ05/CJ05-003-next-affordance-execution.png",
+      "moment_kind": "resulting_next_affordance",
+      "description": "Enabled item offers lawful next action"
+    }
+  ],
+  "snapshot_references": [],
+  "interface_projections_encountered": [
+    "workbench_case_routes"
+  ],
+  "capability_bindings_invoked": [
+    "`case.get_overview`",
+    "`case.get_horizon`",
+    "run listing and detail",
+    "discretionary-item admission",
+    "reopen",
+    "replan",
+    "terminate",
+    "manager-loop judgment",
+    "and ordinary plan mutation."
+  ],
+  "execution_identifiers": {
+    "case_id": "case_01mockcase",
+    "horizon_items_count": 1
+  },
+  "evidence_references": [
+    "case.get_horizon(case_01mockcase)"
+  ],
+  "settlement_oracle_result": {
+    "journey_id": "CJ05",
+    "oracle_name": "CJ05_LiveCaseHorizonOracle",
+    "status": "ACCEPTED",
+    "completion_condition_evaluated": "Governing outcome, spendable/blocked work, evidence, and lawful actions are distinct and traceable.",
+    "authoritative_record_inspected": "case_horizon(case_01mockcase)",
+    "rationale": "Case horizon projected 1 item(s), each with distinct execution/settlement standing folded from trace events.",
+    "evidence_refs": [
+      "case.get_horizon(case_01mockcase)"
+    ],
+    "carried_state": {
+      "case_id": "case_01mockcase",
+      "horizon_items_count": 1
+    }
+  },
+  "gate_results": {
+    "ENTRY": "PASS",
+    "VISIBILITY": "PASS",
+    "REACHABILITY": "PASS",
+    "BINDING": "PASS",
+    "AUTHORITY": "PASS",
+    "EXECUTION": "PASS",
+    "EVIDENCE": "PASS",
+    "SETTLEMENT": "PASS",
+    "CONTINUITY": "PASS",
+    "RECOVERY": "PASS"
+  },
+  "final_status": "PASS",
+  "failure_diagnosis": {
+    "failure_code": "NONE",
+    "failure_locus": "none",
+    "expected": "",
+    "observed": "",
+    "reproducible_path": ""
+  }
+}
