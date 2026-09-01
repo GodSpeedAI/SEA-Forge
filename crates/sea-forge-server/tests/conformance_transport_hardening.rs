@@ -12,7 +12,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
+use tokio::net::{UnixListener, UnixStream};
 
 /// Must match `MAX_REQUEST_BYTES` in `handle_connection`.
 const MAX_REQUEST_BYTES: usize = 1024 * 1024;
@@ -92,8 +92,8 @@ async fn a_second_server_on_a_live_socket_fails_closed() {
     );
     let message = second.unwrap_err().to_string();
     assert!(
-        message.contains("already listening"),
-        "the refusal should name the cause, got: {message}"
+        message.contains("already owns cell"),
+        "the refusal should name the cell ownership cause, got: {message}"
     );
 
     // The decisive property: the original server is untouched and still serving.
@@ -104,17 +104,39 @@ async fn a_second_server_on_a_live_socket_fails_closed() {
     .await;
 }
 
-/// A crashed server's leftover socket must not block a restart.
+/// Socket overrides cannot bypass ownership of the underlying cell root.
+#[tokio::test]
+async fn a_second_server_with_same_root_and_different_socket_fails_closed() {
+    let (root, first_socket) = boot().await;
+    let second_socket = root.path().join("other.sock");
+
+    let second = tokio::time::timeout(
+        Duration::from_secs(10),
+        run(config_for(&root, &second_socket)),
+    )
+    .await
+    .expect("second server kept running despite the cell lock");
+
+    let message = second.unwrap_err().to_string();
+    assert!(message.contains("already owns cell"), "{message}");
+    assert!(
+        !second_socket.exists(),
+        "refused server must not publish a socket"
+    );
+    assert_still_serving(&first_socket, "the original cell owner must remain live").await;
+}
+
+/// A crashed server's leftover socket inode must not block a restart.
 ///
 /// The lock is advisory and process-scoped, so it is released on exit however
-/// the process died; the stale socket file is replaced by the rename.
+/// the process died; the stale socket inode is safe for the staging rename to
+/// replace. A regular file is not equivalent and must be preserved.
 #[tokio::test]
 async fn a_stale_socket_does_not_block_a_restart() {
     let root = tempfile::tempdir().unwrap();
     let socket = root.path().join("stale.sock");
-
-    // A leftover regular file standing in for a stale socket inode.
-    std::fs::write(&socket, b"stale").unwrap();
+    let stale_listener = UnixListener::bind(&socket).unwrap();
+    drop(stale_listener);
 
     let config = config_for(&root, &socket);
     let socket_for_server = socket.clone();
@@ -130,9 +152,45 @@ async fn a_stale_socket_does_not_block_a_restart() {
 
     assert_still_serving(
         &socket,
-        "a stale socket file must be replaced, not treated as fatal",
+        "a stale socket inode must be replaced, not treated as fatal",
     )
     .await;
+}
+
+#[tokio::test]
+async fn regular_file_socket_destination_is_refused_without_data_loss() {
+    let root = tempfile::tempdir().unwrap();
+    let socket = root.path().join("important-file");
+    let original = b"do not replace";
+    std::fs::write(&socket, original).unwrap();
+
+    let failure = run(config_for(&root, &socket))
+        .await
+        .unwrap_err()
+        .to_string();
+
+    assert!(failure.contains("non-socket"), "{failure}");
+    assert_eq!(std::fs::read(&socket).unwrap(), original);
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn symlink_socket_destination_is_refused_without_touching_its_target() {
+    use std::os::unix::fs::symlink;
+
+    let root = tempfile::tempdir().unwrap();
+    let target = root.path().join("target");
+    let socket = root.path().join("link.sock");
+    std::fs::write(&target, b"protected target").unwrap();
+    symlink(&target, &socket).unwrap();
+
+    let failure = run(config_for(&root, &socket))
+        .await
+        .unwrap_err()
+        .to_string();
+
+    assert!(failure.contains("symlink"), "{failure}");
+    assert_eq!(std::fs::read(&target).unwrap(), b"protected target");
 }
 
 /// The socket must never be reachable by other local users, including during
@@ -187,6 +245,25 @@ async fn an_oversized_request_line_is_rejected_and_the_server_survives() {
         "the server must keep serving after refusing an oversized line",
     )
     .await;
+}
+
+/// A partial NDJSON request consumes one bounded connection permit only until
+/// the §11.1 request deadline; it cannot keep a task and buffer forever.
+#[tokio::test]
+async fn partial_request_line_times_out_and_releases_the_connection() {
+    let (_root, socket) = boot().await;
+    let stream = UnixStream::connect(&socket).await.unwrap();
+    let (reader, mut writer) = stream.into_split();
+    let mut reader = BufReader::new(reader);
+    writer.write_all(b"{").await.unwrap();
+    writer.flush().await.unwrap();
+
+    let mut line = String::new();
+    let read = tokio::time::timeout(Duration::from_secs(12), reader.read_line(&mut line))
+        .await
+        .expect("partial request was not timed out");
+    assert_eq!(read.unwrap(), 0, "timed-out connection must close");
+    assert_still_serving(&socket, "partial request timeout must not stop the server").await;
 }
 
 /// The accept loop must treat a failed accept as per-connection, not fatal.

@@ -1,6 +1,25 @@
 #![forbid(unsafe_code)]
 
 use sea_forge_server::{run, ServerConfig};
+use std::ffi::OsString;
+
+const NO_ARGUMENTS_MESSAGE: &str = "sea-forge-server takes no arguments";
+
+/// Refuse accidental flags before loading configuration or touching the cell.
+///
+/// The server deliberately has no CLI contract. Configuration is supplied via
+/// `SEA_FORGE_ROOT`, `SEA_FORGE_SOCKET`, and `<root>/server.yaml` instead.
+fn reject_command_line_arguments(
+    arguments: impl IntoIterator<Item = OsString>,
+) -> Result<(), &'static str> {
+    let mut arguments = arguments.into_iter();
+    let _program_name = arguments.next();
+    if arguments.next().is_some() {
+        Err(NO_ARGUMENTS_MESSAGE)
+    } else {
+        Ok(())
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,6 +34,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_current_span(false)
         .with_span_list(false)
         .init();
+
+    if let Err(message) = reject_command_line_arguments(std::env::args_os()) {
+        eprintln!(
+            "{message}; configure via SEA_FORGE_ROOT, SEA_FORGE_SOCKET, and <root>/server.yaml"
+        );
+        std::process::exit(2);
+    }
 
     // One cell contract: the resolved root owns the records *and* the socket.
     // `SEA_FORGE_ROOT` relocates both together; `SEA_FORGE_SOCKET` is the only
@@ -50,4 +76,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     run(config).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{reject_command_line_arguments, NO_ARGUMENTS_MESSAGE};
+    use std::ffi::OsString;
+
+    #[test]
+    fn accepts_program_name_only() {
+        assert_eq!(
+            reject_command_line_arguments([OsString::from("sea-forge-server")]),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn rejects_extra_command_line_arguments() {
+        let arguments = [
+            OsString::from("sea-forge-server"),
+            OsString::from("--version"),
+        ];
+
+        assert_eq!(
+            reject_command_line_arguments(arguments),
+            Err(NO_ARGUMENTS_MESSAGE)
+        );
+    }
 }

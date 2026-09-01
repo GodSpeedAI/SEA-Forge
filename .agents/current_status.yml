@@ -1,147 +1,69 @@
-# =============================================================================
-# agent.current_status — TEMPLATE
-# =============================================================================
-# Purpose: single source of truth for a resuming agent/session. Read this file
-# FIRST, before touching plan docs or code, to know exact state without
-# replaying history. Every field should let a cold-start agent answer:
-#   "what is settled, what is in flight, what is blocked, what do I do next"
-# without inference or guesswork.
-#
-# Fill-out rules:
-#   - Never mark a task settled on the builder's own say-so. Settlement always
-#     requires an independent confirmation (see CONFIRMATION VOCAB below).
-#   - Only ONE task should normally be in_flight at a time.
-#   - Do not start the next task in the same burst that just got a task
-#     CONFIRMed. Recompute the DAG, update ready_tasks, stop, hand off.
-#   - Every claim in observations/handoff needs an evidence pointer (a path,
-#     not "trust me"). If you can't point to it, it's UNKNOWN, not OBSERVED.
-#   - Replace every <ANGLE_BRACKET> placeholder. Delete this comment block
-#     once the file is in real use if it gets noisy; keep the inline field
-#     comments, they're load-bearing for whoever fills this out next.
-#
-# CONFIRMATION VOCAB (use consistently in latest_evidence[*].confirmation):
-#   "builder_with_teeth (<N> tests incl. any preregistered adversarial
-#     attacks, +<N> honest skip)"   -> builder-run, tests green, no reviewer
-#                                      yet involved (lowest trust tier)
-#   "peer CONFIRM"                  -> independent reviewer confirmed clean
-#   "peer REVISE(<falsifier>)->fixed->round2 CONFIRM"
-#                                    -> reviewer found a real issue, it was
-#                                       fixed, re-reviewed, now clean
-#   "peer REJECT->corrected->CONFIRM"
-#                                    -> reviewer rejected outright, corrected,
-#                                       re-reviewed, now clean
-#   "adversarial CONFIRM; <caveat> deferred to <TID>"
-#                                    -> confirmed, with a named known gap
-#                                       explicitly deferred to a later task
-#   "PENDING — ...; NOT SETTLED"    -> implementation/tests complete but
-#                                       independent confirmation not yet
-#                                       obtained; task stays open
-# Extend this vocab as needed, but keep new entries this specific. Vague
-# statuses ("looks good", "done") are not acceptable values here.
-#
-# BOOTSTRAP FALLBACK:
-#   If this file still has unfilled <ANGLE_BRACKET> placeholders, check
-#   .agents/CURRENT_STATUS.md before doing anything else. If it exists,
-#   treat it as authoritative for current state and use it to populate this
-#   file's first real version.
-#   Once populated, THIS file is the source of truth going forward — do not
-#   keep updating .agents/CURRENT_STATUS.md in parallel. Leave it in place
-#   as a historical record, not a second live status file.
-# =============================================================================
-
 schema: agent.current_status
 schema_version: "1.0"
 
 metadata:
-  plan_id: <plan-slug>              # stable slug, matches evidence dir name
-  plan_version: "<x.y.z>"
-  spec_id: <spec-slug>              # usually == plan_id; differs if one spec
-                                     # drives multiple plans
-  spec_version: "<x.y.z>"
-  initialized: true                 # false only before the very first burst
-  last_updated: "<YYYY-MM-DD>"
-  updated_by: "<agent-id> (<task-id> <action>, <settled|pending confirmation|...>)"
+  plan_id: bootstrap-config-remediation
+  plan_version: "1.0.0"
+  spec_id: Shell-SPEC
+  spec_version: "current"
+  initialized: true
+  last_updated: "2026-08-31"
+  updated_by: "prime-agent (bootstrap remediation, pending independent confirmation)"
 
 execution:
-  last_settled_task: <TID or null>  # most recent task with a CONFIRM in
-                                     # latest_evidence; null if none yet
-  in_flight_task: <TID or null>     # the ONE task currently being worked;
-                                     # null if nothing is in flight
-  ready_tasks: []                   # tasks whose deps are all settled and
-                                     # which are not yet started. Recompute
-                                     # this every time a task settles.
+  last_settled_task: null
+  in_flight_task: bootstrap-config-remediation
+  ready_tasks: []
   blocked_tasks:
-    <TID>: [<blocking-reason-tag>]  # e.g. [independent-confirmation],
-                                     # [T04, T07] for unmet deps, or a named
-                                     # external blocker tag
-  plan_blocked: false               # true only if NOTHING is workable
-                                     # (every ready path is blocked)
-  plan_blocker: null                # if plan_blocked, name the single thing
-                                     # unblocking it; else null
+    bootstrap-config-remediation: [independent-confirmation, draft-ipc-ui-product-decision, request-admission-spec-needs-plan]
+  plan_blocked: false
+  plan_blocker: null
 
 active:
-  task: <TID>                       # should match execution.in_flight_task
+  task: bootstrap-config-remediation
   blocker: >-
-    <what specifically is preventing this task from settling right now.
-    Be concrete: what was tried, what failed, what evidence exists of the
-    failure, what condition would resolve it. This is what the next agent
-    acts on, not a status label.>
-  side_branch: >-
-    <optional. Independent work happening off the critical path that a
-    resuming agent should know about but not act on unless asked. Omit the
-    key entirely if there is none — don't leave it as an empty placeholder.>
+    Implementation and builder verification are complete, but no independent reviewer has
+    confirmed the final diff. The compiler-debris deletion and gauntlet bootstrap-source decisions are applied. Draft IPC remains
+    a retained local capability pending a scoped UI product story. The request-admission spec is a
+    new draft and needs a separately approved implementation plan; final diff confirmation is pending.
 
 latest_evidence:
-  # One entry per task that has produced evidence, most recent state per
-  # task (not a full history — this file is current-state, not a log).
-  <TID>:
-    report: "<path to evidence dir, e.g. .agents/evidence/<plan-slug>/<TID>/>"
-    confirmation: "<see CONFIRMATION VOCAB above>"
-    commit: <commit-hash>            # or [<hash1>, <hash2>] if it took more
-                                      # than one commit to settle
+  bootstrap-config-remediation:
+    report: ".agents/evidence/bootstrap-config-remediation/verification.md"
+    confirmation: "PENDING — builder_with_teeth (focused tests, redacted secrets check, contracts and frontend checks); NOT SETTLED"
+    commit: null
 
 observations:
-  # Facts a resuming agent needs and shouldn't have to re-derive. Keep this
-  # list short and load-bearing — not a running commentary.
-  - status: OBSERVED                 # OBSERVED = directly verified this
-                                      # session/burst, evidence attached
-    statement: <fact, one sentence, no hedging>
-    evidence: <path or command output location>
-  - status: UNKNOWN                  # UNKNOWN = known gap, not yet verified
-                                      # either way — do not upgrade to
-                                      # OBSERVED without actually checking
-    statement: <what is not yet known and why it matters>
-    evidence: <where the open question is tracked, e.g. OPEN_QUESTIONS.md>
+  - status: OBSERVED
+    statement: "The SOPS development profile decrypts with the regenerated local identity without exposing its value."
+    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
+  - status: OBSERVED
+    statement: "Server argument rejection and nine transport hardening tests pass."
+    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
+  - status: OBSERVED
+    statement: "The sidecar is staged from current hardened source; Bun 1.4.0 passes contracts/frontend checks; and the pinned Devbox doctor passes after LF normalization."
+    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
+  - status: UNKNOWN
+    statement: "A full authorization-backed live delegation is not proven: endpoint configuration does not supply identity, policy, templates, or an approved service."
+    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
 
 next_action:
-  task: <TID>                        # the single next task/step to act on
+  task: bootstrap-config-remediation
   action: >-
-    <imperative, specific instructions for the next agent: what to
-    re-dispatch, what to preserve, what to do on each possible outcome
-    (e.g. "On CONFIRM: mark settled, recompute DAG, stop. On REVISE:
-    correct the smallest falsified layer, rerun gates, reconfirm. On
-    repeated infra failure: stop and escalate, do not self-attest.")>
+    Obtain independent final review. Before any live delegation, configure identity, policy,
+    templates, and an approved endpoint; then execute a governed probe. Ask the owner before
+    deleting tracked root artifacts or changing the draft IPC product surface.
   reason: >-
-    <why this is the next action and not something else — the constraint
-    that makes it the only sane next step (e.g. a prohibition on builder
-    self-attestation, an unmet dependency, an external blocker).>
+    The protected runtime remains correctly fail-closed without these operator decisions; the
+    current builder evidence is not independent settlement.
 
 handoff:
   settled_summary:
-    # One line per settled task or logical group of settled tasks. Prior
-    # groups can be batched ("T00 baseline; T01 X; T02 Y"); the most
-    # recently settled task gets its own line with enough detail that a
-    # resuming agent doesn't need to open its evidence dir just to know
-    # what it did.
-    - "<TID(s)> <what it delivered, load-bearing detail only>"
+    - "Bootstrap remediation implemented with focused security teeth; final independent confirmation remains required."
   unresolved_summary:
-    # Every open thread that isn't captured elsewhere: outstanding
-    # confirmations, deferred scope, stale docs owed a refresh, known
-    # follow-ups tied to a later task ID.
-    - "<open item, tied to a task ID or condition that resolves it>"
+    - "Bounded admission before detached request work remains a deeper server architecture hardening item."
+    - "The request-admission specification is draft-only and needs a plan before implementation.
+    - The retained draft IPC needs a scoped UI product story before renderer callers are added."
   warnings:
-    # Anything that could cause a resuming agent to do real damage if
-    # missed — wrong resident state, an action explicitly out of scope
-    # until a later task, an irreversible operation to avoid. Only put
-    # things here that are genuinely dangerous to miss, not routine notes.
-    - "<concrete warning, what not to do and why>"
+    - "Do not commit plaintext secrets or the ignored .sea-forge runtime cell."
+    - "Do not treat the request-admission specification as implemented; its required teeth remain future work."

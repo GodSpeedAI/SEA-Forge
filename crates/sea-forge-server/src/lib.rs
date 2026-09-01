@@ -122,12 +122,13 @@ struct RecoveredAcpSession<'a> {
 
 impl ServerState {
     pub fn new(config: ServerConfig) -> Result<Self, ForgeError> {
+        config.validate().map_err(ForgeError::Input)?;
         recover_cancelled_delegations(&config)?;
         // A SWE_SEED declaration may have been appended directly (out of
         // process) while the server was absent; join it against any
         // harvested evidence before this server accepts new work (M16 T18).
         swe_seed_reconciliation::reconcile_all_cases(&config.root)?;
-        let max = config.max_concurrent_runs.max(1);
+        let max = config.max_concurrent_runs;
         let correlation = RequestCorrelationStore::open(&config.root)?;
         let events_ledger = sfwp::events::open_events_ledger(&config.root)?;
         let (event_bus, _) = broadcast::channel::<EventFrame>(256);
@@ -931,6 +932,55 @@ fn check_socket_path_length(socket_path: &Path) -> Result<(), ForgeError> {
     )))
 }
 
+/// Take an exclusive lifetime lock for the cell root. A socket override must
+/// not let two servers mutate the same ledgers through different socket paths.
+fn lock_cell_root(root: &Path) -> Result<std::fs::File, ForgeError> {
+    std::fs::create_dir_all(root).map_err(|e| ForgeError::io("create server cell root", e))?;
+    let lock_path = root.join(".server.lock");
+    let lock_file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .map_err(|e| ForgeError::io("open server cell lock", e))?;
+    match lock_file.try_lock() {
+        Ok(()) => Ok(lock_file),
+        Err(std::fs::TryLockError::WouldBlock) => Err(ForgeError::io(
+            format!(
+                "another sea-forge server already owns cell {}",
+                root.display()
+            ),
+            std::io::Error::new(std::io::ErrorKind::AddrInUse, "server cell lock held"),
+        )),
+        Err(std::fs::TryLockError::Error(e)) => Err(ForgeError::io("lock server cell", e)),
+    }
+}
+
+/// Refuse to publish a socket over a non-socket object. Replacing a stale
+/// socket inode is safe; replacing an operator's regular file or symlink is not.
+fn validate_socket_destination(socket_path: &Path) -> Result<(), ForgeError> {
+    let metadata = match std::fs::symlink_metadata(socket_path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(ForgeError::io("inspect server socket destination", error)),
+    };
+    if metadata.file_type().is_symlink() {
+        return Err(ForgeError::Input(format!(
+            "refusing to replace symlink configured as server socket: {}",
+            socket_path.display()
+        )));
+    }
+    #[cfg(unix)]
+    if std::os::unix::fs::FileTypeExt::is_socket(&metadata.file_type()) {
+        return Ok(());
+    }
+    Err(ForgeError::Input(format!(
+        "refusing to replace non-socket configured as server socket: {}",
+        socket_path.display()
+    )))
+}
+
 /// Take the exclusive, process-lifetime lock guarding one socket path.
 ///
 /// This is what makes a second server fail instead of silently unlinking a
@@ -975,14 +1025,16 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
     // Fail before the first side effect: `ServerState::new` creates the cell's
     // directories and ledgers, so an unbindable socket path must be rejected
     // ahead of it rather than leaving a half-built cell behind.
+    config.validate().map_err(ForgeError::Input)?;
     check_socket_path_length(&socket_path)?;
     check_notify_command(config.notify_command.as_deref())?;
+    validate_socket_destination(&socket_path)?;
 
-    let state = Arc::new(ServerState::new(config)?);
-
-    // Fail closed if another server already owns this socket path.
-    // `_socket_lock` is held for the process lifetime — do not drop it early.
+    // Both locks live for the server lifetime. The root lock makes an explicit
+    // socket override unable to create a second concurrent writer for one cell.
+    let _cell_lock = lock_cell_root(&config.root)?;
     let _socket_lock = lock_socket_path(&socket_path)?;
+    let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.
     // `bind()` creates the socket with umask-derived permissions, so setting
@@ -1006,6 +1058,12 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
     })?;
 
     tracing::info!("server listening on {}", socket_path.display());
+
+    // A connection holds a bounded writer queue and can otherwise wait for a
+    // partial line forever. Admission is deliberately separate from governed
+    // run permits: slow or idle peers must not create unbounded Tokio tasks.
+    const MAX_CONNECTIONS: usize = 64;
+    let connection_permits = Arc::new(Semaphore::new(MAX_CONNECTIONS));
 
     loop {
         let (stream, _) = match listener.accept().await {
@@ -1035,8 +1093,17 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
             // this connection will be refused as `identity_unverifiable`.
             tracing::warn!("could not read peer credentials; protected verbs refused");
         }
+        let permit = match Arc::clone(&connection_permits).try_acquire_owned() {
+            Ok(permit) => permit,
+            Err(_) => {
+                tracing::warn!("connection refused: server connection limit reached");
+                drop(stream);
+                continue;
+            }
+        };
         let state = Arc::clone(&state);
         tokio::spawn(async move {
+            let _permit = permit;
             if let Err(e) = handle_connection(stream, state, peer).await {
                 tracing::warn!("connection error: {e}");
             }
@@ -1071,6 +1138,7 @@ async fn handle_connection(
     // ponytail: fixed 1 MiB per NDJSON request line; raise only if a real plan
     // payload is measured near it.
     const MAX_REQUEST_BYTES: u64 = 1024 * 1024;
+    const REQUEST_LINE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
     let (tx, mut rx) = mpsc::channel::<String>(WRITER_CHANNEL_CAPACITY);
     let writer_task = tokio::spawn(async move {
         while let Some(payload) = rx.recv().await {
@@ -1086,13 +1154,20 @@ async fn handle_connection(
 
     let result: Result<(), Box<dyn std::error::Error + Send + Sync>> = loop {
         line.clear();
-        let n = match (&mut reader)
-            .take(MAX_REQUEST_BYTES)
-            .read_line(&mut line)
-            .await
+        let n = match tokio::time::timeout(
+            REQUEST_LINE_TIMEOUT,
+            (&mut reader).take(MAX_REQUEST_BYTES).read_line(&mut line),
+        )
+        .await
         {
-            Ok(n) => n,
-            Err(e) => break Err(Box::new(e) as _),
+            Ok(Ok(n)) => n,
+            Ok(Err(error)) => break Err(Box::new(error) as _),
+            Err(_) => {
+                break Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "request line exceeded the 10s server timeout",
+                )) as _)
+            }
         };
         if n == 0 {
             break Ok(());

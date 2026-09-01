@@ -2,7 +2,13 @@ use sea_forge_agent::AgentConfig;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+/// Upper bounds prevent a malformed operator file from turning startup into
+/// unbounded semaphore allocation or approvals that effectively never expire.
+const MAX_CONCURRENT_RUNS: usize = 64;
+const MAX_APPROVAL_TTL_HOURS: u64 = 8_760;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent_runs: usize,
@@ -111,10 +117,31 @@ impl ServerConfig {
             std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
         let config: Self =
             serde_yaml::from_str(&text).map_err(|e| format!("parse {}: {e}", path.display()))?;
-        config.agent.validate().map_err(|message| {
-            format!("{}: invalid agent configuration: {message}", path.display())
+        config.validate().map_err(|message| {
+            format!(
+                "{}: invalid server configuration: {message}",
+                path.display()
+            )
         })?;
         Ok(config)
+    }
+
+    /// Validate every operator-controlled value before startup creates cell
+    /// records or binds a socket.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.max_concurrent_runs == 0 || self.max_concurrent_runs > MAX_CONCURRENT_RUNS {
+            return Err(format!(
+                "max_concurrent_runs must be between 1 and {MAX_CONCURRENT_RUNS}"
+            ));
+        }
+        if self.approval_ttl_hours == 0 || self.approval_ttl_hours > MAX_APPROVAL_TTL_HOURS {
+            return Err(format!(
+                "approval_ttl_hours must be between 1 and {MAX_APPROVAL_TTL_HOURS}"
+            ));
+        }
+        self.agent
+            .validate()
+            .map_err(|message| format!("invalid agent configuration: {message}"))
     }
 
     /// The one socket path this configuration names.
@@ -166,6 +193,29 @@ mod tests {
     }
 
     #[test]
+    fn load_rejects_unknown_top_level_field_before_startup() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(&path, "max_concurrent_rnns: 4\n").unwrap();
+
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("unknown field"), "{error}");
+    }
+
+    #[test]
+    fn load_rejects_unbounded_startup_limits() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(&path, "max_concurrent_runs: 0\n").unwrap();
+        let zero_error = ServerConfig::load(&path).unwrap_err();
+        assert!(zero_error.contains("between 1"), "{zero_error}");
+
+        std::fs::write(&path, "approval_ttl_hours: 8761\n").unwrap();
+        let ttl_error = ServerConfig::load(&path).unwrap_err();
+        assert!(ttl_error.contains("between 1"), "{ttl_error}");
+    }
+
+    #[test]
     fn relative_socket_path_composes_under_root() {
         let config = ServerConfig {
             root: PathBuf::from("/tmp/cell"),
@@ -211,6 +261,21 @@ mod tests {
             config.resolved_socket_path(),
             cwd.join(".sea-forge").join("server.sock")
         );
+    }
+
+    #[test]
+    fn load_accepts_explicit_loopback_test_endpoint() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "agent:\n  endpoints:\n    - id: local\n      kind: open_ai_compatible\n      base_url: http://127.0.0.1:11434/v1\n      allow_loopback_test: true\n",
+        )
+        .unwrap();
+
+        let config = ServerConfig::load(&path).unwrap();
+        assert_eq!(config.agent.endpoints.len(), 1);
+        assert!(config.agent.endpoints[0].allow_loopback_test);
     }
 
     #[test]
