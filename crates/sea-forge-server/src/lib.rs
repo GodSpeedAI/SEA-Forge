@@ -23,7 +23,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU8, Ordering},
     Arc,
 };
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -33,6 +33,11 @@ use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
 
 use sfwp::correlation::RequestCorrelationStore;
 use sfwp::events::EventFrame;
+
+/// At most eight protected socket requests may wait behind admitted work.
+/// Together with `max_concurrent_runs` active permits, this bounds request work
+/// below the 64-connection transport cap without serializing read-only views.
+const REQUEST_ADMISSION_WAIT_QUEUE_CAPACITY: usize = 8;
 
 pub mod agent_probe;
 pub mod case_dispatch;
@@ -72,9 +77,22 @@ pub struct ServerState {
     delegations: Mutex<HashMap<String, DelegationHandle>>,
     pub(crate) permission_broker: delegation::AcpApprovalBroker,
     pub semaphore: Arc<Semaphore>,
+    /// Server-wide request-work admission. Its capacity matches
+    /// `max_concurrent_runs`; a request must hold one before it can create a
+    /// correlation record or reach any governed effect.
+    request_admission: Arc<Semaphore>,
+    /// Bounded waiting room for request admission. The fixed limit is
+    /// deliberately separate from run capacity: at most this many socket
+    /// tasks may wait for 10 seconds, and every further protected request is
+    /// refused as `server_busy` without creating durable state.
+    request_admission_waiters: Arc<Semaphore>,
     /// SFWP request-correlation store (Task 3): answers `request.get_status`
     /// across reconnects.
     pub(crate) correlation: RequestCorrelationStore,
+    /// Serializes check-and-bind for one request id. The cell lock guarantees
+    /// this server is the only process writer; this mutex closes the remaining
+    /// same-process race between concurrent socket connections.
+    correlation_admission: Mutex<()>,
     /// The single durable SFWP events ledger; its `entry_ulid` is the event
     /// cursor. F-24: shared behind an `Arc` and accessed from blocking
     /// threads — the ledger's own `flock` serializes concurrent appends, so a
@@ -130,6 +148,11 @@ impl ServerState {
         swe_seed_reconciliation::reconcile_all_cases(&config.root)?;
         let max = config.max_concurrent_runs;
         let correlation = RequestCorrelationStore::open(&config.root)?;
+        // A process crash can leave a correlation record pending after it was
+        // lawfully admitted. Settle that request as interrupted before serving
+        // retries; otherwise the same id is either a duplicate risk or a
+        // permanent pending lie after restart.
+        correlation.settle_interrupted_requests()?;
         let events_ledger = sfwp::events::open_events_ledger(&config.root)?;
         let (event_bus, _) = broadcast::channel::<EventFrame>(256);
         // F-21: rebuild the in-memory `cases` map from disk at startup. Without
@@ -157,7 +180,12 @@ impl ServerState {
             delegations: Mutex::new(HashMap::new()),
             permission_broker: delegation::AcpApprovalBroker::default(),
             semaphore: Arc::new(Semaphore::new(max)),
+            request_admission: Arc::new(Semaphore::new(max)),
+            request_admission_waiters: Arc::new(Semaphore::new(
+                REQUEST_ADMISSION_WAIT_QUEUE_CAPACITY,
+            )),
             correlation,
+            correlation_admission: Mutex::new(()),
             events_ledger: Arc::new(events_ledger),
             event_bus,
         })
@@ -606,6 +634,10 @@ pub enum Request {
         entity: String,
         #[serde(default = "default_process")]
         process: String,
+        /// Optional caller correlation for a governed probe. A supplied value
+        /// makes a post-admission timeout recoverable through request.get_status.
+        #[serde(default)]
+        request_id: Option<String>,
     },
     Delegate {
         endpoint: String,
@@ -1225,6 +1257,14 @@ async fn handle_connection(
 /// handled on the connection loop above and is long-lived by design.
 const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
+// A queued request crosses exactly one of these terminal transitions. The CAS
+// is the linearization point that makes a timeout's no-effect claim true:
+// either timeout cancels while waiting, or admission wins and the response is
+// explicitly post-admission.
+const ADMISSION_WAITING: u8 = 0;
+const ADMISSION_GRANTED: u8 = 1;
+const ADMISSION_CANCELLED: u8 = 2;
+
 /// Run one request under [`REQUEST_TIMEOUT`].
 ///
 /// The handler runs on its own task, so expiry stops *waiting* for the work —
@@ -1237,35 +1277,172 @@ const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 /// Awaiting the handle here rather than detaching it preserves per-connection
 /// response ordering: NDJSON replies carry no sequence number, so a client
 /// pairs them with requests positionally.
+/// A reserved path to the bounded request-work admission pool.
+///
+/// An immediate permit is already lawful admission. A queued permit only
+/// reserves one of the finite waiting-room slots; it is not admission and is
+/// dropped if the request deadline expires before an active permit is issued.
+enum AdmissionReservation {
+    Immediate(tokio::sync::OwnedSemaphorePermit),
+    Queued(tokio::sync::OwnedSemaphorePermit),
+}
+
+/// Return the caller-supplied correlation id for request variants that support
+/// one. Keeping this exhaustive beside [`Request`] prevents a new mutating
+/// variant from silently escaping the durable-locator rule.
+fn request_id(request: &Request) -> Option<&str> {
+    match request {
+        Request::Submit { request_id, .. }
+        | Request::Approve { request_id, .. }
+        | Request::Reject { request_id, .. }
+        | Request::AgentProbe { request_id, .. }
+        | Request::Delegate { request_id, .. }
+        | Request::CancelDelegation { request_id, .. }
+        | Request::CaseCommit { request_id, .. }
+        | Request::ApprovalDecide { request_id, .. } => {
+            request_id.as_deref().filter(|id| !id.is_empty())
+        }
+        _ => None,
+    }
+}
+
+/// Mutations with a durable governance boundary must be caller-correlated.
+///
+/// We select the specification's fail-closed option rather than minting an
+/// opaque id that a client cannot know before a timeout response. `ask` may
+/// still be protected (and therefore admitted) but is not a durable mutation.
+/// `agent.probe` is durable: it records a case, run, and authority decision
+/// before contacting the configured endpoint.
+fn requires_durable_locator(request: &Request) -> bool {
+    matches!(
+        request,
+        Request::Submit { .. }
+            | Request::Approve { .. }
+            | Request::Reject { .. }
+            | Request::AgentProbe { .. }
+            | Request::Delegate { .. }
+            | Request::CancelDelegation { .. }
+            | Request::CaseCommit { .. }
+            | Request::ApprovalDecide { .. }
+    )
+}
+
+fn durable_locator_refusal() -> serde_json::Value {
+    serde_json::json!({
+        "error": "this durable mutation requires a non-empty request_id before admission",
+        "error_class": "durable_locator_required",
+        "no_side_effect": true,
+    })
+}
+
+/// Run the portions of a protected request that are lawful only after request
+/// admission. In particular, the first correlation write is here rather than
+/// in the connection loop, because that write is itself durable state.
+async fn dispatch_admitted(
+    request: Request,
+    state: Arc<ServerState>,
+    raw_line: String,
+    verified_actor: Option<crate::identity::ResolvedActor>,
+) -> serde_json::Value {
+    if let Some((request_id, verb, hash)) = dedupe_key(&request, &raw_line) {
+        // Check and bind are one admission claim. A second same-id request
+        // waits here until the first has durably bound its payload, then sees
+        // `Pending` or a terminal replay instead of starting duplicate work.
+        let _correlation_admission = state.correlation_admission.lock().await;
+        match state.correlation.check(&request_id, &hash) {
+            Ok(crate::sfwp::correlation::DedupeVerdict::Replay(outcome)) => {
+                tracing::info!(
+                    request_id,
+                    "duplicate request replayed from correlation store"
+                );
+                return outcome;
+            }
+            Ok(crate::sfwp::correlation::DedupeVerdict::Pending) => {
+                tracing::info!(request_id, "duplicate request remains pending");
+                return serde_json::json!({
+                    "request_id": request_id,
+                    "status": "pending",
+                    "recover_with": "request.get_status",
+                });
+            }
+            Ok(crate::sfwp::correlation::DedupeVerdict::Reused) => {
+                tracing::warn!(
+                    request_id,
+                    "request refused: id already bound to another payload"
+                );
+                return serde_json::json!({
+                    "error": format!(
+                        "request_id `{request_id}` was already used for a different operation \
+                         or payload; issue a new id rather than re-using this one"
+                    ),
+                    "error_class": "request_id_reused",
+                    "no_side_effect": true,
+                });
+            }
+            Ok(crate::sfwp::correlation::DedupeVerdict::Proceed) => {
+                // Bind only after lawful admission. A busy refusal or a timeout
+                // while waiting therefore cannot leave a correlation artifact.
+                if let Err(error) =
+                    state
+                        .correlation
+                        .record_pending(&request_id, &verb, Some(&hash))
+                {
+                    tracing::warn!(
+                        request_id,
+                        "request refused: correlation unwritable: {error}"
+                    );
+                    return serde_json::json!({
+                        "error": format!(
+                            "the correlation record for `{request_id}` could not be written, so \
+                             this request cannot be made idempotent: {error}"
+                        ),
+                        "error_class": "idempotency_unverifiable",
+                        "no_side_effect": true,
+                    });
+                }
+            }
+            Err(error) => {
+                tracing::warn!(
+                    request_id,
+                    "request refused: correlation unreadable: {error}"
+                );
+                return serde_json::json!({
+                    "error": format!(
+                        "the correlation record for `{request_id}` could not be read, so this \
+                         request cannot be shown to be a first attempt: {error}"
+                    ),
+                    "error_class": "idempotency_unverifiable",
+                    "no_side_effect": true,
+                });
+            }
+        }
+        // This lock protects only check-and-bind. Keeping it across the
+        // handler would falsely make an already-admitted request wait without
+        // a discoverable locator and would serialize unrelated durable work.
+        drop(_correlation_admission);
+    }
+
+    handle_request_as(request, &state, verified_actor.as_ref()).await
+}
+
+/// Run one request under [`REQUEST_TIMEOUT`], admitting side-effecting work
+/// through a finite active pool and a finite waiting room. Read-only requests
+/// retain the normal bounded wrapper and never consume admission capacity.
 async fn dispatch_bounded(
     request: Request,
     state: &Arc<ServerState>,
     raw_line: &str,
     peer: Option<crate::identity::PeerIdentity>,
 ) -> serde_json::Value {
-    // SF-005 / U-07. The gate sits here, above `tokio::spawn`, so a refused
-    // request never reaches a handler and therefore cannot have had an effect
-    // to undo. Doing it inside `handle_request` would put the check downstream
-    // of every early return that already touched something.
-    //
-    // `is_protected` is one exhaustive match (see `identity`), so a verb added
-    // later cannot slip through unclassified.
-    // Answered here, not in `handle_request`: this is the one inspect verb
-    // whose answer is a property of the *connection* rather than of the cell,
-    // and `peer` exists only at this level.
+    // SF-005 / U-07. The identity gate remains before admission: a refused
+    // request never enters the waiting room and cannot have an effect to undo.
     if matches!(request, Request::IdentityGet) {
         let view = state.config().identity.describe(peer);
         return serde_json::to_value(view)
             .unwrap_or_else(|_| serde_json::json!({"error": "identity serialization failed"}));
     }
 
-    // Carried past the gate so the records this request produces name the actor
-    // that was actually verified, rather than whatever default a downstream
-    // component would otherwise pick. The whole `ResolvedActor` is carried —
-    // id *and* verified role (F-08) — because every authority evaluation this
-    // request triggers must be made for the principal as authenticated.
     let mut verified_actor: Option<crate::identity::ResolvedActor> = None;
-
     if crate::identity::is_protected(&request) {
         let claim = crate::identity::ActorClaim::parse(raw_line);
         match state.config().identity.resolve(claim.as_ref(), peer) {
@@ -1275,10 +1452,6 @@ async fn dispatch_bounded(
                     uid = actor.uid(),
                     "protected request attributed"
                 );
-                // The verified identity must be the one the work is recorded
-                // under. `entity` is what reaches the authority engine and the
-                // ledger; verifying `actor` while recording `entity` would
-                // authenticate one principal and attribute the work to another.
                 if let Some(entity) = request_entity(raw_line) {
                     if entity != actor.actor_id() {
                         let refusal = crate::identity::IdentityRefusal::EntityMismatch {
@@ -1289,11 +1462,6 @@ async fn dispatch_bounded(
                         return refusal.response();
                     }
                 }
-                // Separation of duty, enforced beside the gate that resolved
-                // the actor rather than inside `decide`: refusing here is what
-                // makes "no side effect" true by construction, since `decide`
-                // has already recorded a pending correlation and shelled out
-                // to the CLI by the time it could check.
                 if let Some((case_id, approval_id)) = approval_target(&request) {
                     match crate::identity::approval_submitter(&state.root, case_id, approval_id) {
                         Ok(Some(submitter)) if submitter == actor.actor_id() => {
@@ -1310,9 +1478,6 @@ async fn dispatch_bounded(
                             return refusal.response();
                         }
                         Ok(_) => {}
-                        // An unreadable ledger cannot prove the approver is
-                        // someone else, and separation of duty is exactly the
-                        // property that must not be assumed. Refuse.
                         Err(error) => {
                             tracing::warn!(
                                 approval_id,
@@ -1340,80 +1505,83 @@ async fn dispatch_bounded(
                 return refusal.response();
             }
         }
-    }
-    // SF-006. Dedupe sits beside the identity gate, above `tokio::spawn`, for
-    // the same reason the gate does: a replayed request that reaches a handler
-    // has already had its effect, and there is no undoing it afterwards.
-    if let Some((request_id, verb, hash)) = dedupe_key(&request, raw_line) {
-        match state.correlation.check(&request_id, &hash) {
-            Ok(crate::sfwp::correlation::DedupeVerdict::Replay(outcome)) => {
-                tracing::info!(
-                    request_id,
-                    "duplicate request replayed from correlation store"
-                );
-                return outcome;
-            }
-            Ok(crate::sfwp::correlation::DedupeVerdict::Reused) => {
-                tracing::warn!(
-                    request_id,
-                    "request refused: id already bound to another payload"
-                );
-                return serde_json::json!({
-                    "error": format!(
-                        "request_id `{request_id}` was already used for a different operation \
-                         or payload; issue a new id rather than re-using this one"
-                    ),
-                    "error_class": "request_id_reused",
-                    "no_side_effect": true,
-                });
-            }
-            Ok(crate::sfwp::correlation::DedupeVerdict::Proceed) => {
-                // Bind the id to this payload before the work starts, so a
-                // retry that arrives mid-flight is measured against it.
-                //
-                // Refused if the write fails, on the same principle as the
-                // unreadable case below and for a sharper reason: this write
-                // is the *only* thing that makes the next attempt recognisable
-                // as a duplicate. Logging and proceeding would run the mutation
-                // with no record that it happened, which is exactly the state
-                // a full disk turns into two cases from one id.
-                if let Err(error) =
-                    state
-                        .correlation
-                        .record_pending(&request_id, &verb, Some(&hash))
-                {
+
+        if requires_durable_locator(&request) && request_id(&request).is_none() {
+            tracing::warn!("protected durable mutation refused: request_id absent");
+            return durable_locator_refusal();
+        }
+
+        let reservation = match Arc::clone(&state.request_admission).try_acquire_owned() {
+            Ok(permit) => AdmissionReservation::Immediate(permit),
+            Err(_) => match Arc::clone(&state.request_admission_waiters).try_acquire_owned() {
+                Ok(ticket) => AdmissionReservation::Queued(ticket),
+                Err(_) => {
                     tracing::warn!(
-                        request_id,
-                        "request refused: correlation unwritable: {error}"
+                        request_id = request_id(&request).unwrap_or("<none>"),
+                        "protected request refused: admission queue full"
                     );
                     return serde_json::json!({
-                        "error": format!(
-                            "the correlation record for `{request_id}` could not be written, so \
-                             this request cannot be made idempotent: {error}"
-                        ),
-                        "error_class": "idempotency_unverifiable",
+                        "error": "server request-work admission is full; retry after an admitted request settles",
+                        "error_class": "server_busy",
                         "no_side_effect": true,
                     });
                 }
-            }
-            // An unreadable store cannot prove this is not a replay, and
-            // exactly-once is the property that must not be assumed. Refused
-            // for the same reason an unreadable ledger refuses an approval.
-            Err(error) => {
-                tracing::warn!(
-                    request_id,
-                    "request refused: correlation unreadable: {error}"
-                );
-                return serde_json::json!({
-                    "error": format!(
-                        "the correlation record for `{request_id}` could not be read, so this \
-                         request cannot be shown to be a first attempt: {error}"
-                    ),
-                    "error_class": "idempotency_unverifiable",
-                    "no_side_effect": true,
-                });
-            }
-        }
+            },
+        };
+
+        let admission = Arc::new(AtomicU8::new(
+            if matches!(&reservation, AdmissionReservation::Immediate(_)) {
+                ADMISSION_GRANTED
+            } else {
+                ADMISSION_WAITING
+            },
+        ));
+        let request_id = request_id(&request).map(str::to_owned);
+        let request_id_for_work = request_id.clone();
+        let state = Arc::clone(state);
+        let raw_line = raw_line.to_owned();
+        let admission_for_work = Arc::clone(&admission);
+        let handle = tokio::spawn(async move {
+            let permit = match reservation {
+                AdmissionReservation::Immediate(permit) => permit,
+                AdmissionReservation::Queued(ticket) => {
+                    let permit = Arc::clone(&state.request_admission)
+                        .acquire_owned()
+                        .await
+                        .expect("request admission semaphore is never closed");
+                    // The timeout and this task race only on this transition.
+                    // If cancellation wins, drop both permits and return before
+                    // the correlation write or any governed handler can run.
+                    if admission_for_work
+                        .compare_exchange(
+                            ADMISSION_WAITING,
+                            ADMISSION_GRANTED,
+                            Ordering::AcqRel,
+                            Ordering::Acquire,
+                        )
+                        .is_err()
+                    {
+                        drop(ticket);
+                        drop(permit);
+                        return serde_json::json!({
+                            "error": "request cancelled before admission",
+                            "error_class": "request_cancelled",
+                            "no_side_effect": true,
+                        });
+                    }
+                    drop(ticket);
+                    permit
+                }
+            };
+            tracing::debug!(
+                request_id = request_id_for_work.as_deref().unwrap_or("<none>"),
+                "request admitted"
+            );
+            let response = dispatch_admitted(request, state, raw_line, verified_actor).await;
+            drop(permit);
+            response
+        });
+        return bounded_admitted(handle, REQUEST_TIMEOUT, request_id, admission).await;
     }
 
     let state = Arc::clone(state);
@@ -1501,6 +1669,78 @@ fn approval_target(request: &Request) -> Option<(&str, &str)> {
 /// directly: the whole guarantee lives in `spawn`-then-time-out-the-*handle*,
 /// and collapsing it to `timeout(d, work)` would still compile and still pass
 /// any test that only checked the response shape.
+/// Await a protected request after it has either acquired admission or entered
+/// the finite waiting room. A timeout before admission aborts the task; a
+/// timeout after admission leaves its durable lifecycle running and observable.
+async fn bounded_admitted(
+    mut handle: tokio::task::JoinHandle<serde_json::Value>,
+    limit: std::time::Duration,
+    request_id: Option<String>,
+    admission: Arc<AtomicU8>,
+) -> serde_json::Value {
+    match tokio::time::timeout(limit, &mut handle).await {
+        Ok(Ok(response)) => response,
+        Ok(Err(join_error)) => serde_json::json!({
+            "error": format!("request handler failed: {join_error}"),
+            "error_class": "internal_error",
+        }),
+        Err(_) => match admission.compare_exchange(
+            ADMISSION_WAITING,
+            ADMISSION_CANCELLED,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        ) {
+            Ok(_) => {
+                // Wait for the aborted task to observe cancellation before
+                // making the no-effect claim. If it won the semaphore race it
+                // sees ADMISSION_CANCELLED and releases the permit without
+                // crossing `dispatch_admitted`.
+                handle.abort();
+                let _ = handle.await;
+                tracing::warn!(
+                    request_id = request_id.as_deref().unwrap_or("<none>"),
+                    "request deadline reached before admission; work cancelled"
+                );
+                serde_json::json!({
+                    "error": format!(
+                        "request exceeded the {}s server timeout before admission; the work was cancelled",
+                        limit.as_secs()
+                    ),
+                    "error_class": "request_timeout",
+                    "timeout_seconds": limit.as_secs(),
+                    "request_id": request_id,
+                    "no_side_effect": true,
+                })
+            }
+            Err(ADMISSION_GRANTED) => {
+                tracing::warn!(
+                    request_id = request_id.as_deref().unwrap_or("<none>"),
+                    "request deadline reached after admission; durable work continues"
+                );
+                serde_json::json!({
+                    "error": format!(
+                        "request exceeded the {}s server timeout after admission; the work continues",
+                        limit.as_secs()
+                    ),
+                    "error_class": "request_timeout",
+                    "timeout_seconds": limit.as_secs(),
+                    "request_id": request_id,
+                    "recover_with": "request.get_status",
+                })
+            }
+            Err(ADMISSION_CANCELLED) => {
+                // Only this wrapper writes CANCELLED, so reaching it means a
+                // future refactor attempted a second timeout settlement.
+                serde_json::json!({
+                    "error": "request admission was cancelled twice",
+                    "error_class": "internal_error",
+                })
+            }
+            Err(_) => unreachable!("admission state is one of the declared constants"),
+        },
+    }
+}
+
 async fn bounded<F>(work: F, limit: std::time::Duration, raw_line: &str) -> serde_json::Value
 where
     F: std::future::Future<Output = serde_json::Value> + Send + 'static,
@@ -1728,35 +1968,44 @@ pub async fn handle_request_as(
             policy,
             entity,
             process,
+            request_id,
         } => {
-            let permit = match state.semaphore.acquire().await {
-                Ok(permit) => permit,
-                Err(_) => return serde_json::json!({"error":"server semaphore unavailable"}),
-            };
-            let config = state.config();
-            let result = agent_probe::probe(
-                &config,
-                agent_probe::ProbeRequest {
-                    endpoint_id: &endpoint,
-                    prompt: &prompt,
-                    model: model.as_deref(),
-                    policy_path: &policy,
-                    entity: &entity,
-                    process: &process,
-                    actor_role: verified_role.clone(),
-                },
-                &agent_probe::EnvironmentCredentialResolver,
-            )
-            .await;
-            drop(permit);
-            match result {
-                Ok(outcome) => serde_json::to_value(outcome).unwrap_or_else(
-                    |_| serde_json::json!({"error":"probe response serialization failed"}),
-                ),
-                Err(error) => {
-                    serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+            record_pending(state, request_id.as_deref(), "agent.probe");
+            let response = match state.semaphore.acquire().await {
+                Ok(permit) => {
+                    let config = state.config();
+                    let result = agent_probe::probe(
+                        &config,
+                        agent_probe::ProbeRequest {
+                            endpoint_id: &endpoint,
+                            prompt: &prompt,
+                            model: model.as_deref(),
+                            policy_path: &policy,
+                            entity: &entity,
+                            process: &process,
+                            actor_role: verified_role.clone(),
+                        },
+                        &agent_probe::EnvironmentCredentialResolver,
+                    )
+                    .await;
+                    drop(permit);
+                    match result {
+                        Ok(outcome) => serde_json::to_value(outcome).unwrap_or_else(
+                            |_| serde_json::json!({"error":"probe response serialization failed"}),
+                        ),
+                        Err(error) => serde_json::json!({
+                            "error": error.to_string(),
+                            "error_class": error.class(),
+                        }),
+                    }
                 }
-            }
+                Err(_) => serde_json::json!({
+                    "error": "server semaphore unavailable",
+                    "error_class": "server_unavailable",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "agent.probe", &response);
+            response
         }
         Request::Delegate {
             endpoint,

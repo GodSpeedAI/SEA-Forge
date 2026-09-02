@@ -44,8 +44,11 @@ pub struct RequestRecord {
 /// What dispatch should do with a request that carries a `request_id`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DedupeVerdict {
-    /// Unknown id, still pending, or a legacy record with no hash — execute.
+    /// Unknown id or a legacy record with no hash — execute.
     Proceed,
+    /// The same id is already lawfully admitted but has no terminal outcome.
+    /// Return its locator rather than running a concurrent duplicate.
+    Pending,
     /// The same id and payload already reached a terminal state; return this
     /// stored response instead of running the work a second time.
     Replay(serde_json::Value),
@@ -153,25 +156,39 @@ impl RequestCorrelationStore {
         let Some(record) = self.get(request_id)? else {
             return Ok(DedupeVerdict::Proceed);
         };
-        // Pre-SF-006 record: nothing to compare against, so nothing can be
-        // proven duplicate. Proceeding keeps old ids usable rather than
-        // refusing every one of them on an absent field.
+        // Pre-SF-006 records normally remain usable: their old format lacks
+        // the hash needed to prove a retry is the same payload. The one safe
+        // exception is our restart settlement. Once it records an interrupted
+        // terminal outcome, a retry must replay that failure rather than turn
+        // a crash-recovery record into a duplicate governed effect.
         let Some(stored) = record.payload_hash.as_deref() else {
+            if record.status == RequestStatus::Failed
+                && record.outcome.as_ref().is_some_and(|outcome| {
+                    outcome
+                        .get("error_class")
+                        .and_then(serde_json::Value::as_str)
+                        == Some("request_interrupted")
+                })
+            {
+                return Ok(record
+                    .outcome
+                    .map_or(DedupeVerdict::Pending, DedupeVerdict::Replay));
+            }
             return Ok(DedupeVerdict::Proceed);
         };
         if stored != payload_hash {
             return Ok(DedupeVerdict::Reused);
         }
         match record.status {
-            // Still in flight, or left pending by a crash or a timeout. Proceed
-            // deliberately: a record that never reaches a terminal state would
-            // otherwise wedge the id forever, and un-wedging it is worth more
-            // than blocking the narrow window where a genuinely concurrent
-            // retry overlaps the first attempt.
-            RequestStatus::Pending => Ok(DedupeVerdict::Proceed),
+            // A pending record proves a request crossed the durable boundary,
+            // but not whether its process is still live. Retrying it as new
+            // work would make a timed-out or restarted request execute twice;
+            // preserve the safe answer instead and let request.get_status
+            // expose the unresolved lifecycle.
+            RequestStatus::Pending => Ok(DedupeVerdict::Pending),
             RequestStatus::Completed | RequestStatus::Failed => Ok(record
                 .outcome
-                .map_or(DedupeVerdict::Proceed, DedupeVerdict::Replay)),
+                .map_or(DedupeVerdict::Pending, DedupeVerdict::Replay)),
         }
     }
 
@@ -272,6 +289,43 @@ impl RequestCorrelationStore {
         self.write_atomic(&record)
     }
 
+    /// Settle requests that were durable-pending when a prior server process
+    /// died. A restarted server has no live task that can safely resume them;
+    /// reporting an explicit interrupted failure preserves discoverability and
+    /// prevents a retry from duplicating an effect whose final state is unknown.
+    ///
+    /// Startup calls this before accepting sockets. Any unreadable record or
+    /// failed terminal write aborts startup rather than reopening a cell that
+    /// cannot truthfully account for its admitted work.
+    pub fn settle_interrupted_requests(&self) -> Result<usize, ForgeError> {
+        let mut settled = 0;
+        for entry in std::fs::read_dir(&self.dir)
+            .map_err(|error| ForgeError::io("read request correlations", error))?
+        {
+            let entry =
+                entry.map_err(|error| ForgeError::io("read request correlation entry", error))?;
+            let path = entry.path();
+            if path.extension().and_then(|extension| extension.to_str()) != Some("json") {
+                continue;
+            }
+            let bytes = std::fs::read(&path)
+                .map_err(|error| ForgeError::io("read request correlation", error))?;
+            let record: RequestRecord = serde_json::from_slice(&bytes)?;
+            if record.status != RequestStatus::Pending {
+                continue;
+            }
+            let outcome = serde_json::json!({
+                "error": "server restarted before this admitted request settled",
+                "error_class": "request_interrupted",
+                "request_id": record.request_id,
+                "recover_with": "request.get_status",
+            });
+            self.record_outcome(&record.request_id, &record.method, &outcome)?;
+            settled += 1;
+        }
+        Ok(settled)
+    }
+
     /// Look up a correlation record; `Ok(None)` if the id is unknown.
     pub fn get(&self, request_id: &str) -> Result<Option<RequestRecord>, ForgeError> {
         let path = self.path_for(request_id);
@@ -353,6 +407,66 @@ mod tests {
     }
 
     #[test]
+    fn restart_settles_a_pending_record_as_interrupted_without_reexecuting_it() {
+        let (_root, store) = store();
+        let payload = json!({"verb": "submit", "plan": "plan.json"});
+        let hash = payload_hash(&payload);
+        store
+            .record_pending("req-interrupted", "case.submit", Some(&hash))
+            .unwrap();
+
+        assert_eq!(store.settle_interrupted_requests().unwrap(), 1);
+        let record = store.get("req-interrupted").unwrap().unwrap();
+        assert_eq!(record.status, RequestStatus::Failed);
+        assert_eq!(
+            record
+                .outcome
+                .as_ref()
+                .and_then(|outcome| outcome["error_class"].as_str()),
+            Some("request_interrupted")
+        );
+        assert_eq!(
+            store.check("req-interrupted", &hash).unwrap(),
+            DedupeVerdict::Replay(record.outcome.unwrap())
+        );
+    }
+
+    #[test]
+    fn restart_settlement_prevents_a_hashless_pending_record_from_reexecuting() {
+        let (_root, store) = store();
+        store
+            .record_pending("req-legacy-pending", "case.submit", None)
+            .unwrap();
+
+        assert_eq!(store.settle_interrupted_requests().unwrap(), 1);
+        assert!(matches!(
+            store
+                .check("req-legacy-pending", "new-payload-hash")
+                .unwrap(),
+            DedupeVerdict::Replay(_),
+        ));
+    }
+
+    #[test]
+    fn a_pending_record_refuses_concurrent_retry_without_erasing_its_locator() {
+        let (_root, store) = store();
+        let payload = json!({"verb": "submit", "plan": "plan.json"});
+        let hash = payload_hash(&payload);
+        store
+            .record_pending("req-pending", "case.submit", Some(&hash))
+            .unwrap();
+
+        assert_eq!(
+            store.check("req-pending", &hash).unwrap(),
+            DedupeVerdict::Pending,
+            "a retry while the admitted request is pending must not execute again",
+        );
+        let record = store.get("req-pending").unwrap().unwrap();
+        assert_eq!(record.status, RequestStatus::Pending);
+        assert_eq!(record.payload_hash.as_deref(), Some(hash.as_str()));
+    }
+
+    #[test]
     fn a_terminal_record_replays_its_own_payload_and_refuses_a_different_one() {
         let (_root, store) = store();
         let payload = json!({"verb": "submit", "plan": "plan.json", "entity": "operator_local"});
@@ -363,8 +477,8 @@ mod tests {
             .unwrap();
         assert_eq!(
             store.check("req-1", &hash).unwrap(),
-            DedupeVerdict::Proceed,
-            "a request still in flight must not replay an outcome it has not produced",
+            DedupeVerdict::Pending,
+            "a request still in flight must not execute a concurrent duplicate",
         );
 
         let outcome = json!({"state": "completed", "case_id": "case_1"});

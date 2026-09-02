@@ -246,6 +246,7 @@ async fn commit_with_matching_precondition_creates_a_real_case() {
             "policy": policy_path(root.path()),
             "entity": "operator_local",
             "process": "test",
+            "request_id": "req-matching-precondition",
             "preconditions": {
                 "records": [
                     {"ref": format!("template:{TEMPLATE_REF}"), "expected_digest": expected_digest}
@@ -279,6 +280,7 @@ async fn commit_with_stale_precondition_is_rejected_with_no_case_created() {
             "policy": policy_path(root.path()),
             "entity": "operator_local",
             "process": "test",
+            "request_id": "req-stale-precondition",
             "preconditions": {
                 "records": [
                     {"ref": format!("template:{TEMPLATE_REF}"), "expected_digest": "sha256:deadbeef"}

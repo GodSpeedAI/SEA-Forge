@@ -3,20 +3,23 @@
 SEA-Forge Journey Settlement Gauntlet — Independent Settlement Oracles
 
 Every oracle here evaluates data the harness actually observed during the
-run: real captured DOM text, the mocked SFWP IPC bridge's real command/query
-transcript (`window.__sfwpMock.commandLog` / `.queryLog`), real subprocess
-output, or real recomputed content hashes. None of these functions may
-return ACCEPTED unconditionally — every branch is reachable, and every
-caller in gauntlet_runner.py must pass genuinely observed values, not
-literals.
+run: real captured DOM text, the real-backend bridge shim's real
+command/query transcript (`window.__sfwpRealBridge.commandLog` /
+`.queryLog`, populated from real responses relayed by
+harness/real_sfwp_bridge.mjs over a real Unix socket to a real
+`sea-forge-server` process), real subprocess output, or real recomputed
+content hashes. None of these functions may return ACCEPTED
+unconditionally — every branch is reachable, and every caller in
+gauntlet_runner.py must pass genuinely observed values, not literals.
 
 Scope note: journeys that go through the browser exercise the real
-Workbench frontend against a schema-valid mock of the Tauri IPC boundary
-(see harness/sfwp-full-mock.js and harness/validate_mock_payloads.mjs) —
-they do not exercise the live sea-forge-server process or a persisted
-governance ledger. CJ03 is the one oracle that runs against real compiled
-Rust (`cargo test -p sea-forge-domainforge`). This is stated plainly in
-each REPORT.md's rationale rather than claimed away.
+Workbench frontend against a real, unmodified `sea-forge-server` process
+(bootstrapped by
+crates/sea-forge-server/examples/journey_gauntlet_bootstrap.rs — see that
+file and harness/real_sfwp_bridge.mjs / harness/real-sfwp-bridge-shim.js
+for the full chain). CJ03 additionally runs against real compiled Rust
+(`cargo test -p sea-forge-domainforge`) directly, outside the browser. This
+is stated plainly in each REPORT.md's rationale rather than claimed away.
 """
 
 import hashlib
@@ -92,7 +95,11 @@ class SettlementOracles:
             )
 
         readiness_lower = readiness_dom_text.lower()
-        has_classification = any(term in readiness_lower for term in ("ready", "degraded", "stale", "blocked"))
+        # "unknown" is a real, honest classification the live server returns
+        # for a foundation with no committed snapshot yet (e.g. self-model
+        # integrity before it has been initialized) — it is not the same as
+        # rendering nothing, so it counts as an explicit classification too.
+        has_classification = any(term in readiness_lower for term in ("ready", "degraded", "stale", "blocked", "unknown"))
         if not has_classification:
             return SettlementOracleResult(
                 journey_id="CJ01", oracle_name=oracle_name, status="REJECTED",
@@ -211,7 +218,7 @@ class SettlementOracles:
             return SettlementOracleResult(
                 journey_id="CJ04", oracle_name=oracle_name, status="REJECTED",
                 completion_condition_evaluated=condition,
-                authoritative_record_inspected="mocked IPC command log",
+                authoritative_record_inspected="real backend IPC command log",
                 rationale="No case.commit command was observed on the IPC transcript — the UI never dispatched a real commit.",
             )
 
@@ -231,7 +238,7 @@ class SettlementOracles:
             completion_condition_evaluated=condition,
             authoritative_record_inspected=f"case.get_overview({case_id})",
             rationale=f"Case {case_id} committed via {len(commit_log)} observed case.commit call(s); state={state}; preflight pinned digest={preflight_digest[:22]}...",
-            evidence_refs=["mocked IPC command log"],
+            evidence_refs=["real backend IPC command log"],
             carried_state={"case_id": case_id, "state": state, "stages_count": len(stages)},
         )
 
@@ -307,7 +314,7 @@ class SettlementOracles:
             completion_condition_evaluated=condition,
             authoritative_record_inspected=f"approval.decide(id={approval_id})",
             rationale=f"Approval {approval_id} decided with verdict={verdict!r} by actor={actor!r}, observed live on the IPC transcript.",
-            evidence_refs=["mocked IPC command log"],
+            evidence_refs=["real backend IPC command log"],
             carried_state={"approval_id": approval_id, "verdict": verdict},
         )
 
@@ -407,7 +414,7 @@ class SettlementOracles:
             return SettlementOracleResult(
                 journey_id="CJ08", oracle_name=oracle_name, status="REJECTED",
                 completion_condition_evaluated=condition,
-                authoritative_record_inspected="mocked IPC query/command transcript",
+                authoritative_record_inspected="real backend IPC query/command transcript",
                 rationale="No events were actually observed via the operations monitor — cannot claim authoritative operational standing was seen.",
             )
 
@@ -415,7 +422,7 @@ class SettlementOracles:
             return SettlementOracleResult(
                 journey_id="CJ08", oracle_name=oracle_name, status="REJECTED",
                 completion_condition_evaluated=condition,
-                authoritative_record_inspected="mocked IPC command transcript",
+                authoritative_record_inspected="real backend IPC command transcript",
                 rationale="No recovery scenario (stale precondition re-preflight/re-commit) was actually exercised.",
             )
 
@@ -423,9 +430,9 @@ class SettlementOracles:
         return SettlementOracleResult(
             journey_id="CJ08", oracle_name=oracle_name, status=status,
             completion_condition_evaluated=condition,
-            authoritative_record_inspected="mocked IPC query/command transcript",
+            authoritative_record_inspected="real backend IPC query/command transcript",
             rationale=f"Observed {observed_event_count} real IPC call(s); stale-precondition recovery attempted, succeeded={recovery_succeeded}.",
-            evidence_refs=["mocked IPC command/query transcript"],
+            evidence_refs=["real backend IPC command/query transcript"],
             carried_state={"observed_event_count": observed_event_count, "recovery_succeeded": recovery_succeeded},
         )
 

@@ -7,8 +7,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/CURRENT_STATUS.md",
 			"addedAt": "2026-07-26T16:06:06.779Z",
 			"updatedAt": "2026-07-27T00:24:01.393Z",
-			"commitHash": null,
-			"branch": "frontend"
+			"commitHash": null
 		},
 		"OBSERVED_DEBT": {
 			"slug": "OBSERVED_DEBT",
@@ -16,8 +15,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/OBSERVED_DEBT.md",
 			"addedAt": "2026-07-26T16:06:06.779Z",
 			"updatedAt": "2026-07-27T00:22:43.521Z",
-			"commitHash": null,
-			"branch": "frontend"
+			"commitHash": null
 		},
 		"WORKBENCH-SLICE-PROMPT": {
 			"slug": "WORKBENCH-SLICE-PROMPT",
@@ -25,8 +23,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/WORKBENCH-SLICE-PROMPT.md",
 			"addedAt": "2026-07-27T03:40:03.414Z",
 			"updatedAt": "2026-07-27T03:40:03.414Z",
-			"commitHash": null,
-			"branch": "frontend"
+			"commitHash": null
 		},
 		"CELL_CONTRACT": {
 			"slug": "CELL_CONTRACT",
@@ -34,8 +31,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/CELL_CONTRACT.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T01:40:54.303Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"SF-002": {
 			"slug": "SF-002",
@@ -43,8 +39,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-002.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T01:40:54.303Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"SF-003": {
 			"slug": "SF-003",
@@ -52,8 +47,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-003.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T01:40:54.303Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"SF-007": {
 			"slug": "SF-007",
@@ -61,8 +55,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-007.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T01:40:54.303Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"SF-004": {
 			"slug": "SF-004",
@@ -70,8 +63,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-004.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T01:40:54.303Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"REMAINING_BLOCKERS": {
 			"slug": "REMAINING_BLOCKERS",
@@ -79,8 +71,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/REMAINING_BLOCKERS.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T12:51:49.381Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"FINAL_ARCHITECTURE_STATE": {
 			"slug": "FINAL_ARCHITECTURE_STATE",
@@ -88,8 +79,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/FINAL_ARCHITECTURE_STATE.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T01:40:54.303Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"OPERATIONS_AND_STARTUP": {
 			"slug": "OPERATIONS_AND_STARTUP",
@@ -97,8 +87,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/OPERATIONS_AND_STARTUP.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T12:51:49.381Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"USER_JOURNEY_EVIDENCE": {
 			"slug": "USER_JOURNEY_EVIDENCE",
@@ -106,8 +95,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/USER_JOURNEY_EVIDENCE.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T12:51:49.381Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"FINAL_VERIFICATION_RESULTS": {
 			"slug": "FINAL_VERIFICATION_RESULTS",
@@ -115,8 +103,7 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/FINAL_VERIFICATION_RESULTS.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T12:51:49.381Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
 		},
 		"DECISION_REGISTER": {
 			"slug": "DECISION_REGISTER",
@@ -124,8 +111,50 @@
 			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/DECISION_REGISTER.md",
 			"addedAt": "2026-07-31T01:40:54.303Z",
 			"updatedAt": "2026-07-31T12:51:49.381Z",
-			"commitHash": null,
-			"branch": "ultracode/sea-forge-completion"
+			"commitHash": null
+		},
+		"bootstrap-config-audit": {
+			"slug": "bootstrap-config-audit",
+			"title": "Bootstrap / Configuration Audit — SEA-rs",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/bootstrap-config-audit.md",
+			"addedAt": "2026-08-31T23:38:31.601Z",
+			"updatedAt": "2026-08-31T23:38:31.601Z",
+			"commitHash": null
+		}
+	},
+	"skills": {
+		"claude:doctor": {
+			"source": "claude",
+			"skill": "doctor",
+			"entryPaths": [
+				"command"
+			],
+			"invocations": [
+				{
+					"at": "2026-09-02T02:19:51.818Z",
+					"bodyChars": 44667,
+					"ok": true
+				}
+			],
+			"invocationCount": 1,
+			"firstUsedAt": "2026-09-02T02:19:51.818Z",
+			"lastUsedAt": "2026-09-02T02:19:51.818Z",
+			"usage": {
+				"input": 44,
+				"cached": 85149,
+				"output": 31936,
+				"confidence": "attributed"
+			},
+			"usageBySession": {
+				"claude:f50457cf-9063-4002-964d-1ec65d5896d5": {
+					"input": 44,
+					"cached": 85149,
+					"output": 31936,
+					"confidence": "attributed"
+				}
+			},
+			"sourcePath": "/home/sprime01/projects/sea-rs/.jolli/jollimemory/skills/claude/doctor-72f4be89.md",
+			"commitHash": null
 		}
 	}
 }

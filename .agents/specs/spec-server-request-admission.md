@@ -1,6 +1,6 @@
 # Server request admission and timeout containment specification
 
-Status: proposed draft v0.1 — pending explicit owner approval before implementation — 2026-08-31
+Status: approved v0.1 — owner-approved for implementation — 2026-08-31
 Scope: proposed `sea-forge-server` Unix-socket request admission and timeout behavior.
 Normative language: RFC 2119.
 

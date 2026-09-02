@@ -235,6 +235,7 @@ async fn an_unrecognized_decision_is_refused_rather_than_defaulted() {
             "case_id": "case-1",
             "approval_id": "ap-1",
             "decision": "maybe",
+            "request_id": "req-invalid-decision",
         }))
         .await;
     assert_eq!(

@@ -336,7 +336,7 @@ async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
                      "actor": {"actor_id": "operator_a", "role": "operator"},
                      // F-16: plan/policy references are cell-relative spellings.
                      "plan": "plan.json", "policy": "escalate.yaml",
-                     "entity": "operator_a", "process": "test", "timeout": 60}))
+                     "entity": "operator_a", "process": "test", "timeout": 60, "request_id": "req-identity-submit-1"}))
         .await;
     let case_id = submitted["case_id"]
         .as_str()
@@ -352,7 +352,8 @@ async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
     let decide = |actor_id: &str| {
         json!({"verb": "approval_decide",
                "actor": {"actor_id": actor_id, "role": "operator"},
-               "case_id": case_id, "approval_id": approval_id, "decision": "approve"})
+               "case_id": case_id, "approval_id": approval_id, "decision": "approve",
+               "request_id": format!("req-identity-decide-{actor_id}")})
     };
 
     let by_submitter = client.call(decide("operator_a")).await;
@@ -459,7 +460,7 @@ async fn an_escalated_approval_is_bound_to_committed_criteria() {
                      "actor": {"actor_id": "operator_a", "role": "operator"},
                      // F-16: plan/policy references are cell-relative spellings.
                      "plan": "plan.json", "policy": "escalate.yaml",
-                     "entity": "operator_a", "process": "test", "timeout": 60}))
+                     "entity": "operator_a", "process": "test", "timeout": 60, "request_id": "req-identity-submit-2"}))
         .await;
     let case_id = submitted["case_id"].as_str().expect("a case").to_owned();
 
@@ -516,7 +517,7 @@ async fn reconnecting_does_not_launder_a_self_approval() {
                      "actor": {"actor_id": "operator_a", "role": "operator"},
                      // F-16: plan/policy references are cell-relative spellings.
                      "plan": "plan.json", "policy": "escalate.yaml",
-                     "entity": "operator_a", "process": "test", "timeout": 60}))
+                     "entity": "operator_a", "process": "test", "timeout": 60, "request_id": "req-identity-submit-3"}))
         .await;
     let case_id = submitted["case_id"].as_str().unwrap().to_owned();
     let inbox = first.call(json!({"verb": "approval_list"})).await;
@@ -527,7 +528,8 @@ async fn reconnecting_does_not_launder_a_self_approval() {
     let response = second
         .call(json!({"verb": "approval_decide",
                      "actor": {"actor_id": "operator_a", "role": "operator"},
-                     "case_id": case_id, "approval_id": approval_id, "decision": "approve"}))
+                     "case_id": case_id, "approval_id": approval_id, "decision": "approve",
+                     "request_id": "req-identity-reconnect-decide"}))
         .await;
 
     assert_eq!(

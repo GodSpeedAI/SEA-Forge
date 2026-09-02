@@ -2,68 +2,85 @@ schema: agent.current_status
 schema_version: "1.0"
 
 metadata:
-  plan_id: bootstrap-config-remediation
+  plan_id: server-request-admission
   plan_version: "1.0.0"
-  spec_id: Shell-SPEC
-  spec_version: "current"
+  spec_id: server-request-admission
+  spec_version: "v0.1"
   initialized: true
   last_updated: "2026-08-31"
-  updated_by: "prime-agent (bootstrap remediation, pending independent confirmation)"
+  updated_by: "prime-agent"
 
 execution:
   last_settled_task: null
-  in_flight_task: bootstrap-config-remediation
+  in_flight_task: server-request-admission
   ready_tasks: []
   blocked_tasks:
-    bootstrap-config-remediation: [independent-confirmation, draft-ipc-ui-product-decision, request-admission-spec-needs-plan]
+    server-request-admission: [full-suite-restart-test]
   plan_blocked: false
   plan_blocker: null
 
 active:
-  task: bootstrap-config-remediation
+  task: server-request-admission
   blocker: >-
-    Implementation and builder verification are complete, but no independent reviewer has
-    confirmed the final diff. The compiler-debris deletion and gauntlet bootstrap-source decisions are applied. Draft IPC remains
-    a retained local capability pending a scoped UI product story. The request-admission spec is a
-    new draft and needs a separately approved implementation plan; final diff confirmation is pending.
+    Independent review confirmed the final admission implementation. The broad
+    server suite reaches an unrelated restart test whose second server cannot
+    acquire the still-owned cell lock.
 
 latest_evidence:
-  bootstrap-config-remediation:
-    report: ".agents/evidence/bootstrap-config-remediation/verification.md"
-    confirmation: "PENDING — builder_with_teeth (focused tests, redacted secrets check, contracts and frontend checks); NOT SETTLED"
-    commit: null
+  server-request-admission:
+    commands:
+      - "just crate-check sea-forge-server"
+      - "just crate-test sea-forge-server request_admission_refuses_overflow_and_cancels_waiters_without_effects"
+      - "just crate-test sea-forge-server durable_mutation_without_request_id_fails_closed_before_admission"
+      - "just crate-test sea-forge-server restart_settles_a_pending_record_as_interrupted_without_reexecuting_it"
+    result: >-
+      All listed commands passed. The full `just crate-test sea-forge-server`
+      reached `both_layouts_still_resolve_after_a_restart`, which fails because
+      its first server still owns the cell lock when it starts the second server.
 
 observations:
   - status: OBSERVED
-    statement: "The SOPS development profile decrypts with the regenerated local identity without exposing its value."
-    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
+    statement: >-
+      Protected request work is bounded by max_concurrent_runs active permits
+      and an eight-request waiting room; overflow returns server_busy before a
+      correlation record or governed effect.
+    evidence: "crates/sea-forge-server/tests/conformance_sfwp.rs"
   - status: OBSERVED
-    statement: "Server argument rejection and nine transport hardening tests pass."
-    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
+    statement: >-
+      A pre-admission request deadline aborts its queued task with no correlation,
+      run, or provider-network effect.
+    evidence: "request_admission_refuses_overflow_and_cancels_waiters_without_effects"
   - status: OBSERVED
-    statement: "The sidecar is staged from current hardened source; Bun 1.4.0 passes contracts/frontend checks; and the pinned Devbox doctor passes after LF normalization."
-    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
-  - status: UNKNOWN
-    statement: "A full authorization-backed live delegation is not proven: endpoint configuration does not supply identity, policy, templates, or an approved service."
-    evidence: ".agents/evidence/bootstrap-config-remediation/verification.md"
+    statement: >-
+      Durable mutations without a non-empty request_id fail closed before admission.
+    evidence: "durable_mutation_without_request_id_fails_closed_before_admission"
 
 next_action:
-  task: bootstrap-config-remediation
+  task: server-request-admission
   action: >-
-    Obtain independent final review. Before any live delegation, configure identity, policy,
-    templates, and an approved endpoint; then execute a governed probe. Ask the owner before
-    deleting tracked root artifacts or changing the draft IPC product surface.
-  reason: >-
-    The protected runtime remains correctly fail-closed without these operator decisions; the
-    current builder evidence is not independent settlement.
+    Resolve or separately triage the existing conformance_run_locator restart-test
+    lock failure before claiming the broad server suite green.
+  reason: "Independent review is complete; normal server conformance remains blocked by the restart-test lock failure."
 
 handoff:
-  settled_summary:
-    - "Bootstrap remediation implemented with focused security teeth; final independent confirmation remains required."
-  unresolved_summary:
-    - "Bounded admission before detached request work remains a deeper server architecture hardening item."
-    - "The request-admission specification is draft-only and needs a plan before implementation.
-    - The retained draft IPC needs a scoped UI product story before renderer callers are added."
+  changed_files:
+    - ".agents/specs/spec-server-request-admission.md"
+    - "crates/sea-forge-server/src/lib.rs"
+    - "crates/sea-forge-server/src/sfwp/correlation.rs"
+    - "crates/sea-forge-server/tests/conformance_sfwp.rs"
+    - "crates/sea-forge-server/tests/conformance_approvals.rs"
+    - "crates/sea-forge-server/tests/conformance_case_authoring.rs"
+    - "crates/sea-forge-server/tests/conformance_case_views.rs"
+    - "crates/sea-forge-server/tests/conformance_delegations.rs"
+    - "crates/sea-forge-server/tests/conformance_identity.rs"
+    - "crates/sea-forge-server/tests/conformance_lifecycle.rs"
+  decisions:
+    - >-
+      Chose the spec's fail-closed durable-locator option: Submit, approval,
+      delegation, and case-commit mutations require a caller request_id.
+    - >-
+      Chose a finite queue: active capacity equals max_concurrent_runs and eight
+      additional protected requests may wait for the ten-second deadline.
   warnings:
-    - "Do not commit plaintext secrets or the ignored .sea-forge runtime cell."
-    - "Do not treat the request-admission specification as implemented; its required teeth remain future work."
+    - "Independent final review: CONFIRM. Do not treat the broad server suite as green until the restart-test lock failure is resolved or triaged."
+    - "Do not touch unrelated modified report and Jolli files in this worktree."

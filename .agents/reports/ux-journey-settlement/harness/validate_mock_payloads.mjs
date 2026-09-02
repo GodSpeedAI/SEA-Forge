@@ -1,3 +1,9 @@
+// SUPERSEDED — no longer invoked by gauntlet_runner.py. The gauntlet now
+// tests against a real sea-forge-server process (see real_sfwp_bridge.mjs
+// and the README), so there is no mock left to validate against the
+// contracts. Kept only as a reference. `GauntletEngine._verify_real_backend_reachable()`
+// (gauntlet_runner.py) is the real-backend equivalent preflight check.
+//
 // Validates every response the SFWP IPC mock (sfwp-full-mock.js) actually
 // returns against the real generated AJV schemas at
 // workbench/packages/contracts/schema/*.schema.json.

@@ -407,6 +407,7 @@ async fn a_hung_endpoint_is_bounded_and_the_server_keeps_serving() {
             "policy": "policy.yaml",
             "entity": "operator_local",
             "process": "test",
+            "request_id": "req-hung-agent-probe",
         }),
         // Generous: the assertion below is what pins the actual bound.
         Duration::from_secs(60),
@@ -457,7 +458,7 @@ async fn an_invalid_reload_publishes_an_operator_visible_event() {
 
     let _ = round_trip(
         &socket,
-        json!({"verb": "submit", "actor": {"actor_id": "operator_local", "role": "operator"}, "intent": "anything", "policy": "policy.yaml"}),
+        json!({"verb": "submit", "actor": {"actor_id": "operator_local", "role": "operator"}, "intent": "anything", "policy": "policy.yaml", "request_id": "req-invalid-reload"}),
         Duration::from_secs(30),
     )
     .await;

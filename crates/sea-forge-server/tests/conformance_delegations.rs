@@ -399,7 +399,7 @@ async fn cancelling_a_delegation_that_is_not_active_is_refused() {
     assert_eq!(row(&body, "run-done")["cancellable"], false);
 
     let refused = client
-        .call(json!({"verb": "cancel_delegation", "actor": {"actor_id": "operator_local", "role": "operator"}, "run_id": "run-done"}))
+        .call(json!({"verb": "cancel_delegation", "actor": {"actor_id": "operator_local", "role": "operator"}, "run_id": "run-done", "request_id": "req-cancel-inactive"}))
         .await;
     assert_eq!(refused["error"], "delegation run not active", "{refused}");
 }

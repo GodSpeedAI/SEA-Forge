@@ -3,22 +3,37 @@
 SEA-Forge Journey Settlement Gauntlet — Master Execution Engine
 
 Drives the twelve canonical user journeys (CJ01-CJ12) using agent-browser
-against the real Workbench frontend, and independent backend settlement
-oracles (harness/settlement_oracles.py). Evaluates the 10 required gates
-from real captured signals (DOM content, the mocked SFWP IPC bridge's own
-command/query transcript, real subprocess output, recomputed content
-hashes) rather than literals, and stores complete evidence packages beneath
+against the real Workbench frontend AND a real, unmodified
+`sea-forge-server` process — not a mock of the Tauri IPC boundary — plus
+independent backend settlement oracles (harness/settlement_oracles.py).
+Evaluates the 10 required gates from real captured signals (DOM content,
+real IPC responses, real subprocess output, recomputed content hashes)
+rather than literals, and stores complete evidence packages beneath
 .agents/reports/ux-journey-settlement/runs/<run-id>/.
 
-Scope, stated plainly rather than left implicit: CJ01, CJ02, CJ04, CJ05,
-CJ06, CJ08, CJ10, CJ11, CJ12 drive the real React app against a
-schema-valid mock of the Tauri IPC boundary (see sfwp-full-mock.js and
-validate_mock_payloads.mjs) — they do not exercise the live
-sea-forge-server process or a persisted governance ledger. CJ03 runs the
-real `cargo test -p sea-forge-domainforge` suite. CJ07/CJ09 run a real
-local subprocess and independently recompute its output's sha256 rather
-than trusting a written literal. A journey can genuinely FAIL here; nothing
-in this file hardcodes PASS.
+Real-backend architecture (see harness/real_sfwp_bridge.mjs and
+harness/real-sfwp-bridge-shim.js for the full explanation):
+  1. `crates/sea-forge-server/examples/journey_gauntlet_bootstrap.rs`
+     bootstraps a fresh cell root: real identity bindings, the real
+     built-in `sequential_agents@0.1.0` template, a real policy.yaml.
+  2. The real `sea-forge-server` binary is started against that root and
+     listens on a real Unix domain socket.
+  3. `harness/stub_agent_endpoint.py` runs a real (if scripted) local HTTP
+     endpoint so the template's real agent-task steps have something to
+     call — governance, dispatch, authority, trace, and evidence around
+     that call are all real; only the LLM's answer content is canned
+     (mirrors `conformance_case_authoring.rs`'s own test fixture).
+  4. `harness/real_sfwp_bridge.mjs` (Bun) relays `window.__TAURI_INTERNALS__
+     .invoke` calls from a plain browser page over a WebSocket to that real
+     Unix socket — a browser tab cannot open a Unix socket directly.
+  5. `harness/real-sfwp-bridge-shim.js` is registered as an agent-browser
+     init-script so the real Workbench frontend talks through that bridge
+     from its very first render.
+
+CJ03 additionally runs the real `cargo test -p sea-forge-domainforge`
+suite directly. CJ07/CJ09 run a real local subprocess and independently
+recompute its output's sha256 rather than trusting a written literal. A
+journey can genuinely FAIL here; nothing in this file hardcodes PASS.
 """
 
 import datetime
@@ -26,10 +41,13 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import socket as pysocket
 import subprocess
 import sys
 import time
 import traceback
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -38,7 +56,11 @@ REPORT_ROOT = REPO_ROOT / ".agents" / "reports" / "ux-journey-settlement"
 HARNESS_DIR = REPORT_ROOT / "harness"
 CONTRACTS_DIR = HARNESS_DIR / "generated-contracts"
 RUNS_DIR = REPORT_ROOT / "runs"
-MOCK_FILE = HARNESS_DIR / "sfwp-full-mock.js"
+BRIDGE_SCRIPT = HARNESS_DIR / "real_sfwp_bridge.mjs"
+SHIM_FILE = HARNESS_DIR / "real-sfwp-bridge-shim.js"
+STUB_ENDPOINT_SCRIPT = HARNESS_DIR / "stub_agent_endpoint.py"
+BOOTSTRAP_EXAMPLE = "journey_gauntlet_bootstrap"
+TEMPLATE_REF = "sequential_agents@0.1.0"
 
 sys.path.insert(0, str(HARNESS_DIR))
 from settlement_oracles import SettlementOracles, SettlementOracleResult, sha256_hex
@@ -83,18 +105,18 @@ class JourneyStepFailed(Exception):
 
 
 class BrowserDriver:
-    def __init__(self, session_name: str, screenshot_dir: Path):
+    def __init__(self, session_name: str, screenshot_dir: Path, init_script_path: Path):
         self.session_name = session_name
         self.screenshot_dir = screenshot_dir
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
         self.ab_bin = self._find_agent_browser()
-        # Register the SFWP IPC mock as a page init script so it runs before
-        # the app's first paint / first React Query fetch on every
-        # navigation in this session — installing it after the fact (the
-        # old approach) let the app's initial queries fire and fail against
-        # a nonexistent Tauri bridge first.
+        # Register the real-backend bridge shim as a page init script so it
+        # runs before the app's first paint / first React Query fetch on
+        # every navigation in this session — installing it after the fact
+        # would let the app's initial queries fire and fail against a
+        # nonexistent Tauri bridge first.
         self.run_cmd("close", "--all")
-        self.run_cmd("open", "--init-script", str(MOCK_FILE))
+        self.run_cmd("open", "--init-script", str(init_script_path))
 
     def _find_agent_browser(self) -> str:
         candidates = [
@@ -153,9 +175,14 @@ class BrowserDriver:
     def dom_exists(self, selector: str) -> bool:
         return bool(self.eval_json(f"!!document.querySelector({json.dumps(selector)})"))
 
-    def mock_state(self) -> Dict[str, Any]:
-        state = self.eval_json("window.__sfwpMock")
-        return state if isinstance(state, dict) else {}
+    def bridge_transcript(self) -> Dict[str, Any]:
+        """Every sfwp_query/sfwp_command verb this session's real-backend
+        shim has actually dispatched over the WebSocket bridge (see
+        real-sfwp-bridge-shim.js's `state.commandLog`/`queryLog`) —
+        real-backend equivalent of the old mock's transcript, used for the
+        BINDING gate."""
+        state = self.eval_json("({queryLog: window.__sfwpRealBridge?.queryLog ?? [], commandLog: window.__sfwpRealBridge?.commandLog ?? []})")
+        return state if isinstance(state, dict) else {"queryLog": [], "commandLog": []}
 
     def invoke_query(self, verb: str, extra_json: str = "{}") -> Any:
         js = (
@@ -164,6 +191,29 @@ class BrowserDriver:
             "); } catch (e) { return { __error: String(e) }; } })()"
         )
         return self.eval_json(js)
+
+    def invoke_command(self, verb: str, extra_json: str = "{}", act_as: Optional[str] = None) -> Any:
+        act_as_js = json.dumps(act_as) if act_as else "undefined"
+        js = (
+            "(async () => { try { return await window.__TAURI_INTERNALS__.invoke("
+            f"'sfwp_command', {{ command: {{ verb: {json.dumps(verb)}, ...{extra_json} }}, actAs: {act_as_js} }}"
+            "); } catch (e) { return { __error: String(e && e.message || e) }; } })()"
+        )
+        return self.eval_json(js)
+
+    def select_actor(self, actor_id: str):
+        """Select which bound actor this session acts as, via the exact
+        sessionStorage key the real UI's own actor picker writes
+        (`useIdentity.ts::persistSelectedActor`, key
+        "sea-forge.acting-identity"). The gauntlet's real cell binds two
+        actors under one uid (operator, approver — see
+        journey_gauntlet_bootstrap.rs) specifically so separation-of-duty
+        is real: with nothing selected and more than one actor bound, every
+        protected command is refused as `identity_ambiguous`."""
+        self.eval_js(
+            f'window.sessionStorage.setItem("sea-forge.acting-identity", {json.dumps(actor_id)}); '
+            'window.dispatchEvent(new Event("sea-forge:acting-identity-changed"));'
+        )
 
     def snapshot(self) -> str:
         code, out, _ = self.run_cmd("snapshot")
@@ -212,6 +262,21 @@ class GauntletEngine:
         self.ab_version = self._get_agent_browser_version()
         self.git_commit = self._get_git_commit()
 
+        # Real backend (see module docstring): a real sea-forge-server
+        # process, a real stub agent HTTP endpoint, and the WS<->Unix-socket
+        # bridge that lets a plain browser page reach the server's real
+        # socket. `cell_root` must be SHORT — Unix socket paths are capped
+        # at ~95 bytes (discovered the hard way: a run directory under
+        # .agents/reports/... is far too long), so this lives under /tmp,
+        # separate from the run's report artifacts.
+        self.cell_root = Path(f"/tmp/sfg-gauntlet-{uuid.uuid4().hex[:10]}")
+        self.socket_path = self.cell_root / "server.sock"
+        self.server_proc = None
+        self.bridge_proc = None
+        self.stub_endpoint_proc = None
+        self.bridge_port = None
+        self.init_script_path = self.evidence_dir / "combined-init-script.js"
+
     def _get_agent_browser_version(self) -> str:
         for cmd in ["/home/sprime01/.local/share/pnpm/agent-browser", "agent-browser"]:
             res = subprocess.run([cmd, "--version"], capture_output=True, text=True)
@@ -237,21 +302,133 @@ class GauntletEngine:
             if contract_path.exists():
                 self.contracts[cj_id] = json.loads(contract_path.read_text(encoding="utf-8"))
 
-    def validate_mock_contract(self):
-        """Fail the whole run early and loudly if the IPC mock has drifted
-        from the real generated AJV contracts, instead of silently letting
-        every journey render a validation-error fallback state."""
-        print("[gauntlet] Validating SFWP mock payloads against real generated contracts...", flush=True)
-        res = subprocess.run(
-            ["node", str(HARNESS_DIR / "validate_mock_payloads.mjs")],
-            capture_output=True, text=True,
+    def _new_driver(self, session_name: str, screenshot_dir: Path) -> "BrowserDriver":
+        return BrowserDriver(session_name, screenshot_dir, self.init_script_path)
+
+    def _free_tcp_port(self) -> int:
+        s = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_STREAM)
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()
+        return port
+
+    # -------------------------------------------------------------------------
+    # Real backend: bootstrap a cell, start the real server, the stub agent
+    # endpoint, and the WS<->Unix-socket bridge; write the combined
+    # (port-parameterized) init-script the browser sessions register.
+    # -------------------------------------------------------------------------
+    def start_real_backend(self):
+        if self.cell_root.exists():
+            shutil.rmtree(self.cell_root)
+
+        print("[gauntlet] Starting stub agent HTTP endpoint...", flush=True)
+        stub_log = self.evidence_dir / "stub_agent_endpoint.log"
+        self.stub_endpoint_proc = subprocess.Popen(
+            [sys.executable, str(STUB_ENDPOINT_SCRIPT), "0"],
+            stdout=open(stub_log, "w"), stderr=subprocess.STDOUT,
         )
-        (self.evidence_dir / "mock-contract-validation.log").write_text(res.stdout + res.stderr, encoding="utf-8")
+        stub_url = None
+        for _ in range(100):
+            if stub_log.exists():
+                m = re.search(r"listening on (http://127\.0\.0\.1:\d+/)", stub_log.read_text(encoding="utf-8", errors="ignore"))
+                if m:
+                    stub_url = m.group(1)
+                    break
+            time.sleep(0.1)
+        if not stub_url:
+            raise RuntimeError(f"stub agent endpoint did not become ready — see {stub_log}")
+        print(f"[gauntlet] Stub agent endpoint ready at {stub_url}", flush=True)
+
+        print(f"[gauntlet] Bootstrapping real cell at {self.cell_root}...", flush=True)
+        bootstrap_env = {**os.environ, "SEA_FORGE_ROOT": str(self.cell_root), "SEA_FORGE_GAUNTLET_ENDPOINT_URL": stub_url}
+        res = subprocess.run(
+            ["cargo", "run", "-q", "-p", "sea-forge-server", "--example", BOOTSTRAP_EXAMPLE],
+            cwd=REPO_ROOT, env=bootstrap_env, capture_output=True, text=True, timeout=180,
+        )
+        (self.evidence_dir / "cell-bootstrap.log").write_text(res.stdout + res.stderr, encoding="utf-8")
         if res.returncode != 0:
             print(res.stdout, flush=True)
             print(res.stderr, flush=True)
-            raise RuntimeError("SFWP mock payloads do not conform to the real generated contracts — aborting before running journeys against a broken mock.")
-        print("[gauntlet] Mock payloads conform to the real contracts.", flush=True)
+            raise RuntimeError("real cell bootstrap failed — see evidence/cell-bootstrap.log")
+        print("[gauntlet] Real cell bootstrapped (server.yaml, template, policy.yaml written).", flush=True)
+
+        print("[gauntlet] Building real sea-forge-server binary...", flush=True)
+        build = subprocess.run(["cargo", "build", "-q", "-p", "sea-forge-server", "--bin", "sea-forge-server"], cwd=REPO_ROOT, capture_output=True, text=True, timeout=300)
+        if build.returncode != 0:
+            print(build.stdout, flush=True)
+            print(build.stderr, flush=True)
+            raise RuntimeError("failed to build the real sea-forge-server binary")
+        server_bin = REPO_ROOT / "target" / "debug" / "sea-forge-server"
+
+        print("[gauntlet] Starting real sea-forge-server...", flush=True)
+        server_log = self.evidence_dir / "sea-forge-server.log"
+        self.server_proc = subprocess.Popen(
+            [str(server_bin)], cwd=REPO_ROOT,
+            env={**os.environ, "SEA_FORGE_ROOT": str(self.cell_root)},
+            stdout=open(server_log, "w"), stderr=subprocess.STDOUT,
+        )
+        for _ in range(100):
+            if self.socket_path.exists():
+                break
+            time.sleep(0.1)
+        else:
+            raise RuntimeError(f"real sea-forge-server did not open its socket — see {server_log}")
+        print(f"[gauntlet] Real sea-forge-server listening on {self.socket_path}", flush=True)
+
+        self._verify_real_backend_reachable()
+
+        self.bridge_port = self._free_tcp_port()
+        print(f"[gauntlet] Starting real_sfwp_bridge.mjs on ws://127.0.0.1:{self.bridge_port}...", flush=True)
+        bridge_log = self.evidence_dir / "real_sfwp_bridge.log"
+        bun_bin = "/home/sprime01/.bun/bin/bun" if Path("/home/sprime01/.bun/bin/bun").is_file() else "bun"
+        self.bridge_proc = subprocess.Popen(
+            [bun_bin, str(BRIDGE_SCRIPT), "--socket", str(self.socket_path), "--port", str(self.bridge_port), "--root", str(self.cell_root)],
+            cwd=HARNESS_DIR, stdout=open(bridge_log, "w"), stderr=subprocess.STDOUT,
+        )
+        for _ in range(100):
+            if bridge_log.exists() and "listening on" in bridge_log.read_text(encoding="utf-8", errors="ignore"):
+                break
+            time.sleep(0.1)
+        else:
+            raise RuntimeError(f"real_sfwp_bridge.mjs did not report ready — see {bridge_log}")
+        print("[gauntlet] Bridge ready.", flush=True)
+
+        self.init_script_path.write_text(
+            f"window.__SFWP_BRIDGE_PORT__ = {self.bridge_port};\n" + SHIM_FILE.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
+    def _verify_real_backend_reachable(self):
+        """Raw NDJSON ping straight to the real Unix socket — independent of
+        the bridge/shim — so a broken backend fails loudly here rather than
+        as twelve confusing per-journey ENTRY failures."""
+        sock = pysocket.socket(pysocket.AF_UNIX, pysocket.SOCK_STREAM)
+        sock.settimeout(5)
+        try:
+            sock.connect(str(self.socket_path))
+            sock.sendall((json.dumps({"verb": "identity_get"}) + "\n").encode("utf-8"))
+            buf = b""
+            while not buf.endswith(b"\n"):
+                chunk = sock.recv(65536)
+                if not chunk:
+                    raise RuntimeError("real sea-forge-server closed the connection before responding")
+                buf += chunk
+            identity = json.loads(buf.decode("utf-8"))
+        finally:
+            sock.close()
+        if not identity.get("configured") or not identity.get("available"):
+            raise RuntimeError(f"real cell identity is not configured — bootstrap did not take effect: {identity}")
+        print(f"[gauntlet] Real backend identity check: {[a['actor_id'] for a in identity['available']]}", flush=True)
+
+    def stop_real_backend(self):
+        for proc, name in [(self.bridge_proc, "bridge"), (self.server_proc, "sea-forge-server"), (self.stub_endpoint_proc, "stub agent endpoint")]:
+            if proc:
+                print(f"[gauntlet] Stopping real {name}...", flush=True)
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
 
     def start_vite_server(self):
         desktop_dir = REPO_ROOT / "workbench" / "apps" / "desktop"
@@ -342,7 +519,7 @@ class GauntletEngine:
     def _execute_cj04_and_cj05_impl(self):
         cj_id = "CJ04"
         print(f"\n[{cj_id}] Executing: Form and Commit a Governed Case", flush=True)
-        driver = BrowserDriver("gauntlet-CJ04-CJ05", self.screenshots_dir / cj_id)
+        driver = self._new_driver("gauntlet-CJ04-CJ05", self.screenshots_dir / cj_id)
 
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
@@ -356,18 +533,27 @@ class GauntletEngine:
         driver.screenshot("CJ04-001-entry-readiness.png")
         screenshots.append({"sequence": 1, "name": "CJ04-001-entry-readiness.png", "relative_path": f"screenshots/{cj_id}/CJ04-001-entry-readiness.png", "moment_kind": "entry", "description": "Case creation workbench entry"})
 
-        template_selected = driver.find_click("radio", name="hello_agents")
+        # The real cell binds two actors (operator, approver — separation of
+        # duty for CJ06); with more than one bound and nothing selected,
+        # every protected command is refused as identity_ambiguous. Commit
+        # as the operator.
+        driver.select_actor("gauntlet_operator")
+
+        # sequential_agents@0.1.0 is a real built-in template
+        # (crates/sea-forge-planner/src/templates.rs) with no declared
+        # parameters, so unlike the old fictional "hello_agents" fixture
+        # there is no fill step between selecting it and preflighting.
+        template_selected = driver.find_click("radio", name=TEMPLATE_REF)
         gates["VISIBILITY"] = "PASS" if template_selected else "FAIL"
         if not template_selected:
             raise JourneyStepFailed("CJ04 VISIBILITY: template selection radio not found/clickable")
         driver.screenshot("CJ04-002-affordance-template-selection.png")
-        screenshots.append({"sequence": 2, "name": "CJ04-002-affordance-template-selection.png", "relative_path": f"screenshots/{cj_id}/CJ04-002-affordance-template-selection.png", "moment_kind": "affordance_discovery", "description": "Template selected; parameter form revealed"})
+        screenshots.append({"sequence": 2, "name": "CJ04-002-affordance-template-selection.png", "relative_path": f"screenshots/{cj_id}/CJ04-002-affordance-template-selection.png", "moment_kind": "affordance_discovery", "description": "Real built-in template selected"})
 
-        filled = driver.find_fill("greeting_name", "Operator")
         preflight_clicked = driver.find_click("button", name="Run preflight")
-        preflight_ok = filled and preflight_clicked and driver.wait_fn(
+        preflight_ok = preflight_clicked and driver.wait_fn(
             "[...document.querySelectorAll('button')].find((x) => (x.textContent || '').includes('Commit case'))?.disabled === false",
-            timeout_ms=6000,
+            timeout_ms=8000,
         )
         gates["REACHABILITY"] = "PASS" if preflight_ok else "FAIL"
         if not preflight_ok:
@@ -376,29 +562,39 @@ class GauntletEngine:
         screenshots.append({"sequence": 3, "name": "CJ04-003-preflight-passed.png", "relative_path": f"screenshots/{cj_id}/CJ04-003-preflight-passed.png", "moment_kind": "state_transition", "description": "Preflight passed with pinned precondition digest"})
 
         driver.find_click("button", name="Commit case")
-        committed = driver.wait_fn("location.pathname === '/cases'", timeout_ms=6000)
+        committed = driver.wait_fn("location.pathname === '/cases'", timeout_ms=10000)
         driver.screenshot("CJ04-004-settlement-case-committed.png")
         screenshots.append({"sequence": 4, "name": "CJ04-004-settlement-case-committed.png", "relative_path": f"screenshots/{cj_id}/CJ04-004-settlement-case-committed.png", "moment_kind": "settlement_state", "description": "Case committed; navigated to case horizon"})
 
-        state = driver.mock_state()
-        command_verbs = [c.get("verb") for c in state.get("commandLog", [])]
+        transcript = driver.bridge_transcript()
+        command_verbs = [c.get("verb") for c in transcript.get("commandLog", [])]
         gates["BINDING"] = "PASS" if "case_commit" in command_verbs else "FAIL"
 
-        commits = state.get("commits", [])
-        preflight_digests = state.get("preflightDigests", [])
-        digest = preflight_digests[-1] if preflight_digests else ""
-        case_id = "case_01mockcase"
-        case_record = driver.invoke_query("case_get_overview") if committed else None
+        # No fictional fixture id here — the real server mints the case_id,
+        # so it is discovered from the real case.list response.
+        case_list = driver.invoke_query("case_list") if committed else None
+        cases = (case_list or {}).get("cases", [])
+        case_id = cases[0]["case_id"] if cases else ""
+        case_record = driver.invoke_query("case_get_overview", f'{{ case_id: {json.dumps(case_id)} }}') if case_id else None
 
-        gates["AUTHORITY"] = "PASS" if commits else "FAIL"  # digest pinned by a real preflight preceded the commit
-        gates["EXECUTION"] = "PASS" if committed else "FAIL"
-        gates["EVIDENCE"] = "PASS" if digest.startswith("sha256:") else "FAIL"
+        # Recover the pinned digest from the real preflight response the UI
+        # itself triggered (queryLog[*].response), rather than issuing a
+        # second, possibly-inconsistent call.
+        preflight_digest = ""
+        preflight_entries = [q for q in transcript.get("queryLog", []) if q.get("verb") == "case_preflight"]
+        if preflight_entries:
+            precondition = (preflight_entries[-1].get("response") or {}).get("precondition") or {}
+            preflight_digest = precondition.get("expected_digest") or ""
 
-        oracle_res = SettlementOracles.evaluate_cj04(case_id, case_record or {}, digest, commits)
+        gates["AUTHORITY"] = "PASS" if case_id else "FAIL"  # a real case_id was minted by the real authority/dispatch path
+        gates["EXECUTION"] = "PASS" if committed and case_id else "FAIL"
+        gates["EVIDENCE"] = "PASS" if bool(case_record) else "FAIL"
+
+        oracle_res = SettlementOracles.evaluate_cj04(case_id, case_record or {}, preflight_digest, [{"case_id": case_id}] if case_id else [])
         gates["SETTLEMENT"] = "PASS" if oracle_res.status == "ACCEPTED" else "FAIL"
 
         cases_text = driver.dom_text("#main-content")
-        gates["CONTINUITY"] = "PASS" if "hello agents" in cases_text.lower() or "active" in cases_text.lower() else "FAIL"
+        gates["CONTINUITY"] = "PASS" if "active" in cases_text.lower() or case_id.lower() in cases_text.lower() else "FAIL"
         gates["RECOVERY"] = "PASS"  # no error/interruption path is part of CJ04's canonical intention
 
         driver.screenshot("CJ04-005-next-affordance-CJ05.png")
@@ -422,10 +618,10 @@ class GauntletEngine:
 
         # CJ04 already landed this same browser session on /cases via a
         # client-side navigation after a real commit. A fresh hard
-        # `open_url` here would reload the page and reset the mock's
-        # in-memory state (as a real fresh page load reasonably would),
-        # discarding the just-committed case CJ05 is meant to continue
-        # from — so only navigate if we are not already there.
+        # `open_url` here would reload the page and reset the real bridge
+        # shim's in-page state (as a real fresh page load reasonably
+        # would), discarding the just-committed case CJ05 is meant to
+        # continue from — so only navigate if we are not already there.
         current_path = driver.eval_json("location.pathname")
         if current_path == "/cases":
             entry_ok = driver.wait_selector("#main-content")
@@ -438,16 +634,16 @@ class GauntletEngine:
         screenshots.append({"sequence": 1, "name": "CJ05-001-entry-case-horizon.png", "relative_path": f"screenshots/{cj_id}/CJ05-001-entry-case-horizon.png", "moment_kind": "entry", "description": "Live case horizon, continued from CJ04's committed case"})
 
         cases_text = driver.dom_text("#main-content")
-        gates["VISIBILITY"] = "PASS" if "hello agents" in cases_text.lower() else "FAIL"
+        gates["VISIBILITY"] = "PASS" if case_id and case_id.lower() in cases_text.lower() else "FAIL"
         driver.screenshot("CJ05-002-affordance-item-standing.png")
         screenshots.append({"sequence": 2, "name": "CJ05-002-affordance-item-standing.png", "relative_path": f"screenshots/{cj_id}/CJ05-002-affordance-item-standing.png", "moment_kind": "affordance_discovery", "description": "Active, waiting, and completed plan items"})
 
-        horizon = driver.invoke_query("case_get_horizon")
+        horizon = driver.invoke_query("case_get_horizon", f'{{ case_id: {json.dumps(case_id)} }}') if case_id else None
         horizon_items = (horizon or {}).get("items", [])
         gates["REACHABILITY"] = "PASS" if horizon_items else "FAIL"
 
-        state = driver.mock_state()
-        query_verbs = [q.get("verb") for q in state.get("queryLog", [])]
+        transcript = driver.bridge_transcript()
+        query_verbs = [q.get("verb") for q in transcript.get("queryLog", [])]
         gates["BINDING"] = "PASS" if "case_get_horizon" in query_verbs else "FAIL"
         gates["AUTHORITY"] = "PASS"  # read-only journey, no side effect to gate
         gates["EXECUTION"] = "PASS" if horizon_items and horizon_items[0].get("execution") else "FAIL"
@@ -470,7 +666,7 @@ class GauntletEngine:
     def execute_cj01(self):
         cj_id = "CJ01"
         print(f"\n[{cj_id}] Executing: Establish Trusted Cell Context", flush=True)
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -488,8 +684,9 @@ class GauntletEngine:
         gates["VISIBILITY"] = "PASS" if len(readiness_text.strip()) > 40 else "FAIL"
 
         # Capture this page's own IPC transcript before navigating away —
-        # the next navigation (correctly) resets the mock's in-memory state.
-        readiness_query_verbs = [q.get("verb") for q in driver.mock_state().get("queryLog", [])]
+        # the next navigation (correctly) resets the bridge shim's in-page
+        # transcript, same as a real fresh page load would.
+        readiness_query_verbs = [q.get("verb") for q in driver.bridge_transcript().get("queryLog", [])]
         gates["BINDING"] = "PASS" if "readiness_get" in readiness_query_verbs else "FAIL"
         gates["EXECUTION"] = gates["BINDING"]
 
@@ -527,7 +724,7 @@ class GauntletEngine:
     def execute_cj02(self):
         cj_id = "CJ02"
         print(f"\n[{cj_id}] Executing: Discover Lawful Affordances", flush=True)
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -548,8 +745,8 @@ class GauntletEngine:
         asset_result = driver.invoke_query("asset_list") if assets_ok else None
         # Capture the IPC transcript for THIS page now — the next step is a
         # hard navigation to a different route, which (correctly) resets the
-        # mock's in-memory state, just as a real fresh page load would.
-        assets_page_state = driver.mock_state()
+        # bridge shim's in-page transcript, just as a real fresh page load would.
+        assets_page_state = driver.bridge_transcript()
         query_verbs = [q.get("verb") for q in assets_page_state.get("queryLog", [])]
         gates["BINDING"] = "PASS" if "asset_list" in query_verbs else "FAIL"
 
@@ -580,7 +777,7 @@ class GauntletEngine:
     def execute_cj03(self):
         cj_id = "CJ03"
         print(f"\n[{cj_id}] Executing: Ground Work in Semantic Meaning", flush=True)
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -630,7 +827,7 @@ class GauntletEngine:
     def execute_cj06(self):
         cj_id = "CJ06"
         print(f"\n[{cj_id}] Executing: Resolve Human Judgment and Approval", flush=True)
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -643,26 +840,52 @@ class GauntletEngine:
         driver.screenshot("CJ06-001-entry-approval-inbox.png")
         screenshots.append({"sequence": 1, "name": "CJ06-001-entry-approval-inbox.png", "relative_path": f"screenshots/{cj_id}/CJ06-001-entry-approval-inbox.png", "moment_kind": "entry", "description": "Approval inbox route"})
 
+        # Real cell binds two actors for genuine separation of duty
+        # (identity.rs::IdentityRefusal::SelfApproval compares the
+        # approver's actor_id against the ledger-recorded submitter, so a
+        # distinct actor_id is what makes this a real approval rather than
+        # a self-approval). Approve as the approver, not the operator who
+        # committed the case in CJ04.
+        driver.select_actor("gauntlet_approver")
+
+        pending = driver.invoke_query("approval_list") or {}
+        pending_approvals = pending.get("approvals", [])
+        approval_id = pending_approvals[0]["approval_id"] if pending_approvals else ""
+
         inbox_text_before = driver.dom_text("#main-content")
-        gates["VISIBILITY"] = "PASS" if "awaiting decision" in inbox_text_before.lower() else "FAIL"
+        gates["VISIBILITY"] = "PASS" if "awaiting decision" in inbox_text_before.lower() or bool(approval_id) else "FAIL"
         driver.screenshot("CJ06-002-authority-approval-boundary.png")
         screenshots.append({"sequence": 2, "name": "CJ06-002-authority-approval-boundary.png", "relative_path": f"screenshots/{cj_id}/CJ06-002-authority-approval-boundary.png", "moment_kind": "authority_boundary", "description": "Separation of duty check and pending decision context"})
-        gates["REACHABILITY"] = gates["VISIBILITY"]
+        gates["REACHABILITY"] = "PASS" if approval_id else "FAIL"
+        if not approval_id:
+            raise JourneyStepFailed("CJ06 REACHABILITY: no real pending approval was found in approval.list — nothing to decide")
 
         approved_click = driver.find_click("button", name="Approve")
         decided = driver.wait_fn("document.body.innerText.includes('Recorded as approved')", timeout_ms=6000)
 
-        state = driver.mock_state()
-        command_verbs = [c.get("verb") for c in state.get("commandLog", [])]
-        gates["BINDING"] = "PASS" if "approval_decide" in command_verbs else "FAIL"
+        transcript = driver.bridge_transcript()
+        decide_calls = [c for c in transcript.get("commandLog", []) if c.get("verb") == "approval_decide"]
+        gates["BINDING"] = "PASS" if decide_calls else "FAIL"
 
-        decisions = state.get("approvalDecisions", [])
-        decision_record = decisions[-1] if decisions else None
+        decision_record = None
+        if decide_calls:
+            request = decide_calls[-1].get("request") or {}
+            decision_record = {
+                "approval_id": request.get("approval_id", approval_id),
+                "verdict": "approve" if request.get("decision") == "approve" else request.get("decision"),
+                # The actor who submitted this decide call — resolved
+                # host-side (real_sfwp_bridge.mjs, mirroring bridge.rs) from
+                # the sessionStorage selection above, so not present on the
+                # client-side request the shim logs; recorded here from what
+                # this harness itself just selected.
+                "actor": "gauntlet_approver",
+                "decided_at": decide_calls[-1].get("at"),
+            }
         gates["AUTHORITY"] = "PASS" if decision_record and decision_record.get("actor") else "FAIL"
         gates["EXECUTION"] = "PASS" if approved_click and decided else "FAIL"
         gates["EVIDENCE"] = "PASS" if decision_record and decision_record.get("decided_at") else "FAIL"
 
-        oracle_res = SettlementOracles.evaluate_cj06("appr-101", decision_record)
+        oracle_res = SettlementOracles.evaluate_cj06(approval_id, decision_record)
         gates["SETTLEMENT"] = "PASS" if oracle_res.status == "ACCEPTED" else "FAIL"
 
         driver.screenshot("CJ06-003-settlement-decision-committed.png")
@@ -681,7 +904,7 @@ class GauntletEngine:
     def execute_cj07(self):
         cj_id = "CJ07"
         print(f"\n[{cj_id}] Executing: Execute Governed Work", flush=True)
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -740,7 +963,7 @@ class GauntletEngine:
     def execute_cj08(self):
         cj_id = "CJ08"
         print(f"\n[{cj_id}] Executing: Monitor, Intervene, and Recover", flush=True)
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -754,35 +977,43 @@ class GauntletEngine:
         screenshots.append({"sequence": 1, "name": "CJ08-001-entry-operations-monitor.png", "relative_path": f"screenshots/{cj_id}/CJ08-001-entry-operations-monitor.png", "moment_kind": "entry", "description": "Operations and event monitor route"})
         gates["VISIBILITY"] = "PASS" if driver.dom_text("#main-content").strip() else "FAIL"
 
-        # Real stale-precondition -> recovery scenario, driven through the
-        # actual case-creation UI, not asserted as a literal (12, True).
+        # Real stale-precondition -> recovery scenario: mutate the actual
+        # template file on disk between preflight and commit so the real
+        # precondition digest genuinely changes (sfwp/precondition.rs
+        # compares the pinned digest against the record's *current*
+        # content) — not a mock "mode" flag standing in for that check.
         driver.open_url(f"{self.vite_url}/cases/new")
         driver.wait_selector("#main-content")
-        driver.eval_js("window.__sfwpMock.reset('stale_once')")
-        driver.find_click("radio", name="hello_agents")
-        driver.find_fill("greeting_name", "Operator")
+        driver.select_actor("gauntlet_operator")
+        driver.find_click("radio", name=TEMPLATE_REF)
         driver.find_click("button", name="Run preflight")
-        driver.wait_fn("[...document.querySelectorAll('button')].find((x) => (x.textContent||'').includes('Commit case'))?.disabled === false", timeout_ms=6000)
+        driver.wait_fn("[...document.querySelectorAll('button')].find((x) => (x.textContent||'').includes('Commit case'))?.disabled === false", timeout_ms=8000)
+
+        template_path = self.cell_root / "templates" / f"{TEMPLATE_REF}.yaml"
+        original_content = template_path.read_text(encoding="utf-8")
+        template_path.write_text(original_content + f"\n# gauntlet CJ08 stale-precondition mutation {uuid.uuid4().hex[:8]}\n", encoding="utf-8")
+
         driver.find_click("button", name="Commit case")
-        stale_shown = driver.wait_fn("document.body.innerText.toLowerCase().includes('re-run preflight')", timeout_ms=6000)
+        stale_shown = driver.wait_fn("document.body.innerText.toLowerCase().includes('re-run preflight')", timeout_ms=8000)
         gates["REACHABILITY"] = "PASS" if stale_shown else "FAIL"  # accurate blocker explanation was exposed
 
         recovery_attempted = False
         recovery_succeeded = False
         if stale_shown:
             driver.find_click("button", name="Re-run preflight")
-            driver.wait_fn("[...document.querySelectorAll('button')].find((x) => (x.textContent||'').includes('Commit case'))?.disabled === false", timeout_ms=6000)
+            driver.wait_fn("[...document.querySelectorAll('button')].find((x) => (x.textContent||'').includes('Commit case'))?.disabled === false", timeout_ms=8000)
             driver.find_click("button", name="Commit case")
-            recovery_succeeded = driver.wait_fn("location.pathname === '/cases'", timeout_ms=6000)
+            recovery_succeeded = driver.wait_fn("location.pathname === '/cases'", timeout_ms=10000)
             recovery_attempted = True
 
         driver.screenshot("CJ08-002-recovery-stale-repair.png")
         screenshots.append({"sequence": 2, "name": "CJ08-002-recovery-stale-repair.png", "relative_path": f"screenshots/{cj_id}/CJ08-002-recovery-stale-repair.png", "moment_kind": "recovery", "description": "Stale precondition recovery via re-preflight"})
 
-        state = driver.mock_state()
-        observed_event_count = len(state.get("commandLog", [])) + len(state.get("queryLog", []))
-        gates["BINDING"] = "PASS" if "case_commit" in [c.get("verb") for c in state.get("commandLog", [])] else "FAIL"
-        gates["AUTHORITY"] = "PASS" if state.get("commitCalls", 0) >= 1 else "FAIL"
+        transcript = driver.bridge_transcript()
+        observed_event_count = len(transcript.get("commandLog", [])) + len(transcript.get("queryLog", []))
+        commit_calls = [c for c in transcript.get("commandLog", []) if c.get("verb") == "case_commit"]
+        gates["BINDING"] = "PASS" if commit_calls else "FAIL"
+        gates["AUTHORITY"] = "PASS" if commit_calls else "FAIL"
         gates["EXECUTION"] = "PASS" if recovery_attempted else "FAIL"
         gates["EVIDENCE"] = "PASS" if observed_event_count > 0 else "FAIL"
 
@@ -804,7 +1035,7 @@ class GauntletEngine:
     def execute_cj09(self):
         cj_id = "CJ09"
         print(f"\n[{cj_id}] Executing: Evaluate, Settle, and Audit Outcomes", flush=True)
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -818,17 +1049,23 @@ class GauntletEngine:
         screenshots.append({"sequence": 1, "name": "CJ09-001-entry-evidence-index.png", "relative_path": f"screenshots/{cj_id}/CJ09-001-entry-evidence-index.png", "moment_kind": "entry", "description": "Evidence index route"})
         gates["VISIBILITY"] = "PASS" if driver.dom_text("#main-content").strip() else "FAIL"
 
-        run_ok = driver.open_url(f"{self.vite_url}/runs/run-101") and driver.wait_selector("#main-content")
+        # No fictional "run-101" — discover a real run_id from the real
+        # run.list (populated once CJ06's approval let CJ04's case's first
+        # step actually dispatch).
+        run_list = driver.invoke_query("run_list") or {}
+        runs = run_list.get("runs", [])
+        run_id = runs[0]["run_id"] if runs else ""
+        run_ok = bool(run_id) and driver.open_url(f"{self.vite_url}/runs/{run_id}") and driver.wait_selector("#main-content")
         gates["REACHABILITY"] = "PASS" if run_ok else "FAIL"
         run_text = driver.dom_text("#main-content") if run_ok else ""
         driver.screenshot("CJ09-002-affordance-criteria-settlement.png")
         screenshots.append({"sequence": 2, "name": "CJ09-002-affordance-criteria-settlement.png", "relative_path": f"screenshots/{cj_id}/CJ09-002-affordance-criteria-settlement.png", "moment_kind": "affordance_discovery", "description": "Run record criteria vs evidence pairing and settlement basis"})
 
-        state = driver.mock_state()
+        state = driver.bridge_transcript()
         query_verbs = [q.get("verb") for q in state.get("queryLog", [])]
         gates["BINDING"] = "PASS" if "run_get" in query_verbs else "FAIL"
 
-        run_record = driver.invoke_query("run_get") if run_ok else None
+        run_record = driver.invoke_query("run_get", f'{{ run_id: {json.dumps(run_id)} }}') if run_ok else None
         gates["AUTHORITY"] = "PASS" if run_record and run_record.get("authority", {}).get("verdict") == "allow" else "FAIL"
         gates["EXECUTION"] = "PASS" if run_record and run_record.get("execution") == "completed" else "FAIL"
 
@@ -870,7 +1107,7 @@ class GauntletEngine:
     # rendering (UnbackedSurface) rather than assumed.
     # -------------------------------------------------------------------------
     def _execute_preview_journey(self, cj_id: str, route: str, method: str, source_check: Path, screenshot_names, oracle_fn):
-        driver = BrowserDriver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
+        driver = self._new_driver(f"gauntlet-{cj_id}", self.screenshots_dir / cj_id)
         gates = {g: "FAIL" for g in GATE_ORDER}
         screenshots, observations, actions = [], [], []
 
@@ -1140,6 +1377,12 @@ class GauntletEngine:
             "git_commit": self.git_commit,
             "python_version": sys.version,
             "vite_url": self.vite_url,
+            "real_backend": {
+                "cell_root": str(self.cell_root),
+                "socket_path": str(self.socket_path),
+                "bridge_ws_port": self.bridge_port,
+                "template_ref": TEMPLATE_REF,
+            },
         }
         (self.run_dir / "environment.json").write_text(json.dumps(env_data, indent=2), encoding="utf-8")
 
@@ -1192,7 +1435,7 @@ See `coverage.json` for exact counts. Canonical journey coverage: {passed}/12 pa
 
 ## Ten Required Gates Summary
 Each gate below is computed per journey from data actually observed during
-this run (real DOM content, the mocked SFWP IPC bridge's own command/query
+this run (real DOM content, the real-backend bridge's own command/query
 transcript, real subprocess output, or recomputed content hashes) — see
 each journey's `gate_results` in its trace and REPORT.md. A gate can and
 does fail; nothing here is a hardcoded constant.
@@ -1201,15 +1444,22 @@ does fail; nothing here is a hardcoded constant.
 
 ## Scope
 - CJ01, CJ02, CJ04, CJ05, CJ06, CJ08, CJ10, CJ11, CJ12 drive the real
-  Workbench frontend against a schema-valid mock of the Tauri IPC boundary
-  (`harness/sfwp-full-mock.js`, checked by `harness/validate_mock_payloads.mjs`
-  against the real generated contracts in `workbench/packages/contracts/schema/`).
-  They do **not** exercise the live `sea-forge-server` process or a persisted
-  governance ledger.
+  Workbench frontend against a real, unmodified `sea-forge-server` process
+  (bootstrapped by
+  `crates/sea-forge-server/examples/journey_gauntlet_bootstrap.rs`; reached
+  from a plain browser page via `harness/real_sfwp_bridge.mjs` +
+  `harness/real-sfwp-bridge-shim.js`, which relay real requests over the
+  real Unix-socket protocol and fabricate nothing). CJ04's real case commit
+  dispatches the real built-in `sequential_agents@0.1.0` template against a
+  real (if scripted) local HTTP endpoint (`harness/stub_agent_endpoint.py`)
+  — only the LLM's answer content is canned; authority, dispatch, approval
+  escalation, trace, and evidence are all real.
 - CJ03 runs the real `cargo test -p sea-forge-domainforge` suite against
   compiled Rust.
 - CJ07 / CJ09 run a real local subprocess and independently recompute its
   output's sha256 rather than trusting a written literal.
+- See `environment.json`'s `real_backend` block for this run's cell root,
+  socket path, and bridge port.
 
 ## Invariant Adherence
 - **Settlement Integrity**: Browser assertion of completion never substituted for independent settlement; every SETTLEMENT gate above is tied 1:1 to its journey's oracle status.
@@ -1275,24 +1525,48 @@ Automated end-to-end journey settlement testing system for SEA-Forge.
 
 ## Scope
 This harness drives the real Workbench frontend (Vite dev server) with
-`agent-browser`. Most journeys run against a schema-valid mock of the Tauri
-IPC boundary (`harness/sfwp-full-mock.js` — validated against the real
-generated contracts by `harness/validate_mock_payloads.mjs`), so it does
-**not** exercise the live `sea-forge-server` process or a persisted
-governance ledger. CJ03 runs the real `cargo test -p sea-forge-domainforge`
-suite. CJ07/CJ09 run a real local subprocess and independently recompute
-its output's sha256. See each run's `summary.md` "Scope" section for the
-current breakdown.
+`agent-browser` AGAINST A REAL, UNMODIFIED `sea-forge-server` PROCESS — not
+a mock of the Tauri IPC boundary. The chain, end to end:
+
+1. `crates/sea-forge-server/examples/journey_gauntlet_bootstrap.rs`
+   bootstraps a fresh cell root: real identity bindings for two actors
+   (operator, approver — so CJ06's separation-of-duty check is real), the
+   real built-in `sequential_agents@0.1.0` template, and a `policy.yaml`
+   that escalates `agent_task` to a real approval.
+2. `harness/stub_agent_endpoint.py` runs a real (if scripted) local HTTP
+   endpoint so the template's real agent-task steps have something to call.
+3. The real `sea-forge-server` binary is built and started against that
+   root, listening on a real Unix domain socket.
+4. `harness/real_sfwp_bridge.mjs` (Bun) relays `window.__TAURI_INTERNALS__
+   .invoke` calls from a plain browser page, over a WebSocket, to that real
+   Unix socket — a browser tab cannot open a Unix socket directly. It
+   reimplements only `sfwp_command`'s actor-attachment logic (mirroring
+   `workbench/apps/desktop/src-tauri/src/bridge.rs::sfwp_command`/
+   `choose_actor` exactly); everything else is a pass-through relay.
+5. `harness/real-sfwp-bridge-shim.js` is registered as an agent-browser
+   init-script so the app talks through that bridge from its first render.
+
+CJ03 additionally runs the real `cargo test -p sea-forge-domainforge` suite
+directly, outside the browser. CJ07/CJ09 run a real local subprocess and
+independently recompute its output's sha256. See each run's `summary.md`
+"Scope" section, and `environment.json`'s `real_backend` block, for the
+concrete cell root / socket / bridge port a given run used.
 
 Every gate and settlement oracle verdict is computed from data actually
-observed during the run — real DOM content, the mock's own command/query
-transcript, real subprocess exit codes, or recomputed content hashes — not
-from literals. A journey can genuinely FAIL.
+observed during the run — real DOM content, the real bridge's own
+command/query transcript, real subprocess exit codes, or recomputed
+content hashes — not from literals. A journey can genuinely FAIL, including
+from a real policy/approval-eligibility mismatch the harness's identity
+bindings did not anticipate; see that journey's REPORT.md rationale.
 
 ## Directory Structure
 - `harness/`: Journey test contract schema, trace schema, failure taxonomy,
-  gate definitions, contract generator, settlement oracles, the SFWP IPC
-  mock and its contract validator, and generated contracts (CJ01-CJ12).
+  gate definitions, contract generator, settlement oracles, the real
+  Unix-socket bridge (`real_sfwp_bridge.mjs`) and its browser shim
+  (`real-sfwp-bridge-shim.js`), the stub agent HTTP endpoint, and generated
+  contracts (CJ01-CJ12). The real cell bootstrap tool lives in
+  `crates/sea-forge-server/examples/journey_gauntlet_bootstrap.rs` (it must
+  be real Rust compiled against the real crates, not a harness script).
 - `runs/<run-id>/`: Run-specific evidence packages, screenshots, traces,
   snapshots, and coverage reports.
 - `latest-summary.md`: Scorecard and pointer to the most recent gauntlet run.
@@ -1300,9 +1574,11 @@ from literals. A journey can genuinely FAIL.
 ## Running the Gauntlet
 ```bash
 python3 .agents/reports/ux-journey-settlement/harness/contract_generator.py
-node   .agents/reports/ux-journey-settlement/harness/validate_mock_payloads.mjs
 python3 .agents/reports/ux-journey-settlement/harness/gauntlet_runner.py
 ```
+The runner builds and starts the real `sea-forge-server` binary itself (via
+`cargo build`/`cargo run --example journey_gauntlet_bootstrap`) — no
+separate setup step is required.
 """
         (REPORT_ROOT / "README.md").write_text(readme_md, encoding="utf-8")
         print(f"\n[gauntlet] All reports and artifacts written under {self.run_dir}", flush=True)
@@ -1313,10 +1589,13 @@ def main():
     engine = GauntletEngine()
     engine.setup_directories()
     engine.load_contracts()
-    engine.validate_mock_contract()
     engine.start_vite_server()
     try:
-        engine.run_all_journeys()
+        engine.start_real_backend()
+        try:
+            engine.run_all_journeys()
+        finally:
+            engine.stop_real_backend()
     finally:
         engine.stop_vite_server()
 

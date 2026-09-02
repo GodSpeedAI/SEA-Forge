@@ -14,6 +14,10 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{unix::OwnedReadHalf, TcpListener, UnixStream};
@@ -84,6 +88,56 @@ fn cases_committed(root: &Path) -> usize {
         .unwrap_or(0)
 }
 
+fn runs_created(root: &Path) -> usize {
+    std::fs::read_dir(root.join("runs"))
+        .map(|dir| dir.count())
+        .unwrap_or(0)
+}
+
+/// A stub endpoint that accepts probes but never answers. It provides real
+/// network work that holds an admitted request past the response deadline.
+fn hanging_endpoint() -> (
+    AgentEndpointConfig,
+    Arc<AtomicUsize>,
+    tokio::task::JoinHandle<()>,
+) {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let address: SocketAddr = listener.local_addr().unwrap();
+    let listener = TcpListener::from_std(listener).unwrap();
+    let connections = Arc::new(AtomicUsize::new(0));
+    let count = Arc::clone(&connections);
+    let task = tokio::spawn(async move {
+        loop {
+            let Ok((mut stream, _)) = listener.accept().await else {
+                break;
+            };
+            count.fetch_add(1, Ordering::SeqCst);
+            tokio::spawn(async move {
+                let mut request = vec![0_u8; 32_768];
+                let _ = stream.read(&mut request).await;
+                std::future::pending::<()>().await;
+            });
+        }
+    });
+    let endpoint = AgentEndpointConfig {
+        id: STUB_ENDPOINT.into(),
+        kind: ProviderKind::OpenAiCompatible,
+        base_url: Some(format!("http://127.0.0.1:{}/", address.port())),
+        argv: vec![],
+        env: vec![],
+        credential_ref: None,
+        default_model: Some("test-model".into()),
+        allow_loopback_test: true,
+        max_request_bytes: 16_384,
+        max_response_bytes: 16_384,
+        timeout_secs: 30,
+        status: None,
+        transcript_retention: None,
+    };
+    (endpoint, connections, task)
+}
+
 /// A stub OpenAI-compatible endpoint answering every request identically,
 /// mirroring `conformance_topology.rs::stub_always`.
 fn stub_endpoint(response: &'static str) -> (AgentEndpointConfig, tokio::task::JoinHandle<()>) {
@@ -152,6 +206,19 @@ fn success_submit(root: &Path, request_id: Option<&str>) -> Value {
         request["request_id"] = json!(id);
     }
     request
+}
+
+fn agent_probe_request(request_id: &str) -> Value {
+    json!({
+        "verb": "agent_probe",
+        "actor": {"actor_id": "operator_local", "role": "operator"},
+        "endpoint": STUB_ENDPOINT,
+        "prompt": "hold this governed probe",
+        "policy": "policy.yaml",
+        "entity": "operator_local",
+        "process": "request-admission-test",
+        "request_id": request_id,
+    })
 }
 
 /// A minimal line-delimited JSON client over the Unix socket.
@@ -488,7 +555,7 @@ async fn live_subscriber_receives_pushed_event() {
     assert_eq!(ack["subscribed"], true);
 
     let mut actor = Client::connect(&socket).await;
-    let submit = success_submit(root.path(), None);
+    let submit = success_submit(root.path(), Some("req-live-event"));
     let response = actor.call(submit).await;
     assert_eq!(response["state"], "completed", "{response}");
 
@@ -739,6 +806,146 @@ fn generated_schemas_are_committed_and_current() {
 /// The client cannot tell "the commit never happened" from "the commit
 /// happened and the answer was lost". Only the server can, and only by
 /// recognising the id it already bound to this payload.
+/// Request-work admission is a real Unix-socket boundary: a hung governed
+/// probe consumes one active slot, at most eight more requests may wait, and
+/// every excess request is refused before it can create a correlation or case.
+#[tokio::test]
+async fn request_admission_refuses_overflow_and_cancels_waiters_without_effects() {
+    let (endpoint, connections, _endpoint_task) = hanging_endpoint();
+    let (root, socket) = boot_with_endpoint(Some(endpoint)).await;
+    std::fs::write(
+        root.path().join("policy.yaml"),
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [127.0.0.1]\nrules:\n  - name: allow-agent-probe\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_probe\n",
+    )
+    .unwrap();
+
+    // Active admission capacity is `max_concurrent_runs`, whose default is 4.
+    // These requests reach the actual TCP provider and remain hung there.
+    let mut active = Vec::new();
+    for number in 0..4 {
+        let mut client = Client::connect(&socket).await;
+        client
+            .send(agent_probe_request(&format!("active-{number}")))
+            .await;
+        active.push(client);
+    }
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while connections.load(Ordering::SeqCst) < 4 || runs_created(root.path()) < 4 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect(
+        "the admitted probes did not create their governed runs and reach the controlled endpoint",
+    );
+    assert_eq!(
+        runs_created(root.path()),
+        4,
+        "each admitted probe creates one governed case"
+    );
+
+    // Fill the documented eight-place waiting room. These requests possess no
+    // active permit, so none may create a correlation, case, ledger, child, or
+    // network effect before their own request deadline.
+    let mut queued = Client::connect(&socket).await;
+    queued.send(agent_probe_request("queued-timeout")).await;
+    let mut waiting = Vec::new();
+    for number in 0..7 {
+        let mut client = Client::connect(&socket).await;
+        client
+            .send(agent_probe_request(&format!("queued-{number}")))
+            .await;
+        waiting.push(client);
+    }
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    for number in 0..4 {
+        let id = format!("busy-{number}");
+        let mut client = Client::connect(&socket).await;
+        let response = client.call(agent_probe_request(&id)).await;
+        assert_eq!(response["error_class"], "server_busy", "{response}");
+        assert_eq!(response["no_side_effect"], true, "{response}");
+        assert!(
+            !root
+                .path()
+                .join("requests")
+                .join(format!("{id}.json"))
+                .exists(),
+            "busy request {id} created a correlation record: {response}"
+        );
+    }
+    assert_eq!(
+        connections.load(Ordering::SeqCst),
+        4,
+        "a refused request reached the provider"
+    );
+    assert_eq!(
+        runs_created(root.path()),
+        4,
+        "a refused request created a case"
+    );
+
+    let mut line = String::new();
+    let read = tokio::time::timeout(Duration::from_secs(12), queued.reader.read_line(&mut line))
+        .await
+        .expect("a queued request was not cancelled at the server deadline")
+        .unwrap();
+    assert!(
+        read > 0,
+        "queued request connection closed without a refusal"
+    );
+    let timeout: Value = serde_json::from_str(line.trim()).unwrap();
+    assert_eq!(timeout["error_class"], "request_timeout", "{timeout}");
+    assert_eq!(timeout["no_side_effect"], true, "{timeout}");
+    assert!(
+        !root
+            .path()
+            .join("requests")
+            .join("queued-timeout.json")
+            .exists(),
+        "pre-admission timeout created a correlation record"
+    );
+    assert_eq!(
+        connections.load(Ordering::SeqCst),
+        4,
+        "pre-admission timeout reached provider"
+    );
+    assert_eq!(
+        runs_created(root.path()),
+        4,
+        "pre-admission timeout created a case"
+    );
+
+    // Keep the waiting clients alive through the assertion. Dropping them is
+    // the disconnect variation: their queued tasks remain cancellation-safe.
+    drop(waiting);
+    drop(active);
+}
+
+/// A durable mutation without a caller locator fails before it can reserve
+/// admission, mint case state, or write a request correlation record.
+#[tokio::test]
+async fn durable_mutation_without_request_id_fails_closed_before_admission() {
+    let (endpoint, _task) =
+        stub_endpoint(r#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#);
+    let (root, socket) = boot_with_endpoint(Some(endpoint)).await;
+    let mut client = Client::connect(&socket).await;
+    let response = client.call(success_submit(root.path(), None)).await;
+    assert_eq!(
+        response["error_class"], "durable_locator_required",
+        "{response}"
+    );
+    assert_eq!(response["no_side_effect"], true, "{response}");
+    assert_eq!(cases_committed(root.path()), 0);
+    assert!(
+        std::fs::read_dir(root.path().join("requests"))
+            .unwrap()
+            .next()
+            .is_none(),
+        "a no-id durable mutation created a correlation record"
+    );
+}
+
 #[tokio::test]
 async fn a_retried_request_replays_its_outcome_instead_of_mutating_twice() {
     let (endpoint, stub) = stub_endpoint(

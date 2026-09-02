@@ -4,7 +4,19 @@
 		"0d5f9ad8-756c-4312-b74c-5b6120faf949": {
 			"sessionId": "0d5f9ad8-756c-4312-b74c-5b6120faf949",
 			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/0d5f9ad8-756c-4312-b74c-5b6120faf949.jsonl",
-			"updatedAt": "2026-08-31T20:13:50.372Z",
+			"updatedAt": "2026-08-31T20:37:24.977Z",
+			"source": "claude"
+		},
+		"ef5e6ec9-3ade-42b0-ab90-541e32d9fee1": {
+			"sessionId": "ef5e6ec9-3ade-42b0-ab90-541e32d9fee1",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/ef5e6ec9-3ade-42b0-ab90-541e32d9fee1.jsonl",
+			"updatedAt": "2026-09-01T00:01:50.408Z",
+			"source": "claude"
+		},
+		"f50457cf-9063-4002-964d-1ec65d5896d5": {
+			"sessionId": "f50457cf-9063-4002-964d-1ec65d5896d5",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/f50457cf-9063-4002-964d-1ec65d5896d5.jsonl",
+			"updatedAt": "2026-09-02T03:18:40.935Z",
 			"source": "claude"
 		}
 	}

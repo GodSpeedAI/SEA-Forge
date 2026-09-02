@@ -1,3 +1,12 @@
+// SUPERSEDED — no longer used by gauntlet_runner.py.
+//
+// The gauntlet now drives the real Workbench frontend against a real,
+// unmodified `sea-forge-server` process instead of mocking the Tauri IPC
+// boundary — see real_sfwp_bridge.mjs and real-sfwp-bridge-shim.js, and the
+// README's "Scope" section. This file is kept only as a reference for what
+// a schema-checked mock of the IPC boundary looked like; it is not
+// registered as an init-script by the current runner.
+//
 // SFWP IPC bridge mock for the SEA-Forge Journey Settlement Gauntlet.
 //
 // Grounded in the real generated AJV contracts at

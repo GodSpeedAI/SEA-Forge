@@ -156,6 +156,7 @@ async fn commit_case(client: &mut Client, root: &Path) -> String {
             "policy": policy_path(root),
             "entity": "operator_local",
             "process": "test",
+            "request_id": "req-case-view-commit",
             "preconditions": {
                 "records": [
                     {"ref": format!("template:{TEMPLATE_REF}"), "expected_digest": digest}

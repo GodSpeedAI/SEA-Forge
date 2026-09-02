@@ -2,6 +2,23 @@
 
 Updated: 2026-08-31
 
+> **2026-08-31 server request admission — IMPLEMENTED, PENDING INDEPENDENT REVIEW.**
+> `spec-server-request-admission.md` is approved. Protected socket work now has
+> `max_concurrent_runs` active admission permits and an eight-request waiting room.
+> Overflow returns `server_busy` before durable state; pre-admission timeouts abort
+> with no effect; durable mutations require a caller `request_id`; and pending IDs
+> no longer execute concurrent duplicates. Follow-up fixes serialize same-ID
+> check-and-bind, use a CAS transition to settle the timeout/admission race, and
+> settle interrupted pending requests at restart. Focused Unix-socket overflow/no-effect,
+> no-ID, and restart-recovery tests pass, as does `just crate-check sea-forge-server`.
+> Three successive independent reviews found and then confirmed fixes for the
+> same-ID race, timeout/admission race, restart recovery, and durable probe locator.
+> Final independent result: **CONFIRM**.
+> Full `just crate-test sea-forge-server` reaches an unrelated
+> `conformance_run_locator::both_layouts_still_resolve_after_a_restart` failure:
+> its second server cannot start while the first still owns the cell lock.
+> See `.agents/current_status.yml` for commands and changed files.
+
 > **2026-08-31 SEA-FORGE JOURNEY SETTLEMENT GAUNTLET — SETTLED (12/12 PASS).**
 > Fully automated, canonical journey settlement testing system constructed and executed
 > against the live Workbench product using `agent-browser` 0.34.0 and independent backend

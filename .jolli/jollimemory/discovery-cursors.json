@@ -3,10 +3,26 @@
 	"cursors": {
 		"/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/0d5f9ad8-756c-4312-b74c-5b6120faf949.jsonl": {
 			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/0d5f9ad8-756c-4312-b74c-5b6120faf949.jsonl",
-			"lineNumber": 838,
-			"updatedAt": "2026-08-31T20:13:50.764Z",
+			"lineNumber": 1626,
+			"updatedAt": "2026-08-31T20:37:25.426Z",
 			"extractors": {
-				"skills": 838
+				"skills": 1626
+			}
+		},
+		"/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/ef5e6ec9-3ade-42b0-ab90-541e32d9fee1.jsonl": {
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/ef5e6ec9-3ade-42b0-ab90-541e32d9fee1.jsonl",
+			"lineNumber": 220,
+			"updatedAt": "2026-09-01T00:01:50.495Z",
+			"extractors": {
+				"skills": 220
+			}
+		},
+		"/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/f50457cf-9063-4002-964d-1ec65d5896d5.jsonl": {
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/f50457cf-9063-4002-964d-1ec65d5896d5.jsonl",
+			"lineNumber": 161,
+			"updatedAt": "2026-09-02T03:18:41.205Z",
+			"extractors": {
+				"skills": 161
 			}
 		}
 	}
