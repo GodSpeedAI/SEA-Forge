@@ -7,8 +7,8 @@ metadata:
   spec_id: server-request-admission
   spec_version: "v0.1"
   initialized: true
-  last_updated: "2026-08-31"
-  updated_by: "prime-agent"
+  last_updated: "2026-09-02"
+  updated_by: "documentation-architect"
 
 execution:
   last_settled_task: null
@@ -74,6 +74,18 @@ handoff:
     - "crates/sea-forge-server/tests/conformance_delegations.rs"
     - "crates/sea-forge-server/tests/conformance_identity.rs"
     - "crates/sea-forge-server/tests/conformance_lifecycle.rs"
+    - "docs/documentation-map.md"
+    - "docs/source-map.md"
+    - "docs/architecture.md"
+    - "docs/index.md"
+    - "docs/mental-model.md"
+    - "docs/subsystems/"
+    - "docs/workflows/"
+    - "docs/explanation/"
+    - "docs/tutorials/"
+    - "docs/how-to/"
+    - "docs/reference/"
+    - "docs/operations/"
   decisions:
     - >-
       Chose the spec's fail-closed durable-locator option: Submit, approval,

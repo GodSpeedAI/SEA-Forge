@@ -1,6 +1,33 @@
 # Current Status
 
-Updated: 2026-08-31
+Updated: 2026-09-02
+
+> **2026-09-02 REPOSITORY DOCUMENTATION ARCHITECT — IMPLEMENTED (28 DOCUMENTS).**
+> Reconstructed and authored the complete self-contained technical knowledge system for SEA Forge
+> combining Diátaxis separation, DeepWiki repository modeling, and Google Code Wiki traceability.
+> Master deliverables delivered under `docs/`:
+> - Master Maps: `documentation-map.md` (Diátaxis sitemap), `source-map.md` (concept-to-source traceability),
+>   `architecture.md` (canonical 5-layer spec and invariants), `index.md` (Layer 0 orientation),
+>   and `mental-model.md` (Layer 1 conceptual foundation).
+> - 11 Subsystem Deep Dives (`docs/subsystems/`): `kernel-pipeline.md`, `authority-fabric.md`,
+>   `sandbox-runtime.md`, `settlement-evidence.md`, `integrity-ledger.md`, `capability-memory.md`,
+>   `domainforge-boundary.md`, `server-sfwp.md`, `thoth-agent.md`, `workbench-desktop.md`,
+>   `spec-pipeline-ip.md`.
+> - 4 Execution Workflows (`docs/workflows/`): `cli-run-lifecycle.md`, `case-orchestration-lifecycle.md`,
+>   `human-approval-cycle.md`, `agent-delegation-flow.md`.
+> - 5 Design Explanations (`docs/explanation/`): `why-authority-precedes-execution.md` (AUTH-01),
+>   `settlement-vs-process-exit.md` (DOM-01), `synchronous-kernel-boundary.md` (BUILD-01),
+>   `append-only-truth-rebuildable-views.md` (DATA-01), `landlock-jail-security-model.md`.
+> - 3 Progressive Tutorials (`docs/tutorials/`): `01-first-governed-run.md`,
+>   `02-inspecting-evidence-and-proofs.md`, `03-authoring-first-workbench-case.md`.
+> - 5 Practical How-To Guides (`docs/how-to/`): `write-authority-policies.md`,
+>   `configure-agent-endpoints.md`, `run-and-verify-gates.md`, `troubleshoot-cell-failures.md`,
+>   `regenerate-contracts-and-schemas.md`.
+> - 6 Reference Manuals (`docs/reference/` & `docs/operations/`): `terminology.md` (glossary),
+>   `cli-command-reference.md` (all 24 subcommands), `sfwp-protocol-reference.md` (SFWP v1 catalog),
+>   `configuration-spec.md` (server.yaml & cell layout), `persisted-record-schemas.md` (all 7 record kinds),
+>   and `operations/troubleshooting.md` (diagnostic matrix).
+> Preserved all pre-existing code, invariants, and unrelated worktree files.
 
 > **2026-08-31 server request admission — IMPLEMENTED, PENDING INDEPENDENT REVIEW.**
 > `spec-server-request-admission.md` is approved. Protected socket work now has
