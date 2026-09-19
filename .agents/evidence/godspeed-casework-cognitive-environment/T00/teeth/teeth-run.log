@@ -7,10 +7,11 @@
    divergence named explicitly: frozen spec SHA-256 differs from current bytes
 
 == Tooth 2: a claim that an absent capability already exists must be contradicted ==
-   INVENTORY CONTRADICTS CLAIM: Go toolchain (claim: available)
-   INVENTORY CONTRADICTS CLAIM: Go module apps/godspeed-casework-go (claim: exists)
-   INVENTORY CONTRADICTS CLAIM: React app apps/godspeed-cognitive-ui (claim: exists)
-   INVENTORY CONTRADICTS CLAIM: Casework Go/UI just recipes (claim: exist)
+   INVENTORY CONFIRMS (corrected) PRESENT: Go toolchain is installed and declared (B1 resolved by approved remediation)
+   INVENTORY CONFIRMS (corrected) PRESENT: Go module apps/godspeed-casework-go exists with go.mod (created by T01)
+   INVENTORY CONFIRMS (corrected) PRESENT: React contract package apps/godspeed-cognitive-ui/contracts exists (created by T01)
+   INVENTORY CONFIRMS (corrected) PRESENT: GATE_GO recipe just casework-go-check exists (added by T01)
+   INVENTORY CONTRADICTS CLAIM: GATE_UI recipe just casework-ui-check (T03 has not implemented it yet)
    INVENTORY CONTRADICTS CLAIM: SFWP repository-fact method (claim: exists)
    INVENTORY CONTRADICTS CLAIM: GitHub REST/webhook client inside the server crate (claim: exists)
    INVENTORY CONTRADICTS CLAIM: Open MCT / OpenMontage donor checkout (claim: present)
@@ -19,9 +20,10 @@
    INVENTORY CONFIRMS (corrected) PRESENT: GitHub PR authority action (AuthorityAction::GithubPr)
    INVENTORY CONFIRMS (corrected) PRESENT: GitHub PR policy surface (github_pr, default escalate)
 -- dependent tasks stay blocked (plan DAG at initial_state) --
-   ready at plan start: ['T00']
-   T03 blocked_on=['T01'] (Go-gated; T01 owns GATE_GO)
-   T04 blocked_on=['T01'] (Go-gated; T01 owns GATE_GO)
+   settled now: ['T00', 'T02', 'T01']
+   ready now: ['T03', 'T04']
+   T03 blocked_on=[] (was ['T01'] before T01 settled)
+   T04 blocked_on=[] (was ['T01'] before T01 settled)
    all absent seams remain recorded as absent
 
 TEETH RESULT: both teeth behaved as specified

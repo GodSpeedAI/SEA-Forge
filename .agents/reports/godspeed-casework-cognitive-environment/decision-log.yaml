@@ -185,3 +185,24 @@ decisions:
       the Go ports and React contract package exist, because today it reports NOT-APPLICABLE-YET for
       the interfaces it is meant to police. Evidence:
       .agents/evidence/godspeed-casework-cognitive-environment/T02/.
+
+  - id: D-2026-09-19-T01-01
+    task: T01
+    title: Application-owned ports, one config authority, typed errors, per-capability preflight
+    claim_state: DECIDED
+    decision: >-
+      The Go front end owns its interfaces (authority, execution, repository, plus an OPTIONAL artifact
+      store), has exactly one configuration authority with the precedence defaults < file < environment
+      < explicit override, accepts only `env:`/`file:` credential indirections, and reports preflight as
+      per-capability ready/degraded/blocking rather than a single boolean.
+    basis:
+      - REQ-ARCH-001/002 and REQ-CONFIG-001..004/010..012 require it, and the boundary gate enforces the first mechanically.
+      - 'A first version of config.Load returned the first problem as a fatal error, which contradicted REQ-CONFIG-012 blast radius; it now returns every problem, config.Fatal selects document-level faults, and capability-scoped faults reach preflight.'
+      - 'Tooth 1 proves non-vacuity and then performs a REAL injection: a provider payload type placed in internal/ports makes the boundary gate fail; removing it makes the gate pass.'
+      - 'Tooth 2 runs the fixture config end to end: exit 2, blocking=[authority repository], degraded=[artifact], with config and unavailable kinds distinguished.'
+    consequence: >-
+      T03 and T04 are unblocked and may run in parallel. Later tasks must translate provider shape INTO
+      ports types; a behaviour that needs a provider type in a port is a design fault to raise, not a
+      type to alias. The React contract package is contract-shape only - GATE_UI and the real renderer
+      are T03 scope. Evidence: .agents/evidence/godspeed-casework-cognitive-environment/T01/ and
+      apps/godspeed-casework-go/README.md.

@@ -109,6 +109,16 @@
   state: `SELF-AUDIT: PASS` (**mechanical and arithmetic checks pass**) and `SELF-TEST: PASS`
   (control PASS + 9/9 injected classes detected), recorded in `self-audit.log` and
   `self-audit-selftest.log`. **T00 remains unconfirmed by an independent verifier.**
+- **Round 6 → Round 7 (tooth maintenance, not a verification round).** T00's second tooth began to FAIL
+  once the world changed: the operator approved B1 (Go installed) and T01 created
+  `apps/godspeed-casework-go` plus the `casework-go-check` recipe, so assertions that recorded those
+  things as *absent* were no longer true. That is the tooth working as designed — an inventory that
+  cannot say when it stopped being true is not an inventory — but it had to be updated honestly rather
+  than deleted. The tooth now asserts the CURRENT truth (toolchain installed and declared; Go module and
+  React contract package exist; `GATE_GO` recipe exists) and names what moved and why, keeps the
+  genuinely-still-absent seams (`casework-ui-check`, the SFWP repository-fact/lease/artifact methods,
+  donor checkouts), and reads the DAG from the live status file so T03/T04 no longer assert the
+  pre-T01 blockage. `TEETH RESULT: both teeth behaved as specified`.
 - All failed rounds are preserved rather than erased, per the plan's correction protocol.
 - Round 0/1/2 defects are preserved rather than erased, per the plan's correction protocol.
 

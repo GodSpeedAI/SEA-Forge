@@ -1131,3 +1131,30 @@ publish-bootstrap crate:
     just release-check
     cargo publish --locked -p {{crate}}
     echo "[publish-bootstrap] {{crate}} published; now link the repo on https://crates.io/crates/{{crate}}/settings"
+
+# --- casework-environment plan (plan: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml)
+# GATE_GO, activated by T01: Go format, vet, and tests for the casework front end. This is the gate
+# the plan names `just casework-go-check`; it must observe the real implementation, never a stub.
+[group('casework')]
+casework-go-check:
+    #!/usr/bin/env bash
+    {{set}}
+    module="apps/godspeed-casework-go"
+    if [ ! -f "$module/go.mod" ]; then
+      echo "casework-go-check: no Go module at $module" >&2
+      exit 1
+    fi
+    if ! command -v go >/dev/null 2>&1; then
+      echo "casework-go-check: the Go toolchain is required (mise declares it in mise.toml)" >&2
+      exit 1
+    fi
+    cd "$module"
+    unformatted="$(gofmt -l .)"
+    if [ -n "$unformatted" ]; then
+      echo "casework-go-check: gofmt would rewrite:" >&2
+      printf '%s\n' "$unformatted" >&2
+      exit 1
+    fi
+    go vet ./...
+    go test ./...
+    echo "casework-go-check: format, vet and tests green"

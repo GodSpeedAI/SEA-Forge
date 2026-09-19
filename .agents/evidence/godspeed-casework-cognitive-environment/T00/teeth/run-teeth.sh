@@ -81,19 +81,28 @@ check_absent() { # <label> <shell test>
   fi
 }
 
-check_absent "Go toolchain (claim: available)"   "! command -v go >/dev/null 2>&1"
-check_absent "Go module apps/godspeed-casework-go (claim: exists)" "! test -e '$WT/apps/godspeed-casework-go'"
-check_absent "React app apps/godspeed-cognitive-ui (claim: exists)" "! test -e '$WT/apps/godspeed-cognitive-ui'"
-check_absent "Casework Go/UI just recipes (claim: exist)" "! grep -qE '^casework-(go-check|ui-check|integrated|removal-check):' '$WT/justfile'"
+# T00's inventory was frozen at 6ce518f and has since CHANGED by two operator-approved steps. The
+# tooth therefore asserts the CURRENT truth while naming what moved and why, rather than freezing a
+# stale absence: an inventory that cannot say when it stopped being true is not an inventory.
+check_present "Go toolchain is installed and declared (B1 resolved by approved remediation)" \
+  "command -v go >/dev/null 2>&1 && grep -q 'go = ' '$WT/mise.toml'"
+check_present "Go module apps/godspeed-casework-go exists with go.mod (created by T01)" \
+  "test -f '$WT/apps/godspeed-casework-go/go.mod'"
+check_present "React contract package apps/godspeed-cognitive-ui/contracts exists (created by T01)" \
+  "test -d '$WT/apps/godspeed-cognitive-ui/contracts'"
+check_present "GATE_GO recipe just casework-go-check exists (added by T01)" \
+  "grep -qE '^casework-go-check:' '$WT/justfile'"
+check_absent "GATE_UI recipe just casework-ui-check (T03 has not implemented it yet)" \
+  "! grep -qE '^casework-ui-check:' '$WT/justfile'"
 check_absent "SFWP repository-fact method (claim: exists)" \
-  "! grep -qE 'method: \"(repo|github|pr)\\.[a-z_]+\"' '$WT/crates/sea-forge-server/src/sfwp/mod.rs'"
+  "! grep -qE 'method: .(repo|github|pr)\.[a-z_]+.' '$WT/crates/sea-forge-server/src/sfwp/mod.rs'"
 check_absent "GitHub REST/webhook client inside the server crate (claim: exists)" \
-  "! grep -rqiE 'api\\.github\\.com|hooks\\.github' '$WT/crates/sea-forge-server/src/'"
+  "! grep -rqiE 'api\.github\.com|hooks\.github' '$WT/crates/sea-forge-server/src/'"
 check_absent "Open MCT / OpenMontage donor checkout (claim: present)" "! test -e /home/sprime01/projects/OpenMCT && ! test -e /home/sprime01/projects/OpenMontage"
 check_absent "SFWP lease/claim/reserve method (claim: exists)" \
-  "! grep -qE 'method: \"(lease|work)\\.[a-z_]+\"' '$WT/crates/sea-forge-server/src/sfwp/mod.rs'"
+  "! grep -qE 'method: .(lease|work)\.[a-z_]+.' '$WT/crates/sea-forge-server/src/sfwp/mod.rs'"
 check_absent "SFWP artifact-persistence method (claim: exists)" \
-  "! grep -qE 'method: \"artifact\\.[a-z_]+\"' '$WT/crates/sea-forge-server/src/sfwp/mod.rs'"
+  "! grep -qE 'method: .artifact\.[a-z_]+.' '$WT/crates/sea-forge-server/src/sfwp/mod.rs'"
 
 # Inventory correction found by this tooth run: a "GitHub adapter" claim is HALF true.
 # The authority/approval surface for a GitHub PR does exist; only repository-fact
@@ -104,15 +113,19 @@ check_present "GitHub PR policy surface (github_pr, default escalate)" \
   "grep -q 'github_pr' '$WT/crates/sea-forge-authority/src/lib.rs' && grep -q 'github_pr' '$WT/crates/sea-forge-server/src/sfwp/approvals.rs'"
 
 say "-- dependent tasks stay blocked (plan DAG at initial_state) --"
-python3 - "$WT/.agents/plans/godspeed-casework-cognitive-environment.plan.yaml" <<'PY'
+python3 - "$WT/.agents/plans/godspeed-casework-cognitive-environment.plan.yaml" "$WT/.agents/current_status.yml" <<'PY'
 import sys, yaml
 plan = yaml.safe_load(open(sys.argv[1]))
-blocked = plan['initial_state']['blocked']
-ready = plan['initial_state']['ready']
-print(f"   ready at plan start: {ready}")
+status = yaml.safe_load(open(sys.argv[2]))
+blocked = status['execution']['blocked_tasks']
+ready = status['execution']['ready_tasks']
+settled = status['execution']['settled_tasks']
+print(f"   settled now: {settled}"); print(f"   ready now: {ready}")
+# The DAG expectation moved ONCE T01 settled: T03/T04 are no longer blocked on T01. The tooth
+# asserts the current graph, and the status file is what it asserts against.
 for t in ('T03', 'T04'):
-    print(f"   {t} blocked_on={blocked[t]} (Go-gated; T01 owns GATE_GO)")
-ok = ready == ['T00'] and blocked['T03'] == ['T01'] and blocked['T04'] == ['T01']
+    print(f"   {t} blocked_on={blocked.get(t, [])} (was ['T01'] before T01 settled)")
+ok = 'T00' in settled and ready == ['T03', 'T04'] and not blocked.get('T03') and not blocked.get('T04')
 sys.exit(0 if ok else 1)
 PY
 [ $? -eq 0 ] || { say "   DAG expectation changed (TOOTH FAILED)"; claim_fail=1; }

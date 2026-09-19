@@ -511,3 +511,13 @@ one was in the evidence layer rather than the claim. The claim was stable from r
 failing was the builder's ability to describe its own evidence accurately. A future task in this
 plan should assume the same and budget for it: write the raw log first, state the number once, derive
 it from the log, and never let a phrase stand in for a measurement.
+
+**T00 tooth maintenance after the world changed (round 7).** T00's second tooth began failing once the
+operator approved B1 and T01 created the Go module, the React contract package and the `GATE_GO`
+recipe: it had recorded those things as *absent*, and they no longer were. The tooth was updated to
+assert the current truth — naming each change and the task or approval that caused it — while keeping
+the seams that are still absent (`just casework-ui-check`, the SFWP repository-fact/lease/artifact
+methods, donor checkouts), and it now reads the DAG from the live status file instead of the plan's
+frozen `initial_state`. Lesson for later tasks: a frozen inventory must be *maintained*, and its teeth
+must say what changed and why; deleting a tooth because reality moved would destroy the only thing that
+noticed.

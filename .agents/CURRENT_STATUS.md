@@ -49,6 +49,20 @@ No file under `crates/`, `workbench/`, or the operator's checkout was modified.
 
 ## Completed
 
+- **T01 — SETTLED (P2, peer confirmation pending).** The Go front end exists at
+  `apps/godspeed-casework-go` with application-owned ports (authority, execution, repository, plus an
+  **optional** artifact store), **one** documented configuration authority (defaults < file <
+  environment < explicit override) with secret indirection only, a typed error model that carries
+  capability attribution, and per-capability preflight (ready / degraded / blocking). The React
+  contract package `apps/godspeed-cognitive-ui/contracts` declares the world/interaction/temporal/
+  artifact/agent adapter interfaces with no renderer, agent-framework or transport dependency.
+  `GATE_GO` (`just casework-go-check`: gofmt, `go vet`, `go test`) **PASS**; `GATE_SPEC_TRACE` PASS;
+  teeth exit 0 — including a **real injection** of a provider payload type into `internal/ports` that
+  makes the boundary gate FAIL, and an end-to-end CLI run with one missing required credential plus one
+  unavailable optional adapter (exit 2, `blocking=[authority repository]`, `degraded=[artifact]`, typed
+  `config` vs `unavailable` kinds). Preserved corrections: configuration faults no longer abort before
+  preflight (that contradicted REQ-CONFIG-012), and the tooth's own assertion was corrected rather than
+  the product. Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T01/`.
 - **T02 — SETTLED (P2, peer confirmation pending).** Donors: **Open MCT OMITTED** (REQ-DONOR-001) and
   **OpenMontage OMITTED** (REQ-DONOR-002); no dependency admitted (REQ-DONOR-003 respected: no donor
   noun/type/namespace appears in any contract definition, import path, or namespaced reference the
@@ -163,13 +177,16 @@ No file under `crates/`, `workbench/`, or the operator's checkout was modified.
 
 ## Remaining
 
-- **T01 is now unblocked** (B1 resolved 2026-09-19: Go 1.27.1 installed and declared in `mise.toml`)
-  and owns `GATE_GO` (`just casework-go-check`) plus the React contract package T03 depends on.
-- **T02 is the other Go-independent task** (settles on `GATE_SPEC_TRACE` alone).
-- T05 must **re-run** `just check` and `just ci` (they were last observed red only at `security`)
-  and the three deferred Gauntlet gates before it can settle; a deferred gate stays pending.
+- **T03 and T04 are now ready** (both were blocked on T01, which is settled): T03 implements the React
+  UI core and local world adapter (`GATE_UI`, `just casework-ui-check`), T04 the Go casework core and
+  cognitive projection model (`GATE_GO`). They may run in parallel.
+- T05 must **re-run** `just check` and `just ci` (they were last observed red only at `security`) and
+  the three deferred Gauntlet gates before it can settle; a deferred gate stays pending.
+- T06–T14 remain blocked per the plan DAG.
 - Re-confirm T00 adversarially (round 6) against the round-6 corrections; the audit's PASS covers
   mechanical/arithmetic checks only — not prose claims.
+- Peer confirmation is still outstanding for T02 and T01 (both settled on their gates and evidence,
+  neither yet independently confirmed).
 
 ## Blockers
 

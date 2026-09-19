@@ -220,8 +220,10 @@ print('== 5. no artifact claims an unrun gate passed ==')
 # Only gates that have NOT been run are policed: the just lint/typecheck/test/proof/build and
 # GATE_SPEC_TRACE baselines really were executed and are legitimately recorded as green. A claim is
 # an unrun gate name followed closely by a pass token that no negation immediately precedes.
-UNRUN = ['GATE_GO', 'GATE_UI', 'GATE_INTEGRATED', 'GATE_REMOVAL', 'GATE_SEAFORGE', 'GATE_GAUNTLET',
-         'no-async-kernel', 'workbench-check', 'casework-go-check', 'casework-ui-check',
+# GATE_GO left this list when T01 implemented just casework-go-check and it turned green;
+# GATE_SPEC_TRACE was never on it. Adding a gate back is how a future task asserts it is unrun.
+UNRUN = ['GATE_UI', 'GATE_INTEGRATED', 'GATE_REMOVAL', 'GATE_SEAFORGE', 'GATE_GAUNTLET',
+         'no-async-kernel', 'workbench-check', 'casework-ui-check',
          'casework-integrated', 'casework-removal-check']
 POS = re.compile(r'\bPASS\b|\bgreen\b|\bpassed\b|exit 0|exits 0', re.I)
 NEG = re.compile(r"not|cannot|never|forbid|unrun|un-run|deferred|blocked|missing|absent|would|until|no such|isn't|won't", re.I)
