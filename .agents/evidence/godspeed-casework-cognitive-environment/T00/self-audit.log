@@ -1,0 +1,21 @@
+== 1. withdrawn wording survives only as a disclosure ==
+  ok: 0 non-disclosed assertion(s) across 42 scanned file(s)
+== 2. every repo-rooted path cited in the handoff exists ==
+  ok: 0 missing of 53 cited path(s) (4 in the Gauntlet worktree)
+
+CHECKS-1-2: PASS
+== 3. every GiB figure that carries a kB anchor is arithmetically consistent ==
+  ok: 0 inconsistent of 10 anchored GiB/kB pair(s) (bare prose figures are NOT policed here - documented limitation)
+== 4. one applied correction round, and it is the newest mentioned ==
+  ok: applied correction round = [6]
+  ok: freshness - applied [6] vs history mentions [4, 5, 6]
+== 5. no artifact claims an unrun gate passed ==
+  ok: 0 possible unrun-gate pass claim(s) among 12 unrun gate names
+== 6. required files exist AND have content ==
+  ok: decision log parses with 9 decisions incl. D-2026-09-19-T00-01..D-2026-09-19-T00-09
+  ok: 15 of 15 required files present and non-trivial
+  ok: the self-test log records SELF-TEST: PASS
+
+CHECKS-3-6: PASS
+
+SELF-AUDIT: PASS

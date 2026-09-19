@@ -1,0 +1,145 @@
+schema: agent.decision_log
+schema_version: '1.0'
+plan_id: godspeed.casework-cognitive-environment.implementation
+plan_version: 0.2.2
+evidence_root: .agents/evidence/godspeed-casework-cognitive-environment
+restoration_note: >-
+  This file was found EMPTY (0 bytes) by independent verification round 5, which also showed that
+  the mechanical self-audit certified it as present because that check tested existence, not
+  content. It is restored here from the builder's own record of the nine decisions it held, and the
+  audit now asserts this file is non-empty and parses with its expected decision ids.
+decisions:
+  - id: D-2026-09-19-T00-01
+    task: T00
+    title: Start in a dedicated SEA Forge worktree and a dedicated Gauntlet worktree
+    claim_state: DECIDED
+    decision: >-
+      Execute this plan in /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment
+      on branch godspeed/casework-cognitive-environment (base 6ce518f), and pin
+      GAUNTLET_WORKTREE=/home/sprime01/projects/gauntlet-godspeed-casework on branch
+      godspeed/casework-environment @ fe75108. The operator's active checkouts are excluded from
+      every write and every gate.
+    basis:
+      - parallel_work_isolation.required = true in the plan.
+      - The spec/plan/validator/ADR are committed at 6ce518f, so the worktree inherits them and the frozen hash reproduces without out-of-band transfer, fetch, reset, clean, or merge.
+      - The operator's Gauntlet checkout carries unrelated in-flight work; its git-status md5 was identical before and after creating the worktree (5abbc212bfc9a43667d42295ca86a557).
+    consequence: Handoff state for this plan lives only in the plan worktree's .agents files.
+  - id: D-2026-09-19-T00-02
+    task: T00
+    title: Pin the Gauntlet worktree to fe75108, not to main
+    claim_state: OBSERVED
+    decision: >-
+      Base the dedicated Gauntlet worktree on fe75108d62129ffb179b6773b67f3ee92213e44d because it is
+      the only reachable revision that contains the removal target.
+    basis:
+      - 'git ls-tree -r --name-only main in the Gauntlet repo contains no workbench/ TUI path; the TUI exists only on the branch containing fe75108.'
+      - The plan's removal target is the Gauntlet TUI, so a main-based worktree could not satisfy REQ-MIG-002.
+    consequence: >-
+      T14's Gauntlet removal is branch-bound and must be reconciled with wherever the TUI actually
+      lands. Recorded as a planning risk for T13/T14.
+  - id: D-2026-09-19-T00-03
+    task: T00
+    title: Share the operator checkout's warm Rust target directory for baseline gates
+    claim_state: DECIDED
+    decision: >-
+      Run the SEA Forge baseline gates with CARGO_TARGET_DIR=/home/sprime01/projects/sea-rs/target
+      plus a worktree-local target symlink, so the baseline measures the frozen revision's real gate
+      behaviour instead of a cold rebuild.
+    basis:
+      - Same revision on both sides, so the baseline is faithful; effects are cache-only.
+      - No source file in the active checkout is written; no operator build process was running.
+      - The plan requires one heavy gate at a time, which was honoured.
+    consequence: >-
+      Later tasks must keep the target symlink or accept a cold build; overriding CARGO_TARGET_DIR
+      without the symlink makes just proof fail for a path reason that looks like a gate failure.
+  - id: D-2026-09-19-T00-04
+    task: T00
+    title: Record the pre-existing red 'just security' baseline and withhold the repair
+    claim_state: DECIDED
+    decision: >-
+      Record gitleaks' 14 generic-api-key findings as a pre-existing inherited red baseline with
+      exact rule/file/commit/entropy/charset evidence, and do not edit .gitleaks.toml without
+      explicit approval, because that is a security-gate configuration change.
+    basis:
+      - >-
+        Round 2 correction: the first version of this basis item claimed the matched values were
+        '8-character mixed-case alphabetic strings matched inside JSON key names, with no credential
+        shape'. That was measured off gitleaks' --redact placeholder (the literal string REDACTED,
+        8 characters) and is withdrawn. Corrected: the matched spans are 23 characters (x11) and 32
+        characters (x3); the matched fields are named key (observation records) and idempotency_key
+        (gate logs); each value is 13-16 characters of lower alnum with hyphens, all containing
+        digits (entropy 3.55-3.75). That is identifier-shaped, not prose, but shape alone cannot
+        prove non-secrecy from a redacted report, so the operator must confirm the field semantics
+        before allowlisting.
+      - All 14 findings are in commit 6ce518f, inside the sibling plan's committed evidence; historical evidence is immutable per .agents/AGENTS.md.
+      - '.gitleaks.toml already contains a reviewed, commit-scoped precedent allowlist from T17 gate-remediation (2026-09-18) for the same class.'
+      - AGENTS.md requires asking before CI changes, and weakening a required gate to make a check pass is forbidden.
+    consequence: >-
+      GATE_SEAFORGE cannot pass until the operator decides. The proposed narrow repair is documented
+      verbatim in the T00 evidence.
+  - id: D-2026-09-19-T00-05
+    task: T00
+    title: Correct the GitHub capability verdict from ABSENT to PARTIAL
+    claim_state: OBSERVED
+    decision: >-
+      Record repository-fact capability as PARTIAL: the GitHub PR authority action and policy surface
+      exist; repository-fact execution and webhook ingestion do not.
+    basis:
+      - 'AuthorityAction::GithubPr in crates/sea-forge-core/src/types.rs:223; GithubPrSurface with default escalate in crates/sea-forge-authority/src/lib.rs:541,608; action kind (github_pr, pull_request); surfaced at crates/sea-forge-server/src/governed_execution_boundary.rs:416 and crates/sea-forge-server/src/sfwp/approvals.rs:147.'
+      - No repo./github./pr.* SFWP method exists, and sea-forge-server contains no GitHub REST or webhook endpoint reference.
+    consequence: >-
+      The tooth now asserts both halves. A cold agent may not claim 'no GitHub support exists' nor
+      'GitHub casework is already implemented'.
+  - id: D-2026-09-19-T00-06
+    task: T00
+    title: The Go toolchain absence is a blocking prerequisite, not a resource deferral
+    claim_state: OBSERVED
+    decision: >-
+      Record the missing Go toolchain as blocking prerequisite B1 for T01 and every dependent task,
+      and do not write unsettleable Go code to appear productive.
+    basis:
+      - go is absent from PATH; mise reports go@1.27.1 not installed; no Go binary exists under /usr/local, /usr/lib, or the home tree.
+      - GATE_GO (just casework-go-check) and target_layout.go_module both presuppose a Go toolchain.
+      - The plan states a task is not complete because code exists, and a missing planned gate blocks that task and its dependents.
+    consequence: T01 cannot settle until the toolchain question is decided.
+  - id: D-2026-09-19-T00-07
+    task: T00
+    title: SFWP capability gaps must not be closed by invention
+    claim_state: DECIDED
+    decision: >-
+      Treat the missing SFWP seams (governed lease/claim, durable artifact persistence, typed
+      object-version history, repository-fact execution, narration beats) as boundaries that
+      constrain later tasks, and require a separately reviewed Rust contract change with conformance
+      tests before any new method is added.
+    basis:
+      - Source spec go_boundary forbids inventing missing SFWP capabilities and requires a reviewed Rust contract change.
+      - The plan's rules forbid silently widening API or authority surfaces.
+    consequence: >-
+      T05 must take duplicate-execution safety from the server's request_id correlation; T07 must
+      build history from events/episode records or block; T08 may settle its ephemeral scope but
+      cannot settle REQ-ART-004 by fixture.
+  - id: D-2026-09-19-T00-08
+    task: T00
+    title: The SFWP protocol reference document is stale by five methods
+    claim_state: OBSERVED
+    decision: >-
+      Record docs/reference/sfwp-protocol-reference.md as stale (18 documented methods vs 23
+      implemented) and treat sfwp/mod.rs::IMPLEMENTED_METHODS as the authoritative catalog.
+    basis:
+      - 'Parsed IMPLEMENTED_METHODS: 23 descriptors. The document catalog adds up to 18 and omits request.get_status, events.get_range, case.entry_options, delegation.preview, delegation.list.'
+    consequence: A cold agent following the document would under-count the boundary.
+  - id: D-2026-09-19-T00-09
+    task: T00
+    title: T00 settles with recorded prerequisites rather than claiming green
+    claim_state: DECIDED
+    decision: >-
+      Settle T00 on its own gate (GATE_SPEC_TRACE plus the implementation-brief file check) with all
+      T00 done_when conditions met, while recording B1 (no Go toolchain) and B2 (red just security)
+      as open prerequisites that block T01 and GATE_SEAFORGE respectively.
+    basis:
+      - 'T00 done_when: frozen SHA-256 verifies; gate baselines recorded as passed or RESOURCE_DEFERRED without claiming an unrun gate passed; implementation brief with cold-agent hot context; 86/86 traceability; all T00 teeth pass.'
+      - GATE_SEAFORGE and GATE_GAUNTLET activate at T05, not T00, and T00 forbids marking an unrun gate passed.
+      - 'Round-5 verification found this file empty; it is restored, and the audit now checks content, not just existence.'
+    consequence: >-
+      The plan is not blocked at T00, but T01 cannot start until B1 is decided. Nothing here claims
+      product capability, adapter compatibility, UI behaviour, or end-to-end integration.

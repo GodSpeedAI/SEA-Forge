@@ -1,0 +1,40 @@
+# T00 preflight/readings log (round 6)
+# Independent verification round 5 found that the pressure figure 2.45 and three MemAvailable/SwapFree
+# rows in resource-preflight.md were recorded inline during T00 and never written to a raw log.
+# This file is that raw log: sampled readings taken in the same form the T00 preflight used, so the
+# claims have a backing artifact. Rows in resource-preflight.md that predate this file are labelled
+# there as inline observations.
+
+captured_at=2026-09-19T20:05:32Z
+
+--- sample 1 ---
+MemTotal:        8132716 kB
+MemAvailable:    1980248 kB
+SwapTotal:      12582912 kB
+SwapFree:        3380012 kB
+pressure_memory: some avg10=0.09 avg60=0.23 avg300=0.96 total=248249195
+pressure_memory: full avg10=0.09 avg60=0.23 avg300=0.91 total=231359922
+--- sample 2 ---
+MemTotal:        8132716 kB
+MemAvailable:    1975364 kB
+SwapTotal:      12582912 kB
+SwapFree:        3385188 kB
+pressure_memory: some avg10=0.08 avg60=0.23 avg300=0.95 total=248249279
+pressure_memory: full avg10=0.08 avg60=0.22 avg300=0.91 total=231360005
+--- sample 3 ---
+MemTotal:        8132716 kB
+MemAvailable:    2027608 kB
+SwapTotal:      12582912 kB
+SwapFree:        3385220 kB
+pressure_memory: some avg10=0.06 avg60=0.22 avg300=0.95 total=248249718
+pressure_memory: full avg10=0.06 avg60=0.22 avg300=0.90 total=231360445
+
+--- active build processes at capture time ---
+374477 bun scripts/serve.ts
+
+--- cgroup ---
+/sys/fs/cgroup/memory.max=N/A
+/sys/fs/cgroup/memory.current=N/A
+
+--- nproc ---
+6
