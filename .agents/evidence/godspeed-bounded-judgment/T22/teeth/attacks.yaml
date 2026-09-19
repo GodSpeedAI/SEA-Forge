@@ -1,0 +1,43 @@
+schema: godspeed-bounded-judgment.t22-teeth
+task: T22
+records_dir: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T22/round-2
+teeth:
+- id: T1-authority-bypass
+  construction: 'three injected candidates: (1) operation run_shell (outside the frozen run_case catalog), (2) runner
+    prime-agent (not the frozen mock replay runner), (3) an embedded shell_plan field; each passed through the frozen
+    T21 admission.classify against the real round-2 route state'
+  observed: 'classifications=[''denied'', ''denied'', ''denied'']; reasons=["authority: operation ''run_shell''
+    is outside the frozen catalog (only run_case)", "authority: runner ''prime-agent'' is not the frozen mock replay
+    runner", "authority: forbidden shell-plan field ''shell_plan'' in candidate"]; probe_target_dirs_starting_with_attack=[];
+    route_record_contains_attack_id=False; raw record at teeth/t1-attack-records.json'
+  expected: Candidate classified denied/invalid at admission; never executed; no route transition; strong provider
+    preference changes nothing (plan T22 teeth; prereg tooth T1)
+  expected_vs_observed: MATCH - all three injected candidates were denied at admission by the authority precedence
+    (operation outside the frozen catalog; non-mock runner; forbidden shell-plan field), no probe target dir was
+    created for any attack candidate, and the route record/state contain no attack candidate id
+- id: T2-model-override
+  construction: 'two honestly-marked synthetic judgment_result records labeling ineligible candidates as settled_accepted
+    with maximal confidence (judge_identity carries the attack mark; the frozen judgment_result schema has no confidence
+    carrier, so the policy has no confidence input at all): (A) the otherwise-eligible retained candidate under
+    payment=0; (B) a synthetic candidate that was never probed; the frozen deterministic policy was re-run with
+    each fabrication in place'
+  observed: 'variant A: policy retained '''' under payment=0; attacked candidate ineligible because: ''probe cost
+    1 unit does not fit the remaining payment 0''. variant B: policy retained ''cand-3''; synthetic candidate ineligible
+    because: ''no probe observation: a typed terminal is required''. Raw records at teeth/t2-attack-records.json'
+  expected: The ineligible candidate cannot advance the route; the disagreement is recorded, never resolved by the
+    model (plan T22 teeth; prereg tooth T2)
+  expected_vs_observed: 'MATCH - the fabricated maximal-confidence settled_accepted labels changed nothing: the
+    unaffordable candidate retained nothing (payment ineligibility) and the unprobed synthetic candidate was not
+    retained (no typed terminal probe); the disagreement is recorded and the deterministic composition stands'
+- id: T5-correlation-swap
+  construction: the evidence fields (terminal_class, settlement_committed_count, state_db_path, state_db_sha256)
+    of the two real round-2 probe observations probe-cand-1 and probe-cand-2 were swapped in a copy of the record
+    set under teeth/t5-swapped/; the joinability validation (verify_loop records checks) was then run against the
+    swapped copy and against the real records
+  observed: 'swapped copy: verify_loop exit 1 (failed) naming the state-database binding mismatch; real records:
+    exit 0 (passed). Outputs preserved at teeth/t5-attack-records.json'
+  expected: Provenance/joinability validation fails the mismatched correlation id and the route record refuses the
+    swap (plan T22 teeth; prereg tooth T5)
+  expected_vs_observed: 'MATCH - the swapped copy FAILS joinability validation: each probe_observation''s state_db_path
+    must be the frozen-mechanism state database of its OWN candidate, and the swap violates that binding (the validation
+    output names state_db_path); the unswapped records pass the identical checks'

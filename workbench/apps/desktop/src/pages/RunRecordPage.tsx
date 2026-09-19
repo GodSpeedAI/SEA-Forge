@@ -32,7 +32,7 @@ const CRITERION_EXPLANATION: Record<string, string> = {
   recorded:
     "Observed and recorded as evidence. An evaluator score never decides acceptance on its own.",
   unavailable:
-    "The settlement recorded nothing deciding this criterion. Unknown — not assumed satisfied.",
+    "The settlement recorded nothing deciding this criterion. Unknown. Not assumed satisfied.",
 };
 
 function CriterionRow({ check }: { check: CriterionCheck }) {
@@ -144,7 +144,7 @@ function OutcomePanel({ record }: { record: RunRecord }) {
           </dl>
         ) : (
           <p className={styles.muted}>
-            No settlement record exists for this run. The work is unsettled — which is
+            No settlement record exists for this run. The work is unsettled, which is
             distinct from rejected.
           </p>
         )}
@@ -209,7 +209,7 @@ export function RunRecordPage() {
         <h1>{record.plan_item_name || record.run_id}</h1>
         <p className={styles.lede}>
           One run episode with every record that bears on it. Each retry is its own
-          immutable run — nothing here overwrites a previous attempt.
+          immutable run. Nothing here overwrites a previous attempt.
         </p>
         <dl className={styles.grid}>
           <div>
@@ -294,8 +294,8 @@ export function RunRecordPage() {
           </div>
         ) : (
           <p className={styles.muted}>
-            No authority decision record for this run. Absent is not the same as denied —
-            see the record inventory below.
+            No authority decision record for this run. Absent is not the same as denied.
+            See the record inventory below.
           </p>
         )}
       </section>
@@ -359,7 +359,7 @@ export function RunRecordPage() {
                     (epic 12.6): an operator must be able to see that the
                     declarer and the acting entity were the same.
                   */}
-                  <td>{declaration.independent ? "Yes" : "No — self-declared"}</td>
+                  <td>{declaration.independent ? "Yes" : "No: self-declared"}</td>
                   <td>{declaration.qualifies_for_capability ? "Yes" : "No"}</td>
                   <td>{declaration.reliability_weight}</td>
                 </tr>

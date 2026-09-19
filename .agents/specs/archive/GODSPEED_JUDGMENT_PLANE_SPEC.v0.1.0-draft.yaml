@@ -1,0 +1,1493 @@
+# =============================================================================
+# GODSPEED JUDGMENT PLANE — NORMATIVE SPECIFICATION
+# =============================================================================
+
+schema: agent.spec
+schema_version: "1.0"
+
+metadata:
+  id: "godspeed.judgment-plane"
+  title: "GodSpeed Judgment Plane"
+  status: "draft"
+  version: "0.1.0"
+  created: "2026-09-16"
+  scope: >-
+    Provider-neutral probabilistic judgment subsystem connecting DomainForge-defined
+    semantic representation to SEA-Forge authority evaluation without granting model
+    output direct authority over privileged action.
+  purpose: >-
+    Define the end-state contract for bounded, typed, provenance-preserving judgments
+    over declared domain state, such that learned judgment can inform but never replace
+    deterministic authority, evidence, execution, observation, or settlement.
+  owner: "GodSpeed AI"
+
+  normative_language: "RFC 2119"
+  normative_keywords:
+    - MUST
+    - MUST_NOT
+    - REQUIRED
+    - SHOULD
+    - SHOULD_NOT
+    - RECOMMENDED
+    - MAY
+    - OPTIONAL
+  implementation_defined_meaning: >-
+    Behavior is part of the implementation contract but this specification does not
+    prescribe one universal mechanism. The implementation MUST document the selected
+    behavior and prove conformance to the surrounding requirements.
+
+sources:
+  primary_brief:
+    role: "Normative architectural intent derived from the GodSpeed representation → judgment → authority model"
+    expected_path: "this specification"
+
+  existing_implementation:
+    role: >-
+      Pre-existing DomainForge, SEA-Forge, Gauntlet, Context Kernel, RealityTrace,
+      evidence, settlement, semantic-envelope, and runtime components to evolve;
+      current code is evidence of current state, not automatically the normative target.
+    location: "repository inspection required"
+
+  provider_references:
+    role: >-
+      External provider contracts such as TypeSafe Jev/System One or OpenAI-compatible
+      local inference may inform adapters but MUST NOT define the stable domain model.
+    location: "implementation-defined external provider documentation"
+
+# -----------------------------------------------------------------------------
+# 0. SPEC FRAME
+# -----------------------------------------------------------------------------
+spec_frame:
+  quality_gate_questions:
+    - "What should be built?"
+    - "What result should it produce?"
+    - "How will we know the result is real?"
+    - "What capability should become reliably available after repeated successful use?"
+    - "What evidence proves the capability claim?"
+    - "What fails safely?"
+    - "What must repeat until reliable?"
+    - "What changes when evidence disagrees with the design?"
+
+  proof_loop:
+    mermaid: |-
+      flowchart LR
+        JTBD["Need bounded judgment over represented state"] --> Build["Judgment Plane"]
+        Build --> Output["JudgmentObservation produced"]
+        Output --> Verify["Replay + live verification"]
+        Verify -->|passes| Outcome["Verified bounded judgment capability"]
+        Verify -->|fails| Blocked["Blocked / degraded / contradicted"]
+        Outcome --> Evidence["Immutable evidence + provenance"]
+        Evidence --> Repeat["Variation + provider substitution"]
+        Repeat --> Capability["Reliable judgment capability claim"]
+        Evidence -->|contradicts design| Revise["Revise spec or implementation"]
+
+# -----------------------------------------------------------------------------
+# 1. PROBLEM STATEMENT
+# -----------------------------------------------------------------------------
+problem_statement:
+  system_name: "GodSpeed Judgment Plane"
+
+  problem_summary: >-
+    GodSpeed currently has explicit architectural boundaries for semantic representation,
+    authority, execution, evidence, observation, settlement, and learning, but learned
+    judgment between represented state and authority is not yet expressed as a first-class,
+    provider-neutral, replayable contract. Without that boundary, models risk being asked
+    to reproduce control logic, authority, or semantic structure inside prompts.
+
+  job_to_be_done:
+    actor: "GodSpeed runtime, Gauntlet controller, or other authorized calling subsystem"
+    trigger: >-
+      A represented case or work state requires one or more bounded semantic judgments
+      before deterministic routing, authority evaluation, or escalation can proceed.
+    job: >-
+      Evaluate an explicitly declared DecisionSurface against a bounded ContextBundle and
+      produce typed probabilistic JudgmentObservations with complete provenance.
+    outcome: >-
+      GodSpeed can use learned judgment as inspectable evidence while preserving DomainForge
+      as semantic authority, SEA-Forge as operational authority, and settlement as the
+      consequence-backed closure mechanism.
+
+  current_failure_modes:
+    - "General-purpose models are asked to infer both domain meaning and action logic in one prompt."
+    - "Model output may be consumed without a stable distinction between judgment, evidence, and authority."
+    - "Provider-specific schemas or prompts can leak into stable architecture."
+    - "Historical judgment cannot always be replayed against later consequence for calibration."
+    - "Uncertainty can be collapsed into an answer instead of represented explicitly."
+
+  why_existing_approaches_fail: >-
+    Monolithic agent prompting concentrates interpretation, classification, planning,
+    authorization, routing, and action in one nondeterministic component. This makes
+    provenance weak, replay difficult, provider substitution expensive, and false closure
+    easy. The required architecture must separate what the domain means, what a model judges,
+    what policy authorizes, what execution changes, and what consequence later establishes.
+
+  important_boundary:
+    is: >-
+      A bounded judgment subsystem that evaluates declared decision surfaces over represented
+      state and emits typed, probabilistic, provenance-preserving observations.
+    is_not: >-
+      A planner, autonomous agent, policy engine, semantic compiler, execution engine,
+      settlement authority, or vendor-specific Jev wrapper.
+    successful_execution: >-
+      A valid JudgmentRequest produces a fully traceable JudgmentObservation whose values are
+      constrained to the declared DecisionSurface and which can be consumed as evidence without
+      granting direct authority.
+    false_success_boundary: >-
+      Receiving syntactically valid model output, a high-confidence score, a provider response,
+      or a passed mock test MUST NOT alone be called successful judgment capability.
+
+# -----------------------------------------------------------------------------
+# 2. GOALS AND NON-GOALS
+# -----------------------------------------------------------------------------
+requirements:
+  goals:
+    - id: REQ-GOAL-001
+      text: >-
+        The system MUST provide a stable provider-neutral contract for bounded typed judgments.
+    - id: REQ-GOAL-002
+      text: >-
+        The system MUST preserve DomainForge as the authority for domain meaning and valid
+        semantic distinctions.
+    - id: REQ-GOAL-003
+      text: >-
+        The system MUST preserve SEA-Forge as the authority for privileged action decisions.
+    - id: REQ-GOAL-004
+      text: >-
+        Every judgment MUST be attributable to its exact input state, decision surface,
+        provider, model, and semantic projection.
+    - id: REQ-GOAL-005
+      text: >-
+        Historical judgments MUST be replayable and comparable with later consequence and settlement.
+    - id: REQ-GOAL-006
+      text: >-
+        Provider substitution MUST NOT require changes to DomainForge, SEA-Forge authority
+        semantics, Gauntlet execution semantics, or the stable JudgmentObservation contract.
+    - id: REQ-GOAL-007
+      text: >-
+        The system MUST make uncertainty, provider failure, contradiction, and insufficiency
+        observable rather than silently coercing them into a positive judgment.
+
+  non_goals:
+    - id: NONGOAL-001
+      text: "Replacing DomainForge with a learned ontology or provider-defined schema."
+    - id: NONGOAL-002
+      text: "Allowing model confidence to directly authorize privileged operations."
+    - id: NONGOAL-003
+      text: "Making Jev, Qwen, or any other vendor/model a required stable dependency."
+    - id: NONGOAL-004
+      text: "Using the Judgment Plane as an unrestricted natural-language generation interface."
+    - id: NONGOAL-005
+      text: "Automatically changing policy thresholds based only on model self-evaluation."
+    - id: NONGOAL-006
+      text: "Claiming semantic truth, settlement, or learning merely from provider output."
+
+# -----------------------------------------------------------------------------
+# 3. OUTCOME CONTRACT
+# -----------------------------------------------------------------------------
+outcome_contract:
+  output_produced:
+    primary_output: >-
+      A durable JudgmentObservation containing one or more bounded typed judgments,
+      probability/confidence information where supported, provenance, hashes of all stable
+      semantic inputs, and an explicit status for success, insufficiency, contradiction,
+      provider failure, or unsupported capability.
+
+    requirements:
+      - id: REQ-OUT-001
+        text: >-
+          Every successful request MUST produce a JudgmentObservation conforming to the stable schema.
+      - id: REQ-OUT-002
+        text: >-
+          Every JudgmentObservation MUST identify the DecisionSurface and semantic projection used.
+      - id: REQ-OUT-003
+        text: >-
+          Every individual judgment MUST be constrained to the declared output type and value set.
+      - id: REQ-OUT-004
+        text: >-
+          Provider metadata MUST be preserved below the stable abstraction without changing its meaning.
+      - id: REQ-OUT-005
+        text: >-
+          The output MUST distinguish judgment result from downstream authority decision and settlement.
+
+  outcome_verified:
+    condition: >-
+      The system counts as verified only when real provider-backed judgments can be produced,
+      replayed, audited, safely failed, and consumed by downstream code without bypassing
+      DomainForge semantic constraints or SEA-Forge authority.
+
+    signals:
+      - id: REQ-VERIFY-001
+        text: "The same frozen request can be replayed with provenance sufficient to explain input and output."
+      - id: REQ-VERIFY-002
+        text: "At least two providers can satisfy the same stable contract without upstream semantic changes."
+      - id: REQ-VERIFY-003
+        text: "Provider failure yields a typed non-authoritative state and never permissive fallback."
+      - id: REQ-VERIFY-004
+        text: "Historical Gauntlet cases can compare pre-consequence judgment with later settlement."
+      - id: REQ-VERIFY-005
+        text: "SEA-Forge can consume judgment evidence without delegating ALLOW authority to the model."
+
+    false_completion_conditions:
+      - "Only mock providers pass."
+      - "Only one hardcoded provider works."
+      - "The model can emit values outside the declared DecisionSurface."
+      - "High confidence is treated as equivalent to authorization."
+      - "Replay cannot reconstruct the exact semantic and contextual inputs."
+      - "Provider outage silently falls back to an unrecorded or less-constrained path."
+      - "The integration works only through prompt conventions that are not schema-validated."
+
+  consumer_and_handoff:
+    consumers:
+      - "Gauntlet controller"
+      - "SEA-Forge runtime/authority evaluation"
+      - "RealityTrace"
+      - "evidence and settlement subsystems"
+      - "evaluation/training pipelines"
+
+    handoff_complete_when:
+      - "JudgmentObservation is durable and referenceable by stable ID."
+      - "All semantic/provenance hashes required for replay are present."
+      - "Consumer can distinguish result, uncertainty, failure, and unsupported capability."
+      - "No direct privileged side effect occurred during judgment."
+
+    unverified_state: "incomplete"
+    unverified_surface:
+      - "typed judgment status"
+      - "evidence artifact"
+      - "operator/agent-readable reason code"
+
+# -----------------------------------------------------------------------------
+# 4. CAPABILITY CLAIM
+# -----------------------------------------------------------------------------
+capability_claim:
+  applicability: "applicable"
+  owner: "GodSpeed runtime and downstream agents/controllers"
+
+  delta: >-
+    After repeated successful use, GodSpeed gains a reliable ability to convert bounded
+    represented state into typed probabilistic judgments that can be compared with later
+    consequence and substituted across providers without collapsing judgment into authority.
+
+  why_in_scope: >-
+    This closes an architectural gap between semantic representation and operational
+    authority while preserving the existing GodSpeed decomposition.
+
+  proven_only_if:
+    - "Judgments remain schema-bounded across required variations."
+    - "At least one local/general model provider and one independently implemented provider path pass conformance."
+    - "Replay links judgment state to later observed consequence."
+    - "Provider substitution does not alter stable upstream/downstream contracts."
+    - "Safe failure and no-authority-escalation invariants hold."
+
+  not_proven_by:
+    - "A single demo."
+    - "A high benchmark score without target-system integration."
+    - "A provider returning confidence values."
+    - "Syntactically valid structured output."
+    - "Model self-reported reasoning or confidence."
+
+  learning_claim: >-
+    Repetition initially establishes operational reliability and calibration evidence.
+    It does NOT by itself imply online learning. Actual model or policy learning may be
+    added later only when a training/change mechanism and consequence-backed evidence exist.
+
+# -----------------------------------------------------------------------------
+# 5. EVIDENCE AND CLAIM DISCIPLINE
+# -----------------------------------------------------------------------------
+claim_discipline:
+  levels:
+    evidence_backed: >-
+      Supported by implementation, tests, logs, proof commands, reviewable artifacts,
+      integration results, benchmark evidence, or other inspectable evidence.
+    partially_proven: >-
+      Implemented in meaningful pieces but not yet proven end-to-end, under required
+      variation, or in the target environment.
+    assumption: >-
+      Required for the design to hold but not yet proven.
+    roadmap: >-
+      Intended future behavior that is not required for current conformance.
+
+  claims:
+    - id: CLAIM-001
+      claim: "A provider-neutral judgment boundary can be inserted without changing SEA-Forge authority semantics."
+      level: "assumption"
+      required_evidence: "Repository inspection plus conformance tests showing no authority bypass."
+      current_evidence: "Architectural fit from existing subsystem responsibilities."
+      gap: "Target repository implementation and independent confirmation."
+
+    - id: CLAIM-002
+      claim: "A local general-purpose model can satisfy the stable JudgmentProvider contract."
+      level: "assumption"
+      required_evidence: "Real local inference integration with schema validation and replay."
+      current_evidence: "None in this spec."
+      gap: "Target-environment proof."
+
+    - id: CLAIM-003
+      claim: "A specialized provider such as Jev can satisfy the same contract."
+      level: "roadmap"
+      required_evidence: "Real provider integration using the stable contract."
+      current_evidence: "None in this spec."
+      gap: "Provider access and target integration."
+
+    - id: CLAIM-004
+      claim: "Pre-consequence judgment can be compared with later settlement to measure calibration."
+      level: "partially_proven"
+      required_evidence: "Replay pipeline over historical settled Gauntlet cases."
+      current_evidence: "GodSpeed already distinguishes preregistration/expectation, observation, evidence, and settlement conceptually."
+      gap: "Concrete JudgmentObservation data and scoring pipeline."
+
+# -----------------------------------------------------------------------------
+# 6. SYSTEM OVERVIEW
+# -----------------------------------------------------------------------------
+system_overview:
+  architecture_pattern:
+    primary: "provider-neutral bounded judgment plane between semantic representation and authority"
+    rationale: >-
+      Learned judgment is nondeterministic and probabilistic; semantic meaning and authority
+      must remain stable and independently inspectable. A narrow plane permits model evolution
+      without moving semantic or authority boundaries.
+    intentionally_not_used:
+      - pattern: "monolithic autonomous-agent controller"
+        reason: "Conflates interpretation, judgment, policy, action, and evidence."
+      - pattern: "provider-specific model integration as architecture"
+        reason: "Leaks transient vendor/model semantics into stable system boundaries."
+      - pattern: "confidence-implies-authority"
+        reason: "Epistemic confidence is not operational permission."
+
+  main_components:
+    - name: "DecisionSurface"
+      responsibility: >-
+        Declares the bounded questions, types, values, rubrics, propositions, and semantic
+        references that are meaningful for one judgment context.
+      inputs:
+        - "DomainForge semantic projection"
+      outputs:
+        - "stable decision surface"
+
+    - name: "JudgmentRequest"
+      responsibility: >-
+        Binds a DecisionSurface to a specific bounded ContextBundle and correlation identity.
+      inputs:
+        - "DecisionSurface"
+        - "ContextBundle"
+        - "case/work identity"
+      outputs:
+        - "provider-neutral judgment request"
+
+    - name: "JudgmentProvider"
+      responsibility: >-
+        Evaluates a JudgmentRequest using a concrete model/runtime without acquiring domain
+        or operational authority.
+      inputs:
+        - "JudgmentRequest"
+      outputs:
+        - "provider result or typed provider failure"
+
+    - name: "JudgmentObservation"
+      responsibility: >-
+        Preserves normalized judgment results, uncertainty, provenance, provider metadata,
+        and stable semantic hashes as evidence.
+      inputs:
+        - "provider result"
+        - "request provenance"
+      outputs:
+        - "durable judgment evidence"
+
+    - name: "JudgmentComposer"
+      responsibility: >-
+        Applies deterministic code to one or more JudgmentObservations to produce a bounded
+        assessment usable by routing or authority evaluation.
+      inputs:
+        - "JudgmentObservation set"
+        - "declared composition rules"
+      outputs:
+        - "CaseAssessment"
+
+    - name: "Downstream Authority Boundary"
+      responsibility: >-
+        Consumes assessment/judgment evidence while independently applying SEA-Forge authority.
+      inputs:
+        - "CaseAssessment"
+        - "other authority context/evidence"
+      outputs:
+        - "authority result outside this subsystem"
+
+  component_diagram:
+    mermaid: |-
+      flowchart LR
+        DF["DomainForge / .sea"] --> DS["DecisionSurface"]
+        CK["Context Kernel"] --> JR["JudgmentRequest"]
+        DS --> JR
+        JR --> JP["JudgmentProvider"]
+        JP --> JO["JudgmentObservation"]
+        JO --> JC["Deterministic JudgmentComposer"]
+        JC --> SF["SEA-Forge Authority"]
+        SF --> G["Gauntlet / Execution"]
+        G --> RT["RealityTrace"]
+        RT --> ST["Settlement"]
+        ST -. calibration / training evidence .-> JP
+
+  external_dependencies:
+    - name: "DomainForge"
+      purpose: "Provides canonical semantic identity and projections."
+      failure_behavior: "Judgment MUST NOT proceed if required semantic references cannot be resolved."
+
+    - name: "Inference provider"
+      purpose: "Performs learned judgment."
+      failure_behavior: "Return typed provider-unavailable/failed state; never broaden authority."
+
+    - name: "Evidence/trace substrate"
+      purpose: "Preserves replayable provenance."
+      failure_behavior: "Judgment MUST NOT be treated as durable evidence if required provenance cannot be persisted."
+
+# -----------------------------------------------------------------------------
+# 7. CORE DOMAIN MODEL
+# -----------------------------------------------------------------------------
+core_domain_model:
+  scope_rule: >-
+    Stable entities exist only for concepts that must be passed, validated, replayed,
+    audited, or referenced across component boundaries. Provider request/response shapes,
+    transport details, prompt formats, tokenization, and vendor-specific metadata remain
+    adapter details unless required for replay evidence.
+
+  entities:
+    - name: "DecisionSurface"
+      purpose: "Defines the bounded semantic judgment space."
+      used_by:
+        - "DomainForge projection"
+        - "JudgmentProvider"
+        - "JudgmentComposer"
+      required_fields:
+        - name: "id"
+          type: "string"
+          meaning: "Stable logical identity of the judgment surface."
+        - name: "version"
+          type: "string"
+          meaning: "Stable version used for replay and compatibility."
+        - name: "semantic_pack_hash"
+          type: "hash"
+          meaning: "Identity of the DomainForge semantic projection."
+        - name: "questions"
+          type: "array<Question>"
+          meaning: "Bounded typed questions permitted on this surface."
+      optional_fields:
+        - "description"
+        - "metadata"
+      rules:
+        - "Every answerable value MUST be declared by the surface or its referenced rubric."
+        - "Provider-specific field names MUST NOT define stable semantic meaning."
+        - "A changed semantic meaning requires a new compatible version or identity."
+
+    - name: "Question"
+      purpose: "Represents one atomic bounded judgment."
+      used_by:
+        - "DecisionSurface"
+        - "JudgmentProvider"
+      required_fields:
+        - name: "id"
+          type: "string"
+          meaning: "Stable question identity within the DecisionSurface."
+        - name: "kind"
+          type: "enum(choice, score, proposition)"
+          meaning: "Stable judgment kind independent of provider naming."
+        - name: "semantic_reference"
+          type: "string"
+          meaning: "DomainForge concept/proposition/rubric reference."
+        - name: "output_contract"
+          type: "object"
+          meaning: "Allowed values, scale, or proposition semantics."
+      optional_fields:
+        - "natural_language_projection"
+      rules:
+        - "Questions SHOULD be atomic enough that deterministic code can compose their consequences."
+        - "Natural-language wording MUST NOT override referenced semantic meaning."
+
+    - name: "JudgmentRequest"
+      purpose: "Binds a bounded decision surface to one immutable evaluation state."
+      used_by:
+        - "caller"
+        - "JudgmentProvider"
+      required_fields:
+        - name: "id"
+          type: "string"
+          meaning: "Stable request/correlation identity."
+        - name: "decision_surface_id"
+          type: "string"
+          meaning: "DecisionSurface identity."
+        - name: "decision_surface_hash"
+          type: "hash"
+          meaning: "Exact surface content used."
+        - name: "context_bundle_id"
+          type: "string"
+          meaning: "Identity of bounded context."
+        - name: "context_bundle_hash"
+          type: "hash"
+          meaning: "Exact context state evaluated."
+        - name: "semantic_pack_hash"
+          type: "hash"
+          meaning: "Exact domain projection used."
+      optional_fields:
+        - "case_id"
+        - "work_request_id"
+        - "deadline"
+      rules:
+        - "A request MUST be immutable once evaluation begins."
+        - "The request MUST contain or reference enough information for replay."
+
+    - name: "JudgmentObservation"
+      purpose: "Durable evidence of what a judgment provider concluded before downstream consequence."
+      used_by:
+        - "JudgmentComposer"
+        - "SEA-Forge"
+        - "RealityTrace"
+        - "evaluation/training"
+      required_fields:
+        - name: "id"
+          type: "string"
+          meaning: "Stable evidence identity."
+        - name: "request_id"
+          type: "string"
+          meaning: "Correlation to exact JudgmentRequest."
+        - name: "status"
+          type: "enum(success, insufficient, contradictory, provider_failed, unsupported)"
+          meaning: "Judgment outcome class."
+        - name: "judgments"
+          type: "array<Judgment>"
+          meaning: "Normalized bounded results."
+        - name: "provider_identity"
+          type: "string"
+          meaning: "Concrete provider implementation."
+        - name: "model_identity"
+          type: "string"
+          meaning: "Concrete model/version when available."
+        - name: "occurred_at"
+          type: "timestamp"
+          meaning: "Time of provider result."
+      optional_fields:
+        - "provider_metadata"
+        - "latency"
+        - "usage"
+      rules:
+        - "JudgmentObservation is evidence, not authority."
+        - "Failed or contradictory observations MUST remain preserved."
+        - "Provider metadata MUST NOT alter stable semantic meaning."
+
+    - name: "Judgment"
+      purpose: "One normalized answer to one Question."
+      used_by:
+        - "JudgmentObservation"
+        - "JudgmentComposer"
+      required_fields:
+        - name: "question_id"
+          type: "string"
+          meaning: "Question being answered."
+        - name: "result"
+          type: "typed value"
+          meaning: "Value conforming to the Question output contract."
+        - name: "distribution"
+          type: "optional probability distribution"
+          meaning: "Provider-supported normalized uncertainty over allowed values."
+      optional_fields:
+        - "confidence"
+        - "provider_raw_reference"
+      rules:
+        - "A result outside the declared output contract MUST be rejected."
+        - "Missing probability support MUST be represented explicitly, not fabricated."
+
+    - name: "CaseAssessment"
+      purpose: "Deterministic composition of one or more JudgmentObservations."
+      used_by:
+        - "Gauntlet controller"
+        - "SEA-Forge runtime"
+      required_fields:
+        - name: "id"
+          type: "string"
+          meaning: "Stable assessment identity."
+        - name: "source_judgment_ids"
+          type: "array<string>"
+          meaning: "Exact judgments composed."
+        - name: "assessment"
+          type: "typed object"
+          meaning: "Deterministically derived assessment."
+        - name: "composition_rule_version"
+          type: "string"
+          meaning: "Exact deterministic rule set."
+      optional_fields: []
+      rules:
+        - "Composition MUST be deterministic for identical inputs and rule version."
+        - "CaseAssessment MUST NOT itself grant privileged authority."
+
+  orchestrator_daemon_add_on:
+    applicability: "not_applicable"
+    guidance: >-
+      Runtime orchestration concerns belong to the existing GodSpeed/Gauntlet runtime unless
+      repository inspection proves a dedicated judgment daemon is necessary.
+    entities: []
+
+  identifiers_and_normalization:
+    primary_id_rule: "Use collision-resistant stable IDs; content-addressed hashes where replay identity matters."
+    human_readable_rule: "Human-readable aliases MAY accompany stable IDs but MUST NOT be authoritative."
+    normalized_identifier_rule: >-
+      Domain concept and question identifiers MUST use the repository's canonical normalization
+      rule discovered during implementation; no new incompatible identifier convention may be invented.
+    path_or_resource_rule: >-
+      External paths/resources MUST be canonicalized before hashing or privileged use according to
+      the owning subsystem's established boundary rules.
+    unsafe_input_rule: >-
+      Untrusted strings are data. They MUST be validated against declared schemas and MUST NOT
+      create new semantic values, privileged operations, provider configuration, or executable code.
+
+# -----------------------------------------------------------------------------
+# 8. CONFIGURATION AND INPUT CONTRACT
+# -----------------------------------------------------------------------------
+configuration_and_input_contract:
+  configuration_sources_precedence:
+    - order: 1
+      source: "explicit per-invocation/provider selection authorized by caller policy"
+    - order: 2
+      source: "authoritative project/runtime configuration"
+    - order: 3
+      source: "documented safe defaults"
+    - order: 4
+      source: "environment/secret indirection where required"
+
+  resolution_rules:
+    - id: REQ-CONFIG-001
+      text: "Provider selection MUST be explicit, inspectable, and separated from semantic meaning."
+    - id: REQ-CONFIG-002
+      text: "Credentials and endpoints MUST use indirection and MUST NOT be embedded in semantic artifacts."
+    - id: REQ-CONFIG-003
+      text: "Thresholds used for deterministic composition MUST be versioned configuration or declared policy, not prompt text."
+    - id: REQ-CONFIG-004
+      text: "Provider-specific configuration MUST remain below the JudgmentProvider abstraction."
+
+  required_config_fields:
+    - field: "provider"
+      type: "string"
+      required: true
+      default: null
+      validation: "Must resolve to a registered JudgmentProvider implementation."
+
+    - field: "provider_timeout"
+      type: "duration"
+      required: false
+      default: "implementation-defined safe default"
+      validation: "Must be finite and positive."
+
+    - field: "max_retries"
+      type: "integer"
+      required: false
+      default: "implementation-defined bounded default"
+      validation: "Must be >= 0 and bounded."
+
+    - field: "evidence_mode"
+      type: "enum(required)"
+      required: true
+      default: "required"
+      validation: "Current conformance requires durable evidence."
+
+  error_classes:
+    - code: "missing_config_error"
+      blast_radius: "Judgment provider activation or affected request."
+    - code: "parse_error"
+      blast_radius: "Affected configuration or request only."
+    - code: "schema_error"
+      blast_radius: "Affected request/surface; no authority progression."
+    - code: "unsupported_kind_error"
+      blast_radius: "Affected question/request only unless surface requires atomic completeness."
+    - code: "missing_credential_error"
+      blast_radius: "Provider unavailable; no permissive fallback."
+    - code: "input_validation_error"
+      blast_radius: "Affected operation only."
+    - code: "provider_unavailable_error"
+      blast_radius: "Affected provider/request; alternate provider only if explicit observable policy permits."
+    - code: "provider_contract_error"
+      blast_radius: "Affected request; result rejected."
+    - code: "evidence_persistence_error"
+      blast_radius: "Judgment MUST NOT become durable authority evidence."
+
+  error_surface_requirements:
+    - "Errors MUST include a stable code, concise message, and recoverability hint where possible."
+    - "Errors MUST NOT include secrets or excessive raw configuration."
+    - "Provider raw payloads MUST be sanitized before inclusion in normal error surfaces."
+    - "A provider failure MUST remain distinguishable from an epistemic insufficient/contradictory result."
+
+  dynamic_reload:
+    status: "optional"
+    requirements:
+      - "Any provider/config change MUST be validated before activation."
+      - "In-flight requests MUST retain the configuration identity with which they started."
+      - "Invalid reload MUST leave the last known-valid configuration active or explicitly disable the provider."
+      - "Reload behavior MUST be observable."
+
+  startup_preflight:
+    requirements:
+      - id: REQ-CONFIG-010
+        text: "Registered providers MUST validate required local configuration before accepting work."
+      - id: REQ-CONFIG-011
+        text: "A DecisionSurface and its semantic references MUST validate before provider invocation."
+      - id: REQ-CONFIG-012
+        text: "Preflight failure MUST block only the affected provider/surface where safe isolation is possible."
+
+  primary_input:
+    type: "JudgmentRequest"
+    source: "authorized GodSpeed caller"
+
+    required_fields:
+      - name: "id"
+        type: "string"
+        validation: "Non-empty stable identity."
+      - name: "decision_surface_hash"
+        type: "hash"
+        validation: "Must resolve to immutable validated surface."
+      - name: "context_bundle_hash"
+        type: "hash"
+        validation: "Must resolve to immutable bounded context."
+      - name: "semantic_pack_hash"
+        type: "hash"
+        validation: "Must match required DomainForge projection."
+
+    optional_fields:
+      - "case_id"
+      - "work_request_id"
+      - "deadline"
+
+    invalid_input_behavior:
+      missing_required: "Reject with typed validation error before provider invocation."
+      invalid_value: "Reject before provider invocation."
+      duplicate_request: "Return/reuse existing identical result when idempotency identity matches; conflict if content differs."
+      out_of_scope: "Reject as unsupported."
+      unsafe: "Reject before privileged side effects or provider configuration changes."
+
+# -----------------------------------------------------------------------------
+# 9. OPERATIONAL FLOW AND STATE MODEL
+# -----------------------------------------------------------------------------
+operational_flow_and_state_model:
+  flow_summary:
+    primary_flow:
+      - "Resolve and validate DecisionSurface and DomainForge semantic references."
+      - "Resolve immutable bounded ContextBundle and construct JudgmentRequest."
+      - "Invoke selected JudgmentProvider without granting side-effect authority."
+      - "Validate and normalize provider result into JudgmentObservation."
+      - "Persist JudgmentObservation and provenance as evidence."
+      - "Optionally compose judgments deterministically into CaseAssessment."
+      - "Hand off evidence/assessment to Gauntlet or SEA-Forge."
+      - "Later correlate pre-consequence judgment with RealityTrace and Settlement."
+
+  flow_diagram:
+    mermaid: |-
+      flowchart TD
+        A["Validate semantic surface"] --> B["Freeze JudgmentRequest"]
+        B --> C["Invoke provider"]
+        C -->|valid| D["Normalize JudgmentObservation"]
+        C -->|provider failure| X["Typed failed state"]
+        D --> E["Persist evidence"]
+        E -->|success| F["Deterministic composition"]
+        E -->|persistence failure| Y["Incomplete / no authority handoff"]
+        F --> G["Downstream routing / SEA-Forge"]
+        G --> H["Execution + consequence"]
+        H --> I["RealityTrace / Settlement correlation"]
+
+  service_states:
+    stateful_object: "JudgmentRequest"
+    states:
+      - name: "validated"
+        meaning: "Surface/context/provenance are valid and immutable."
+        entry_trigger: "Preflight succeeds."
+        exit_trigger: "Provider invocation begins."
+
+      - name: "evaluating"
+        meaning: "Provider evaluation is in progress."
+        entry_trigger: "Provider invocation."
+        exit_trigger: "Provider result, timeout, cancellation, or failure."
+
+      - name: "observed"
+        meaning: "Provider output has been normalized into a valid JudgmentObservation."
+        entry_trigger: "Schema and semantic validation succeeds."
+        exit_trigger: "Evidence persistence succeeds."
+
+      - name: "durable"
+        meaning: "JudgmentObservation and replay provenance are durably preserved."
+        entry_trigger: "Evidence persistence succeeds."
+        exit_trigger: "Terminal for this request."
+
+      - name: "failed"
+        meaning: "No conforming durable judgment was produced."
+        entry_trigger: "Validation/provider/normalization/persistence failure."
+        exit_trigger: "New request or explicit retry according to bounded policy."
+
+  transition_rules:
+    - from: "validated"
+      to: "evaluating"
+      when: "A configured provider accepts the request."
+    - from: "evaluating"
+      to: "observed"
+      when: "Provider result validates against the DecisionSurface."
+    - from: "observed"
+      to: "durable"
+      when: "Required evidence is persisted."
+    - from: "validated"
+      to: "failed"
+      when: "Provider cannot be invoked."
+    - from: "evaluating"
+      to: "failed"
+      when: "Provider result is invalid, times out, or exhausts bounded recovery."
+    - from: "observed"
+      to: "failed"
+      when: "Required evidence cannot be persisted."
+
+  transition_triggers:
+    - name: "provider_result"
+      behavior: "Validate and normalize; never trust raw provider shape as stable meaning."
+    - name: "evidence_persisted"
+      behavior: "Marks judgment eligible for downstream evidence reference."
+    - name: "provider_failure"
+      behavior: "Produce typed failed state; no implicit authority broadening."
+
+  idempotency_rule: >-
+    Reprocessing the same request identity with identical immutable content MUST return the
+    existing durable observation or an equivalent replay result according to declared mode.
+    Reuse of an identity with different content MUST be rejected as a conflict.
+
+  important_nuances:
+    - "A high-confidence wrong judgment is still only a judgment and MUST NOT become authority."
+    - "An epistemic result of insufficient/contradictory is different from provider/runtime failure."
+    - "Provider substitution is a conformance target, not permission for hidden fallback."
+    - "A missing distribution MUST remain missing rather than being synthesized from a scalar."
+    - "Settlement may later contradict a valid earlier judgment; that contradiction is developmental evidence, not proof that the earlier event record should be rewritten."
+
+# -----------------------------------------------------------------------------
+# 10. CORE BEHAVIOR REQUIREMENTS
+# -----------------------------------------------------------------------------
+core_behavior_requirements:
+  semantic_bounding:
+    - id: "REQ-JUDG-001"
+      text: "Every question MUST resolve to a valid DecisionSurface and DomainForge semantic reference."
+    - id: "REQ-JUDG-002"
+      text: "Providers MUST NOT introduce undeclared output classes, semantic concepts, or privileged operations."
+    - id: "REQ-JUDG-003"
+      text: "Semantic meaning MUST survive provider substitution."
+
+  judgment_execution:
+    - id: "REQ-JUDG-010"
+      text: "A JudgmentProvider MUST receive only the bounded request/context required by the declared surface."
+    - id: "REQ-JUDG-011"
+      text: "Provider output MUST be validated before normalization."
+    - id: "REQ-JUDG-012"
+      text: "The system MUST preserve uncertainty/distributions when the provider supplies them."
+    - id: "REQ-JUDG-013"
+      text: "The system MUST NOT fabricate provider confidence or probabilities."
+    - id: "REQ-JUDG-014"
+      text: "Retries MUST be bounded, observable, and preserve attempt provenance."
+
+  authority_separation:
+    - id: "REQ-AUTH-001"
+      text: "JudgmentProvider MUST NOT execute privileged domain actions."
+    - id: "REQ-AUTH-002"
+      text: "JudgmentObservation MUST be treated as evidence, not permission."
+    - id: "REQ-AUTH-003"
+      text: "SEA-Forge or an equivalent declared authority boundary MUST independently decide privileged authorization."
+    - id: "REQ-AUTH-004"
+      text: "Provider confidence MUST NOT automatically widen an actor's authority or capability set."
+    - id: "REQ-AUTH-005"
+      text: "Provider failure MUST NOT default to ALLOW."
+
+  deterministic_composition:
+    - id: "REQ-COMP-001"
+      text: "Any composition from judgments to CaseAssessment MUST be deterministic for identical inputs and rule version."
+    - id: "REQ-COMP-002"
+      text: "Composition thresholds/rules MUST be versioned and inspectable outside model prompts."
+    - id: "REQ-COMP-003"
+      text: "Conflicting required judgments MUST produce an explicit contradiction/uncertainty path."
+
+  provenance_and_replay:
+    - id: "REQ-PROV-001"
+      text: "Every durable JudgmentObservation MUST reference exact request, context, surface, semantic projection, provider, and model identities."
+    - id: "REQ-PROV-002"
+      text: "Failed attempts relevant to a final result MUST be preserved or referenceable."
+    - id: "REQ-PROV-003"
+      text: "A historical observation MUST remain interpretable after provider upgrades."
+    - id: "REQ-PROV-004"
+      text: "Correction MUST append or supersede with provenance; contradictory evidence MUST NOT be destructively overwritten."
+
+  settlement_linkage:
+    - id: "REQ-SETTLE-001"
+      text: "Judgment evidence SHOULD be correlatable with later execution observation and settlement."
+    - id: "REQ-SETTLE-002"
+      text: "A judgment MUST NOT be relabeled as settled merely because downstream code accepted it."
+    - id: "REQ-SETTLE-003"
+      text: "Calibration/training datasets MUST preserve the distinction between pre-consequence judgment and post-consequence settlement."
+
+  completion_rules:
+    may_claim_completion_only_when:
+      - "Stable contracts are implemented and schema-validated."
+      - "Real provider-backed integration passes required conformance tests."
+      - "No-authority-bypass tests pass."
+      - "Replay/provenance tests pass."
+      - "Safe failure and provider substitution tests pass."
+      - "Required historical Gauntlet replay evidence exists."
+
+    must_report_incomplete_blocked_or_failed_when:
+      - "Only mocks pass."
+      - "Provider output bypasses schema or semantic validation."
+      - "Evidence persistence is missing."
+      - "Provider substitution changes semantic meaning."
+      - "Authority can be widened by provider output alone."
+      - "Required real integration tests are skipped."
+
+# -----------------------------------------------------------------------------
+# 11. EXECUTION / INTEGRATION CONTRACT
+# -----------------------------------------------------------------------------
+execution_integration_contract:
+  invocation:
+    method: "implementation-defined provider adapter behind a stable library/runtime interface"
+    required_parameters:
+      - "JudgmentRequest"
+      - "selected provider identity/config"
+    runtime_context: "GodSpeed case/run/task correlation context when available"
+    authentication: "provider-specific; MUST remain adapter/config concern"
+    timeout_policy: "Finite, bounded, cancellable, and observable; timeout produces typed failure."
+
+  result:
+    type: "JudgmentObservation or typed failure"
+
+    success_fields:
+      - "id"
+      - "request_id"
+      - "status"
+      - "judgments"
+      - "provider_identity"
+      - "model_identity"
+      - "occurred_at"
+      - "provenance hashes"
+
+    failure_fields:
+      - "error.code"
+      - "error.message"
+      - "error.recoverable"
+      - "provider_identity"
+      - "request_id"
+
+  external_side_effects:
+    may_change:
+      - "judgment evidence store"
+      - "telemetry/metrics/logs"
+    must_not_change:
+      - "privileged domain resources"
+      - "SEA-Forge authority state except by ordinary evidence ingestion"
+      - "DomainForge semantic definitions"
+      - "capability grants"
+      - "settlement truth"
+
+  sequence_diagram:
+    mermaid: |-
+      sequenceDiagram
+        participant Caller as Gauntlet/Runtime
+        participant DF as DomainForge Projection
+        participant JP as Judgment Plane
+        participant P as JudgmentProvider
+        participant E as Evidence/RealityTrace
+        participant SF as SEA-Forge
+        Caller->>DF: resolve semantic decision surface
+        DF-->>Caller: DecisionSurface
+        Caller->>JP: JudgmentRequest
+        JP->>JP: validate/freeze request
+        JP->>P: bounded provider invocation
+        P-->>JP: provider result
+        JP->>JP: validate/normalize
+        JP->>E: persist JudgmentObservation
+        JP-->>Caller: durable observation / failure
+        Caller->>SF: authority request + judgment evidence refs
+        SF-->>Caller: ALLOW / DENY / ESCALATE / other declared result
+
+# -----------------------------------------------------------------------------
+# 12. EVIDENCE, PROOF, AND OBSERVABILITY
+# -----------------------------------------------------------------------------
+proof_and_observability:
+  required_evidence_artifacts:
+    - "machine-readable DecisionSurface fixture(s)"
+    - "JudgmentRequest/Observation replay fixtures"
+    - "provider conformance results"
+    - "historical Gauntlet replay dataset/results"
+    - "authority non-bypass test evidence"
+    - "provider failure and contradiction evidence"
+    - "provider substitution comparison"
+    - "independent/adversarial confirmation report for high-risk invariants"
+
+  evidence_policy:
+    storage: "project evidence root, exact path implementation-defined by repository conventions"
+    retention: "Preserve settlement-critical and correction-chain evidence according to project evidence policy."
+    access: "Readable by authorized developers/agents and independent verifiers."
+    correction_history: >-
+      Failed or contradictory evidence MUST NOT be overwritten merely because a
+      later run passes. Preserve provenance sufficient to reconstruct correction.
+
+  proof_interface:
+    preferred_commands:
+      - "implementation-defined: one stable command for schema/unit conformance"
+      - "implementation-defined: one stable command for frozen historical replay"
+      - "implementation-defined: one stable command for real provider integration + authority safety"
+
+    pass_condition: >-
+      Commands exit successfully only when all REQUIRED checks for their scope run,
+      no required test is silently skipped, expected evidence artifacts exist, and
+      no contradiction remains unresolved.
+
+    fail_condition: >-
+      Nonzero exit, skipped REQUIRED integration, missing evidence, semantic mismatch,
+      authority bypass, unbounded retry/fallback, unreplayable input, or contradictory
+      settlement-critical evidence MUST fail conformance.
+
+  required_log_context:
+    - "judgment_request_id"
+    - "decision_surface_id/version/hash"
+    - "semantic_pack_hash"
+    - "context_bundle_hash"
+    - "provider/model identity"
+    - "status/reason code"
+    - "case/run/task correlation when available"
+
+  required_metrics:
+    - name: "judgment_latency"
+      reason: "Diagnose provider/runtime suitability without making latency the semantic contract."
+    - name: "judgment_success_failure_by_reason"
+      reason: "Separate epistemic insufficiency from provider/runtime failure."
+    - name: "schema_contract_violation_rate"
+      reason: "Detect providers/adapters that violate bounded output."
+    - name: "calibration_by_question_or_surface"
+      reason: "Compare pre-consequence probabilities with later consequence where labels exist."
+    - name: "provider_disagreement_rate"
+      reason: "Measure substitution behavior and identify brittle surfaces."
+    - name: "authority_bypass_count"
+      reason: "Must remain zero."
+
+  required_events:
+    - "judgment.requested"
+    - "judgment.provider_attempted"
+    - "judgment.observed"
+    - "judgment.failed"
+    - "judgment.evidence_persisted"
+    - "judgment.correlated_with_settlement"
+
+# -----------------------------------------------------------------------------
+# 13. REPEATABILITY AND VARIATION
+# -----------------------------------------------------------------------------
+repeatability_and_variation:
+  required_variations:
+    - id: VAR-001
+      case: "Known historical Gauntlet blockage with represented/affordable outcome."
+      expected: "Bounded judgment produced; later settlement comparison available."
+
+    - id: VAR-002
+      case: "Represented but unaffordable/blocking case."
+      expected: "Judgment remains within declared classes and uncertainty is explicit."
+
+    - id: VAR-003
+      case: "Capability-deficit case."
+      expected: "No invented capability or authority; deficit can be represented as judgment evidence."
+
+    - id: VAR-004
+      case: "Unrepresented/unknown case."
+      expected: "System does not coerce the case into a known class when declared evidence rules say insufficient."
+
+    - id: VAR-005
+      case: "Same frozen request evaluated by two providers."
+      expected: "Both outputs normalize to the same stable schema and remain semantically comparable."
+
+    - id: VAR-006
+      case: "Provider returns malformed/out-of-domain value."
+      expected: "Result is rejected; no downstream authority progression."
+
+    - id: VAR-007
+      case: "Provider supplies result without probability distribution."
+      expected: "Result may be represented if contract permits, but probability MUST remain absent."
+
+    - id: VAR-008
+      case: "Settlement later contradicts high-confidence judgment."
+      expected: "Original judgment remains immutable; contradiction becomes calibration/development evidence."
+
+  required_recovery_cases:
+    - id: RECOV-001
+      case: "Provider timeout/unavailable."
+      expected: "Bounded retries if configured, then typed failure; no hidden permissive fallback."
+
+    - id: RECOV-002
+      case: "Evidence persistence fails after valid provider result."
+      expected: "Request is incomplete/failed for durable use; raw result MUST NOT silently become authority evidence."
+
+    - id: RECOV-003
+      case: "Semantic pack/surface version mismatch."
+      expected: "Reject before provider invocation or downstream consumption."
+
+    - id: RECOV-004
+      case: "Duplicate request identity with different content."
+      expected: "Conflict error; never overwrite prior evidence."
+
+  capability_claim_rule: >-
+    A capability claim remains unverified until every REQUIRED variation and
+    recovery case applicable to the target environment has passed.
+
+# -----------------------------------------------------------------------------
+# 14. FAILURE MODEL AND RECOVERY
+# -----------------------------------------------------------------------------
+failure_model_and_recovery:
+  failure_classes:
+    - name: "semantic_resolution_failure"
+      symptoms:
+        - "Missing concept, incompatible surface, unresolved semantic pack."
+      required_behavior: >-
+        Reject before provider invocation; surface exact missing/incompatible identity.
+
+    - name: "provider_failure"
+      symptoms:
+        - "Timeout, transport error, unavailable model, provider internal failure."
+      required_behavior: >-
+        Use bounded retry only if explicitly configured; otherwise produce typed failure.
+        Never reinterpret as negative/positive semantic judgment.
+
+    - name: "provider_contract_violation"
+      symptoms:
+        - "Undeclared value, malformed schema, impossible distribution, missing required field."
+      required_behavior: >-
+        Reject result, preserve diagnostic evidence, do not compose or authorize from it.
+
+    - name: "epistemic_insufficiency"
+      symptoms:
+        - "Evidence insufficient to make a supported declared judgment."
+      required_behavior: >-
+        Represent as an epistemic result/status distinct from infrastructure failure.
+
+    - name: "contradictory_judgment"
+      symptoms:
+        - "Required atomic judgments conflict under declared composition rules."
+      required_behavior: >-
+        Produce contradiction/escalation state; do not silently choose a convenient branch.
+
+    - name: "evidence_failure"
+      symptoms:
+        - "Observation cannot be durably persisted or replay provenance is incomplete."
+      required_behavior: >-
+        Prevent durable handoff as authority evidence and report incomplete/failed state.
+
+  safe_failure_requirements:
+    - id: REQ-SAFE-001
+      text: "Any provider/runtime failure MUST fail closed with respect to privileged authority."
+    - id: REQ-SAFE-002
+      text: "Malformed or semantically invalid provider output MUST be rejected before downstream composition."
+    - id: REQ-SAFE-003
+      text: "Hidden fallback to a different provider, prompt, model, or relaxed schema MUST NOT occur."
+    - id: REQ-SAFE-004
+      text: "Uncertainty MUST remain observable and MUST NOT be silently coerced into certainty."
+    - id: REQ-SAFE-005
+      text: "Judgment evidence MUST NOT be treated as settlement."
+
+  unsafe_behaviors:
+    - "Model/provider directly executing privileged actions."
+    - "Confidence threshold automatically minting capability/authority."
+    - "Provider output introducing undeclared semantic values."
+    - "Destructive overwrite of contradictory historical judgment evidence."
+    - "Unlogged provider fallback."
+    - "Treating provider outage as a semantic negative/positive judgment."
+
+  recoverable_failures:
+    - failure: "transient provider transport failure"
+      recovery: "Bounded retry with attempt provenance, then typed failure."
+    - failure: "optional provider unavailable"
+      recovery: "Explicit caller/policy-directed alternate provider may be used only as a new observable attempt."
+
+  nonrecoverable_or_operator_required:
+    - failure: "semantic pack or DecisionSurface integrity mismatch"
+      behavior: "Stop affected judgment flow and require corrected/rebuilt semantic artifact."
+    - failure: "authority boundary bypass detected"
+      behavior: "Fail conformance; disable affected path until corrected and independently confirmed."
+
+# -----------------------------------------------------------------------------
+# 15. SECURITY, SAFETY, AND TRUST BOUNDARIES
+# -----------------------------------------------------------------------------
+security_safety_trust_boundaries:
+  trusted_inputs:
+    - "validated DomainForge semantic projection"
+    - "versioned deterministic composition rules"
+    - "SEA-Forge authority result"
+
+  untrusted_inputs:
+    - "provider/model output"
+    - "natural-language observation/context content"
+    - "external tool/provider metadata"
+
+  trusted_actors:
+    - "authorized GodSpeed runtime components acting through established identity/authority boundaries"
+
+  privileged_operations:
+    - "changing capability grants"
+    - "authorizing external/domain side effects"
+    - "mutating authoritative semantic definitions"
+    - "declaring settlement"
+    - "changing provider credentials/configuration"
+
+  mandatory_requirements:
+    - id: REQ-SEC-001
+      text: "Model/provider output MUST be treated as untrusted data until schema and semantic validation succeed."
+    - id: REQ-SEC-002
+      text: "Judgment providers MUST have no ambient privilege to perform downstream domain actions."
+    - id: REQ-SEC-003
+      text: "Provider secrets MUST be supplied through approved secret/config boundaries and excluded from evidence."
+    - id: REQ-SEC-004
+      text: "Untrusted context MUST NOT be able to redefine DecisionSurface values, provider configuration, or authority policy."
+    - id: REQ-SEC-005
+      text: "Downstream privileged action MUST cross the existing SEA-Forge/equivalent authority boundary."
+
+  secret_handling:
+    source: "approved environment/secret manager/runtime indirection"
+    must_not:
+      - "log secrets"
+      - "persist secrets in evidence artifacts"
+      - "emit secrets in error messages"
+      - "include provider credentials in JudgmentRequest or DecisionSurface"
+
+  authorization_requirements:
+    - "Creating a judgment is not equivalent to authorizing the judged action."
+    - "Only the existing declared authority subsystem may grant privileged execution."
+    - "Alternate-provider use must follow caller/runtime policy, not provider self-selection."
+
+  trust_boundary_diagram:
+    mermaid: |-
+      flowchart LR
+        DF["Trusted semantic projection"] --> JP["Judgment Plane"]
+        Context["Untrusted / bounded context"] --> Validate["Validation + bounding"]
+        Validate --> JP
+        JP --> Provider["Untrusted learned provider"]
+        Provider --> ValidateOut["Schema + semantic validation"]
+        ValidateOut --> Evidence["JudgmentObservation"]
+        Evidence --> SF["SEA-Forge Authority"]
+        Provider -. no direct access .-> Priv["Privileged domain action"]
+        Provider -. no direct access .-> Secrets["Secrets / authority state"]
+
+# -----------------------------------------------------------------------------
+# 16. REFERENCE ALGORITHMS
+# -----------------------------------------------------------------------------
+reference_algorithms:
+  "evaluate_judgment_request":
+    pseudocode: |-
+      function evaluate_judgment_request(request, provider):
+          validate request identity, semantic pack, context bundle, and decision surface
+          freeze exact request inputs and hashes
+          raw = provider.evaluate(request) with bounded timeout/retry
+          if provider failure:
+              preserve attempt evidence
+              return typed provider failure
+          normalized = validate_and_normalize(raw, request.decision_surface)
+          if normalization fails:
+              preserve contract-violation evidence
+              return typed failure
+          observation = build JudgmentObservation(normalized, request, provider identity)
+          persist observation and replay provenance
+          if persistence fails:
+              return incomplete/failed durable state
+          return observation
+
+  "compose_case_assessment":
+    pseudocode: |-
+      function compose_case_assessment(observations, rule_version):
+          require every observation is durable and schema-valid
+          apply versioned deterministic composition rules
+          if required inputs are missing:
+              return insufficient assessment
+          if required judgments conflict:
+              return contradictory assessment
+          return CaseAssessment with source ids and rule version
+
+# -----------------------------------------------------------------------------
+# 17. TEST AND VALIDATION MATRIX
+# -----------------------------------------------------------------------------
+validation_matrix:
+  core_conformance:
+    - area: "Outcome"
+      test: "Evaluate a frozen valid request using a real provider."
+      expected: "Durable, schema-valid JudgmentObservation with full provenance."
+      evidence: "request + observation + evidence record"
+
+    - area: "Input validation"
+      test: "Submit unresolved semantic reference and malformed output contract."
+      expected: "Typed rejection before provider invocation."
+      evidence: "validation test/log"
+
+    - area: "Config errors"
+      test: "Start selected provider without required endpoint/credential/config."
+      expected: "Typed configuration/preflight failure with correct blast radius."
+      evidence: "preflight test"
+
+    - area: "Startup/preflight"
+      test: "Validate provider registry plus DecisionSurface compatibility."
+      expected: "Only valid providers/surfaces become available."
+      evidence: "preflight report"
+
+    - area: "State transitions"
+      test: "Exercise validated → evaluating → observed → durable and each failure branch."
+      expected: "Only legal transitions occur with reason codes."
+      evidence: "state transition tests"
+
+    - area: "Failure handling"
+      test: "Timeout, malformed provider result, evidence-store failure."
+      expected: "Typed safe failure; no authority progression."
+      evidence: "failure injection results"
+
+    - area: "Observability"
+      test: "Trace one judgment from request through later settlement correlation."
+      expected: "All required IDs/hashes/provider metadata are reconstructable."
+      evidence: "trace/replay artifact"
+
+    - area: "Security/safety"
+      test: "Attempt prompt/context injection that asks provider to add new action/value or bypass authority."
+      expected: "Undeclared outputs rejected; provider cannot perform privileged side effect."
+      evidence: "adversarial test report"
+
+    - area: "Authority separation"
+      test: "Return maximum provider confidence for an action SEA-Forge denies."
+      expected: "SEA-Forge denial remains authoritative."
+      evidence: "authority integration test"
+
+    - area: "Provider substitution"
+      test: "Run identical frozen requests through two provider implementations."
+      expected: "Both normalize to stable contract; differences remain evidence, not schema drift."
+      evidence: "cross-provider comparison"
+
+  variation_and_recovery:
+    - case: "Historical settled Gauntlet blockage classifications"
+      why: "Provides consequence-backed evaluation rather than synthetic prompt correctness."
+      expected: "Judgments can be scored against later settlement without rewriting history."
+      evidence: "replay report"
+
+    - case: "Unknown/unrepresented state"
+      why: "Tests whether system preserves incompleteness instead of forcing a known class."
+      expected: "Explicit insufficient/unrepresented result according to declared surface."
+      evidence: "variation test"
+
+    - case: "Provider changes model version"
+      why: "Tests whether provider evolution is isolated below stable contract."
+      expected: "New identity is recorded; stable semantic contract remains valid or incompatibility is explicit."
+      evidence: "compatibility report"
+
+  real_integration_condition: >-
+    Final conformance requires at least one real local/general-purpose model provider path
+    in the target GodSpeed environment and a second independently implemented provider path
+    when available. Mock-only success is insufficient.
+
+  real_integration_tests:
+    - "Real target-environment provider evaluation of frozen Gauntlet traces."
+    - "Real downstream SEA-Forge authority consumption with no-authority-bypass proof."
+    - "Replay from stored request/provenance to comparable normalized observation."
+
+  skipped_test_rule: >-
+    Skipped REQUIRED integration tests MUST be reported as skipped, not passed,
+    and MUST prevent final conformance when those tests are required.
+
+# -----------------------------------------------------------------------------
+# 18. IMPLEMENTATION DEFINITION OF DONE
+# -----------------------------------------------------------------------------
+implementation_definition_of_done:
+  - "The stable DecisionSurface, Question, JudgmentRequest, Judgment, JudgmentObservation, and CaseAssessment contracts exist and are versioned."
+  - "A provider-neutral JudgmentProvider boundary exists."
+  - "At least one real target-environment provider path passes conformance."
+  - "A second provider path can satisfy the same stable contract when available; otherwise the seam remains proven by a genuinely independent test provider and the claim stays partial."
+  - "DomainForge semantic references are authoritative and validated."
+  - "SEA-Forge remains independently authoritative for privileged action."
+  - "Provider output cannot introduce undeclared semantic values or privileged actions."
+  - "Judgment evidence is durable, immutable/correction-preserving, and replayable."
+  - "Historical Gauntlet replay demonstrates comparison of pre-consequence judgment with later settlement."
+  - "Provider timeout, malformed result, evidence failure, contradiction, and semantic mismatch all fail safely."
+  - "No hidden fallback path exists."
+  - "Required variation and recovery cases pass."
+  - "High-risk authority/provenance requirements receive independent/adversarial confirmation."
+  - "Claim levels match actual evidence."
+  - "A cold developer or agent can answer every quality-gate question in spec_frame from this file alone."
+
+# -----------------------------------------------------------------------------
+# ROADMAP / MIGRATION BOUNDARIES
+# -----------------------------------------------------------------------------
+roadmap_boundaries:
+  "DomainForge-compiled DecisionSurfaces":
+    level: roadmap
+    future_shape: >-
+      DomainForge compiles DecisionSurfaces directly from canonical .sea semantics,
+      including stable choice domains, rubrics, propositions, and semantic references.
+    current_requirement: >-
+      Current DecisionSurfaces MUST reference canonical DomainForge identities and MUST
+      remain structurally compatible with future compilation; new .sea syntax is not required now.
+
+  "TypeSafe Jev provider":
+    level: roadmap
+    future_shape: >-
+      A provider adapter maps the stable GodSpeed JudgmentProvider contract to Jev/System One
+      without leaking vendor-specific nouns into core semantics.
+    current_requirement: >-
+      The stable contract MUST not preclude a bounded choice/score/proposition provider and
+      MUST permit provider-specific probability metadata.
+
+  "Local Qwen/System-One-compatible provider":
+    level: roadmap
+    future_shape: >-
+      Local inference on the Jetson or other OpenAI-compatible runtime implements the same
+      bounded provider contract for offline/private operation.
+    current_requirement: >-
+      Provider abstraction MUST support local endpoints and MUST not assume cloud-only identity/auth.
+
+  "Judgment model training":
+    level: roadmap
+    future_shape: >-
+      Consequence-backed Gauntlet traces train or adapt a specialized judgment model using
+      pre-consequence state and post-consequence settlement as evaluation/training evidence.
+    current_requirement: >-
+      JudgmentObservation, RealityTrace, and Settlement MUST preserve enough immutable
+      correlation/provenance to build future datasets without reconstructing history from prose.
+
+  "Adaptive threshold/policy learning":
+    level: roadmap
+    future_shape: >-
+      Empirical calibration may inform proposed threshold or routing changes subject to
+      explicit review, versioning, authority, and evidence.
+    current_requirement: >-
+      Current composition thresholds MUST remain deterministic, versioned, and externally controlled.
+
+# -----------------------------------------------------------------------------
+# CONFORMANCE TRACEABILITY
+# -----------------------------------------------------------------------------
+conformance_traceability:
+  high_risk_requirement_groups:
+    - group: "authority_separation"
+      requirements:
+        - "REQ-AUTH-001"
+        - "REQ-AUTH-002"
+        - "REQ-AUTH-003"
+        - "REQ-AUTH-004"
+        - "REQ-AUTH-005"
+      confirmation: "adversarial"
+
+    - group: "semantic_bounding"
+      requirements:
+        - "REQ-JUDG-001"
+        - "REQ-JUDG-002"
+        - "REQ-JUDG-003"
+      confirmation: "independent"
+
+    - group: "provenance_replay"
+      requirements:
+        - "REQ-PROV-001"
+        - "REQ-PROV-003"
+        - "REQ-PROV-004"
+      confirmation: "fresh_target_reproduction"
+
+    - group: "safe_failure"
+      requirements:
+        - "REQ-SAFE-001"
+        - "REQ-SAFE-002"
+        - "REQ-SAFE-003"
+        - "REQ-SAFE-004"
+        - "REQ-SAFE-005"
+      confirmation: "adversarial"
+
+  plan_projection_rule: >-
+    Every REQUIRED normative requirement MUST map to at least one implementation
+    plan task. Every settlement-critical task MUST declare the requirement IDs it
+    settles, its proof level, evidence location, and confirmation mode. A
+    requirement without a plan task or settled evidence remains open.

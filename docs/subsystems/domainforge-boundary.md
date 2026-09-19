@@ -13,7 +13,7 @@ The **DomainForge Semantic Boundary** integrates SEA Forge with the canonical Do
 
 ## 2. Responsibilities
 
-* **Side-Effect-Free `.sea` Parsing:** Loads and validates `.sea` source files using `domainforge-core 0.15.0` without invoking external binaries or accessing the filesystem directly.
+* **Side-Effect-Free `.sea` Parsing:** Loads and validates `.sea` source files using `domainforge-core 0.16.0` without invoking external binaries or accessing the filesystem directly.
 * **Finite Resource Protection:** Enforces strict limits on source count, aggregate byte size, import depth, AST node counts, and expression nesting depth before parsing, preventing denial-of-service (DoS) or stack overflow attacks.
 * **Candidate Authority Evaluation:** Evaluates candidate policy verdicts from the semantic model, translating DomainForge traces into candidate governance records for `sea-forge-authority`.
 * **In-Memory Projections:** Generates in-memory representations of external projections (such as CALM architecture models or RDF ontologies) through pure library APIs.
@@ -34,7 +34,7 @@ The **DomainForge Semantic Boundary** integrates SEA Forge with the canonical Do
 ```mermaid
 flowchart LR
     SOURCES[".sea Source Files (In-Memory)"] --> LIMITS["Check Finite Limits (Nesting <= 256, Bytes <= 1MiB)"]
-    LIMITS --> DF["domainforge-core 0.15.0"]
+    LIMITS --> DF["domainforge-core 0.16.0"]
     DF --> GRAPH["DomainModel (Graph + DomainModelRef)"]
     GRAPH --> EVAL["evaluate_authority()"]
     EVAL --> CANDIDATE["DomainForgeCandidate (Candidate Verdict)"]
@@ -55,19 +55,24 @@ To shield the kernel from maliciously crafted or infinite `.sea` inputs, the ada
 * `MAX_NESTING_DEPTH = 256`: Maximum bracket or unary operator nesting depth, preventing the external Pest parser from overflowing the call stack (SUP-01).
 
 ### `DomainModelRef` (`sea-forge-domainforge::DomainModelRef`)
-The immutable certificate identifying a validated semantic model:
+The immutable certificate identifying a validated semantic model under the `v2-full-preimage` scheme:
 ```rust
 pub struct DomainModelRef {
+    pub identity_scheme_version: String, // "v2-full-preimage"
     pub source_refs: Vec<SourceRef>,
     pub domainforge_version: String,
     pub adapter_descriptor_sha256: String,
     pub parse_options_sha256: String,
     pub semantic_model_sha256: String,
+    pub d_content_hash: Option<String>,
+    pub semantic_closure_hash: Option<String>,
     pub concept_refs: Vec<String>,
     pub class_refs: Vec<String>,
     pub validation_evidence_refs: Vec<String>,
 }
 ```
+- `adapter_descriptor_sha256`: Computed over adapter name, version, and linked `domainforge_version` (`sha256:16fcd1519e00727b2d17c68c3ddbefd633dacf3dcadd51a0ef37a900a119460e`).
+- Legacy records without `identity_scheme_version` deserialize with `"unknown-pre-versioning"` via `#[serde(default)]`.
 
 ### `DomainForgeCandidate`
 The candidate evaluation passed into `PolicyAuthorityEngine`:
@@ -84,9 +89,9 @@ The candidate evaluation passed into `PolicyAuthorityEngine`:
 1. `SeaSourceSet` is validated against finite bounds (`MAX_AGGREGATE_BYTES`, `MAX_SOURCE_COUNT`).
 2. Source text is scanned for bracket/expression nesting depth. If nesting exceeds 256, it fails closed with `ForgeError::Input` before reaching the Pest parser.
 3. `domainforge_core::parser::parse_source()` constructs the raw AST.
-4. `domainforge_core::application::resolve_semantic_envelope()` validates module imports and circular dependency constraints.
+4. `domainforge_core::application::resolve_semantic_envelope()` validates module imports, circular dependencies, and builds the canonical envelope document $D$.
 5. `resolve_application_graph()` constructs the typed semantic graph.
-6. The resulting `DomainModel` is wrapped with a canonical `DomainModelRef` containing the aggregate `semantic_model_sha256`.
+6. The resulting `DomainModel` is wrapped with a canonical `DomainModelRef`. The aggregate `semantic_model_sha256` binds the full 7-tuple: `identity_scheme_version`, `domainforge_version`, `adapter_descriptor_sha256`, `parse_options_sha256`, `source_refs`, `d_content_hash`, and `semantic_closure_hash`.
 
 ---
 

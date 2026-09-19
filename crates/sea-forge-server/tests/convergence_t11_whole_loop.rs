@@ -24,7 +24,7 @@ use sea_forge_core::types::{
 };
 use sea_forge_server::governed_execution_boundary::InvocationLedger;
 use sea_forge_server::governed_settlement_return::{
-    emit_operational_settlement, evaluate_operational_settlement, SettlementOptionalFields,
+    emit_operational_settlement, SettlementOptionalFields,
 };
 use sea_forge_server::governed_work_ingress::accept_governed_work_request;
 use serde_json::{json, Value};

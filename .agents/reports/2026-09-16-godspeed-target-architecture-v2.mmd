@@ -1,0 +1,96 @@
+%% GodSpeed — TARGET architecture v2 (CORRECTED PROPOSAL, supersedes the v1 diagram AS A PROPOSAL)
+%% Corrections applied: C1 carrier-proven-not-universal | C2 scoped falsification | C3 pilot measurement
+%% C4 dual-basis surface | C5 Judgment Plane is a concern | C6 correlation is joinability
+%% C7 comparability levels | C9 carrier-conditional answer domain
+%% Nothing here is scheduled, deployed, or persisted as a unit.
+
+flowchart TB
+
+  subgraph CONCERN["JUDGMENT PLANE — ARCHITECTURAL CONCERN ONLY (no unit is scheduled or deployed under this name)"]
+    direction TB
+
+    MEANING["SEMANTIC AUTHORITY — sole owner<br/>DomainForge .sea: concepts, identities, admissible distinctions,<br/>domain relationships, meaning of referenced values<br/>UNCHANGED - no grammar change"]
+    EC["EVALUATION AUTHORITY — the QUESTION, not the meaning<br/>Gauntlet Reference/ReferenceDefinition: quality dimensions,<br/>settlement criteria, claim under examination, task-local constraints<br/>MUST NOT acquire semantic authority"]
+    CEPQ["CEP-0005 Question<br/>preferred semantic home, CARRIER-CONDITIONAL (U1 open)"]
+
+    DS["DecisionSurface — DERIVED, hash-pinned, DUAL-BASIS<br/>{id, version, semantic_pack_hash, semantic_basis,<br/>evaluation_basis, questions[], content_hash,<br/>unresolved_reference_policy}"]
+
+    AD["C9 answer domain — distinction normative, carrier open<br/>AnswerDomain: Choice{labels} | Score{min,max,legend} | Proposition{uri}<br/>abstention REQUIRED in every choice domain"]
+    CARRIER["accepted slice-1 carriers:<br/>additive CEP field IF proven | result-contract artifact |<br/>other hash-addressed evaluation artifact"]
+
+    PORT["PROVIDER PATH — one existing port, one new transport<br/>gauntlet_ports::AgentRunner UNCHANGED<br/>+ decision_surface_hash + semantic_pack_hash"]
+    NEWAD["NEW: one HTTP AgentRunner adapter<br/>~1 adapter crate, no new port"]
+    OLDAD["CliAgentRunner / PrimeAgentRunner / MockAgentRunner UNCHANGED"]
+
+    VR["judgment record<br/>VerificationRecord@v1 + distribution, provider_identity,<br/>model_identity, decision_surface_hash, answer_domain_version<br/>record_type slot ALREADY EXISTS"]
+    UV["UNIVERSALITY: NOT ESTABLISHED<br/>slice-1 carrier proven for the VERIFICATION family only.<br/>New carrier requires demonstrated non-verification<br/>insufficiency. NONGOAL-008."]
+    FAM["families needing future evidence: incident classification,<br/>severity estimation, capability classification,<br/>represented/unrepresented, routing, state interpretation,<br/>proposition estimation before a verification claim"]
+
+    EVS["COMPOSITION — existing, made rule-driven<br/>sea-forge-settlement UNCHANGED type;<br/>thresholds move to a VERSIONED, HASH-ADDRESSED rule artifact"]
+    CR["CompositionRule file<br/>{rule_version, thresholds, contradiction_policy}"]
+
+    CORR["CORRELATION — joinability, not a field name (C6)<br/>mechanism implementation-defined: direct echo |<br/>envelope projection | mapping table | other lossless<br/>MUST be proven by a joinability test"]
+
+    PILOT["MEASUREMENT — exploratory (C3, C11)<br/>bounded-judgment PILOT MEASUREMENT (read-only)<br/>replays targets/.runs/*/state/*.db; descriptive metrics only"]
+    DISC["MANDATORY DISCLOSURE BLOCK: N | independent runs |<br/>class counts | effective diversity | missing attribution |<br/>reconstructibility rate"]
+    NOTCAL["RESERVED TERMS, forbidden for this corpus:<br/>calibrated probability | calibration curve |<br/>production threshold | population reliability |<br/>model generalization"]
+
+    SOF["SCOPE OF FALSIFICATION (C2)<br/>surface | task_family | capability_class"]
+    SHAPES["a capability_class conclusion requires evidence across<br/>at least TWO materially different shapes:<br/>1 binary/proposition 2 multiclass choice 3 ordered score/rubric<br/>slice 1 need not cover all three, but MUST NOT generalize<br/>from one to another"]
+  end
+
+  SF["AUTHORITY<br/>sea-forge-authority Verdict{Allow,Deny,Escalate}<br/>judgment is EVIDENCE, never permission<br/>REQ-AUTH-006: semantics stay with DomainForge"]
+  GEX["EXECUTION<br/>SEA-Forge governed execution + Gauntlet orchestration<br/>UNCHANGED"]
+  OBSN["OBSERVATION / EVIDENCE<br/>Gauntlet CAS, observation_bindings, sea-forge-evidence,<br/>sxr record kinds — UNCHANGED"]
+  SET["SETTLEMENT<br/>Gauntlet settlements + SettlementClaim/SettlementEvent<br/>UNCHANGED — scoped owners, not collapsed"]
+  PQ["PROOF-1 — DEFINED, NOT AUTHORISED<br/>two-part question: 1 can the corpus reconstruct the<br/>experiment end-to-end? 2 on this surface, does uncertainty<br/>add information over the deterministic outcome?"]
+  OA["A history not reconstructible -> provenance/correlation blocker.<br/>NO judgment-quality inference."]
+  OB["B provider cannot satisfy the contract -> mechanics need work.<br/>NOT evidence against uncertainty."]
+  OC["C little added on THIS surface -> do not promote for this surface;<br/>inspect a DIFFERENT shape before any wider conclusion."]
+  OD["D useful information -> proceed with the minimal implementation.<br/>Scope of that permission: the examined shape."]
+  OE["E providers disagree -> diagnose ambiguity, context, provider match,<br/>or genuine uncertainty. NOT automatically a wrong surface."]
+
+  LA["CLAIM LEVEL A: interface comparability — SUPPORTED NOW"]
+  LB["CLAIM LEVEL B: operational comparability — needs slice + target hardware"]
+  LC["CLAIM LEVEL C: model-quality comparability — UNPROVEN"]
+
+  R1["PRESERVED REDUCTIONS (C8): no judgment service | no third provider port |<br/>no new database | no .sea grammar change | no training pipeline in slice 1 |<br/>no learning claim | no destructive ledger rewrite |<br/>authority stays with SEA-Forge | composition stays outside the model"]
+
+  DF["DomainForge"]
+  DF --> DS
+  EC --> DS
+  CEPQ -.->|carrier-conditional| DS
+  DS --> AD --> CARRIER
+  DS --> PORT
+  PORT --> NEWAD
+  PORT --> OLDAD
+  NEWAD --> VR
+  OLDAD --> VR
+  VR --> UV
+  UV --> FAM
+  FAM -.->|roadmap-gated| VR
+  VR --> EVS
+  CR --> EVS
+  EVS --> SF
+  SF --> GEX
+  GEX --> OBSN
+  OBSN --> SET
+  CORR -.-> PORT
+  CORR -.-> SF
+  CORR -.-> SET
+  SET --> PILOT
+  PILOT --> DISC
+  PILOT --> NOTCAL
+  PILOT --> SOF
+  SOF --> SHAPES
+  PILOT -.-> PQ
+  PQ --> OA
+  PQ --> OB
+  PQ --> OC
+  PQ --> OD
+  PQ --> OE
+  OD -.-> PORT
+  OD -.-> LA
+  OD -.-> LB
+  LA -.-> LC
+  CONCERN -.- R1

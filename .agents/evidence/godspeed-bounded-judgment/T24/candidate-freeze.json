@@ -1,0 +1,10 @@
+{
+  "candidate_case_path": ".agents/evidence/godspeed-bounded-judgment/T24/candidate-case.yaml",
+  "candidate_sha256": "6bf2610c12a609cee98d48ad571baf2fc58d383232eb72bdb9275b245ea25977",
+  "frozen_at_utc": "2026-09-19T04:08:04.784746+00:00",
+  "frozen_before": "any replay run (no replay record exists at freeze time; replay_case.py re-verifies this pin before running)",
+  "replay_record_exists_at_freeze": false,
+  "rule": "the candidate case record is frozen BEFORE replaying; the sha256 pin is the freeze identity checked by the replay and by verify_case.py",
+  "schema": "godspeed-bounded-judgment.t24-candidate-freeze",
+  "task": "T24"
+}

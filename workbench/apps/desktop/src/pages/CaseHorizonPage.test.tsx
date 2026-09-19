@@ -219,9 +219,9 @@ describe("case horizon", () => {
     });
     renderPage();
 
-    const first = await screen.findByRole("link", { name: "Attempt 1" });
+    const first = await screen.findByRole("link", { name: /Attempt 1/ });
     expect(first).toHaveAttribute("href", "/runs/run-a");
-    expect(screen.getByRole("link", { name: "Attempt 2" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Attempt 2/ })).toHaveAttribute(
       "href",
       "/runs/run-b",
     );

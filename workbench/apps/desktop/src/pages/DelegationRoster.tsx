@@ -170,7 +170,7 @@ export function DelegationRoster() {
       {unreadable.length > 0 && (
         <div role="alert" className={styles.alert}>
           {unreadable.length} delegation run(s) exist but could not be read:{" "}
-          {unreadable.join(", ")}. These are not absent delegations — they are unreadable
+          {unreadable.join(", ")}. These are not absent delegations. They are unreadable
           ones, which is an integrity signal worth investigating.
         </div>
       )}

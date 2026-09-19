@@ -71,6 +71,14 @@
   flex: 1;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .navItem,
+  .navItem:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
 @media (max-width: 1020px) {
   .nav {
     padding-inline: var(--space-2, 8px);

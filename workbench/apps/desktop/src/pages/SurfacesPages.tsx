@@ -68,7 +68,7 @@ export function CapabilitiesPage() {
   return (
     <UnbackedSurface
       title="Capability matrix"
-      purpose="Demonstrated capability with its qualifying settlements — what has held under variation, not what was declared."
+      purpose="Demonstrated capability with its qualifying settlements. What has held under variation, not what was declared."
       method="capability.list"
     />
   );

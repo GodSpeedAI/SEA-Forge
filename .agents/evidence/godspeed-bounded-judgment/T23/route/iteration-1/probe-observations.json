@@ -1,0 +1,53 @@
+[
+  {
+    "bounded_input": {
+      "max_rounds": 4,
+      "scenario": "e2e-happy"
+    },
+    "candidate_id": "cand-1",
+    "correlation_id": "t23-route-001-iter1",
+    "finished_at_utc": "2026-09-19T02:24:36.557466+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i1-cand-1",
+    "settlement_committed_count": 3,
+    "started_at_utc": "2026-09-19T02:24:36.051741+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+    "state_db_sha256": "87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953",
+    "terminal_class": "settled"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 3,
+      "scenario": "e2e-happy"
+    },
+    "candidate_id": "cand-2",
+    "correlation_id": "t23-route-001-iter1",
+    "finished_at_utc": "2026-09-19T02:24:36.876135+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i1-cand-2",
+    "settlement_committed_count": 2,
+    "started_at_utc": "2026-09-19T02:24:36.572656+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-2/state/gauntlet-state.db",
+    "state_db_sha256": "468612b9fc06a7516e9fb85b0a41bd58691a8f9bc3c0dcd8bffbb99f1c675c18",
+    "terminal_class": "budget_exhausted"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 4,
+      "scenario": "e2e-lying"
+    },
+    "candidate_id": "cand-3",
+    "correlation_id": "t23-route-001-iter1",
+    "finished_at_utc": "2026-09-19T02:24:37.182383+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i1-cand-3",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T02:24:36.878946+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-3/state/gauntlet-state.db",
+    "state_db_sha256": "28be5692bee0714a11e01a54f9be5cf5084651f9069a2038b809efc0ea2caf4f",
+    "terminal_class": "budget_exhausted"
+  }
+]

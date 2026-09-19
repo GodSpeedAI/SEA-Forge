@@ -68,7 +68,7 @@ function ContractTable({ contract }: { contract: JobContractPreview }) {
         // Absent is not zero. A zero budget would be an instruction to spend
         // nothing; an absent one means the turn cap is the only bound.
         <span key="tb" className={styles.muted}>
-          no token cap — bounded by the turn cap alone
+          no token cap. Bounded by the turn cap alone.
         </span>
       ),
     ],
@@ -130,7 +130,7 @@ export function DelegationWorkbench() {
       <header className={styles.header}>
         <h1>Configure an agent task</h1>
         <p className={styles.lede}>
-          The complete job contract a delegation would run under — which endpoint, which
+          The complete job contract a delegation would run under: which endpoint, which
           model, which caps, which transcript retention, and which authority it will have
           to obtain. Reading it commits nothing: no case, no run, no ledger entry, and no
           authority decision.
@@ -165,7 +165,7 @@ export function DelegationWorkbench() {
               // endpoint that exists and is refused as one that is absent, and
               // the reason it is refused is exactly what the operator came for.
               <option key={row.asset_id} value={row.name}>
-                {row.name} — {humanize(row.standing)}
+                {row.name}: {humanize(row.standing)}
                 {row.blocking_reason ? " (blocked)" : ""}
               </option>
             ))}
@@ -175,7 +175,7 @@ export function DelegationWorkbench() {
             <span className={styles.muted}>
               {" "}
               No agent endpoint is configured in this cell. Delegation has nowhere to go
-              until one is — see the <Link to="/assets">asset catalog</Link>.
+              until one is configured. See the <Link to="/assets">asset catalog</Link>.
             </span>
           )}
         </p>
@@ -228,10 +228,16 @@ export function DelegationWorkbench() {
           type="button"
           className="button"
           disabled={!endpoint || isFetching}
+          aria-describedby="delegation-inspect-hint"
           onClick={() => setCommitted(draft)}
         >
           {isFetching ? "Reading contract…" : "Inspect job contract"}
         </button>
+        <p className={styles.muted} id="delegation-inspect-hint">
+          {!endpoint
+            ? "Choose an endpoint to enable contract inspection."
+            : "Reads the exact job contract for the current draft. Commits nothing."}
+        </p>
       </section>
 
       {error && (
@@ -294,7 +300,7 @@ export function DelegationWorkbench() {
               <p className={styles.muted}>
                 Committing this delegation will submit a{" "}
                 <code>{preview.contract.required_authority}</code> authority action for
-                evaluation. No decision has been made — naming the gate is not passing it,
+                evaluation. No decision has been made. Naming the gate is not passing it,
                 and no verdict exists until the delegation is committed and the decision
                 is written to the ledger.
               </p>

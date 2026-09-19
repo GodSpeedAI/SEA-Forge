@@ -99,8 +99,10 @@ function HorizonRow({ item }: { item: HorizonItem }) {
                   to="/runs/$runId"
                   params={{ runId }}
                   className={styles.episodeLink}
+                  title={runId}
                 >
                   Attempt {index + 1}
+                  <span className={styles.episodeId}>{runId.slice(0, 8)}</span>
                 </Link>
               ))}
             </dd>
@@ -128,7 +130,7 @@ export function CaseHorizonPage() {
         <h1>Case horizon</h1>
         <p className={styles.lede}>
           Every committed case in this cell, and what each of its plan items is currently
-          doing. Execution and settlement are shown as separate facts — work can finish and
+          doing. Execution and settlement are shown as separate facts. Work can finish and
           still not be accepted.
         </p>
         <button type="button" className={styles.refresh} onClick={refresh}>
@@ -145,7 +147,7 @@ export function CaseHorizonPage() {
       {unreadable.length > 0 && (
         <div role="alert" className={styles.alert}>
           {unreadable.length} case record(s) exist but could not be parsed:{" "}
-          {unreadable.join(", ")}. These are not missing — they are unreadable, which is an
+          {unreadable.join(", ")}. These are not missing. They are unreadable, which is an
           integrity signal worth investigating.
         </div>
       )}
@@ -156,7 +158,7 @@ export function CaseHorizonPage() {
           {!isLoading && cases.length === 0 && !error && (
             <p className={styles.muted}>
               No case has been committed in this cell yet. That is a fact about this cell,
-              not a failure to read it — commit one from the case workbench to populate
+              not a failure to read it. Commit one from the case workbench to populate
               this board.
             </p>
           )}

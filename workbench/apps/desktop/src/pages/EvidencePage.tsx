@@ -38,7 +38,7 @@ export function EvidencePage() {
       {unreadable.length > 0 && (
         <div role="alert" className={styles.alert}>
           {unreadable.length} run director(ies) exist but hold no readable trace or
-          settlement: {unreadable.join(", ")}. These are not missing runs — they are
+          settlement: {unreadable.join(", ")}. These are not missing runs. They are
           unreadable ones, which is an integrity signal worth investigating.
         </div>
       )}
@@ -81,7 +81,7 @@ export function EvidencePage() {
                     out of the list.
                   */}
                   <td>{run.case_id ?? <span className={styles.muted}>unclaimed</span>}</td>
-                  <td>{run.plan_item_id ?? "—"}</td>
+                  <td>{run.plan_item_id ?? "not recorded"}</td>
                   <td>
                     <GovernedStatusPill
                       variant={EXECUTION_VARIANT[run.execution] ?? "unknown"}

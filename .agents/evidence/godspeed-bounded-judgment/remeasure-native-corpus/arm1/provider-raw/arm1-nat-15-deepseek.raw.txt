@@ -1,0 +1,1 @@
+{"answer": "settled", "confidence": 0.72, "distribution": {"settled": 0.72, "not_settled": 0.18, "insufficient_evidence": 0.1}, "reason": "Two admitted builder results on a 'mock-e2e-happy' session with corrections resolved indicate a converged happy path, though the absence of explicit terminal settlement or budget records caps confidence."}

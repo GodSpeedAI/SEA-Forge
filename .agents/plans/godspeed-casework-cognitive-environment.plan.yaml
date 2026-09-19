@@ -1,0 +1,1889 @@
+schema: agent.development_plan
+schema_version: '1.0'
+metadata:
+  id: godspeed.casework-cognitive-environment.implementation
+  title: "GodSpeed Casework System Front End and Cognitive Environment — Implementation Settlement Plan"
+  status: draft
+  version: 0.2.2
+  created: '2026-09-19'
+  purpose: >-
+    Implement the frozen authoritative specification through a Go operational application and
+    React cognitive environment, prove governed integration and parity, then remove the
+    current SEA Forge Rust/Tauri GUI and Gauntlet TUI while retaining their backend engines.
+source:
+  spec:
+    intended_repository_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+    artifact_name: godspeed.casework-cognitive-environment-spec.yaml
+    spec_id: godspeed.casework-cognitive-environment
+    spec_version: 0.2.1
+    sha256: 6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641
+    authority: normative
+  implementation_brief:
+    intended_repository_path: .agents/plans/godspeed-casework-cognitive-environment.implementation.md
+    authority: non_normative_execution_context
+    conflict_rule: >-
+      The normative specification governs. Any conflict MUST be surfaced as a blocked decision rather than silently
+      resolved by the implementing agent.
+  supporting_sources:
+  - path: AGENTS.md and repository-local agent instructions discovered by T00
+    role: Repository-local execution conventions, commands, and constraints.
+  - path: docs/decisions/ADR-006-godspeed-casework-ui-replacement.md
+    role: Accepted replacement and removal boundary; the spec governs behavior.
+  - path: SEA-Forge current implementation and case-engine documentation
+    role: Current case/authority/evidence interfaces and existing tests; informs adapters but does not override
+      the source spec.
+  - path: Gauntlet current implementation and orchestration documentation
+    role: Current execution-harness interfaces and evidence; informs the Execution Port adapter.
+  - path: workbench/apps/desktop and workbench/AGENTS.md
+    role: Existing React/Tauri GUI is a migration inventory and removal target, not the new application's transport.
+  - path: $GAUNTLET_WORKTREE
+    role: Isolated Gauntlet checkout; retain its Rust executor and remove its TUI after proven workflow parity.
+  - path: Open MCT and OpenMontage, if locally available and licensed
+    role: Optional design references only; native implementations may satisfy every requirement.
+target_settlement: >-
+  A decoupled GodSpeed operating environment exists in which the Go system front end continuously coordinates governed
+  casework through application-owned ports, the React cognitive environment renders and manipulates live cognitive
+  projections through a small spatial/temporal/artifact grammar, humans and agents act through the same interaction
+  model, consequential operations cross the governed Go/SEA-Forge boundary, history remains inspectable without
+  rewriting source truth, and the complete FDE journey is evidenced under required variation, recovery, and independent
+  confirmation, followed by evidence-backed removal of the two superseded UIs.
+operating_contract:
+  core_principle: >-
+    Keep authority, execution, repository truth, operational coordination, and human representation separate: SEA-Forge
+    owns governed case meaning/authority/settlement; Gauntlet executes; GitHub owns repository facts for enabled
+    workflows; Go coordinates; React represents and interacts. The current Tauri GUI and Gauntlet TUI are removed
+    only after replacement parity and real integration pass.
+  parallel_work_isolation:
+    required: true
+    sea_forge_checkout: >-
+      Start this plan in a dedicated sea-rs Git worktree and branch, separate from the operator's active checkout.
+      Its own .agents/CURRENT_STATUS.md and .agents/current_status.yml are the canonical handoff files for this
+      plan. Do not edit the active checkout's status files or substitute a sidecar for the repository handoff gate.
+    gauntlet_checkout: >-
+      Set GAUNTLET_WORKTREE to the absolute path of a dedicated Gauntlet Git worktree before T00. Never run
+      Gauntlet gates or removal commands against the operator's active Gauntlet checkout. Verify the variable
+      points to the intended worktree and that its unrelated work is preserved before each cross-repository step.
+    bootstrap: >-
+      A new worktree does not inherit uncommitted or untracked files. Transfer the reviewed spec, plan,
+      validator, and ADR into the dedicated sea-rs worktree without copying unrelated changes; compare the
+      transferred spec SHA-256 with source.spec.sha256 before T00. Do not fetch, reset, clean, merge, or publish
+      to bootstrap. If the required artifacts cannot be transferred faithfully, stop before implementation.
+    integration: >-
+      At final integration, manually reconcile this worktree's canonical status and evidence with the then-current
+      active checkout. Never overwrite newer status from other work or claim that a worktree-local context-check
+      validates the active checkout's handoff state.
+  build_resource_policy:
+    preflight: >-
+      Before every compile, test, or broad verification gate, inspect MemAvailable in /proc/meminfo, the current
+      process cgroup's memory limit/usage when finite, /proc/pressure/memory, swap usage, and other active builds.
+      Effective headroom is the smaller of MemAvailable and finite cgroup limit minus usage. Record the readings
+      in task evidence. A missing cgroup limit means use host MemAvailable; it is not zero headroom.
+    scheduling: >-
+      Run at most one heavy build or test gate across these worktrees at a time. Coordinate with the operator's
+      ongoing sea-rs and Gauntlet work; do not kill or pause its processes. Use CARGO_BUILD_JOBS=1 for the first
+      Rust baseline and similarly limit Go build parallelism. Defer a broad gate when another build is active or
+      effective headroom is below the observed peak for that gate plus a safety margin. Until a peak is known,
+      begin with a narrow single-job gate and observe it; do not guess that swap makes an OOM safe.
+    proof_rule: >-
+      A resource-deferred gate remains pending, never passed. Resume and run every required gate before settlement.
+    resource_deferred_mode: >-
+      If Rust compilation is unsafe, finish T00's read-only inventory and spec checks, then implement and verify
+      Go/React tasks whose listed gates do not require Rust. Work on a Rust-gated task may be staged as provisional
+      implementation, but that task and its dependents remain unsettled until every listed gate passes. Do not
+      alter dependency edges, mark a resource-deferred gate green, or remove the old UIs during this mode. At each
+      handoff, record the exact deferred commands, affected task IDs, current code state, and next resource-safe
+      verification action in the worktree's canonical status files.
+  rules:
+  - Settle tasks by dependency, not by narrative order; provisional implementation under resource-deferred mode
+    never satisfies a dependency.
+  - Independent tasks MAY run in parallel only after all declared dependencies are settled.
+  - A gate becomes applicable when its activation task creates it; a missing planned gate blocks that task and all dependents.
+  - Architectural and dependency changes require the review/approval required by AGENTS.md before implementation.
+  - Every task MUST leave the repository in a coherent state with all applicable global gates green.
+  - >-
+    A task is not complete because code exists, a process starts once, the builder reports success, or a happy-path
+    test passes.
+  - A passing gate proves only what that gate actually observes.
+  - High-risk P3 work requires fresh independent/adversarial confirmation.
+  - Do not generalize from one observation unless the normative requirement is itself general.
+  - >-
+    Do not silently widen domain, schema, API, config, service, or authority surfaces when an existing representation
+    can preserve the required distinction.
+  - >-
+    Runtime/machine/provider-specific facts belong in the project's established config/secret hierarchy rather than
+    scattered hardcoding.
+  - Preserve failed evidence and correction history.
+  - >-
+    Do not change .sea grammar for UI, transport, provider, runtime, or integration features unless repository evidence
+    demonstrates a genuinely new semantic distinction that the source spec cannot preserve through projection/adaptation.
+  - >-
+    Fixture/local adapters may prove UI-core isolation and interaction behavior; they MUST NOT be used as evidence
+    of governed integration or settlement.
+  - >-
+    Donor repositories are optional. Any copied code must remain license-compatible and source provenance must be recorded.
+  claim_states:
+  - OBSERVED
+  - INFERRED
+  - DECIDED
+  - ASSUMED
+  - UNKNOWN
+  correction_protocol:
+  - Preserve the failed evidence.
+  - >-
+    Classify the failure: implementation, oracle/test, representation, missing prerequisite, environmental confound,
+    or source-spec ambiguity.
+  - Determine whether the governing requirement/invariant remains valid.
+  - Correct the smallest falsified layer.
+  - Rerun the original teeth/falsification check.
+  - Rerun the original confirmation path.
+  - Append the correction round; do not erase the failed round.
+  - Do not weaken acceptance merely because the implementation repeatedly fails it.
+  scope_control: >-
+    A newly discovered issue enters the current plan only when it blocks a normative requirement or is itself required
+    by the source specification. Valuable but independent discoveries become future debt/plans. Attractive architecture
+    with no requirement is rejected from current scope.
+artifacts:
+  current_status: .agents/current_status.yml
+  current_status_scope: dedicated_sea_forge_worktree_only
+  decision_log: .agents/reports/godspeed-casework-cognitive-environment/decision-log.yaml
+  evidence_root: .agents/evidence/godspeed-casework-cognitive-environment
+  reports_root: .agents/reports/godspeed-casework-cognitive-environment
+  preregistration_root: .agents/preregistrations/godspeed-casework-cognitive-environment
+  status_rule: >-
+    Mutable current status is an operational projection and MUST NOT become a source of desired-state or normative
+    authority.
+verification:
+  global_gates:
+  - id: GATE_SPEC_TRACE
+    command: python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py
+    activation_task: T00
+  - id: GATE_SEAFORGE
+    command: just check && just test && just ci && just proof
+    activation_task: T05
+  - id: GATE_GAUNTLET
+    command: cd "$GAUNTLET_WORKTREE" && just check && just test && just ci
+    activation_task: T05
+  - id: GATE_GO
+    command: just casework-go-check
+    activation_task: T01
+  - id: GATE_UI
+    command: just casework-ui-check
+    activation_task: T03
+  - id: GATE_INTEGRATED
+    command: just casework-integrated
+    activation_task: T11
+  - id: GATE_REMOVAL
+    command: just casework-removal-check
+    activation_task: T14
+  gate_binding_rule: >-
+    Existing SEA Forge and Gauntlet commands run as written. T01, T03, T11,
+    and T14 must add the named root just recipes over their actual target
+    implementations before their own tasks can settle. A missing recipe is
+    BLOCKED, never a passing or skipped gate. All commands run from the SEA
+    Forge repository root; the Gauntlet gate changes directory explicitly.
+  proof_levels:
+    P0: Mechanical/deterministic change. Requires a narrow direct gate plus applicable global gates.
+    P1: Normal behavioral work. Requires positive behavior, a meaningful teeth/falsification check, and applicable
+      global gates.
+    P2: >-
+      Invariant-sensitive work. Requires an explicit or preregistered claim, meaningful adversarial/negative evidence,
+      an evidence artifact, applicable global gates, and review of a plausible alternate failure path.
+    P3: >-
+      Settlement-critical work. Requires frozen preregistration, builder evidence, explicit adversarial attacks,
+      fresh independent confirmation, and correction/re-confirmation after any failed confirmation.
+dependency_graph:
+  edges:
+  - - T00
+    - T01
+  - - T00
+    - T02
+  - - T01
+    - T03
+  - - T01
+    - T04
+  - - T04
+    - T05
+  - - T03
+    - T06
+  - - T02
+    - T07
+  - - T03
+    - T07
+  - - T04
+    - T07
+  - - T02
+    - T08
+  - - T03
+    - T08
+  - - T02
+    - T09
+  - - T03
+    - T09
+  - - T06
+    - T09
+  - - T08
+    - T09
+  - - T03
+    - T10
+  - - T04
+    - T10
+  - - T05
+    - T11
+  - - T09
+    - T11
+  - - T10
+    - T11
+  - - T06
+    - T12
+  - - T07
+    - T12
+  - - T08
+    - T12
+  - - T11
+    - T12
+  - - T12
+    - T13
+  - - T13
+    - T14
+  critical_path:
+  - T00
+  - T01
+  - T03
+  - T06
+  - T09
+  - T11
+  - T12
+  - T13
+  - T14
+  settlement_sequence:
+  - Freeze authority, repositories, gates, and donor/license facts.
+  - Establish decoupled Go and React application cores and their owned ports.
+  - Implement operational coordination and cognitive capabilities in parallel.
+  - Join real projection transport and consequential interaction boundaries.
+  - Execute the complete FDE journey under variation/recovery.
+  - Confirm replacement parity, remove both old UIs, then rerun independent whole-plan confirmation.
+initial_state:
+  current_task: T00
+  last_settled_task: null
+  ready:
+  - T00
+  blocked:
+    T01:
+    - T00
+    T02:
+    - T00
+    T03:
+    - T01
+    T04:
+    - T01
+    T05:
+    - T04
+    T06:
+    - T03
+    T07:
+    - T02
+    - T03
+    - T04
+    T08:
+    - T02
+    - T03
+    T09:
+    - T02
+    - T03
+    - T06
+    - T08
+    T10:
+    - T03
+    - T04
+    T11:
+    - T05
+    - T09
+    - T10
+    T12:
+    - T06
+    - T07
+    - T08
+    - T11
+    T13:
+    - T12
+    T14:
+    - T13
+tasks:
+  T00:
+    title: Freeze source authority, repository topology, gate bindings, and execution context
+    initial_status: ready
+    depends_on: []
+    proof_level: P2
+    confirmation: peer
+    settles: []
+    changes: >-
+      Verifies the bound spec revision, inspects the real SFWP/Gauntlet/Workbench
+      seams and both removal targets, records missing capabilities, and freezes
+      the reviewed architecture/dependency decisions before code changes.
+    proves: >-
+      A cold agent can locate both repositories, reproduce the spec hash,
+      distinguish existing gates from planned gates, enumerate 86 requirements,
+      and state exactly which SFWP methods or integrations are absent.
+    does_not_prove: Does not prove any product capability, adapter compatibility, UI behavior, or end-to-end integration.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T00.prereg.yaml
+      claim: The authoritative source spec and repository execution context can be frozen unambiguously before implementation.
+      falsifier: >-
+        Two incompatible source specs claim equal authority, a required repository cannot be located, or required
+        project gates cannot be identified without inventing desired behavior.
+      known_confounds:
+      - Stale copied docs or old repository clones can resemble current authority.
+      confirmation_condition: Peer reviewer independently reproduces the spec hash, repository locations, gate bindings,
+        and 86/86 traceability count.
+    hot_context:
+    - .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+    - AGENTS.md files from each target repository and workspace root
+    - SEA-Forge repository case/runtime/authority interfaces and existing tests
+    - Gauntlet repository execution interfaces and existing tests
+    - workbench/AGENTS.md and the existing desktop GUI removal inventory
+    - $GAUNTLET_WORKTREE/AGENTS.md and its TUI/engine boundary
+    steps:
+    - >-
+      Confirm sea-rs as the target for apps/godspeed-casework-go and
+      apps/godspeed-cognitive-ui in the dedicated sea-rs worktree; inspect
+      $GAUNTLET_WORKTREE read-only. Confirm neither path is the operator's
+      active checkout before any build or write.
+    - >-
+      Confirm both dedicated worktrees, the transferred plan/spec/validator/ADR,
+      and this worktree's canonical status files. Record the active checkout
+      paths for exclusion, not for writing. Run the build-resource preflight
+      before each baseline gate; defer a gate if headroom is inadequate.
+      Record exact SFWP methods, auth semantics, event replay, history
+      availability, and missing seams. Do not assume GitHub or donors exist.
+    - >-
+      Recompute SHA-256 for the bound spec path and run GATE_SPEC_TRACE.
+      Any spec revision requires a new plan hash/version and reconfirmation.
+    - >-
+      Parse the source spec requirement IDs and verify there are exactly 86 normative REQ-* records represented by this
+      plan with zero unknown IDs.
+    - >-
+      If resource preflight permits, execute the existing SEA Forge and Gauntlet
+      gates serially and record their real baseline. Otherwise record each as
+      RESOURCE_DEFERRED, including readings and the exact command to run later.
+      Record Go, UI, integrated, and removal gates as planned with the
+      activation tasks named above; never mark a missing or deferred recipe passed.
+    - >-
+      If an attempted existing gate is red, record its exact failing assertion
+      and revision, repair it without weakening the gate, or mark T00 BLOCKED
+      with a concrete prerequisite. A failed baseline is not a resource deferral.
+    - >-
+      Record concrete current interfaces, repository ownership boundaries, toolchain versions, target runtime assumptions,
+      and discovered incompatibilities in the implementation brief without changing normative requirements.
+    - >-
+      Create the implementation brief in .agents/plans/, with exact API and
+      removal inventories. Prepare required ADR/dependency review before
+      implementing new module or protocol boundaries.
+    gate:
+    - GATE_SPEC_TRACE
+    - test -f .agents/plans/godspeed-casework-cognitive-environment.implementation.md
+    teeth:
+    - attack: Modify one byte of a copied spec and run the frozen-hash check.
+      expected: The binding check detects hash divergence; execution blocks until authority is explicitly re-frozen.
+    - attack: Claim an absent Go, GitHub, donor, or SFWP capability already exists.
+      expected: Inventory identifies the missing seam and blocks the dependent task until implemented and tested.
+    redesign_trigger: >-
+      Repository inspection shows that the source spec assumes an ownership boundary that does not exist or cannot
+      be introduced without changing SEA-Forge/Gauntlet semantics; stop and raise a source-spec decision rather
+      than fabricating a parallel subsystem.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T00/
+    done_when:
+    - The frozen SHA-256 verifies; each existing gate baseline is recorded as passed or RESOURCE_DEFERRED
+      without claiming an unrun gate passed.
+    - The implementation brief contains repository-specific hot context sufficient for a cold agent.
+    - Traceability reports 86/86 mapped requirements, zero unknown plan IDs, and zero unmapped requirements.
+    - All T00 teeth pass.
+  T01:
+    title: Establish application-owned ports, configuration authority, typed errors, and preflight
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-CONFIG-001
+    - REQ-CONFIG-002
+    - REQ-CONFIG-003
+    - REQ-CONFIG-004
+    - REQ-CONFIG-010
+    - REQ-CONFIG-011
+    - REQ-CONFIG-012
+    - REQ-ARCH-001
+    - REQ-ARCH-002
+    changes: >-
+      Creates apps/godspeed-casework-go and the minimum React contract package
+      for the replacement app, establishes one config/secret authority per
+      application, typed errors, port ownership, and preflight.
+    proves: >-
+      Provider/runtime technologies can be connected without becoming the stable application model, and invalid/missing
+      configuration fails with the specified blast radius before consequential operation.
+    does_not_prove: >-
+      Does not prove SEA-Forge/Gauntlet compatibility, cognitive projection quality, UI interaction behavior, or
+      real execution.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T01.prereg.yaml
+      claim: >-
+        Both applications can own stable ports/config/error contracts without importing vendor/provider schemas
+        into their cores.
+      falsifier: >-
+        A core behavior required by the spec is impossible without provider-specific types or multiple competing
+        configuration authorities.
+      known_confounds:
+      - Convenient code generation can hide provider types behind aliases while preserving the coupling.
+      confirmation_condition: Peer review plus boundary tests show provider replacement points terminate at adapters.
+    hot_context:
+    - .agents/plans/godspeed-casework-cognitive-environment.implementation.md
+    - Existing project config conventions and secret hierarchy discovered by T00
+    - Current SEA-Forge/Gauntlet public interfaces only for shape discovery, not semantic duplication
+    - Source spec domain_contract, target_layout, and REQ-CONFIG/REQ-ARCH records
+    steps:
+    - >-
+      Define Go-owned port interfaces and stable application error/result types without embedding provider-native
+      payloads in core packages.
+    - >-
+      Define React-owned world/interaction/agent/artifact/temporal adapter interfaces without depending on R3F,
+      CopilotKit, or Go transport types.
+    - >-
+      Implement a single documented configuration precedence/validation path per application, including secret indirection
+      and runtime/provider endpoint configuration.
+    - >-
+      Implement startup/preflight checks that validate REQUIRED configured capabilities before live operation and
+      report typed degraded/blocking states.
+    - >-
+      Add boundary tests proving provider-native/vendor objects are translated at adapters and do not leak into
+      stable core interfaces.
+    - Add the root casework-go-check just recipe for Go format, vet, and tests.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_GO
+    teeth:
+    - attack: Inject an unknown provider payload type directly into a core application path.
+      expected: Compilation/type tests or boundary tests reject the leakage; adapter translation is required.
+    - attack: Start with one missing required adapter credential and one optional artifact adapter unavailable.
+      expected: Required consequential capability blocks with typed error; unrelated/optional capability remains
+        available.
+    redesign_trigger: >-
+      A required semantic distinction cannot be expressed without importing SEA-Forge/Gauntlet/vendor ontology directly
+      into the application core; stop and revisit the port representation instead of spreading provider types.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T01/
+    done_when:
+    - Port ownership and configuration authority are implemented and documented.
+    - Preflight and typed-error tests pass with the declared blast radius.
+    - Provider-object leakage teeth pass.
+    - All applicable global gates remain green.
+  T02:
+    title: Decide optional donor mechanics and dependency/license boundaries
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-DONOR-001
+    - REQ-DONOR-002
+    - REQ-DONOR-003
+    changes: >-
+      Records whether any donor or new dependency materially improves the
+      required behavior. Native Go/React implementations are valid. Copying is
+      optional and requires license/provenance review and prior dependency approval.
+    proves: >-
+      The temporal and narration contracts do not depend on unavailable donor
+      checkouts or unapproved dependencies.
+    does_not_prove: Does not prove the resulting temporal or narration behavior; later tasks must integrate and
+      verify those mechanics.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T02.prereg.yaml
+      claim: >-
+        No donor implementation enters the codebase by default; any selected
+        reuse remains narrow, replaceable, licensed, and reviewed.
+      falsifier: >-
+        A copied donor component requires importing donor application ontology, or source license obligations conflict
+        with the intended project distribution and cannot be cleanly isolated.
+      known_confounds:
+      - Forks/clones may carry different licenses from canonical donor repositories.
+      confirmation_condition: Peer reviewer checks canonical source provenance, licenses, copied scope, and public-interface
+        independence.
+    hot_context:
+    - Target dependency inventory and repository approval rules
+    - Optional donor source and license only if T02 elects reuse
+    steps:
+    - Compare native implementation against available licensed donor mechanics.
+    - Record a use-or-omit decision for each donor; absence is a valid omit.
+    - For selected reuse, freeze exact revision/license/notices and obtain required review before copying.
+    - Keep donor nouns and types out of GodSpeed application contracts.
+    gate:
+    - GATE_SPEC_TRACE
+    teeth:
+    - attack: Search application-core public interfaces for OpenMCT/OpenMontage product types or namespaces.
+      expected: No donor-product ontology leaks into stable application contracts.
+    - attack: Remove access to both donor checkouts.
+      expected: T02 still settles with a native implementation decision and no copied code.
+    redesign_trigger: >-
+      The needed mechanic cannot be legally reused under the target distribution posture or cannot be reduced without
+      importing the donor's product model; replace it with an independent implementation behind the same GodSpeed
+      port.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T02/
+    done_when:
+    - Donor decision records use or omit, with provenance/notices for any copied file.
+    - GodSpeed-owned temporal/choreography interfaces are independent of donor product models.
+    - License/provenance review is complete for every copied file.
+    - All applicable global gates remain green.
+  T03:
+    title: Implement the React UI core and local world adapter
+    initial_status: blocked
+    depends_on:
+    - T01
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-GOAL-002
+    - REQ-GOAL-003
+    - REQ-OUT-002
+    - REQ-ARCH-003
+    - REQ-ARCH-004
+    changes: >-
+      Creates the replacement React application at apps/godspeed-cognitive-ui
+      with a renderer-independent model for surfaces, objects, relationships,
+      focus, time, artifacts, and actions; supplies a fixture adapter for core tests.
+    proves: >-
+      The real UI architecture exists independently of Go transport, SEA-Forge, GitHub, Gauntlet, CopilotKit, and
+      Three.js, and can be exercised against synthetic worlds without changing its interaction grammar.
+    does_not_prove: >-
+      Does not prove spatial rendering quality, real Go integration, agent interaction, historical correctness,
+      or consequential action.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T03.prereg.yaml
+      claim: >-
+        The cognitive interaction model is independently executable with synthetic projections and contains no backend
+        or renderer authority.
+      falsifier: Core behavior cannot be tested without importing Go/SEA-Forge/R3F/CopilotKit implementation objects.
+      known_confounds:
+      - Thin wrapper types can hide direct vendor coupling.
+      confirmation_condition: Peer review and dependency tests confirm core packages reference only application-owned
+        abstractions.
+    hot_context:
+    - Source spec domain_contract and REQ-GOAL/REQ-ARCH records
+    - T01 React-owned port interfaces
+    - Current frontend conventions/package manager discovered by T00
+    steps:
+    - >-
+      Implement stable UI-core representations: SurfaceProjection, CognitiveObject, CognitiveRelationship, TemporalContext,
+      CognitiveArtifact descriptor, and InteractionIntent/action vocabulary.
+    - >-
+      Implement local UI state for focus, selection, surface, time, artifact,
+      and narration with the simplest existing repository pattern.
+    - Add the casework-ui-check just recipe over this new app's type, test, and build gates.
+    - >-
+      Implement a fixture/world adapter containing representative FDE worlds without embedding fixture-specific
+      logic in core components.
+    - >-
+      Implement application actions independent of physical input and renderer so pointer, keyboard, agent, and
+      future voice can call the same operations.
+    - Add tests proving the core runs with renderer/agent/transport adapters replaced by no-op/test adapters.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_UI
+    teeth:
+    - attack: Replace the optional scene and agent adapters with test adapters.
+      expected: UI-core tests still execute against the fixture adapter.
+    - attack: Swap the fixture provider for a second structurally different provider implementing the same world
+        port.
+      expected: Core interaction tests remain unchanged.
+    redesign_trigger: >-
+      UI behavior requires case-engine or renderer-specific nouns in the core model rather than generic projection/interaction
+      distinctions; stop and revise the UI-core representation.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T03/
+    done_when:
+    - Fixture-driven UI core executes without backend or scene dependencies.
+    - Shared application actions drive focus/selection/temporal/artifact state.
+    - Adapter replacement tests pass.
+    - All applicable global gates remain green.
+  T04:
+    title: Implement the Go casework core, stable ports, and cognitive projection model
+    initial_status: blocked
+    depends_on:
+    - T01
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-GOAL-001
+    - REQ-OUT-001
+    - REQ-PROJ-001
+    - REQ-PROJ-002
+    - REQ-PROJ-003
+    - REQ-PROJ-004
+    changes: >-
+      Implements the new Go module's Case/Authority, Execution, optional
+      Repository, Context/Contract, Projection, and Event ports. Judgment
+      remains observational only; it cannot authorize or settle work.
+      Defines WorkOpportunity, ExecutionLease, and bounded cognitive projections.
+    proves: >-
+      Go can represent and project operational casework without duplicating SEA-Forge authority, Gauntlet internals,
+      GitHub schemas, or React renderer concerns.
+    does_not_prove: Does not prove real execution, lease safety, transport delivery, UI rendering, or settlement.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T04.prereg.yaml
+      claim: >-
+        Go can coordinate and project the operational world through stable GodSpeed-owned ports without becoming
+        semantic authority.
+      falsifier: >-
+        Implementing required projection/coordination semantics requires Go core to own SEA-Forge case semantics
+        or provider-native resource models.
+      known_confounds:
+      - Adapters may accidentally place provider payloads inside generic map/JSON fields and thereby preserve hidden
+        coupling.
+      confirmation_condition: Peer review plus contract tests show provider translation at edges and bounded cognitive
+        projection behavior.
+    hot_context:
+    - T01 Go-owned port/config/error contracts
+    - SEA-Forge current case/authority interfaces discovered by T00
+    - Gauntlet current execution interfaces discovered by T00
+    - Source spec target_layout, domain_contract, and REQ-PROJ records
+    steps:
+    - >-
+      Implement minimal stable Go domain objects and application services required to pass/store/route/reconcile
+      work and cognitive projections.
+    - >-
+      Implement typed Go port seams for the SFWP and Gauntlet methods actually
+      verified by T00, using contract fixtures at this task. Record any missing
+      Rust capability as an explicit T05 integration prerequisite; T05 adds
+      its reviewed Rust contract and conformance test before claiming real
+      integration.
+    - >-
+      Implement a projection builder that can intentionally omit non-useful operational detail while retaining stable
+      references for deeper resolution/action/history.
+    - Implement deeper operational projections separately from primary cognitive projections.
+    - Add contract tests showing omission is projection behavior, not deletion of source state.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_GO
+    teeth:
+    - attack: >-
+        Feed a source state with many operational details but mark only two as currently relevant in the projection
+        policy/fixture.
+      expected: Cognitive projection contains only useful objects while deeper source state remains retrievable.
+    - attack: Replace the GitHub/Gauntlet test adapter with structurally different fakes implementing the same ports.
+      expected: Core projection/application tests remain unchanged.
+    redesign_trigger: >-
+      Projection construction requires copying SEA-Forge's internal case ontology or GitHub/Gauntlet provider models
+      into Go core; stop and redesign the translation boundary.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T04/
+    done_when:
+    - All required Go ports and minimal stable core objects exist.
+    - Cognitive and machine-operational projections are distinguishable.
+    - Projection omission/deeper-resolution tests pass.
+    - All applicable global gates remain green.
+  T05:
+    title: Implement governed operational coordination, leases, execution, and reconciliation
+    initial_status: blocked
+    depends_on:
+    - T04
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-CASE-001
+    - REQ-CASE-002
+    - REQ-CASE-003
+    - REQ-CASE-004
+    - REQ-VERIFY-004
+    - REQ-SAFE-001
+    - REQ-SAFE-003
+    - REQ-SAFE-004
+    changes: >-
+      Adds event-driven work availability handling, operational lease/claim state machine, bounded execution-contract
+      acquisition, executor/workspace/repository coordination, infrastructure-vs-consequential failure classification,
+      cancellation, retry/backoff where safe, and reconciliation after uncertainty or missed events.
+    proves: >-
+      Go can keep governed work moving without inventing availability/authority, duplicating uncertain consequential
+      execution, discarding failed evidence, or treating executor/GitHub completion as SEA-Forge settlement.
+    does_not_prove: Does not prove UI transport, scene behavior, narrated interaction, artifact UX, or whole FDE
+      acceptance.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T05.prereg.yaml
+      claims:
+      - Operational claims/leases prevent accidental duplicate consequential execution without becoming semantic
+        authority.
+      - Executor/repository success cannot independently produce governed settlement.
+      - Uncertain runtime state reconciles before retry or reacquisition.
+      falsifiers:
+      - A second executor can start while the first consequential execution may still be active.
+      - A merged PR or executor success causes a settled cognitive projection without SEA-Forge confirmation.
+      - Restart/missed-event recovery loses failed evidence or resolves uncertainty by assumption.
+      known_confounds:
+      - Test executors that terminate too deterministically can hide lease/process uncertainty races.
+      confirmation_condition: >-
+        Fresh independent adversarial verifier reproduces the attacks and returns CONFIRM with no settlement/authority/duplicate-execution
+        critical defect.
+    hot_context:
+    - SEA-Forge case/authority/evidence adapters and tests
+    - Gauntlet execution adapter and existing run/evidence semantics
+    - Enabled repository workflow conventions, if the chosen FDE case uses GitHub
+    - Source spec domain_contract, security_teeth, and required_recovery
+    steps:
+    - >-
+      Implement event-driven availability intake from the Case/Authority Port and operational claim/lease acquisition
+      with deterministic correlation/idempotency.
+    - >-
+      For any capability absent from the T00 SFWP inventory, implement a
+      reviewed typed Rust SFWP command/query/event and conformance test before
+      its Go adapter. Never infer authority from a local lease.
+    - >-
+      Implement execution-contract retrieval and invoke Gauntlet/conforming executor through the Execution Port;
+      correlate workspace/repository state without inferring semantic settlement.
+    - >-
+      Implement explicit infrastructure-failure versus consequential-failure handling; only bounded infrastructure
+      failure may auto-retry.
+    - >-
+      Implement lease renewal/expiry, cancellation, stale-process detection, missed-event recovery, and reconciliation
+      before duplicate consequential execution.
+    - Preserve all final observations, failed evidence, and correction rounds through the governed evidence path.
+    - >-
+      Add adversarial integration fixtures for stale lease + live process, missed webhook, executor success with
+      unsettled case, GitHub merge with unsettled case, and restart during active work.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_GO
+    - GATE_SEAFORGE
+    - GATE_GAUNTLET
+    teeth:
+    - attack: Expire the lease while the executor process remains alive, then trigger scheduler recovery.
+      expected: No duplicate consequential execution starts; system enters reconciliation and resolves actual runtime
+        state first.
+    - attack: Return executor success and merged PR while SEA-Forge reports evidence/settlement unmet.
+      expected: Go preserves the observations but does not present or write governed settlement.
+    - attack: Drop a case/repository event and restart Go during active work.
+      expected: Reconciliation reconstructs operational state without erasing evidence or manufacturing history.
+    independent_confirmation:
+      verifier_receives:
+      - source requirements
+      - lease/reconciliation invariants
+      - relevant Go/adapter implementation
+      - builder evidence
+      - exact adversarial scenarios
+      verifier_should_not_receive:
+      - builder's preferred explanation of why each race is safe before independently reproducing it
+      required_verdict: CONFIRM
+    redesign_trigger: >-
+      Repository evidence shows SEA-Forge already owns an overlapping lease/orchestration invariant whose duplication
+      would create two authorities, or Gauntlet's execution contract cannot be correlated safely without modifying
+      its governing objective; stop and revise the seam.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T05/
+    done_when:
+    - All lease state transitions and idempotency tests pass.
+    - Infrastructure and consequential failures take different verified paths.
+    - Adversarial duplicate-execution and false-settlement attacks fail safely.
+    - Fresh independent verifier returns CONFIRM with no authority/duplicate-execution critical finding.
+    - All applicable global gates remain green.
+  T06:
+    title: Implement the spatial cognitive scene, Core, semantic focus/zoom, and attention discipline
+    initial_status: blocked
+    depends_on:
+    - T03
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-UI-001
+    - REQ-UI-002
+    - REQ-UI-003
+    - REQ-UI-004
+    - REQ-UI-005
+    - REQ-UI-006
+    - REQ-ATTN-001
+    - REQ-ATTN-002
+    - REQ-ATTN-003
+    - REQ-ATTN-004
+    changes: >-
+      Connects the UI core to an accessible spatial renderer, implements Core,
+      scene objects/relationships, focus/back, semantic zoom, pointer/keyboard
+      actions, restrained motion, and projection-driven salience/quieting.
+    proves: >-
+      The approved spatial interaction grammar works as the real renderer while the UI core remains renderer-independent
+      and visible complexity is driven by current projection/relevance rather than stored object count.
+    does_not_prove: >-
+      Does not prove agent narration, real backend integration, temporal history, cognitive artifacts, or user research
+      outcomes.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T06.prereg.yaml
+      claim: >-
+        A renderer-independent cognitive projection can drive the approved 2.5D focus/zoom/orientation experience
+        without exposing internal case semantics.
+      falsifier: >-
+        The renderer requires domain-specific case semantics or persistent controls absent from the UI core in order
+        to support the specified journey.
+      known_confounds:
+      - Fixture-specific hand positioning can make the scene appear generic while layout code is actually special-cased.
+      confirmation_condition: >-
+        Peer review plus fixture variation shows generic object/relationship rendering and common application actions
+        across surfaces.
+    hot_context:
+    - T03 UI core and fixture adapter
+    - Existing React/browser rendering and accessibility patterns
+    - Source spec REQ-UI-* and REQ-ATTN-*
+    - Source spec verification_contract.reference_journey as design context
+    steps:
+    - Implement a restrained spatial scene and Core using the simplest
+      accessible renderer that satisfies semantic focus and sparse attention.
+      Any new graphics dependency requires the repository's prior review.
+    - >-
+      Render generic cognitive objects and contextual relationships from projection data rather than domain-specific
+      components.
+    - >-
+      Implement focus/back and camera continuity; expose semantic zoom thresholds to the UI core so deeper projections/content
+      can replace simple representations.
+    - Map pointer/keyboard interactions onto the same application actions used by other adapters.
+    - Implement salience/quieting rules and demand rendering so non-consequential work can remain visually quiet.
+    - Exercise representative sparse, dense-underlying, focused, comparison-ready, and deep-zoom fixtures.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_UI
+    teeth:
+    - attack: Load a fixture with 100+ underlying objects but a projection exposing only three useful objects.
+      expected: Scene remains sparse and does not discover/render hidden objects merely because they exist.
+    - attack: Mark an active-looking object as settled/non-actionable and a single object as requiring judgment.
+      expected: Visual salience shifts to the consequential object without a dashboard/badge explosion.
+    - attack: Navigate focus four levels deep then use back/Core.
+      expected: Camera and interaction context return deterministically without losing orientation.
+    redesign_trigger: >-
+      The desired interaction requires arbitrary 3D navigation or domain-specific widget families to remain intelligible;
+      stop and revisit the scene representation rather than adding uncontrolled UI vocabulary.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T06/
+    done_when:
+    - Spatial fixture journeys complete using application actions.
+    - Semantic zoom changes representational resolution rather than only object scale.
+    - Attention/sparsity teeth pass.
+    - All applicable global gates remain green.
+  T07:
+    title: Implement shared temporal control, historical projection, comparison, and return-to-now
+    initial_status: blocked
+    depends_on:
+    - T02
+    - T03
+    - T04
+    proof_level: P2
+    confirmation: independent
+    settles:
+    - REQ-TIME-001
+    - REQ-TIME-002
+    - REQ-TIME-003
+    - REQ-TIME-004
+    - REQ-TIME-005
+    changes: >-
+      Adds a GodSpeed-owned temporal controller using native or reviewed optional donor mechanics, supports live and
+      historical positions/ranges, coordinates time-aware surfaces/artifacts, requests historical projections through
+      the Go boundary, compares versions, and returns deterministically to live state.
+    proves: >-
+      Time is a first-class shared application state independent from any timeline renderer, and historical exploration
+      changes representation without mutating authoritative history.
+    does_not_prove: Does not prove whole FDE flow, dense timeline artifact quality, or governed consequential action.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T07.prereg.yaml
+      claim: >-
+        Shared temporal state can coordinate multiple views while remaining independent from renderers and non-mutating
+        toward authoritative history.
+      falsifier: Historical navigation requires rewriting source state, or removing the timeline renderer removes
+        temporal capability.
+      known_confounds:
+      - Fixture snapshots may hide inability of real adapters to resolve historical references.
+      confirmation_condition: Independent review runs temporal tests against both fixture and Go projection adapters.
+    hot_context:
+    - T02 use-or-omit decision for optional donor mechanics
+    - T03 TemporalContext/UI actions
+    - T04 projection references/history capabilities
+    - Source spec domain_contract.temporal_context and REQ-TIME records
+    steps:
+    - >-
+      Implement TemporalController/port with live, historical, range, comparison, subscription, and return-to-present
+      semantics.
+    - >-
+      Connect temporal requests to fixture and Go projection adapters without embedding timeline-renderer state
+      in the controller.
+    - >-
+      Prove three real historical positions through source-backed SFWP
+      references. If the required history query is absent, add its reviewed
+      Rust contract and conformance test before claiming historical support.
+    - >-
+      Implement scene/UI response to temporal position changes: object/relationship appearance, focus preservation
+      where valid, and explicit unavailable/unknown historical states.
+    - Implement A/B temporal comparison as a surface composition over two resolved projections.
+    - Add optional timeline artifact adapter only after the shared temporal controller works independently.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_GO
+    - GATE_UI
+    teeth:
+    - attack: Navigate to an old version, mutate local UI state, then return to live and refetch source projection.
+      expected: Authoritative current and historical source states are byte/semantically unchanged by navigation.
+    - attack: Replace the dense timeline renderer with a stub while keeping temporal controller tests.
+      expected: Live/historical/compare/return behavior still passes.
+    - attack: Move shared time while two different time-aware surfaces/artifacts are open.
+      expected: Both resolve against the same temporal context or explicitly report unsupported history.
+    redesign_trigger: >-
+      The source systems cannot provide stable historical/version references needed to reconstruct requested states
+      without inventing history; stop and surface the source-spec/integration gap rather than simulating authoritative
+      history.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T07/
+    done_when:
+    - Live/historical/compare/return-to-now tests pass.
+    - Historical source immutability teeth pass.
+    - Independent reviewer confirms temporal state is application-owned and renderer-independent.
+    - All applicable global gates remain green.
+  T08:
+    title: Implement the bounded cognitive-artifact runtime and lightweight renderer adapters
+    initial_status: blocked
+    depends_on:
+    - T02
+    - T03
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-ART-001
+    - REQ-ART-002
+    - REQ-ART-003
+    - REQ-ART-005
+    - REQ-ART-006
+    - REQ-ART-007
+    - REQ-ARTDEP-001
+    - REQ-ARTDEP-002
+    - REQ-ARTDEP-003
+    - REQ-ARTDEP-004
+    - REQ-ARTDEP-005
+    - REQ-ARTDEP-006
+    - REQ-ARTDEP-007
+    - REQ-ARTDEP-008
+    - REQ-SEC-001
+    - REQ-SEC-003
+    changes: "Implements the artifact registry/lifecycle, progressive disclosure, source traceability, ephemeral\
+      \ default, explicit persistence intent, scene\u2194DOM anchoring, dynamic renderer loading, and lightweight\
+      \ adapters for excerpts/charts/tables/code/diff/grid/DOCX/PDF/timeline according to the spec."
+    proves: >-
+      Real source material can appear as bounded interactive artifacts without importing full application suites,
+      unsafe content cannot gain privileged execution, heavy adapters are paid for only at deeper interaction depth,
+      and persistence remains only a pending intent until T11 proves the
+      authorized backend operation.
+    does_not_prove: Does not prove agent choreography, persistence authorization end-to-end, or whole FDE acceptance.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T08.prereg.yaml
+      claims:
+      - Artifact rendering remains bounded, source-traceable, and ephemeral.
+      - Untrusted artifact content cannot execute privileged frontend/backend behavior.
+      - Heavy renderers are lazy capabilities rather than baseline runtime dependencies.
+      falsifiers:
+      - Dismissed artifact emits a persistence command or changes durable case state.
+      - Injected artifact content executes script or privileged action.
+      - A declared heavy renderer is present in initial session load without being requested.
+      known_confounds:
+      - Development bundlers may preload modules differently from production; evidence must use the target build
+        mode.
+      confirmation_condition: Fresh independent verifier reproduces trust, ephemeral-state,
+        sanitization, and lazy-load attacks in the target build.
+    hot_context:
+    - T03 CognitiveArtifact and artifact-port definitions
+    - T02 donor/license inventory
+    - Existing browser and repository artifact-rendering capabilities
+    - Source spec REQ-ART-*, REQ-ARTDEP-*, and REQ-SEC-*
+    steps:
+    - Implement artifact registry keyed by capability/kind with lazy resolver boundaries and source/provenance metadata.
+    - "Implement lifecycle: materialize minimal disclosure \u2192 expand/inspect/manipulate \u2192 dismiss or emit\
+      \ explicit persistence intent."
+    - >-
+      Implement four materially distinct required artifact families from the
+      FDE journey with source traceability. For each REQ-ARTDEP SHOULD, record
+      implemented or justified omission; add no dependency without prior review.
+    - Implement DOM/scene anchoring and focus return so opening precision artifacts preserves spatial context.
+    - >-
+      Add security tests for unsafe DOCX/HTML, malicious URLs/content, agent-generated artifact descriptors, secret
+      leakage, and attempts to turn a render/dismiss action into persistence.
+    - Add bundle/module evidence proving heavy adapters are absent from initial load and loaded only on demand.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_UI
+    teeth:
+    - attack: Open an artifact containing script/event-handler/unsafe HTML payloads.
+      expected: Payload is sanitized/sandboxed; no script or privileged side effect executes.
+    - attack: Render then dismiss an artifact without persistence.
+      expected: No durable backend/case mutation occurs.
+    - attack: Request persistence in the UI before a backend adapter exists.
+      expected: Only a pending intent is represented; no durable success is shown.
+    - attack: Start a normal session without opening PDF/advanced-code/spreadsheet capabilities.
+      expected: Heavy modules are absent from initial loaded-module/bundle evidence.
+    independent_confirmation:
+      verifier_receives:
+      - source artifact/security requirements
+      - artifact registry/lifecycle implementation
+      - production build/module report
+      - security evidence
+      - exact attacks
+      verifier_should_not_receive:
+      - builder's sanitization assumptions beyond documented contracts
+      required_verdict: CONFIRM
+    redesign_trigger: >-
+      A selected artifact dependency requires owning the document/domain state model, leaks executable untrusted
+      content into privileged context, or is too heavyweight to remain a bounded lazy adapter; replace it behind
+      the registry instead of widening the UI core.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T08/
+    done_when:
+    - Progressive disclosure and source traceability work across at least four materially different artifact families.
+    - Heavy-module lazy-load evidence passes.
+    - Security and ephemeral-state attacks fail safely; backend persistence remains open for T11.
+    - Fresh independent adversarial verifier returns CONFIRM with no artifact-trust/persistence critical finding.
+    - All applicable global gates remain green.
+  T09:
+    title: Integrate the agent adapter and interactive narration/choreography
+    initial_status: blocked
+    depends_on:
+    - T02
+    - T03
+    - T06
+    - T08
+    proof_level: P2
+    confirmation: independent
+    settles:
+    - REQ-GOAL-004
+    - REQ-GOAL-005
+    - REQ-AGENT-001
+    - REQ-AGENT-002
+    - REQ-AGENT-003
+    - REQ-NAR-001
+    - REQ-NAR-002
+    - REQ-NAR-003
+    - REQ-NAR-004
+    - REQ-NAR-005
+    changes: >-
+      Adds a bounded adapter to the existing agent/AG-UI substrate, publishes current surface/focus/selection/time, maps agent requests
+      onto UI-owned actions, implements semantic-beat/narration choreography with scene/artifact/evidence directives,
+      and supports pause/branch/inspect/resume.
+    proves: >-
+      The agent can participate in the same represented world as the human and explain by composing the established
+      UI/artifact grammar rather than by owning a separate chat UI or mutating renderer internals.
+    does_not_prove: Does not prove consequential backend authority, real Go action handoff, or final FDE integration.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T09.prereg.yaml
+      claim: The selected agent adapter can direct the cognitive environment entirely through UI-owned actions and a bounded choreography
+        grammar.
+      falsifier: >-
+        Required narration can only be implemented by letting the agent generate arbitrary renderer/UI internals
+        or by maintaining a separate authoritative chat state.
+      known_confounds:
+      - >-
+        A mock agent may issue cleaner instructions than real model output; adapter validation must be tested with
+        malformed directives.
+      confirmation_condition: >-
+        Independent reviewer drives equivalent narration through the selected adapter and a second test adapter and observes
+        equivalent application actions.
+    hot_context:
+    - T03 UI action/context ports
+    - T06 scene adapter actions
+    - T08 artifact registry/lifecycle
+    - T02 optional donor decision
+    - Existing AG-UI/agent integration contracts; add a new framework only with prior dependency approval
+    steps:
+    - Implement an agent adapter that reads UI context and emits validated application-owned representational actions.
+    - Implement semantic-beat sequence representation independent of agent framework and scene renderer internals.
+    - >-
+      Implement choreography execution for focus, reveal, relationship, annotation, artifact, evidence, and temporal
+      directives currently supported by the UI.
+    - >-
+      Implement interruption semantics: pause on user inspection, branch on follow-up question/selection, resume
+      or abandon deterministically.
+    - Implement evidence insertion so source artifacts can replace abstract narration where available.
+    - Add fixture conversations covering direct manipulation, visual answer, and multi-beat narrated explanation.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_UI
+    teeth:
+    - attack: Have the agent request a renderer-internal operation not present in the UI action vocabulary.
+      expected: Adapter rejects/normalizes it; agent cannot directly mutate renderer or local store internals.
+    - attack: Interrupt narration by opening an artifact and asking a question about a selected passage.
+      expected: Sequence pauses/branches with preserved context and can resume or terminate cleanly.
+    - attack: Remove the selected agent adapter and drive the same semantic-beat sequence from a test adapter.
+      expected: Narration/choreography core still works.
+    redesign_trigger: >-
+      The desired explanatory behavior requires arbitrary generated React components or renderer-specific commands
+      rather than composition of the bounded UI/artifact grammar; stop and revise the choreography representation.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T09/
+    done_when:
+    - Agent receives current surface/focus/selection/time context.
+    - All agent visual changes pass through UI-owned actions.
+    - Interruptible multi-beat narration with evidence/artifacts passes.
+    - Independent review confirms the selected agent integration remains an adapter.
+    - All applicable global gates remain green.
+  T10:
+    title: Connect Go cognitive projections to React through replaceable snapshot/update transport
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T04
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-OUT-001
+    - REQ-OUT-002
+    - REQ-PROJ-001
+    - REQ-PROJ-002
+    - REQ-PROJ-003
+    - REQ-PROJ-004
+    changes: "Implements the concrete Go\u2194React projection/interaction transport adapter with initial snapshot,\
+      \ correlated updates/deltas or refresh semantics, reconnect/resync, typed transport errors, and adapter replacement\
+      \ tests while preserving application-owned models on both sides."
+    proves: >-
+      The real UI can consume live Go cognitive projections without sharing Go transport/provider schemas, survive
+      delivery interruption, and recover from a fresh authoritative projection snapshot.
+    does_not_prove: Does not prove consequential authority, execution, narration, or full FDE acceptance.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T10.prereg.yaml
+      claim: Projection transport can be replaced independently while React and Go retain their own stable application
+        models.
+      falsifier: Replacing transport requires changing UI-core or Go-core domain/interaction semantics.
+      known_confounds:
+      - Generated client types can silently become the application model.
+      confirmation_condition: Peer review plus alternate in-process adapter demonstrates boundary independence.
+    hot_context:
+    - T03 React world/interaction ports
+    - T04 Go Projection/Event ports and cognitive projection model
+    - T01 configuration/error/preflight contracts
+    steps:
+    - >-
+      Implement the spec's versioned HTTP JSON snapshot/intent and
+      server-sent projection-event adapter. Freeze schemas, cursor ordering,
+      authentication, and resync semantics before integration.
+    - Implement Go projection snapshot and update publication plus React adapter translation into UI-core projections.
+    - Implement interaction-intent transport in the opposite direction without exposing transport DTOs to UI core.
+    - >-
+      Implement reconnect/resync from current projection snapshot; handle duplicate/out-of-order updates according
+      to deterministic correlation/version rules.
+    - Add adapter replacement tests using an in-process/local transport implementation.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_GO
+    - GATE_UI
+    teeth:
+    - attack: Disconnect transport, allow Go projection state to advance, then reconnect.
+      expected: React discards/repairs stale local projection through authoritative resync and reaches current state.
+    - attack: Deliver a duplicate or out-of-order projection update.
+      expected: Version/correlation logic prevents regression or duplicate side effects.
+    - attack: Replace network transport with in-process adapter.
+      expected: Application-core tests remain unchanged.
+    redesign_trigger: >-
+      Transport constraints force application cores to adopt transport-specific streaming/event objects as canonical
+      state; stop and introduce/repair translation rather than coupling cores.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T10/
+    done_when:
+    - Live snapshot/update/reconnect path passes.
+    - Transport replacement test passes.
+    - Out-of-order/duplicate update teeth pass.
+    - All applicable global gates remain green.
+  T11:
+    title: Route human and agent consequential actions through the governed Go boundary
+    initial_status: blocked
+    depends_on:
+    - T05
+    - T09
+    - T10
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-GOAL-006
+    - REQ-AGENT-004
+    - REQ-VERIFY-002
+    - REQ-VERIFY-003
+    - REQ-SEC-002
+    - REQ-ART-004
+    - REQ-SEC-004
+    changes: >-
+      Joins UI interaction intents to Go application commands, preserves actor/context/correlation, routes consequential
+      operations through SEA-Forge authority and configured adapters, makes human and agent invocation use the same
+      application action path, and updates the UI only from resulting cognitive projections.
+    proves: >-
+      Neither frontend state nor agent confidence can authorize or settle consequential work; equivalent human and
+      agent intents cross the same governed boundary and only resulting backend projection changes become consequential
+      UI truth.
+    does_not_prove: Does not prove the entire FDE journey, all variation/recovery cases, or developmental capability.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T11.prereg.yaml
+      claims:
+      - Consequential frontend operations cannot bypass Go and SEA-Forge authority.
+      - Agent-originated actions have no authority beyond the authenticated user/system context.
+      - UI consequential truth is projection-driven rather than locally declared.
+      falsifiers:
+      - A direct frontend or agent tool call produces a consequential side effect without backend authority.
+      - Local UI mutation persists as authoritative settled state.
+      - Duplicate interaction delivery duplicates a consequential side effect.
+      known_confounds:
+      - Test adapters that always allow authority can hide bypass paths; explicit deny/unavailable adapters are
+        required.
+      confirmation_condition: Fresh independent adversarial verifier reproduces bypass/duplicate/local-forgery attacks
+        and returns CONFIRM.
+    hot_context:
+    - T05 governed operational coordinator
+    - T09 agent/UI action adapter
+    - T10 projection/interaction transport
+    - SEA-Forge authority adapter and evidence path
+    steps:
+    - >-
+      Define/implement the interaction-intent classification that distinguishes representational operations from
+      consequential operations without teaching React SEA-Forge semantics.
+    - >-
+      Route consequential UI actions through Go and SEA-Forge authority with preserved actor/service identity, correlation,
+      and relevant context.
+    - Route agent-originated consequential actions through the same UI action and Go command path as equivalent
+      human actions.
+    - >-
+      Update UI consequential state only after receiving a new backend projection; local optimistic representation
+      may indicate pending intent but cannot claim settlement.
+    - Add explicit deny/escalate/authority-unavailable paths and evidence.
+    - >-
+      Implement explicit cognitive-artifact persistence through the same
+      authenticated Go/SFWP authority path, preserving actor and source
+      provenance. A render or dismiss action remains ephemeral.
+    - Add the casework-integrated just recipe for real Rust server, Go, React,
+      and Gauntlet conformance; fixture-only runs are separate evidence.
+    - >-
+      Add adversarial tests for direct frontend call, forged agent tool call, stale projection action, and duplicate
+      interaction delivery.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_SEAFORGE
+    - GATE_GO
+    - GATE_UI
+    - GATE_INTEGRATED
+    teeth:
+    - attack: Invoke a consequential frontend action while SEA-Forge denies or is unavailable.
+      expected: No governed side effect occurs and UI shows blocked/denied/unknown state rather than local approval.
+    - attack: Forge the same consequential intent through an agent/frontend tool without valid actor/authority
+        context.
+      expected: Backend rejects it; agent path has no elevated authority.
+    - attack: Deliver the same consequential interaction twice.
+      expected: Idempotency/correlation prevents duplicate side effects.
+    - attack: Mutate local UI store to a 'settled' visual state without backend projection.
+      expected: Refetch/reconciliation restores authoritative projection and no durable state changed.
+    - attack: Persist an artifact without backend authorization or source provenance.
+      expected: Go/SFWP rejects it and the artifact remains ephemeral.
+    independent_confirmation:
+      verifier_receives:
+      - source authority/security requirements
+      - React interaction implementation
+      - Go command/authority implementation
+      - SEA-Forge adapter
+      - attack scripts/evidence
+      verifier_should_not_receive:
+      - builder's assumed trusted call paths
+      required_verdict: CONFIRM
+    redesign_trigger: >-
+      A consequential action cannot be expressed through the Go application without embedding SEA-Forge authority
+      logic in React or granting the agent a provider-direct bypass; stop and revise the command/authority boundary.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T11/
+    done_when:
+    - Human and agent consequential actions share one governed application path.
+    - Deny/unavailable/duplicate/local-forgery attacks fail safely.
+    - Fresh independent adversarial verifier returns CONFIRM with no frontend/agent authority bypass.
+    - All applicable global gates remain green.
+  T12:
+    title: Settle the integrated FDE journey under variation, recovery, and lazy-depth behavior
+    initial_status: blocked
+    depends_on:
+    - T06
+    - T07
+    - T08
+    - T11
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-OUT-003
+    - REQ-OUT-004
+    - REQ-VERIFY-001
+    - REQ-VERIFY-005
+    - REQ-SAFE-002
+    changes: >-
+      Integrates the real scene, temporal controller, artifact runtime, agent narration, Go projection transport,
+      and governed action bridge into the reference FDE journey; executes all required variation/recovery cases
+      and proves replaceable adapter boundaries and bounded frontend failures.
+    proves: >-
+      The specified product experience exists as one coherent system: a user can enter a sparse world, focus, ask,
+      inspect artifacts, move through time, receive narrated visual explanation, invoke governed action, observe
+      backend-driven reorganization, and recover safely from optional frontend/agent/artifact failures.
+    does_not_prove: >-
+      Does not establish long-term developmental capability, cross-domain transfer, or production-scale performance
+      beyond the explicitly exercised variations.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T12.prereg.yaml
+      claims:
+      - >-
+        The integrated cognitive environment implements the reference FDE journey through the real application cores
+        and declared target adapters.
+      - Required variation/recovery cases preserve architecture and safe failure.
+      - Heavy artifact capability is paid only when interaction depth requests it.
+      falsifiers:
+      - Any reference step requires bypassing ports or direct provider/domain coupling.
+      - A required recovery case corrupts or silently changes authoritative state.
+      - A heavy artifact module loads in the baseline session without being requested.
+      - The UI requires a special-case component for the reference fixture rather than generic composition.
+      known_confounds:
+      - Recorded demo success can conceal hidden fixtures/mocks; evidence must identify every adapter instance and
+        source.
+      confirmation_condition: >-
+        Fresh independent verifier executes the frozen journey and required variations/recovery cases from a clean
+        target build and returns CONFIRM.
+    hot_context:
+    - Settled evidence from T05-T11
+    - Source spec verification_contract.reference_journey, required_variations, and required_recovery
+    - Source spec verification_contract.reference_journey
+    - Production build configuration and target adapter set
+    steps:
+    - >-
+      Implement/complete the reference FDE scenario using real application cores and all adapters claimed for the
+      target release; fixtures may supply customer content but may not replace
+      SEA Forge or Gauntlet. If the selected scenario uses GitHub, its
+      repository adapter and real integration are also required.
+    - "Exercise the full path: system orientation \u2192 focus \u2192 contextual question \u2192 narrated visual\
+      \ answer \u2192 source artifact expansion/selection \u2192 temporal rewind/compare/return \u2192 consequential\
+      \ action \u2192 governed execution/observation \u2192 projection-driven world reorganization."
+    - Run VAR-001 through VAR-007 and RECOV-001 through RECOV-004 from the source spec in the target build/runtime
+      mode.
+    - Capture module/bundle evidence showing heavy artifact adapters remain unloaded until used.
+    - >-
+      Demonstrate replacement of at least one UI-side adapter and one Go-side non-authority adapter without application-core
+      changes, sufficient to support REQ-OUT-004 at the implemented-release level.
+    - >-
+      Record screenshots/video only as supplemental evidence; preserve structured traces, command results, and state/evidence
+      artifacts as primary proof.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_SEAFORGE
+    - GATE_GAUNTLET
+    - GATE_GO
+    - GATE_UI
+    - GATE_INTEGRATED
+    teeth:
+    - attack: Run the quiet-world variation with substantial hidden operational state.
+      expected: Primary surface remains sparse while deeper detail remains reachable.
+    - attack: Break the selected agent adapter during an active direct-interaction session.
+      expected: Non-agent direct UI remains usable and authoritative state is unchanged.
+    - attack: Fail an optional artifact renderer during narration.
+      expected: Only that artifact degrades; the scene/source reference remains usable and no authoritative state
+        changes.
+    - attack: Run the FDE consequential action with authority deny, then allow on a separate fresh attempt.
+      expected: Denied attempt leaves no consequential mutation; authorized attempt changes the world only via backend
+        projection.
+    independent_confirmation:
+      verifier_receives:
+      - source spec
+      - frozen T12 preregistration
+      - target build instructions
+      - adapter inventory
+      - evidence locations
+      - variation/recovery scripts
+      verifier_should_not_receive:
+      - builder's step-by-step demo choreography beyond the user-visible scenario
+      required_verdict: CONFIRM
+    redesign_trigger: >-
+      The integrated journey can only be made to pass by special-casing the reference fixture, bypassing application
+      ports, weakening variation/recovery conditions, or introducing persistent UI concepts absent from the approved
+      grammar; stop and correct the falsified layer.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T12/
+    done_when:
+    - Reference FDE journey passes in the target build with primary structured evidence.
+    - All required variation and recovery cases pass.
+    - Lazy-depth evidence proves heavy renderers load only when requested.
+    - >-
+      Fresh independent adversarial verifier returns CONFIRM with no critical architecture, safety, or interaction-boundary
+      defect.
+    - All applicable global gates remain green.
+  T13:
+    title: Confirm replacement conformance and freeze removal parity evidence
+    initial_status: blocked
+    depends_on:
+    - T12
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles: []
+    confirms:
+    - REQ-GOAL-006
+    - REQ-CASE-001
+    - REQ-CASE-002
+    - REQ-CASE-004
+    - REQ-AGENT-004
+    - REQ-VERIFY-002
+    - REQ-VERIFY-003
+    - REQ-VERIFY-004
+    - REQ-ARCH-001
+    - REQ-ARCH-003
+    - REQ-ARCH-004
+    - REQ-TIME-001
+    - REQ-TIME-002
+    - REQ-TIME-003
+    - REQ-TIME-004
+    - REQ-ART-002
+    - REQ-ART-003
+    - REQ-ART-004
+    - REQ-SEC-001
+    - REQ-SEC-002
+    - REQ-SEC-004
+    - REQ-SAFE-001
+    - REQ-SAFE-002
+    - REQ-SAFE-003
+    - REQ-SAFE-004
+    changes: >-
+      Confirms the replacement through real integration and a cold independent
+      review, then freezes the before/after workflow inventory and removal
+      checklist for both old user interfaces. T13 is pre-removal evidence,
+      not final plan settlement.
+    proves: >-
+      The replacement satisfies its casework contract before either old UI
+      is removed, and removal can be judged against a frozen parity matrix.
+    does_not_prove: >-
+      Does not prove future roadmap adapters, organizational learning, cross-domain transfer, or any capability
+      claim explicitly excluded by the source spec.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T13.prereg.yaml
+      claims:
+      - All 84 non-migration requirements have settled evidence; both migration requirements remain open for T14.
+      - No settlement-critical ownership boundary has regressed during integration.
+      - The pre-removal target build reproduces conformance without hidden builder state.
+      falsifiers:
+      - Any non-migration requirement is unmapped/unsettled or either migration requirement is unmapped.
+      - Any fresh adversarial confirmation breaks an authority/safety invariant.
+      - Clean-build reproduction requires an undeclared mock, credential, local patch, or manual step.
+      known_confounds:
+      - A verifier can accidentally reuse builder caches/workspaces; confirmation must start from a declared clean
+        state.
+      confirmation_condition: Fresh independent verifier returns CONFIRM on the replacement,
+        all gates activated through T13 pass, and traceability is 86/86 mapped
+        with 84 non-migration requirements settled.
+    hot_context:
+    - Frozen source spec/hash
+    - All task preregistrations and evidence T00-T12
+    - Requirement-to-task/evidence index
+    - Final target adapter inventory and production build instructions
+    steps:
+    - >-
+      Mechanically regenerate the requirement-to-task/evidence map from the frozen spec and settled task records;
+      require 86/86 mapped with zero unknown IDs and 84 non-migration
+      requirements settled. REQ-MIG-001/002 remain open until T14.
+    - From a clean checkout/build, run every gate activated through T13 and the integrated conformance gate.
+    - Run just workbench-check against the existing GUI before its removal
+      and preserve its baseline as migration evidence.
+    - >-
+      Select fresh adversarial cases covering authority bypass, duplicate execution/reconciliation, temporal immutability,
+      artifact trust/persistence, adapter decoupling, and agent action parity.
+    - >-
+      Have an independent cold verifier inspect source requirements, implementation, and evidence and return an
+      explicit verdict without relying on builder summaries.
+    - Inventory every supported SEA Forge Rust/Tauri GUI and Gauntlet TUI
+      workflow, its new-path equivalent, source-backed parity evidence, and
+      no unported supported workflow. Freeze the removal and rollback checklist.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_SEAFORGE
+    - GATE_GAUNTLET
+    - GATE_GO
+    - GATE_UI
+    - GATE_INTEGRATED
+    teeth:
+    - attack: Remove one non-migration requirement-to-evidence link from a copy of the index.
+      expected: Traceability gate fails and T13 cannot settle.
+    - attack: Re-run a fresh authority-bypass or stale-lease race not used during builder confirmation.
+      expected: System preserves the governed boundary and safe recovery.
+    - attack: Have the cold verifier inspect a deliberately stale/failed evidence round alongside the corrected
+        round.
+      expected: Verifier can distinguish correction history and no failed evidence has been erased.
+    independent_confirmation:
+      verifier_receives:
+      - frozen source spec/hash
+      - final plan
+      - implementation
+      - all evidence including failed rounds
+      - exact confirmation checklist
+      verifier_should_not_receive:
+      - builder-only unstated setup knowledge
+      required_verdict: CONFIRM
+    redesign_trigger: >-
+      Independent confirmation finds a systemic representation/authority defect or the final conformance result
+      depends on undocumented local state, hidden mock/fallback, or builder-only knowledge; reopen the smallest
+      responsible task/spec layer and reconfirm rather than declaring settlement.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T13/
+    done_when:
+    - Traceability is 86/86 with zero unmapped or unknown requirement IDs.
+    - All gates activated through T13 pass from a clean target state.
+    - Fresh independent adversarial verifier returns CONFIRM with no critical finding.
+    - Both legacy UI workflow inventories have source-backed replacement evidence and no unported supported flow.
+    - Current status names T14 as the next task; the plan remains open.
+  T14:
+    title: Remove both superseded user interfaces and settle the replacement
+    initial_status: blocked
+    depends_on:
+    - T13
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-MIG-001
+    - REQ-MIG-002
+    changes: >-
+      Removes the SEA Forge Tauri/Rust GUI and the Gauntlet TUI from their
+      respective source trees and supported builds after parity. Retains
+      SEA Forge's Rust server/kernel and Gauntlet's executor/evidence path.
+      Re-runs real integration, removal checks, and cold confirmation.
+    proves: >-
+      The Go/React replacement is the supported human entry point and both
+      unwanted UIs are gone without deleting the governed or execution engines.
+    does_not_prove: Does not establish roadmap providers or cross-domain transfer.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T14.prereg.yaml
+      claims:
+      - Both old UIs are absent from source and supported build entry points.
+      - Their supported workflows pass through the replacement against real sources.
+      - SEA Forge authority and Gauntlet execution still function after removal.
+      falsifiers:
+      - A Rust/Tauri GUI or Gauntlet TUI binary, route, command, or packaging path remains supported.
+      - A former workflow can no longer complete through the replacement.
+      - Removing UI code also removes or weakens server/executor conformance.
+      known_confounds:
+      - A build can hide a UI behind feature flags while leaving live entry points.
+      confirmation_condition: >-
+        Fresh independent verifier examines both repository diffs, builds and
+        exercises the new path, runs removal teeth, and returns CONFIRM.
+    hot_context:
+    - T13 frozen parity matrix and removal checklist
+    - workbench/AGENTS.md and $GAUNTLET_WORKTREE/AGENTS.md
+    - Source spec migration_and_cutover and REQ-MIG-001/002
+    steps:
+    - >-
+      Confirm writable access to $GAUNTLET_WORKTREE and preserve its unrelated
+      changes. If access is unavailable, record BLOCKED; do not claim removal.
+    - >-
+      Remove the old SEA Forge Tauri host/renderer, routes, packaging,
+      GUI-only tests/contracts, scoped instructions, and obsolete recipes. First port any
+      retained behavioral assertions to new or server conformance tests.
+      Keep the Rust server, SFWP, kernel, and shared contracts still used.
+    - >-
+      Migrate the Rust-generated SFWP schema output and its
+      generated_schemas_are_committed_and_current drift test to the new
+      client contract location before deleting Workbench contract paths.
+      Regenerate from Rust definitions; never hand-edit schema files.
+    - >-
+      Remove Gauntlet TUI source, binary/build entry points, TUI-only
+      dependencies/tests/docs and obsolete recipes. First port any
+      retained behavioral assertions. Keep its execution engine, protocol,
+      evidence records, and non-TUI tests.
+    - >-
+      Add casework-removal-check to inspect source manifests and supported
+      build outputs for both old UIs, while asserting server and executor
+      entry points remain. Update repository docs and migration instructions.
+    - Run all global gates from clean declared builds, plus workflow parity,
+      cutover, and rollback rehearsal without dual writes.
+    - Update handoff status only after cold independent confirmation.
+    gate:
+    - GATE_SPEC_TRACE
+    - GATE_SEAFORGE
+    - GATE_GAUNTLET
+    - GATE_GO
+    - GATE_UI
+    - GATE_INTEGRATED
+    - GATE_REMOVAL
+    teeth:
+    - attack: Invoke each former GUI/TUI build or launch command.
+      expected: No supported UI entry point remains; engine/server commands still work.
+    - attack: Execute a former workflow only through the new React/Go path.
+      expected: It completes with the same source-backed authority and settlement semantics.
+    - attack: Re-run authority, duplicate-execution, history, and artifact-persistence attacks after removal.
+      expected: Every governed boundary remains intact and failed evidence is preserved.
+    independent_confirmation:
+      verifier_receives:
+      - frozen spec and plan
+      - both repository removal diffs
+      - T13 parity matrix
+      - full gate outputs and failure history
+      verifier_should_not_receive:
+      - builder-only claims that hidden legacy entry points are harmless
+      required_verdict: CONFIRM
+    redesign_trigger: >-
+      Missing workflow parity, a surviving legacy UI path, or damage to the
+      SEA Forge/Gauntlet engines reopens the responsible task. Do not mark
+      the plan settled or hide the gap as deprecation.
+    evidence: .agents/evidence/godspeed-casework-cognitive-environment/T14/
+    done_when:
+    - REQ-MIG-001 and REQ-MIG-002 have source/build removal evidence.
+    - All 86 requirements have settled evidence; every global gate exits 0.
+    - Fresh independent verifier returns CONFIRM on the post-removal build.
+    - Handoff reports exact evidence, limitations, recovery, and next action.
+final_acceptance:
+  architecture_and_ownership:
+  - >-
+    SEA-Forge remains the authority/evidence/settlement owner; Gauntlet remains executor; GitHub remains repository
+    truth; Go remains operational coordinator; React remains representation/interaction.
+  - >-
+    Go and React application cores contain only stable owned abstractions and can replace external adapters without
+    rewriting core semantics.
+  - >-
+    No .sea grammar change was introduced unless separately justified by a genuine new semantic distinction and
+    explicit source-spec revision.
+  operational_casework:
+  - >-
+    Available governed work can be claimed/leased, executed, observed, reconciled, and released without duplicate
+    consequential execution.
+  - Executor/repository completion is preserved as observation and cannot independently become governed settlement.
+  - Missed events, restarts, stale leases, and infrastructure failures take bounded recovery paths with preserved
+    evidence.
+  cognitive_environment:
+  - >-
+    The user can orient at Core, focus/zoom through generic objects/relationships, and operate through the small
+    approved interaction grammar.
+  - Visible complexity remains projection-driven and sparse when little deserves attention.
+  - The UI remains useful in degraded non-agent mode.
+  temporal_and_artifacts:
+  - Live/historical/compare/return-to-now work through shared application time without rewriting authoritative history.
+  - >-
+    Cognitive artifacts progressively disclose source material, remain traceable, are ephemeral by default, and
+    persist only through the governed backend path.
+  - Heavy artifact renderers remain lazy and optional.
+  agent_and_narration:
+  - The selected agent adapter receives current UI context and requests UI-owned actions rather than renderer mutations.
+  - >-
+    Narration can direct semantic beats, scene changes, evidence, and interactive artifacts; users can interrupt/inspect/branch/resume.
+  - Agent-originated consequential actions use the same governed path as equivalent human actions.
+  evidence_and_confirmation:
+  - Every normative REQ record has a settled implementation or documented disposition; MUST obligations require real proof.
+  - Every P3 task has the required fresh independent confirmation.
+  - Failed/correction evidence has not been erased.
+  - Documentation/status claims do not exceed observed proof.
+  - All global gates exit 0.
+  - Final traceability is mechanically 86/86 and a fresh cold independent verifier returns CONFIRM on the target
+    build.
+  migration_and_removal:
+  - The SEA Forge Tauri/Rust GUI and Gauntlet TUI are removed from source and supported builds after verified parity.
+  - The Rust governed server/kernel and Gauntlet executor/evidence path still pass their required gates.
+  - The replacement is the sole supported human UI, with tested recovery and no dual authority.
+guardrails:
+- >-
+  Do not expose or duplicate SEA-Forge/CMMN/internal GodSpeed ontology in the React interaction model merely because
+  the backend uses it.
+- Do not let Go derive governed availability, authority, or settlement from GitHub, Gauntlet, local leases, or UI
+  state.
+- Do not let fixture/local adapters count as evidence of real SEA-Forge/Gauntlet/GitHub integration.
+- Do not make a timeline renderer, graphics library, or agent framework own the UI grammar.
+- Do not persist ephemeral cognitive artifacts without an explicit backend persistence operation and authorization.
+- Do not retry an uncertain consequential operation until reconciliation establishes a safe state.
+- Do not import donor product ontology or source code whose license is incompatible with the target distribution
+  posture.
+- Do not expand .sea grammar for this implementation unless a separate semantic requirement is explicitly established.
+- Do not claim completion by hiding or relabeling either old UI; T14 requires actual source/build removal.
+handoff_contract:
+  must_report:
+  - settled capabilities/requirements
+  - explicitly unsettled or deferred items
+  - current operational system state
+  - requirement-to-evidence index
+  - known limitations
+  - rollback/recovery instructions where relevant
+  - important decisions/discoveries that changed the execution model
+  - donor-derived code/mechanics and license notices
+  - "exact next executable action or 'none \u2014 plan settled'"
+  settled_next_action_rule: "The next executable action MUST be set to `none \u2014 plan settled` only after the\
+    \ final required conformance/confirmation task succeeds."
+traceability:
+  spec_requirement_count: 86
+  mapped_requirement_count: 86
+  unmapped_requirements: []
+  unknown_plan_requirement_ids: []
+  requirement_to_tasks:
+    REQ-GOAL-001:
+    - T04
+    REQ-GOAL-002:
+    - T03
+    REQ-GOAL-003:
+    - T03
+    REQ-GOAL-004:
+    - T09
+    REQ-GOAL-005:
+    - T09
+    REQ-GOAL-006:
+    - T11
+    REQ-OUT-001:
+    - T04
+    - T10
+    REQ-OUT-002:
+    - T03
+    - T10
+    REQ-OUT-003:
+    - T12
+    REQ-OUT-004:
+    - T12
+    REQ-VERIFY-001:
+    - T12
+    REQ-VERIFY-002:
+    - T11
+    REQ-VERIFY-003:
+    - T11
+    REQ-VERIFY-004:
+    - T05
+    REQ-VERIFY-005:
+    - T12
+    REQ-CONFIG-001:
+    - T01
+    REQ-CONFIG-002:
+    - T01
+    REQ-CONFIG-003:
+    - T01
+    REQ-CONFIG-004:
+    - T01
+    REQ-CONFIG-010:
+    - T01
+    REQ-CONFIG-011:
+    - T01
+    REQ-CONFIG-012:
+    - T01
+    REQ-ARCH-001:
+    - T01
+    REQ-ARCH-002:
+    - T01
+    REQ-ARCH-003:
+    - T03
+    REQ-ARCH-004:
+    - T03
+    REQ-CASE-001:
+    - T05
+    REQ-CASE-002:
+    - T05
+    REQ-CASE-003:
+    - T05
+    REQ-CASE-004:
+    - T05
+    REQ-PROJ-001:
+    - T04
+    - T10
+    REQ-PROJ-002:
+    - T04
+    - T10
+    REQ-PROJ-003:
+    - T04
+    - T10
+    REQ-PROJ-004:
+    - T04
+    - T10
+    REQ-UI-001:
+    - T06
+    REQ-UI-002:
+    - T06
+    REQ-UI-003:
+    - T06
+    REQ-UI-004:
+    - T06
+    REQ-UI-005:
+    - T06
+    REQ-UI-006:
+    - T06
+    REQ-ATTN-001:
+    - T06
+    REQ-ATTN-002:
+    - T06
+    REQ-ATTN-003:
+    - T06
+    REQ-ATTN-004:
+    - T06
+    REQ-TIME-001:
+    - T07
+    REQ-TIME-002:
+    - T07
+    REQ-TIME-003:
+    - T07
+    REQ-TIME-004:
+    - T07
+    REQ-TIME-005:
+    - T07
+    REQ-AGENT-001:
+    - T09
+    REQ-AGENT-002:
+    - T09
+    REQ-AGENT-003:
+    - T09
+    REQ-AGENT-004:
+    - T11
+    REQ-NAR-001:
+    - T09
+    REQ-NAR-002:
+    - T09
+    REQ-NAR-003:
+    - T09
+    REQ-NAR-004:
+    - T09
+    REQ-NAR-005:
+    - T09
+    REQ-ART-001:
+    - T08
+    REQ-ART-002:
+    - T08
+    REQ-ART-003:
+    - T08
+    REQ-ART-004:
+    - T11
+    REQ-ART-005:
+    - T08
+    REQ-ART-006:
+    - T08
+    REQ-ART-007:
+    - T08
+    REQ-ARTDEP-001:
+    - T08
+    REQ-ARTDEP-002:
+    - T08
+    REQ-ARTDEP-003:
+    - T08
+    REQ-ARTDEP-004:
+    - T08
+    REQ-ARTDEP-005:
+    - T08
+    REQ-ARTDEP-006:
+    - T08
+    REQ-ARTDEP-007:
+    - T08
+    REQ-ARTDEP-008:
+    - T08
+    REQ-DONOR-001:
+    - T02
+    REQ-DONOR-002:
+    - T02
+    REQ-DONOR-003:
+    - T02
+    REQ-SAFE-001:
+    - T05
+    REQ-SAFE-002:
+    - T12
+    REQ-SAFE-003:
+    - T05
+    REQ-SAFE-004:
+    - T05
+    REQ-SEC-001:
+    - T08
+    REQ-SEC-002:
+    - T11
+    REQ-SEC-003:
+    - T08
+    REQ-SEC-004:
+    - T11
+    REQ-MIG-001:
+    - T14
+    REQ-MIG-002:
+    - T14
+  coverage_rule: >-
+    Every normative REQ record MUST map to a settlement task. MUST obligations
+    require implementation and evidence; SHOULD/MAY records require an
+    implemented result or explicit justified omission. High-risk groups
+    require the confirmation mode defined by the specification and this plan.

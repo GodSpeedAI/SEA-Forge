@@ -1,0 +1,302 @@
+[
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 23.52,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-1-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:03:28.708800+00:00"
+   }
+  ],
+  "candidate_id": "cand-1",
+  "correlation_id": "t23-route-001-iter1",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:03:52.228984+00:00",
+  "label": "settled_accepted",
+  "observation_refs": [
+   "probe-i1-cand-1"
+  ],
+  "probe_id": "probe-i1-cand-1",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i1-cand-1.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 16.044,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-2-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:03:52.229405+00:00"
+   }
+  ],
+  "candidate_id": "cand-2",
+  "correlation_id": "t23-route-001-iter1",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:04:08.273192+00:00",
+  "label": "budget_exhausted",
+  "observation_refs": [
+   "probe-i1-cand-2"
+  ],
+  "probe_id": "probe-i1-cand-2",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i1-cand-2.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 12.646,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-3-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:04:08.273583+00:00"
+   }
+  ],
+  "candidate_id": "cand-3",
+  "correlation_id": "t23-route-001-iter1",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:04:20.920239+00:00",
+  "label": "budget_exhausted",
+  "observation_refs": [
+   "probe-i1-cand-3"
+  ],
+  "probe_id": "probe-i1-cand-3",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i1-cand-3.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 11.547,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-1-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:04:20.920881+00:00"
+   }
+  ],
+  "candidate_id": "cand-1",
+  "correlation_id": "t23-route-001-iter2",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:04:32.467838+00:00",
+  "label": "settled_accepted",
+  "observation_refs": [
+   "probe-i2-cand-1"
+  ],
+  "probe_id": "probe-i2-cand-1",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i2-cand-1.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 13.219,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-2-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:04:32.468182+00:00"
+   }
+  ],
+  "candidate_id": "cand-2",
+  "correlation_id": "t23-route-001-iter2",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:04:45.687785+00:00",
+  "label": "budget_exhausted",
+  "observation_refs": [
+   "probe-i2-cand-2"
+  ],
+  "probe_id": "probe-i2-cand-2",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i2-cand-2.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 11.631,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-3-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:04:45.688731+00:00"
+   }
+  ],
+  "candidate_id": "cand-3",
+  "correlation_id": "t23-route-001-iter2",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:04:57.320398+00:00",
+  "label": "settled_accepted",
+  "observation_refs": [
+   "probe-i2-cand-3"
+  ],
+  "probe_id": "probe-i2-cand-3",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i2-cand-3.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 14.578,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-1-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:04:57.320788+00:00"
+   }
+  ],
+  "candidate_id": "cand-1",
+  "correlation_id": "t23-route-001-iter3",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:05:11.898624+00:00",
+  "label": "budget_exhausted",
+  "observation_refs": [
+   "probe-i3-cand-1"
+  ],
+  "probe_id": "probe-i3-cand-1",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i3-cand-1.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 12.554,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-2-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:05:11.899462+00:00"
+   }
+  ],
+  "candidate_id": "cand-2",
+  "correlation_id": "t23-route-001-iter3",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:05:24.453763+00:00",
+  "label": "settled_accepted",
+  "observation_refs": [
+   "probe-i3-cand-2"
+  ],
+  "probe_id": "probe-i3-cand-2",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i3-cand-2.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 23.379,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-3-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:05:24.454228+00:00"
+   }
+  ],
+  "candidate_id": "cand-3",
+  "correlation_id": "t23-route-001-iter3",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:05:47.833885+00:00",
+  "label": "verification_failed_nonsettlement",
+  "observation_refs": [
+   "probe-i3-cand-3"
+  ],
+  "probe_id": "probe-i3-cand-3",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i3-cand-3.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 25.113,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-1-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:05:47.834321+00:00"
+   }
+  ],
+  "candidate_id": "cand-1",
+  "correlation_id": "t23-route-001-iter4",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:06:12.947877+00:00",
+  "label": "budget_exhausted",
+  "observation_refs": [
+   "probe-i4-cand-1"
+  ],
+  "probe_id": "probe-i4-cand-1",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i4-cand-1.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 10.398,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-2-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:06:12.948380+00:00"
+   }
+  ],
+  "candidate_id": "cand-2",
+  "correlation_id": "t23-route-001-iter4",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:06:23.346450+00:00",
+  "label": "budget_exhausted",
+  "observation_refs": [
+   "probe-i4-cand-2"
+  ],
+  "probe_id": "probe-i4-cand-2",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i4-cand-2.json"
+ },
+ {
+  "attempts": [
+   {
+    "abstention": false,
+    "attempt": "primary",
+    "duration_seconds": 8.982,
+    "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+    "outcome": "ok",
+    "provider": "deepseek-clinepass",
+    "raw_output_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-3-primary.raw.txt",
+    "started_at_utc": "2026-09-19T03:06:23.346922+00:00"
+   }
+  ],
+  "candidate_id": "cand-3",
+  "correlation_id": "t23-route-001-iter4",
+  "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+  "judged_at_utc": "2026-09-19T03:06:32.329152+00:00",
+  "label": "settled_accepted",
+  "observation_refs": [
+   "probe-i4-cand-3"
+  ],
+  "probe_id": "probe-i4-cand-3",
+  "source": "provider",
+  "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/probe-i4-cand-3.json"
+ }
+]

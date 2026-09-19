@@ -24,7 +24,7 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{unix::OwnedReadHalf, unix::OwnedWriteHalf, UnixStream};
 
-async fn serve(root: &Path) -> PathBuf {
+async fn serve(root: &Path) -> (PathBuf, tokio::task::JoinHandle<()>) {
     // A fresh socket name per boot: a restart in these tests is a second
     // server over the same records, not a reuse of the first one's endpoint.
     let socket = root.join(format!("sfwp-{}.sock", std::process::id()));
@@ -37,7 +37,7 @@ async fn serve(root: &Path) -> PathBuf {
         root: root.to_path_buf(),
         ..ServerConfig::default()
     };
-    tokio::spawn(async move {
+    let handle = tokio::spawn(async move {
         let _ = run(config).await;
     });
     for _ in 0..500 {
@@ -46,7 +46,7 @@ async fn serve(root: &Path) -> PathBuf {
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    socket
+    (socket, handle)
 }
 
 struct Client {
@@ -200,7 +200,7 @@ fn seed_both_layouts(root: &Path) {
 async fn both_layouts_resolve_through_one_run_get() {
     let root = tempfile::tempdir().unwrap();
     seed_both_layouts(root.path());
-    let socket = serve(root.path()).await;
+    let (socket, _server) = serve(root.path()).await;
     let mut client = Client::connect(&socket).await;
 
     let cased = client
@@ -230,7 +230,7 @@ async fn both_layouts_still_resolve_after_a_restart() {
     let root = tempfile::tempdir().unwrap();
     seed_both_layouts(root.path());
 
-    let first = serve(root.path()).await;
+    let (first, first_server) = serve(root.path()).await;
     let mut client = Client::connect(&first).await;
     assert!(client
         .call(json!({"verb": "run_get", "run_id": "run-cased"}))
@@ -239,7 +239,15 @@ async fn both_layouts_still_resolve_after_a_restart() {
         .is_none());
     drop(client);
 
-    let second = serve(root.path()).await;
+    // A restart stops the old server before the new one takes the cell: the
+    // product holds an exclusive per-cell lock for a server's lifetime, so a
+    // second live server over one root is refused by design, not a locator
+    // defect. Stopping the first task releases that lock, exactly as a real
+    // process exit would.
+    first_server.abort();
+    let _ = first_server.await;
+
+    let (second, _second_server) = serve(root.path()).await;
     assert_ne!(first, second, "the restart must be a second server");
     let mut client = Client::connect(&second).await;
     for run_id in ["run-cased", "run-flat"] {
@@ -257,7 +265,7 @@ async fn both_layouts_still_resolve_after_a_restart() {
 async fn run_list_reports_both_layouts_once_each() {
     let root = tempfile::tempdir().unwrap();
     seed_both_layouts(root.path());
-    let socket = serve(root.path()).await;
+    let (socket, _server) = serve(root.path()).await;
     let mut client = Client::connect(&socket).await;
 
     let result = client.call(json!({"verb": "run_list"})).await;
@@ -297,7 +305,7 @@ async fn a_duplicated_id_resolves_to_the_flat_layout() {
         "case-dup",
         "Flat copy",
     );
-    let socket = serve(root.path()).await;
+    let (socket, _server) = serve(root.path()).await;
     let mut client = Client::connect(&socket).await;
 
     let record = client
@@ -317,7 +325,7 @@ async fn a_duplicated_id_resolves_to_the_flat_layout() {
 async fn a_case_sees_the_settlement_of_its_own_case_owned_run() {
     let root = tempfile::tempdir().unwrap();
     seed_both_layouts(root.path());
-    let socket = serve(root.path()).await;
+    let (socket, _server) = serve(root.path()).await;
     let mut client = Client::connect(&socket).await;
 
     let overview = client
@@ -340,7 +348,7 @@ async fn the_case_owned_probe_does_not_widen_the_traversal_surface() {
     let root = tempfile::tempdir().unwrap();
     seed_both_layouts(root.path());
     std::fs::write(root.path().join("secret.json"), "{}").unwrap();
-    let socket = serve(root.path()).await;
+    let (socket, _server) = serve(root.path()).await;
     let mut client = Client::connect(&socket).await;
 
     for probe in ["../../etc", "..", "case-owned/runs/run-cased", "run cased"] {

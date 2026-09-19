@@ -1,0 +1,20 @@
+# T16 round-1 — environmental provider-availability blocker
+schema: godspeed-bounded-judgment.t16-environmental-blocker
+date: "2026-09-18"
+observation:
+  - "codex CLI: usage limit reached (plan plus; per the API response primary_used_percent=100; try-again ~11:38 AM provider time)"
+  - "prime-agent CLI: same upstream usage_limit_reached (429; resets_in_seconds≈2358 at call time)"
+  - "both capable providers returned provider_error on all 9 rows; raw outputs empty (CLI-level refusals, before any model work)"
+classification: >-
+  ENVIRONMENTAL (transient quota), NOT outcome B: B means providers cannot
+  structurally satisfy the bounded contract. The round-1 report's mechanical
+  B-letter is superseded by this record: the frozen decision rule's B leg
+  presupposed contract-relevant failures; quota refusals carry no information
+  about the capability question. Preserving the round honestly and blocking on
+  provider availability rather than misclassifying.
+resume_procedure:
+  - "1. smoke-test both CLIs (codex exec / prime-agent -p --offline with a neutral prompt) until both answer"
+  - "2. re-run: python3 .agents/evidence/godspeed-bounded-judgment/T16/run_remeasure.py (harness + prereg frozen and unchanged)"
+  - "3. apply the frozen decision rule; run verify_disclosure; obtain independent adversarial confirmation"
+  - "no other step may change: prereg sha256 d89bea89..., harness sha256 7df3dc8e..."
+preserved: "round-1 provider-raw-results.json + remeasure-report.yml (mechanical B) kept as evidence"

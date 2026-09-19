@@ -1,0 +1,51 @@
+schema: godspeed-bounded-judgment.t25-teeth
+task: T25
+marked: ATTACK - every record in this directory is an attack artifact and never part of the developmental records
+matched_pair_read: .agents/evidence/godspeed-bounded-judgment/T25/matched-pair.yaml
+teeth:
+- id: T8-redundant-route
+  marked: ATTACK - synthetic record, never part of any route ledger or developmental set
+  construction: regenerated a structurally equivalent route record (same retained-move sequence and terminals as
+    t23-route-001, fingerprint e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted) and
+    ran the SAME frozen novelty metric (route_contracts.route_fingerprint + the prereg classification rule) over
+    it against the settled route as reference
+  expected: 'the novelty computation DETECTS the duplicate: classification structural duplicate for the synthetic
+    record; duplication measurable and recorded, with NO automatic rejection (frozen policy)'
+  observed: 'classification = structural-duplicate: the equal fingerprint was detected by direct comparison; the
+    duplicate is recorded here and rejected by nothing'
+  expected_vs_observed: MATCH - structural duplicate detected and recorded; no auto-rejection applied (measured,
+    per the frozen novelty policy)
+  classification: structural-duplicate
+  classification_rule:
+    structural-duplicate: equal fingerprint in the reference set
+    near-duplicate: same operation set, different order
+    novel: otherwise
+    metric_source: prereg novelty_metric.fingerprint via frozen T21 route_contracts.route_fingerprint
+  reference:
+    route_id: t23-route-001
+    fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+    operation_set:
+    - e2e-happy@2
+    - e2e-happy@3
+    - e2e-happy@6
+  duplicate_detected: true
+  auto_rejection_applied: false
+  no_auto_rejection_note: 'frozen policy: duplicates are measured and recorded; no automatic rejection is frozen
+    in this slice'
+  gauntlet_executions: 0
+  provider_calls: 0
+immutability:
+  matched_pair_sha256_before: aa0af3c641776b41144c8fa0944506a1235c890a2326855dc03a0f42f490ec06
+  matched_pair_sha256_after: aa0af3c641776b41144c8fa0944506a1235c890a2326855dc03a0f42f490ec06
+  matched_pair_unchanged: true
+  attack_ids_absent_from_developmental_records: true
+  attack_ids:
+  - t8-attack
+  - t25-t8-duplicate-route
+  - t25-t8-attack
+payment_counters:
+  wall_clock_seconds: 0
+  provider_calls: 0
+  tool_executions: 0
+  failed_executions: 0
+  note: 'T8 is a synthetic-record attack: no gauntlet execution and no provider call'

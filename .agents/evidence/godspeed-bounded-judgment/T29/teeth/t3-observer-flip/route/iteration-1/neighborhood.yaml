@@ -1,0 +1,45 @@
+schema: godspeed-bounded-judgment.t29-neighborhood
+route_id: t29-route-001
+iteration: 1
+correlation_id: t29-route-001-iter1
+rule: prereg operation_surface.neighborhood_rule (frozen), restricted to the frozen family-2 scenario domain
+filters_applied:
+  probed_on_route: []
+  denied_on_route: []
+  probes_remaining: 8
+  probe_cost_per_operation: 1
+  admission_compatible: mock replay runner only; disposable copy; no credentials; no network (frozen catalog)
+neighborhood_size: 8
+operations:
+- op_id: run_case:e2e-forged-report:1
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 1
+- op_id: run_case:e2e-forged-report:2
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 2
+- op_id: run_case:e2e-forged-report:3
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 3
+- op_id: run_case:e2e-forged-report:4
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 4
+- op_id: run_case:e2e-forged-report:5
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 5
+- op_id: run_case:e2e-forged-report:6
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 6
+- op_id: run_case:e2e-forged-report:7
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 7
+- op_id: run_case:e2e-forged-report:8
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 8

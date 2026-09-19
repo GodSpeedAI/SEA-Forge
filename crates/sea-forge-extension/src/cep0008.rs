@@ -83,6 +83,14 @@ const PAYLOAD_SECTIONS: &[&str] = &[
     "projections",
 ];
 
+/// Profile identifier for the CEP-0008 v1 flat profile compatibility mapping (G1).
+/// Condition-based sunset: G1 retires once sea-rs E6 and swe_seed E4/E7 have a passing G2
+/// integration test. Zero new G1 consumers permitted.
+pub const PROFILE_ID_GODSPEED_V1_FLAT: &str = "godspeed.event.v1-flat";
+pub const PROFILE_ID_CEP0008_FLAT_V1: &str = "cep-0008-flat-v1";
+pub const SCHEMA_DIGEST_V1_FLAT: &str =
+    "sha256:a2b2722008e920d0e74b3970b427b0b2e3e5b323c9321ef9a8f4c017d29162eb";
+
 // ── Projection input ──
 
 /// Typed projection input carrying the committed native envelope's ledger
@@ -216,7 +224,10 @@ pub fn project_to_cep0008_flat_v1(
             "CEP-0008 §52 concepts not fully carried in flat profile metadata",
         ],
         "conformance_status": "partially_conformant",
-        "profile_id": "cep-0008-flat-v1",
+        "profile_id": PROFILE_ID_CEP0008_FLAT_V1,
+        "registered_profile_id": PROFILE_ID_GODSPEED_V1_FLAT,
+        "schema_digest": SCHEMA_DIGEST_V1_FLAT,
+        "sunset_condition": "G1 retires once sea-rs E6 and swe_seed E4/E7 have a passing G2 integration test. Zero new G1 consumers permitted.",
         "native_envelope_version": env.version,
     });
     if let Some(cell_id) = &env.cell_id {

@@ -151,7 +151,7 @@ export function UnbackedSurface({
             </div>
             <p>
               Because this surface holds no projection, it grants no authority and
-              blocks none. Work that depends on it is neither approved nor denied — it
+              blocks none. Work that depends on it is neither approved nor denied. It
               is simply not yet inspectable from here.
             </p>
             <p className="operational-copy">

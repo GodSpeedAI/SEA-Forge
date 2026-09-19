@@ -1,0 +1,29 @@
+{
+  "auto_rejection_applied": false,
+  "classification": "structural-duplicate",
+  "classification_rule": {
+    "metric_source": "prereg novelty_metric.fingerprint via frozen T21 route_contracts.route_fingerprint",
+    "near-duplicate": "same operation set, different order",
+    "novel": "otherwise",
+    "structural-duplicate": "equal fingerprint in the reference set"
+  },
+  "construction": "regenerated a structurally equivalent route record (same retained-move sequence and terminals as t23-route-001, fingerprint e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted) and ran the SAME frozen novelty metric (route_contracts.route_fingerprint + the prereg classification rule) over it against the settled route as reference",
+  "duplicate_detected": true,
+  "expected": "the novelty computation DETECTS the duplicate: classification structural duplicate for the synthetic record; duplication measurable and recorded, with NO automatic rejection (frozen policy)",
+  "expected_vs_observed": "MATCH - structural duplicate detected and recorded; no auto-rejection applied (measured, per the frozen novelty policy)",
+  "gauntlet_executions": 0,
+  "id": "T8-redundant-route",
+  "marked": "ATTACK - synthetic record, never part of any route ledger or developmental set",
+  "no_auto_rejection_note": "frozen policy: duplicates are measured and recorded; no automatic rejection is frozen in this slice",
+  "observed": "classification = structural-duplicate: the equal fingerprint was detected by direct comparison; the duplicate is recorded here and rejected by nothing",
+  "provider_calls": 0,
+  "reference": {
+    "fingerprint": "e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted",
+    "operation_set": [
+      "e2e-happy@2",
+      "e2e-happy@3",
+      "e2e-happy@6"
+    ],
+    "route_id": "t23-route-001"
+  }
+}

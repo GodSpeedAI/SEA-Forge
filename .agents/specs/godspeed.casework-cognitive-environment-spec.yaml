@@ -1,0 +1,394 @@
+schema: agent.spec
+schema_version: "1.0"
+metadata:
+  id: godspeed.casework-cognitive-environment
+  title: GodSpeed Casework System Front End and Cognitive Environment
+  status: authoritative
+  version: "0.2.1"
+  created: "2026-09-18"
+  revised: "2026-09-19"
+  purpose: >-
+    Define the replacement Go operational front end and React cognitive environment
+    for governed SEA Forge casework, with explicit authority, migration, and proof
+    boundaries. This file is self-contained; missing external design references
+    cannot silently supply requirements.
+  normative_language: RFC 2119
+authority:
+  architecture_decision: docs/decisions/ADR-006-godspeed-casework-ui-replacement.md
+  precedence:
+    - Repository AGENTS.md and scoped instructions govern implementation procedure.
+    - This specification governs casework-environment behavior and acceptance.
+    - The linked plan schedules implementation but cannot weaken this specification.
+  change_rule: >-
+    Changes to public contracts, persisted schemas, authority boundaries, dependencies,
+    or application architecture require the repository's prior review/approval and an
+    ADR/spec update before implementation. A task cannot waive that rule.
+  source_truth:
+    case_authority_and_settlement: SEA Forge Rust kernel and server
+    execution_observations: Gauntlet executor through a governed adapter
+    repository_facts: GitHub through a server-side adapter when the workflow uses GitHub
+    operational_coordination: New Go application; leases never grant semantic authority
+    representation: New React cognitive environment; local state never grants authority
+  current_substrate:
+    sea_forge: crates/sea-forge-server and its typed SFWP Unix-socket NDJSON boundary
+    current_gui: workbench/apps/desktop React renderer plus Rust Tauri host
+    current_gui_rule: Migration source only; the new Go/React path supersedes its Rust host after verified cutover.
+    gauntlet: Sibling Rust repository at ../gauntlet; executor integration is external to this checkout.
+    missing_here:
+      - No Go module or Go source currently exists in this repository.
+      - No GitHub casework adapter, CopilotKit adapter, Open MCT checkout, or OpenMontage checkout exists here.
+      - The referenced CognitiveOS prose files and an implementation brief are not present here.
+    evidence_rule: >-
+      These are inventory observations, not an assertion that SFWP already exposes
+      every required operation. T00 must record exact existing methods, versions,
+      ownership, and missing seams before implementing adapters.
+target_layout:
+  go_module: apps/godspeed-casework-go
+  react_app: apps/godspeed-cognitive-ui
+  placement_rule: >-
+    These are the implementation targets in this repository. A different repository
+    or boundary requires an ADR and plan/spec revision before work moves.
+  frontend_boundary: >-
+    React uses only typed Go application APIs for projections and interaction
+    intents; it does not open SFWP, read ledgers/SQL, or invoke Gauntlet directly.
+  go_boundary: >-
+    Go uses typed SFWP commands/queries/events for governed state and authority;
+    it cannot read or mutate SEA Forge's private ledgers or invent missing SFWP
+    capabilities. Missing methods require a separately reviewed Rust contract
+    change with conformance tests.
+  transport_initial_choice: >-
+    Go exposes versioned JSON snapshot/query and interaction-intent endpoints
+    over HTTP plus server-sent projection events with a monotonic cursor.
+    On a missing or out-of-order cursor, React fetches a fresh snapshot
+    before applying further updates. T10 freezes typed schemas, actor/session
+    authentication, version rules, and reconnect tests before integration;
+    transport remains an adapter.
+  agent_boundary: >-
+    An agent adapter may request the same application actions as a human. It
+    cannot submit forged actor claims, invoke renderer internals, or skip Go and
+    SEA Forge authorization. Reuse existing AG-UI/agent substrate where it fits;
+    CopilotKit is an optional adapter, not a prerequisite.
+  renderer_boundary: >-
+    The small spatial grammar is required; Three.js/R3F is optional. Prefer the
+    simplest renderer that proves focus, orientation, semantic zoom, attention,
+    and accessibility before adding a graphics dependency.
+  donor_boundary: >-
+    Open MCT and OpenMontage are optional design references. No donor checkout
+    or source reuse is required for conformance. Copying code requires provenance
+    and license review; absent donors cannot block a native implementation.
+domain_contract:
+  work_opportunity: >-
+    Stable id plus governed authority reference and bounded execution-contract
+    reference. Existence and reservation are not permission to execute.
+  execution_lease: >-
+    Stable id, opportunity id, holder, expiry, and durable reconciliation status.
+    A stale/expired lease with uncertain process state must reconcile before
+    a new consequential execution can start.
+  lease_states: [claimed, active, reconciling, released, expired]
+  surface_projection: >-
+    Stable identity/version, temporal context, currently useful objects and
+    relationships, source/deeper-resolution references, and available action
+    descriptors. Omission never means deletion from source truth.
+  temporal_context: >-
+    Application-owned live or historical position, optional range/compare pair,
+    explicit unsupported-history result. Navigation cannot mutate source history.
+  cognitive_artifact: >-
+    Kind, stable source/provenance reference, disclosure level, optional scene
+    anchor. It is ephemeral until a separate authorized persistence operation
+    succeeds; rendering alone cannot create case material.
+  interaction_intent: >-
+    Stable request/idempotency key, actor identity resolved server-side, operation,
+    projection/source version, and typed payload. Go must reject stale, duplicate,
+    malformed, unauthorized, or unsupported consequential intents before effects.
+  error_contract: >-
+    Errors carry stable code, concise message, source, and recoverability hint.
+    Unknown authority, process state, or history remains visibly unknown/blocked;
+    no silent fallback or fabricated success is permitted.
+  config_contract: >-
+    Runtime overrides, project-owned structured config, then documented defaults;
+    secrets resolve by server-side indirection. Preflight validates required
+    capabilities before live operation and only disables affected optional ones.
+  result_contract: >-
+    Executor completion and repository state are observations. The UI may show
+    settled only after SEA Forge returns an authoritative accepted settlement
+    reference on a fresh source-backed projection.
+migration_and_cutover:
+  rust_gui: >-
+    The existing Tauri/Rust GUI is a temporary migration source, not a retained
+    product surface. Inventory its supported workflows, prove source-backed parity
+    in the new Go/React environment, rehearse cutover and recovery, then remove
+    its renderer, Rust host, packaging, routes, commands, tests, and documentation
+    from the supported build. Preserve SEA Forge's Rust server and kernel.
+  gauntlet_tui: >-
+    The Gauntlet TUI is also a removal target. Prove parity for its supported
+    human workflows in the new environment, then remove the TUI code, build
+    entry points, tests, and documentation in the Gauntlet repository. Preserve
+    Gauntlet's executor, protocol, and evidence contract. Read-only diagnostics
+    may use a typed Go/Gauntlet adapter; consequential controls must pass the
+    governed SEA Forge authority boundary. A workflow that cannot satisfy
+    this rule blocks removal until the contract is explicitly revised.
+  no_dual_authority: >-
+    Parallel operation must not create a second case authority or dual-write
+    governed records. Both user interfaces read the same SEA Forge truth.
+  rollback: >-
+    Record a tested recovery procedure against the pre-removal revision
+    until post-cutover verification passes. No old UI binary is shipped or
+    kept as a supported entry point; recovery cannot rewrite settled history
+    or rely on dual authority.
+  cutover_claim: >-
+    Completion means both old user interfaces are absent from supported builds
+    and source trees, with passing replacement workflows and a documented
+    recovery path. Merely hiding, disabling, or labeling them deprecated fails.
+  test_preservation: >-
+    Port behavioral and conformance assertions needed by retained server or
+    executor contracts before deleting UI-specific tests. Removal must not
+    weaken authority, execution, evidence, or settlement gates.
+  generated_contract_migration: >-
+    Rust SFWP types remain the source for their generated schemas. Before
+    removing Workbench's contracts package, move or regenerate every schema
+    consumed by the new Go/React clients and retarget the existing
+    generated_schemas_are_committed_and_current conformance assertion to
+    the new generated location. Never hand-edit generated contracts or
+    delete the drift assertion to make removal pass.
+requirements:
+  - id: REQ-GOAL-001
+    text: "The system MUST provide a Go operational front end that coordinates live casework across application-owned ports while preserving SEA-Forge as the governed case and authority owner."
+  - id: REQ-GOAL-002
+    text: "The system MUST provide a React cognitive environment whose interaction model remains independent of SEA-Forge, Go transport, Three.js, CopilotKit, repository providers, and artifact-renderer implementations."
+  - id: REQ-GOAL-003
+    text: "The cognitive environment MUST express useful work through a small compositional grammar of surfaces, objects, relationships, focus, zoom, time/version, composer interaction, and bounded cognitive artifacts."
+  - id: REQ-GOAL-004
+    text: "Humans and agents MUST be able to operate the same represented world through shared application actions rather than through separate interaction models."
+  - id: REQ-GOAL-005
+    text: "The system MUST support spatial, temporal, narrated, and artifact-based progressive disclosure without requiring those forms to become separate application modules."
+  - id: REQ-GOAL-006
+    text: "Consequential actions initiated from the cognitive environment MUST cross the Go system-front-end boundary and the appropriate governed backend authority instead of being concluded locally in React."
+  - id: REQ-OUT-001
+    text: "The Go application MUST expose live cognitive projections and accept user/agent interaction requests through a transport-independent application boundary."
+  - id: REQ-OUT-002
+    text: "The React application MUST render cognitive projections and maintain local interaction state without becoming the authority for case, repository, execution, judgment, or settlement truth."
+  - id: REQ-OUT-003
+    text: "The cognitive environment MUST support focus/zoom, temporal movement, contextual composer interaction, bounded artifact expansion, and agent-directed representational composition."
+  - id: REQ-OUT-004
+    text: "The system MUST preserve ports-and-adapters replacement boundaries for external case authority, executor, repository, agent framework, scene renderer, artifact renderers, and transport."
+  - id: REQ-VERIFY-001
+    text: "A human can enter a system surface, focus a work object, progressively resolve its representation, inspect and close a bounded source artifact, move through historical state, and return to the present."
+  - id: REQ-VERIFY-002
+    text: "An agent receives current UI context and can request representational operations through UI-owned actions without directly mutating governed case truth."
+  - id: REQ-VERIFY-003
+    text: "A consequential UI operation crosses the Go application boundary and the configured authority/integration port before the projection changes to reflect consequential success."
+  - id: REQ-VERIFY-004
+    text: "Go can claim/reserve available governed work, coordinate execution, preserve the resulting observation, and reconcile runtime state without treating executor or repository completion as semantic settlement."
+  - id: REQ-VERIFY-005
+    text: "Heavy artifact capabilities load through bounded adapters only when the interaction reaches the corresponding resolution."
+  - id: REQ-CONFIG-001
+    text: "Go and React application configuration MUST have one documented authority and precedence order; adapters MUST NOT silently introduce independent competing configuration authority."
+  - id: REQ-CONFIG-002
+    text: "Secrets and machine-specific credentials MUST be resolved through indirection and MUST NOT be embedded in stable application configuration."
+  - id: REQ-CONFIG-003
+    text: "Provider endpoints, adapter selections, ports, evidence roots, and environment-specific paths MUST remain configurable rather than compiled into stable application logic."
+  - id: REQ-CONFIG-004
+    text: "Configuration schema and defaults MUST be represented once per application and validation MUST occur before activation."
+  - id: REQ-CONFIG-010
+    text: "Go MUST validate configured REQUIRED ports/adapters and application configuration before accepting consequential work."
+  - id: REQ-CONFIG-011
+    text: "React MUST verify the required projection/interaction boundary before presenting the environment as live-connected."
+  - id: REQ-CONFIG-012
+    text: "Preflight failure MUST disable only the capability whose required dependency is unavailable unless the missing capability is required for application integrity."
+  - id: REQ-ARCH-001
+    text: "Go and React MUST each define application-owned ports so provider, transport, rendering, and integration technologies remain adapters."
+  - id: REQ-ARCH-002
+    text: "Vendor/provider objects MUST be translated at adapter boundaries before entering stable application-core representations."
+  - id: REQ-ARCH-003
+    text: "The React UI core MUST be executable against a local fixture/provider adapter without requiring SEA-Forge, GitHub, Gauntlet, or CopilotKit."
+  - id: REQ-ARCH-004
+    text: "Replacing the Go projection transport MUST NOT require redesigning the UI interaction grammar."
+  - id: REQ-CASE-001
+    text: "Go MUST obtain governed availability and authority through the configured Case / Authority Port rather than deriving them from repository or executor state."
+  - id: REQ-CASE-002
+    text: "Go MUST provide operational claim/lease semantics sufficient to prevent accidental concurrent duplication of consequential work."
+  - id: REQ-CASE-003
+    text: "Go MUST preserve executor observations and consequential failures for downstream evidence/settlement processing."
+  - id: REQ-CASE-004
+    text: "Go MUST support event-driven reaction to case changes and bounded reconciliation for missed events, stale leases, process uncertainty, and runtime drift."
+  - id: REQ-PROJ-001
+    text: "Go MUST be able to produce human-facing cognitive projections that are materially smaller than the complete underlying operational state."
+  - id: REQ-PROJ-002
+    text: "A projection MUST preserve stable references sufficient to request deeper resolution, source artifacts, consequential interactions, or historical projections."
+  - id: REQ-PROJ-003
+    text: "Projection omission MUST NOT be interpreted as deletion or absence from authoritative state."
+  - id: REQ-PROJ-004
+    text: "Low-level machine-operational state MAY be exposed through deeper projections without being permanently present in the primary cognitive surface."
+  - id: REQ-UI-001
+    text: "The primary cognitive environment MUST support persistent spatial orientation, object focus, return, selection, and semantic zoom."
+  - id: REQ-UI-002
+    text: "Increasing representational resolution MUST be able to reveal richer internal structure rather than only geometrically scaling an object."
+  - id: REQ-UI-003
+    text: "Relationships MUST be rendered contextually and MUST NOT be required to display every underlying relation simultaneously."
+  - id: REQ-UI-004
+    text: "The scene SHOULD remain predominantly 2.5D, using depth to improve focus, hierarchy, continuity, transition, and aesthetics rather than requiring arbitrary 3D navigation."
+  - id: REQ-UI-005
+    text: "Core MUST provide a stable route to broader system orientation while remaining visually subordinate when local focus is more useful."
+  - id: REQ-UI-006
+    text: "The normal environment MUST support low-cost idle rendering and SHOULD animate only where motion carries orientation, state, attention, or deliberate ambient value."
+  - id: REQ-ATTN-001
+    text: "Persistent UI elements MUST be limited to elements whose absence would materially increase interaction, orientation, interpretation, or recovery cost."
+  - id: REQ-ATTN-002
+    text: "Visible complexity SHOULD track current unresolved consequential complexity rather than total stored object count."
+  - id: REQ-ATTN-003
+    text: "Settled or non-actionable material SHOULD become visually quieter while materially unresolved distinctions become easier to perceive."
+  - id: REQ-ATTN-004
+    text: "User interruption SHOULD be reserved for conditions in which human attention, judgment, authority, or knowledge materially changes what can happen next."
+  - id: REQ-TIME-001
+    text: "Time/version MUST be an application-level state independent of any timeline renderer."
+  - id: REQ-TIME-002
+    text: "The environment MUST support live/present and historical temporal modes."
+  - id: REQ-TIME-003
+    text: "The user MUST be able to move to prior represented states and return directly to the present."
+  - id: REQ-TIME-004
+    text: "The environment MUST support comparison of at least two temporal/version positions."
+  - id: REQ-TIME-005
+    text: "Time-aware surfaces and artifacts MUST be able to respond to shared temporal-context changes."
+  - id: REQ-AGENT-001
+    text: "The composer MUST supply the agent with current surface, focus, selection, and temporal context sufficient to avoid requiring the user to restate visible context."
+  - id: REQ-AGENT-002
+    text: "Agent-requested UI changes MUST travel through UI-owned operations rather than direct mutation of renderer internals."
+  - id: REQ-AGENT-003
+    text: "The agent MUST be able to request representational operations including focus, reveal, arrange, compare, highlight, temporal movement, and artifact presentation."
+  - id: REQ-AGENT-004
+    text: "Consequential agent actions MUST route through the Go application and appropriate governed authority rather than through frontend tools alone."
+  - id: REQ-NAR-001
+    text: "The system MUST support agent responses expressed as a sequence of semantic narration beats coupled to representational actions."
+  - id: REQ-NAR-002
+    text: "Narration beats MAY change focus, visible objects, relationships, artifacts, temporal position, evidence, and annotations."
+  - id: REQ-NAR-003
+    text: "Narrated explanations MUST remain interruptible; user interaction MAY pause, branch, inspect, or resume the sequence."
+  - id: REQ-NAR-004
+    text: "Narrated composition SHOULD reveal actual source evidence when a source artifact communicates a consequential claim more directly than abstraction."
+  - id: REQ-NAR-005
+    text: "Generative narration MUST compose the existing interaction/artifact grammar rather than require arbitrary new interaction paradigms for each answer."
+  - id: REQ-ART-001
+    text: "Cognitive artifacts MUST support bounded progressive disclosure from a minimal representation into deeper source material."
+  - id: REQ-ART-002
+    text: "Artifacts MUST preserve traceability to the source or derivation they represent."
+  - id: REQ-ART-003
+    text: "Artifacts MUST be ephemeral by default."
+  - id: REQ-ART-004
+    text: "Preserving an artifact as durable case material MUST cross the system-front-end boundary and the relevant backend authority."
+  - id: REQ-ART-005
+    text: "Artifact renderers MUST be resolved through an application-owned registry or capability boundary."
+  - id: REQ-ART-006
+    text: "Heavy artifact renderers SHOULD be dynamically loaded only when the user reaches the required interaction depth."
+  - id: REQ-ART-007
+    text: "Scene and DOM rendering MUST be able to cooperate so precision document, text, code, data, and form interaction can remain browser-native while preserving spatial context."
+  - id: REQ-ARTDEP-001
+    text: "Code display SHOULD use a fine-grained Shiki adapter or equivalently lightweight renderer."
+  - id: REQ-ARTDEP-002
+    text: "Code diff interaction SHOULD use a focused diff renderer rather than a full IDE surface."
+  - id: REQ-ARTDEP-003
+    text: "Small bounded code editing SHOULD use a lightweight editor such as CodeJar; richer editing MAY dynamically load CodeMirror when its capabilities are required."
+  - id: REQ-ARTDEP-004
+    text: "General tabular artifacts SHOULD use headless/virtualized table capabilities such as TanStack Table and TanStack Virtual."
+  - id: REQ-ARTDEP-005
+    text: "Spreadsheet-like editing SHOULD use a bounded grid renderer such as react-data-grid; spreadsheet file parsing MAY be supplied through a separate lazy adapter."
+  - id: REQ-ARTDEP-006
+    text: "DOCX reading SHOULD prefer semantic HTML conversion suitable for bounded reading; resulting untrusted HTML MUST be sanitized before display."
+  - id: REQ-ARTDEP-007
+    text: "PDF interaction SHOULD use native browser capability where sufficient and MAY lazily load PDF.js when programmatic page/text/highlight control is required."
+  - id: REQ-ARTDEP-008
+    text: "Dense timeline rendering MAY use a dedicated timeline adapter, but the renderer MUST NOT own application temporal state."
+  - id: REQ-DONOR-001
+    text: "Open MCT MAY be used as an implementation donor for the minimum temporal, provider, or time-aware-view mechanics that materially reduce engineering cost, subject to preservation of applicable license notices."
+  - id: REQ-DONOR-002
+    text: "OpenMontage MAY inform semantic-beat, narration, choreography, renderer routing, and evidence-insertion mechanics; source-code reuse MUST follow explicit license review before incorporation."
+  - id: REQ-DONOR-003
+    text: "Donor-derived implementation MUST be reduced behind GodSpeed-owned ports and MUST NOT import the donor product's application ontology when the required mechanic can stand independently."
+  - id: REQ-SAFE-001
+    text: "Uncertain operational state MUST enter reconciliation before any retry capable of duplicating consequential effects."
+  - id: REQ-SAFE-002
+    text: "Frontend, scene, agent, narration, or artifact failure MUST NOT mutate authoritative case or repository state."
+  - id: REQ-SAFE-003
+    text: "Missing governed authority MUST surface as unavailable/blocked rather than falling back to local approval."
+  - id: REQ-SAFE-004
+    text: "Contradictory or failed evidence MUST remain inspectable after later correction."
+  - id: REQ-SEC-001
+    text: "Untrusted content MUST be validated, encoded, sanitized, or sandboxed as appropriate before entering executable rendering or privileged operations."
+  - id: REQ-SEC-002
+    text: "Frontend and agent interaction MUST NOT bypass backend authorization for consequential operations."
+  - id: REQ-SEC-003
+    text: "Secrets MUST remain server-side or within the adapter that requires them and MUST NOT enter cognitive projections, logs, evidence artifacts, or agent context unless explicitly required and safe."
+  - id: REQ-SEC-004
+    text: "Artifact persistence MUST preserve actor/source provenance and pass the authorization required by the destination system."
+  - id: REQ-MIG-001
+    text: "After source-backed workflow parity, real integration, and cutover verification, the implementation MUST remove the existing SEA Forge Tauri/Rust GUI code and supported build entry points while preserving the Rust governed server and kernel."
+  - id: REQ-MIG-002
+    text: "After source-backed workflow parity and cutover verification, the implementation MUST remove the Gauntlet TUI code and supported build entry points while preserving the Gauntlet executor and evidence contract."
+verification_contract:
+  high_risk_groups:
+    - name: authority_and_settlement
+      requirements: [REQ-GOAL-006, REQ-CASE-001, REQ-AGENT-004, REQ-SAFE-003]
+      confirmation_task: T13
+      mode: independent_adversarial
+    - name: duplicate_execution_and_reconciliation
+      requirements: [REQ-CASE-002, REQ-CASE-004, REQ-SAFE-001]
+      confirmation_task: T05
+      mode: independent_adversarial
+    - name: frontend_application_decoupling
+      requirements: [REQ-ARCH-001, REQ-ARCH-003, REQ-ARCH-004]
+      confirmation_task: T13
+      mode: independent_adversarial
+    - name: temporal_integrity
+      requirements: [REQ-TIME-001, REQ-TIME-002, REQ-TIME-003, REQ-TIME-004]
+      confirmation_task: T07
+      mode: independent
+    - name: artifact_trust_and_persistence
+      requirements: [REQ-ART-002, REQ-ART-003, REQ-ART-004, REQ-SEC-001, REQ-SEC-004]
+      confirmation_task: T13
+      mode: independent_adversarial
+    - name: mandatory_interface_removal
+      requirements: [REQ-MIG-001, REQ-MIG-002]
+      confirmation_task: T14
+      mode: independent_adversarial
+  reference_journey:
+    - Open a source-backed system surface and focus a work object.
+    - Progressively resolve its representation and inspect then dismiss a source artifact.
+    - Move through three historical positions, compare two, and return to live.
+    - Ask an agent for an interruptible multi-beat explanation with source evidence.
+    - Initiate a human and an agent consequential action through the same Go path.
+    - Observe authority denial and acceptance on separate fresh attempts.
+    - Observe execution, evidence, and authoritative settlement before the world changes to settled.
+  required_variations:
+    VAR-001: Quiet world with substantial hidden data remains sparse while detail is reachable.
+    VAR-002: One consequential issue among routine objects is perceptually available.
+    VAR-003: The same source objects work in spatial, comparison, and temporal views.
+    VAR-004: Three historical versions compare without source-history mutation.
+    VAR-005: Multi-beat agent explanation uses two artifact kinds and survives interruption.
+    VAR-006: Heavy artifact renderer stays unloaded during a normal session.
+    VAR-007: Agent-initiated consequence follows the human action and authority path.
+  required_recovery:
+    RECOV-001: Restart Go during an active/uncertain lease; reconcile before new execution.
+    RECOV-002: Miss a case event or repository webhook; resync without invented history.
+    RECOV-003: Lose the agent adapter; direct non-agent UI stays usable.
+    RECOV-004: Fail an optional artifact renderer; isolate failure and retain source reference.
+  security_teeth:
+    - Deny/unavailable SEA Forge authority causes zero consequential effects.
+    - Forged frontend/agent identity or stale projection is rejected server-side.
+    - Duplicate delivery and expired lease cannot duplicate consequential execution.
+    - Unsafe artifact HTML/URLs cannot execute or persist without authorization.
+    - Secret material cannot enter projections, agent context, logs, or evidence.
+  evidence:
+    - Machine-validated requirement-to-task-to-test mapping with no unknown or unmapped IDs.
+    - Versioned boundary contracts and existing/missing SFWP method inventory.
+    - Real server, Go, React, and Gauntlet integration trace; fixture-only evidence is labeled.
+    - Failed rounds and corrections preserved; no passing claim from process exit alone.
+    - Source-backed before/after parity matrix, removal diff, and cutover/rollback rehearsal.
+    - Fresh independent review of authority, idempotency, history, and migration.
+  completion_rule: >-
+    Final settlement requires all required tests and variations, real integration,
+    accepted SEA Forge settlement evidence, and verified removal of both old UIs.
+    Skipped required checks, mocks substituted for claimed integrations, unresolved
+    authority gaps, or a failed independent review leave the plan open.
+roadmap_only:
+  - Other repository providers and executors.
+  - Additional scene renderers and voice input.
+  - Advanced office or IDE editing beyond bounded artifact needs.

@@ -1,0 +1,42 @@
+# T01 scope-of-falsification statement (preregistered requirement)
+schema: godspeed-bounded-judgment.t01-scope-of-falsification
+written: "2026-09-17 (post-measurement; content follows the frozen preregistration)"
+
+disclosure:
+  n: 17
+  independent_run_count: 6
+  class_counts: {PASS: 17}
+  concentration_by_run:
+    demo-calculator.proof-2of3-2216: 2
+    demo-calculator.settled-0904: 3
+    demo-calculator.settled-3of3-clean-seed-0730: 3
+    demo-calculator.settled-3of3-contaminated-seed-2234: 3
+    demo-calculator.settled-3of3-sharpened-role-1044: 3
+    demo-calculator.settled-rpc-1652: 3
+  missing_attribution: "17/17 rows unattributed (historical model identity absent; never inferred)"
+  reconstructibility_rate: 1.0
+  stability: "UNSTABLE: pilot corpus of order 10^1 settled judgments; every statement below is descriptive only"
+
+scope:
+  falsification_level: SURFACE
+  surface: "verification-satisfaction (binary/proposition shape), domain t01-surface-verification-satisfaction/v1 = [satisfied, not_satisfied, insufficient_evidence]"
+  corpus: "the 17 settled-judgment verification records in the 6 runs named above, exactly as hashed in the frozen corpus manifest"
+  providers: "codex + prime-agent (capable), scripted marker heuristic (mechanics only)"
+  result_applies_to: "THIS surface + THIS answer domain + THESE providers + THIS corpus"
+
+shapes:
+  examined:
+    - "binary/proposition (the first surface)"
+  not_examined:
+    - "multiclass choice/classification (the preregistered second surface: verification-chain-deficiency domain; REQUIRED before any capability-class conclusion per spec REQ-JUDG-023)"
+    - "ordered score/rubric judgment"
+  rule: "a single-shape result MUST NOT be generalized to another shape (spec REQ-JUDG-023); this corpus cannot support a task_family or capability_class conclusion"
+
+explicitly_not_claimed:
+  - "no calibrated-probability claim of any kind"
+  - "no reliability-curve claim of any kind"
+  - "no threshold valid for production"
+  - "no population-level statement"
+  - "no statement about any model generalizing"
+  - "no conclusion about providers other than the two named CLIs"
+  - "no conclusion about surfaces, runs, or corpora outside the manifest"

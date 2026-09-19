@@ -1,0 +1,48 @@
+{
+  "task": "T24",
+  "builder": "B1",
+  "status": "complete",
+  "case": {
+    "accepted": true,
+    "generated_case_id": "t24-case-001",
+    "replay_terminal": "settled",
+    "replay_settlement_committed_count": 3,
+    "replay_state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/state/gauntlet-state.db",
+    "replay_state_db_sha256": "5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc",
+    "replay_gauntlet_id_seed": "t24-case-001-replay-r1-seed",
+    "bounded_input": { "scenario": "e2e-happy", "max_rounds": 4 },
+    "generator_path": "deepseek-clinepass primary (cline-pass/cline-pass/deepseek-v4.1-flash responded ok on the first ladder step; 0 substitutions, 0 fallbacks)",
+    "candidate_sha256_frozen_before_replay": "6bf2610c12a609cee98d48ad571baf2fc58d383232eb72bdb9275b245ea25977",
+    "source_route_id": "t23-route-001",
+    "source_route_fingerprint": "e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted",
+    "record_file": "accepted-case.yaml"
+  },
+  "teeth": ["T7"],
+  "verification": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 .agents/evidence/godspeed-bounded-judgment/T24/generate_case.py  (cwd /home/sprime01/projects/sea-rs)",
+      "exit": 0,
+      "summary": "Settlement-first inverse derivation from the SETTLED route only (round-3 record sha256 c6b9ee9c... pinned and verified, plus T21 modules + prereg + addenda 1-3 fail-closed). Mechanical derivation: the route's own ledger makes (e2e-happy, 4) THE case it legitimately solves (baseline e2e-happy@4 settled with 3 settlement_committed events; r*=4 with r*-1=3 budget_exhausted). Frozen provider ladder: primary deepseek-clinepass presented the route fingerprint + goal ledger and returned a derivation CONSISTENT with the mechanical case (echoed bounded_input + ledger-faithful rationale; raw + prompt preserved verbatim under provider-raw/); 0 substitutions, 0 fallbacks. Candidate envelope (target recipe, frozen env block, observer horizon, expected route reference = the route's retained moves, replay fields explicitly EMPTY) written and FROZEN: candidate-freeze.json pins sha256 6bf2610c... with frozen_at 2026-09-19T04:08:04Z attesting no replay record existed."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 .agents/evidence/godspeed-bounded-judgment/T24/replay_case.py  (cwd /home/sprime01/projects/sea-rs; real gauntlet run)",
+      "exit": 0,
+      "summary": "Independent replay of the FROZEN candidate: freeze pin re-verified (sha256 match) before running; fresh tests/fixtures/target copy (no runner sed, no budget sed - the case value equals the fixture default 4); fresh GAUNTLET_ID_SEED t24-case-001-replay-r1-seed with 0 collisions against all 12 recorded T22/T23 seeds; exact addendum-1 env block; timeout 240 frozen command. RESULT: typed terminal settled with 3 settlement_committed events, exit 0, wall 0.505s; state DB pinned by path+sha256 under $HOME/.local/share/godspeed-route-discovery/T24/replay-001-r1/ and independently recomputed through the frozen T23 provenance validator (absorb-time gate, clean). Acceptance decided ONLY by the replay's real settlement: accepted-case.yaml written as the bare typed T21 generated_case_record (schema-validated), accepted=true."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 .agents/evidence/godspeed-bounded-judgment/T24/run_tooth.py  (cwd /home/sprime01/projects/sea-rs; real gauntlet run)",
+      "exit": 0,
+      "summary": "TOOTH T7 MATCH: companion case derived from the accepted case with EXACTLY ONE factor changed - max_rounds 4 -> 2, a known honest non-settlement budget on the route's OWN ledger (probe-i3-cand-1: e2e-happy@2 budget_exhausted, 1 honest settlement) - PRESENTED AS IF solvable by the settled route (same legitimacy claim, same fingerprint), then replayed through the REAL frozen mechanism (fresh copy, fresh seed t24-t7-attack-seed, timeout 240) and pushed through the SAME acceptance path. Observed: typed terminal budget_exhausted with 1 settlement_committed event (label read from the run_terminal, never assigned); acceptance path produced accepted=false with a recorded invalid_reason; rejected record preserved under teeth/ ONLY (marked ATTACK, never added as valid developmental data); accepted-case.yaml + candidate-case.yaml byte-identical before/after (sha256 proven)."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T24/verify_case.py  (cwd /home/sprime01/projects/sea-rs; OFFICIAL plan-T24 gate)",
+      "exit": 0,
+      "summary": "OFFICIAL GATE PASS: 154 fail-closed checks. (1) frozen inputs: T21 modules via manifest, base prereg + addenda 1-3, T23 provenance.py, T23 round-1 + round-3 route records - all by pinned sha256; (2) settled route basis recomputed (goal fully met, fingerprint recomputes to the frozen string, r*=4/r*-1=3, settled baseline row present); (3) candidate envelope checked field-by-field (case id, route join, bounded_input through the frozen catalog contract, ladder identity, provider-raw files, target recipe + frozen env block + observer horizon + expected route reference, replay fields in the frozen EMPTY state); (4) freeze BEFORE replay proven three ways (pin sha256 == current file hash == replay's re-pin; mtimes candidate <= freeze <= replay record; frozen_at_utc <= replay_started_at_utc); (5) replay hygiene + INDEPENDENT terminal recomputation from the pinned DB via the frozen provenance validator (fresh seed with 0 collisions, frozen command, exactly one run_terminal, settlements joined, settled carries >= 1 event); (6) acceptance <=> replay settled (exactly one decision record, schema-valid through the FROZEN generated_case_record contract, typed fields join the envelope, accepted flag equals the recomputed settlement); (7) tooth T7 verified end-to-end (ATTACK marking, MATCH, attack observation recomputed from its pinned DB and NOT a settlement, schema-valid rejection with invalid_reason, developmental set untouched, attack ids absent); (8) manifest hash checks both directions, fail-closed. A pre-freeze trial run failed ONLY on the then-missing manifest (by design); verify_case.py was not modified between trial and official run."
+    }
+  ],
+  "deviations": [
+    "Interpretation recorded (no contract change): the T21 generated_case_record schema has an exact field set, so the pre-replay candidate is frozen as a richer envelope (candidate-case.yaml: target recipe, frozen env block, observer horizon, expected route reference, explicitly empty replay block) and the replay materializes the bare 10-field typed record as accepted-case.yaml/rejected-case.yaml; the gate validates the typed record through the frozen contract verbatim and cross-joins the envelope and the replay evidence. The candidate is never modified after freeze.",
+    "The provider's role is derivation-narrative only by construction: the mechanical settlement-first derivation from the route ledger fixes the case fields, the provider ladder is run exactly as frozen and its answer is admitted only when it agrees with the mechanical case (anything else would be a schema_failure driving the substitution/fallback ladder), and acceptance is decided exclusively by the independent replay. The primary provider agreed on the first step, so no substitution or fallback was exercised."
+  ],
+  "notes": "T24 complete: the settled route t23-route-001 was inverted into candidate case t24-case-001 (e2e-happy@4, the route's own settled baseline with r*=4), the candidate was frozen (sha256 pinned) BEFORE replay, and the independent replay through the real frozen mechanism genuinely settled (3 settlement_committed events behind the pinned DB) - so the case is ACCEPTED as consequence-backed developmental data (CLAIM B evidence). Tooth T7 MATCH: the single-factor non-settling lookalike (max_rounds 2) was honestly rejected by the same acceptance path. Whole-task gauntlet executions: 2 (candidate replay + T7 attack); provider calls: 1 (deepseek-clinepass generation, responded); generation wall 23.7s + replay 0.5s + tooth 0.4s; tokens/cost n/a (seam does not expose them; honest gap). No plan, prereg, addendum, status file, or T21/T22/T23 file was modified (import/read only, hash-verified); PYTHONDONTWRITEBYTECODE honored; all durable run state under $HOME/.local/share/godspeed-route-discovery/T24/. Next move: T25 (matched negative max_rounds 4 -> 3 through the real mechanism, then the payment comparison beside the recorded T15/T16 baseline and the novelty classification, with tooth T8)."
+}

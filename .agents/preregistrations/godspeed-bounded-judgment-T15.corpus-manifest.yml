@@ -1,0 +1,75 @@
+schema: godspeed-bounded-judgment.t15-corpus-manifest
+created: '2026-09-18'
+generator: headless gauntlet run (deterministic mock replay, GAUNTLET_CLOCK=deterministic,
+  GAUNTLET_ID_SEED per case) over tests/fixtures/target copies; the repo's own e2e_full_loop_mock
+  recipe
+prereg: .agents/preregistrations/godspeed-bounded-judgment-T15.prereg.yaml
+excluded_rounds: rounds 1-2 preserved as failed rounds (generator targeting + wall-clock
+  mismatch + state-dir reuse); this manifest covers the clean round-3 batch
+class_counts:
+  budget_exhausted: 6
+  settled: 3
+runs:
+- case_id: accepted-A1
+  state_db_path: /tmp/t15-corpus/runs/accepted-A1/state/gauntlet-state.db
+  sha256: 03e176dad4ea8dbc6543117464e9c436d5236d71c41ec0eba3b7935b126f5795
+  single_run: true
+  consequence_class: settled
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: accepted-A2
+  state_db_path: /tmp/t15-corpus/runs/accepted-A2/state/gauntlet-state.db
+  sha256: d8e6ff39de2bf09ef41cd2b035ba0659e889c77e21977e4b9dfd3fb144d5b379
+  single_run: true
+  consequence_class: settled
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: accepted-A3
+  state_db_path: /tmp/t15-corpus/runs/accepted-A3/state/gauntlet-state.db
+  sha256: 81cb2177cfeeef55e65f3d6c654d9a6646c8c8c82f0747754ab0d8f7a4937014
+  single_run: true
+  consequence_class: settled
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: lying-B1
+  state_db_path: /tmp/t15-corpus/runs/lying-B1/state/gauntlet-state.db
+  sha256: c3a2937642ce1f339d0e8f133f7e0effdddcb50e4fedd73c1c5c30bcbd661f12
+  single_run: true
+  consequence_class: budget_exhausted
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: lying-B2
+  state_db_path: /tmp/t15-corpus/runs/lying-B2/state/gauntlet-state.db
+  sha256: 80810805a577dd0801662f3d1e9e306bb500846e28936fb0c567991ccbcfbc33
+  single_run: true
+  consequence_class: budget_exhausted
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: lying-B3
+  state_db_path: /tmp/t15-corpus/runs/lying-B3/state/gauntlet-state.db
+  sha256: a129ac4c005e4c027fdbab7920ccb2ed6ebaa2fc8cb1e9289449cb06c6bac82e
+  single_run: true
+  consequence_class: budget_exhausted
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: budget-C1
+  state_db_path: /tmp/t15-corpus/runs/budget-C1/state/gauntlet-state.db
+  sha256: 3aee2beaa325912303d2b471af9ba1b5d4ad6b0f49b3e5989996578881ddcec2
+  single_run: true
+  consequence_class: budget_exhausted
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: budget-C2
+  state_db_path: /tmp/t15-corpus/runs/budget-C2/state/gauntlet-state.db
+  sha256: 50ba68708c08ecd819a42cd4cd4dbcbb25060d55b25e7a81f89ef5c54bf8256b
+  single_run: true
+  consequence_class: budget_exhausted
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected
+- case_id: budget-C3
+  state_db_path: /tmp/t15-corpus/runs/budget-C3/state/gauntlet-state.db
+  sha256: 76833330526707a94cd0b9f115b0630b09e20a39ffe19868f88e3959ba9c7cf5
+  single_run: true
+  consequence_class: budget_exhausted
+  class_basis: run_terminal event written by the gauntlet controller
+  status: selected

@@ -1,0 +1,102 @@
+schema: godspeed-bounded-judgment.t23-round2-evidence-manifest
+task: T23
+builder: B2
+correction_round: 2
+frozen_utc: '2026-09-19T03:15:22+00:00'
+note: round-2 rejudgment evidence (addendum-2, sha256 087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a).
+  Pinned BEFORE the official verify_route.round2.py gate run; every round-2 file is pinned (the manifest
+  cannot pin itself); the gate checks both directions, fail-closed. No script is modified after its first
+  execution.
+files:
+- path: build_surfaces.py
+  sha256: 562fff970796e7748795594df23e6ac15f15af60eb98f3179f5354f319183cf4
+- path: compute_round2_record.py
+  sha256: 22e91226ea007ebbd4a85e99b7b9a3867b3cf32f6f3afb5814df7d39f5c69f6a
+- path: payment-counters.round2.yaml
+  sha256: 1088435a6d8fd821567311cf2c5a67886a2970b9cf13e3d3b9d2014843e8b37a
+- path: provider-raw/r2-judgment-probe-i1-cand-1-primary.prompt.txt
+  sha256: a8f4637b045aeeaba9b2b5c64fda99fa5e5bfb4dcd1b46e561f2ef3b09cd8af2
+- path: provider-raw/r2-judgment-probe-i1-cand-1-primary.raw.txt
+  sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+- path: provider-raw/r2-judgment-probe-i1-cand-2-primary.prompt.txt
+  sha256: 25e4b3ef7d94ef7f230005d2ea16aeb600d21e3b79330ffa2f4ac1b7434b3f8a
+- path: provider-raw/r2-judgment-probe-i1-cand-2-primary.raw.txt
+  sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+- path: provider-raw/r2-judgment-probe-i1-cand-3-primary.prompt.txt
+  sha256: 9dee1c6141304c60d670f1abfdf22242165de18b7897fc36eb66d3646a379b41
+- path: provider-raw/r2-judgment-probe-i1-cand-3-primary.raw.txt
+  sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+- path: provider-raw/r2-judgment-probe-i2-cand-1-primary.prompt.txt
+  sha256: 1fc2cc61beedf16761bdfdc0932f04fa71b78c78541fdc1de1639c7d9bad2675
+- path: provider-raw/r2-judgment-probe-i2-cand-1-primary.raw.txt
+  sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+- path: provider-raw/r2-judgment-probe-i2-cand-2-primary.prompt.txt
+  sha256: 51f451929b3adff8cb72586c2ceca7fc68a78ab79e9214f2f123287803ab4199
+- path: provider-raw/r2-judgment-probe-i2-cand-2-primary.raw.txt
+  sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+- path: provider-raw/r2-judgment-probe-i2-cand-3-primary.prompt.txt
+  sha256: c9118d379e3af1bdfd71308ac3ab3aa5d138519883e6d98fdf27691077239f68
+- path: provider-raw/r2-judgment-probe-i2-cand-3-primary.raw.txt
+  sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+- path: provider-raw/r2-judgment-probe-i3-cand-1-primary.prompt.txt
+  sha256: c192a6a401ba12fe76c834f8dd8635b4a3f53294e344f986171f6cd389396e47
+- path: provider-raw/r2-judgment-probe-i3-cand-1-primary.raw.txt
+  sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+- path: provider-raw/r2-judgment-probe-i3-cand-2-primary.prompt.txt
+  sha256: c0549dffc9e54c425f2668cc2dbeb27898241cbd7fa9077abce446c784930cb2
+- path: provider-raw/r2-judgment-probe-i3-cand-2-primary.raw.txt
+  sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+- path: provider-raw/r2-judgment-probe-i3-cand-3-primary.prompt.txt
+  sha256: e6567525e33ec697b6d6f45919b642fd1750cfc8ad00ac60ef6b754f28cdc697
+- path: provider-raw/r2-judgment-probe-i3-cand-3-primary.raw.txt
+  sha256: bcc04bfe5c59e2c71c2b079106cb27fde87e215f29e203d78440dce201eaa4a5
+- path: provider-raw/r2-judgment-probe-i4-cand-1-primary.prompt.txt
+  sha256: c4a55a857d0c58591cfaed197732b110585d826de51d7506f496ed77efbac233
+- path: provider-raw/r2-judgment-probe-i4-cand-1-primary.raw.txt
+  sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+- path: provider-raw/r2-judgment-probe-i4-cand-2-primary.prompt.txt
+  sha256: 5998feae2fba06c54afc958d50cb77f69aea243254694f2b317991cb5bd19c7f
+- path: provider-raw/r2-judgment-probe-i4-cand-2-primary.raw.txt
+  sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+- path: provider-raw/r2-judgment-probe-i4-cand-3-primary.prompt.txt
+  sha256: 5e05fe46087ee5a79bb607cffa96b886479bfb34a0e1a0db695c8f5f582d6f9c
+- path: provider-raw/r2-judgment-probe-i4-cand-3-primary.raw.txt
+  sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+- path: rejudge_surfaces.py
+  sha256: 77390edf17761e4845b6efd3b013ee2f9dab4f089b282cf90916be7f72fa8b1c
+- path: rejudgment-record.yaml
+  sha256: 8b4dc6feb81d4fbd93e6f0f1b26228668f2fb182a232194f38dd1c4d2c3e0cac
+- path: rejudgment-results.json
+  sha256: b1200b3d798284279e33081493530d571e178bd592cb17b709c59a37b524355e
+- path: route-record.round2.yaml
+  sha256: 147f12e072dc7b578f11bd5d57b4fb7fd1caed7330b73e33acaf3c69eb04a416
+- path: separation-verdict.json
+  sha256: e3786def9767b6a02ac5a65c027df93ba24ad2cd2fbc72e4ab994e2e1e97e704
+- path: surfaces/corrected-surfaces.json
+  sha256: a3eaf829d87f6f4c7beb5cd600cf39750e0a4d3b2e0fa82fece782a1377a6c3f
+- path: surfaces/probe-i1-cand-1.json
+  sha256: 9471b6224377e37c15805d473cbd634b76b52aa1988aae61bf75bee784db294a
+- path: surfaces/probe-i1-cand-2.json
+  sha256: 0aa8856c95ac041357a9f111aa36ad44631f8f70a39f6c3ea99491ca06c179c8
+- path: surfaces/probe-i1-cand-3.json
+  sha256: 5bc9a23066226ed7ea54727fe2e1a5196d8502d8f0b154741237849f36ee2dfc
+- path: surfaces/probe-i2-cand-1.json
+  sha256: 51eee4d169e860f421529cc9338ad182771d04f1a80eba5d777e4f15c5e8b35b
+- path: surfaces/probe-i2-cand-2.json
+  sha256: c435a0dd521ed1591e4447bb7bea00b63fe8c19d4644d7926882a27d9364f18c
+- path: surfaces/probe-i2-cand-3.json
+  sha256: 2c9d4a2d59ef05c6670b2ab0c659d0870943dac215e7f7cf6625c09064adb0b9
+- path: surfaces/probe-i3-cand-1.json
+  sha256: a184c16cc436a4a5ce382f4c9093c0766944bead3ef6ca31298a0cb9829933bc
+- path: surfaces/probe-i3-cand-2.json
+  sha256: 1fda6dd0de169ea06d405cb828919e7a096e7c269516936c0f1047d83838736d
+- path: surfaces/probe-i3-cand-3.json
+  sha256: c39b03b186bd95776cdda00435738362da5f7298d443d48b0a0b5c60c69454a3
+- path: surfaces/probe-i4-cand-1.json
+  sha256: 4cc6007489b0ad263801cef2a5d4038359148a284c190ffcb0b11ba5390a24f2
+- path: surfaces/probe-i4-cand-2.json
+  sha256: 06d30e09439c695d857484645de7196e0638980cc0675eb32a23998002af8843
+- path: surfaces/probe-i4-cand-3.json
+  sha256: 4772bc2340d68244c0cb81d0f2293e0ec07d27a549e097475fe17101c2dd4cfe
+- path: verify_route.round2.py
+  sha256: 59f8363fb96872ae42f1700cf81f3bf63fa1770055dd1cbbcdf015ffefa0d640

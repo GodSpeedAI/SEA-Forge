@@ -1,0 +1,2 @@
+VERIFY-BREADTH: FAIL (1 findings, 187 checks)
+  - T29 evidence-manifest.yml missing

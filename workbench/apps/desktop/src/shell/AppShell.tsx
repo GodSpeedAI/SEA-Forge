@@ -57,6 +57,14 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
   const routeContext =
     ROUTE_CONTEXT[location.pathname === "/" ? "/readiness" : location.pathname] ??
     ROUTE_CONTEXT["/readiness"];
+  // `undefined` unless the inbox was actually read. An unread inbox, an
+  // unreadable journal, and an empty queue are three different things,
+  // and only the third is "0 approvals". Shared by header and sidebar
+  // so the badge can never disagree with the bar.
+  const inboxCount =
+    approvals.isLoading || approvals.error || approvals.unreadable
+      ? undefined
+      : approvals.approvals.length;
   const [isEvidenceOpen, setIsEvidenceOpen] = useState(true);
   // No evidence until a surface hands over a real record.
   //
@@ -129,20 +137,12 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
         onSelectActor={selectActor}
         cellName={cellId}
         integrityStatus={integrityStatus}
-        // `undefined` unless the inbox was actually read. An unread inbox, an
-        // unreadable journal, and an empty queue are three different things,
-        // and only the third is "0 approvals".
-        inboxCount={
-          approvals.isLoading || approvals.error || approvals.unreadable
-            ? undefined
-            : approvals.approvals.length
-        }
-        onOpenSearch={() => alert("Search command palette (Press /)")}
+        inboxCount={inboxCount}
         onOpenInbox={() => navigate({ to: "/inbox" })}
         onToggleEvidence={() => setIsEvidenceOpen((prev) => !prev)}
       />
 
-      <Sidebar />
+      <Sidebar inboxCount={inboxCount} />
 
       <div className={`${styles.mainWorkspace} main-workspace`} data-od-id="readiness-workspace">
         <JourneyRibbon
@@ -170,9 +170,7 @@ export function AppShell({ children, currentJourneyStep }: AppShellProps) {
           <span className={`state-dot ${connection.ready ? "state-dot--ready" : ""}`} />
           {connection.label}
         </span>
-        <span className="machine-value">
-          Keyboard: R run checks · I intended work · B blocker · E evidence
-        </span>
+        <span className="machine-value">Keyboard: R readiness</span>
       </footer>
 
       <EvidenceDrawer

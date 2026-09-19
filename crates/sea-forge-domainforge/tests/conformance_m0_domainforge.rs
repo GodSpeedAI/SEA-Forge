@@ -1,7 +1,7 @@
 use sea_forge_core::ForgeError;
 use sea_forge_domainforge::{
-    load_validate, normalize_authority, CandidateDisposition, SeaSourceSet, SourceFile,
-    MAX_IMPORT_DEPTH,
+    load_validate, normalize_authority, CandidateDisposition, DomainModelRef, SeaSourceSet,
+    SourceFile, MAX_IMPORT_DEPTH,
 };
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -57,6 +57,61 @@ fn valid_fixture_produces_stable_domain_model_ref() {
     assert_eq!(
         model.model_ref.semantic_model_sha256,
         model2.model_ref.semantic_model_sha256
+    );
+}
+
+#[test]
+fn domain_model_ref_v2_full_preimage_and_backward_compatibility() {
+    let model = load_validate(&demo_source_set()).unwrap();
+    assert_eq!(model.model_ref.identity_scheme_version, "v2-full-preimage");
+    assert!(model.model_ref.d_content_hash.is_some());
+    assert!(model.model_ref.semantic_closure_hash.is_some());
+
+    // Serialize model_ref to json
+    let json_val = serde_json::to_value(&model.model_ref).unwrap();
+    assert_eq!(json_val["identity_scheme_version"], "v2-full-preimage");
+
+    // Test backward compatibility: deserialize without identity_scheme_version
+    let mut legacy_json = json_val.clone();
+    legacy_json
+        .as_object_mut()
+        .unwrap()
+        .remove("identity_scheme_version");
+    legacy_json
+        .as_object_mut()
+        .unwrap()
+        .remove("d_content_hash");
+    legacy_json
+        .as_object_mut()
+        .unwrap()
+        .remove("semantic_closure_hash");
+
+    let deserialized: DomainModelRef = serde_json::from_value(legacy_json).unwrap();
+    assert_eq!(
+        deserialized.identity_scheme_version,
+        "unknown-pre-versioning"
+    );
+    assert_eq!(deserialized.d_content_hash, None);
+    assert_eq!(deserialized.semantic_closure_hash, None);
+}
+
+#[test]
+fn mutating_model_content_changes_semantic_identity() {
+    let model1 = load_validate(&demo_source_set()).unwrap();
+
+    let mut ss2 = demo_source_set();
+    let mutated_content = format!("{}\nEntity \"Additional\" in demo\n", DEMO_SEA);
+    ss2.files[0].content = mutated_content.clone();
+    ss2.files[0].sha256 = sha256_hex(mutated_content.as_bytes());
+
+    let model2 = load_validate(&ss2).unwrap();
+    assert_ne!(
+        model1.model_ref.semantic_model_sha256, model2.model_ref.semantic_model_sha256,
+        "mutating model declarations must produce a distinct semantic model identity"
+    );
+    assert_ne!(
+        model1.model_ref.d_content_hash, model2.model_ref.d_content_hash,
+        "mutating model declarations must produce a distinct D content hash"
     );
 }
 

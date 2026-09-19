@@ -1,0 +1,49 @@
+# =============================================================================
+# T01 ROUND-2 PREREG ADDENDUM — preregistered second-surface evaluation
+# =============================================================================
+# Frozen BEFORE the first round-2 execution, per the outcome-C consequence and
+# the round-1 preregistration (whose second-surface nomination, domain, and
+# shapes are already frozen and are NOT edited here). This addendum fixes only
+# what the evaluation needs operationally. Any later change = round-3.
+schema: godspeed-bounded-judgment.t01-prereg-round2
+created_utc: "2026-09-17"
+parent_prereg:
+  path: ".agents/preregistrations/godspeed-bounded-judgment-T01.prereg.yaml"
+  sha256: "c44dcef8745eeb1bf07f48a44b0d0982bf5b0f0adf15544033d98b29a52875d2"
+  unchanged: true
+corpus_manifest_sha256: "6738d5a8f514a55f87e8bc9bec2749958a1d24505631ecea70954e0271ca879f"
+harness:
+  path: ".agents/evidence/godspeed-bounded-judgment/T01/round-2/run_pilot_surface2.py"
+  reuses: "frozen round-1 run_pilot.py functions by import (no frozen file modified)"
+surface2_evaluation:
+  question: "Which verification-chain deficiency, if any, does this record's chain exhibit?"
+  domain_frozen_in_parent: [no_chain_deficiency, missing_evidence_object, unresolvable_reference, instrument_mismatch, insufficient_provenance]
+  provider_input: "chain facts only (hop presence, temporal integrity, instrument metadata, requirement kind, evidence locator); surface-1 answers, the mechanical classification, and all recorded outcomes are EXCLUDED and structurally asserted"
+  deterministic_baseline_frozen_rule: |
+    mechanical_classify(row), evaluated in order:
+      1. evidence object not resolvable            -> missing_evidence_object
+      2. evidence_production gap                   -> unresolvable_reference
+      3. observation_binding gap                   -> unresolvable_reference
+      4. settlement gap                            -> insufficient_provenance
+      5. action gap                                -> insufficient_provenance
+      6. temporal_integrity VIOLATED               -> insufficient_provenance
+      7. instrument.declared_deterministic != true -> instrument_mismatch
+      8. otherwise                                 -> no_chain_deficiency
+  providers: "codex + prime-agent (same frozen identities/invocations as round-1)"
+  metrics: "accuracy vs mechanical baseline; confusion matrix; mean entropy; cross-capable disagreement; contract-failure counts"
+  authorization_rule: |
+    The second surface EARNS AUTHORIZATION for the judgment slice only if ALL of:
+      (a) 0 contract failures for both capable providers;
+      (b) the mechanical baseline has >= 2 distinct classes on this corpus
+          (a single-class baseline makes the surface degenerate as a test bed,
+          exactly as in round-1);
+      (c) each capable provider scores accuracy >= 0.8 vs the mechanical
+          baseline with mean distribution entropy > 0 (judgment tracks the
+          mechanical reality and is not constant).
+    If authorized, T06's declared surface becomes this one (plan T06
+    branch_dependent_note). If NOT authorized, T06 remains blocked and the
+    capability-class question is ESCALATED per spec REQ-JUDG-023 (never
+    resolved by exhaustion): both preregistered shapes were examined on this
+    corpus and neither earned promotion; the honest claim_state is that the
+    corpus cannot support any promotion OR class-level rejection at N=17.
+  disclosure: "same mandatory disclosure block; forbidden vocabulary gate re-run over round-2 outputs"

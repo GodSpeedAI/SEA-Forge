@@ -1,309 +1,133 @@
-# SEA Forge Agent Guide
+# AGENTS.md
 
-Build SEA Forge as a governed capability-execution kernel. Authorize every side
-effect before execution, then trace, evidence, settle, and record it. A process
-exit is never success unless settlement accepts the declared outcome.
+Durable operating contract for coding agents in SEA Forge. Keep this file project-specific, behavior-changing, and earned; task state belongs in `.agents/`, and detailed subsystem guidance belongs in scoped specs/docs or nested `AGENTS.md`.
 
-## Start Here
+## 1. Scope and Precedence
 
-1. Follow the user's request and the nearest `AGENTS.md`; a nested guide governs
-   its subtree.
-2. Read `.agents/current_status.yml` before continuing active work.
-3. Read the governing spec before changing behavior:
+SEA Forge is a governed capability-execution kernel: authorize every side effect before execution, then trace, evidence, settle, and record it. Process exit is not success unless settlement accepts the declared outcome.
 
-   * `.agents/specs/spec-minimum.md` defines the minimum kernel, persisted
-     records, ID grammar, lifecycle, authority hashes, and proofs P1–P4b.
-   * `.agents/specs/spec-full.md` adds milestones without weakening the minimum.
-   * `.agents/specs/Shell-SPEC.md` defines tools, commands, secrets, and CI.
-   * Feature-specific `.agents/specs/spec-*.md` files govern named subsystems.
-4. If instructions and a normative spec conflict, stop and report the conflict.
+Before substantial work:
 
-Surface contradictions, hidden assumptions, unnecessary scope, and debt instead
-of encoding them in the implementation.
+1. Read this file.
+2. Read `.agents/CURRENT_STATUS.md` and `.agents/current_status.yml`.
+3. Read the governing spec under `.agents/specs/`.
+4. Inspect affected code, tests, and configuration.
+5. Load additional docs only when needed.
 
-## Commands
+Instruction precedence:
 
-Run `just` from the repository root. It is the project's canonical
-human-and-agent command-line interface and prints the grouped recipe list when
-called without a recipe.
+1. Runtime/system safety and user constraints.
+2. Nearest applicable scoped `AGENTS.md`.
+3. This root `AGENTS.md`.
+4. Governing normative spec in `.agents/specs/`.
+5. Active plan in `.agents/plans/`.
+6. Current implementation and tests.
+7. General engineering defaults.
 
-Prefer an existing `just` recipe over an equivalent raw Cargo command. Raw Cargo
-commands remain appropriate for diagnostics or when no repository recipe exists,
-but they must not silently bypass a stronger project-specific gate.
+If instructions and a normative spec conflict, stop and report the conflict. Surface contradictions, hidden assumptions, unnecessary scope, and debt rather than encoding them silently.
 
-### Setup and fast feedback
+## 2. Instruction Topology & Routing
 
-```sh
-just setup                              # pinned tools and dependencies
-just doctor                             # JSONL environment diagnostics
-just sync                               # after toolchain or lockfile changes
-just check-fast                         # context + fmt + typecheck
-just fmt-check                          # verify formatting
-just crate-check sea-forge-core
-just crate-test sea-forge-core <test_name>
-just crate-test sea-forge-cli <test_name>
-```
+Instructions live at the narrowest scope that completely governs them:
 
-Prefer the narrowest relevant crate and test while iterating.
+* **`crates/` (`crates/AGENTS.md`)**: Governs all 22 Rust workspace crates. Owns the synchronous kernel boundary (19 synchronous kernel crates vs 2 async edge crates: `sea-forge-server` and `sea-forge-agent`), the package-scoped feedback loop (`just crate-check`, `just crate-test`), domain invariants, SFWP contract synchronization, and Rust build/toolchain discipline.
+* **`workbench/` (`workbench/AGENTS.md`)**: Governs the desktop frontend (Bun workspace + Tauri 2 host + React 19 renderer). Owns renderer/host boundaries, generated schemas/tokens, and E2E testing evidence rules (`workbench-e2e-*`).
+* **`.agents/` (`.agents/AGENTS.md`)**: Governs the durable agent workbench. Owns normative specs vs tactical plans, status handoff contracts verified by `just context-check` (`scripts/check-agent-context.sh`), and memory ledgers (`OBSERVED_DEBT.md`, `LESSONS.md`, `OPEN_QUESTIONS.md`).
 
-For a bounded Rust change, use this progression unless the governing spec
-requires something stronger earlier:
+## 3. Investigation and Retrieval
 
-```text
-rust-analyzer semantics
-→ targeted source/test/spec inspection
-→ just crate-check <crate>
-→ just crate-test <crate> <test>
-→ just check-fast
-→ broader relevant tests
-→ milestone/task gates
-→ just ci / just proof when required
-```
+Investigate before asking. Use deterministic tools and repository utilities to settle mechanically answerable questions; do not spend reasoning effort inferring facts those tools can establish directly.
 
-Do not repeatedly pay workspace-wide verification cost after small localized
-edits when a crate-scoped check settles the immediate question.
+Use the cheapest tool that can settle the question:
 
-### Verification recipes
+* `graft map` for first-pass repository orientation.
+* `graft ask "<question>" --source` for ranked architectural/behavioral context with source spans.
+* `graft callers <symbol>` (`--direction out`, `--depth N`) for exact call-graph/blast-radius questions.
+* `graft skeleton <file>` for signatures/spans without whole-file reads.
+* `graft grep "<literal>"` for exhaustive literal matches across indexed files.
+* `zvec_grep_search` or `zg` for semantic/conceptual discovery when wording/location is unknown.
+* `rg --files` for inventory and `rg` for known paths, symbols, identifiers, literals, config keys, errors, or regexes.
+* `rust-analyzer` semantics for Rust structural questions before grep-and-recompile loops.
+* `$understand-chat`, `$understand-explain`, or `$understand-diff` only when relationships/blast radius would otherwise require broad reading; verify graph results against source/tests.
 
-| Scope                     | Command                |
-| ------------------------- | ---------------------- |
-| Agent handoff             | `just context-check`   |
-| Rust quality              | `just check`           |
-| Rust tests                | `just test`            |
-| Current-platform CI union | `just ci`              |
-| Minimum proofs P1–P4b     | `just proof`           |
-| Workbench                 | `just workbench-check` |
+Use Graft/zvec to narrow the search space, then verify anchors with `rg` and read only relevant source/test/spec/history ranges. Ranked semantic results are not exhaustive. For unindexed files, fall back to `rg`/`grep`. If Graft truncates a span, open that exact range before finalizing.
 
-`just ci` runs context, formatting, lint, typecheck, security, tests, the
-dependency boundary, and build on the current platform. It does **not** run
-`just proof`, Workbench gates, or another platform's tests. Run the applicable
-extra gates and report every skipped platform test with its reason.
+## 4. Universal Change Boundaries
 
-Run the current milestone gate named by the governing feature spec. Use
-`just no-async-kernel` as a focused check when dependency boundaries change.
+Always:
 
-A fast inner loop never substitutes for a required milestone gate, proof,
-cross-platform check, evidence requirement, or settlement criterion. Optimization
-changes when verification cost is paid, not what must ultimately be proven.
+* Make the smallest effective change that fully satisfies the requested outcome; do not deliver MVP-like, partial, placeholder, or knowingly incomplete work unless explicitly requested.
+* Read every file before editing it; inspect one nearby implementation pattern and its tests.
+* Preserve unrelated worktree changes and avoid drive-by formatting/refactoring.
+* Keep changes milestone-scoped and architecture-consistent.
+* Change generators/source definitions instead of hand-editing generated zones.
+* Run verification proportional to the claim.
+* Record consequential state, evidence, debt, lessons, or open questions in `.agents/`.
 
-For Workbench work, follow `workbench/AGENTS.md`. Useful root recipes include
-`workbench-contracts-gate`, `workbench-tauri-test`, `workbench-package`,
-`workbench-package-inventory`, `workbench-dev-up`/`-down`, and
-`workbench-storybook-up`/`-down`. Packaging and inventory apply only to release
-or packaging tasks.
+Ask first before:
 
-For frontend development and evidence, use the recipes for their declared
-scope:
+* adding/upgrading dependencies;
+* changing persisted schemas, ID grammar, policy precedence, exit codes, public interfaces, CI, deployment, or architecture boundaries;
+* deleting files or expanding the current milestone;
+* destructive, publishing, external-write, or difficult-to-reverse operations.
 
-```sh
-just workbench-dev-up                 # Vite renderer at http://localhost:1420
-just workbench-dev-down               # stop that Vite server
-just workbench-e2e-agent-browser      # renderer + accessibility; no Tauri IPC mock
-just workbench-e2e-case-authoring     # case-authoring proof journeys; mocked Tauri IPC
-just workbench-e2e-real [filter]      # packaged Tauri/WebKit + real server/SFWP
-```
+Never:
 
-The Vite development server has no native Tauri bridge and must therefore show
-the fail-closed unavailable state for governed data. The installed Playwright
-suite and `workbench-e2e-case-authoring` remain mocked-IPC evidence only; do
-not use either for an integrated Tauri/server claim. `workbench-e2e-real`
-requires the documented Linux native driver prerequisites and packages the
-application itself.
+* bypass authority, weaken a sandbox, allow unknown operations, or silently fall back when policy/jail infrastructure is unavailable;
+* expose secrets, credentials, private keys, `.env` contents, or sensitive payloads in code, fixtures, logs, traces, evidence, or instructions;
+* weaken/delete conformance tests or required gates merely to make checks pass;
+* fabricate evidence, passing tests, proof results, or completion status;
+* hand-edit `.ua/` or other generated zones;
+* treat `.sea-forge/` runtime output as source.
 
-Do not run destructive, publishing, or external-write recipes without approval:
-`just pr` pushes and opens a pull request, and `publish-bootstrap` publishes a
-crate. `clean` deletes build output. Use `secrets-*` only for an explicitly
-requested secrets task; never expose decrypted values. `integration` currently
-fails closed because no integrations are declared.
+## 5. Commands and Repository Verification
 
-### Rust workstation tooling
+Run `just` from the repository root; it is the canonical human/agent command surface. Prefer existing recipes over equivalent raw Cargo commands; raw Cargo is for diagnostics or missing recipes and must not bypass stronger project gates.
 
-The development workstation may provide shared tools globally, including:
+Required gates by claim:
 
-* `sccache`
-* `mold`
-* `cargo-nextest`
-* `cargo-mutants`
-* `cargo-deny`
-* `cargo-llvm-cov`
-* `just`
-* `clippy`
-* `rustfmt`
+* handoff -> `just context-check`
+* Rust quality -> `just check`
+* Rust tests -> `just test`
+* current-platform CI union -> `just ci`
+* minimum proofs P1–P4b -> `just proof`
+* Workbench -> `just workbench-check` (see `workbench/AGENTS.md`)
+* dependency-boundary change -> `just no-async-kernel` (see `crates/AGENTS.md`)
+* milestone/feature work -> governing spec's named gate
 
-Global availability is capability, not project policy.
+`just ci` does not include `just proof`, Workbench gates, or other-platform tests. Run applicable extra gates and report skipped platform tests with reasons. A fast inner loop changes when cost is paid, not what must ultimately be proven.
 
-The repository's toolchain pin, `justfile`, specs, configuration, CI, and
-verification contracts remain authoritative. Do not add project-local
-installation or configuration for globally supplied developer tooling merely
-because it exists on the workstation.
+Do not run `just pr`, `publish-bootstrap`, `clean`, secrets recipes, or other destructive/external-write recipes without explicit approval.
 
-Do not modify the project's Rust toolchain, nextest configuration, dependency
-policy, mutation exclusions, coverage thresholds, tracing/evidence
-configuration, CI, or proof gates merely to normalize SEA Forge to a generic
-workstation baseline. Such changes require project-specific justification.
+## 6. Testing & Development Discipline
 
-When build performance itself needs investigation, prefer instrumented
-diagnostics such as Cargo timings and `sccache --show-stats` over speculative
-configuration changes.
+Use test-driven development for logic, fixes, state transitions, and behavior when practical:
 
-## Project Map
-
-* `crates/`: Rust workspace; preserve the crate boundaries in the specs.
-* `workbench/`: separate Bun and Tauri workspaces with a nested `AGENTS.md`.
-* `.agents/specs/`: normative behavior and conformance gates.
-* `.agents/plans/`: implementation plans aligned with the specs.
-* `.agents/{OBSERVED_DEBT,LESSONS,OPEN_QUESTIONS}.md`, `current_status.yml`: durable
-  handoff, debt, verified lessons, and owner decisions.
-* `.sea-forge/`: gitignored runtime output, never source.
-* `.ua/`: generated Understand-Anything projection; never hand-edit it.
-* `justfile`: canonical command surface. Do not duplicate recipe bodies here.
-
-## Architecture and Code
-
-* Normalize intent into typed operations; never interpolate intent into shell
-  commands or paths.
-* Decide all authority requests before side effects. Default deny, use one
-  authority fabric, and keep policy out of sandbox and runtime mechanisms.
-* Keep authority and isolation independent; never weaken either by fallback.
-* Record complete outcomes for allow, denial, escalation, failure, and timeout.
-* Settle from evidence, not exit status. Keep JSONL truth and history append-only,
-  views rebuildable, and required identity and governance metadata intact.
-* Validate workspace-relative paths with the specified safe-join algorithm.
-  When implementing child processes, use argv execution, a minimal explicit
-  environment, and enforced timeouts.
-* Keep kernel crates synchronous. Only `sea-forge-agent` and
-  `sea-forge-server` may contain async-runtime or HTTP-client dependencies.
-* Use the repository's pinned stable Rust toolchain, Rust 2021 edition, rustfmt
-  defaults, typed enums, typed errors, and serde `snake_case` for persisted
-  enums. Avoid `unsafe`.
-* Prefer domain concepts and canonical vocabulary. Name types for identity and
-  methods for behavior; make illegal states apparent in names and types.
-* Prefer explicit interfaces, local reasoning, observable behavior, and
-  abstractions that represent real domain concepts. Hide mechanisms behind
-  capabilities; keep domain objects free of infrastructure concerns.
-* Follow current implementations and tests, not roadmap pseudocode. Never
-  hand-edit generated zones; change their source or generator and regenerate.
-
-## Testing
-
-Use test-driven development for logic, fixes, state transitions, and behavior:
-write a focused failing test, implement, then refactor.
-
-Cover allow, deny, escalate, malformed input, timeout, nonzero exit, and false
-success where applicable. Denied paths must prove the absence of side effects.
-Keep minimum tests offline, and never delete or weaken a conformance test to
-make a gate pass.
-
-### Test execution discipline
-
-During implementation:
-
-1. Identify the observable behavior that distinguishes correct from incorrect.
-2. Add or identify the focused test first when practical.
-3. Confirm it fails for the expected reason.
+1. Identify the observable behavior distinguishing correct from incorrect.
+2. Add or identify the focused test first.
+3. Confirm it fails for the expected reason before implementing.
 4. Implement the smallest coherent change.
-5. Run the narrowest relevant crate/test recipe immediately.
-6. Broaden verification only as the affected surface expands.
-7. Run every required milestone, CI, proof, or settlement gate before claiming
-   the work complete.
+5. Run the narrowest relevant crate/test recipe.
+6. Broaden verification with blast radius.
+7. Run every required milestone, CI, proof, or settlement gate before completion.
 
-Do not use full-workspace compilation as a substitute for understanding the
-affected boundary.
+Global workstation tools are capabilities, not project policy. Repository toolchain pins, `justfile`, specs, configuration, CI, and verification contracts remain authoritative.
 
-### Expensive evidence
+## 7. Git, Handoff, and Completion
 
-Mutation testing and coverage are explicit evidence-generation operations, not
-ordinary edit/check-loop steps.
+Use conventional commits: `type(scope): imperative summary`. Before committing, inspect the diff and run blast-radius-appropriate verification. Do not drive-by format/cleanup/rename/refactor, or overwrite/discard unrelated working-tree changes.
 
-When repository recipes exist, prefer those recipes. Otherwise:
+Follow `.agents/AGENTS.md` for handoff state requirements (`CURRENT_STATUS.md`, `current_status.yml`) and memory ledgers (`OBSERVED_DEBT.md`, `LESSONS.md`, `OPEN_QUESTIONS.md`).
 
-```sh
-cargo mutants
-cargo llvm-cov nextest --workspace
-```
+Before declaring completion:
 
-Use mutation testing when required to demonstrate that tests discriminate
-correct from incorrect behavior. Coverage measures execution reach; it does not
-prove behavioral discrimination or correctness.
+1. Inspect the final diff.
+2. Run proof commands proportional to the claim.
+3. Confirm no required gate, assertion, authority path, or sandbox was weakened/bypassed.
+4. Record unresolved failures, debt, or uncertainty in `.agents/`.
+5. Update `.agents/CURRENT_STATUS.md` and `.agents/current_status.yml`.
+6. Run `just context-check` before handoff.
+7. Run `graft build` after code changes that affect indexing.
+8. Leave the next move explicit if the case remains open.
 
-Do not add mutation or coverage to every development iteration unless the
-governing spec explicitly requires it.
-
-`cargo-deny` remains the repository's dependency-policy instrument; use the
-canonical project recipe when one exists.
-
-## Workflow and Permissions
-
-* Investigate before asking. Use `rg --files`, then `rg`, and read narrow source,
-  test, spec, and history ranges until evidence is sufficient.
-* Use `$understand-chat`, `$understand-explain`, or `$understand-diff` only when
-  relationships or blast radius would otherwise require broad reading. Verify
-  graph results against source and tests.
-* Prefer `rust-analyzer` semantics for Rust structural questions before
-  grep-and-recompile loops.
-* Read every file before editing it; inspect one nearby pattern and its tests.
-* Keep changes small and milestone-scoped. Preserve unrelated worktree changes
-  and avoid unrelated formatting.
-* Ask before adding or upgrading dependencies; changing persisted schemas, ID
-  grammar, policy precedence, exit codes, public interfaces, CI, or deployment;
-  deleting files; or expanding the current milestone.
-* Update a spec or ADR when changing a public contract, persisted schema,
-  architecture boundary, proof level, or implementation-defined behavior.
-* Review diffs for correctness, security, compatibility, test strength,
-  needless complexity, and architectural coherence.
-* Keep secrets, credentials, private keys, `.env` contents, and sensitive
-  payloads out of code, fixtures, logs, traces, evidence, and instructions.
-* Never bypass authority, weaken a sandbox, allow unknown operations, or
-  silently fall back when policy or jail infrastructure is unavailable.
-* Make small focused commits when the task calls for commits. Do not push, open
-  a pull request, deploy, or publish unless the user asks.
-
-## Handoff
-
-Keep `.agents/current_status.yml` resumable: objective, worktree state, changed
-files, completed work, verification, remaining steps, blockers, and decisions.
-
-Record only concrete out-of-scope debt in `OBSERVED_DEBT.md`, verified reusable
-project lessons in `LESSONS.md`, and unresolved owner choices in
-`OPEN_QUESTIONS.md`. Update existing entries instead of duplicating them.
-
-Run `just context-check` before handoff.
-
-### Build-lock and artifact discipline
-
-Only one agent may perform compile-heavy work against the shared build directory
-at a time. Do not launch overlapping Cargo builds merely to reduce wall-clock
-time.
-
-Preserve hot incremental build state. Do not use routine `cargo clean` as a
-response to slow compilation or ordinary test failure.
-
-Watch build-artifact growth when compile-heavy work is active:
-
-```sh
-du -sh target
-```
-
-If `target/` exceeds the project's documented build-artifact ceiling, first
-determine what is consuming space and whether an active build owns those
-artifacts. Remove stale artifacts before destroying useful active build state.
-
-Use a full `cargo clean` only when:
-
-* the project's documented build-cache policy explicitly requires it,
-* stale/corrupt artifacts are supported by evidence,
-* a true clean rebuild is part of the requested verification, or
-* the configured artifact ceiling has been exceeded and narrower cleanup cannot
-  safely recover sufficient space.
-
-Never clean a target directory while another agent or process is compiling into
-it.
-
-Do not increase Cargo build jobs or test concurrency to compensate for slow
-builds without evidence that memory and scheduling permit it. If a build or
-test is OOM-killed, diagnose memory pressure and the failing process rather than
-retrying with greater parallelism.
-
-Global `sccache` and linker acceleration may reduce repeated build cost, but
-they do not weaken the single-writer build-lock rule or any SEA Forge
-verification requirement.
+Hard cap for this file: fewer than 150 lines and no more than 32 KiB.

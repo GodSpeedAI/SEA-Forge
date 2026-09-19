@@ -136,6 +136,7 @@ export function ThothPage() {
                 type="button"
                 className="button button--primary"
                 disabled={asking || !reachable || !subject.trim() || !askAction.isAllowed}
+                aria-describedby="thoth-ask-hint"
                 onClick={() => {
                   if (askAction.isAllowed) void ask({ kind, subject, purpose });
                 }}
@@ -143,6 +144,15 @@ export function ThothPage() {
                 {asking ? "Asking…" : "Ask"}
               </button>
             </div>
+            <p className="operational-copy" id="thoth-ask-hint">
+              {!reachable
+                ? "Ask unavailable: the Thoth endpoint is not reachable."
+                : !subject.trim()
+                  ? "Enter a subject to enable Ask."
+                  : !askAction.isAllowed
+                    ? "Ask unavailable: identity or readiness blocks this action."
+                    : "Asks one grounded question of the verified snapshot."}
+            </p>
 
             {askAction.refusal ? (
               <p className="operational-copy" role="alert">

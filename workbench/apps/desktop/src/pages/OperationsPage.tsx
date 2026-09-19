@@ -30,10 +30,10 @@ function standingFor(kind: string) {
   return KNOWN_EVENT_KINDS[kind] ?? { variant: "unknown", label: "Unrecognised kind" };
 }
 
-/** Execution lifecycle, straight off the correlation record. */
+/** Execution lifecycle, straight off the correlation record. Completed stays degraded, never ready. Only settlement earns success. */
 const EXECUTION_STANDING: Record<RequestRecord["status"], { variant: string; label: string }> = {
   pending: { variant: "pending", label: "Execution in flight" },
-  completed: { variant: "ready", label: "Execution succeeded" },
+  completed: { variant: "degraded", label: "Execution completed" },
   failed: { variant: "blocked", label: "Execution failed" },
 };
 
@@ -61,7 +61,7 @@ export function OperationsPage() {
   // held is degraded (last-known state, still useful), not unavailable. Testing
   // `error` first would blank a view the operator can still legitimately read.
   const streamStanding = stale
-    ? { variant: "degraded", label: "Last known — reconnecting" }
+    ? { variant: "degraded", label: "Last known: reconnecting" }
     : error
       ? { variant: "blocked", label: "Stream unavailable" }
       : isLoading
@@ -186,16 +186,23 @@ export function OperationsPage() {
                 value={requestId}
                 placeholder="request id from a submitted command"
                 onChange={(e) => setRequestId(e.target.value)}
+                aria-describedby="requestId-hint"
               />
               <button
                 className="button button--primary"
                 type="button"
                 disabled={requestId.trim() === ""}
+                aria-describedby="requestId-hint"
                 onClick={() => setTracked(requestId.trim())}
               >
                 Inspect
               </button>
             </div>
+            <p className="operational-copy" id="requestId-hint">
+              {requestId.trim() === ""
+                ? "Enter a request id to enable Inspect."
+                : "Reads the authoritative correlation record for this request."}
+            </p>
 
             {status.isError ? (
               <p className="operational-copy" role="alert">

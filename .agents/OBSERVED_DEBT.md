@@ -934,3 +934,70 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   definition wins on conflict is still unspecified.
 - Next move: owner decision (precedence, merge, or rejection on divergence) in
   spec-adlc-thoth terms before any release ships diverging definitions.
+
+## Open: rustfmt drift in committed files keeps `just check`/`just ci` red at baseline
+
+- Observed: 2026-09-17 (GodSpeed bounded-judgment T00 gate baselining)
+- Evidence: `cargo fmt --all -- --check` fails on
+  `crates/sea-forge-server/examples/journey_gauntlet_bootstrap.rs` (line 65)
+  and `crates/sea-forge-server/tests/convergence_t12_variation.rs` (25 diff
+  sites) — both unmodified tracked files at revision 7234823, so the drift is
+  committed, not worktree-local — plus the worktree-dirty
+  `crates/sea-forge-domainforge/tests/conformance_m0_domainforge.rs`. Full
+  diff: `.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt`.
+- Impact: SEA_CHECK and SEA_CI (and the pre-push hook) fail before lint,
+  typecheck, security, and test can run, so those composite gates are not
+  currently a usable green signal for any task.
+- Next move: apply `cargo fmt` to the three named files (or repo-wide) as a
+  hygiene-only change, or fold into T03's gate-repair scope; then re-baseline
+  SEA_CHECK.
+- Scope: T00 records baselines and changes no product file; formatting repair
+  is outside its contract.
+
+## Open: sea-forge-cli conformance_m13 t13_1 fails at baseline (second pre-existing red test)
+
+- Observed: 2026-09-17 (GodSpeed bounded-judgment T00 gate baselining)
+- Evidence: `just test` (revision 7234823) aborts in
+  `crates/sea-forge-cli/tests/conformance_m13.rs:308` —
+  `t13_1_agent_task_routed_through_server_and_settles`: "sea-forge run --plan
+  failed: case_state=terminated", left=Some(3) != right=Some(0). Independent
+  of the known sea-forge-server `both_layouts_still_resolve_after_a_restart`
+  failure (confirmed separately at
+  `.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_TEST-server-crate.log`).
+- Impact: the workspace test gate is red for at least two distinct pre-existing
+  causes; suites ordered after conformance_m13 were never executed (cargo
+  aborts at first failure), so the full extent of baseline red is unknown.
+- Next move: diagnose alongside the known server failure (T03 scope); run
+  suites after conformance_m13 individually before attributing any of their
+  results to plan work.
+- Scope: T00 only classifies baselines; repair belongs to the gate-repair task.
+
+## Open: grant.authorize failure after a committed Allow strands a run allowed-but-unsettled
+
+- Observed: 2026-09-17 (T04 independent adversarial confirmation, verifier note)
+- Evidence: crates/sea-forge-server/src/agent_probe.rs — after the authority
+  Allow is committed, a `grant.authorize` failure propagates `Err` without
+  writing any settlement, leaving the run allowed-but-unsettled (the inverse
+  direction of the authority non-bypass claim; no unjustified ALLOW is
+  produced).
+- Impact: a stranded run has an Allow on record with no terminal settlement;
+  SUP-06's registration-failure path handles the analogous case by settling
+  Rejected.
+- Next move: route grant.authorize failures through finish_rejected with a
+  typed class (e.g. grant_authorization_failed) like SUP-06 does.
+- Scope: outside T04's declared claim; recorded during independent confirmation.
+
+## Open: `run --plan` settlement ledger refs still cite per-run decision_id labels
+
+- Observed: 2026-09-17 (T05 independent adversarial confirmation)
+- Evidence: crates/sea-forge-cli/src/plan_pipeline.rs:802 — the settlement_event
+  commit on the `--plan` pipeline passes `decision_id` labels ("auth_NN") as
+  authority_refs, the same defect class T05 repaired in the mainline pipeline
+  (pipeline.rs now cites committed decision entry ULIDs).
+- Impact: settlement -> authority-decision hops are not ledger-joinable on the
+  `--plan` path; this is also the path of the known failing t13_1 test.
+- Next move: apply the same one-line committed_decisions citation when T03/T13
+  work next touches the plan pipeline; verify with the T05 joinability harness
+  pointed at a `--plan` run.
+- Scope: outside T05's frozen preregistered delta (mainline pipeline only);
+  recorded during independent confirmation.

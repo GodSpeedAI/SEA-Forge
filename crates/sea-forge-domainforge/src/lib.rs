@@ -42,14 +42,24 @@ pub struct DomainModel {
     pub model_ref: DomainModelRef,
 }
 
+fn default_identity_scheme_version() -> String {
+    "unknown-pre-versioning".to_string()
+}
+
 /// Stable reference to a validated semantic input.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DomainModelRef {
+    #[serde(default = "default_identity_scheme_version")]
+    pub identity_scheme_version: String,
     pub source_refs: Vec<SourceRef>,
     pub domainforge_version: String,
     pub adapter_descriptor_sha256: String,
     pub parse_options_sha256: String,
     pub semantic_model_sha256: String,
+    #[serde(default)]
+    pub d_content_hash: Option<String>,
+    #[serde(default)]
+    pub semantic_closure_hash: Option<String>,
     pub concept_refs: Vec<String>,
     #[serde(default)]
     pub class_refs: Vec<String>,
@@ -80,9 +90,9 @@ pub struct DomainForgeTrace {
     pub evidence_refs: Vec<String>,
 }
 
-/// Descriptor hash for this adapter (fixed for a given adapter version).
+/// Descriptor hash for this adapter (computed over adapter name, version, and domainforge_version).
 pub const ADAPTER_DESCRIPTOR_SHA256: &str =
-    "sha256:0000000000000000000000000000000000000000000000000000000000000001";
+    "sha256:16fcd1519e00727b2d17c68c3ddbefd633dacf3dcadd51a0ef37a900a119460e";
 
 // ── Finite limits (spec-full §7.0a) ──
 
@@ -306,12 +316,15 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
     });
     let parse_options_sha256 = sha256_json(&parse_options_value)?;
 
-    // ── Build semantic_model_sha256 over the canonical 4-tuple ──
+    // ── Build semantic_model_sha256 over the canonical preimage ──
     let canonical_tuple = serde_json::json!({
+        "identity_scheme_version": "v2-full-preimage",
         "domainforge_version": domainforge_core::VERSION,
         "adapter_descriptor_sha256": ADAPTER_DESCRIPTOR_SHA256,
         "parse_options_sha256": parse_options_sha256,
         "source_refs": source_refs,
+        "d_content_hash": envelope.self_hash,
+        "semantic_closure_hash": envelope.semantic_closure_hash,
     });
     let semantic_model_sha256 = sha256_json(&canonical_tuple)?;
 
@@ -333,11 +346,14 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
     class_refs.dedup();
 
     let model_ref = DomainModelRef {
+        identity_scheme_version: "v2-full-preimage".to_string(),
         source_refs,
         domainforge_version: domainforge_core::VERSION.to_string(),
         adapter_descriptor_sha256: ADAPTER_DESCRIPTOR_SHA256.into(),
         parse_options_sha256,
         semantic_model_sha256,
+        d_content_hash: Some(envelope.self_hash),
+        semantic_closure_hash: Some(envelope.semantic_closure_hash),
         concept_refs,
         class_refs,
         validation_evidence_refs: vec![format!(

@@ -1,0 +1,76 @@
+{
+ "addendum2_sha256": "087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a",
+ "correction_round": 2,
+ "probe_id": "probe-i3-cand-1",
+ "provenance": {
+  "artifact_dir": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-1/evidence",
+  "artifact_paths": {
+   "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-1/evidence/objects/98/cb/98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+  },
+  "db_pin_verified": true,
+  "recompute_reasons": [],
+  "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-1/state/gauntlet-state.db",
+  "state_db_sha256_actual": "d587d0a1127fe855f89814a19cc637164dcba8627550f8e82f251d68e2ff2937",
+  "state_db_sha256_pinned": "d587d0a1127fe855f89814a19cc637164dcba8627550f8e82f251d68e2ff2937"
+ },
+ "schema": "godspeed-bounded-judgment.t23-corrected-judgment-surface",
+ "status": "ok",
+ "surface": {
+  "bounded_input": {
+   "max_rounds": 2,
+   "scenario": "e2e-happy"
+  },
+  "candidate_id": "cand-1",
+  "correlation_id": "t23-route-001-iter3",
+  "evidence_artifacts": [
+   {
+    "content": "{\"tests\": 1, \"failures\": 0, \"command\": \"scripts/check.sh --marker\"}",
+    "kind": "test_report",
+    "locator": "evidence/marker-check-report.json",
+    "sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+   }
+  ],
+  "mechanism": "t15-frozen-case-execution",
+  "operation": "run_case",
+  "probe_id": "probe-i3-cand-1",
+  "settlement_committed_count": 1,
+  "settlement_progression": [
+   {
+    "evidence_ref": "sha256:98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+    "order": 1,
+    "unit_id": "AK-901",
+    "verification_ref": "vrf-7K63N7X5T4W9T4BNM3FZCY1PJ4"
+   }
+  ],
+  "state_db_sha256": "d587d0a1127fe855f89814a19cc637164dcba8627550f8e82f251d68e2ff2937",
+  "timing": {
+   "checkpoint_iterations": [
+    1,
+    1
+   ],
+   "event_clock_first": 0,
+   "event_clock_last": 10,
+   "finished_at_utc": "2026-09-19T02:27:00.795093+00:00",
+   "started_at_utc": "2026-09-19T02:27:00.591314+00:00",
+   "wall_seconds": 0.204
+  },
+  "typed_terminal": {
+   "run_terminal_states": [
+    "budget_exhausted"
+   ],
+   "terminal_class": "budget_exhausted"
+  },
+  "unit_dispatch_pattern": {
+   "dispatch_sequence": [
+    "AK-901"
+   ],
+   "per_unit": [
+    {
+     "dispatches": 1,
+     "settlements": 1,
+     "unit_id": "AK-901"
+    }
+   ]
+  }
+ }
+}

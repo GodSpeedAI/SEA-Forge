@@ -1,0 +1,367 @@
+# Evidence manifest — remeasure-native-corpus
+# sha256 of every file in this evidence directory authored/finalized by this
+# measurement (excluding this manifest itself; b1-result.json is written
+# after the gate run by directive order and is therefore not listed).
+schema: godspeed-bounded-judgment.remeasure-native-corpus.evidence-manifest
+created_utc: '2026-09-19'
+files:
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/corpus-manifest.yaml
+    sha256: e2419c2ccd79cd84761354471a796141196a85b8ffe34322531339b74220be36
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/phase0_freeze.py
+    sha256: 4e9cf07319a8856c854bf6d220bb63d680a35bb1f53a52e0cac5ab235c48f4cc
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/remeasure-report.md
+    sha256: 330d8130186f81a5a33efb6338025f0e31907ccb4cd9f129571c530693588ce7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/remeasure-results.json
+    sha256: 3f86d98242a09b74d3229d89cade6af1a63ba4a9a18eb5c523b0ef0dae34a845
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/remeasure-results.round1-arm1.json
+    sha256: 9be29eea53b60bd2ae44703d82cc1033a777dff0543d7fbcfceb7527d6ff82cf
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/run_arms.py
+    sha256: ee750b7895bc5ddb6b323daab508e15b2dfedc21121aa43b5c0c91f4c55e4268
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/run_arms.round2.py
+    sha256: c30c0d04c0f3ca0d35b55f591599d362d207c6444de1507c24492ac7d5742638
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/run_arms.round3.py
+    sha256: bbeaed22800bcff5426af8b21d7a627209d3872934788e8b3c4b1d0eb38cc8e6
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/verify_remeasure.py
+    sha256: fba1c7cbedf4504cd26c1cf28cffac3fde0b4296e82892d2b9afd7bc69a13534
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-01-deepseek.raw.txt
+    sha256: 596fbb466837884fa1c8fe1f0c78e0937bc72dd92687a76b3f6d3f049dac0923
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-01.prompt.txt
+    sha256: 774b99b279fa379cd7b3a3427b3c6960bd0929c420ede0b40f1be97813223d20
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-02-deepseek.raw.txt
+    sha256: 7456b92e75d5fb32779b533d4a1d97aca19bc7a16484c4f6fe8cd25c11acd106
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-02.prompt.txt
+    sha256: 132192b40bcf80ad3c9bd35be43e9a28c6999ef8fb79258894cd595303aa7948
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-03-deepseek.raw.txt
+    sha256: f87bef18188945ae957df4946cc7bcea744e6aa9d44bba8fd23a442df5cd917a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-03.prompt.txt
+    sha256: a169fc91acc71cbd45038ba176decd6781833cb4f43d1d2306a89131ebb96d08
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-04-deepseek.raw.txt
+    sha256: 202db2fcf07b28658449bd0ee70ee1c0c2dd90927f4511e3112ba1d1f31ab98a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-04.prompt.txt
+    sha256: 4a14503a1164628d787a1d091a7d550c3b37b1c97cf1b0f56a286f3ce5dede24
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-05-deepseek.raw.txt
+    sha256: 96106321b9f4af4e6b764e76fd218a9eb7281bd862aaaba868f7d3368f9b7566
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-05.prompt.txt
+    sha256: 2a405d27dcb33a20114ca8f90eb7909f00b1ea83612e6003e7f610e03a84f76d
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-06-deepseek.raw.txt
+    sha256: 712abb2eeb50e19adfdf5cf6e1c6f2d470de6a67f196a2caff2d890e1c1429b7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-06.prompt.txt
+    sha256: 0295864a87c460491d30b9af7b8ca65f84e87ea4df0fae0177c53452a7f0bd70
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-07-deepseek.raw.txt
+    sha256: 280546b783752292a7d00c09dff1cd99c033822a775d890d4a5fefd2d5e2cc98
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-07.prompt.txt
+    sha256: 2419a023e5ae54c2140b14966852ff851102d53c1c542531ead48ad1d10cd930
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-08-deepseek.raw.txt
+    sha256: 810e934e6d5e6b38cc1a1e807b46dc30b4dafa1cef4515890b48878d797e23bd
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-08.prompt.txt
+    sha256: 81691385c05d2f8c9c3837a24dbb170f1ca47f8457c15bbe5900be8ec15e7ed0
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-09-deepseek.raw.txt
+    sha256: 4c0e4a482f694a7f3ff172553ac5c5b47a4d5c0fd2004a66cb5c64e2f928cc06
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-09.prompt.txt
+    sha256: 119fd4259fc2928b52790623e0a40d3d51b90696b04e8601c64a91afe5e04489
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-10-deepseek.raw.txt
+    sha256: 6c0019d82b4a0771b5cc397ed557573bc3bc60c48227e7d6287c496f2647ae46
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-10.prompt.txt
+    sha256: 94ffcfbcd1edd7e3800db644b54ed38c9dad1a2a7f99e96d3cd1edd22788b4c2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-11-deepseek.raw.txt
+    sha256: b59c782dba58279c1f3f7b5dbc97c949407b07aa2c9c0939c3f8f23cc76eff55
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-11.prompt.txt
+    sha256: 2d5f9696b4fe9fe40a8b337cc8389416621dc86e9f253848584e0f80c20311bc
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-12-deepseek.raw.txt
+    sha256: d7c1a759a7839ad5d792fdf03d540d967074e078c07907b9e30d48db011f1779
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-12.prompt.txt
+    sha256: 9d6ec82f8b25cab4032eacbc0667690911f40ed4be4b5afbae722d2dac588cc8
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-13-deepseek.raw.txt
+    sha256: 37deecffea104b01adda6e7b746958cd9a64d47650799f586f3544f9c6f20062
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-13.prompt.txt
+    sha256: d687899e66d457ffd57bb07ea82fd6822503ae977855bf477dff2e4c0ecb4ec3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-14-deepseek.raw.txt
+    sha256: 2b347578defea78312091bde6bf4e2778044dbce71290625e2de894b932c0976
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-14.prompt.txt
+    sha256: 416e9ed00a79cfa69e7acf5ab0ea571d7822f05304b52f67a2512b8cf92eb131
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-15-deepseek.raw.txt
+    sha256: c0012294ed25eb38e525bc41eaad13845839ac9b83db5673312278e806c6c6b2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-15.prompt.txt
+    sha256: b6fb4e3742940cb17a3ee67ddb5af1ae6fe1290b5f5bb8b1f7618ea48dd8c029
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s1-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s2-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s3-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01.prompt.txt
+    sha256: a8f4637b045aeeaba9b2b5c64fda99fa5e5bfb4dcd1b46e561f2ef3b09cd8af2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s2-deepseek.error.txt
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s2-muse.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02.prompt.txt
+    sha256: 25e4b3ef7d94ef7f230005d2ea16aeb600d21e3b79330ffa2f4ac1b7434b3f8a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s2-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03.prompt.txt
+    sha256: 9dee1c6141304c60d670f1abfdf22242165de18b7897fc36eb66d3646a379b41
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s1-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s2-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s3-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04.prompt.txt
+    sha256: 1fc2cc61beedf16761bdfdc0932f04fa71b78c78541fdc1de1639c7d9bad2675
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s1.prompt.txt
+    sha256: 51f451929b3adff8cb72586c2ceca7fc68a78ab79e9214f2f123287803ab4199
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s2-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s2.prompt.txt
+    sha256: 51f451929b3adff8cb72586c2ceca7fc68a78ab79e9214f2f123287803ab4199
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s3.prompt.txt
+    sha256: 51f451929b3adff8cb72586c2ceca7fc68a78ab79e9214f2f123287803ab4199
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05.prompt.txt
+    sha256: 51f451929b3adff8cb72586c2ceca7fc68a78ab79e9214f2f123287803ab4199
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s1-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s1.prompt.txt
+    sha256: c9118d379e3af1bdfd71308ac3ab3aa5d138519883e6d98fdf27691077239f68
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s2-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s2.prompt.txt
+    sha256: c9118d379e3af1bdfd71308ac3ab3aa5d138519883e6d98fdf27691077239f68
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s3-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s3.prompt.txt
+    sha256: c9118d379e3af1bdfd71308ac3ab3aa5d138519883e6d98fdf27691077239f68
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06.prompt.txt
+    sha256: c9118d379e3af1bdfd71308ac3ab3aa5d138519883e6d98fdf27691077239f68
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s1.prompt.txt
+    sha256: c192a6a401ba12fe76c834f8dd8635b4a3f53294e344f986171f6cd389396e47
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s2-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s2.prompt.txt
+    sha256: c192a6a401ba12fe76c834f8dd8635b4a3f53294e344f986171f6cd389396e47
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s3.prompt.txt
+    sha256: c192a6a401ba12fe76c834f8dd8635b4a3f53294e344f986171f6cd389396e47
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07.prompt.txt
+    sha256: c192a6a401ba12fe76c834f8dd8635b4a3f53294e344f986171f6cd389396e47
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s1-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s1.prompt.txt
+    sha256: c0549dffc9e54c425f2668cc2dbeb27898241cbd7fa9077abce446c784930cb2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s2-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s2.prompt.txt
+    sha256: c0549dffc9e54c425f2668cc2dbeb27898241cbd7fa9077abce446c784930cb2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s3-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s3.prompt.txt
+    sha256: c0549dffc9e54c425f2668cc2dbeb27898241cbd7fa9077abce446c784930cb2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08.prompt.txt
+    sha256: c0549dffc9e54c425f2668cc2dbeb27898241cbd7fa9077abce446c784930cb2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s1.prompt.txt
+    sha256: e6567525e33ec697b6d6f45919b642fd1750cfc8ad00ac60ef6b754f28cdc697
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s2-deepseek.raw.txt
+    sha256: bcc04bfe5c59e2c71c2b079106cb27fde87e215f29e203d78440dce201eaa4a5
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s2.prompt.txt
+    sha256: e6567525e33ec697b6d6f45919b642fd1750cfc8ad00ac60ef6b754f28cdc697
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s3.prompt.txt
+    sha256: e6567525e33ec697b6d6f45919b642fd1750cfc8ad00ac60ef6b754f28cdc697
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09.prompt.txt
+    sha256: e6567525e33ec697b6d6f45919b642fd1750cfc8ad00ac60ef6b754f28cdc697
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s1.prompt.txt
+    sha256: c4a55a857d0c58591cfaed197732b110585d826de51d7506f496ed77efbac233
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s2-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s2.prompt.txt
+    sha256: c4a55a857d0c58591cfaed197732b110585d826de51d7506f496ed77efbac233
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s3.prompt.txt
+    sha256: c4a55a857d0c58591cfaed197732b110585d826de51d7506f496ed77efbac233
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10.prompt.txt
+    sha256: c4a55a857d0c58591cfaed197732b110585d826de51d7506f496ed77efbac233
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s1.prompt.txt
+    sha256: 5998feae2fba06c54afc958d50cb77f69aea243254694f2b317991cb5bd19c7f
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s2-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s2.prompt.txt
+    sha256: 5998feae2fba06c54afc958d50cb77f69aea243254694f2b317991cb5bd19c7f
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s3.prompt.txt
+    sha256: 5998feae2fba06c54afc958d50cb77f69aea243254694f2b317991cb5bd19c7f
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11.prompt.txt
+    sha256: 5998feae2fba06c54afc958d50cb77f69aea243254694f2b317991cb5bd19c7f
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s1-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s1.prompt.txt
+    sha256: 5e05fe46087ee5a79bb607cffa96b886479bfb34a0e1a0db695c8f5f582d6f9c
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s2-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s2.prompt.txt
+    sha256: 5e05fe46087ee5a79bb607cffa96b886479bfb34a0e1a0db695c8f5f582d6f9c
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s3-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s3.prompt.txt
+    sha256: 5e05fe46087ee5a79bb607cffa96b886479bfb34a0e1a0db695c8f5f582d6f9c
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12.prompt.txt
+    sha256: 5e05fe46087ee5a79bb607cffa96b886479bfb34a0e1a0db695c8f5f582d6f9c
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s1-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s1.prompt.txt
+    sha256: 735d1d570ccd6f2abba18db74b0862febdbb22b6837e993ed3dc334a0d673cb7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s2-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s2.prompt.txt
+    sha256: 735d1d570ccd6f2abba18db74b0862febdbb22b6837e993ed3dc334a0d673cb7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s3-deepseek.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s3.prompt.txt
+    sha256: 735d1d570ccd6f2abba18db74b0862febdbb22b6837e993ed3dc334a0d673cb7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13.prompt.txt
+    sha256: 735d1d570ccd6f2abba18db74b0862febdbb22b6837e993ed3dc334a0d673cb7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s1-deepseek.error.txt
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s1-muse.raw.txt
+    sha256: 66548e881e32b1646cb21b10d3462d78a1b313b0ab3d74d2b1d1816689e25bc7
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s1.prompt.txt
+    sha256: 46fa68978cb8587c8fb432fec707087093e8cc37dcb0d73076e445d415b0013a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s2-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s2.prompt.txt
+    sha256: 46fa68978cb8587c8fb432fec707087093e8cc37dcb0d73076e445d415b0013a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s3.prompt.txt
+    sha256: 46fa68978cb8587c8fb432fec707087093e8cc37dcb0d73076e445d415b0013a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14.prompt.txt
+    sha256: 46fa68978cb8587c8fb432fec707087093e8cc37dcb0d73076e445d415b0013a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s1-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s1.prompt.txt
+    sha256: 458df1d64c24bb0ae136b3c79197c688441be81ee6e83161c31da996fe8556a1
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s2-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s2.prompt.txt
+    sha256: 458df1d64c24bb0ae136b3c79197c688441be81ee6e83161c31da996fe8556a1
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s3-deepseek.raw.txt
+    sha256: 9fb7e2f2dcc8b3cc910bde83225f7aa10e97fbd4e2146ab1a3f83249337cee4b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s3.prompt.txt
+    sha256: 458df1d64c24bb0ae136b3c79197c688441be81ee6e83161c31da996fe8556a1
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15.prompt.txt
+    sha256: 458df1d64c24bb0ae136b3c79197c688441be81ee6e83161c31da996fe8556a1
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-01.surface.json
+    sha256: 9471b6224377e37c15805d473cbd634b76b52aa1988aae61bf75bee784db294a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-02.surface.json
+    sha256: 0aa8856c95ac041357a9f111aa36ad44631f8f70a39f6c3ea99491ca06c179c8
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-03.surface.json
+    sha256: 5bc9a23066226ed7ea54727fe2e1a5196d8502d8f0b154741237849f36ee2dfc
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-04.surface.json
+    sha256: 51eee4d169e860f421529cc9338ad182771d04f1a80eba5d777e4f15c5e8b35b
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-05.surface.json
+    sha256: c435a0dd521ed1591e4447bb7bea00b63fe8c19d4644d7926882a27d9364f18c
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-06.surface.json
+    sha256: 2c9d4a2d59ef05c6670b2ab0c659d0870943dac215e7f7cf6625c09064adb0b9
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-07.surface.json
+    sha256: a184c16cc436a4a5ce382f4c9093c0766944bead3ef6ca31298a0cb9829933bc
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-08.surface.json
+    sha256: 1fda6dd0de169ea06d405cb828919e7a096e7c269516936c0f1047d83838736d
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-09.surface.json
+    sha256: c39b03b186bd95776cdda00435738362da5f7298d443d48b0a0b5c60c69454a3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-10.surface.json
+    sha256: 4cc6007489b0ad263801cef2a5d4038359148a284c190ffcb0b11ba5390a24f2
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-11.surface.json
+    sha256: 06d30e09439c695d857484645de7196e0638980cc0675eb32a23998002af8843
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-12.surface.json
+    sha256: 4772bc2340d68244c0cb81d0f2293e0ec07d27a549e097475fe17101c2dd4cfe
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-13.surface.json
+    sha256: d2540687e4d370269ca9102101be1da7f05f84be2042877a32a2b9fffd42cee4
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-14.surface.json
+    sha256: b6203055b68e7be99628e931297e1dd8b619bc1cee5496545e78d804ae1435b1
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-15.surface.json
+    sha256: dd328ac5769adddf1596cc3abbf109a9686e3571b622da91b56d1aeef3d2958a
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-01-deepseek.raw.txt
+    sha256: eae6cadc87fb4754f4d6e4c9533d692d7127dfbc1555d8e6482fcfb4e8dd5da3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-01.prompt.txt
+    sha256: 9bfe8cbd766356382799c988bb09966fe60c0ce14ce7091a34f8d67b32ef02e6
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-02-deepseek.raw.txt
+    sha256: 30ddf1bdff6bbcf09ca3b3d1aa4a284cf9203cdd3c02abcbdfe5070241dba25c
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-02.prompt.txt
+    sha256: d1ab96bc6885483c585f01de9436d047cd17e07ba8d84370d0a30ceb43be8ee5
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-03-deepseek.error.txt
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-03-muse.raw.txt
+    sha256: 3d62686bede064b44bb9d4b52db20df4710f9bf1b0567e36e7e83d5bc566045d
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-03.prompt.txt
+    sha256: 75fda74c4665613cdb474b61b3bc65d6042b8aa30b59c1d97b5d5bbda5b2ebbb
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-04-deepseek.raw.txt
+    sha256: eae6cadc87fb4754f4d6e4c9533d692d7127dfbc1555d8e6482fcfb4e8dd5da3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-04.prompt.txt
+    sha256: b0e039da51936c5e3f9be15d86af82d8f79b569ca74a0a00a8eb46cb670b13ce
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-05-deepseek.raw.txt
+    sha256: 3d62686bede064b44bb9d4b52db20df4710f9bf1b0567e36e7e83d5bc566045d
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-05.prompt.txt
+    sha256: 29a33d2e22bd74faabae02ec984ad9a231632ea46643682baac0e4d8d02c1871
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-06-deepseek.raw.txt
+    sha256: eae6cadc87fb4754f4d6e4c9533d692d7127dfbc1555d8e6482fcfb4e8dd5da3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-06.prompt.txt
+    sha256: 5c87213061d3031fe7bfa279d339aa113ea60461eb33ff1728f5f0820c3fcc24
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-07-deepseek.raw.txt
+    sha256: e0c9ff53a8373e6154ddf315b7a972e101a6eaf9c1b743bfda286da8ca893673
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-07.prompt.txt
+    sha256: 3638371aead109f5beaeb735b50a870e7677447e4c114bab7107d9782065f7b5
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-08-deepseek.raw.txt
+    sha256: eae6cadc87fb4754f4d6e4c9533d692d7127dfbc1555d8e6482fcfb4e8dd5da3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-08.prompt.txt
+    sha256: b30c786b0743116b1c8229f314e0d8cf5e949534ba81bf021ba46c3d2c4f7173
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-09-deepseek.raw.txt
+    sha256: 3d62686bede064b44bb9d4b52db20df4710f9bf1b0567e36e7e83d5bc566045d
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-09.prompt.txt
+    sha256: 755649db6e24f11d4f129bb9766cd9f41afd039e13434d022b2cc7516e58dbf8
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-10-deepseek.raw.txt
+    sha256: 2d4ff64673f2509deef0b86d6280b411fffd7b4a85019880ecc0630768747280
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-10.prompt.txt
+    sha256: 3716b23eee915678c6b89668b59eed5fafc02642fa9d9c45e68eb849833f8262
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-11-deepseek.raw.txt
+    sha256: 3d62686bede064b44bb9d4b52db20df4710f9bf1b0567e36e7e83d5bc566045d
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-11.prompt.txt
+    sha256: 55c7d3358c39664a5e8b49f8f5d64a5fdc7439fc8513b7e72a4c9d361a552a51
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-12-deepseek.raw.txt
+    sha256: eae6cadc87fb4754f4d6e4c9533d692d7127dfbc1555d8e6482fcfb4e8dd5da3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-12.prompt.txt
+    sha256: a950edc747923f14f814183ef568760d13a2c713947ee791a691873b51ad8a04
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-13-deepseek.raw.txt
+    sha256: eae6cadc87fb4754f4d6e4c9533d692d7127dfbc1555d8e6482fcfb4e8dd5da3
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-13.prompt.txt
+    sha256: 1921d0e772eae71d820e99a7ee1d70d61457ffdb6e58a19e7cbc58630db63494
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-14-deepseek.raw.txt
+    sha256: e0c9ff53a8373e6154ddf315b7a972e101a6eaf9c1b743bfda286da8ca893673
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-14.prompt.txt
+    sha256: 96a6134fe0a1867b7303d31f15daa5453449bd459f4be2fa356af70fef313c89
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-15-deepseek.raw.txt
+    sha256: 30ddf1bdff6bbcf09ca3b3d1aa4a284cf9203cdd3c02abcbdfe5070241dba25c
+  - path: .agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-15.prompt.txt
+    sha256: 13b1ea3e83eb9b5df39e4934156ba57d140b9ed252222afb01bdd75f42426ec9

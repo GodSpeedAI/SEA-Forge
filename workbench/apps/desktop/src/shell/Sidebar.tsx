@@ -16,7 +16,7 @@ const OPERATE_NAV: NavItemDef[] = [
   { path: "/delegate", label: "Delegation", icon: "⇥" },
   { path: "/models", label: "Domain Models", icon: "⌘" },
   { path: "/cases", label: "Cases", icon: "▤" },
-  { path: "/inbox", label: "Inbox", icon: "▾", badge: 1 },
+  { path: "/inbox", label: "Inbox", icon: "▾" },
   { path: "/operations", label: "Operations", icon: "▶" },
 ];
 
@@ -32,11 +32,18 @@ const ADMIN_NAV: NavItemDef[] = [
   { path: "/admin", label: "Administration", icon: "⚙" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ inboxCount }: { inboxCount?: number }) {
   const location = useLocation();
 
+  const withBadge = (items: NavItemDef[]): NavItemDef[] =>
+    items.map((item) =>
+      item.path === "/inbox" && inboxCount !== undefined
+        ? { ...item, badge: inboxCount }
+        : item,
+    );
+
   const renderNavGroup = (items: NavItemDef[]) =>
-    items.map((item) => {
+    withBadge(items).map((item) => {
       const isActive = location.pathname.startsWith(item.path);
       return (
         <Link

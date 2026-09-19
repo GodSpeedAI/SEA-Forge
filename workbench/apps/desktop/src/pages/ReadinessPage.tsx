@@ -239,6 +239,12 @@ export function ReadinessPage() {
               className="freshness-badge"
               type="button"
               disabled={!foundations[0]?.source}
+              title={!foundations[0]?.source ? "No committed source available" : undefined}
+              aria-label={
+                foundations[0]?.source
+                  ? "Inspect source for first foundation"
+                  : "Inspect source unavailable: no committed source available"
+              }
               onClick={() => inspectSource(foundations[0]?.source ?? undefined)}
             >
               Inspect source
@@ -369,7 +375,12 @@ export function ReadinessPage() {
                       <button
                         className={styles.conditionTrigger}
                         type="button"
-                        aria-label={`Inspect evidence for ${f.name}`}
+                        aria-label={
+                          f.source
+                            ? `Inspect evidence for ${f.name}`
+                            : `Inspect evidence unavailable for ${f.name}: no committed source available`
+                        }
+                        title={!f.source ? "No committed source available" : undefined}
                         disabled={!f.source}
                         onClick={() => inspectSource(f.source ?? undefined)}
                       >
@@ -432,7 +443,12 @@ export function ReadinessPage() {
                     <button
                       className="row-action"
                       type="button"
-                      aria-label={`Inspect evidence for ${c.name}`}
+                      aria-label={
+                        c.source
+                          ? `Inspect evidence for ${c.name}`
+                          : `Inspect evidence unavailable for ${c.name}: no committed source available`
+                      }
+                      title={!c.source ? "No committed source available" : undefined}
                       disabled={!c.source}
                       onClick={() => inspectSource(c.source ?? undefined)}
                     >
@@ -471,6 +487,12 @@ export function ReadinessPage() {
               className="button button--attention"
               type="button"
               disabled={!limitation?.source}
+              title={!limitation?.source ? "No committed source available" : undefined}
+              aria-label={
+                limitation?.source
+                  ? "Open limitation evidence"
+                  : "Open limitation evidence unavailable: no committed source available"
+              }
               onClick={() => inspectSource(limitation?.source ?? undefined)}
             >
               Open limitation evidence
@@ -515,17 +537,19 @@ export function ReadinessPage() {
           </section>
 
           <section className="panel recent-panel">
-            <div className="section-header">
-              <h2>Recent invalidations</h2>
-              <span className="status-pill status-pill--neutral">
-                {view?.recent_invalidations.length ?? 0}
-              </span>
-            </div>
-            <p>
-              {view?.recent_invalidations.length
-                ? `${view.recent_invalidations.length} recent invalidation records require inspection.`
-                : "No verified state has been invalidated in this projection."}
-            </p>
+            <details open={(view?.recent_invalidations.length ?? 0) > 0}>
+              <summary className="section-header">
+                <h2>Recent invalidations</h2>
+                <span className="status-pill status-pill--neutral">
+                  {view?.recent_invalidations.length ?? 0}
+                </span>
+              </summary>
+              <p>
+                {view?.recent_invalidations.length
+                  ? `${view.recent_invalidations.length} recent invalidation records require inspection.`
+                  : "No verified state has been invalidated in this projection."}
+              </p>
+            </details>
           </section>
         </aside>
       </div>

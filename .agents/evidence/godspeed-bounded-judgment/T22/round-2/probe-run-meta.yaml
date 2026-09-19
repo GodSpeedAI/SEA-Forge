@@ -1,0 +1,63 @@
+schema: godspeed-bounded-judgment.t22-probe-run-meta
+route_id: t22-route-001-round2
+iteration: 1
+note: typed sidecar for exit codes and wall seconds; the frozen probe_observation schema has an exact field set
+  and refuses extra fields
+probes:
+- probe_id: probe-cand-1
+  candidate_id: cand-1
+  gauntlet_stdout_tail: 'idence"},{"key":"skills","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"},{"key":"status","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"},{"key":"verify","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"}],"out_of_scope":[]}
+
+    '
+  gauntlet_stderr_tail: ''
+  command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+    page
+  cwd: /home/sprime01/.local/share/godspeed-route-discovery/T22/round2/targets/cand-1
+  exit_code: 1
+  timed_out: false
+  wall_seconds: 0.607
+  state_db_exists: true
+  raw_terminal_state: budget_exhausted
+  settlement_committed_count_from_db: 0
+  note: state_db_sha256 is the digest of the real gauntlet state database
+- probe_id: probe-cand-2
+  candidate_id: cand-2
+  gauntlet_stdout_tail: 'idence"},{"key":"skills","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"},{"key":"status","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"},{"key":"verify","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"}],"out_of_scope":[]}
+
+    '
+  gauntlet_stderr_tail: ''
+  command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+    page
+  cwd: /home/sprime01/.local/share/godspeed-route-discovery/T22/round2/targets/cand-2
+  exit_code: 1
+  timed_out: false
+  wall_seconds: 0.804
+  state_db_exists: true
+  raw_terminal_state: budget_exhausted
+  settlement_committed_count_from_db: 0
+  note: state_db_sha256 is the digest of the real gauntlet state database
+- probe_id: probe-cand-3
+  candidate_id: cand-3
+  gauntlet_stdout_tail: 'idence"},{"key":"skills","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"},{"key":"status","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"},{"key":"verify","wired":true,"category":"configured-but-untested","basis":"wired
+    per the caller''s manifest; the manifest binds no run unit as its evidence"}],"out_of_scope":[]}
+
+    '
+  gauntlet_stderr_tail: ''
+  command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+    page
+  cwd: /home/sprime01/.local/share/godspeed-route-discovery/T22/round2/targets/cand-3
+  exit_code: 1
+  timed_out: false
+  wall_seconds: 0.604
+  state_db_exists: true
+  raw_terminal_state: budget_exhausted
+  settlement_committed_count_from_db: 0
+  note: state_db_sha256 is the digest of the real gauntlet state database

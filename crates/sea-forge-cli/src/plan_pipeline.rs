@@ -605,6 +605,12 @@ fn run_plan_inner(
                             &root,
                             json!({
                                 "verb": "delegate",
+                                // Server request admission (2026-08-31) refuses
+                                // protected durable mutations without a
+                                // request_id; a deterministic one keyed on the
+                                // run + item makes retries idempotent and the
+                                // outcome recoverable via request.get_status.
+                                "request_id": format!("plan-{run_id}-{}", item.plan_item_id),
                                 "endpoint": endpoint_ref,
                                 "instruction": instruction,
                                 "max_turns": max_turns,
@@ -806,9 +812,13 @@ fn run_plan_inner(
                             settlement.settlement_id.clone(),
                         ],
                         &settlement,
+                        // T05 correction round: cite the authority decisions by
+                        // their committed ledger entry ULIDs, matching the
+                        // mainline pipeline — every loop path must join by
+                        // causal reference alone (REQ-PROV-021).
                         authorized
                             .iter()
-                            .map(|operation| operation.decision.decision_id.clone())
+                            .map(|operation| operation.committed.entry_ulid().to_string())
                             .collect(),
                     )?;
                     write_json(&run_dir.join("plan.json"), &plan)?;

@@ -1,0 +1,22 @@
+{
+  "correlation_id": "t23-route-001-iter4",
+  "decided_at_utc": "2026-09-19T02:28:47.199796+00:00",
+  "eligible_candidate_ids": [],
+  "ineligible": [
+    {
+      "candidate_id": "cand-1",
+      "reason": "probe cost 1 unit does not fit the remaining payment 0"
+    },
+    {
+      "candidate_id": "cand-2",
+      "reason": "probe cost 1 unit does not fit the remaining payment 0"
+    },
+    {
+      "candidate_id": "cand-3",
+      "reason": "probe cost 1 unit does not fit the remaining payment 0"
+    }
+  ],
+  "iteration": 4,
+  "policy_version": "selection-policy-v1",
+  "retained_candidate_id": ""
+}

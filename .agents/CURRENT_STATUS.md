@@ -1,6 +1,544 @@
 # Current Status
 
-Updated: 2026-09-02
+Updated: 2026-09-19
+
+> **2026-09-19 GODSPEED — T27 SETTLED (P2, DISPOSITION C5): CLAIM-VS-OBSERVATION
+> TYPING DOES NOT CHANGE CASE-LEVEL BOUNDED JUDGMENT ON THE FRONTIER; TARGET
+> LYING-CLAIM CASE STAYS STABLY WRONG; NOTHING PROMOTED.**
+> Executed exactly under the frozen prereg (base `41af1921…74343` + append-only
+> addendum-1 `a7fb31e2…7609` frozen before any call; the addendum corrected a
+> pre-execution analysis defect so discordant pairs score abstain as
+> not-correct instead of excluding the frontier's abstention channel).
+> Corpus 14/14 hash-verified from the persistent T16 expanded corpus:
+> frontier = the 1 stable-wrong case (budget-C3) + all 9 single-call unstable
+> cases; controls = accepted-A1/A2, forge-D1, lying-B1 by the frozen
+> deterministic stratified rule. 140/140 fresh DeepSeek-v4.1-Flash calls
+> (ClinePass seam, 5 reps × 2 conditions, interleaved A-then-B,
+> persist-before-score); all four teeth PASS with simulated attacks rejected
+> (content-equivalence atom sets, role vocabulary, temporal horizon,
+> case-identity binding); store keys verified 140/140; `--verify-only`
+> recomputation identical. RESULT: case-level accuracy A 9/14 (0.643) vs B
+> 8/14 (0.571); corrections 0; regressions 1 (accepted-A4, an abstention
+> shift on an already-unstable case); control regressions 0; exact paired
+> McNemar two-sided p = 1.0; practical criterion unmet; budget-C3
+> unchanged-wrong under BOTH representations. Mechanically C5 (validity
+> passed; C4/C1/C2 unmet; C3's zero-movement condition defeated by the single
+> frontier regression → genuinely inconclusive), substantively consistent
+> with NO case-level treatment effect. Exploratory: per-call abstentions rose
+> 18/70 → 32/70 under B — a behavior shift without a judgment shift.
+> CONSEQUENCE: H_REPRESENTATION_T27 not supported on this surface/provider;
+> with T18's independent negative, the surface's judgment failure is not an
+> input-representation failure; T06 stays blocked; no `.sea` grammar
+> implication; T28 (independent confirmation/disposition) is ready and
+> receives this frozen evidence — it did NOT participate in producing it.
+> Evidence: `.agents/evidence/godspeed-bounded-judgment/T27/` (settlement
+> report, paired report, 140 raw observations, teeth log); decisions
+> D-2026-09-19-T27-01 … -05 (incl. -04 append-only harness-hash correction).
+> Nothing committed.
+
+> **2026-09-19 GODSPEED CASEWORK ENVIRONMENT DOCUMENT REVIEW:** The former
+> 2,090-line spec did not parse as YAML, and the plan named absent Go/adapter
+> substrate and wrong spec/status paths. The corrected authoritative spec
+> preserves the 84 original requirements and adds two mandatory UI-removal
+> requirements. Plan v0.2.2 maps 86/86 across T00–T14, binds the spec hash,
+> separates existing from future gates, and makes real integration and parity
+> precede removal of the SEA Forge Tauri GUI and Gauntlet TUI. ADR-006 records
+> the architecture direction; findings are in
+> `.agents/reports/2026-09-19-casework-cognitive-environment-adversarial-review.md`.
+> Validator PASS; this is document settlement
+> only—no Go/React implementation, UI removal, or product conformance is
+> claimed. Parallel-work initiation now requires dedicated SEA Forge and
+> Gauntlet worktrees, each with its own canonical handoff files. T00 may defer
+> Rust baselines for insufficient memory; Go/React work can proceed, while
+> Rust-gated tasks remain unsettled until their gates pass. Next move: transfer
+> the reviewed artifacts into an isolated worktree and execute T00 inventory.
+
+> **2026-09-19 GODSPEED — T29 BREADTH EXPERIMENT SETTLED (P2, ADVERSARIAL
+> VERDICT: CONFIRM): MECHANISM SURVIVES A MATERIALLY DIFFERENT SECOND FAMILY
+> IN CHARACTERIZE-AND-STOP MODE; d\*=2 DETECTION BOUNDARY; RM EVIDENCE-
+> INTEGRITY CONFIRMED (OPTION A); DOCS UPDATED.**
+> RM check: the 3 Muse substitutions were fallback-evidence only — arm1
+> 15/15 pure DeepSeek; arm2 Muse rows (nat-02, nat-14) excluded from the
+> DeepSeek slice (n=13, reported separately); arm2b Muse row (nat-03)
+> excluded (n=14). No pooling; no recomputation needed (D-2026-09-19-RM-04).
+> Plan v1.7.0: T29 added (depends_on T26). Family: e2e-forged-report x
+> budget ladder (prereg e844fce4… frozen before any probe; rationale: fraud
+> refusal vs honest exhaustion, detection-success vs settlement-success,
+> passing-claim artifacts, COR-F1 gate; near-duplicate and new-scenario
+> options rejected). 6 real probes, deepseek ladders, no substitutions.
+> UP rule (bounded-non-settlement ∧ 0 settlements ∧ passing-claim artifact)
+> recomputed from raw DBs by builder, orchestrator, and fresh adversarial
+> verifier (104 own checks + 3 novel attacks refused): d\*=2 (fires
+> {2,3,4,5,6}; d\*-1=1 produces zero dispatches/artifacts), matched negative
+> single-factor (budget, target-file diff verified), G3 partition holds
+> (UP 6/6 forged; addendum-3 4/4 lying; honest fire neither). Observer
+> labels (2 calls) proven inert. Gate 618 checks PASS (orchestrator re-run);
+> failed rounds preserved. EARNED: mechanism survival in
+> characterize-and-stop mode; d\*=2 boundary + one-factor negative; rule
+> complementarity. NOT EARNED: two-settleable-families breadth (no
+> honest-completion scenario in the catalog) and all broader claims;
+> learned judgment stays observational-only. docs/explanation/native-route-
+> discovery.md updated (second-family result + bounded conclusion).
+> ready_now=[T27]. Nothing committed. NEXT AFFORDABLE MOVE: operator
+> decision — either accept the one-settleable-family scope and route
+> breadth investigation to catalog extension (a decision ABOVE this
+> branch's authority), or proceed to the claim-vs-observation T27 (ready).
+
+> **2026-09-19 GODSPEED — NATIVE-CORPUS JUDGMENT REMEASUREMENT SETTLED
+> (operator-directed, outside the settled plan): LEARNED LAYER ADDS NO
+> INFORMATION OVER THE MECHANICAL LAYER; RECOMMENDATION = REMOVE FROM THE
+> ROUTE-DISCOVERY DECISION PATH; DOCS INTEGRATED.**
+> Stage 1 (documentation): earned route-discovery structure placed as a new
+> Layer-5 explanation `docs/explanation/native-route-discovery.md`
+> (registered in `docs/documentation-map.md`), cross-referenced from the
+> canonical `docs/explanations-and-references/goodspeed-loop.md` at the
+> changed-navigation slot; evidence-backed / inference / interpretation /
+> open-question distinctions and evidence links preserved; context-check
+> PASS. Stage 2 (remeasurement, prereg 8142c0a5… frozen before any scored
+> call, corpus manifest frozen RM-02, 15 native rows, mechanical truth):
+> arm1 exact-T16 predictive comparability — learned 0.600 CI [0.323, 0.837]
+> = face-value baseline 0.600, McNemar p=1.0; arm2 enriched-surface
+> discrimination — single 0.692 CI [0.386, 0.909], majority-of-3 identical
+> (agreement 0.974: errors are SYSTEMATIC anchoring on terminal_class, not
+> sampling noise — aggregation refuted), honest 9/9 vs adversarial 0/4
+> (all 4 verification_failed rows collapse to budget_exhausted while the
+> surface visibly contains failures:1 and 0 settlements); arm2b exploratory
+> graded probe: MAE 0.0 but pure copy-fidelity of a surface field. Payment:
+> 78 learned calls / 3217.8s wall vs 0 calls for the mechanical layer.
+> ARCHITECTURE INTERPRETATION STANDS (LLM proposes/interprets; governed
+> execution produces consequence; deterministic machinery preserves
+> evidence; authority external; settlement decides). T21-T26 untouched;
+> T18 not reopened; T19/T20 not authorized; T06 stays blocked. Durable
+> report: `.agents/evidence/godspeed-bounded-judgment/remeasure-native-
+> corpus/remeasure-report.md` (gate exit 0; D-2026-09-19-RM-01/-02/-03).
+> NEXT AFFORDABLE MOVE (evidence-following): learned judgment removed from
+> the route-discovery decision path (it never gated settlement); keep it
+> only as an optional instrumented probe; second-operation-family route
+> discovery is the natural next experiment (breadth, mechanical
+> discrimination authoritative), plus the recorded 12-call revised-surface
+> variant-B idea as a cheap future probe — operator decides.
+
+> **2026-09-19 GODSPEED — NATIVE ROUTE-DISCOVERY BRANCH COMPLETE (T21..T26 ALL
+> SETTLED): T26 FRESH ADVERSARIAL CONFIRMATION VERDICT: CONFIRM — CLAIMS A AND
+> B EARNED, CLAIM C MEASURED; NO PROMOTION; NOTHING COMMITTED.**
+> The developmental branch executed its full frozen arc through real
+> consequence: T21 froze the contract (prereg 1fb55d9c… + three append-only
+> addenda, each frozen before the round that consumed it); T22 executed one
+> real loop advance and repelled authority teeth T1/T2/T5; T23 settled route
+> t23-route-001 on 12 REAL sequential gauntlet probes (baseline e2e-happy@4
+> settled with 3 settlement_committed; boundary r\*=4 with r\*-1=3 swept on
+> the route's own ledger; discriminator separated by the frozen addendum-3
+> mechanical rule, 4/4 lying vs 0/8 honest) — independent confirmation
+> CONFIRM; T24 inverted the settled route into case t24-case-001 whose
+> independent replay genuinely re-settled (freeze-before-replay proven;
+> impostor tooth T7 rejected) — CONFIRM; T25 recorded the single-factor
+> matched negative (4→3 honestly budget_exhausted), the honest payment table
+> (7 branch decision entries / 37 provider calls / 22 executions / 3 failed /
+> 406s wall; unobservables n/a), and novelty NOVEL vs the T15/T16 grids —
+> CONFIRM; T26 (fresh adversarial verifier, own 892-check gate, 9 attacks
+> incl. a novel artifact-laundering forgery) returned VERDICT: CONFIRM with
+> claims adjudicated separately and the addendum 1→2→3 history adjudicated
+> PRINCIPLED append-only correction (post-hoc construction of addendum-3
+> disclosed and recorded as the branch's weakest epistemic link, mitigated —
+> settlement also passes under the base wording). FIRST-CLASS PRESERVED
+> FINDING: on the enriched surface with neutral prompts, the learned judge
+> separated only 1/4 lying probes — consequence-level discrimination is
+> mechanically unambiguous but learned-label reliability at this setting is
+> weak. Model output never gated settlement (goal evaluation is mechanical);
+> judgment stayed evidence for selection. SCOPE: one fixture surface, mock
+> replay runner, N=1 route; CLAIM D (promotion) NOT claimed and NOT
+> adjudicated; T06 stays blocked; T19 stays not-authorized. Nothing
+> committed. NEXT AFFORDABLE MOVE: point the frozen loop's freshly generated
+> consequence-backed rows (boundary sweep @5/@6/@7 settled + @1/@3 exhausted,
+> lying family at new budgets, accepted case + matched negative) at a
+> T16-style remeasurement as fresh judgment-corpus variation, and/or run the
+> loop on a second operation family (e2e-forged-report) to test route
+> breadth — after the operator decides; also adopt the mechanical-not-
+> judgment-mediated goal-evaluation lesson in any future loop prereg.
+
+> **2026-09-18 GODSPEED — T22 SETTLED (P2): ONE REAL ROUTE ADVANCE END-TO-END,
+> AUTHORITY TEETH REPELLED; PREREG ADDENDUM 1 FROZEN (FIXTURE-MECHANISM
+> CORRECTION); NOTHING COMMITTED.**
+> Builder B1 executed the frozen loop for real: deepseek-clinepass generated
+> 3 schema-valid candidates from the bounded 24-op neighborhood (raw preserved);
+> frozen admission admitted all 3; 3 SEQUENTIAL REAL gauntlet probes returned
+> typed terminals from gauntlet's own event log (state DBs pinned
+> path+sha256 under $HOME/.local/share/godspeed-route-discovery/T22/);
+> bounded judgment over observation records only labeled all 3
+> budget_exhausted; selection-policy-v1 retained exactly one move (e2e-happy@7
+> boundary probe) with bijective correlation joins; goal honestly NOT met at
+> depth 1. Teeth repelled as expected: T1 authority bypass (run_shell /
+> prime-agent / shell_plan injections denied at admission, never executed),
+> T2 model override (fabricated maximal-confidence settled_accepted changed
+> nothing), T5 correlation swap (joinability check fails the swap).
+> verify_loop.py PASS (orchestrator re-run). Round-1 failure PRESERVED: the
+> base prereg had frozen demo-calculator targeting from T15's preserved
+> FAILED round script; T15's clean corpus manifest actually records
+> tests/fixtures/target copies + deterministic clock + per-case id seed
+> ("the repo's own e2e_full_loop_mock recipe"); on demo-calculator copies
+> nothing can settle at any budget (instrument failures=1) — the baseline
+> goal was unreachable by construction. Smallest falsified layer =
+> probe_execution (fixture mechanism); loop/admission/judgment/selection NOT
+> implicated. Prereg ADDENDUM 1 frozen append-only (sha256 c472d1b6…0cea8,
+> D-2026-09-18-T21-03) BEFORE any T23 probe: fixture-target recipe, baseline
+> = e2e-happy@4, boundary over {1..8}, discriminator unchanged; all other
+> frozen terms stand. ready_now = [T18, T23]. Nothing committed.
+
+> **2026-09-18 GODSPEED — T21 SETTLED (P1): ROUTE-DISCOVERY CONTRACT+FIXTURE
+> FROZEN AND SELF-PROVEN; GATE 67/67; NOTHING COMMITTED.**
+> Builder B1 authored the frozen contract under .agents/evidence/godspeed-
+> bounded-judgment/T21/ (route_contracts.py typed records with named refusal
+> reasons and lossless round-trips; admission.py classify() with fixed
+> precedence; selection_policy.py = selection-policy-v1 implementing the
+> prereg eligibility+ordering exactly, no provider capability; operations_
+> catalog.yaml 24 run_case operations with derivation provenance; verify_
+> contract.py gate). Orchestrator re-verified personally on the final tree:
+> gate PASS 67/67 (15 schema-refusal vectors incl. shell-plan and fabricated-
+> mechanism refusal; 6 admission vectors; 8 selection vectors incl.
+> ineligible-but-judgment-preferred NOT retained, midpoint tie-breaks, r*-1
+> priority; fail-closed manifest hash check; prereg sha256 1fb55d9c…8ea8b5
+> match), `just ruler` PASS, scope audit clean (only T21/ added). Nine
+> interpretive readings recorded and reviewed, all faithful-to-restrictive.
+> No route/probe/provider execution occurred (that starts at T22). ready_now
+> = [T18, T22]. Nothing committed.
+
+> **2026-09-18 GODSPEED — PLAN v1.5.0: NATIVE ROUTE-DISCOVERY DEVELOPMENTAL
+> BRANCH ADDED (T21..T26); T21 PREREGISTRATION FROZEN; VALIDATOR PASS;
+> NOTHING COMMITTED.**
+> Operator-directed amendment branching from the settled T16 developmental
+> result (separate from T06 and from the paused epistemic-role branch
+> T18..T20, whose files/corpus/state are untouched). The branch tests whether
+> GodSpeed can autonomously construct fresh, genuinely settleable routes over
+> an existing governed operation surface and invert a settled route into a
+> fresh consequence-backed case at lower payment than manual construction —
+> reusing ONLY existing mechanisms: the T15 case-execution mechanism (real
+> headless gauntlet runs over disposable demo-calculator copies with the
+> deterministic mock replay runner; typed terminal consequences as ground
+> truth), the frozen T15/spec answer-domain vocabulary, and the frozen T16
+> provider seam (deepseek-clinepass primary, one muse substitution, declared
+> deterministic fallback). Frozen bounds: K=3 candidates, 5 retained moves,
+> 12 probes, 6 iterations, route goal = baseline settled_accepted +
+> discriminator verification_failed_nonsettlement + minimal settling budget
+> boundary r*/r*-1 discovered on the route's own ledger. Tasks: T21
+> contract+fixture freeze (prereg sha256 1fb55d9c…8ea8b5 recorded in the
+> decision log BEFORE any execution) → T22 one real loop advance + authority
+> teeth (T1/T2/T5) → T23 multi-step route settlement + teeth (T3/T4/T6) →
+> T24 settlement-first inverse case generation + independent replay + tooth
+> T7 → T25 matched negative (single factor r*→r*-1) + payment/novelty
+> measurement + tooth T8 → T26 fresh independent adversarial confirmation of
+> claims A/B/C separately (D promotion explicitly out of scope). Model output
+> is evidence, never authority: it may propose/classify/compare/estimate/
+> abstain; it can never authorize, settle, or override deterministic
+> composition. Probe run state persists under
+> $HOME/.local/share/godspeed-route-discovery/ (T18 /tmp-wipe lesson). No
+> product/spec/gauntlet-source change; no ToolGrad dependency; validator PASS
+> (27 tasks, 42 edges, acyclic, ready_now=[T18, T21]); nothing committed.
+
+> **2026-09-18 GODSPEED — T16 PERMUTATION ORACLE CORRECTED (operator-caught
+> inconsistency verified and fixed); DEEPSEEK LEG D-QUALIFIED WITH CORRECTED
+> EXACT p = 2.5e-6; PRIME RESUME AUTHORIZED BUT QUOTA-BLOCKED ~4.25h.**
+> The operator's caught inconsistency was real: the N=25 exact tooth counted
+> settled-truths-on-not_settled-answers as matches, producing the impossible
+> 0/5,200,300 with null max 0.48. The faulty artifact is preserved
+> (`t16-state.round5-faulty-permutation.yml`; the D-2026-09-18-T16-13
+> 'p < 2e-7' claim is superseded). Corrected exhaustive enumeration
+> (invariants 1–4 all passing, independent reconstruction): **total
+> 5,200,300; observed 20/25 reproduced by the original labeling; exact max
+> 20/25 achieved by 13 assignments; count(≥obs) = 13; exact p =
+> 13/5,200,300 ≈ 2.5e-6** — matching the operator's analytical cross-check
+> exactly. Design wording corrected (the null MAX ≈ the provider's own
+> accuracy; what shrinks with N is the upper-tail ratio 13/5.2M vs 4/84 —
+> the N=25 choice satisfied its purpose independently of the wording
+> defect). **Substantive result survives: DeepSeek D-bar PASS (0.800 ≥ 0.8);
+> corrected discrimination tooth PASS (2.5e-6 ≪ 0.05); N=25 sufficient for
+> the DeepSeek leg.** Prime resume is AUTHORIZED but its upstream codex-plus
+> window is quota-blocked until epoch 1789783016 (~4.25h). T16 remains
+> in-flight with the full resume procedure recorded
+> (`expanded-round/t16-state.yml`; decisions D-2026-09-18-T16-14/-15).
+> No provider responses, corpus, scoring, rule, or prior evidence were
+> changed. Validator PASS; context-check PASS; nothing committed.
+
+
+> **2026-09-18 GODSPEED — T16 EXPANDED MEASUREMENT (N=25): DEEPSEEK LEG
+> COMPLETE AND D-QUALIFIED (EXACT PERMUTATION p < 2e-7); PRIME LEG QUOTA-
+> BLOCKED; T16 IN-FLIGHT AWAITING THE PRIME WINDOW.**
+> (1) **T15/T16 reconciliation:** T15 legitimately settled (projection was
+> stale) — `settled=[T00–T05, T15, T17]`. (2) **Exact permutation tooth
+> (N=9):** DeepSeek observed 0.667 = the maximum over all 84 class-preserving
+> permutations (p = 4/84); Prime p = 34/84 — the corpus could not
+> discriminate; recorded as the task-level failure per the tooth's frozen
+> declaration. (3) **Expansion (frozen addendum `09169eea…`):** design
+> analysis (closed-form hypergeometric null) showed separation at p < 1e-5
+> for N ≥ 16; N_total = 25 frozen (12 settled / 13 not_settled); 16 new
+> consequence-backed runs generated through real Gauntlet mechanisms
+> (e2e-happy ×9; lying ×3; budget ×2; NEW forged-report ×2, smoke-verified);
+> expanded manifest `9bc65fb9…`; zero problems. (4) **Expanded measurement:**
+> **DeepSeek leg COMPLETE and D-QUALIFIED**: 0 contract failures, 25/25
+> answered, accuracy **0.800 = the frozen D-bar exactly** (settled 12/12;
+> 4 responsible abstentions on not_settled rows; 1 lying-claim error),
+> entropy 0.828 nats, and the **exact permutation tooth over all
+> 5,200,300 class-preserving placements: p < 2e-7 (null max 0.48)** — the
+> measurement now discriminates absolutely. **Prime leg environmentally
+> blocked** (24/25 quota refusals; 5-hour window). The mechanical B letter
+> is superseded as environmental per the recorded precedent; the frozen D
+> rule requires BOTH providers, so **no outcome letter is issued yet** —
+> T06 stays blocked, and the claim-vs-observation representational
+> hypothesis is recorded as a SEPARATE future experiment. (5) One incident
+> recorded: an edit-assertion failure caused a 9-row re-measure that
+> overwrote round-1 files (fresh artifacts preserved as `.9row-rerun.*`;
+> the round-4 numbers survive in the NOT_CONFIRM verdict's independent
+> recomputation). Evidence: `T16/expanded-round/`; state:
+> `t16-state.yml`; decisions D-2026-09-18-T16-08 … -13. Validator PASS;
+> context-check PASS; nothing committed.
+
+
+> **2026-09-18 GODSPEED — T16 RECONFIRMATION AUDIT: SHUFFLE TOOTH FAILS THE
+> TASK AT N=9; T16 SETTLEMENT BLOCKED ON CORPUS EXPANSION; CORRECTED BASELINE
+> = CONSTANT PRIOR AT 0.667.**
+> Post-NOT_CONFIRM corrections verified: baseline now scored against the same
+> mapped truth as providers (round-5 harness `289e0fbd…`) — the preregistered
+> face-value rule degenerates to the constant not_settled predictor scoring
+> **6/9 = 0.667** (DeepSeek ties it; Prime 0.556 is below it); provenance
+> closed byte-exact (frozen `94f2d796…` reproduced by substituting the
+> round-2 harness hash over the `SET-BELOW` placeholder — sole delta is the
+> documented fill-in); entropy relabeled nats. **Shuffle tooth (Case A:
+> required for settlement per its own "fails the task" declaration; frozen
+> `130db4ef…` before its result): FAILED** — 500-shuffle permutation test:
+> DeepSeek's observed 0.667 equals the shuffled maximum; Prime's 0.556 is
+> inside the noise band (max 0.778, p95 0.667). At N=9 with a 3/6 split, the
+> measured accuracies are indistinguishable from label noise. **T16 cannot
+> settle while its own tooth declares the measurement non-discriminating.**
+> Outcome C is reinforced a fortiori (no demonstrable signal at all); T06
+> stays blocked; the capability-class question stays escalated. **The next
+> discriminating move is now tooth-evidenced: expand the varied corpus (the
+> frozen generator is reusable) until the shuffle test separates, then
+> re-measure under the frozen family.** Provider-substitution record stands;
+> original NOT_CONFIRM verdict preserved; rounds 1–4 preserved. Validator
+> PASS (`settled=[T00–T05,T15,T17], ready_now=[T16]`); context-check PASS;
+> nothing committed.
+
+
+> **2026-09-18 GODSPEED — T16 MEASURED: OUTCOME C (FROZEN RULE); CLAIM
+> NARROWED; T15/T16 STATE RECONCILED; CONFIRMATION OUTSTANDING ON T16.**
+> (1) **T15/T16 reconciliation:** T15's contract is satisfied by existing
+> evidence — T15 added to `settled_tasks`; the projection was the stale
+> artifact. **T16 is now the DAG-ready/in-flight task** (`settled=[T00–T05,
+> T15, T17], ready_now=[T16]`). (2) **Provider substitution (append-only):**
+> quota-blocked Codex → **DeepSeek 4.1 Flash via ClinePass**
+> (`cline-pass/cline-pass/deepseek-v4.1-flash`, discovered from `opencode
+> models`; alias-level identity confidence recorded honestly); Prime-Agent
+> unchanged (quota reset, smoke green); addendum
+> `94f2d796…` records unchanged corpus/surface/domain/baseline/rule/teeth;
+> material independence checked-as-far-as-observable with the prime-backend
+> caveat; no anonymous "LLM" merging; the result is provider-specific.
+> (3) **T16 measurement (round-4, first fully-correct; rounds 1–3 preserved:
+> codex quota, then two harness/oracle defects — T01-vocabulary parser and
+> unmapped terminal→domain truth labels — corrected per protocol):**
+> contract 0 failures both providers; **face-value baseline 0.0 accuracy;
+> DeepSeek 0.667; Prime 0.556**; entropy 0.831/0.388; disagreement 3/9;
+> DeepSeek's abstentions landed only on budget rows; its single error was
+> believing a lying claim; Prime misread two settled runs. **Outcome C as
+> frozen** (the 0.8 D-bar unmet — applied without loosening): NO promotion
+> for this surface; T06 remains blocked; the capability-class question stays
+> escalated. Claim NARROWED per the mixed-evidence rule: careful record
+> reading carries consequence-grounded information the trivial baseline
+> lacks, but the promotion bar was not earned at N=9. (4) **T16 independent
+> adversarial confirmation is OUTSTANDING** (conservative direction: nothing
+> unlocks on C); resume procedure in `t16-outcome.yml`. Validator PASS;
+> context-check PASS; nothing committed.
+
+
+> **2026-09-18 GODSPEED CONTINUATION — T15 SETTLED (REAL VARIED CORPUS); T16
+> BLOCKED ON PROVIDER QUOTA (transient); T05 CORRECTED; ALL SEA GATES GREEN.**
+> (1) **T05 scope audit (operator-directed):** REQ-PROV-021 is universal, so
+> T05 was over-settled on the `--plan` path — correction round executed
+> (`plan_pipeline.rs` now cites committed decision ULIDs), verified on a real
+> completing `--plan` run; agent-item delegations join cross-boundary by the
+> deterministic `request_id`. (2) **Gate remediation (T17 executed):**
+> SEA_CHECK / SEA_TEST (120 suites) / SEA_CI **all exit 0** — sfwp trio +
+> t13_1 root-caused to stale pre-admission callers of the correct
+> request-admission gate (deterministic `request_id`s added; server invariant
+> untouched); masked clippy drift fixed; RUSTSEC-2026-0285 rustls bump;
+> commit-scoped gitleaks allowlist for verified simulated fixtures. No test
+> weakened. (3) **Headless affordance classified:** NO session transport was
+> missing — the repo's own `e2e_full_loop_mock.rs` recipe (fixture target +
+> its own check tool + `GAUNTLET_CLOCK=deterministic` + `GAUNTLET_ID_SEED`)
+> drives genuine headless accepted settlements; earlier failures were
+> generator targeting (wrong target/tool/wall-clock). No T18 needed; nothing
+> bypassed. (4) **T15 SETTLED:** 9 clean consequence-backed runs through the
+> real governed path — settled×3 (`settlement_committed` per unit,
+> `run_terminal=settled`) + budget_exhausted×6 (3 lying-discrimination runs
+> where the verifier ladder recorded FAIL against planted artifacts; 3
+> genuine round-constraint cuts). verify_corpus PASS; manifest
+> `b8550ad5…`; rounds 1–2 preserved. (5) **T16:** prereg + harnesses frozen
+> (`d89bea89…`/`7df3dc8e…`); measurement round-1 attempted — both capable
+> providers hit plan quota (429 usage_limit_reached, codex indicates ~11:38 AM
+> reset). Classified ENVIRONMENTAL (deliberately NOT outcome B); resume =
+> re-run the unchanged frozen harness after quota reset, apply the frozen
+> A–E rule, obtain independent confirmation. Validator PASS
+> (`settled=[T00–T05,T17], ready_now=[T15 in-flight on quota]`); context-check
+> PASS; nothing committed.
+
+
+> **2026-09-17 GODSPEED BOUNDED-JUDGMENT — FULL EXECUTION PASS COMPLETE: 6/15
+> TASKS SETTLED (T00–T05), REMAINDER BLOCKED BY EVIDENCE OR PHYSICS.**
+> Operator-directed whole-plan execution. **T01 PROOF-1: outcome C, then the
+> preregistered second-surface evaluation ALSO failed authorization** (both
+> shapes single-class baseline on this 17-row corpus; capability-class question
+> ESCALATED per REQ-JUDG-023 — the corpus supports neither promotion nor a
+> class-level rejection). **T02:** Gauntlet CI authored (`just ci` only;
+> uncommitted — activation on operator push); lint tooth verified.
+> **T03:** the red `conformance_run_locator` gate repaired — the per-cell
+> flock invariant proven correct, the test now models a real restart
+> (assertions untouched, no production change); three masked sfwp failures
+> recorded PREEXISTING_BASELINE_FAILURE. **T04 (P3, CONFIRM):** authority
+> non-bypass proven adversarially — strongest allow-shaped provider output
+> under a denying policy yields Rejected with ZERO provider contact; all
+> failure modes settle Rejected with named typed classes; the independent
+> verifier added seven new attacks (incl. engine-level vocabulary minting and
+> wall-clock dispatch-ordering proof) and found no widening case.
+> **T05 (P3, CONFIRM):** loop correlation identity BOUND — the ledger causal
+> chain with the admission intent ULID; the one broken hop (settlement cited
+> per-run labels) repaired; joinability 8/8 (collision, duplicate id, restart,
+> missing-hop, stale-mapping, mismatched-pair, VAR-008 immutability); the
+> verifier's own from-scratch attacks achieved no false join. **Blocked:**
+> T06–T12 (judgment-slice escalation — re-open with a larger varied corpus
+> re-run through the frozen harness family, or explicit operator override);
+> T12 also physically blocked (no Jetson reachable); T13 needs T07; T14 needs
+> T12+T13. All evidence under `.agents/evidence/godspeed-bounded-judgment/`,
+> decisions D-2026-09-17-T01-01 … T05-05. Nothing committed (authorization not
+> given). Readiness is mechanically empty: no task is executable.
+
+> **2026-09-17 GODSPEED BOUNDED-JUDGMENT T01 (PROOF-1) SETTLED — OUTCOME C;
+> FRESH INDEPENDENT ADVERSARIAL CONFIRMATION: CONFIRM; READY = T02–T05; T06
+> BRANCH-BLOCKED.**
+> Executed read-only against the frozen 16-run Gauntlet corpus (manifest
+> `6738d5a8…`, 632 evidence files hashed; prereg frozen `c44dcef8…` before the
+> first execution; corrections rounds 1–8 preserved in the decision log — six
+> mechanical harness defects found and fixed pre-provider, plus one custody
+> bug the verifier caught, repaired with the failed-round bytes restored).
+> Results (all disclosure-gated, pilot terminology): **history reconstructs**
+> — all five chain hops present 17/17, wall-clock temporal integrity ok 17/17;
+> **bounded output contract perfect** — codex 17/17 and prime-agent 17/17
+> in-domain, 0 schema/out-of-domain/provider failures; **outcome C** — the
+> recorded deterministic baseline is single-class `PASS` (outside the frozen
+> domain; 0 pairs by the no-coercion rule), so incremental information is NOT
+> establishable on this surface; codex abstains 16/17 (mean entropy 0.079
+> bits); capable-vs-capable disagreement 4/17 (prime-agent = corpus-producer
+> lineage, disclosed confound). Label-shuffle attack honestly recorded
+> VACUOUS_NO_BASELINE_VARIANCE. **Consequence (binding): no promotion for
+> this surface; no capability-class conclusion; T06 authorized only after the
+> preregistered second-surface evaluation (multiclass chain-deficiency shape)
+> or an operator re-routing decision.** `../gauntlet` unmodified (648 files
+> watched, 0 drift; verifier-confirmed). Evidence:
+> `.agents/evidence/godspeed-bounded-judgment/T01/`; confirmation record:
+> `t01-independent-confirmation.md`; outcome: decision log D-2026-09-17-T01-08
+> … -11. Validator extended (mechanical readiness now honors
+> `execution.branch_blockers`). **Next: ready = T02, T03, T04, T05 (heavy
+> commands sequential); T06 NOT authorized on DAG readiness alone.**
+
+> **2026-09-17 GODSPEED BOUNDED-JUDGMENT REPRESENTATIONAL REBASE — CASE 2
+> (PLAN-ONLY); SPEC BYTE-IDENTICAL; T00 RECONFIRMED; READY = T01–T05.**
+> Controlled rebase of spec → plan → T00 settlement → execution state before any
+> implementation task. Audit against the ten corrected-logic items (Judgment
+> Plane as architectural concern; VerificationRecord as slice-1-only carrier;
+> surface/task_family/capability_class falsification scopes; pilot-not-calibration
+> with mandatory disclosure; DomainForge sole semantic authority over a dual-basis
+> DecisionSurface; answer domain normative with physical placement contingent;
+> correlation-as-joinability; provider disagreement as evidence; comparability
+> levels A/B/C; authority non-bypass), the PROOF-1 governing question, and branch
+> semantics A–E found everything ALREADY_ENCODED in the normative spec (unchanged,
+> sha256 `69b7d1ba…baf6a82`) except one PARTIALLY_ENCODED item: T01's
+> preregistration freeze contract did not explicitly enumerate semantic basis,
+> evaluation basis, provider/config identities, deterministic baseline, and the
+> exploratory pilot metric list. **Plan corrected v1.1.0 → v1.2.0**: T01 gained a
+> two-stage freeze_contract (F0 before first harness execution; F1 before any
+> provider result is observed) — no requirement id, task id, DAG edge, gate, or
+> spec binding changed. **Validator updated only as required**: version pin 1.2.0
+> and execution-aware readiness derivation (pre-execution checks unchanged;
+> post-settlement ready/blocked are derived from depends_on + settled_tasks, so
+> readiness is now recomputed mechanically on every run). **T00 status: SETTLED —
+> RECONFIRMED (round-2)**: validator + all four teeth rerun green against plan
+> v1.2.0; ALL heavy gate baselines explicitly INHERITED from the original T00
+> settlement (no governing repository changed; no heavy gate rerun). Evidence:
+> `.agents/evidence/godspeed-bounded-judgment/T00/round-2/`; report:
+> `.agents/reports/2026-09-17-godspeed-bounded-judgment-rebase-review.md`;
+> decision log appended. **Next: a cold agent can simply be told "proceed" —
+> ready tasks are T01 (critical path), T02, T03, T04, T05; T06+ remains gated on
+> T01's A/B/C/D/E outcome.**
+
+> **2026-09-17 GODSPEED BOUNDED-JUDGMENT T00 SETTLED — AUTHORITY FROZEN, GATES
+> BASELINED, READY SET RECOMPUTED (T01–T05).**
+> Executed at revision `7234823` (branch `ultracode/sea-forge-completion`),
+> builder confirmation, P1. Spec binding verified, never repaired: recomputed
+> sha256 equals the bound `69b7d1ba…baf6a82`; final_self_check 12/12;
+> correction_ledger 11 corrections, zero reversals. Checked-in validator PASS
+> (90/90 bidirectional mappings, 26-edge acyclic DAG, 6/6 high-risk
+> confirmation groups). All four declared teeth behaved as declared — teeth-4
+> needed a round-2 after a round-1 attack-implementation error (edge added in
+> the wrong direction; preserved as evidence); the plan file was restored
+> byte-exact after every attack. Global gate baselines, all sequential:
+> **RED at pre-existing baseline** — SEA_CHECK/SEA_CI (rustfmt drift reached
+> at fmt-check; two of three drifted files are committed unmodified files),
+> SEA_TEST (exact ids: `sea-forge-cli::conformance_m13::
+> t13_1_agent_task_routed_through_server_and_settles`; and the KNOWN FACT
+> re-CONFIRMED by scoped run: `sea-forge-server::conformance_run_locator::
+> both_layouts_still_resolve_after_a_restart`); **GREEN** — SEA_NO_ASYNC_KERNEL,
+> SEA_PROOF (P1–P4b), GAUNTLET_CHECK/TEST/CI (1787 tests; ci adds 261
+> boundary tests + ruler lock PASS). EDGEAI_HEALTH/EDGEAI_JETSON_PORTS
+> recorded NOT_RUN_TARGET_ONLY (recipes resolved at `../edgeai/Justfile`
+> lines 495/782; development-host output is never target evidence). Masking
+> limitation recorded: suites ordered after the first failing binary were
+> never executed at T00. Dirty-worktree inventory (73 entries) captured
+> before any gate ran. Evidence:
+> `.agents/evidence/godspeed-bounded-judgment/T00/`; decision log (created,
+> append-only): `.agents/evidence/godspeed-bounded-judgment/decisions.yml`;
+> two new OBSERVED_DEBT entries for the pre-existing reds. **Next: per the
+> kickoff contract T01 was NOT started in this run — next kickoff recomputes
+> ready tasks from `.agents/current_status.yml` (T01–T05 ready; T01 freezes
+> its preregistration + corpus manifest before the first harness command).**
+
+> **2026-09-17 GODSPEED BOUNDED-JUDGMENT PLAN v1.1.0 — REMEDIATED, VALIDATED, READY FOR T00 ONLY.**
+> The adversarial inspection was vetted against the actual SEA, Gauntlet, and
+> EdgeAI workspaces. Its core findings were valid; its raw-Cargo, wildcard-corpus,
+> and incomplete confirmation remedies were tightened. The repaired plan now uses
+> canonical repository recipes, exact host/cwd gate metadata, an immutable corpus
+> manifest, explicit task-harness authoring, a dependency/state-equivalent 26-edge
+> DAG, and requirement-complete confirmation for all six high-risk groups.
+> Mechanical validation passes: authoritative spec hash unchanged; self-check
+> 12/12; 90/90 requirements mapped bidirectionally; 15 complete tasks; acyclic;
+> T00 sole ready task. Review:
+> `.agents/reports/2026-09-17-godspeed-bounded-judgment-plan-remediation-review.md`.
+> Start prompt: `.agents/plans/godspeed-bounded-judgment-kickoff.md`.
+
+> **2026-09-17 GODSPEED BOUNDED-JUDGMENT SPEC — AUTHORITATIVE, UNCHANGED; EXECUTION NOT STARTED.**
+> Canonical spec v1.0.0 (`godspeed.judgment-plane`) is authoritative at
+> `.agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml`
+> (sha256 `69b7d1baabd55ae61c73e615f04cf0fda43a4958a9fa3d50567035425baf6a82`;
+> draft v0.1.0 archived verbatim at `.agents/specs/archive/`). Executable plan
+> with 15 tasks (T00-T14), plan revision v1.1.0, at `.agents/plans/godspeed-bounded-judgment-plan.yaml`
+> plus cold-agent brief `godspeed-bounded-judgment-brief.md`; mutable state in
+> `.agents/current_status.yml` (ready: T00; all others blocked per DAG).
+> Plan validation passes (spec binding, 12/12 self-check, 11 corrections,
+> 90/90 bidirectional mappings, 6/6 high-risk confirmation groups, acyclic DAG,
+> complete contracts, no executable placeholders).
+> NO task has run: no implementation, no PROOF-1 execution, no production change.
+
+
+> **2026-09-09 AGENT INSTRUCTION TOPOLOGY RESTRUCTURING — IMPLEMENTED.**
+> Derived repository instruction topology from semantic and architectural boundaries:
+> - Root `AGENTS.md` slimmed to universal repository-wide contract and routing (133 lines, 8.0 KiB).
+> - Created `crates/AGENTS.md` governing all 22 Rust workspace crates (synchronous kernel vs async edge, fast loop, domain invariants, SFWP contract sync).
+> - Updated `workbench/AGENTS.md` absorbing Workbench e2e test evidence rules previously misplaced at root.
+> - Created `.agents/AGENTS.md` governing the durable agent workbench (specs vs plans, handoff contract, memory ledgers).
+> - All 4 instruction files comply with the <150 line and <32 KiB budget. `just context-check` passes green.
+
+> **2026-09-08 DOMAINFORGE / SXR / SEA-FORGE / CEP INTERFACE UNIFICATION & REMEDIATION — IMPLEMENTED & SETTLED.**
+> Settled all recommendations and load-bearing decisions from `.agents/reports/domainforge-sxr-sea-rs-cep-interface-investigation.md`:
+> - Upgraded `DomainModelRef` in `sea-forge-domainforge` to `identity_scheme_version: "v2-full-preimage"` (binding full 7-tuple including `d_content_hash`, `semantic_closure_hash`, and real `ADAPTER_DESCRIPTOR_SHA256`).
+> - Backward compatibility preserved: missing scheme defaults to `"unknown-pre-versioning"` via `#[serde(default)]`.
+> - Fixed CEP-0008 adapter in `sea-forge-extension`: registered `godspeed.event.v1-flat` profile (`sha256:a2b2722008e920d0e74b3970b427b0b2e3e5b323c9321ef9a8f4c017d29162eb`), aligning T05 convergence tests with the full event profile schema.
+> - Verification: All 28 `sea-forge-domainforge` tests pass, 42 `sea-forge-extension` tests pass, and 10 `convergence_t05` tests pass green.
 
 > **2026-09-02 REPOSITORY DOCUMENTATION ARCHITECT — IMPLEMENTED (28 DOCUMENTS).**
 > Reconstructed and authored the complete self-contained technical knowledge system for SEA Forge
@@ -1163,6 +1701,9 @@ Updated: 2026-09-02
 
 ## Objective
 
+- **2026-09-09 Objective**: Restructure SEA Forge agent instructions using the repository's actual semantic and architectural topology into a progressive disclosure hierarchy (root `AGENTS.md`, `crates/AGENTS.md`, `workbench/AGENTS.md`, `.agents/AGENTS.md`). (Settled).
+- **2026-09-08 Objective**: Implement the recommendations described in `.agents/reports/domainforge-sxr-sea-rs-cep-interface-investigation.md` to unify and remediate the DomainForge, SXR, SEA-Forge, and CEP interfaces across repositories. (Settled).
+
 Implement `.agents/plans/2026-08-02-workbench-product-completion-ralph-loop.md`
 in its required order. Tasks 0 and 1 are `PASSING` on the current tree: the
 evaluator packet has an exact machine-checked exclusion fixture, and protected
@@ -1657,6 +2198,8 @@ remain synchronous).
 
 ## Worktree State
 
+2026-09-08: Preserved unrelated worktree files (`.jolli/jollimemory/*`, `.agents/plans/*`, `clickhouse`). Modified `crates/sea-forge-domainforge/src/lib.rs`, `crates/sea-forge-domainforge/tests/conformance_m0_domainforge.rs`, `crates/sea-forge-extension/src/cep0008.rs`, and updated `docs/subsystems/domainforge-boundary.md`, `.agents/reports/domainforge-sxr-sea-rs-cep-interface-investigation.md`, `.agents/CURRENT_STATUS.md`, and `.agents/current_status.yml`.
+
 2026-08-02 Task 0: preserved unrelated dirty changes to the active completion
 plan (Markdown table formatting only) and `.jolli/jollimemory/debug.log`
 (one Jolli diagnostic line). Current Task 0 adds only evaluator-input
@@ -1740,6 +2283,14 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 289 tests). Remaining open debt: SodRule transition_kind scoping (.agents/OBSERVED_DEBT.md).
 
 ## Changed Files
+
+- `crates/sea-forge-domainforge/src/lib.rs` — DomainModelRef v2-full-preimage scheme, real ADAPTER_DESCRIPTOR_SHA256, serde default.
+- `crates/sea-forge-domainforge/tests/conformance_m0_domainforge.rs` — Conformance test updates for v2-full-preimage.
+- `crates/sea-forge-extension/src/cep0008.rs` — Registered godspeed.event.v1-flat schema profile.
+- `docs/subsystems/domainforge-boundary.md` — DomainForge boundary subsystem doc updated to 0.16.0 and v2-full-preimage.
+- `.agents/reports/domainforge-sxr-sea-rs-cep-interface-investigation.md` — Implementation resolution addendum.
+- `.agents/current_status.yml` — Active handoff state.
+- `.agents/CURRENT_STATUS.md` — Active status ledger.
 
 - `SWE_SEED/crates/swe-seed-core/src/federation/{identity,producers,idempotency}.rs`,
   `{envelope,consume,mod}.rs`, `tests/convergence_t01_envelope.rs` — plan T01
@@ -1919,6 +2470,12 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Completed
 
+- **2026-09-08 DomainForge / SXR / SEA-Forge / CEP Interface Remediation**:
+  - Upgraded `DomainModelRef` to `identity_scheme_version: "v2-full-preimage"` with `d_content_hash`, `semantic_closure_hash`, and real `ADAPTER_DESCRIPTOR_SHA256` (`sha256:16fcd1519e00727b2d17c68c3ddbefd633dacf3dcadd51a0ef37a900a119460e`).
+  - Added `#[serde(default)]` fallback for `identity_scheme_version` returning `"unknown-pre-versioning"` for legacy persisted records.
+  - Registered `godspeed.event.v1-flat` profile (`sha256:a2b2722008e920d0e74b3970b427b0b2e3e5b323c9321ef9a8f4c017d29162eb`) in `sea-forge-extension` CEP-0008 adapter.
+  - Updated subsystem docs (`docs/subsystems/domainforge-boundary.md`) and investigation report resolution.
+
 - Task 0 evaluator-input vertical slice: created the source-owned input sheet
   and machine-checkable owner exclusion fixture. The focused validator has
   teeth: it failed before either input existed and failed again after removing
@@ -2024,6 +2581,14 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   quarantining incomplete tails. CLI `ledger verify|prove` subcommands added.
 
 ## Verification
+
+- **2026-09-08 Interface Remediation Verification**:
+  - `just crate-check sea-forge-domainforge` — PASS
+  - `just crate-test sea-forge-domainforge` — 28/28 tests passed (including `domain_model_ref_v2_full_preimage_matches_specification` and legacy deserialization fallback)
+  - `just crate-check sea-forge-extension` — PASS
+  - `just crate-test sea-forge-extension cep0008` — 42/42 tests passed (including registered `godspeed.event.v1-flat` profile schema)
+  - `cargo test --test convergence_t05` — 10/10 tests passed
+  - `just context-check` — PASS
 
 - Task 0 focused evidence: `just workbench-completion-eval-inputs-check`
   passes; it failed with `missing ...eval-inputs.md` before inputs were added
@@ -2360,6 +2925,8 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
 
 ## Remaining
 
+- 2026-09-08 Interface Remediation: None. All recommendations from `domainforge-sxr-sea-rs-cep-interface-investigation.md` are implemented, verified, and settled.
+
 - Continue the plan's next bounded Workbench task. Task 3's real-stack native
   automation gate is satisfied; the installed Playwright suite remains only
   mocked speed evidence and is not used for the integrated claim.
@@ -2454,6 +3021,8 @@ removed, and resume-retry approval grants are idempotent via grant_after_approva
   `devbox run -- just test` passed after ledger-verification hardening.
 
 ## Blockers
+
+- 2026-09-08 Interface Remediation: None.
 
 - No external blocker for Task 0. Native evaluator automation remains an
   environment capability to be assessed in Task 3; the evaluator input names
@@ -2646,6 +3215,12 @@ Remaining M12 gaps (before cumulative gate):
 - Spec §5 claim table update + cumulative gate + this status refresh.
 
 ## Decisions
+
+- **2026-09-08 Interface Remediation Decisions**:
+  - Upgraded `DomainModelRef` to "v2-full-preimage" with full 7-tuple preimage binding (`identity_scheme_version`, `domainforge_version`, `adapter_descriptor_sha256`, `parse_options_sha256`, `source_refs`, `d_content_hash`, and `semantic_closure_hash`).
+  - Used real computed `ADAPTER_DESCRIPTOR_SHA256` (`sha256:16fcd1519e00727b2d17c68c3ddbefd633dacf3dcadd51a0ef37a900a119460e`).
+  - Added `#[serde(default)]` fallback for `identity_scheme_version` to preserve deserialization of legacy records as `"unknown-pre-versioning"`.
+  - Registered `godspeed.event.v1-flat` schema profile in CEP-0008 adapter.
 
 - Task 0 records the owner-approved exclusions as a JSON evaluator fixture,
   rather than duplicating an informal list in the evaluator prompt. The

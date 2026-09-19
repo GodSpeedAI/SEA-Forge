@@ -69,6 +69,7 @@ This document is the navigational index and sitemap for the **SEA Forge Technica
 | [`explanation/synchronous-kernel-boundary.md`](file:///c:/Users/sprim/projects/sea-rs/docs/explanation/synchronous-kernel-boundary.md) | Rationale for Invariant BUILD-01 (19 async-free crates, Tokio isolated to edges) | Rust developer / dependency auditor | Explanation | `architecture.md` | `how-to/run-and-verify-gates.md` |
 | [`explanation/append-only-truth-rebuildable-views.md`](file:///c:/Users/sprim/projects/sea-rs/docs/explanation/append-only-truth-rebuildable-views.md) | Rationale for Invariant DATA-01 (append-only ledgers vs disposable projections) | Database architect / storage engineer | Explanation | `architecture.md` | `subsystems/integrity-ledger.md` |
 | [`explanation/landlock-jail-security-model.md`](file:///c:/Users/sprim/projects/sea-rs/docs/explanation/landlock-jail-security-model.md) | Linux Landlock ABI v1-v6 filesystem and network isolation security analysis | Platform security engineer | Explanation | `architecture.md` | `subsystems/sandbox-runtime.md` |
+| [`explanation/native-route-discovery.md`](docs/explanation/native-route-discovery.md) | Earned structure of consequence-guided route discovery: candidates → governed probes → consequence → deterministic retention; route-to-case inversion; learned vs mechanical discrimination | Systems engineer / agent-architecture engineer | Explanation | `architecture.md`, `mental-model.md` | `explanations-and-references/goodspeed-loop.md`, `subsystems/settlement-evidence.md` |
 
 ### 6. Tutorials (Layer 6)
 

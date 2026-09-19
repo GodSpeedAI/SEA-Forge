@@ -39,7 +39,7 @@ export function ProofPage() {
 
   return (
     <main style={{ padding: "var(--space-6)", display: "grid", gap: "var(--space-4)" }}>
-      <h1 style={{ font: "var(--text-page-title)" }}>SEA Forge Workbench — stack proof</h1>
+      <h1 style={{ font: "var(--text-page-title)" }}>SEA Forge Workbench: stack proof</h1>
 
       <section style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
         <Button

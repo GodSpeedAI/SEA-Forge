@@ -65,7 +65,12 @@ fn main() {
     let root = PathBuf::from(env_required("SEA_FORGE_ROOT"));
     let endpoint_url = env_required("SEA_FORGE_GAUNTLET_ENDPOINT_URL");
 
-    if root.exists() && root.read_dir().map(|mut d| d.next().is_some()).unwrap_or(false) {
+    if root.exists()
+        && root
+            .read_dir()
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(false)
+    {
         eprintln!(
             "journey_gauntlet_bootstrap: {} is not empty; refuse to bootstrap over an existing cell",
             root.display()

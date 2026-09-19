@@ -37,7 +37,7 @@ const SECTIONS: readonly KindSection[] = [
     kind: "plan_template",
     heading: "Plan templates",
     standingLede:
-      "A template is materialized on disk or it is not — that is the only fact a template has. Materialization says nothing about whether a case built from it will be authorized.",
+      "A template is materialized on disk or it is not. That is the only fact a template has. Materialization says nothing about whether a case built from it will be authorized.",
     emptyLede:
       "No template has been materialized in this cell. That is a fact about this cell, not a failure to read it.",
     nameHeading: "Template",
@@ -46,7 +46,7 @@ const SECTIONS: readonly KindSection[] = [
     kind: "agent_endpoint",
     heading: "Agent endpoints",
     standingLede:
-      "Declared, probed, then demonstrated. The kernel refuses a status asserted in configuration, so this ladder is only ever climbed by a settled probe — and the most recent probe decides, so an endpoint that has started failing does not keep an old demonstration.",
+      "Declared, probed, then demonstrated. The kernel refuses a status asserted in configuration, so this ladder is only ever climbed by a settled probe. The most recent probe decides, so an endpoint that has started failing does not keep an old demonstration.",
     emptyLede:
       "No agent endpoint is configured in this cell. Delegation has nowhere to go until one is.",
     nameHeading: "Endpoint",
@@ -168,7 +168,7 @@ export function AssetCatalogPage() {
         </p>
         <p className={styles.muted}>
           Read on demand. No durable event kind announces a template, endpoint, or
-          extension change, so this catalog is not live — re-read it after probing an
+          extension change, so this catalog is not live. Re-read it after probing an
           endpoint or installing an extension.{" "}
           <button type="button" className="button" onClick={refresh} disabled={isFetching}>
             {isFetching ? "Re-reading…" : "Re-read catalog"}
@@ -185,7 +185,7 @@ export function AssetCatalogPage() {
       {unreadable.length > 0 && (
         <div role="alert" className={styles.alert}>
           {unreadable.length} asset source(s) exist but could not be read:{" "}
-          {unreadable.join(", ")}. These are not absent assets — they are unreadable
+          {unreadable.join(", ")}. These are not absent assets. They are unreadable
           ones, which is an integrity signal worth investigating.
         </div>
       )}

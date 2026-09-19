@@ -763,9 +763,12 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 settled.settlement_id.clone(),
             ],
             &settled,
-            decisions
+            // T05: cite the authority decisions by their committed ledger
+            // entry ULIDs, not per-run decision_id labels — the settlement
+            // hop must join by causal reference alone.
+            committed_decisions
                 .iter()
-                .map(|decision| decision.decision_id.clone())
+                .map(|reference| reference.entry_ulid().to_string())
                 .collect(),
         )?;
         write_json(&run_dir.join("settlement.json"), &settled)?;

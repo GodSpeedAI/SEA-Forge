@@ -1,0 +1,171 @@
+# =============================================================================
+# T23 round-3 route record — goal recomputed under the FROZEN addendum-3
+# mechanical discriminator rule over the PRESERVED route t23-route-001 ledger.
+# Append-only: round-1 and round-2 records are untouched; no probes re-run;
+# no provider calls this round (the rule is deterministic over records).
+# =============================================================================
+schema: godspeed-bounded-judgment.t23-route-record.round3
+correction_round: 3
+route_id: t23-route-001
+frozen_rule:
+  addendum3_path: .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.addendum-3.yaml
+  addendum3_sha256: 1c13889ae0c2a9621b7f0b803b327ee6dd76a16983c9ed72b00ff309f59c6ddb
+  authority_chain:
+    base_prereg_sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+    addendum1_sha256: c472d1b63248ff5895433df16c545c4e145c8171e9d475a8f4b0732fa1c0cea8
+    addendum2_sha256: 087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a
+    addendum3_sha256: 1c13889ae0c2a9621b7f0b803b327ee6dd76a16983c9ed72b00ff309f59c6ddb
+  discriminator_restatement: >-
+    A route probe of the e2e-lying family mechanically classified
+    verification_failed_nonsettlement by the frozen mechanical rule, from
+    this route's own preserved ledger; learned judgment labels are recorded
+    beside it and feed selection/claims/payment, never the goal.
+basis:
+  round1_route_record_sha256: 9345c43e6787ef32fbe1a7749c90872de7b5be4b46f73af9708516f4f8ded67e
+  round2_route_record_sha256: 147f12e072dc7b578f11bd5d57b4fb7fd1caed7330b73e33acaf3c69eb04a416
+  note: >-
+    round-1 records are complete-but-unsettled and round-2 records record the
+    preserved judgment non-separation; both remain byte-identical (re-verified
+    against their manifests by verify_route.round3.py). This round-3 record
+    applies the frozen addendum-3 mechanical rule to the SAME preserved
+    observations and recomputes the goal.
+probe_count: 12
+probes_rerun: 0
+mechanical_labels_table:
+- {probe_id: probe-i1-cand-1, scenario: e2e-happy, max_rounds: 4, terminal: settled,
+  settlements: 3, rule_clauses: {c1: false, c2: false, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: settled, round1_label: settled_accepted, round2_label: settled_accepted}
+- {probe_id: probe-i1-cand-2, scenario: e2e-happy, max_rounds: 3, terminal: budget_exhausted,
+  settlements: 2, rule_clauses: {c1: true, c2: false, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: budget_exhausted, round1_label: budget_exhausted,
+  round2_label: budget_exhausted}
+- {probe_id: probe-i1-cand-3, scenario: e2e-lying, max_rounds: 4, terminal: budget_exhausted,
+  settlements: 0, rule_clauses: {c1: true, c2: true, c3: true},
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2,
+  mechanical_label: verification_failed_nonsettlement, round1_label: budget_exhausted,
+  round2_label: budget_exhausted}
+- {probe_id: probe-i2-cand-1, scenario: e2e-happy, max_rounds: 5, terminal: settled,
+  settlements: 3, rule_clauses: {c1: false, c2: false, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: settled, round1_label: settled_accepted, round2_label: settled_accepted}
+- {probe_id: probe-i2-cand-2, scenario: e2e-lying, max_rounds: 5, terminal: budget_exhausted,
+  settlements: 0, rule_clauses: {c1: true, c2: true, c3: true},
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2,
+  mechanical_label: verification_failed_nonsettlement, round1_label: budget_exhausted,
+  round2_label: budget_exhausted}
+- {probe_id: probe-i2-cand-3, scenario: e2e-happy, max_rounds: 6, terminal: settled,
+  settlements: 3, rule_clauses: {c1: false, c2: false, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: settled, round1_label: settled_accepted, round2_label: settled_accepted}
+- {probe_id: probe-i3-cand-1, scenario: e2e-happy, max_rounds: 2, terminal: budget_exhausted,
+  settlements: 1, rule_clauses: {c1: true, c2: false, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: budget_exhausted, round1_label: budget_exhausted,
+  round2_label: budget_exhausted}
+- {probe_id: probe-i3-cand-2, scenario: e2e-happy, max_rounds: 8, terminal: settled,
+  settlements: 3, rule_clauses: {c1: false, c2: false, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: settled, round1_label: settled_accepted, round2_label: settled_accepted}
+- {probe_id: probe-i3-cand-3, scenario: e2e-lying, max_rounds: 2, terminal: budget_exhausted,
+  settlements: 0, rule_clauses: {c1: true, c2: true, c3: true},
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2,
+  mechanical_label: verification_failed_nonsettlement, round1_label: budget_exhausted,
+  round2_label: verification_failed_nonsettlement}
+- {probe_id: probe-i4-cand-1, scenario: e2e-lying, max_rounds: 8, terminal: budget_exhausted,
+  settlements: 0, rule_clauses: {c1: true, c2: true, c3: true},
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2,
+  mechanical_label: verification_failed_nonsettlement, round1_label: budget_exhausted,
+  round2_label: budget_exhausted}
+- {probe_id: probe-i4-cand-2, scenario: e2e-happy, max_rounds: 1, terminal: budget_exhausted,
+  settlements: 0, rule_clauses: {c1: true, c2: true, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: budget_exhausted, round1_label: budget_exhausted,
+  round2_label: budget_exhausted}
+- {probe_id: probe-i4-cand-3, scenario: e2e-happy, max_rounds: 7, terminal: settled,
+  settlements: 3, rule_clauses: {c1: false, c2: false, c3: false}, failing_artifact_sha256: '',
+  mechanical_label: settled, round1_label: settled_accepted, round2_label: settled_accepted}
+separation:
+  lying_count: 4
+  lying_all_verification_failed_nonsettlement: true
+  honest_count: 8
+  honest_none_verification_failed_nonsettlement: true
+  verdict: separated
+goal_evaluation:
+  goal: >-
+    addendum-3 restated goal: baseline e2e-happy@4 settled_accepted +
+    discriminator = a route probe of the e2e-lying family mechanically
+    classified verification_failed_nonsettlement by the frozen mechanical rule
+    from this route's own preserved ledger, with the symmetry property (all 4
+    e2e-lying probes trigger, no e2e-happy probe triggers) + boundary r*/r*-1
+    on THIS route's ledger
+  baseline_met: true
+  baseline_basis: >-
+    e2e-happy@4 (probe-i1-cand-1): terminal settled with 3 settlement_committed
+    events behind the pinned DB, round-1 judgment settled_accepted
+  r_star: 4
+  boundary_met: true
+  boundary_basis: >-
+    r* = 4 (minimal settling e2e-happy budget on this ledger); r*-1 = 3
+    (probe-i1-cand-2) budget_exhausted; also e2e-happy@2 (probe-i3-cand-1)
+    budget_exhausted — both on this route's own probes
+  discriminator_met: true
+  discriminator_basis: >-
+    mechanical separation verdict "separated": all 4 e2e-lying probes
+    (e2e-lying@2/@4/@5/@8) satisfy clauses c1+c2+c3 against hash-verified
+    failing artifacts; none of the 8 e2e-happy probes triggers the rule
+  goal_met: true
+  evaluated_at_utc: '2026-09-19T03:30:00+00:00'
+  honesty_note: >-
+    goal_met under addendum-3 does NOT retract the preserved round-2 finding:
+    the learned judge separated only 1/4 lying probes on the corrected
+    surface. Both results are reported together to T25/T26.
+route_record:
+  route_id: t23-route-001
+  correlation_id: t23-route-001-iter4
+  settled: true
+  stop_condition: route_settled
+  settled_basis: >-
+    addendum-3 goal recomputation over the preserved round-1 ledger; the
+    ledger itself is UNCHANGED from round 1 (no probe re-run, no new probe)
+  moves:
+  - {scenario: e2e-happy, max_rounds: 3, terminal_class: budget_exhausted}
+  - {scenario: e2e-happy, max_rounds: 6, terminal_class: settled}
+  - {scenario: e2e-happy, max_rounds: 2, terminal_class: budget_exhausted}
+  fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+  fingerprint_unchanged_from_round1: true
+  correlation_ids:
+  - t23-route-001-iter1
+  - t23-route-001-iter2
+  - t23-route-001-iter3
+  - t23-route-001-iter4
+  policy_version: selection-policy-v1
+  prereg_sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+  opened_at_utc: '2026-09-19T02:24:11.221077+00:00'
+  closed_at_utc: '2026-09-19T02:28:47.202155+00:00'
+  note: >-
+    retained-move ledger, correlation ids, policy version, fingerprint and the
+    opened/closed timestamps are the round-1 ones unchanged; only settled and
+    stop_condition are recomputed under the frozen addendum-3 rule
+preserved_finding_judgment_nonseparation:
+  source: round-2 (preserved; addendum-2 corrected surface, K=1 primary provider)
+  verdict: not_separated
+  lying_labeled_vfn_count: 1
+  lying_labeled_vfn_probe_ids: [probe-i3-cand-3]
+  detail: >-
+    With the enriched corrected surface (artifact contents by sha256 pin,
+    dispatch patterns) and neutral prompts, the primary provider produced the
+    verification-failed label for only 1 of 4 lying probes (e2e-lying@2);
+    e2e-lying@4/@5/@8 stayed budget_exhausted. The consequence-level
+    discrimination is mechanically unambiguous (this round's separation),
+    but the learned judge did not reliably map it to the frozen label at
+    this K=1 provider setting. Falsified layer: bounded judgment (label
+    reliability). Preserved verbatim under T23/round-2/provider-raw/.
+  carried_to: [T25 payment/usefulness evaluation, T26 claims adjudication]
+payment:
+  probes: 12
+  probes_rerun: 0
+  round1_probe_run_provider_calls: 16
+  round2_rejudgment_provider_calls: 12
+  round3_provider_calls: 0
+  detail_refs:
+  - T23/route/payment-counters.yaml
+  - T23/round-2/payment-counters.round2.yaml
+  note: >-
+    round 3 makes NO provider calls: the mechanical rule is deterministic
+    over preserved records (addendum-3 role clause: the mechanical label is
+    the GOAL evaluation input, a deterministic route-evaluator layer).

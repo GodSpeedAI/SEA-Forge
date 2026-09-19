@@ -1,0 +1,7 @@
+tooth: duplicate_rows
+effective_diversity_real: 5.897959183673469
+effective_diversity_inflated: 5.2631578947368425
+expected: the concentration report exposes the inflation; effective diversity contradicts the inflated N
+behaved_as_specified: true
+mode: duplicate-rows
+executed_at: '2026-09-18T00:28:59.683406+00:00'

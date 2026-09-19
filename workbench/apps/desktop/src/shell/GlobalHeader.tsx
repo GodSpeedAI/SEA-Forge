@@ -26,9 +26,12 @@ export interface GlobalHeaderProps {
   integrityStatus?: "verified" | "compromised" | "checking" | "unverified";
   /** Pending approvals; `undefined` while unknown, which is not zero. */
   inboxCount?: number;
+  /** Present only when command search exists. Absent hides the button. */
   onOpenSearch?: () => void;
   onOpenInbox?: () => void;
   onToggleEvidence?: () => void;
+  /** Active work summary; `undefined` renders as Unknown, never as None. */
+  activeWorkLabel?: string;
 }
 
 /** Rendered wherever a value has no source. Never styled as a success state. */
@@ -45,6 +48,7 @@ export function GlobalHeader({
   onOpenSearch,
   onOpenInbox,
   onToggleEvidence,
+  activeWorkLabel,
 }: GlobalHeaderProps) {
   const actorLabel =
     actorName && roleName ? `${actorName} · ${roleName}` : (actorName ?? UNRESOLVED);
@@ -117,16 +121,18 @@ export function GlobalHeader({
       </div>
 
       <div className={`${styles.globalActions} global-actions`}>
-        <button
-          type="button"
-          id="searchButton"
-          className={`${styles.iconButton} icon-button`}
-          onClick={onOpenSearch}
-          aria-label="Open command search"
-          title="Search (/)"
-        >
-          <span aria-hidden="true">⌕</span>
-        </button>
+        {onOpenSearch && (
+          <button
+            type="button"
+            id="searchButton"
+            className={`${styles.iconButton} icon-button`}
+            onClick={onOpenSearch}
+            aria-label="Open command search"
+            title="Search (/)"
+          >
+            <span aria-hidden="true">⌕</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -142,11 +148,11 @@ export function GlobalHeader({
           type="button"
           className={`${styles.activeWork} active-work`}
           onClick={onToggleEvidence}
-          aria-label="Toggle active work evidence"
+          aria-label={`Active work: ${activeWorkLabel ?? "unknown"}`}
         >
           <span className="state-dot state-dot--running" />
           <span>Active work</span>
-          <strong>None running</strong>
+          <strong>{activeWorkLabel ?? "Unknown"}</strong>
         </button>
       </div>
     </header>

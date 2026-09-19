@@ -1,0 +1,157 @@
+# =============================================================================
+# T16 CLOSURE ADDENDUM — reconciled final record
+# =============================================================================
+schema: godspeed-bounded-judgment.t16-closure
+date: "2026-09-18"
+
+reconciled_plan_state:
+  plan_version: "1.3.0"
+  total_task_count: 18
+  settled: 9 ["T00","T01","T02","T03","T04","T05","T15","T16","T17"]
+  ready: 0 []
+  in_flight: 0
+  branch_blocked: 1 ["T06"]
+  dependency_blocked: 8 ["T07".."T14"]
+  spec_sha256: "69b7d1baabd55ae61c73e615f04cf0fda43a4958a9fa3d50567035425baf6a82 (unchanged)"
+  note: "the narrative '9 of 15' was stale; the amended plan has 18 tasks (T00-T14 + T15-T17)"
+
+provider_lineage:
+  - leg: "T16 provider A, original"
+    provider: "codex exec --skip-git-repo-check"
+    model: "codex CLI default (not overridden)"
+    route: "OpenAI codex-plus plan"
+    access_tier: "paid (plus subscription)"
+    status: "quota-blocked (429 usage_limit_reached) before any T16 judgment was obtained"
+    identity_confidence: "high (named CLI, known plan)"
+  - leg: "T16 provider A, replacement (operator-directed + fallback policy)"
+    provider: "opencode run -m cline-pass/cline-pass/deepseek-v4.1-flash"
+    model_requested: "deepseek-v4.1-flash"
+    model_resolved: "cline-pass/deepseek-v4.1-flash (alias only; backend not independently verifiable)"
+    route: "ClinePass API"
+    access_tier: "free (contributor; current operating condition, not architectural)"
+    reason_selected: "operator-directed free-provider fallback after codex quota exhaustion"
+    identity_confidence: "alias-level only"
+  - leg: "T16 provider B, original"
+    provider: "prime-agent -p --offline"
+    model: "prime-agent's own configured backend (not fully observable from this seam)"
+    route: "local harness CLI"
+    access_tier: "free (local)"
+    status: "produced 1 completed leg on the N=9 corpus (round-4); quota-blocked on the expanded corpus (24/25 refusals)"
+    identity_confidence: "medium (known CLI, backend model not observable)"
+  - leg: "T16 provider B, replacement (operator-directed fallback chain)"
+    provider: "opencode run -m opencode/muse-spark-1.3-contributor-free"
+    model_requested: "muse-spark-1.3"
+    model_resolved: "muse-spark-1.3 (alias only; contributor-free tier)"
+    route: "opencode provider namespace (NOT ClinePass; different provider route from provider A)"
+    access_tier: "free (contributor)"
+    reason_selected: "prime-agent quota-blocked; operator fallback chain (deepseek -> glm -> muse); muse-spark-1.3-contributor-free was the available muse endpoint"
+    identity_confidence: "alias-level only"
+    note: "opencode/muse-spark-1.3 (paid) hit a payment-method wall; the contributor-free variant was available and smoke-tested clean"
+
+provider_independence:
+  assessment: >-
+    DeepSeek-via-ClinePass and Muse-Spark-via-opencode are different models on
+    different provider routes (ClinePass API vs opencode provider namespace),
+    sharing only the opencode CLI front-end and the auth store. Backend
+    independence is NOT fully provable from this seam (alias-level identity,
+    opaque backends). The two-provider comparison is preserved WITH this
+    caveat. The pair is more independent than a same-router pair would be,
+    but not provably fully independent.
+  caveats: "prime-agent's backend was also not fully observable; no provider's backend identity was independently verifiable beyond the alias level"
+
+reconciled_metrics:
+  frozen_d_bar_definition: >-
+    accuracy >= 0.8 on NON-ABSTAINING rows for both capable providers (prereg
+    leg b). The overall accuracy (including abstentions as incorrect) is a
+    DIFFERENT metric and is reported separately for transparency.
+  deepseek_clinepass:
+    total_rows: 25
+    answered: 24
+    abstentions: 3
+    correct: 20
+    incorrect: 1
+    contract_failures: 1 (provider_timeout)
+    overall_accuracy: "0.8000 (20/25, abstentions as incorrect)"
+    non_abstaining_accuracy: "0.9524 (20/21)" 
+    abstention_rate: 0.12
+    exact_permutation_p: "49/5,200,300 = 9.4e-6"
+    frozen_d_bar_leg_b: "PASS (0.9524 >= 0.8)"
+    frozen_d_bar_leg_a: "FAIL (1 timeout != 0)"
+  muse_spark_free:
+    total_rows: 25
+    answered: 25
+    abstentions: 17
+    correct: 7
+    incorrect: 1
+    contract_failures: 0
+    overall_accuracy: "0.2800 (7/25, abstentions as incorrect)"
+    non_abstaining_accuracy: "0.8750 (7/8)"
+    abstention_rate: 0.68
+    exact_permutation_p: "204204/5,200,300 = 0.039"
+    frozen_d_bar_leg_b: "PASS (0.875 >= 0.8)"
+    frozen_d_bar_leg_c: "FAIL (0.68 > 0.5)"
+  KEY_FINDING: >-
+    BOTH providers pass the frozen D-bar's accuracy metric (leg b: non-
+    abstaining accuracy >= 0.8). DeepSeek: 0.9524. Muse: 0.8750. The
+    conjunctive rule fails on OTHER legs: DeepSeek's 1 timeout (leg a) and
+    Muse's 0.68 abstention rate (leg c). The prior narrative's "Muse
+    performed at chance / 0.28" was misleading: Muse's OVERALL accuracy was
+    0.28 because 17/25 abstentions scored as incorrect, but its 7/8
+    non-abstaining accuracy (0.875) passes the D-bar. The distinction
+    between "overall" and "non-abstaining" accuracy is the reconciled
+    metric definition.
+  outcome_C_justification: >-
+    Outcome C is correct under the frozen conjunctive rule: leg (a) fails
+    (DeepSeek 1 timeout), leg (c) fails (Muse 0.68 abstention). The accuracy
+    leg (b) passes for both providers. The result is more nuanced than
+    "providers can't judge": both providers CAN discriminate when they answer;
+    the blockers are availability (timeout) and abstention rate.
+  corrected_permutation_oracle:
+    method: "exact class-preserving enumeration, corrected matches formula"
+    deepseek: "p = 49/5,200,300 = 9.4e-6"
+    muse: "p = 204,204/5,200,300 = 0.039"
+    prior_faulty_result: "preserved; cause = matches counted settled-truths-on-wrong-answers as hits"
+
+provider_fallback_policy_vs_evidence:
+  execution_policy: >-
+    The operator authorized a free-provider fallback chain: prefer an
+    available free provider; if usage is exhausted, select the next suitable
+    free provider. This policy selected which instruments were used.
+  experimental_evidence: >-
+    Each provider's scored outputs are separate and provider-specific.
+    DeepSeek and Muse results are NOT merged. The fallback policy did not
+    and must not cause results from different instruments to be treated as
+    coming from one model.
+
+final_t16_claim:
+  outcome: C
+  statement: >-
+    On this frozen DecisionSurface and consequence-backed 25-run corpus, both
+    capable providers demonstrated consequence-grounded signal at or above
+    the frozen D-bar's accuracy threshold when they answered (DeepSeek 0.952
+    non-abstaining; Muse 0.875 non-abstaining). However, the conjunctive
+    frozen promotion rule was not satisfied: DeepSeek had 1 contract failure
+    (timeout), and Muse abstained on 68% of rows (exceeding the 0.5
+    threshold). Therefore the bounded-judgment slice does not earn
+    architectural promotion on this surface. The capability-class question
+    remains ESCALATED, not rejected.
+  deepseek_component_finding:
+    earned: >-
+      DeepSeek 4.1 Flash via ClinePass showed real, permutation-confirmed
+      consequence-grounded discrimination: 0.952 non-abstaining accuracy,
+      exact permutation p = 9.4e-6, responsible abstention pattern (all 3
+      abstentions on not_settled rows). The single non-abstaining error was
+      a lying-claim acceptance (the claim-vs-observation distinction).
+    not_earned: "the 0-contract-failure requirement (1 timeout)"
+  muse_component_finding:
+    earned: "Muse Spark 1.3 contributor-free showed 0.875 non-abstaining accuracy on the 8 rows it chose to answer"
+    not_earned: "sufficient answer coverage (68% abstention rate fails the 0.5 threshold); overall accuracy 0.28 including abstentions"
+  scoped: "this DecisionSurface, this 25-run corpus, these two provider legs; no capability-class, model-generalization, or calibration claim"
+
+remaining_blocked:
+  T06: "blocked: T16 outcome C did not earn promotion for this surface"
+  T07: "blocked: depends on T06"
+  "T08-T12": "blocked by dependency chains from T06"
+  T13: "blocked: depends on T07 (unsettled)"
+  T14: "blocked: depends on T12 (Jetson) and T13"
+  T12_physical: "Jetson AGX Orin target not reachable from this host"

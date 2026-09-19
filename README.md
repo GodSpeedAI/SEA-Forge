@@ -1,123 +1,143 @@
-# SEA Forge
+# SEA-Forge
 
-**Authority before action. Proof before acceptance.**
+### Put authority between agents and the systems they can change.
 
-AI agents no longer just produce text. They write files, run commands, call
-APIs, open pull requests, and modify infrastructure. The controls around them
-have not kept up. A prompt says what you want; it does not enforce what is
-allowed. An exit code says a process ran; it does not say the job was done.
-And an agent's own summary of its work is not an inspection of it.
+AI coding agents can already write files, run commands, call APIs, open pull requests, use credentials, and modify infrastructure.
 
-SEA Forge is the missing control layer. Before an agent touches a protected
-surface, SEA Forge decides whether that specific action, by that actor, is
-authorized. Authorized work runs inside a bounded sandbox. Everything that
-happens is captured as structured evidence. Then — independently of the agent
-and its exit code — SEA Forge checks the evidence against the outcome you
-declared. Only if the evidence holds is the work accepted.
+That creates a new problem before it creates an enterprise architecture problem.
 
-> Serious work has two boundaries: permission before action and proof after.
-
-No building department lets a contractor issue their own permit, perform the
-work, conduct their own inspection, and declare the building safe. Yet that is
-the standard operating model for autonomous agents: interpret a prompt as
-permission, perform consequential work, cite a successful exit as proof. SEA
-Forge ends that arrangement.
+When an agent decides to run:
 
 ```text
-Intent → authority decision → bounded execution → evidence → independent acceptance → permanent record
+rm file
+git push
+POST /deploy
+merge pull request
+read secret
+call external model
 ```
 
-Denied and failed work leaves the same complete record as accepted work.
-[See it work](#see-it-work), or [install and run a governed
-lifecycle](#installation-and-quick-start).
+where does permission actually get decided?
 
-## The failure pattern
+A prompt can tell the agent what it should do. Repository permissions can stop some operations. A sandbox can limit where code runs. Human review can catch mistakes afterward.
 
-Agents can now write and delete files, run shell commands, call internal and
-external APIs, open and merge pull requests, modify infrastructure, use
-credentials, and delegate work to other agents. Most teams govern that
-activity with some mix of prompts, sandbox configuration, repository
-permissions, logs, human review, and the agent's own completion summary. Each
-is a real control. None of them is the control it is being asked to be:
+Those controls matter. They answer different questions.
 
-- **A prompt expresses intent. It does not enforce authority.** "Do not touch
-  that directory" is a behavioral instruction, interpreted by the same system
-  that decides how to act on it. Nothing independent stands between the
-  instruction and the write.
-- **A sandbox limits where work can happen. It does not decide whether the
-  work should happen.** Containment shrinks the blast radius of an action; it
-  grants no permission for it.
-- **A log records activity. It does not prove an outcome.** Logs can show a
-  busy afternoon without answering what was declared, what was authorized, or
-  whether the result was accepted.
-- **A zero exit code proves a process ran successfully. It does not prove the
-  job was completed correctly.** The wrong artifact exits zero just as cleanly
-  as the right one.
-- **An agent's completion claim cannot be its own acceptance test.** The actor
-  doing the work is also declaring whether the work succeeded. Useful context;
-  not proof.
+SEA-Forge answers this one before the side effect:
 
-If any of these sound familiar, you have the gap:
+> **Is this actor allowed to perform this operation on this resource under these conditions?**
 
-- The agent edited the wrong file, then reported success — and the report is
-  what got reviewed.
-- The prompt said not to access something. Nothing enforced it, and you found
-  out after the side effect.
-- The process exited zero while the artifact the job actually required was
-  missing, wrong, or never validated.
-- An agent delegated work to another agent, and afterward nobody could say
-  exactly which actor had been allowed to do what.
-- The logs show everything that happened and nothing about whether it should
-  have happened, or whether it was accepted.
+**SEA-Forge is a runtime authority and evidence layer for autonomous systems. It evaluates proposed actions against declared domain meaning and policy before execution, returns allow, deny, or escalate decisions, and records evidence of what governed execution actually did.**
 
-These are not agent failures, and the fix is not a more careful prompt. They
-are infrastructure failures: no authoritative decision before the action, and
-no independent judgment after it.
-
-## What SEA Forge changes
-
-Before:
+The basic path is:
 
 ```text
-Prompt → agent acts → agent says it worked → logs accumulate
+intent
+  ↓
+proposed operation
+  ↓
+authority decision
+  ├── deny
+  ├── escalate
+  └── allow
+        ↓
+  bounded execution
+        ↓
+     evidence
+        ↓
+operational settlement
+        ↓
+ tamper-evident record
 ```
 
-With SEA Forge:
+The agent can still choose what it wants to try.
+
+It does not get to decide whether it has authority to do it.
+
+---
+
+## The gap appears as soon as agents get useful
+
+Suppose you ask an agent:
+
+> Update the deployment configuration, run the tests, and push the fix.
+
+That sounds like one task.
+
+Operationally, it may involve several different acts:
 
 ```text
-Intent → authority decision → bounded execution → evidence → independent acceptance → permanent record
+read repository files
+write configuration
+execute a binary
+access an environment variable
+connect to a service
+create a commit
+push to a remote
 ```
 
-The decision before the action is **authority**: every operation the work will
-require is evaluated against policy, at a single decision point, before any
-side effect runs. The judgment after the action is **settlement**: the
-independent decision that the recorded evidence satisfies the declared
-outcome. Not the process's exit code. Not the agent's narration. The evidence,
-measured against criteria declared before the work ran.
+Those acts do not necessarily deserve the same authority.
 
-The analogy maps directly, and only where it fits: the permit is the authority
-decision; the controlled worksite is the sandbox; the inspection is the
-evidence — artifact hashes, validators, traces; acceptance against
-requirements is settlement; the permanent record is the integrity ledger;
-subcontractors are delegated agents, governed by the same rules.
+Maybe the agent may edit `deploy/staging/**` but not `deploy/prod/**`.
 
-The practical result is bounded autonomy: routine actions proceed under
-declared authority, risky actions escalate to a human with the evidence
-attached, and every result stays inspectable.
+Maybe it may run `cargo test` but not arbitrary shell commands.
 
-Put together, that composition is what we mean by a **governed
-capability-execution kernel** — one lifecycle that authorizes, executes,
-evidences, settles, and records consequential work. The name is a mouthful.
-The mechanism is the point.
+Maybe network access is normally denied.
 
-## See it work
+Maybe a production deployment requires a human approval.
 
-The smallest credible demonstration: submit one intent, watch one operation
-get allowed, denied, or escalated, then inspect the evidence and the
-settlement. Everything below uses the CLI; install takes a few commands
-([quick start](#installation-and-quick-start)).
+Maybe an agent may prepare a commit but never push it.
 
-Submit an intent, with a policy file that declares what the run may do:
+A prompt is a poor place to encode those distinctions because the same system interpreting the instruction is also choosing the action.
+
+By the time a log tells you the wrong operation happened, the decision is already behind you.
+
+SEA-Forge moves that decision in front of the side effect.
+
+---
+
+## Authority, containment, evidence, and acceptance are different controls
+
+These are easy to collapse when everything lives inside one agent loop.
+
+They should remain separate.
+
+| Control                    | Question it answers                                                 |
+| -------------------------- | ------------------------------------------------------------------- |
+| **Prompt / task**          | What are we asking the agent to accomplish?                         |
+| **Authority**              | May this actor perform this specific operation here?                |
+| **Sandbox**                | Where and how may an allowed operation execute?                     |
+| **Evidence**               | What actually happened?                                             |
+| **Operational settlement** | Did the observed result satisfy the criteria declared for this run? |
+| **Ledger**                 | Can we inspect and verify the record later?                         |
+
+A container does not grant permission.
+
+A successful process does not prove the requested artifact exists.
+
+A log entry does not establish that an action should have happened.
+
+An agent saying “done” is useful narration. It is not an independent acceptance criterion.
+
+SEA-Forge keeps those judgments separate.
+
+---
+
+## Start with one operation you would rather not discover after the fact
+
+You do not need to model an entire organization to test SEA-Forge.
+
+Start with one action where the cost of a wrong decision is already obvious:
+
+* an agent writing outside an approved directory
+* a shell command that should require explicit permission
+* an external API call
+* access to a credential
+* a Git commit or merge
+* a deployment
+* a delegated agent task
+
+Give SEA-Forge a policy and submit a run:
 
 ```sh
 sea-forge run \
@@ -125,654 +145,992 @@ sea-forge run \
   --intent "Generate a .sea model"
 ```
 
-Every invocation records its case, plan, authority decisions, trace, evidence,
-settlement, and capability envelope under `.sea-forge/`. Denied and failed
-work is recorded too. The process exit code is the settlement, not the
-executor's self-report:
+SEA-Forge records the run under `.sea-forge/`.
 
-| Code | Meaning |
-| ---- | ------- |
-| 0 | Settlement `accepted` |
-| 1 | Internal error |
-| 2 | Input / usage error |
-| 3 | Settlement `rejected` |
-| 4 | Settlement `escalated` or governed denial |
-| 5 | Awaiting approval / parked active (resumable) |
-
-Inspect what actually happened, and why:
+Inspect it:
 
 ```sh
-sea-forge inspect <run_id>                     # show all six records of a run
-sea-forge ask ask_why_denied <run_id>          # explain a denial
+sea-forge inspect <run_id>
 ```
 
-Re-check the evidence later, and search what has been accepted before:
+If something was denied:
 
 ```sh
-sea-forge validate <run_id>                    # re-validate a past run's evidence
-sea-forge recall generate                      # search capability memory
-sea-forge recall --result accepted --limit 10  # filter by outcome
+sea-forge ask ask_why_denied <run_id>
 ```
 
-What you should see:
+Re-check the evidence later:
 
-- **Accepted work exits 0.** `inspect` shows the declared criteria and the
-  evidence that satisfied them.
-- **Denied work exits 4** and never produces a side effect. The denial is
-  still a complete record; `ask_why_denied` explains it.
-- **False success exits 3.** A step can return zero while the required
-  artifact is missing or wrong; settlement rejects the run because the
-  evidence does not hold.
-- **Escalated work exits 4; parked work exits 5.** A run awaiting human
-  approval is resumable, not lost — `sea-forge approve <run_id>` in server
-  mode continues it.
+```sh
+sea-forge validate <run_id>
+```
 
-## Core guarantees
+Search previous results:
 
-Each guarantee names the failure it removes and the record that proves it. The
-conformance suite exercises all of them — `just proof` runs it.
+```sh
+sea-forge recall generate
+sea-forge recall --result accepted --limit 10
+```
 
-### Default deny
+The useful experiment is not “can SEA-Forge run an agent?”
 
-An unknown operation does not inherit permission from a vague prompt. It stops
-before any side effect, and the denial — with its reason — becomes part of the
-record. A policy that fails to load denies everything; there is no fail-open
-path.
+It is:
 
-### Authority before side effects
+> Can I put one consequential operation behind an independent authority decision and still understand exactly what happened afterward?
 
-Governance that arrives after the action is documentation. Every operation is
-decided before it runs, at one decision point spanning every policy surface —
-files, shell commands, external APIs, commits, merges, secrets, deployments,
-and more. The decision record binds actor, operation, resource, and verdict.
-Missing required evidence denies.
+If that is valuable, expand from there.
 
-### Sandboxing is a separate control
+---
 
-"It ran in a container" is not "it was allowed." Authority decides whether
-work may happen; the sandbox constrains how and where allowed work happens —
-OS-level jails (Landlock on Linux, Seatbelt on macOS), safe-join path
-validation, and no network unless policy grants it. Neither control
-substitutes for the other: a disallowed action inside a jail is still denied.
+## A run can finish without being accepted
 
-### Evidence is collected, not asserted
-
-A completion claim that cannot be inspected is a confident rumor. Every run
-produces SHA-256 content hashes, artifact descriptors with deterministic
-identity (`ifl:hash:<sha256>`), execution results, and a structured trace.
-`sea-forge inspect` shows them; `sea-forge validate` re-checks them later.
-
-### Settlement is independent of the exit code
-
-A process can return zero and still fail the job. Settlement evaluates the
-declared outcome and its criteria, not merely whether the command ran — so
-exit-zero-with-wrong-artifacts is rejected, and only an accepted settlement
-exits 0. Validation checks artifacts; evidence supports claims; settlement
-decides. The agent's narration has no standing in the decision.
-
-### Every path leaves a complete record
-
-The runs you most need to understand are usually the ones that left nothing
-behind. Denied, failed, cancelled, escalated, rejected, and accepted work all
-produce the full record set — case, plan, authority decisions, trace,
-evidence, settlement, and the capability envelope appended to the ledger.
-
-### Delegation keeps the same governance
-
-Agent chains diffuse responsibility faster than they create accountability —
-unless delegated work stays ordinary governed work. A delegated agent task is
-authority-checked, turn-capped, cancellable, transcript-evidenced, and
-independently settled. Subcontractors do not get to grade their own work
-either.
-
-### Records are tamper-evident and re-verifiable
-
-An audit trail you can quietly edit is a claim, not evidence. The ledger is
-append-only JSONL with domain-separated SHA-256 hashes over canonical
-encoding, chain and Merkle Mountain Range construction for tamper evidence,
-Ed25519-signed checkpoints, and independent witness receipts as the assurance
-level rises. Inclusion and consistency proofs let you verify records without
-trusting the store.
-
-## How it works
-
-A governed run starts from what you declared, not from what the agent decides
-to do first. You state an intent and a policy; SEA Forge normalizes the intent
-into typed operations, decides each operation before anything executes, runs
-allowed work inside a bounded environment, collects evidence as it goes, then
-settles the outcome against the criteria you declared.
+Agent systems often collapse several states into one:
 
 ```text
-Intent → Case → Plan → Authority → Sandbox → Execute → Evidence → Settlement → Envelope
+command returned 0
+        ↓
+task succeeded
+        ↓
+agent can do this
 ```
 
-1. **Intake** — Normalize operator intent into a typed `Case` with classified
-   operations.
-2. **Plan** — Generate a `CasePlan` with stages, sentries, milestones, and
-   plan items. Plans may use versioned templates (ADLC, ODI,
-   sequential/concurrent agents) and bind to hash-pinned semantic models.
-3. **Authorize** — Evaluate every operation against the authority fabric.
-   Default deny. Single decision point across all policy surfaces.
-4. **Sandbox** — Prepare an isolated workspace with OS-level jails (Landlock
-   on Linux, Seatbelt on macOS). Safe-join path validation prevents traversal.
-5. **Execute** — Run allowed steps via argv-based process execution (no
-   shell). Minimal explicit environment. Enforced timeouts.
-6. **Evidence** — Collect SHA-256 content hashes, artifact descriptors with
-   deterministic pre-mint identity (`ifl:hash:<sha256>`), and execution
-   results.
-7. **Settle** — Evaluate evidence against declared criteria. Detect false
-   success (exit 0 but wrong/missing artifacts → rejected).
-8. **Record** — Append a semantic capability envelope — the durable record of
-   what capability was exercised, under what authority, with what outcome — to
-   the integrity ledger. Update capability memory and feed the Thoth knowledge
-   graph.
+Those claims are different.
 
-Four distinctions do most of the work:
+SEA-Forge distinguishes execution from operational settlement.
 
-- **Authority** decides whether work may happen.
-- **Sandboxing** limits how and where allowed work happens.
-- **Evidence** records what happened.
-- **Settlement** decides whether what happened satisfies the declared outcome.
+A command may exit successfully while:
 
-One honest boundary: SEA Forge governs actions routed through its declared
-execution and authority surfaces. A side effect that occurs through an
-unmediated path — a shell opened outside the governed run — is outside that
-boundary. Govern the paths that matter rather than assume universal
-interception.
+* the required artifact is missing
+* the wrong file was changed
+* a validator fails
+* an expected hash does not match
+* required evidence was never produced
 
-On status: the CLI lifecycle above — run, inspect, validate, recall — is
-implemented and covered by the conformance suite. Broader capabilities
-described in the reference below (the ADLC lifecycle, the Genesis self-model,
-orchestration templates, artifact IP) are built milestone by milestone against
-the normative specifications. `just proof` runs P1–P4b plus the milestone
-gates; the suite, not this page, is the authority on what is proven.
+SEA-Forge can reject that run even though the underlying process returned `0`.
 
-## Where it gets used
+The CLI exposes the resulting state directly:
 
-- **Coding agents that write files and open pull requests.** Policy decides
-  which paths, commands, commits, and merges an agent may touch; settlement
-  decides whether the required artifact — code, tests, proof commands —
-  actually exists and passes.
-- **Agents that call external APIs.** Provider calls are gated by exact grants
-  binding endpoint, config hash, destination, model, limits, and credential
-  reference. Credentials resolve by indirection only after authority grants.
-- **Infrastructure and deployment changes.** Deployment is a first-class
-  authority surface. Risky changes escalate for human approval instead of
-  being silently allowed or permanently blocked.
-- **Multi-agent delegation.** Sequential and concurrent templates coordinate
-  agent chains while each delegated task remains authority-checked,
-  turn-capped, cancellable, and independently settled.
-- **Governed spec-to-code pipelines.** Requirements and design artifacts flow
-  through a generation chain with governed records at each stage; generated
-  zones reject hand-edits.
-- **Regulated or auditable automation.** Every run answers what was requested,
-  what was authorized, what ran, what evidence was produced, and how the
-  outcome was decided — at execution time, not assembled afterward for the
-  audit.
+| Exit code | Meaning                                   |
+| --------: | ----------------------------------------- |
+|       `0` | Settlement `accepted`                     |
+|       `1` | Internal error                            |
+|       `2` | Input or usage error                      |
+|       `3` | Settlement `rejected`                     |
+|       `4` | Settlement `escalated` or governed denial |
+|       `5` | Awaiting approval / parked active         |
 
-SEA Forge governs the work, not the worker: argv processes, sandboxed tasks,
-and external agents behind the provider seam are all replaceable executors
-inside the same lifecycle.
+That distinction is intentionally narrow.
 
-## Installation and quick start
+An accepted SEA-Forge run means the declared criteria for that governed run were satisfied by its evidence.
+
+It does **not** mean the agent has acquired a durable capability. Repeated performance under variation, recovery, and developmental promotion are stronger claims handled elsewhere.
+
+---
+
+## Denial is a result, not a missing run
+
+The runs that matter most during an incident are often the ones that traditional automation records least clearly.
+
+SEA-Forge preserves denied, failed, cancelled, escalated, rejected, and accepted paths.
+
+A governed run can leave records for:
+
+```text
+case
+plan
+authority decisions
+execution trace
+evidence
+settlement
+capability envelope
+```
+
+That makes questions such as these answerable later:
+
+```text
+What did the operator request?
+Which actor attempted the operation?
+Which resource was targeted?
+Which policy applied?
+Was the action allowed, denied, or escalated?
+What actually executed?
+What evidence was produced?
+Why was the result accepted or rejected?
+```
+
+The record exists because the decision happened as part of the work, not because someone reconstructed the story afterward.
+
+---
+
+## Default deny makes missing knowledge visible
+
+An authority system has to decide what happens when it cannot establish permission.
+
+SEA-Forge defaults to denial.
+
+An unknown operation does not inherit authority from a broad instruction such as:
+
+```text
+"Fix the repository."
+```
+
+A policy that cannot load does not quietly disappear.
+
+Missing required authority evidence does not become an implicit allow.
+
+Unresolvable policy conflicts do not get averaged into a best guess.
+
+Depending on the condition, the operation is denied or escalated before the side effect.
+
+That can feel stricter than an agent that simply tries things until something works.
+
+That is the point.
+
+A blocked operation tells you which permission, representation, or approval is missing. A silently permitted one removes that information along with the protection.
+
+---
+
+## Sandboxing answers a different question
+
+SEA-Forge can execute allowed work inside bounded environments using controls including:
+
+* Landlock on Linux
+* Seatbelt on macOS
+* safe-join path validation
+* scoped workspaces
+* explicit environment variables
+* execution timeouts
+* network deny by default
+* agent cells with constrained resources and APIs
+
+But sandboxing comes **after** authority.
+
+Consider these two questions:
+
+```text
+May this agent write deploy/prod/config.yaml?
+
+If allowed, what filesystem and network access
+should the process receive while doing it?
+```
+
+The first is authority.
+
+The second is containment.
+
+Running a disallowed operation safely inside a sandbox would still be the wrong operation.
+
+---
+
+## Delegation does not erase the authority boundary
+
+The accountability problem becomes harder when one agent delegates to another.
+
+Without a shared authority boundary, it is easy to end up with:
+
+```text
+operator
+  ↓
+agent A
+  ↓
+agent B
+  ↓
+tool
+  ↓
+side effect
+```
+
+and no clean answer to which actor was allowed to do what.
+
+SEA-Forge treats delegated agent work as governed work.
+
+Delegated tasks can be:
+
+* authority-checked
+* turn-capped
+* cancellable
+* transcript-evidenced
+* independently settled
+
+The executor can change without changing the authority model.
+
+That means an argv process, a sandboxed task, an OpenAI-compatible agent, an Anthropic-backed agent, an ACP-connected CLI agent, or another supported executor can operate behind the same governed lifecycle.
+
+SEA-Forge governs the work path rather than trusting a particular model.
+
+---
+
+## Domain meaning can participate in authority
+
+File paths and command names are useful policy surfaces.
+
+They are not always enough.
+
+A rule may depend on domain meaning:
+
+```text
+this actor is a Reviewer
+
+this operation changes a ProductionDeployment
+
+this resource belongs to Payments
+
+this flow carries CustomerData
+
+this action affects a regulated approval boundary
+```
+
+That is where DomainForge connects.
+
+`.sea` is the **Semantic Executable Abstraction** source language used by DomainForge to represent the consequential structure of a purposeful system.
+
+DomainForge compiles that source into a canonical semantic model.
+
+```text
+domain knowledge
+      ↓
+   .sea source
+      ↓
+  DomainForge
+      ↓
+canonical semantic model
+      ↓
+concept identities + validated meaning
+```
+
+SEA-Forge can then bind runtime decisions to that declared meaning.
+
+```text
+actor + operation + resource + context
+              ↓
+       canonical domain meaning
+              +
+           policy
+              ↓
+      allow / deny / escalate
+```
+
+The boundary is deliberate:
+
+**DomainForge owns semantic compilation.**
+
+It parses `.sea`, resolves concepts, validates the model, and computes deterministic projections.
+
+**SEA-Forge owns runtime authority and governed side effects.**
+
+It decides whether an operation may proceed, constrains execution, collects evidence, settles the run, and records what happened.
+
+When a DomainForge projection is invoked inside a governed SEA-Forge run, DomainForge can compute the projection while SEA-Forge governs whether and where the resulting artifact may be materialized.
+
+Meaning and authority remain separate.
+
+---
+
+## Policies cover more than file writes
+
+SEA-Forge's authority fabric evaluates multiple first-class operational surfaces through one policy layer.
+
+Current surfaces include:
+
+```text
+file
+shell_cmd
+external_api
+git_commit
+pr_merge
+prompt_risk
+memory_recall
+spec_pipeline
+artifact_transition
+attestation
+deployment
+secret_access
+policy_mutation
+evidence_mutation
+extension_install
+projection_execute
+identity_binding
+self_disclosure
+```
+
+The useful property is not the length of that list.
+
+It is that a run does not need one permission system for shell commands, another for provider calls, another for Git, and another for deployments while hoping their decisions remain coherent.
+
+Policy resolution is deterministic:
+
+```text
+any deny
+    ↓
+deny
+
+otherwise any escalate
+    ↓
+escalate
+
+otherwise intersect applicable boundaries
+    ↓
+allow
+```
+
+Missing required evidence denies.
+
+Policy conflicts that cannot be resolved become an explicit blocking condition rather than an invented permission.
+
+---
+
+## Evidence can be checked again later
+
+A normal application log is usually optimized for debugging.
+
+SEA-Forge's governed records have a stronger job: preserve enough information for later verification.
+
+Evidence can include:
+
+* execution results
+* artifact descriptors
+* SHA-256 content hashes
+* structured trace records
+* deterministic artifact identities
+
+Past evidence can be revalidated:
+
+```sh
+sea-forge validate <run_id>
+```
+
+The ledger itself supports progressively stronger tamper evidence through:
+
+```text
+legacy_digest_only
+      ↓
+local_tamper_evident
+      ↓
+checkpoint_signed
+      ↓
+externally_verified
+```
+
+The implementation includes canonical encoding, hash chaining, Merkle Mountain Range construction, Ed25519-signed checkpoints, witness receipts, and inclusion / consistency proofs.
+
+The purpose is not to make a database magically truthful.
+
+It is to make silent alteration of the recorded evidence detectable at the assurance level being used.
+
+---
+
+## One governed lifecycle
+
+Underneath the CLI, SEA-Forge carries a run through a structured lifecycle:
+
+```text
+Intent
+  ↓
+Case
+  ↓
+Plan
+  ↓
+Authority
+  ↓
+Sandbox
+  ↓
+Execute
+  ↓
+Evidence
+  ↓
+Settlement
+  ↓
+Record
+```
+
+### Intake
+
+Operator intent becomes a typed `Case` with classified operations.
+
+### Plan
+
+The case is represented as stages, sentries, milestones, and plan items.
+
+### Authority
+
+Each consequential operation passes through the authority fabric before execution.
+
+### Sandbox
+
+Allowed work receives an execution environment constrained by the applicable policy.
+
+### Execute
+
+The selected executor performs the operation with explicit environment and timeout boundaries.
+
+### Evidence
+
+SEA-Forge records execution results, traces, hashes, artifacts, and other required evidence.
+
+### Settlement
+
+The evidence is evaluated against the criteria declared for the run.
+
+### Record
+
+The resulting governed history is appended to the integrity ledger and made available for inspection and recall.
+
+This is deliberately more structured than:
+
+```text
+prompt
+  ↓
+model
+  ↓
+tools
+  ↓
+"done"
+```
+
+The extra structure exists because side effects create consequences that text generation does not.
+
+---
+
+## The boundary SEA-Forge cannot cross for you
+
+SEA-Forge only governs operations routed through its authority and execution surfaces.
+
+If somebody opens an unrelated shell and changes the same system outside SEA-Forge, SEA-Forge did not intercept that action.
+
+Likewise, connecting a provider to SEA-Forge does not mean every possible side effect the provider can cause elsewhere is automatically mediated.
+
+The security boundary is therefore concrete:
+
+> Route the consequential paths you want governed through the authority layer.
+
+Do not treat installation as universal interception.
+
+That boundary is easier to reason about, test, and improve than a claim that every possible action is somehow under control.
+
+---
+
+## Where SEA-Forge earns its keep
+
+### Coding agents
+
+Allow agents to modify approved repository surfaces while treating sensitive paths, commands, commits, or merges differently.
+
+### External API calls
+
+Bind provider calls to explicit endpoints, destinations, models, limits, configuration hashes, and credential references.
+
+### Infrastructure changes
+
+Allow routine operations while escalating higher-risk deployments or environment changes for approval.
+
+### Multi-agent work
+
+Keep delegated tasks inside the same authority, evidence, cancellation, and settlement model.
+
+### Generated systems
+
+Govern projection and spec-to-code operations so generated artifacts retain evidence about the source and process that produced them.
+
+### Auditable automation
+
+Preserve the request, authority decision, execution, evidence, and operational settlement as part of the work rather than manufacturing an audit trail later.
+
+The common property is simple:
+
+> The action matters enough that finding out afterward is too late.
+
+---
+
+## Install and verify the repository
 
 ### Prerequisites
 
-Only three host tools are required before entering the shell:
+The host needs:
 
-- [Git](https://git-scm.com/)
-- [Devbox](https://www.jetify.com/devbox)
-- [direnv](https://direnv.net/)
+* [Git](https://git-scm.com/)
+* [Devbox](https://www.jetify.com/devbox)
+* [direnv](https://direnv.net/)
 
-Everything else (Rust toolchain, `just`, `sops`, `age`, `gitleaks`,
-`cargo-deny`) is pinned by Devbox and `rust-toolchain.toml`, so the
-environment you verify is the environment CI verifies.
+The remaining development tools are pinned by the repository, including the Rust toolchain, `just`, `sops`, `age`, `gitleaks`, and `cargo-deny`.
 
-### Quick start
+### Bootstrap
 
 ```sh
-git clone <repo> sea-rs && cd sea-rs
-devbox shell          # enter the pinned environment
-direnv allow          # activate direnv (loads encrypted secrets if present)
-just setup            # converge on the toolchain + dependencies
-just hooks-install    # install the checked-in git hooks (.githooks/)
-just doctor           # machine-readable environment check
-just check            # fmt + clippy + check --locked + cargo deny + gitleaks
-just test             # cargo test --workspace --all-features --locked
+git clone <repo> sea-rs
+cd sea-rs
+
+devbox shell
+direnv allow
+
+just setup
+just hooks-install
+just doctor
+just check
+just test
 ```
 
-A fresh clone is ready when `just doctor`, `just check`, and `just test` all
-exit zero. `just proof` runs the full conformance suite — the executable
-statement of every guarantee above.
+A fresh clone is in a good state when:
 
-How to recognize trouble:
+```text
+just doctor
+just check
+just test
+```
 
-- `just doctor` is machine-readable and names what is missing.
-- Without an age key, `direnv` warns and leaves secret variables unset; the
-  foundation gates still work offline. Missing secrets block declared
-  integrations only — never the core gates.
-- Runtime records appear under `.sea-forge/` (gitignored). Bootstrap evidence
-  goes under `target/bootstrap-evidence/` (also gitignored). The two stores
-  are never conflated.
+all exit zero.
 
-## Technical reference
-
-Depth for implementers and evaluators. None of this is required to run the
-quick start; all of it is behavior the specifications define.
-
-### Server mode
-
-For long-running and concurrent workloads, run the governed daemon:
+Run the full conformance suite with:
 
 ```sh
-sea-forge server start                        # Unix-socket daemon
-sea-forge submit --intent "Build the module"  # submit a case
-sea-forge status <case_id>                    # check case status
-sea-forge approve <run_id>                    # approve an escalated operation
-sea-forge subscribe                           # stream lifecycle events
+just proof
 ```
 
-The server dispatches runs concurrently (configurable `max_concurrent_runs`,
-default 4), manages approval workflows with configurable TTL, and supports
-policy hot-reload between dispatches. All runs use the same governed lifecycle
-as the CLI.
+The proof suite is the executable reference for the guarantees implemented by the repository.
 
-### Agent delegation
+If the README and the proof suite disagree, trust the proof suite.
 
-Delegate governed tasks to external agents:
+### Missing secrets
+
+Core offline gates do not require provider credentials.
+
+Without an age key, `direnv` leaves secret-backed integrations unavailable while local foundation checks continue to work.
+
+Runtime records live under:
+
+```text
+.sea-forge/
+```
+
+Bootstrap evidence lives under:
+
+```text
+target/bootstrap-evidence/
+```
+
+Both are gitignored and intentionally separate.
+
+---
+
+## Server mode
+
+For longer-running or concurrent work:
 
 ```sh
-sea-forge agent probe <endpoint>              # one-call diagnostic
-sea-forge agent list                          # registered agent endpoints
-sea-forge run cancel <run_id>                 # cancel an in-flight delegation
-sea-forge case manage <case_id> --iterations 5  # Thoth manager loop
+sea-forge server start
+sea-forge submit --intent "Build the module"
+sea-forge status <case_id>
+sea-forge approve <run_id>
+sea-forge subscribe
 ```
 
-Agent tasks are ordinary governed runs whose executor is an agent dialogue
-instead of an argv command. Every delegation is authority-checked,
-turn-capped, cancellable, and transcript-evidenced. Agent output is untrusted
-input — settlement evaluates criteria, not agent narration.
+The daemon manages concurrent runs, approval workflows, event streaming, and policy reload between dispatches while using the same governed lifecycle as the CLI.
 
-### Self-model and Thoth
+The default maximum concurrent run count is configurable and currently defaults to `4`.
 
-Thoth is SEA Forge's self-knowledge protocol: it answers questions about the
-system's own capabilities with evidence-linked, disclosure-controlled claims.
-Knowledge is never authority.
+---
+
+## Agent delegation
+
+Inspect and use configured agent endpoints:
 
 ```sh
-sea-forge self-model validate                 # verify bundled .sea self-model
-sea-forge self-model rebuild --probe          # rebuild with environment probes
-sea-forge self-model show --json              # composed self-model view
-
-sea-forge ask ask_capability sea-forge.settlement   # query a capability
-sea-forge ask ask_environment_status sandbox.jail   # query environment status
-sea-forge ask ask_why_denied <run_id>               # explain a denial
+sea-forge agent probe <endpoint>
+sea-forge agent list
+sea-forge run cancel <run_id>
 ```
 
-Thoth answers with grounded claims backed by evidence references, not
-free-text opinions. Disclosure is decided before retrieval — Thoth never
-retrieves broadly and then redacts. A Thoth answer is never permission to
-perform an operation.
+SEA-Forge supports a provider seam with implementations for:
 
-### Authority model
+* OpenAI-compatible HTTP
+* Anthropic HTTP
+* ACP-connected CLI agents
 
-The authority fabric is a single unified policy evaluation layer — not
-per-surface gates. Policy bundles are hash-addressed YAML with 18+ first-class
-surfaces:
+Provider access itself is governed.
 
-```
-file · shell_cmd · external_api · git_commit · pr_merge · prompt_risk ·
-memory_recall · spec_pipeline · artifact_transition · attestation · deployment ·
-secret_access · policy_mutation · evidence_mutation · extension_install ·
-projection_execute · identity_binding · self_disclosure
-```
+Exact grants can bind details such as:
 
-Verdict resolution is deterministic and commutative: any `deny` blocks → any
-`escalate` blocks → boundaries intersect → `allow`. Missing required evidence
-denies. Unresolvable policy engine conflicts produce an `OpaqueConstraint`
-that halts with `escalate`.
-
-Identity is resolved via configurable identity maps with RBAC and
-separation-of-duty rules. Built-in roles include operator, agent, system,
-lifecycle controller, settlement authority, and self-model actor.
-
-### Case engine
-
-Cases are the primary unit of work, modeled on CMMN concepts — stages,
-sentries, milestones, and plan items. A `CasePlanModel` contains:
-
-- **Stages** with entry/exit sentries evaluated over the trace and case-file
-  ledger
-- **Plan items**: sandboxed tasks, agent tasks, human tasks (approvals),
-  milestones, timer listeners, user event listeners
-- **Discretionary items** for governed runtime plan mutation
-- **Sentries** as event-condition rules that drive stage activation,
-  reactivation, and milestone achievement
-
-Cases auto-complete when all required items are completed. Reactivation
-sentries enable non-waterfall behavior — a rejected simulation can re-activate
-the design phase.
-
-### Integrity ledger
-
-Every record is a `LedgerEntry` with:
-
-- ULID-based entry ordering with append ordinals
-- Domain-separated SHA-256 hashes over JCS-canonical encoding
-- Chain and Merkle Mountain Range construction for tamper evidence
-- Ed25519-signed checkpoints at configurable cadence
-- Independent witness receipts for external verification
-- Inclusion and consistency proofs
-
-Assurance levels: `legacy_digest_only` → `local_tamper_evident` →
-`checkpoint_signed` → `externally_verified`.
-
-### Sandbox and isolation
-
-SEA Forge provides defense-in-depth isolation:
-
-- **OS-level jails**: Landlock (Linux) / Seatbelt (macOS) restrict filesystem,
-  network, and system call access. Untrusted commands must specify `jail` or
-  `microvm` sandbox class in policy.
-- **Workspace isolation**: Safe-join path validation prevents directory
-  traversal, symlink escapes, and charset violations.
-- **Agent cells**: Isolated execution contexts with scoped filesystem,
-  environment, resource limits, and capability-restricted API access.
-- **Network deny by default**: Jailed commands have no network unless policy
-  explicitly grants `network: true`.
-
-### DomainForge boundary
-
-DomainForge owns `.sea` syntax, semantic graph, concept identities,
-validation, and deterministic projections. SEA Forge owns authorization,
-isolation, side effects, evidence, and settlement.
-
-The `sea-forge-domainforge` crate calls the `domainforge-core` Rust library
-directly to:
-
-- Load and validate `.sea` files
-- Normalize DomainForge governance verdicts as candidate authority verdicts
-- Bind plans to hash-pinned semantic models with canonical concept IDs
-- Execute governed `.sea` synthesis and projections (CALM, RDF, SBVR, SHACL,
-  KG events, manifests, generated contracts)
-
-SEA Forge remains the only component that materializes projection artifacts.
-See the
-[DomainForge semantic-boundary decision](docs/decisions/ADR-001-domainforge-semantic-boundary.md).
-
-### Spec-to-code pipeline
-
-The `sea-forge-spec-pipeline` crate drives a governed generation chain:
-
-```
-ADR → PRD → SDS → SEA → AST → IR → manifest → codegen → last-mile
+```text
+endpoint
+configuration hash
+destination
+model
+limits
+credential reference
 ```
 
-Each stage produces governed records with deterministic replay. Generated
-zones are guarded — hand-edits are rejected; change the source or generator
-and regenerate.
+Credential material is resolved only after authority permits the operation.
+
+There is no silent provider fallback. A failed endpoint remains a failed recorded endpoint rather than becoming permission to route somewhere else.
+
+---
+
+## Case management
+
+SEA-Forge represents work as cases rather than assuming every task is a fixed linear workflow.
+
+A `CasePlanModel` can contain:
+
+* stages
+* entry and exit sentries
+* milestones
+* sandboxed tasks
+* agent tasks
+* human approval tasks
+* timer listeners
+* user-event listeners
+* discretionary plan items
+
+That allows work to react to what actually happens.
+
+A rejected result can reopen a stage. An approval can unblock a waiting task. A timer or external event can change what becomes available next.
+
+Cases complete when their required conditions are satisfied rather than because the agent reached the bottom of a checklist.
+
+---
+
+## Self-knowledge without self-authorization
+
+SEA-Forge includes a versioned `.sea` self-model and the Thoth self-knowledge protocol.
+
+Inspect it with:
+
+```sh
+sea-forge self-model validate
+sea-forge self-model rebuild --probe
+sea-forge self-model show --json
+```
+
+Ask evidence-grounded questions:
+
+```sh
+sea-forge ask ask_capability sea-forge.settlement
+sea-forge ask ask_environment_status sandbox.jail
+sea-forge ask ask_why_denied <run_id>
+```
+
+The self-model separates three kinds of claim:
+
+| View             | Meaning                                   |
+| ---------------- | ----------------------------------------- |
+| **Declared**     | What the system specification says exists |
+| **Observed**     | What this installation currently exposes  |
+| **Demonstrated** | What prior evidence supports              |
+
+A declared capability is not automatically demonstrated.
+
+More importantly, knowledge is not authority.
+
+A Thoth answer can explain that a capability or environment surface exists. It cannot grant permission to use it.
+
+---
+
+## Spec-to-code without hiding the source chain
+
+SEA-Forge includes a governed generation pipeline:
+
+```text
+ADR
+ ↓
+PRD
+ ↓
+SDS
+ ↓
+.sea
+ ↓
+DomainForge semantic model
+ ↓
+generated representations
+ ↓
+code generation
+ ↓
+last-mile implementation
+```
+
+Each stage can produce governed records and participate in deterministic replay.
+
+Generated zones can reject hand edits so a change is made at the source or generator rather than silently diverging downstream.
+
+The important distinction is the same one used throughout SEA-Forge:
+
+```text
+generation
+≠
+authority to materialize
+≠
+evidence of correctness
+≠
+acceptance
+```
+
+Each needs its own judgment.
+
+---
 
 <details>
-<summary><strong>Agent orchestration: provider seam, topologies, and the Thoth manager loop</strong></summary>
+<summary><strong>Agent orchestration and bounded manager loops</strong></summary>
 
-The agent orchestration layer is a governed delegation framework — not an
-agent runtime. Every agent side effect is authority-gated, evidenced,
-cancellable, and settlement-judged.
+SEA-Forge's orchestration layer governs delegation. It is not the model itself and does not turn the authority layer into an autonomous actor.
 
-The `sea-forge-agent` crate provides the `AgentProvider` trait with built-in
-implementations: OpenAI-compatible HTTP, Anthropic HTTP, and ACP (Agent
-Communication Protocol) for CLI agents (Claude Code, Codex, SWE_SEED-harnessed
-hosts). All provider calls are gated by exact grants binding endpoint ID,
-config hash, destination, model, limits, and credential reference. Credentials
-resolve via indirection only after authority grants. No provider fallback;
-endpoint failure is recorded, not routed around.
+The `sea-forge-agent` crate provides the `AgentProvider` trait.
 
-Built-in templates coordinate multi-agent work: `sequential_agents` chains
-tasks through source-bound sentries; `concurrent_agents` runs tasks in
-parallel with an all-success rollup milestone. Templates instantiate to plain
-case plans — the case engine (sentries, milestones, discretionary items) is
-the coordination substrate, not an actor runtime.
+Built-in orchestration templates include sequential and concurrent agent arrangements. Templates become ordinary case plans, so the case engine remains the coordination substrate.
 
-Thoth can also orchestrate development cycles through bounded iterations: read
-case state and ledger, propose discretionary `agent_task` items via the
-planner path, await settlement, then evaluate `satisfied | progressing |
-stalled | blocked`. The manager never settles or promotes what it proposed
-(separation of duty). The iteration cap triggers case parking and escalation.
+Thoth can also operate bounded management iterations:
+
+```text
+read case state
+      ↓
+propose discretionary work
+      ↓
+await governed execution and settlement
+      ↓
+evaluate
+satisfied | progressing | stalled | blocked
+```
+
+The manager cannot settle or promote the work it proposed.
+
+Iteration limits prevent indefinite autonomous loops; exhausted loops park and escalate.
 
 </details>
 
 <details>
-<summary><strong>ADLC, ODI, and the Genesis self-model</strong></summary>
+<summary><strong>ADLC, outcome measurement, and lifecycle models</strong></summary>
 
-ADLC (Agentic Development Lifecycle) models software development as a governed
-lifecycle with four containment stages, each a SEA Forge capability-execution
-cycle:
+SEA-Forge includes an Agentic Development Lifecycle model with four stages:
 
-| Stage | Activities | Exit Milestone |
-| ----- | ---------- | -------------- |
-| **Frame** | Preparation, hypothesis, scope | `ProblemFramed` |
-| **Form** | Design, simulation | `DevelopmentAuthorized` |
-| **Build** | Implementation, continuous evaluation | `ReleaseCandidateAccepted` |
-| **Activate** | Controlled deployment, production observation | `ActivationSettled` |
+| Stage        | Typical work                       | Exit milestone             |
+| ------------ | ---------------------------------- | -------------------------- |
+| **Frame**    | preparation, hypothesis, scope     | `ProblemFramed`            |
+| **Form**     | design, simulation                 | `DevelopmentAuthorized`    |
+| **Build**    | implementation, evaluation         | `ReleaseCandidateAccepted` |
+| **Activate** | controlled deployment, observation | `ActivationSettled`        |
 
-ODI (Outcome-Driven Innovation) extends ADLC with outcome measurement.
-Settlement criteria bind to desired outcomes via DomainForge concept
-references, so every criterion traces back to *why* it exists. ODI analysis
-(importance/satisfaction ranking) runs as sandboxed plan items.
+Outcome-Driven Innovation extensions can bind settlement criteria to desired outcomes through DomainForge concept references.
 
-SEA Forge ships a versioned canonical `.sea` self-model
-(`godspeed.seaforge.system`) so no installation starts semantically empty. The
-self-model enforces a strict three-view separation:
-
-| View | Contents |
-| ---- | -------- |
-| **Declared** | Canonical ontology + release realization |
-| **Observed** | Installation-specific: extensions, toolchains, environment contracts |
-| **Demonstrated** | Evidence-backed capability projection from ledgered records |
-
-A declared capability is never reported as demonstrated. The system represents
-absence and uncertainty with a rich status vocabulary from `unsupported`
-through `proven_narrow_variation` to `deprecated` and `quarantined`.
+These lifecycle models are built and proven milestone by milestone. Check `just proof` and the relevant normative specifications before treating a broader lifecycle capability as proven.
 
 </details>
 
 <details>
-<summary><strong>Artifact identity and IP (IFL)</strong></summary>
+<summary><strong>Artifact identity and lineage</strong></summary>
 
-The `sea-forge-artifact-ip` crate tracks work products through their full
-lifecycle:
+The `sea-forge-artifact-ip` crate supports artifact records including:
 
-- **Pre-mint identity**: Deterministic `ifl:hash:<sha256>` computed from
-  canonical content properties (no timestamps, paths, or hostnames)
-- **Registration**: Artifact registration with type, stage, producer, owner,
-  license, and review status
-- **Lineage DAG**: Track derivation chains and transformation provenance
-- **Stage progression**: Cognitive → Intellectual → Product → Capital
-- **Transition tokens**: Governed promote/derive operations with authority
-- **IFL attestation**: From content-hash identity to registered intellectual
-  property token
-- **Capital projection**: Aggregate IP portfolio views
+* deterministic pre-mint identity using `ifl:hash:<sha256>`
+* artifact type, stage, producer, owner, license, and review status
+* lineage DAGs
+* governed stage transitions
+* attestation
+* portfolio projections
+
+These features track work products and their derivation.
+
+They do not turn generated content into legally protected intellectual property by themselves; legal status remains external to the technical record.
 
 </details>
 
-### Project layout
+---
+
+## Repository layout
 
 ```text
 .agents/specs/               # normative specifications
 docs/decisions/              # architecture decision records
+
 crates/
   sea-forge-core/            # kernel types, IDs, lifecycle, errors
-  sea-forge-ledger/          # append-only JSONL truth store, integrity proofs
-  sea-forge-domain/          # intent vocabulary, domain primitives
+  sea-forge-ledger/          # append-only record store + integrity proofs
+  sea-forge-domain/          # intent vocabulary and domain primitives
   sea-forge-domainforge/     # DomainForge semantic adapter
   sea-forge-authority/       # policy engine, authority fabric, RBAC
-  sea-forge-planner/         # case plans, stages, sentries, templates
-  sea-forge-sandbox/         # workspace isolation, jail backends
-  sea-forge-runtime/         # process execution, timeout enforcement
-  sea-forge-trace/           # structured trace events, EventSink trait
-  sea-forge-evidence/        # evidence collection, hash verification
-  sea-forge-settlement/      # settlement evaluation, criteria, authorities
-  sea-forge-capability/      # capability envelopes, memory, semantic recall
-  sea-forge-extension/       # extension registry, projection adapter ABI
-  sea-forge-server/          # Tokio daemon, Unix-socket API, event stream
-  sea-forge-cli/             # CLI frontend
-  sea-forge-spec-pipeline/   # spec-to-code generation pipeline
-  sea-forge-cell/            # cell-based isolation and federation
-  sea-forge-artifact-ip/     # artifact identity, IP lifecycle, attestation
-  sea-forge-self-model/      # Genesis self-model, self-knowledge primitives
-models/                      # bundled .sea self-model and ontology seeds
-justfile                     # canonical command surface
-devbox.json                  # pinned system tools
-rust-toolchain.toml          # pinned Rust channel + components
-deny.toml                    # cargo-deny policy
+  sea-forge-planner/         # cases, stages, sentries, templates
+  sea-forge-sandbox/         # workspace isolation and jail backends
+  sea-forge-runtime/         # process execution and timeouts
+  sea-forge-trace/           # structured trace events
+  sea-forge-evidence/        # evidence collection and verification
+  sea-forge-settlement/      # operational settlement
+  sea-forge-capability/      # capability envelopes and recall
+  sea-forge-extension/       # extension and projection interfaces
+  sea-forge-server/          # long-running daemon
+  sea-forge-cli/             # CLI
+  sea-forge-spec-pipeline/   # governed generation pipeline
+  sea-forge-cell/            # cell isolation and federation
+  sea-forge-artifact-ip/     # artifact identity and lineage
+  sea-forge-self-model/      # system self-model
+
+models/                      # bundled .sea models
+justfile                     # canonical developer commands
+devbox.json                  # pinned host tooling
+rust-toolchain.toml          # pinned Rust toolchain
+deny.toml                    # dependency policy
 ```
 
-Runtime output goes under `.sea-forge/` (gitignored). Bootstrap evidence goes
-under `target/bootstrap-evidence/` (gitignored). The two stores are never
-conflated.
+---
 
-### Commands
+## Developer commands
 
-`just` with no arguments prints the grouped recipe list. Key recipes:
+Run `just` with no arguments to see the complete command surface.
 
-| Recipe | Purpose |
-| --- | --- |
-| `just setup` | Converge on the pinned toolchain and dependencies |
-| `just sync` | Re-converge after a pull that touched Cargo.toml / rust-toolchain.toml |
-| `just doctor` | Machine-readable environment check |
-| `just hooks-install` | Set `core.hooksPath=.githooks` |
-| `just check-fast` | Context + fmt + typecheck — what the pre-commit hook runs |
-| `just fmt` / `just fmt-check` | Apply / verify rustfmt |
-| `just lint` | clippy with `-D warnings` |
-| `just typecheck` | `cargo check --workspace --all-targets --locked` |
-| `just security` | `cargo deny check` + `gitleaks detect` |
-| `just test` | `cargo test --workspace --all-features --locked` |
-| `just build` | `cargo build --workspace --all-targets --locked` |
-| `just check` | context + fmt + clippy + typecheck + cargo deny + gitleaks |
-| `just ci` | Canonical CI verification (union of all required CI jobs) |
-| `just pr` | Verify + push + open a PR via `gh`; refuses from `main` |
-| `just proof` | Run the full conformance suite (P1–P4b + milestone gates) |
-| `just release-check [tag]` | Verify workspace/core/cli versions agree |
-| `just clean` | Remove `target/` and bootstrap evidence |
-| `just secrets-init` | Create a local age key if absent |
-| `just secrets-edit [profile]` | Edit an encrypted secrets profile via SOPS |
-| `just secrets-check [profile]` | Verify decryption (values redacted) |
+Common recipes:
 
-CI invokes the same recipes via `devbox run -- just ...`. The required check
-name on a pull request is `CI / gate`.
+| Command                    | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| `just setup`               | Converge on pinned dependencies               |
+| `just doctor`              | Check the local environment                   |
+| `just check-fast`          | Fast formatting + type checks                 |
+| `just fmt`                 | Apply Rust formatting                         |
+| `just lint`                | Run clippy with warnings denied               |
+| `just typecheck`           | Check the workspace                           |
+| `just security`            | Run dependency and secret checks              |
+| `just test`                | Run workspace tests                           |
+| `just build`               | Build workspace targets                       |
+| `just check`               | Run the standard verification set             |
+| `just ci`                  | Run the canonical CI verification             |
+| `just proof`               | Run the conformance and milestone proof suite |
+| `just release-check [tag]` | Check release version consistency             |
+| `just clean`               | Remove generated build/evidence output        |
 
-### Secrets (SOPS + age)
+CI invokes the same command surface through Devbox.
 
-API and MCP credentials are encrypted at rest with
-[SOPS](https://github.com/getsops/sops) and
-[age](https://github.com/FiloSottile/age):
+The required pull-request check is:
 
-- Only `*.enc.env` files live under `secrets/` and are tracked. Plaintext is
-  gitignored and never committed.
-- The private key lives **outside the repository** at `$SOPS_AGE_KEY_FILE`
-  (default `~/.config/sops/key.txt`).
-- `.envrc` decrypts the active profile (`$SEA_ENV`, default `dev`) only when a
-  key is present. With no key it emits a warning and leaves secret variables
-  unset, so offline gates keep working.
+```text
+CI / gate
+```
+
+---
+
+## Secrets
+
+SEA-Forge uses SOPS and age for encrypted repository-managed secret profiles.
+
+Tracked files under `secrets/` remain encrypted.
+
+The age private key stays outside the repository.
 
 ```sh
-just secrets-init           # first time: creates ~/.config/sops/key.txt
-# add the printed age1... recipient to .sops.yaml, then:
-just secrets-edit dev       # edit secrets/dev.enc.env
-just secrets-check dev      # verify it decrypts (values redacted)
+just secrets-init
+just secrets-edit dev
+just secrets-check dev
 ```
 
-Lost age private keys are **not recoverable**. Generate a new key with `just
-secrets-init`, add its recipient to `.sops.yaml`, and re-encrypt with `just
-secrets-rekey`.
+If the key is unavailable, secret-backed integrations remain unavailable rather than causing the authority foundation to fail open.
 
-### Offline work
+Lost age private keys cannot be recovered. Generate and register a replacement, then re-encrypt the affected profiles.
 
-Builds, formatting, clippy, unit tests, `cargo deny` (licenses/bans/sources),
-and gitleaks run without credentials or network. Only `cargo deny check
-advisories` fetches the RustSec database. Missing secrets block declared
-integrations only — never the foundation gates.
+---
 
-### Diagnostics and observability
+## Offline work
 
-The CLI emits newline-delimited JSON diagnostics to stderr through Rust's
-`tracing` ecosystem. Set `RUST_LOG` to control filtering (default `info`):
+The core repository is designed so that formatting, builds, Clippy, unit tests, license/bans/source checks, and secret scanning can run without provider credentials.
+
+Some dependency advisory checks may require network access to refresh their databases.
+
+Missing external credentials should block the integration that needs them, not unrelated local proof.
+
+---
+
+## Diagnostics
+
+SEA-Forge emits structured diagnostics through Rust's `tracing` ecosystem.
+
+Increase runtime verbosity with:
 
 ```sh
 RUST_LOG=debug sea-forge run --intent "..."
 ```
 
-Runtime diagnostics use stable event names and include `run_id`, `component`,
-and `error_class`. They are distinct from the governed lifecycle events
-persisted in `.sea-forge/` run directories.
+Diagnostics include stable fields such as:
 
-The server exposes an event subscription stream for external monitoring
-consumers and supports OpenTelemetry-compatible trace export.
+```text
+run_id
+component
+error_class
+```
 
-### Specifications
+These diagnostics are separate from governed lifecycle events stored as run evidence.
 
-The specifications are normative: they define the behavior the conformance
-suite checks.
+Server mode also exposes an event subscription stream and supports OpenTelemetry-compatible trace export.
 
-| Spec | Scope |
-| ---- | ----- |
-| [Shell-SPEC.md](.agents/specs/Shell-SPEC.md) | Development shell, toolchain, secrets, CI |
-| [spec-minimum.md](.agents/specs/spec-minimum.md) | Minimum governed kernel (M-slice) |
-| [spec-full.md](.agents/specs/spec-full.md) | Full system milestones M0–M8 |
-| [spec-adlc-thoth-minimum.md](.agents/specs/spec-adlc-thoth-minimum.md) | ADLC/ODI lifecycle, Genesis self-model, Thoth (M9–M11) |
-| [spec-agent-orchestration.md](.agents/specs/spec-agent-orchestration.md) | Agent delegation, orchestration topologies, ACP (M12–M16) |
-| [ADR-001](docs/decisions/ADR-001-domainforge-semantic-boundary.md) | DomainForge semantic boundary |
+---
 
-See `ARCHITECTURE.md` for the system map and how the layers fit together.
+## Specifications are stronger than this README
 
-### Contributing
+The normative behavior lives in the repository specifications and their proof gates.
+
+Key references include:
+
+* [`Shell-SPEC.md`](.agents/specs/Shell-SPEC.md)
+* [`spec-minimum.md`](.agents/specs/spec-minimum.md)
+* [`spec-full.md`](.agents/specs/spec-full.md)
+* [`spec-adlc-thoth-minimum.md`](.agents/specs/spec-adlc-thoth-minimum.md)
+* [`spec-agent-orchestration.md`](.agents/specs/spec-agent-orchestration.md)
+* [`ADR-001`](docs/decisions/ADR-001-domainforge-semantic-boundary.md)
+* [`ARCHITECTURE.md`](ARCHITECTURE.md)
+
+Use:
+
+```sh
+just proof
+```
+
+to check the executable evidence behind implemented claims.
+
+A README can become stale.
+
+A passing proof tied to a frozen specification is harder to hand-wave.
+
+---
+
+## Contributing
+
+Create a branch from current `main`, make the change, and exercise the same gates CI will use:
 
 ```sh
 git switch main
 git pull --ff-only
 git switch -c feat/short-description
 
-# make changes
-just check-fast       # what the pre-commit hook runs
-git add ...
-git commit            # pre-commit hook runs `just pre-commit`
+just check-fast
 
-just pre-push         # what the pre-push hook runs
+git add ...
+git commit
+
+just pre-push
 git push -u origin HEAD
 
-just pr               # verify + push + open a PR via gh; refuses from main
+just pr
 ```
 
-The PR title must be Conventional Commit-shaped (`feat(scope): ...`,
-`fix(scope): ...`, etc.) so Release Please can derive the next release. The
-full happy path and recovery procedures are in
-[`CONTRIBUTING.md`](CONTRIBUTING.md); the CI/CD architecture is in
-[`docs/explanations-and-references/ci-cd-architecture.md`](docs/explanations-and-references/ci-cd-architecture.md).
+Pull-request titles use Conventional Commit form so Release Please can determine version changes.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the complete workflow and recovery procedures.
+
+---
 
 ## License and commercial use
 
-SEA Forge is source-available under the
-[SEA-Forge Sustainable Use License](LICENSE). Separate
-[commercial licensing](COMMERCIAL-LICENSE.md) is available for hosted,
-embedded, redistributed, white-labeled, client-facing, and enterprise use.
+SEA-Forge is source-available under the [SEA-Forge Sustainable Use License](LICENSE).
 
-SEA Forge follows the **Photoshop Principle**: you may own and commercialize
-independent outputs you create with the tool, but you do not own or resell the
-tool itself.
+Permitted uses include the internal, personal, educational, research, evaluation, and non-commercial uses described by the license.
 
-- **You may:** use and modify SEA Forge for permitted internal, personal,
-  educational, research, evaluation, and non-commercial purposes.
-- **You may also:** own and commercialize independent outputs generated with
-  SEA Forge, provided they do not include SEA Forge itself,
-  repository-generated materials, or enterprise-only components.
-- **You may not without a commercial license:** resell or redistribute SEA
-  Forge, offer it as a hosted or managed service, embed it in a paid product,
-  white-label it, provide SEA-Forge-powered services to clients, or use
-  enterprise-only components.
+Independent outputs produced with SEA-Forge can be owned and commercialized when they do not include SEA-Forge itself, restricted repository-generated materials, or enterprise-only components.
 
-Enterprise-only files are identified by the rules in
-[LICENSE_EE.md](LICENSE_EE.md). Third-party components remain subject to their
-own licenses.
+A commercial license is required for restricted operational uses such as hosted, embedded, redistributed, white-labeled, client-facing, managed-service, or other uses covered by the commercial terms.
 
-For production agents, client-facing deployments, or enterprise rights,
-contact [licensing@godspeedai.com](mailto:licensing@godspeedai.com).
+See:
+
+* [LICENSE](LICENSE)
+* [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)
+* [LICENSE_EE.md](LICENSE_EE.md)
+
+for the actual legal terms.
+
+The practical distinction is simple:
+
+> You can own what you create with the tool. The tool itself remains subject to its license.
+
+For production agents, client-facing deployment rights, enterprise components, or commercial licensing questions, contact:
+
+[licensing@godspeedai.com](mailto:licensing@godspeedai.com)

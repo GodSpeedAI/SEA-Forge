@@ -160,3 +160,9 @@
     bottom: 0;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .skipLink {
+    transition: none;
+  }
+}

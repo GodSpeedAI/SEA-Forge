@@ -1,0 +1,60 @@
+{
+  "task": "T25",
+  "builder": "B1",
+  "status": "complete",
+  "negative": {
+    "terminal": "budget_exhausted",
+    "single_factor": true,
+    "mutation": "bounded_input.max_rounds 4 -> 3 (the discovered r*-1); every other case-config field identical",
+    "settlement_committed_count": 2,
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/state/gauntlet-state.db",
+    "state_db_sha256": "097e1af5bad144c661c6c11126a6077e0ccbddedde654ba9e0702f885bf19d88",
+    "gauntlet_id_seed": "t25-negative-r1-seed",
+    "label_source": "recomputed read-only from the negative run's own state DB (run_terminal event); never assigned; independently recomputed by the gate"
+  },
+  "payment": {
+    "tool_executions": 22,
+    "model_calls": 37,
+    "wall_seconds_recorded": 406.054,
+    "failed_executions": 3,
+    "operator_decision_entries": 7,
+    "recorded_detail": {
+      "tool_executions_by_stage": "T22 round-1 probes 3 (failed round) + T22 round-2 probes 3 + T23 route probes 12 + T23 teeth T4 1 + T24 replay 1 + T24 T7 attack 1 + T25 negative 1",
+      "model_calls_by_stage": "T22 r1 4 (1 gen + 3 judgment) + T22 r2 4 (1 gen + 3 judgment) + T23 route 16 (4 gen + 12 judgment) + T23 round-2 re-judgment 12 + T23 round-3 0 + T24 case generation 1 + T25 0",
+      "failed_executions": "T22 round-1: 3 run_error probes (preserved failed round); every other recorded stage 0; T23's round-1 teeth script crash never reached a gauntlet execution",
+      "wall_clock_note": "recorded total only: T23 round-2 and round-3 recorded no wall clock (n/a, not estimated); T23 round-2 made 12 recorded re-judgment provider calls",
+      "tokens_and_cost": "n/a: the frozen provider seam does not expose token/cost accounting (recorded honest gap)"
+    },
+    "baseline_note": "manual T15/T16 baseline quoted from records only: T15 = operator-authored 9-case grid, clean round-3 batch (settled 3 / budget_exhausted 6; rounds 1-2 preserved failed); T16 = N=25 expansion (settled 12 / budget_exhausted 13) measured over recorded rounds (quota-blocked round-1, failed round-2 scoring, round-3 re-calls, round-4 complete, round-5 baseline correction), with recorded provider answers (9-row: DeepSeek 9 answered / Prime 0 answered 9 contract failures; expanded: DeepSeek 24 answered + 1 contract failure, Muse 25 answered) and 21 recorded operator decision entries (D-T15-01..D-T16-18); wall clock for the manual baseline: n/a (not recorded in the T15/T16 evidence); no estimates, no normalized cost claim (the two sides measure different surfaces)"
+  },
+  "novelty": "novel",
+  "novelty_detail": {
+    "route_fingerprint": "e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted",
+    "grid_as_recorded": "25 runs, single-run fingerprints only: e2e-happy@4:settled, e2e-lying@4:budget_exhausted, e2e-happy@1:budget_exhausted, e2e-happy@2:budget_exhausted, e2e-forged-report@4:budget_exhausted; recorded budget levels [1, 2, 4(default)]",
+    "classification_basis": "no equal fingerprint (no multi-move sequences in the recorded grids) and no equal operation set; the route's budget levels 3 and 6 were never probed in the T15/T16 records - the T16 expansion verified to have never probed fixture-target budget levels 5, 6, or 7",
+    "tooth_t8": "a regenerated structurally-equivalent route record (same fingerprint) classifies structural-duplicate under the gate's own re-derivation of the frozen metric: duplication DETECTABLE and recorded, no auto-rejection (frozen policy)"
+  },
+  "teeth": ["T8"],
+  "verification": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 .agents/evidence/godspeed-bounded-judgment/T25/run_negative.py  (cwd /home/sprime01/projects/sea-rs; real gauntlet run)",
+      "exit": 0,
+      "summary": "Single-factor matched negative: took the ACCEPTED T24 case (e2e-happy@4) and mutated EXACTLY ONE factor - max_rounds 4 -> 3 (the route's discovered r*-1) - everything else identical (independently diffed and recorded). Real mechanism on a fresh tests/fixtures/target copy (budget sed 4->3 applied and still verifiable in the durable target copy), fresh seed t25-negative-r1-seed (0 collisions against 14 recorded prior seeds), frozen env + timeout 240. RESULT: typed terminal budget_exhausted with 2 settlement_committed events, exit 1, wall 0.303s - the label READ from the run's own state DB (pinned path+sha256, provenance-validated), never assigned. The actual non-settlement consequence held. matched-pair.yaml records positive (T24 replay: settled, 3 settlements, pinned DB) vs negative with the single-factor diff."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 .agents/evidence/godspeed-bounded-judgment/T25/run_tooth.py  (cwd /home/sprime01/projects/sea-rs; synthetic, no gauntlet run)",
+      "exit": 0,
+      "summary": "TOOTH T8 MATCH: regenerated a structurally equivalent route record (same retained-move sequence and terminals as settled t23-route-001, same fingerprint) marked ATTACK, ran the SAME frozen novelty metric over it against the settled route: classification structural-duplicate - duplication DETECTED and recorded with NO automatic rejection (frozen policy: measured, not rejected). Zero gauntlet executions, zero provider calls; matched-pair.yaml byte-identical before/after."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T25/verify_payment.py  (cwd /home/sprime01/projects/sea-rs; OFFICIAL plan-T25 gate)",
+      "exit": 0,
+      "summary": "OFFICIAL GATE PASS: 137 fail-closed checks. (1) frozen inputs re-verified (T21 modules, prereg chain, provenance, round-1/round-3 route records, AND the T24 artifacts through T24's own frozen manifest); (2) the positive side re-joined to the T24 replay record and its pinned DB (recomputed settled with 3 settlement events); the negative label RECOMPUTED from its own pinned DB (path+sha256 first, exactly one run_terminal) - the gate fails if the negative settles or errors (it recomputed budget_exhausted with 2 settlements); (3) the single-factor mutation proven three ways: the gate independently rebuilt both case configs and diffed them (exactly bounded_input.max_rounds 4->3), re-read the durable target copies' GAUNTLET.md (positive still 4 with no sed; negative 3), and checked the fresh seed; (4) payment-comparison.yaml assembled deterministically from RECORDED counters only (7 branch decision entries counted from decisions.yml in the frozen range D-2026-09-18-T21-01..D-2026-09-19-T23-03; wall per task from the recorded payment counters, 406.054s recorded total with T23 r2/r3 n/a; 37 model calls from the recorded provider ledgers: 7 generation + 30 judgment; 22 recorded gauntlet executions; 3 failed executions = the preserved T22 round-1 run_errors) BESIDE the manual T15/T16 baseline as recorded (corpus 9 -> 25 runs, recorded rounds history, recorded provider answers, 21 recorded baseline decision entries; wall n/a - not recorded; no estimates); (5) novelty.yaml computed with the gate's own re-derivation of the frozen metric against the T15/T16 grids as recorded: NOVEL, with the T16 expansion's recorded budget levels re-derived as [1,2,4] and 5/6/7 verified absent (route levels 3 and 6 outside every recorded grid level); (6) tooth T8 re-proven by independent classification (structural duplicate detected, no auto-rejection); (7) manifest hash checks both directions, fail-closed. A pre-freeze trial run failed ONLY on the then-missing manifest (by design); verify_payment.py was not modified between trial and official run."
+    }
+  ],
+  "deviations": [
+    "payment-comparison.yaml and novelty.yaml are assembled BY the gate from recorded evidence files (deterministic content: recorded values only, no wall-clock timestamps), then byte-compared on every re-run; they are gate outputs and, like b1-result.json, are excluded from the manifest's unpinned-file walk while all other T25 artifacts are hash-pinned fail-closed.",
+    "Recorded-surface caveat (honesty, not a defect): the mechanism-side and baseline-side counters measure different surfaces (loop-mechanism payment vs manual corpus construction with its own preserved failed rounds); payment-comparison.yaml records both sides beside each other with their sources and draws no normalized economic claim - the recorded CLAIM-C measurement surface only."
+  ],
+  "notes": "T25 complete. Matched negative realized: positive = T24's accepted case t24-case-001 (e2e-happy@4, replay settled, 3 settlement_committed events) vs negative = the same case with exactly max_rounds 4->3 run through the real mechanism (budget_exhausted, 2 honest settlements - mirroring the route's own probe-i1-cand-2 consequence); both labels recomputed from their pinned state DBs, never assigned. Payment recorded honestly: 22 tool executions / 37 model calls (7 gen + 30 judgment) / 406.054s recorded wall / 3 failed executions / 7 branch operator-decision entries, beside the quoted T15/T16 manual baseline (9->25 runs, rounds history recorded, wall n/a). Novelty: NOVEL under the frozen metric (no equal fingerprint or operation set in the recorded T15/T16 grids; budget levels 5/6/7 verified never probed there; route levels 3/6 outside the grid). Tooth T8: structural duplicate detection proven with no auto-rejection. Whole-T25 gauntlet executions: 1 (the negative). No plan, prereg, addendum, status file, or T21/T22/T23/T24 file was modified (import/read only; T24 artifacts hash-verified through T24's frozen manifest); PYTHONDONTWRITEBYTECODE honored; durable run state under $HOME/.local/share/godspeed-route-discovery/T25/. Next move (orchestrator): T26 independent adversarial confirmation over the T23/T24/T25 evidence."
+}

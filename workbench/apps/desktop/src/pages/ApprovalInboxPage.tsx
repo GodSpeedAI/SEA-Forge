@@ -20,15 +20,31 @@ function ApprovalRow({
   approval,
   busy,
   action,
+  currentActorId,
   onDecide,
 }: {
   approval: PendingApproval;
   busy: boolean;
   action: ProtectedActionDecision;
+  currentActorId?: string;
   onDecide: (verdict: Verdict, note: string) => void;
 }) {
   const [note, setNote] = useState("");
   const noteId = `note-${approval.approval_id}`;
+  const requester = approval.governance?.requester;
+  const isSelfRequest = !!requester && !!currentActorId && requester === currentActorId;
+  const isExpired = approval.expired;
+  const isDisabled = busy || !action.isAllowed || isExpired;
+  const disabledReason = isExpired
+    ? "Decision unavailable: the approval window has closed."
+    : !action.isAllowed && action.refusal
+      ? `${action.refusal.message} ${action.refusal.unchangedEffect}`
+      : undefined;
+  const operationKind = approval.governance?.operation_kind ?? "the requested operation";
+  const resourceRef = approval.governance?.resource_ref ?? "the recorded resource";
+  const purposeEntries = approval.governance
+    ? Object.entries(approval.governance.purpose_context ?? {})
+    : [];
 
   return (
     <li className={styles.row} data-od-id="approval-decision-panel">
@@ -98,7 +114,20 @@ function ApprovalRow({
             </div>
             <div>
               <dt>Purpose context</dt>
-              <dd className={styles.mono}>{JSON.stringify(approval.governance.purpose_context)}</dd>
+              <dd>
+                {purposeEntries.length > 0 ? (
+                  <dl className={styles.purposeList}>
+                    {purposeEntries.map(([key, value]) => (
+                      <div key={key}>
+                        <dt>{key}</dt>
+                        <dd className={styles.mono}>{String(value ?? "not recorded")}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <span className={styles.mono}>not recorded</span>
+                )}
+              </dd>
             </div>
             <div>
               <dt>Side effect</dt>
@@ -123,11 +152,23 @@ function ApprovalRow({
 
       {approval.expired && (
         <p className={styles.expiredNote} role="status">
-          This approval&rsquo;s window has closed. It stays listed so the reason dependent
-          work is parked remains visible; the kernel decides whether a decision is still
-          accepted.
+          This approval window has closed. It stays listed so the reason dependent
+          work is parked remains visible. The kernel decides whether a late decision
+          is accepted. The buttons below are disabled for this reason.
         </p>
       )}
+
+      {isSelfRequest && (
+        <p className={styles.dutyWarning} role="alert">
+          Separation of duty: you requested this work. Ask a different reviewer to
+          decide, or record why self approval is justified in the note.
+        </p>
+      )}
+
+      <p className={styles.consequence}>
+        Approving executes {operationKind} on {resourceRef}. This cannot be undone
+        from here. Rejecting parks dependent work instead of failing it.
+      </p>
 
       <label className={styles.noteLabel} htmlFor={noteId}>
         Decision note
@@ -137,7 +178,7 @@ function ApprovalRow({
         className={styles.note}
         value={note}
         rows={2}
-        placeholder="Why this decision — recorded with it."
+        placeholder="Why this decision: recorded with it."
         onChange={(event) => setNote(event.target.value)}
       />
 
@@ -145,7 +186,8 @@ function ApprovalRow({
         <button
           type="button"
           className={styles.approve}
-          disabled={busy || !action.isAllowed}
+          disabled={isDisabled}
+          aria-describedby={disabledReason ? `${noteId}-reason` : undefined}
           onClick={() => onDecide("approve", note)}
         >
           {busy ? "Recording…" : "Approve"}
@@ -153,12 +195,18 @@ function ApprovalRow({
         <button
           type="button"
           className={styles.reject}
-          disabled={busy || !action.isAllowed}
+          disabled={isDisabled}
+          aria-describedby={disabledReason ? `${noteId}-reason` : undefined}
           onClick={() => onDecide("reject", note)}
         >
           {busy ? "Recording…" : "Reject"}
         </button>
       </div>
+      {disabledReason && (
+        <p className={styles.disabledReason} id={`${noteId}-reason`} role="status">
+          {disabledReason}
+        </p>
+      )}
     </li>
   );
 }
@@ -196,7 +244,7 @@ export function ApprovalInboxPage() {
       {unreadable && (
         <div role="alert" className={styles.alert}>
           The approvals journal exists but could not be parsed: {unreadable}. This is not an
-          empty inbox — nothing could be determined, so no approval shown or missing here
+          empty inbox. Nothing could be determined, so no approval shown or missing here
           should be trusted until it is resolved.
         </div>
       )}
@@ -223,8 +271,8 @@ export function ApprovalInboxPage() {
 
       {!isLoading && approvals.length === 0 && !error && !unreadable && (
         <p className={styles.muted}>
-          Nothing is waiting for a decision. This is an empty queue, not an unread one — the
-          journal was read successfully and contained no pending approval.
+          Nothing is waiting for a decision. This is an empty queue, not an unread one.
+          The journal was read successfully and contained no pending approval.
         </p>
       )}
 
@@ -236,6 +284,7 @@ export function ApprovalInboxPage() {
               approval={approval}
               busy={deciding === approval.approval_id}
               action={action}
+              currentActorId={identity?.actor?.actorId}
               onDecide={(verdict, note) =>
                 void decide(approval.approval_id, approval.case_id, verdict, note || undefined)
               }

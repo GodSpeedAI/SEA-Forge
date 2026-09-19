@@ -3,10 +3,11 @@
   align-items: center;
   gap: var(--space-2, 8px);
   padding: 6px var(--space-4, 16px);
-  background-color: rgba(13, 17, 23, 0.8);
-  border-bottom: 1px solid #21262d;
-  font: var(--text-caption, 11px / 1.3 system-ui, sans-serif);
-  color: #8b949e;
+  background-color: var(--surface-overlay);
+  border-bottom: 1px solid var(--surface-muted);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--fg-secondary);
   overflow-x: auto;
 }
 
@@ -17,11 +18,11 @@
 }
 
 .stepActive {
-  color: #58a6ff;
+  color: var(--color-focus-primary);
   font-weight: 600;
 }
 
 .arrow {
-  color: #30363d;
+  color: var(--surface-muted);
   font-size: 10px;
 }

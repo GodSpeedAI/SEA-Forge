@@ -1,0 +1,24 @@
+schema: godspeed-bounded-judgment.t25-evidence-manifest
+task: T25
+builder: B1
+frozen_utc: '2026-09-19T04:28:45.245466+00:00'
+note: frozen BEFORE the FINAL gate run; every .py/.yaml/.json artifact of T25 is pinned except the gate's own deterministic
+  outputs (payment-comparison.yaml, novelty.yaml) and the result contract (b1-result.json), which are written with/after
+  the gate and byte-verified by the gate on every run; no pinned file is ever modified afterwards
+files:
+- path: matched-pair.yaml
+  sha256: aa0af3c641776b41144c8fa0944506a1235c890a2326855dc03a0f42f490ec06
+- path: payment-counters.yaml
+  sha256: 6b21deec6bf21306d3d37bd0d2587d93acb9378b2c87680c9676015c44f37f9c
+- path: run_negative.py
+  sha256: a6ea392e6b97aa57e3b094fc0b7cccfc859aaf2430ee7d459b3c829d3d38ac63
+- path: run_tooth.py
+  sha256: 65388cfb72377e13387eeeaeb977e6956b99bb08c1547d09d990a3fa9daf995d
+- path: teeth.yaml
+  sha256: f914c4e1848ec8501c10809f15db8aaf1a63f050940492f4d16927094261d612
+- path: verify_payment.py
+  sha256: 6389490a9b52795322864828f32e27d594c16d1f203784bc602517299c9115db
+- path: teeth/t8-attack-record.json
+  sha256: 60d0637ab75f73f64d953d481ec9a1eed7cc7efab6008fc03dee106ceb2a0ca8
+- path: teeth/t8-duplicate-route-record.yaml
+  sha256: 23bf1369e8426e1049f2b9ad9a20874618d494c5a3b0a21aaac7de04c735b98b

@@ -343,6 +343,7 @@ async fn stale_precondition_on_approve_is_rejected_with_no_side_effect() {
             "verb": "approve", "actor": {"actor_id": "operator_local", "role": "operator"},
             "case_id": "case_does_not_exist",
             "approval_id": "appr_1",
+            "request_id": "test-stale-approve",
             "preconditions": {
                 "records": [
                     {"ref": "case:case_does_not_exist", "expected_digest": "sha256:deadbeef"}
@@ -394,6 +395,7 @@ async fn precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint() {
             "verb": "approve", "actor": {"actor_id": "operator_local", "role": "operator"},
             "case_id": "real_case",
             "approval_id": "appr_1",
+            "request_id": "test-ref-mismatch-approve",
             "preconditions": {
                 "records": [
                     {"ref": "case:other_case", "expected_digest": "sha256:deadbeef"}
@@ -1124,6 +1126,7 @@ async fn oversized_precondition_records_fail_with_typed_error_before_any_side_ef
             "verb": "approve", "actor": {"actor_id": "operator_local", "role": "operator"},
             "case_id": "case_cap",
             "approval_id": "appr_cap",
+            "request_id": "test-cap-approve",
             "preconditions": { "records": records }
         }))
         .await;

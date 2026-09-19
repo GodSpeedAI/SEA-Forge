@@ -157,7 +157,7 @@ export function SystemContractPage() {
               </div>
               <p className="operational-copy" role="alert">
                 {error.message}. Until the cell answers, the workbench makes no claim about
-                which methods exist — surfaces will show <em>unknown</em> rather than guess.
+                which methods exist. Surfaces will show <em>unknown</em> rather than guess.
               </p>
             </section>
           ) : isLoading ? (
@@ -182,7 +182,7 @@ export function SystemContractPage() {
                         <li className="method-row" key={method} data-standing={standing}>
                           <span className="machine-value">{method}</span>
                           <span className="method-class">
-                            {contract?.classes.get(method) ?? "—"}
+                            {contract?.classes.get(method) ?? "not described"}
                           </span>
                           <GovernedStatusPill
                             variant={presentation.variant}
@@ -213,7 +213,7 @@ export function SystemContractPage() {
                       <li className="method-row" key={method} data-standing="unsurfaced">
                         <span className="machine-value">{method}</span>
                         <span className="method-class">
-                          {contract?.classes.get(method) ?? "—"}
+                          {contract?.classes.get(method) ?? "not described"}
                         </span>
                         <GovernedStatusPill
                           variant="degraded"

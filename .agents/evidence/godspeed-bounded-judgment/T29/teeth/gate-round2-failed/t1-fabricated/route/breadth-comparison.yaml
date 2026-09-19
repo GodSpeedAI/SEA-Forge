@@ -1,0 +1,92 @@
+# =============================================================================
+# T29 BREADTH COMPARISON — family-2 (forged-report detection) vs family-1
+# (honest settling), per the frozen T29 prereg breadth_comparison_required.
+# Every number is counted or quoted from a recorded evidence file named beside
+# it; unobservable quantities are n/a; the two families measure DIFFERENT
+# payment currencies (settling payment vs detection payment) and are NOT
+# collapsed into one scalar.
+# =============================================================================
+schema: godspeed-bounded-judgment.t29-breadth-comparison
+task: T29
+route_id: t29-route-001
+family1_reference: >-
+  The settled T21-T26 mechanism on the honest family (e2e-happy x budget
+  ladder, settling boundary r*), preserved under T22-T26 and the frozen
+  T23/round-3 ledger.
+family2_subject: >-
+  This route: e2e-forged-report x budget ladder, detection boundary d*, under
+  the frozen T29 prereg.
+
+comparison:
+  discoverable_route:
+    family1: "yes: r* = 4 (minimal settling e2e-happy budget), r*-1 = 3 exhausting; T23/round-3/route-record.round3.yaml goal_evaluation (r_star: 4, boundary_met: true)"
+    family2: "yes: d* = 2 (minimal UP-detected forged budget), d*-1 = 1 probed and not firing; T29/route/route-record.yaml goal_evaluation (d_star: 2)"
+  settlement_vs_characterization:
+    family1: "settlement route: honest e2e-happy runs settle (3 settlement_committed events at budgets 4..8); route stop_condition route_settled with real settlements behind it"
+    family2: "characterize-and-stop route: 0 settlement_committed events on ALL 6 forged probes (the composed settlement gate COR-F1 refuses the forged reports as producer_uncorroborated); route 'settled' means ONLY the frozen characterization goal G1+G2+G3 was met — recorded in route-record.yaml note"
+  payment_boundary_character:
+    family1: "r* is a SETTLEMENT boundary: payment at >= 4 buys a settled run; below it the run exhausts with partial settlements (happy@2: 1, happy@3: 2) — payment and settlement are coupled"
+    family2: "d* is a DETECTION boundary: payment at >= 2 buys mechanical detection of the fraud (passing-claim artifact + 0 settlements + bounded non-settlement); at d*-1 = 1 the run ends with 0 dispatches and 0 artifacts, so there is nothing to detect — detection is decoupled from settlement everywhere in the family"
+  matched_negative_behavior:
+    family1: "happy@3 (r*-1) budget_exhausted vs happy@4 (r*) settled; single declared factor budget; label read from real terminals (T23/round-3 mechanical labels rows probe-i1-cand-2/-cand-1)"
+    family2: "forged@1 (d*-1) UP-not-fired (0 artifacts; c3 false) vs forged@2 (d*) UP-fired; single declared factor budget; label read from real terminals (this route probe-i2-cand-2-1 vs probe-i1-cand-2)"
+  inversion_applicability:
+    family1: "applied: T24 inverted the settled route into a generated case with candidate-before-replay + impostor lookalike (T24/replay-record.yaml)"
+    family2: "N/A, with the reason: no settleable route exists in this family (every forged run is refused by the settlement gate by construction), so there is no settleable route to invert; the apparatus was NOT modified to force it (prereg route_to_case_inversion)"
+  shared_vs_changed_machinery:
+    shared:
+      - "T21 frozen modules imported UNCHANGED: route_contracts.py, admission.py, selection_policy.py, operations_catalog.yaml (verified against T21/evidence-manifest.yml at every harness start)"
+      - "the frozen addendum-1 probe mechanism (disposable tests/fixtures/target copies, budget sed lever, deterministic clock, per-probe GAUNTLET_ID_SEED, 240 s timeout)"
+      - "ground truth = the run's own event log in the pinned state DB; absorb-time mechanism-provenance gate"
+      - "K=3 generation via the opencode seam with ONE substitution and a declared deterministic fallback"
+      - "deterministic route-goal evaluation over consequence records (addendum-3 architecture); learned output observational only"
+      - "matched-negative single-factor discipline; append-only records; teeth"
+    changed:
+      - "family constants: scenario e2e-forged-report (vs e2e-happy/e2e-lying mix)"
+      - "route goal: detection boundary d* (vs settling boundary r*); characterize-and-stop (vs settlement)"
+      - "the mechanical rule: family-2 UP rule (passing-claim artifact, failures: 0) vs frozen addendum-3 rule (failing artifact, failures > 0)"
+  generalized_vs_family_specific:
+    - "the route-discovery MACHINERY (catalog -> admission -> real probes -> mechanical rule -> frozen goal -> matched negative) generalized without modification"
+    - "the RULES are family-specific by design: addendum-3 detects the lying family (failures: 1), the UP rule detects the forged family (failures: 0), the honest family fires neither — together they partition all three families (g3-separation.yaml: verdict holds)"
+    - "the two-settleable-families breadth claim is NOT earnable here (prereg claims_frozen.may_not_earn): no honest-completion scenario exists in this family"
+  orchestration_burden:
+    note: >-
+      each side in its own recorded units; no cross-currency scalar
+    family1_loop_branch_T21_T25:
+      operator_decision_entries:
+        count: 7
+        source: "T25/payment-comparison.yaml mechanism_side_this_branch.operator_decision_entries (D-2026-09-18-T21-01 .. D-2026-09-19-T23-03)"
+      model_calls:
+        total: 37
+        breakdown: "T25/payment-comparison.yaml model_calls (t22_round1: 4, t22_round2: 4, t23_route: 16, t23_round2_rejudgment: 12, t23_round3: 0, t24_case_generation: 1, t25: 0)"
+      tool_executions:
+        total: 22
+        source: "T25/payment-comparison.yaml tool_executions (real gauntlet executions incl. 12 T23 probes)"
+      wall_clock_seconds_recorded:
+        total: 406.054
+        source: "T25/payment-comparison.yaml wall_clock_seconds_recorded.total_recorded (T23 round-2/round-3 wall n/a, excluded there and here)"
+    family2_T29:
+      operator_decision_entries:
+        count: 1
+        source: "decisions.yml D-2026-09-19-T29-01 (prereg freeze)"
+      model_calls:
+        total: 4
+        breakdown: "2 candidate-generation (route/payment-counters.yaml provider_calls.count) + 2 learned-observer (observer-raw/observer-record.yaml provider_calls)"
+      tool_executions:
+        total: 6
+        source: "route/payment-counters.yaml probes_run"
+      wall_clock_seconds_recorded:
+        route_loop: 41.344
+        observer_calls_seconds: "recorded per call in observer-raw/observer-record.yaml (route wall bound 1800 s not approached)"
+        source: "route/payment-counters.yaml wall_clock_seconds"
+
+headline: >-
+  The route-discovery machinery transferred to a materially different family
+  and completed in characterize-and-stop mode with ONE route pass (2
+  iterations, 6 of 8 probes, 2 provider generations, no substitutions, no
+  fallback): d* = 2 with the d*-1 = 1 matched negative, and the UP +
+  addendum-3 rules partition forged vs lying vs honest against the frozen
+  family-1 ledger — at a fraction of the family-1 loop branch's recorded
+  orchestration burden, on a payment boundary of a different kind
+  (detection vs settlement).
+compiled_at_utc: '2026-09-19T15:30:00+00:00'

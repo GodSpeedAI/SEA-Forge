@@ -1,0 +1,47 @@
+schema: godspeed-bounded-judgment.t18-prereg
+created_utc: "2026-09-18"
+frozen_before: "any provider call"
+corpus: ".agents/preregistrations/godspeed-bounded-judgment-T16.expanded-corpus-manifest.yml (25 runs, unchanged)"
+parent_experiment: "T16 expanded-corpus measurement (Outcome C confirmed)"
+
+epistemic_role_mapping:
+  builder_claim: "the result_document payload from role_invocation records (what the builder ASSERTS about its work)"
+  observed_artifact: "evidence_produced payload digests and locators (what the workspace observer actually SAW)"
+  correction_count: "the number of correction_selection records (how many times the controller chose to retry/correct)"
+  authority_refs: "the authority decision references (what the authority boundary decided)"
+  EXCLUDED: ["run_terminal", "settlement_committed", "verification_record outcome field", "truth label", "correction_selection payload details"]
+
+condition_A:
+  description: "the current T16 representation (undifferentiated JSON blob of role_invocation payload + correction count)"
+  renderer: "rm.load_rows() -> build_provider_input() equivalent from run_remeasure.py (round-5+)"
+  reference: "persisted in .agents/evidence/godspeed-bounded-judgment/T16/expanded-round/provider-raw-results.json (condition A answers already obtained)"
+
+condition_B:
+  description: "the SAME factual content, re-presented with explicit epistemic-role tags"
+  renderer: "each JSON section prefixed with [builder_claim], [observed_artifact], [correction_count] tags"
+  note: "no new information added; the underlying data is identical; only organization/labeling differs"
+
+answer_domain: {version: "t16-settlement-outcome/v1", labels: [settled, not_settled, insufficient_evidence]}
+judgment_question: "Will this run settle accepted, or end non-settled (budget exhausted)?"
+providers: "DeepSeek via ClinePass + Muse Spark contributor-free via opencode (same as T16 expanded round)"
+scoring: "identical to T16: accuracy vs mapped truth, confusion, abstention, entropy, exact permutation tooth, disagreement"
+teeth:
+  content_equivalence: "condition B contains the same factual content as condition A (verified by field-level comparison)"
+  label_removal: "stripping epistemic-role tags from B reduces to A's substantive content"
+  truth_leakage: "no role name encodes correctness; structural assertion before each call"
+  temporal_horizon: "post-judgment artifacts are excluded (same as T16); validator rejects injection"
+  random_role: "randomize role labels; if random labels improve equally, H_REPRESENTATION is weakened"
+  case_identity: "swapping typed representations between cases; correlation controls reject"
+paired_comparison:
+  method: "within-case paired A/B: same case, same provider, same truth; only representation differs"
+  metrics: "delta-accuracy, delta-non-abstaining, delta-abstention, per-row A->B corrections and regressions, confusion shift"
+  lying_claim_focus: "the lying-builder cases where DeepSeek erred in condition A; did condition B fix them WITHOUT breaking condition-A-correct cases?"
+success_criterion_stage1:
+  H_REPRESENTATION_supported_if: >-
+    Condition B improves non-abstaining accuracy by >= 0.1 over condition A
+    for at least one provider, AND the improvement is not solely on
+    trivially-classifiable rows, AND teeth pass.
+  H_REPRESENTATION_weakened_if: >-
+    Condition B performs same or worse than condition A, or random-role
+    labels produce equivalent improvement.
+falsification_scope: "this surface, this 25-case corpus, these provider legs, this paired comparison"

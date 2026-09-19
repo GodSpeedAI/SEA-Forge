@@ -1,0 +1,23 @@
+You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+Question: classify the recorded consequence of one bounded Gauntlet probe.
+Answer domain for "label" (choose exactly one): settled_accepted | verification_failed_nonsettlement | budget_exhausted | execution_failed | insufficient_evidence
+Judge ONLY from the observation record below (typed terminal, settlement_committed count, state-database digest, timing). Use insufficient_evidence if the observation genuinely cannot decide.
+JSON shape: {"label": "<one label from the answer domain>"}
+
+Observation record:
+{
+ "bounded_input": {
+  "max_rounds": 8,
+  "scenario": "e2e-happy"
+ },
+ "candidate_id": "cand-1",
+ "correlation_id": "t22-route-001-iter1",
+ "finished_at_utc": "2026-09-19T01:36:11.998322+00:00",
+ "mechanism": "t15-frozen-case-execution",
+ "operation": "run_case",
+ "probe_id": "probe-cand-1",
+ "settlement_committed_count": 0,
+ "started_at_utc": "2026-09-19T01:36:11.886996+00:00",
+ "state_db_sha256": "f69e1734f5a2fcd3c844c50fbc56cc393c67dc0e20a1f388bb1caf42166f50d2",
+ "terminal_class": "run_error"
+}

@@ -43,10 +43,15 @@ describe("Shell & Keyboard Navigation", () => {
     }
   });
 
-  it("renders GlobalHeader context chips and search button", () => {
+  it("renders GlobalHeader context chips and hides search until it exists", () => {
     render(<GlobalHeader actorName="Operator" roleName="Sponsor" />);
     expect(screen.getByTestId("global-context-bar")).toBeInTheDocument();
     expect(screen.getByText("Operator · Sponsor")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open command search" })).not.toBeInTheDocument();
+  });
+
+  it("renders search when a handler is provided", () => {
+    render(<GlobalHeader actorName="Operator" roleName="Sponsor" onOpenSearch={() => {}} />);
     expect(screen.getByRole("button", { name: "Open command search" })).toBeInTheDocument();
   });
 
@@ -95,7 +100,7 @@ describe("Shell & Keyboard Navigation", () => {
 
     const denial = screen.getByTestId("governed-denial-surface");
     expect(denial).toBeInTheDocument();
-    expect(screen.getByText(/Governed Access Denial — G9 Readiness/)).toBeInTheDocument();
+    expect(screen.getByText(/Governed access denial: G9 Readiness/)).toBeInTheDocument();
     expect(screen.getByText("Open readiness console")).toBeInTheDocument();
   });
 

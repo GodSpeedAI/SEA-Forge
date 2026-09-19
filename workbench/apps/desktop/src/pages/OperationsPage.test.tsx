@@ -177,7 +177,8 @@ describe("execution and settlement standing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Inspect" }));
 
     // Collapsing these into one pill would report the rejection as a success.
-    expect(await screen.findByText("Execution succeeded")).toBeVisible();
+    // Completed stays degraded: only settlement earns success.
+    expect(await screen.findByText("Execution completed")).toBeVisible();
     expect(screen.getByText("Settlement rejected")).toBeVisible();
   });
 });

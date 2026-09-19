@@ -28,6 +28,12 @@ just workbench-package            # release sidecar + packaged desktop bundle
 The kernel gates (`just check`, `just test`) never need Bun and must stay green
 regardless of anything in this directory.
 
+## E2E Testing & Evidence Rules
+
+- `just workbench-e2e-agent-browser` is renderer and accessibility evidence only.
+- `just workbench-e2e-case-authoring` uses mocked Tauri IPC; it does not prove integrated Tauri/server behavior.
+- Use `just workbench-e2e-real [filter]` for packaged Tauri/WebKit + real server/SFWP claims.
+
 ## Boundaries
 
 - **The renderer never touches the Unix socket, `.sea-forge/` files, or SQL

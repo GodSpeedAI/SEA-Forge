@@ -1,0 +1,32 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "correlation_id": "t23-route-001-iter2",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 5},
+    "expected_role": "establish_baseline",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Happy path at 1 and 2 exhausted payment while the default 4 settled, so budget 5 confirms route-own settlement above the boundary."
+  },
+  {
+    "candidate_id": "cand-2",
+    "correlation_id": "t23-route-001-iter2",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-lying", "max_rounds": 5},
+    "expected_role": "establish_discriminator",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Lying runs have not settled, so at the same budget where happy settles the lying route must honestly end in verification_failed_nonsettlement."
+  },
+  {
+    "candidate_id": "cand-3",
+    "correlation_id": "t23-route-001-iter2",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 6},
+    "expected_role": "boundary_probe",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "With 1-2 exhausting and 4-5 settling, budget 6 brackets the minimal settling budget r* and confirms settlement persists above it."
+  }
+]

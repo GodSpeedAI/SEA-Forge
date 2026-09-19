@@ -1,0 +1,13 @@
+{
+  "correlation_id": "t29-route-001-iter2",
+  "decided_at_utc": "2026-09-19T15:22:11.316751+00:00",
+  "eligible_candidate_ids": [
+    "cand-2-1",
+    "cand-2-3",
+    "cand-2-5"
+  ],
+  "ineligible": [],
+  "iteration": 2,
+  "policy_version": "selection-policy-v1",
+  "retained_candidate_id": "cand-2-1"
+}

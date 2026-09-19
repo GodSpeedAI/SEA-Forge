@@ -44,6 +44,8 @@ The output of the loop is not merely an artifact or successful execution.
 
 A completed cycle produces consequence, evidence, developmental state, and memory that can change what becomes visible, reachable, payable, governable, settleable, and therefore spendable on a later cycle.
 
+The *changed navigation* slot has an earned realization: native route discovery — candidates generated from a bounded represented neighborhood, probed through real governed execution (Gauntlet as the probe substrate), discriminated by mechanical settlement-backed evidence, and retained only by a frozen deterministic policy; a retained settled route can then be inverted into a fresh case that must independently re-settle. See [Native Route Discovery](../explanation/native-route-discovery.md) for the earned structure, its evidence bounds, and the learned-vs-mechanical discrimination finding.
+
 One successful cycle proves integration and may produce legitimate developmental evidence.
 
 It does **not**, by itself, establish metabolized capability.

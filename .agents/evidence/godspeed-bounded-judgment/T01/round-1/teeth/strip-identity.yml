@@ -1,0 +1,6 @@
+tooth: strip_identity
+all_recorded_unattributed: true
+expected: a row with stripped identity is recorded as explicitly unattributed; no identity is inferred
+behaved_as_specified: true
+mode: strip-identity
+executed_at: '2026-09-18T00:12:02.497101+00:00'

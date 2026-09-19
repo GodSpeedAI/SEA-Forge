@@ -1050,8 +1050,8 @@ kbd {
 /* A durable event frame is clickable (it opens its own evidence), so it is a
    button rather than the plain div the stream otherwise contains. */
 .event-frame { width: 100%; min-height: var(--row-review); display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 0 var(--space-3); padding: var(--space-2); border: 0; border-bottom: var(--border-standard); background: transparent; color: var(--fg-primary); text-align: left; font: inherit; cursor: pointer; }
-.event-frame:hover { background: var(--bg-raised); }
-.event-frame:focus-visible { outline: var(--focus-ring, 2px solid var(--color-focus)); outline-offset: -2px; }
+.event-frame:hover { background: var(--surface-panel-elevated); }
+.event-frame:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: -2px; }
 .event-frame small { grid-column: 2 / -1; color: var(--fg-secondary); }
 .correlation-row { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2); }
 .correlation-row .workbench-input { flex: 1; }

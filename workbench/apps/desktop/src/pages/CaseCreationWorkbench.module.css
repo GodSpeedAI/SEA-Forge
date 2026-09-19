@@ -22,7 +22,7 @@
 }
 
 .templateOption[aria-checked="true"] {
-  border-color: var(--color-authority-active, currentColor);
+  border-color: var(--color-focus-primary, currentColor);
 }
 
 .paramGrid {
@@ -44,5 +44,5 @@
 }
 
 .errorList {
-  color: var(--color-execution-rejected, crimson);
+  color: var(--color-danger);
 }

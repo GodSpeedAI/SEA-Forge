@@ -1,0 +1,380 @@
+schema: godspeed-bounded-judgment.t27-paired-report
+created_utc: '2026-09-19T17:30:36Z'
+prereg_sha256: 41af1921285bdbea33684d06b226fc8add83a59ed71378dbed464ab5b4b74343
+addendum1_sha256: a7fb31e295dfcca4c1fe6aba32f9345857d22187038b7c29f918b28681e07609
+provider: deepseek-v4.1-flash-via-clinepass
+n: 14
+repetitions: 5
+note: recomputed from persisted observations (verify-only)
+primary_analysis:
+  unit: case-level unique-modal readout (abstain = not correct, per addendum-1)
+  corrections_b: 0
+  regressions_c: 1
+  frontier_b_f: 0
+  frontier_c_f: 1
+  control_regressions_c_ctrl: 0
+  mcnemar_exact_two_sided_p: 1.0
+  mcnemar_one_sided_improvement_p: 0.5
+  mcnemar_one_sided_harm_p: 0.5
+  alpha: 0.05
+  target_case_budget_C3_corrected: false
+  net: -1
+  frontier_net: -1
+  practical_effect: false
+  regression_guard:
+    hard_line_c_ctrl_gte_2: false
+    soft_line_c_ctrl_eq_1: false
+    pass_for_C1_C2: true
+  accuracy_A: 0.6429
+  accuracy_B: 0.5714
+  baseline_constant_settled: 0.4286
+disposition:
+  letter: C5
+  mechanical_reason: 'boundary/inconclusive: p_two=1.00000, net=-1, frontier_net=-1, T=0, c_ctrl=0'
+per_case:
+- case_id: accepted-A1
+  truth: settled
+  category: control
+  conflict_or_control: control
+  family: accepted
+  A_readout: settled
+  A_degraded: false
+  A_per_call:
+  - not_settled
+  - settled
+  - settled
+  - settled
+  - settled
+  A_correct: true
+  B_readout: settled
+  B_degraded: false
+  B_per_call:
+  - settled
+  - settled
+  - settled
+  - settled
+  - settled
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+- case_id: accepted-A10
+  truth: settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: accepted
+  A_readout: settled
+  A_degraded: false
+  A_per_call:
+  - settled
+  - settled
+  - settled
+  - settled
+  - not_settled
+  A_correct: true
+  B_readout: settled
+  B_degraded: false
+  B_per_call:
+  - settled
+  - settled
+  - insufficient_evidence
+  - insufficient_evidence
+  - settled
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+- case_id: accepted-A11
+  truth: settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: accepted
+  A_readout: settled
+  A_degraded: false
+  A_per_call:
+  - settled
+  - settled
+  - settled
+  - settled
+  - settled
+  A_correct: true
+  B_readout: settled
+  B_degraded: false
+  B_per_call:
+  - insufficient_evidence
+  - settled
+  - settled
+  - not_settled
+  - settled
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+- case_id: accepted-A12
+  truth: settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: accepted
+  A_readout: settled
+  A_degraded: false
+  A_per_call:
+  - settled
+  - settled
+  - settled
+  - not_settled
+  - settled
+  A_correct: true
+  B_readout: settled
+  B_degraded: false
+  B_per_call:
+  - settled
+  - settled
+  - insufficient_evidence
+  - settled
+  - insufficient_evidence
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+- case_id: accepted-A2
+  truth: settled
+  category: control
+  conflict_or_control: control
+  family: accepted
+  A_readout: settled
+  A_degraded: false
+  A_per_call:
+  - settled
+  - not_settled
+  - settled
+  - settled
+  - settled
+  A_correct: true
+  B_readout: settled
+  B_degraded: false
+  B_per_call:
+  - settled
+  - insufficient_evidence
+  - settled
+  - insufficient_evidence
+  - settled
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+- case_id: accepted-A4
+  truth: settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: accepted
+  A_readout: settled
+  A_degraded: false
+  A_per_call:
+  - settled
+  - settled
+  - settled
+  - settled
+  - settled
+  A_correct: true
+  B_readout: insufficient_evidence
+  B_degraded: false
+  B_per_call:
+  - insufficient_evidence
+  - settled
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  B_correct: false
+  A_to_B_transition: abstention-transition loss
+- case_id: budget-C1
+  truth: not_settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: budget
+  A_readout: insufficient_evidence
+  A_degraded: false
+  A_per_call:
+  - insufficient_evidence
+  - not_settled
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  A_correct: false
+  B_readout: insufficient_evidence
+  B_degraded: false
+  B_per_call:
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  B_correct: false
+  A_to_B_transition: unchanged-wrong
+- case_id: budget-C2
+  truth: not_settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: budget
+  A_readout: insufficient_evidence
+  A_degraded: false
+  A_per_call:
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  A_correct: false
+  B_readout: insufficient_evidence
+  B_degraded: false
+  B_per_call:
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  B_correct: false
+  A_to_B_transition: unchanged-wrong
+- case_id: budget-C3
+  truth: not_settled
+  category: stable-wrong
+  conflict_or_control: conflict
+  family: budget
+  A_readout: settled
+  A_degraded: false
+  A_per_call:
+  - settled
+  - not_settled
+  - settled
+  - settled
+  - settled
+  A_correct: false
+  B_readout: settled
+  B_degraded: false
+  B_per_call:
+  - settled
+  - settled
+  - settled
+  - settled
+  - insufficient_evidence
+  B_correct: false
+  A_to_B_transition: unchanged-wrong
+- case_id: budget-C4
+  truth: not_settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: budget
+  A_readout: insufficient_evidence
+  A_degraded: false
+  A_per_call:
+  - insufficient_evidence
+  - not_settled
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  A_correct: false
+  B_readout: insufficient_evidence
+  B_degraded: false
+  B_per_call:
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  B_correct: false
+  A_to_B_transition: unchanged-wrong
+- case_id: budget-C5
+  truth: not_settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: budget
+  A_readout: insufficient_evidence
+  A_degraded: false
+  A_per_call:
+  - settled
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  A_correct: false
+  B_readout: insufficient_evidence
+  B_degraded: false
+  B_per_call:
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  B_correct: false
+  A_to_B_transition: unchanged-wrong
+- case_id: forge-D1
+  truth: not_settled
+  category: control
+  conflict_or_control: control
+  family: forge
+  A_readout: not_settled
+  A_degraded: false
+  A_per_call:
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  A_correct: true
+  B_readout: not_settled
+  B_degraded: false
+  B_per_call:
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+- case_id: forge-D2
+  truth: not_settled
+  category: unstable-frontier
+  conflict_or_control: conflict
+  family: forge
+  A_readout: not_settled
+  A_degraded: false
+  A_per_call:
+  - not_settled
+  - not_settled
+  - not_settled
+  - insufficient_evidence
+  - not_settled
+  A_correct: true
+  B_readout: not_settled
+  B_degraded: false
+  B_per_call:
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+- case_id: lying-B1
+  truth: not_settled
+  category: control
+  conflict_or_control: control
+  family: lying
+  A_readout: not_settled
+  A_degraded: false
+  A_per_call:
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  A_correct: true
+  B_readout: not_settled
+  B_degraded: false
+  B_per_call:
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  - not_settled
+  B_correct: true
+  A_to_B_transition: unchanged-correct
+teeth:
+  T27-1_content_equivalence:
+    pass: true
+  T27-2_role_vocabulary:
+    pass: true
+  T27-3_temporal_horizon:
+    pass: true
+  T27-4_case_identity:
+    store_consistent: true
+    attack_rejected: true

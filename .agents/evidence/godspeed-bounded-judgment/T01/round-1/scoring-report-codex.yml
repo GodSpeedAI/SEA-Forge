@@ -1,0 +1,52 @@
+disclosure:
+  n: 17
+  independent_run_count: 6
+  class_counts:
+    PASS: 17
+  concentration_by_run:
+    rows_by_run:
+      demo-calculator.proof-2of3-2216: 2
+      demo-calculator.settled-0904: 3
+      demo-calculator.settled-3of3-clean-seed-0730: 3
+      demo-calculator.settled-3of3-contaminated-seed-2234: 3
+      demo-calculator.settled-3of3-sharpened-role-1044: 3
+      demo-calculator.settled-rpc-1652: 3
+    effective_diversity_runs: 5.897959183673469
+    note: one run may dominate; effective diversity is disclosed with every N
+  missing_attribution: 17/17
+  reconstructibility_rate: 1.0
+  stability: 'UNSTABLE: pilot corpus of order 10^1 settled judgments; every metric below is unstable and descriptive only'
+  note: provider=codex
+provider: codex
+provider_kind: capable
+provider_identity: codex CLI (OpenAI-backed); exact model as configured for the CLI, not overridden
+n_rows: 17
+schema_failures: 0
+out_of_domain_rejections: 0
+provider_failures: 0
+n_paired_with_baseline: 0
+accuracy_vs_deterministic_baseline: null
+confusion_matrix_rows_provider_cols_baseline:
+  satisfied:
+    satisfied: 0
+    not_satisfied: 0
+    insufficient_evidence: 0
+  not_satisfied:
+    satisfied: 0
+    not_satisfied: 0
+    insufficient_evidence: 0
+  insufficient_evidence:
+    satisfied: 0
+    not_satisfied: 0
+    insufficient_evidence: 0
+mean_brier_vs_baseline: null
+mean_log_loss_vs_baseline: null
+mean_distribution_entropy_bits: null
+abstention_rate_insufficient_evidence: 0.9411764705882353
+abstention_rows_with_provenance_gaps:
+  abstaining_rows: 16
+  rows_with_chain_gaps: 0
+  note: descriptive co-occurrence; N too small for any inference beyond description
+reliability_bins_confidence_vs_agreement: []
+attribution: 17/17 rows unattributed (historical model identity absent; never inferred)
+terminology: PILOT MEASUREMENT on one surface; all metrics exploratory, unstable, and surface-scoped
