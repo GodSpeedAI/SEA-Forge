@@ -49,6 +49,17 @@ No file under `crates/`, `workbench/`, or the operator's checkout was modified.
 
 ## Completed
 
+- **T02 — SETTLED (P2, peer confirmation pending).** Donors: **Open MCT OMITTED** (REQ-DONOR-001) and
+  **OpenMontage OMITTED** (REQ-DONOR-002); no dependency admitted (REQ-DONOR-003 respected: no donor
+  noun/type/namespace appears in any contract definition, import path, or namespaced reference the
+  tooth can inspect). Neither donor is reachable from the searched roots, so no cost reduction or
+  licence review can be demonstrated; the mechanics the spec allows a donor to supply stay behind
+  GodSpeed-owned ports (temporal = T07, narration = T09). No file was copied, so provenance/notice
+  obligations are vacuous and are asserted by a tooth rather than assumed. `GATE_SPEC_TRACE` PASS;
+  `T02/teeth/run-teeth.sh` exit 0. Preserved correction: the tooth's first version failed on this
+  plan's own decision prose (it measured a *mention* where the requirement forbids a *dependency*) and
+  was rewritten to inspect definitions only. Evidence:
+  `.agents/evidence/godspeed-casework-cognitive-environment/T02/`.
 - **T00 — SETTLED (P2), CORRECTION ROUND 6 APPLIED, NOT YET INDEPENDENTLY CONFIRMED (five rounds run,
   all NOT_CONFIRM).** Frozen spec hash
   reproduced; `GATE_SPEC_TRACE` PASS; 86/86 requirements mapped with zero unknown and zero
@@ -152,34 +163,33 @@ No file under `crates/`, `workbench/`, or the operator's checkout was modified.
 
 ## Remaining
 
-- **T02 is the only task independent of Go** (settles on `GATE_SPEC_TRACE` alone) and can run next.
-- **T01 is blocked on prerequisite B1** (no Go toolchain): it owns `GATE_GO`
-  (`just casework-go-check`) and the React contract package T03 depends on.
-- T03–T14 remain blocked per the plan DAG; T05's `GATE_SEAFORGE` additionally needs B2 resolved.
-- Run the three deferred Gauntlet gates before T05 settles.
-- **Re-confirm T00 adversarially (round 6)** against the round-6 corrections; run
-  `.agents/evidence/godspeed-casework-cognitive-environment/T00/self-audit.sh` and its `--self-test`
-  first, and note that the audit's PASS covers mechanical/arithmetic checks only — not prose claims.
-  T00 is not to be treated as confirmed until a fresh verifier returns CONFIRM.
+- **T01 is now unblocked** (B1 resolved 2026-09-19: Go 1.27.1 installed and declared in `mise.toml`)
+  and owns `GATE_GO` (`just casework-go-check`) plus the React contract package T03 depends on.
+- **T02 is the other Go-independent task** (settles on `GATE_SPEC_TRACE` alone).
+- T05 must **re-run** `just check` and `just ci` (they were last observed red only at `security`)
+  and the three deferred Gauntlet gates before it can settle; a deferred gate stays pending.
+- Re-confirm T00 adversarially (round 6) against the round-6 corrections; the audit's PASS covers
+  mechanical/arithmetic checks only — not prose claims.
 
 ## Blockers
 
-- **B1 — no Go toolchain on this host.** `go` is absent from `PATH`; `mise` reports
-  `go@1.27.1 not installed`; no Go binary exists under `/usr/local`, `/usr/lib`, or the home tree.
-  T01/T04 and the whole critical path cannot settle until the operator decides whether to install
-  it. Writing uncompilable Go would not satisfy "a task is not complete because code exists".
-- **B2 — `just security` is RED at the frozen revision** (14 `generic-api-key` identifier-class
-  findings in `.agents/evidence/godspeed-bounded-judgment/**`, committed by the sibling plan at
-  `6ce518f`: JSON fields named `key`/`idempotency_key` with 13–16-character id-shaped values).
-  Repair requires a narrow, commit+path+rule-scoped `.gitleaks.toml` allowlist, and the field
-  semantics should be confirmed first —
-  a security-gate configuration change that AGENTS.md requires asking about first. Until then
-  `GATE_SEAFORGE` (activates T05) cannot pass.
+- **B1 — RESOLVED (operator-approved 2026-09-19).** Go 1.27.1 is installed via mise
+  (`go version go1.27.1 linux/amd64`) and declared in `mise.toml` so a fresh worktree installs it.
+  T01/T04 are unblocked and `GATE_GO` can run. Evidence: `T00/approvals-and-remediation.md`.
+- **B2 — RESOLVED (operator-approved 2026-09-19).** `just security` is now green (exit 0, 52 s,
+  "no leaks found") under a narrow `condition = "AND"` allowlist that requires the commit AND the
+  path AND the rule to match. Proven non-global by a tooth: the same bytes scanned outside that
+  commit+path still produce 4 findings. `GATE_SEAFORGE` (activates T05) is no longer blocked by the
+  security baseline — but `just check`/`just ci` must be **re-run** at T05 rather than assumed green,
+  since they were last observed red only at `security` and have not been re-run since the allowlist.
 - **B5 — SFWP capability gaps** (no governed lease/claim, no durable artifact persistence, no typed
   object-version history, no repository-fact execution, no narration beats). Each would be a
   separately reviewed Rust contract change and must not be invented by Go or React.
 - **B4 — the SFWP reference document is stale** by five methods; `sfwp/mod.rs::IMPLEMENTED_METHODS`
   is authoritative.
+- **Resource condition (not a blocker):** at the remediation runs `MemAvailable` had fallen to
+  ~2.4 GiB and swap free to ~2.2 GiB, from 3.2 GiB / 7.1 GiB when the T00 baselines ran. Preflight
+  before every heavy gate and defer when headroom is inadequate; a deferred gate is never passed.
 - Planning risk (not a blocker at T00): the Gauntlet TUI removal target exists only on the branch
   containing `fe75108` — `main` has no `workbench/` TUI — so T14's removal is branch-bound.
 

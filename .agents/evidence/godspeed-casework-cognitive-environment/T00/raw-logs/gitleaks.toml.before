@@ -46,32 +46,3 @@ paths = [
   '''crates/sea-forge-ledger/src/types\.rs''',
   '''crates/sea-forge-ledger/tests/conformance_m0_ledger\.rs''',
 ]
-
-# --- casework-environment plan, T00 remediation (operator-approved 2026-09-19) --------------
-# `just security` reported 14 `generic-api-key` findings at revision 6ce518f. They are
-# identifier-class matches introduced by the sibling Godspeed bounded-judgment plan's committed
-# evidence, not by this plan. Five independent adversarial verification rounds
-# (.agents/evidence/godspeed-casework-cognitive-environment/T00/T00-verification-round-{1..5}-NOT_CONFIRM.md)
-# reviewed them; the corrected re-measurement reads the real bytes at the recorded column offsets
-# and prints no matched value: the matched field is named `key` (observation records) or
-# `idempotency_key` (gate logs), and each value is 13-16 characters of lower-case alnum with
-# hyphens, all containing digits (entropy 3.55-3.75) - the shape of a record/idempotency
-# identifier, not of credential material. The records themselves are immutable evidence
-# (.agents/AGENTS.md), so they cannot be rewritten to remove the match.
-#
-# Deliberately narrow, following the commit-scoped precedent above: condition = AND so the
-# allowlist requires the commit AND the path AND the rule to all match. Any NEW occurrence in
-# these paths - or any occurrence elsewhere - still fails the gate.
-[[allowlists]]
-description = "casework T00: identifier-class generic-api-key matches in the bounded-judgment plan's evidence at 6ce518f (operator-approved 2026-09-19; analysis in .agents/evidence/godspeed-casework-cognitive-environment/T00/gate-baseline-seafoerge.md)"
-condition = "AND"
-commits = ["6ce518fcd9b01bc5a7037f80f5d8986a33cd2924"]
-rules = ["generic-api-key"]
-paths = [
-  '''\.agents/evidence/godspeed-bounded-judgment/T18/observations\.jsonl''',
-  '''\.agents/evidence/godspeed-bounded-judgment/T27/observations\.jsonl''',
-  '''\.agents/evidence/godspeed-bounded-judgment/repeatability/observations\.jsonl''',
-  '''\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift\.txt''',
-  '''\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK\.log''',
-  '''\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI\.log''',
-]

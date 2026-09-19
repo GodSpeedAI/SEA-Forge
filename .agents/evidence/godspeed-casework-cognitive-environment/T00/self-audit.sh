@@ -261,6 +261,7 @@ REQUIRED = {
     '.agents/evidence/godspeed-casework-cognitive-environment/T00/self-audit.sh': 2000,
     '.agents/evidence/godspeed-casework-cognitive-environment/T00/raw-logs/preflight-readings.log': 300,
     '.agents/evidence/godspeed-casework-cognitive-environment/T00/T00-verification-round-5-NOT_CONFIRM.md': 1500,
+    '.agents/evidence/godspeed-casework-cognitive-environment/T00/approvals-and-remediation.md': 1500,
 }
 for p, minsize in REQUIRED.items():
     if not os.path.exists(p):

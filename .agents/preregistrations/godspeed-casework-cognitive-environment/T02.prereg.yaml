@@ -1,0 +1,67 @@
+schema: agent.preregistration
+schema_version: '1.0'
+metadata:
+  plan_id: godspeed.casework-cognitive-environment.implementation
+  plan_version: 0.2.2
+  task: T02
+  title: Decide optional donor mechanics and dependency/license boundaries
+  frozen_at: '2026-09-19T22:16:36Z'
+  frozen_before: 'Any donor search, license inspection, dependency inventory, or write under T02.'
+  plan_path: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml
+  spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+  spec_id: godspeed.casework-cognitive-environment
+  spec_version: 0.2.1
+  spec_sha256: 6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641
+  spec_authority: normative
+  amendment_rule: >-
+    Append-only. A defect found during execution is corrected by an addendum that records the defect
+    and preserves this frozen text; the base file is never rewritten.
+claim: >-
+  No donor implementation enters this codebase by default; the required temporal and narration
+  behavior can be specified behind GodSpeed-owned ports with native implementations, and any reuse
+  would be narrow, replaceable, licensed, and reviewed before it is copied.
+falsifier: >-
+  A copied donor component requires importing the donor product's application ontology, or the donor
+  source license obligations conflict with this project's distribution and cannot be cleanly
+  isolated.
+known_confounds:
+  - >-
+    A donor may exist locally under a different name or outside the searched roots, so a
+    "no donor available" conclusion is only as strong as the documented search.
+  - >-
+    Convenience-driven copying during a later task would bypass this decision; the decision must be
+    re-checkable (a tooth) rather than a one-time statement.
+measurements:
+  - id: M1-donor-availability
+    command: filesystem search for Open MCT / OpenMontage checkouts under the developer project roots
+    pass_condition: >-
+      Each donor is either located and named with its revision, or recorded as not available with the
+      searched roots listed, so the omit decision rests on evidence rather than assumption.
+    blocks_on_failure: T02
+  - id: M2-no-donor-ontology-in-contracts
+    command: .agents/evidence/godspeed-casework-cognitive-environment/T02/teeth/run-teeth.sh
+    pass_condition: >-
+      No donor product namespace, type, or noun appears in this plan's application-contract surfaces
+      (the implementation brief's port/contract definitions and any Go/TS contract files present at
+      run time). If those surfaces do not exist yet, the tooth must say so explicitly instead of
+      passing silently.
+    blocks_on_failure: T02
+  - id: M3-no-copied-files
+    command: .agents/evidence/godspeed-casework-cognitive-environment/T02/teeth/run-teeth.sh
+    pass_condition: >-
+      No file in this plan's implementation changed in this task, and no donor-derived file exists in
+      the repository, so the license/provenance obligation is vacuous and is recorded as such.
+    blocks_on_failure: T02
+  - id: M4-dependency-boundary
+    command: >-
+      git diff --stat over the task's changes plus a declaration inventory of the Go module and React
+      app once they exist
+    pass_condition: >-
+      T02 admits no dependency: no Go module requirement, no npm package, and no Cargo dependency is
+      added by this task, and any future addition is recorded as requiring the repository's prior
+      review.
+    blocks_on_failure: T02
+confirmation_condition: >-
+  A peer reviewer checks the canonical donor sources, licenses, the copied scope (none), the
+  documented search, and the independence of any GodSpeed-owned interface definitions, without
+  relying on this task's conclusions.

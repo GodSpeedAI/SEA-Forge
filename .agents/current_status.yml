@@ -35,15 +35,14 @@ worktree_state:
     a missing target/debug/sea-forge. The symlink is untracked but NOT gitignored: .gitignore's
     '/target/' pattern matches a directory, not a symlink, so git status reports '?? target'.
 execution:
-  last_settled_task: T00
+  last_settled_task: T02
   settled_tasks:
     - T00
-  in_flight_task: null
-  ready_tasks:
     - T02
+  in_flight_task: T01
+  ready_tasks:
+    - T01
   blocked_tasks:
-    T01:
-      - B1 (no Go toolchain on this host)
     T03:
       - T01
     T04:
@@ -83,9 +82,10 @@ execution:
       - T13
   plan_blocked: false
   plan_blocker: null
-  external_blockers:
-    T01: 'B1: go is absent from PATH; mise reports go@1.27.1 not installed; no Go binary under /usr/local, /usr/lib, or the home tree. GATE_GO (just casework-go-check) cannot run and the critical path cannot settle until the operator decides whether to install the toolchain or defer Go-gated work.'
-    T05: 'B2: just security exits 1 on 14 gitleaks generic-api-key findings — identifier-class matches inside JSON fields named key (observation records) and idempotency_key (gate logs) with 13-16-character id-shaped values, in .agents/evidence/godspeed-bounded-judgment/** (committed by the sibling plan at 6ce518f). An earlier "8-character alphabetic" characterization was measured off gitleaks'' REDACTED placeholder and is withdrawn (see the round-2 correction in gate-baseline-seafoerge.md). Repair is a security-gate configuration change requiring prior approval and confirmation of the field semantics; GATE_SEAFORGE cannot pass until it is decided.'
+  external_blockers: {}
+  resolved_prerequisites:
+    B1: 'RESOLVED 2026-09-19 (operator-approved): Go 1.27.1 installed via mise and declared in mise.toml; go version resolves. Evidence: T00/approvals-and-remediation.md.'
+    B2: 'RESOLVED 2026-09-19 (operator-approved): just security exits 0 (52 s, no leaks found) under a narrow condition=AND allowlist scoped to commit 6ce518f + six evidence paths + the generic-api-key rule. Tooth: the same bytes scanned outside that commit+path still produce 4 findings. just check and just ci must be RE-RUN at T05 rather than assumed green.'
   planning_risks:
     T14: 'The Gauntlet TUI removal target exists only on the branch containing fe75108; main (e4ca393) has no workbench/ TUI. Removal is branch-bound and must be reconciled with wherever the TUI lands.'
 latest_evidence:
@@ -106,6 +106,13 @@ latest_evidence:
     self_audit_selftest: .agents/evidence/godspeed-casework-cognitive-environment/T00/self-audit-selftest.log
     composite_baseline: .agents/evidence/godspeed-casework-cognitive-environment/T00/gate-baseline-composites.md
     result: 'T00 SETTLED (P2) with CORRECTION ROUND 6 APPLIED and RE-CONFIRMATION PENDING. Frozen prereg before the first gate (one disclosed 36-second post-freeze typo fix recorded as post_freeze_amendments, with an explicit not_established list); spec sha256 reproduced; GATE_SPEC_TRACE PASS; 86/86 traceability; both teeth pass; SEA Forge baselines lint/typecheck/test/proof/build PASS, security RED, and just check (101 s)/just ci (41 s) both red ONLY at security; Gauntlet gates RESOURCE_DEFERRED with readings and exact commands; implementation brief with exact SFWP/Gauntlet/Workbench inventories; two inventory corrections preserved (GitHub verdict ABSENT -> PARTIAL; SFWP reference doc stale 18 vs 23). Independent verification rounds 1, 2 and 3 all returned NOT_CONFIRM, each finding real defects in the measurement/bookkeeping layer: round 1 found 7; round 2 found the withdrawn gitleaks wording still current in five artifacts and the unbacked proof time still displayed; round 3 found a self-destroyed prereg disclosure, disagreeing handoff rounds, a script measuring the span while the text described the value, three script vacuity/crash holes, a non-durable report path, and GB values under GiB labels throughout. Round 4 fixed that class, but round 4 verification proved the self-audit was partly theatre and found a residual unit error; round 5 fixed the audit and rebuilt it, and round 5 verification then found the decision log emptied to 0 bytes while the audit certified it present, plus thirteen injected defect classes the audit missed. Round 6 restored the decision log and hardened the audit (content assertions incl. the nine decision ids and the verdict records; punctuation-variant and wrapped wording; .csv and extensionless citations; anchored-pair arithmetic; absent/stale round claims; deleted raw logs and round records; injections proven to change the mirror; no skip-variable loophole), then deliberately narrowed it because tightening prose heuristics produced false positives on the builder own disclosure text. Current state: SELF-AUDIT: PASS (mechanical and arithmetic checks only) and SELF-TEST: PASS (9/9 injected classes detected). T00 IS NOT INDEPENDENTLY CONFIRMED: five adversarial verification rounds were run and all five returned NOT_CONFIRM; every finding was in the evidence layer and each is fixed or explicitly re-scoped. No load-bearing claim has been falsified in any round.'
+  t02:
+    evidence_dir: .agents/evidence/godspeed-casework-cognitive-environment/T02/
+    settlement_report: .agents/evidence/godspeed-casework-cognitive-environment/T02/T02-settlement-report.md
+    decision_record: .agents/evidence/godspeed-casework-cognitive-environment/T02/donor-and-license-decisions.md
+    preregistration: .agents/preregistrations/godspeed-casework-cognitive-environment/T02.prereg.yaml
+    teeth: .agents/evidence/godspeed-casework-cognitive-environment/T02/teeth/run-teeth.sh
+    result: 'T02 SETTLED (P2, peer confirmation pending): both donors OMITTED and no dependency admitted. Neither Open MCT nor OpenMontage is reachable; the spec makes donor use optional, so no cost reduction or licence review can be demonstrated and the mechanics stay behind GodSpeed-owned ports (temporal T07, narration T09). No file was copied, so provenance/notice obligations are vacuous and are asserted by a tooth. GATE_SPEC_TRACE PASS; teeth exit 0. The tooth was rewritten after its first version failed on the plan''s own decision prose (measuring a mention instead of a dependency).'
 next_action:
   task: verification-round-6
   action: 'Re-confirm T00 adversarially (round 6) against the round-6 corrections (five prior rounds all returned NOT_CONFIRM; the last found the decision log emptied while the audit certified it present). Run self-audit.sh and self-audit.sh --self-test first, noting the audit covers mechanical/arithmetic checks only. Then decide B1 (install the Go toolchain, e.g. mise install go@1.27.1, or defer Go-gated work) and B2 (confirm the key/idempotency_key field semantics, then approve the narrow commit+path+rule-scoped .gitleaks.toml allowlist, or dispose otherwise), then execute T02 (Go-independent, GATE_SPEC_TRACE only) and T01 once B1 is resolved.'

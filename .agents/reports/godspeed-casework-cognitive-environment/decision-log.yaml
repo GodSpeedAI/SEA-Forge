@@ -143,3 +143,45 @@ decisions:
     consequence: >-
       The plan is not blocked at T00, but T01 cannot start until B1 is decided. Nothing here claims
       product capability, adapter compatibility, UI behaviour, or end-to-end integration.
+
+  - id: D-2026-09-19-T00-10
+    task: T00
+    title: Operator approved installing the Go toolchain and a narrow gitleaks allowlist
+    claim_state: DECIDED
+    decision: >-
+      On 2026-09-19 the operator approved both prerequisites T00 had recorded: install Go via mise,
+      and apply a narrow .gitleaks.toml allowlist. Go 1.27.1 was installed and declared in mise.toml
+      (a toolchain declaration in the mechanism this repository already uses, not an application
+      dependency), and the allowlist was added with condition = AND so that commit, path and rule
+      must all match.
+    basis:
+      - B1 blocked T01/T04 and GATE_GO; B2 blocked GATE_SEAFORGE. Both were surfaced to the operator rather than worked around.
+      - After the allowlist, just security exits 0 (52 s, no leaks found) where it previously exited 1 with 14 findings.
+      - 'Falsification tooth: the same bytes copied outside the repository and scanned with --no-git still produce 4 findings, so the rule is not globally disabled and any new occurrence still fails.'
+      - The values were never read unredacted; the classification rests on non-exposing measurement only.
+    consequence: >-
+      T01 and T04 are unblocked. GATE_SEAFORGE is no longer blocked by the security baseline, but
+      just check and just ci must be re-run at T05 rather than assumed green. Evidence:
+      .agents/evidence/godspeed-casework-cognitive-environment/T00/approvals-and-remediation.md and
+      raw-logs/gitleaks.toml.{before,after}.
+
+  - id: D-2026-09-19-T02-01
+    task: T02
+    title: Omit both donors and admit no dependency
+    claim_state: DECIDED
+    decision: >-
+      Open MCT (REQ-DONOR-001) and OpenMontage (REQ-DONOR-002) are OMITTED, and T02 admits no
+      dependency at all. The temporal, provider, time-aware, narration and choreography mechanics the
+      spec permits a donor to supply stay behind GodSpeed-owned ports, owned by T07 (temporal) and T09
+      (narration) respectively.
+    basis:
+      - Neither donor checkout is reachable from the searched roots, so no material cost reduction can be demonstrated and no licence/provenance review can be performed.
+      - The spec makes donor use optional (MAY) and states that native implementations satisfy the requirements.
+      - No file was copied from any donor, so the notice/provenance obligation is vacuous; the tooth asserts that no third-party licence or notice header exists under apps/ and that no dependency manifest changed.
+      - REQ-DONOR-003 is respected: no donor marker appears in any contract definition, import path or namespaced reference the tooth can inspect.
+    consequence: >-
+      If a licensed donor later becomes available, OMIT must be revisited as a NEW decision record
+      rather than by copying code into an unrelated task. The tooth must be re-run by T04 and T07 once
+      the Go ports and React contract package exist, because today it reports NOT-APPLICABLE-YET for
+      the interfaces it is meant to police. Evidence:
+      .agents/evidence/godspeed-casework-cognitive-environment/T02/.
