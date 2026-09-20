@@ -35,8 +35,10 @@ casework-go-check: format, vet and tests green
 `teeth/run-teeth.sh` → exit 0. `TEETH RESULT: both teeth behaved as specified`.
 
 **Tooth 1 — an unknown provider payload type in a core path must be rejected.** Three steps, in order:
-1. the scanner catches all six forbidden shapes in synthetic sources (provider import, adapter import,
-   vendor identifier, `any` field, empty-interface field) — so the check is not vacuous;
+1. the scanner catches all five forbidden shapes in synthetic sources (provider import, adapter import,
+   vendor identifier, `any` field, empty-interface field) — so the check is not vacuous (the tooth's
+   printed "6" counts the parent test's own `--- PASS` line and is not a sixth shape; corrected by
+   verification round 1);
 2. a real `sfwpEnvelope` provider type written into `internal/ports` makes the boundary gate **FAIL**
    (`boundary violation: internal/ports/zz_tooth_injected_leak.go:4 core identifier sfwpEnvelope
    names provider vocabulary (sfwp)`);
