@@ -92,8 +92,14 @@ check_present "React contract package apps/godspeed-cognitive-ui/contracts exist
   "test -d '$WT/apps/godspeed-cognitive-ui/contracts'"
 check_present "GATE_GO recipe just casework-go-check exists (added by T01)" \
   "grep -qE '^casework-go-check:' '$WT/justfile'"
-check_absent "GATE_UI recipe just casework-ui-check (T03 has not implemented it yet)" \
-  "! grep -qE '^casework-ui-check:' '$WT/justfile'"
+# Maintenance (2026-09-20): the GATE_UI recipe seam left the absent list when T03 implemented
+# just casework-ui-check over the real app (gate run green, T03/raw-logs/gate-casework-ui-check.log).
+# It is now asserted PRESENT, the way the Go seams were re-asserted after B1/T01. Deleting the line
+# instead would have destroyed the only thing that noticed the change.
+check_present "GATE_UI recipe just casework-ui-check (implemented by T03, 2026-09-20)" \
+  "grep -qE '^casework-ui-check:' '$WT/justfile'"
+check_present "the cognitive UI app (apps/godspeed-cognitive-ui, built by T03)" \
+  "test -f '$WT/apps/godspeed-cognitive-ui/package.json'"
 check_absent "SFWP repository-fact method (claim: exists)" \
   "! grep -qE 'method: .(repo|github|pr)\.[a-z_]+.' '$WT/crates/sea-forge-server/src/sfwp/mod.rs'"
 check_absent "GitHub REST/webhook client inside the server crate (claim: exists)" \
@@ -121,11 +127,17 @@ blocked = status['execution']['blocked_tasks']
 ready = status['execution']['ready_tasks']
 settled = status['execution']['settled_tasks']
 print(f"   settled now: {settled}"); print(f"   ready now: {ready}")
-# The DAG expectation moved ONCE T01 settled: T03/T04 are no longer blocked on T01. The tooth
-# asserts the current graph, and the status file is what it asserts against.
-for t in ('T03', 'T04'):
-    print(f"   {t} blocked_on={blocked.get(t, [])} (was ['T01'] before T01 settled)")
-ok = 'T00' in settled and ready == ['T03', 'T04'] and not blocked.get('T03') and not blocked.get('T04')
+# The DAG expectation moved twice as predecessors settled: when T01 settled, T03/T04 became ready;
+# when T03 settled (2026-09-20, the cognitive UI core + host), T06 and T08 joined the ready set and
+# T04 stayed ready. The tooth asserts the CURRENT graph, and the live status file is what it
+# asserts against. A later settlement must update this expectation in the same way, naming the
+# task and date that moved it - not by deleting the check.
+for t in ('T04', 'T06', 'T08'):
+    print(f"   {t} blocked_on={blocked.get(t, [])} (ready after T01 settled T04; T06/T08 after T03 settled 2026-09-20)")
+ok = ('T00' in settled and 'T03' in settled and ready == ['T04', 'T06', 'T08']
+      and not blocked.get('T04') and not blocked.get('T06') and not blocked.get('T08')
+      and blocked.get('T05') == ['T04'] and blocked.get('T07') == ['T04']
+      and blocked.get('T09') == ['T06', 'T08'] and blocked.get('T10') == ['T04'])
 sys.exit(0 if ok else 1)
 PY
 [ $? -eq 0 ] || { say "   DAG expectation changed (TOOTH FAILED)"; claim_fail=1; }

@@ -1158,3 +1158,140 @@ casework-go-check:
     go vet ./...
     go test ./...
     echo "casework-go-check: format, vet and tests green"
+
+# GATE_UI, activated by T03: frozen install, typecheck, production build and tests for the cognitive
+# UI app. The plan names `just casework-ui-check`; it must observe the real app, never a stub.
+[group('casework')]
+casework-ui-check:
+    #!/usr/bin/env bash
+    {{set}}
+    app="apps/godspeed-cognitive-ui"
+    if [ ! -f "$app/package.json" ]; then
+      echo "casework-ui-check: no app at $app" >&2
+      exit 1
+    fi
+    if ! command -v bun >/dev/null 2>&1; then
+      echo "casework-ui-check: bun is required (mise declares it in mise.toml)" >&2
+      exit 1
+    fi
+    cd "$app"
+    bun install --frozen-lockfile
+    bun run typecheck
+    bun run build
+    bun test
+    echo "casework-ui-check: frozen install, typecheck, build and tests green"
+
+# Operator controls for the fixture-backed cognitive UI (T03). The dev server binds a fixed port
+# (default 4178, strict) so the printed URL is the served URL. `up` is idempotent: if something
+# already answers on the port it says so and reuses it. Detached via setsid; pidfile and log live
+# under /.sea-forge/ (gitignored).
+casework_ui_port := "4178"
+
+[group('casework')]
+casework-ui-up port=casework_ui_port:
+    #!/usr/bin/env bash
+    {{set}}
+    app="apps/godspeed-cognitive-ui"
+    url="http://127.0.0.1:{{port}}"
+    run_dir=".sea-forge/casework-ui"
+    pidfile="$run_dir/ui.pid"
+    logfile="$run_dir/ui.log"
+    mkdir -p "$run_dir"
+    if curl -sSf -o /dev/null --max-time 2 "$url" 2>/dev/null; then
+      echo "casework-ui-up: something already answers at $url - reusing it (log: $logfile)"
+      exit 0
+    fi
+    if [ -f "$pidfile" ]; then
+      stale="$(cat "$pidfile")"
+      if kill -0 "$stale" 2>/dev/null; then
+        echo "casework-ui-up: pid $stale is alive but nothing answers on the port; stopping it" >&2
+        kill -TERM -- -"$stale" 2>/dev/null || kill -TERM "$stale" 2>/dev/null || true
+        sleep 1
+      fi
+      rm -f "$pidfile"
+    fi
+    if [ ! -d "$app/node_modules" ]; then
+      echo "casework-ui-up: installing dependencies (frozen lockfile)"
+      (cd "$app" && bun install --frozen-lockfile)
+    fi
+    cd "$app"
+    setsid nohup bun run dev --port "{{port}}" --strictPort >"../../$logfile" 2>&1 &
+    pid=$!
+    echo "$pid" > "../../$pidfile"
+    cd ../..
+    for i in $(seq 1 50); do
+      if curl -sSf -o /dev/null --max-time 1 "$url" 2>/dev/null; then
+        echo "casework-ui-up: serving $url (pid $pid)"
+        echo "casework-ui-up: log: $logfile"
+        exit 0
+      fi
+      if ! kill -0 "$pid" 2>/dev/null; then
+        echo "casework-ui-up: dev server exited during startup; log tail:" >&2
+        tail -20 "$logfile" >&2 || true
+        rm -f "$pidfile"
+        exit 1
+      fi
+      sleep 0.2
+    done
+    echo "casework-ui-up: nothing answered $url within 10s; log tail:" >&2
+    tail -20 "$logfile" >&2 || true
+    exit 1
+
+# Stop the dev server started by `casework-ui-up`. Idempotent; refuses to kill a pid that is not the
+# UI (guards against pid reuse after a reboot).
+[group('casework')]
+casework-ui-down:
+    #!/usr/bin/env bash
+    {{set}}
+    run_dir=".sea-forge/casework-ui"
+    pidfile="$run_dir/ui.pid"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-ui-down: not running (no pidfile)"
+      exit 0
+    fi
+    pid="$(cat "$pidfile")"
+    if ! kill -0 "$pid" 2>/dev/null; then
+      rm -f "$pidfile"
+      echo "casework-ui-down: not running (stale pidfile removed)"
+      exit 0
+    fi
+    if ! tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -qiE 'bun|vite|node'; then
+      echo "casework-ui-down: pid $pid does not look like the casework UI; not killing it" >&2
+      rm -f "$pidfile"
+      exit 1
+    fi
+    kill -TERM -- -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    for i in $(seq 1 25); do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.2
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+      kill -KILL -- -"$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
+    fi
+    rm -f "$pidfile"
+    echo "casework-ui-down: stopped (pid $pid)"
+
+# Report up/down, the URL, the pid, and the last log lines — the first thing to run when the UI
+# looks wrong.
+[group('casework')]
+casework-ui-status port=casework_ui_port:
+    #!/usr/bin/env bash
+    {{set}}
+    url="http://127.0.0.1:{{port}}"
+    run_dir=".sea-forge/casework-ui"
+    pidfile="$run_dir/ui.pid"
+    logfile="$run_dir/ui.log"
+    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      echo "casework-ui-status: up (pid $(cat "$pidfile"))"
+    else
+      echo "casework-ui-status: down (no live pidfile)"
+    fi
+    if curl -sSf -o /dev/null --max-time 2 "$url" 2>/dev/null; then
+      echo "casework-ui-status: answering at $url"
+    else
+      echo "casework-ui-status: nothing answers at $url"
+    fi
+    if [ -f "$logfile" ]; then
+      echo "casework-ui-status: last log lines ($logfile):"
+      tail -5 "$logfile" | sed 's/^/  /'
+    fi

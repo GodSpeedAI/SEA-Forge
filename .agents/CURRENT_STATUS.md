@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-09-19
+Updated: 2026-09-20
 
 ## Objective
 
@@ -45,11 +45,37 @@ T00 adds plan-scoped artifacts and changes no product code:
 - `target` (symlink to the operator checkout's build cache; **untracked, not ignored** —
   `.gitignore`'s `/target/` pattern does not match a symlink, so `git status` lists it as `?? target`)
 
+T01 adds `apps/godspeed-casework-go` (ports, config authority, typed errors, preflight, boundary
+gate, CLI), the `apps/godspeed-cognitive-ui/contracts` package, the `casework-go-check` recipe,
+and `mise.toml`'s declared Go toolchain (approved B1 remediation); `.gitleaks.toml` carries the
+approved narrow B2 allowlist. T02 adds only its evidence and decision records.
+
+T03 adds the runnable cognitive environment at `apps/godspeed-cognitive-ui` — `src/core/` (model,
+store, actions, engine, core ports + purity test), `src/adapters/fixture/` (fixture provider set +
+structurally different alt provider), `src/adapters/test/` (no-op/test adapters), `src/host/`
+(React 19 renderer), `index.html`, `package.json` + `bun.lock` + `tsconfig.json` + `vite.config.ts`
++ app `.gitignore` + `README.md` — plus the root recipes `casework-ui-check` (GATE_UI) and
+`casework-ui-up/-down/-status`, the frozen `T03.prereg.yaml`, and `T03/` evidence.
+
 No file under `crates/`, `workbench/`, or the operator's checkout was modified.
 
 ## Completed
 
-- **T01 — SETTLED (P2, peer confirmation pending).** The Go front end exists at
+- **T03 — SETTLED (P2, peer confirmation pending).** The cognitive environment exists and runs:
+  `apps/godspeed-cognitive-ui` with a framework-free UI core (`src/core/`: representations, store,
+  action vocabulary, engine), the fixture provider set (a representative FDE world with bounded
+  artifacts and history, plus a deliberately different second provider for the provider-swap
+  tooth), no-op/test adapters, and a React 19 host that maps mouse and keyboard onto the same
+  action vocabulary the tests call. `GATE_UI` (`just casework-ui-check`: frozen install, tsc,
+  vite build, bun test — 8 tests, 226 assertions) **PASS**; teeth exit 0 — scene/agent replaced by
+  test adapters, ONE shared interaction scenario passing under both providers with zero hardcoded
+  ids, and a **real injection** of `react` into `src/core` that makes the purity gate FAIL.
+  Operator controls `casework-ui-up/-down/-status` verified over the full cycle (up → curl 200 →
+  status → reuse-on-up → down → port free → idempotent down → repeatable up). The app and README
+  state plainly: **fixture-backed, not connected to SEA Forge, GitHub, Gauntlet, or any agent.**
+  Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T03/`.
+- **T01 — SETTLED (P2) and INDEPENDENTLY CONFIRMED (verification round 1: CONFIRM, one minor
+  representation finding F1 corrected in the same round).** The Go front end exists at
   `apps/godspeed-casework-go` with application-owned ports (authority, execution, repository, plus an
   **optional** artifact store), **one** documented configuration authority (defaults < file <
   environment < explicit override) with secret indirection only, a typed error model that carries
@@ -57,168 +83,110 @@ No file under `crates/`, `workbench/`, or the operator's checkout was modified.
   contract package `apps/godspeed-cognitive-ui/contracts` declares the world/interaction/temporal/
   artifact/agent adapter interfaces with no renderer, agent-framework or transport dependency.
   `GATE_GO` (`just casework-go-check`: gofmt, `go vet`, `go test`) **PASS**; `GATE_SPEC_TRACE` PASS;
-  teeth exit 0 — including a **real injection** of a provider payload type into `internal/ports` that
-  makes the boundary gate FAIL, and an end-to-end CLI run with one missing required credential plus one
-  unavailable optional adapter (exit 2, `blocking=[authority repository]`, `degraded=[artifact]`, typed
-  `config` vs `unavailable` kinds). Preserved corrections: configuration faults no longer abort before
-  preflight (that contradicted REQ-CONFIG-012), and the tooth's own assertion was corrected rather than
-  the product. Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T01/`.
-- **T02 — SETTLED (P2, peer confirmation pending).** Donors: **Open MCT OMITTED** (REQ-DONOR-001) and
-  **OpenMontage OMITTED** (REQ-DONOR-002); no dependency admitted (REQ-DONOR-003 respected: no donor
-  noun/type/namespace appears in any contract definition, import path, or namespaced reference the
-  tooth can inspect). Neither donor is reachable from the searched roots, so no cost reduction or
-  licence review can be demonstrated; the mechanics the spec allows a donor to supply stay behind
-  GodSpeed-owned ports (temporal = T07, narration = T09). No file was copied, so provenance/notice
-  obligations are vacuous and are asserted by a tooth rather than assumed. `GATE_SPEC_TRACE` PASS;
-  `T02/teeth/run-teeth.sh` exit 0. Preserved correction: the tooth's first version failed on this
-  plan's own decision prose (it measured a *mention* where the requirement forbids a *dependency*) and
-  was rewritten to inspect definitions only. Evidence:
-  `.agents/evidence/godspeed-casework-cognitive-environment/T02/`.
-- **T00 — SETTLED (P2), CORRECTION ROUND 6 APPLIED, NOT YET INDEPENDENTLY CONFIRMED (five rounds run,
-  all NOT_CONFIRM).** Frozen spec hash
-  reproduced; `GATE_SPEC_TRACE` PASS; 86/86 requirements mapped with zero unknown and zero
-  unmapped IDs; implementation brief written with exact SFWP/Gauntlet/Workbench interfaces and
-  both removal inventories; both plan teeth executed and passing; SEA Forge gate baselines
-  recorded (lint/typecheck/test/proof/build PASS; `security` RED with exact assertion, and
-  `just check`/`just ci` red only at that step); Gauntlet gates recorded RESOURCE_DEFERRED with
-  readings, a real narrow observation, and exact commands.
-- **Independent verification round 1 returned NOT_CONFIRM** (7 findings). Every finding was in the
-  measurement/bookkeeping/evidence-backing layer, not in the claim: the gitleaks finding analysis
-  had been measured off gitleaks' `REDACTED` placeholder (withdrawn and re-measured from real
-  bytes without printing any value), four inventory counts were wrong (workspace members 23→22,
-  `src-tauri/src` 9→7, `contracts/schema` 174→57, generated-total 174→172), the composite gate
-  results had been recorded by pointer to a file that did not exist (now actually run and
-  recorded), brief §5's heading had been swallowed into §4's list and item 7 truncated (now
-  reflowed; heading count 12), and one recorded gate wall time had no backing log (now re-run
-  under `/usr/bin/time -v`).
-- **Round 2 verified F2–F6 correct but returned NOT_CONFIRM again**: the withdrawn gitleaks wording
-  still stood as current text in five handoff artifacts, and the unbacked "2 s" `proof` figure was
-  still displayed. **Round 3 replaced all six surviving instances** (matching grep now returns
-  nothing in this plan's artifacts, including the decision log), gave the `proof` row the backed
-  round-2 value with "2 s" labelled as an unbacked disclosed defect, fixed the re-measurement
-  script to print the true enclosing field name and to refuse an empty report (`exit 2`), and
-  recorded the preregistration's 36-second post-freeze typo correction as an explicit
-  `post_freeze_amendments` disclosure.
-- **Round 3 verification returned NOT_CONFIRM as well.** It held the "no surviving withdrawn
-  wording" and "proof time backed" claims, but found: the prereg disclosure claimed something
-  nothing establishes and the fix destroyed the mtime it was about; the two handoff files named
-  different current rounds; the re-measurement script measured the span while the text described the
-  value, printed nonsense on whitespace columns, crashed on an unreadable file, and defaulted to a
-  `/tmp` report; and every memory figure in the brief and three evidence files carried GB values
-  under GiB labels. **Round 4 fixed the class**: the script now measures and reports the value
-  (class, digit and hyphen presence) from real bytes and refuses empty reports, whitespace spans,
-  unreadable files and unresolved values with `exit 2`; memory figures were recomputed from raw kB
-  with 1 GiB = 1048576 kB and the convention declared; the prereg disclosure was narrowed with an
-  explicit `not_established` list; and a **mechanical self-audit**
-  (`.agents/evidence/godspeed-casework-cognitive-environment/T00/self-audit.sh`) now runs before any
-  re-confirmation — grep for withdrawn wording, path-existence of every cited repo path, re-derivation
-  of every numeric claim from its raw log, round agreement across handoff files, and an unrun-gate
-  claim scan. All rounds are preserved in
-  `.agents/evidence/godspeed-casework-cognitive-environment/T00/T00-verification-round-{1,2,3}-NOT_CONFIRM.md`.
-- **Round 4 verification returned NOT_CONFIRM too**, and it was the most useful round: it confirmed
-  the gitleaks re-measurement and the four refusal guards, then proved the self-audit was **partly
-  theatre** — it could print PASS with a live defect of every class it claimed to cover — and found
-  a live unit error inherited from the round-3 verifier's own arithmetic (`3809564 kB` labelled
-  3.69 GiB; swap low end 7.05 instead of 7.14 GiB), a stale settlement-report history, a truncated
-  §3 sentence, a malformed table row, an orphan line, and two false statements that `target` is
-  gitignored. **Round 5 fixed all of them and rebuilt the audit** (plan-scoped file set derived by
-  walking this plan's artifacts; explicit end-of-handoff marker; wrap-aware matching; arithmetic
-  `GiB (kB)` re-derivation; single-round agreement; full gate-name coverage; named-file existence),
-  then fixed two further audit defects its own self-test exposed — checks 1–2 printed FAIL without
-  affecting the exit status, and three self-test injections were mis-quoted so they never applied.
-  Evidence: `T00-verification-round-4-NOT_CONFIRM.md`, `self-audit.sh`, `self-audit.log`
-  (**SELF-AUDIT: PASS**) and `self-audit-selftest.log` (**SELF-TEST: PASS**, 7/7 injected classes
-  detected).
-- **Round 5 verification returned NOT_CONFIRM again** — decisively because
-  `.agents/reports/godspeed-casework-cognitive-environment/decision-log.yaml` had been reduced to
-  **0 bytes** while this file, the settlement report and the plan all cited its nine decisions, and
-  the self-audit certified it as present (existence, not content). It also proved by injection that
-  the audit missed thirteen defect classes and that its injection test credited detection without
-  verifying the injector had modified anything. **Round 6 restored the decision log and hardened the
-  audit** (content assertions including the nine decision ids and the verdict records;
-  punctuation/wrap-variant wording; `.csv` and extensionless citations; anchored-pair arithmetic;
-  absent/stale round claims; deleted raw logs and round records; injections proven to change the
-  mirror; no skip-variable loophole) — and then **deliberately narrowed it**, because tightening
-  prose heuristics produced false positives on this plan's own disclosure text. Its printed output
-  now states that `SELF-AUDIT: PASS` means the mechanical and arithmetic checks pass, not that every
-  prose claim is true. Current state: `SELF-AUDIT: PASS`, `SELF-TEST: PASS` (9/9 classes detected).
-- **T00 is NOT independently confirmed.** Five adversarial rounds were run and all five returned
-  NOT_CONFIRM. Every finding was in the evidence layer, and each is either fixed or explicitly
-  re-scoped, but the plan requires a CONFIRM verdict for a P2 task and that verdict has not been
-  obtained. Records 1–5 are preserved in `T00-verification-round-{1..5}-NOT_CONFIRM.md`.
-- Inventory corrections found and preserved: the GitHub capability is **PARTIAL** (the
-  `AuthorityAction::GithubPr` authority/policy surface exists; repository-fact execution and
-  webhook ingestion do not), and `docs/reference/sfwp-protocol-reference.md` is stale (18
-  documented methods vs 23 implemented).
+  teeth exit 0. The independent verifier reproduced every claim from the sources, re-ran the gate
+  and teeth, and failed to break the product with three attacks (provider type in `internal/config`,
+  required capability with endpoint but no credential, one capability healthy while another blocks).
+  Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T01/`, including
+  `T01-verification-round-1-CONFIRM.md`.
+- **T02 — SETTLED (P2) and INDEPENDENTLY CONFIRMED (verification round 1: CONFIRM).** Donors:
+  **Open MCT OMITTED** (REQ-DONOR-001) and **OpenMontage OMITTED** (REQ-DONOR-002); no dependency
+  admitted (REQ-DONOR-003 respected). The verifier re-searched the roots independently, re-ran the
+  teeth — which now inspect the **real** T01 module and contract surfaces — and restated plainly
+  that the tooth's strongest form remains a re-run obligation for T04 and T07 (their ports do not
+  exist yet). Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T02/`, including
+  `T02-verification-round-1-CONFIRM.md`.
+- **T00 — SETTLED (P2), CORRECTION ROUND 6 APPLIED, and INDEPENDENTLY CONFIRMED (verification
+  round 6: CONFIRM, after five NOT_CONFIRM rounds).** Frozen spec hash
+  reproduced; `GATE_SPEC_TRACE` PASS; 86/86 requirements mapped; implementation brief with exact
+  SFWP/Gauntlet/Workbench interfaces and both removal inventories; both plan teeth executed and
+  passing; SEA Forge gate baselines recorded (lint/typecheck/test/proof/build PASS; `security` RED
+  with exact assertion, and `just check`/`just ci` red only at that step); Gauntlet gates
+  RESOURCE_DEFERRED with readings and exact commands. Round 6 reproduced the authority binding,
+  traceability, DAG, isolation, baselines, missing-seam inventory, and teeth independently; proved
+  validator non-vacuity by injecting a fabricated 87th requirement (caught four ways); exercised
+  the teeth relocation guard (exit 2); and checked decision-log semantics beyond the audit's
+  content assertion (id grammar, uniqueness, claim_state vocabulary). All five earlier adversarial
+  rounds and their evidence-layer findings remain preserved. Evidence: `T00/`, including
+  `T00-verification-round-6-CONFIRM.md`.
 
 ## Verification
 
 - `sha256sum .agents/specs/godspeed.casework-cognitive-environment-spec.yaml` → `6312453f…d6641` (equals `source.spec.sha256`).
-- `python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py` → PASS (exit 0).
-- `test -f .agents/plans/godspeed-casework-cognitive-environment.implementation.md` → present.
-- `.agents/evidence/…/T00/teeth/run-teeth.sh` → exit 0 (both teeth behaved as specified).
-- `just lint` 0 · `just typecheck` 0 · `just test` 0 (290 s) · `just proof` 0 (after a preserved
-  harness-defect correction from exit 127) · `just build` 0 · **`just security` 1** (gitleaks: 14
-  findings: identifier-class matches — JSON fields named `key`/`idempotency_key` with
-  13–16-character id-shaped values — inside the sibling plan's committed evidence at `6ce518f`;
-  `cargo deny` green). The earlier "8-character alphabetic" wording was measured off gitleaks'
-  `REDACTED` placeholder and is withdrawn (see `gate-baseline-seafoerge.md`'s round-2 correction).
-- `just context-check` → PASS after this update.
-- `just check` → **exit 1** (101 s) and `just ci` → **exit 1** (41 s): both red **only** at
-  `just security`, with `context-check`, `fmt-check`, `clippy -D warnings`, and `cargo check`
-  green before it (step-by-step evidence in
-  `.agents/evidence/godspeed-casework-cognitive-environment/T00/gate-baseline-composites.md`).
-  `no-async-kernel` was not run and is not claimed.
+- `python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py` → PASS (exit 0), re-run at T03.
+- `just casework-go-check` → PASS (re-run during the T01 confirmation).
+- `just casework-ui-check` → PASS: frozen install, `tsc --noEmit`, `vite build`, `bun test`
+  (8 tests, 226 assertions). Raw logs in `T03/raw-logs/`.
+- `T03/teeth/run-teeth.sh` → exit 0 (adapter replacement, provider swap on one shared scenario with
+  zero hardcoded ids, and a real `react` injection that fails the purity gate until removed).
+- Operator controls verified end to end in `T03/raw-logs/operator-cycle.log` (up → curl 200 →
+  status → reuse → down → port free → idempotent down → repeatable up → down).
+- T00 self-audit: `SELF-AUDIT: PASS` (mechanical/arithmetic only, as its header states) and
+  `SELF-TEST: PASS` (9/9 injected classes detected).
+- **Independent confirmations: T00 round 6 CONFIRM · T01 round 1 CONFIRM (F1 corrected) · T02
+  round 1 CONFIRM.** Records: `T00/T00-verification-round-6-CONFIRM.md`,
+  `T01/T01-verification-round-1-CONFIRM.md`, `T02/T02-verification-round-1-CONFIRM.md`; rounds
+  1–5 NOT_CONFIRM records preserved alongside.
+- Baselines recorded at T00 remain as they were: `just lint`/`typecheck`/`test`/`proof`/`build`
+  PASS; **`just security` was RED (14 identifier-class gitleaks findings) before the approved B2
+  remediation and is now green** ("no leaks found" over 492 commits). `just check`/`just ci` were
+  red only at `security` when last run and **must be re-run at T05** — they were NOT re-run this
+  session (resource policy: MemAvailable 2.1–2.4 GiB throughout, thinner than the T00 baseline
+  window; deferred gates stay pending and are never passed).
 - Gauntlet gates: RESOURCE_DEFERRED (not run, not claimed passed) with readings, a narrow
   single-crate observation (exit 0, 137 s), and the exact commands recorded.
-- **Independent confirmation round 1: NOT_CONFIRM**, 7 findings, all in measurement/bookkeeping/
-  evidence-backing; corrections applied in round 2 and preserved in
-  `T00-verification-round-1-NOT_CONFIRM.md`. Re-confirmation is the outstanding step.
+- `just context-check` → PASS after this update.
 
 ## Remaining
 
-- **T03 and T04 are now ready** (both were blocked on T01, which is settled): T03 implements the React
-  UI core and local world adapter (`GATE_UI`, `just casework-ui-check`), T04 the Go casework core and
-  cognitive projection model (`GATE_GO`). They may run in parallel.
-- T05 must **re-run** `just check` and `just ci` (they were last observed red only at `security`) and
-  the three deferred Gauntlet gates before it can settle; a deferred gate stays pending.
-- T06–T14 remain blocked per the plan DAG.
-- Re-confirm T00 adversarially (round 6) against the round-6 corrections; the audit's PASS covers
-  mechanical/arithmetic checks only — not prose claims.
-- Peer confirmation is still outstanding for T02 and T01 (both settled on their gates and evidence,
-  neither yet independently confirmed).
+- **T04, T06 and T08 are now ready** (T04 was blocked on T01 — settled; T06 and T08 were blocked on
+  T03 — settled): T04 implements the Go casework core and projection model (`GATE_GO`); T06 the
+  spatial cognitive scene and semantic focus/zoom (`GATE_UI`); T08 the bounded artifact runtime and
+  renderer adapters (`GATE_UI`). They may run in parallel. T07 becomes ready when T04 settles.
+- T05 must **re-run** `just check` and `just ci` (last observed red only at `security`, now green
+  there, but unverified since) and the three deferred Gauntlet gates before it can settle; a
+  deferred gate stays pending.
+- T09–T14 remain blocked per the plan DAG.
+- **B4 —** `docs/reference/sfwp-protocol-reference.md` is stale by five methods; harmonise in the
+  T04/T05 window and cross-link from the brief.
+- **B5 — SFWP capability gaps are load-bearing** (no governed lease/claim, no durable artifact
+  persistence, no typed object-version history, no repository-fact execution, no narration beats);
+  adding any is a separately reviewed Rust contract change. T05 takes duplicate-execution safety
+  from `request_id` correlation; T07 builds history from events/episode records; T08 cannot settle
+  REQ-ART-004 by fixture; the GitHub authority surface is PRESENT while repository-fact execution
+  is ABSENT.
+- **Final integration reconciliation:** reconcile this worktree's canonical status and evidence
+  with the then-current active checkout; never overwrite newer status from other work and never
+  claim a worktree-local `just context-check` validates the operator's handoff state.
+- Not verified at all (unchanged): anything requiring a live SEA Forge cell, a live Gauntlet run,
+  or GitHub. No adapter exists; both new applications report unavailable rather than pretending.
 
 ## Blockers
 
-- **B1 — RESOLVED (operator-approved 2026-09-19).** Go 1.27.1 is installed via mise
-  (`go version go1.27.1 linux/amd64`) and declared in `mise.toml` so a fresh worktree installs it.
-  T01/T04 are unblocked and `GATE_GO` can run. Evidence: `T00/approvals-and-remediation.md`.
-- **B2 — RESOLVED (operator-approved 2026-09-19).** `just security` is now green (exit 0, 52 s,
-  "no leaks found") under a narrow `condition = "AND"` allowlist that requires the commit AND the
-  path AND the rule to match. Proven non-global by a tooth: the same bytes scanned outside that
-  commit+path still produce 4 findings. `GATE_SEAFORGE` (activates T05) is no longer blocked by the
-  security baseline — but `just check`/`just ci` must be **re-run** at T05 rather than assumed green,
-  since they were last observed red only at `security` and have not been re-run since the allowlist.
-- **B5 — SFWP capability gaps** (no governed lease/claim, no durable artifact persistence, no typed
-  object-version history, no repository-fact execution, no narration beats). Each would be a
-  separately reviewed Rust contract change and must not be invented by Go or React.
+- **Resource condition (not a blocker):** through the 2026-09-19/20 session `MemAvailable` stayed
+  at ~2.0–2.4 GiB with ~1.5–1.6 GiB swap free (vs 3.2 GiB / 7.1 GiB at the T00 baselines). Per the
+  build-resource policy the Rust-wide gates (`just check`, `just ci`, `just test` re-runs) were
+  **deferred, not run, and remain pending**; the Bun/Go gates T03 and the confirmations needed ran
+  one at a time with readings recorded (`T03/raw-logs/resource-preflight.log`). Re-measure before
+  T05; defer again rather than risking an OOM.
+- **B5 — SFWP capability gaps** (as above). Each would be a separately reviewed Rust contract
+  change and must not be invented by Go or React.
 - **B4 — the SFWP reference document is stale** by five methods; `sfwp/mod.rs::IMPLEMENTED_METHODS`
   is authoritative.
-- **Resource condition (not a blocker):** at the remediation runs `MemAvailable` had fallen to
-  ~2.4 GiB and swap free to ~2.2 GiB, from 3.2 GiB / 7.1 GiB when the T00 baselines ran. Preflight
-  before every heavy gate and defer when headroom is inadequate; a deferred gate is never passed.
-- Planning risk (not a blocker at T00): the Gauntlet TUI removal target exists only on the branch
+- Planning risk (not a blocker): the Gauntlet TUI removal target exists only on the branch
   containing `fe75108` — `main` has no `workbench/` TUI — so T14's removal is branch-bound.
 
 ## Decisions
 
 See `.agents/reports/godspeed-casework-cognitive-environment/decision-log.yaml` for the full
-records. Headlines: isolate work in dedicated worktrees and pin the Gauntlet worktree to
-`fe75108`; share the warm Rust cache for baseline gates plus a `target` symlink; record the
-pre-existing red `security` baseline and withhold the repair pending approval; correct the GitHub
-verdict to PARTIAL; treat the missing Go toolchain and missing SFWP seams as blocking
-prerequisites rather than inventing capability; settle T00 on its own gates with those
-prerequisites recorded rather than claiming green.
+records (14 entries: T00-01…10, T02-01, T01-01, T03-01, T03-02). Headlines: isolate work in
+dedicated worktrees and pin the Gauntlet worktree to `fe75108`; share the warm Rust cache for
+baseline gates plus a `target` symlink; record the pre-existing red `security` baseline and
+withhold the repair pending approval (then apply the approved narrow allowlist); correct the GitHub
+verdict to PARTIAL; treat the missing Go toolchain and missing SFWP seams as blocking prerequisites
+rather than inventing capability; settle T00 on its own gates with those prerequisites recorded
+rather than claiming green; build the cognitive UI as a React 19 + Vite app whose core imports no
+renderer/transport/backend module, with the fixture provider chosen only in the host bootstrap, and
+serve the demo on fixed port 4178 with honest refusal of consequential intents.
 
 <!-- END OF GODSPEED CASEWORK-ENVIRONMENT HANDOFF.
      Everything below this marker is inherited history from the Godspeed bounded-judgment plan and

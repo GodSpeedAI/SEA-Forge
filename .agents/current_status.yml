@@ -11,8 +11,8 @@ metadata:
   spec_sha256: 6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641
   spec_status: authoritative
   initialized: true
-  last_updated: '2026-09-19'
-  updated_by: t00-freeze-authority-and-inventory
+  last_updated: '2026-09-20'
+  updated_by: t03-cognitive-ui-core-and-host
   scope: dedicated_sea_forge_worktree_only
   inherited_status_note: >-
     The status content previously present in this worktree belonged to the Godspeed bounded-judgment
@@ -35,34 +35,26 @@ worktree_state:
     a missing target/debug/sea-forge. The symlink is untracked but NOT gitignored: .gitignore's
     '/target/' pattern matches a directory, not a symlink, so git status reports '?? target'.
 execution:
-  last_settled_task: T01
+  last_settled_task: T03
   settled_tasks:
     - T00
     - T02
     - T01
+    - T03
   in_flight_task: null
   ready_tasks:
-    - T03
     - T04
+    - T06
+    - T08
   blocked_tasks:
     T05:
       - T04
-    T06:
-      - T03
     T07:
-      - T02
-      - T03
       - T04
-    T08:
-      - T02
-      - T03
     T09:
-      - T02
-      - T03
       - T06
       - T08
     T10:
-      - T03
       - T04
     T11:
       - T05
@@ -102,14 +94,14 @@ latest_evidence:
     self_audit_log: .agents/evidence/godspeed-casework-cognitive-environment/T00/self-audit.log
     self_audit_selftest: .agents/evidence/godspeed-casework-cognitive-environment/T00/self-audit-selftest.log
     composite_baseline: .agents/evidence/godspeed-casework-cognitive-environment/T00/gate-baseline-composites.md
-    result: 'T00 SETTLED (P2) with CORRECTION ROUND 6 APPLIED and RE-CONFIRMATION PENDING. Frozen prereg before the first gate (one disclosed 36-second post-freeze typo fix recorded as post_freeze_amendments, with an explicit not_established list); spec sha256 reproduced; GATE_SPEC_TRACE PASS; 86/86 traceability; both teeth pass; SEA Forge baselines lint/typecheck/test/proof/build PASS, security RED, and just check (101 s)/just ci (41 s) both red ONLY at security; Gauntlet gates RESOURCE_DEFERRED with readings and exact commands; implementation brief with exact SFWP/Gauntlet/Workbench inventories; two inventory corrections preserved (GitHub verdict ABSENT -> PARTIAL; SFWP reference doc stale 18 vs 23). Independent verification rounds 1, 2 and 3 all returned NOT_CONFIRM, each finding real defects in the measurement/bookkeeping layer: round 1 found 7; round 2 found the withdrawn gitleaks wording still current in five artifacts and the unbacked proof time still displayed; round 3 found a self-destroyed prereg disclosure, disagreeing handoff rounds, a script measuring the span while the text described the value, three script vacuity/crash holes, a non-durable report path, and GB values under GiB labels throughout. Round 4 fixed that class, but round 4 verification proved the self-audit was partly theatre and found a residual unit error; round 5 fixed the audit and rebuilt it, and round 5 verification then found the decision log emptied to 0 bytes while the audit certified it present, plus thirteen injected defect classes the audit missed. Round 6 restored the decision log and hardened the audit (content assertions incl. the nine decision ids and the verdict records; punctuation-variant and wrapped wording; .csv and extensionless citations; anchored-pair arithmetic; absent/stale round claims; deleted raw logs and round records; injections proven to change the mirror; no skip-variable loophole), then deliberately narrowed it because tightening prose heuristics produced false positives on the builder own disclosure text. Current state: SELF-AUDIT: PASS (mechanical and arithmetic checks only) and SELF-TEST: PASS (9/9 injected classes detected). T00 IS NOT INDEPENDENTLY CONFIRMED: five adversarial verification rounds were run and all five returned NOT_CONFIRM; every finding was in the evidence layer and each is fixed or explicitly re-scoped. No load-bearing claim has been falsified in any round.'
+    result: 'T00 SETTLED (P2) with CORRECTION ROUND 6 APPLIED and RE-CONFIRMATION PENDING. Frozen prereg before the first gate (one disclosed 36-second post-freeze typo fix recorded as post_freeze_amendments, with an explicit not_established list); spec sha256 reproduced; GATE_SPEC_TRACE PASS; 86/86 traceability; both teeth pass; SEA Forge baselines lint/typecheck/test/proof/build PASS, security RED, and just check (101 s)/just ci (41 s) both red ONLY at security; Gauntlet gates RESOURCE_DEFERRED with readings and exact commands; implementation brief with exact SFWP/Gauntlet/Workbench inventories; two inventory corrections preserved (GitHub verdict ABSENT -> PARTIAL; SFWP reference doc stale 18 vs 23). Independent verification rounds 1, 2 and 3 all returned NOT_CONFIRM, each finding real defects in the measurement/bookkeeping layer: round 1 found 7; round 2 found the withdrawn gitleaks wording still current in five artifacts and the unbacked proof time still displayed; round 3 found a self-destroyed prereg disclosure, disagreeing handoff rounds, a script measuring the span while the text described the value, three script vacuity/crash holes, a non-durable report path, and GB values under GiB labels throughout. Round 4 fixed that class, but round 4 verification proved the self-audit was partly theatre and found a residual unit error; round 5 fixed the audit and rebuilt it, and round 5 verification then found the decision log emptied to 0 bytes while the audit certified it present, plus thirteen injected defect classes the audit missed. Round 6 restored the decision log and hardened the audit (content assertions incl. the nine decision ids and the verdict records; punctuation-variant and wrapped wording; .csv and extensionless citations; anchored-pair arithmetic; absent/stale round claims; deleted raw logs and round records; injections proven to change the mirror; no skip-variable loophole), then deliberately narrowed it because tightening prose heuristics produced false positives on the builder own disclosure text. Current state: SELF-AUDIT: PASS (mechanical and arithmetic checks only) and SELF-TEST: PASS (9/9 injected classes detected). T00 IS NOW INDEPENDENTLY CONFIRMED: verification round 6 (2026-09-20) returned CONFIRM - the verifier reproduced the authority binding, 86/86 traceability, DAG, worktree isolation, gate baselines (from raw logs), the 23-method SFWP surface and absent seams, and both teeth; proved the validator non-vacuous by injecting a fabricated 87th requirement (caught four ways); exercised the teeth relocation guard (exit 2); and checked decision-log semantics beyond the audit (id grammar, uniqueness, claim_state vocabulary). Rounds 1-5 (NOT_CONFIRM) and every finding remain preserved.'
   t02:
     evidence_dir: .agents/evidence/godspeed-casework-cognitive-environment/T02/
     settlement_report: .agents/evidence/godspeed-casework-cognitive-environment/T02/T02-settlement-report.md
     decision_record: .agents/evidence/godspeed-casework-cognitive-environment/T02/donor-and-license-decisions.md
     preregistration: .agents/preregistrations/godspeed-casework-cognitive-environment/T02.prereg.yaml
     teeth: .agents/evidence/godspeed-casework-cognitive-environment/T02/teeth/run-teeth.sh
-    result: 'T02 SETTLED (P2, peer confirmation pending): both donors OMITTED and no dependency admitted. Neither Open MCT nor OpenMontage is reachable; the spec makes donor use optional, so no cost reduction or licence review can be demonstrated and the mechanics stay behind GodSpeed-owned ports (temporal T07, narration T09). No file was copied, so provenance/notice obligations are vacuous and are asserted by a tooth. GATE_SPEC_TRACE PASS; teeth exit 0. The tooth was rewritten after its first version failed on the plan''s own decision prose (measuring a mention instead of a dependency).'
+    result: 'T02 SETTLED (P2) and INDEPENDENTLY CONFIRMED (verification round 1, 2026-09-20: CONFIRM; the tooth now inspects the real T01 surfaces and the T04/T07 re-run obligation is restated): both donors OMITTED and no dependency admitted. Neither Open MCT nor OpenMontage is reachable; the spec makes donor use optional, so no cost reduction or licence review can be demonstrated and the mechanics stay behind GodSpeed-owned ports (temporal T07, narration T09). No file was copied, so provenance/notice obligations are vacuous and are asserted by a tooth. GATE_SPEC_TRACE PASS; teeth exit 0. The tooth was rewritten after its first version failed on the plan''s own decision prose (measuring a mention instead of a dependency).'
   t01:
     evidence_dir: .agents/evidence/godspeed-casework-cognitive-environment/T01/
     settlement_report: .agents/evidence/godspeed-casework-cognitive-environment/T01/T01-settlement-report.md
@@ -117,8 +109,28 @@ latest_evidence:
     teeth: .agents/evidence/godspeed-casework-cognitive-environment/T01/teeth/run-teeth.sh
     module: apps/godspeed-casework-go
     contracts: apps/godspeed-cognitive-ui/contracts
-    result: 'T01 SETTLED (P2, peer confirmation pending): the Go front end owns stable ports (authority/execution/repository plus an optional artifact store), one documented configuration authority (defaults < file < environment < explicit override) with secret indirection only, a typed error model carrying capability attribution, and per-capability preflight (ready/degraded/blocking). GATE_GO (just casework-go-check: gofmt, go vet, go test) PASS and GATE_SPEC_TRACE PASS. Both teeth pass, including a REAL injection of a provider payload type into internal/ports that makes the boundary gate fail, and an end-to-end CLI run with one missing required credential plus one unavailable optional adapter (exit 2, blocking=[authority repository], degraded=[artifact], typed config vs unavailable kinds). Preserved corrections: config faults no longer abort before preflight (that contradicted REQ-CONFIG-012), and the tooth s own assertion was corrected rather than the product.'
+    result: 'T01 SETTLED (P2) and INDEPENDENTLY CONFIRMED (verification round 1, 2026-09-20: CONFIRM, with one minor representation finding F1 corrected in the same round): the Go front end owns stable ports (authority/execution/repository plus an optional artifact store), one documented configuration authority (defaults < file < environment < explicit override) with secret indirection only, a typed error model carrying capability attribution, and per-capability preflight (ready/degraded/blocking). GATE_GO (just casework-go-check: gofmt, go vet, go test) PASS and GATE_SPEC_TRACE PASS. Both teeth pass, including a REAL injection of a provider payload type into internal/ports that makes the boundary gate fail, and an end-to-end CLI run with one missing required credential plus one unavailable optional adapter (exit 2, blocking=[authority repository], degraded=[artifact], typed config vs unavailable kinds). Preserved corrections: config faults no longer abort before preflight (that contradicted REQ-CONFIG-012), and the tooth s own assertion was corrected rather than the product.'
+  t03:
+    evidence_dir: .agents/evidence/godspeed-casework-cognitive-environment/T03/
+    settlement_report: .agents/evidence/godspeed-casework-cognitive-environment/T03/T03-settlement-report.md
+    preregistration: .agents/preregistrations/godspeed-casework-cognitive-environment/T03.prereg.yaml
+    teeth: .agents/evidence/godspeed-casework-cognitive-environment/T03/teeth/run-teeth.sh
+    app: apps/godspeed-cognitive-ui
+    gate: just casework-ui-check
+    result: 'T03 SETTLED (P2, peer confirmation pending): the cognitive environment exists and runs.
+      A framework-free UI core (model, store, action vocabulary, engine) composes with a fixture
+      provider set (representative FDE world with bounded artifacts and history, plus a deliberately
+      different alt provider) and a React 19 host that calls the same actions the tests call.
+      GATE_UI (just casework-ui-check: frozen install, tsc, vite build, bun test - 8 tests, 226
+      assertions) PASS and GATE_SPEC_TRACE PASS. Teeth exit 0: scene/agent replaced by no-op/test
+      adapters; ONE shared interaction scenario with zero hardcoded ids passes under both providers;
+      a REAL react injection into src/core fails the purity gate until removed. Operator controls
+      casework-ui-up/-down/-status verified over the full cycle (up, curl 200, status, reuse, down,
+      port free, idempotent down, repeatable up). The app and README state plainly: fixture-backed,
+      not connected to SEA Forge, GitHub, Gauntlet, or any agent. Honest limits: semantic zoom and
+      composer are T06/T08; time positions are metadata only (content projection is T07); narration
+      shows the unavailable state.'
 next_action:
-  task: verification-round-6
-  action: 'Re-confirm T00 adversarially (round 6) against the round-6 corrections (five prior rounds all returned NOT_CONFIRM; the last found the decision log emptied while the audit certified it present). Run self-audit.sh and self-audit.sh --self-test first, noting the audit covers mechanical/arithmetic checks only. Then decide B1 (install the Go toolchain, e.g. mise install go@1.27.1, or defer Go-gated work) and B2 (confirm the key/idempotency_key field semantics, then approve the narrow commit+path+rule-scoped .gitleaks.toml allowlist, or dispose otherwise), then execute T02 (Go-independent, GATE_SPEC_TRACE only) and T01 once B1 is resolved.'
-  reason: T00 is not fully confirmed until a fresh verifier returns CONFIRM; T01 owns GATE_GO and T03/T04 are blocked on T01, so no implementation task can settle until B1 is decided; GATE_SEAFORGE cannot pass until B2 is decided.
+  task: T04-recommended-parallel-with-T06-T08
+  action: 'Run T04 (Go casework core, ports, projection model, GATE_GO), and in parallel T06 (spatial scene, semantic focus/zoom, GATE_UI) and T08 (bounded artifact runtime and renderer adapters, GATE_UI); all three are dependency-ready. T04 first is reasonable because it unlocks T05 and T07. Before T05: re-run just check and just ci (unverified since the B2 allowlist) and the three deferred Gauntlet gates, and re-measure memory first (MemAvailable stayed 2.0-2.4 GiB this session, thinner than the T00 baseline window; Rust-wide re-runs were therefore DEFERRED, not skipped). T04 and T07 must re-run the T02 donor tooth against their real ports; harmonise the stale SFWP reference doc (B4) in the T04/T05 window.'
+  reason: 'T03 settled and unlocked T06 and T08; T01 settled long ago unlocked T04. Settle by dependency in parallel. T05 remains the join point and cannot settle while the GATE_SEAFORGE re-runs and GATE_GAUNTLET stay pending.'

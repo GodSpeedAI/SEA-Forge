@@ -206,3 +206,42 @@ decisions:
       type to alias. The React contract package is contract-shape only - GATE_UI and the real renderer
       are T03 scope. Evidence: .agents/evidence/godspeed-casework-cognitive-environment/T01/ and
       apps/godspeed-casework-go/README.md.
+  - id: D-2026-09-20-T03-01
+    task: T03
+    title: Build the cognitive UI as a React 19 + Vite app with a framework-free core
+    claim_state: DECIDED
+    decision: >-
+      Implement apps/godspeed-cognitive-ui as its own Bun package: a React 19 host rendered by Vite
+      (dev server on fixed port 4178, strict), with a UI core that imports neither React nor any
+      renderer/transport/backend module, composed from adapter implementations of the T01 contract
+      ports. The fixture provider set is chosen only in src/host/bootstrap.tsx.
+    basis:
+      - 'The plan names the replacement a React cognitive environment (REQ-GOAL-002) while requiring the interaction model to be independent of renderer and transport (REQ-ARCH-003/004); a framework-free core plus a React host satisfies both halves at once.'
+      - 'The T03 preregistration (frozen before code) declares this composition and the confound that a host mutating state directly would prove nothing; the host instead subscribes to the store and calls the same actions the tests call.'
+      - 'bun is the repository declared package manager (workbench conventions, mise.toml); react/react-dom/vite/typescript are the minimal dependency set for that composition.'
+    consequence: >-
+      GATE_UI (just casework-ui-check) exists and observes the real app. Later tasks extend the
+      grammar (T06 scene, T07 temporal projection, T08 artifacts/composer, T09 narration) by adding
+      adapters and actions, not by redesigning the core. Dependencies added: react, react-dom,
+      vite, @vitejs/plugin-react, typescript, @types/react, @types/react-dom, bun-types - all
+      dev-scoped except react/react-dom, all resolved from the npm registry under the plan-mandated
+      stack. Evidence: .agents/evidence/godspeed-casework-cognitive-environment/T03/.
+  - id: D-2026-09-20-T03-02
+    task: T03
+    title: Operator controls serve the fixture-backed demo on a fixed port with honest refusal
+    claim_state: DECIDED
+    decision: >-
+      just casework-ui-up/-down/-status manage a detached Vite dev server (default port 4178,
+      strictPort, 127.0.0.1), with pidfile and log under /.sea-forge/casework-ui/. up reuses an
+      already-answering server instead of failing; down refuses to kill a pid whose cmdline does not
+      look like the UI. The fixture interaction adapter REFUSES every consequential intent as
+      unavailable, and the served page carries a permanent banner stating it is fixture-backed and
+      connected to nothing.
+    basis:
+      - 'The task brief requires non-interactive idempotent controls, reuse on a live port, and clear labelling (fixture-backed, not connected to SEA Forge).'
+      - 'REQ-GOAL-006 forbids concluding consequential actions locally, so even the demo must refuse them; the refusal is recorded in core state, not swallowed.'
+    consequence: >-
+      The operator can look at a working, honestly-labelled prototype with up/status/down; the
+      recipes were verified for the full cycle (up, curl 200, status, reuse, down, port free,
+      idempotent down, repeatable up) as recorded in T03/raw-logs/operator-cycle.log. The demo must
+      be replaced by real transports at T10/T11, never presented as governed integration.
