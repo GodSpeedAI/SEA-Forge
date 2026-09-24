@@ -62,7 +62,7 @@ operator_decisions:
   dependencies: "APPROVED: a Go OIDC library and golang.org/x/crypto/argon2. REJECTED: Playwright; use agent-browser. Anything else is ask-first."
   git: >-
     The implementing agent may create a local branch and make local commits, following the
-    agent_protocol.git rules below. It may never push, fetch, pull, rebase, reset, merge or clean.
+    agent_protocol.git rules below. Make frequent commits at meaninful milestones. It may never push, fetch, pull, rebase, reset, merge or clean.
 
 next_action:
   task: T04
