@@ -375,18 +375,110 @@ async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
     // recorded no criteria binding, so `approve` refused every approval this
     // dispatcher opened and the case parked forever.
     //
-    // This test cannot carry that assertion to completion. `decide` shells out
-    // through `run_cli`, which resolves a `sea-forge` binary beside
-    // `current_exe()` — inside a test harness that is the test binary, so the
-    // approve subcommand never runs here regardless of correctness. What is
-    // assertable is that the *specific* defect is gone; the end-to-end
-    // resolution is proven live by `docs/execution/journey/drive_identity.py`,
-    // and the record binding by the test below.
+    // This test still cannot carry that assertion to completion: `escalate.yaml`
+    // authorizes no `approval_resolution`, so an in-process resolution (T04
+    // moved `decide` off spawning the CLI onto the shared case-ops library)
+    // is refused by policy here. The end-to-end resolution with a resolvable
+    // policy is proven by the dedicated wiring test below, and the record
+    // binding by the test after this one.
     let message = by_other["error"].as_str().unwrap_or_default();
     assert!(
         !message.contains("criteria reference is missing")
             && !message.contains("criteria record is missing"),
         "the escalation opened an approval with no usable criteria binding: {by_other}"
+    );
+}
+
+/// The in-process approval wiring (T04 step 3): `approval.decide` resolves
+/// through the shared case-ops library rather than spawning the CLI, so the
+/// resolution must land in the approvals journal attributed to the actor the
+/// identity gate verified. The journal, not the response, is the claim under
+/// test: a wiring that silently substituted another actor (or a server-side
+/// default) would pass the gate and write the wrong name here.
+#[tokio::test]
+async fn approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones() {
+    let (root, socket) = boot(two_actors()).await;
+    escalating_plan(root.path());
+    // Escalate the item, then allow the resolution of what the escalation
+    // opened: without the second rule the approval can never be resolved
+    // ("approval resolution is not authorized by policy").
+    fs::write(
+        root.path().join("resolvable.yaml"),
+        "version: \"0.1\"\nrules:\n  - name: escalate-command\n    verdict: escalate\n    \
+         actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n  \
+         - name: allow-approval-resolution\n    verdict: allow\n    actor_role: operator\n    \
+         operation_kind: approval_resolution\n",
+    )
+    .unwrap();
+    let mut client = Client::connect(&socket).await;
+
+    let submitted = client
+        .call(json!({"verb": "submit",
+                     "actor": {"actor_id": "operator_a", "role": "operator"},
+                     "plan": "plan.json", "policy": "resolvable.yaml",
+                     "entity": "operator_a", "process": "test", "timeout": 60,
+                     "request_id": "req-identity-submit-resolvable"}))
+        .await;
+    let case_id = submitted["case_id"]
+        .as_str()
+        .unwrap_or_else(|| panic!("submit did not return a case_id: {submitted}"))
+        .to_owned();
+
+    let inbox = client.call(json!({"verb": "approval_list"})).await;
+    let approval_id = inbox["approvals"][0]["approval_id"]
+        .as_str()
+        .unwrap_or_else(|| panic!("an escalated episode must open an approval: {inbox}"))
+        .to_owned();
+
+    // The escalation itself journals the pending request, so the refusal's
+    // durable proof is an unchanged journal, not an absent one.
+    let journal_before = fs::read_to_string(root.path().join("approvals.jsonl"))
+        .expect("the escalation must journal its pending approval request");
+
+    // Negative: an actor this cell has never bound is refused at the gate,
+    // and the refusal writes nothing.
+    let by_stranger = client
+        .call(json!({"verb": "approval_decide",
+                     "actor": {"actor_id": "mallory", "role": "operator"},
+                     "case_id": case_id, "approval_id": approval_id, "decision": "approve",
+                     "request_id": "req-identity-decide-mallory"}))
+        .await;
+    assert_eq!(
+        by_stranger["error_class"], "identity_not_bound",
+        "{by_stranger}"
+    );
+    assert_eq!(
+        fs::read_to_string(root.path().join("approvals.jsonl")).unwrap(),
+        journal_before,
+        "a refused decision must not write the approvals journal"
+    );
+
+    // Positive: operator_b — verified by the gate — resolves in-process, and
+    // the journal names operator_b, not the submitter and not any default.
+    let by_other = client
+        .call(json!({"verb": "approval_decide",
+                     "actor": {"actor_id": "operator_b", "role": "operator"},
+                     "case_id": case_id, "approval_id": approval_id, "decision": "approve",
+                     "request_id": "req-identity-decide-operator-b"}))
+        .await;
+    assert_eq!(by_other["ok"], true, "{by_other}");
+    let journal = fs::read_to_string(root.path().join("approvals.jsonl"))
+        .expect("the in-process resolution must write the approvals journal");
+    let resolved: Value = serde_json::from_str(
+        journal
+            .lines()
+            .last()
+            .expect("the journal must carry the resolution"),
+    )
+    .unwrap();
+    assert_eq!(
+        resolved["resolved_by"], "operator_b",
+        "the resolution must be attributed to the verified actor: {resolved}"
+    );
+    assert_eq!(resolved["status"], "approved");
+    assert_eq!(
+        resolved["approval_id"], approval_id,
+        "the journal line must name the resolved approval: {resolved}"
     );
 }
 

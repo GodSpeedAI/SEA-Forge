@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod case_ops;
+
 use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};

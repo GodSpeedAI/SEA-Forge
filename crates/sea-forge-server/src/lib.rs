@@ -28,7 +28,6 @@ use std::sync::{
 };
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
-use tokio::process::Command;
 use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
 
 use sfwp::correlation::RequestCorrelationStore;
@@ -1927,7 +1926,7 @@ pub async fn handle_request_as(
         } => {
             decide(
                 state,
-                "approve",
+                true,
                 "approval.approve",
                 "approval.approved",
                 &case_id,
@@ -1948,7 +1947,7 @@ pub async fn handle_request_as(
         } => {
             decide(
                 state,
-                "reject",
+                false,
                 "approval.reject",
                 "approval.rejected",
                 &case_id,
@@ -2262,9 +2261,9 @@ pub async fn handle_request_as(
             // Route to the same `decide` helper `Approve`/`Reject` use. An
             // unknown verdict is refused outright: defaulting it would resolve
             // a governed decision on the server's guess.
-            let (cli_verb, method, event_kind) = match decision.as_str() {
-                "approve" => ("approve", "approval.approve", "approval.approved"),
-                "reject" => ("reject", "approval.reject", "approval.rejected"),
+            let (approved, method, event_kind) = match decision.as_str() {
+                "approve" => (true, "approval.approve", "approval.approved"),
+                "reject" => (false, "approval.reject", "approval.rejected"),
                 other => {
                     return serde_json::json!({
                         "error": format!("unknown approval decision {other:?}; expected \"approve\" or \"reject\""),
@@ -2274,7 +2273,7 @@ pub async fn handle_request_as(
             };
             decide(
                 state,
-                cli_verb,
+                approved,
                 method,
                 event_kind,
                 &case_id,
@@ -2622,7 +2621,7 @@ impl sfwp::precondition::RecordResolver for LedgerRecordResolver<'_> {
 #[allow(clippy::too_many_arguments)]
 async fn decide(
     state: &Arc<ServerState>,
-    cli_verb: &str,
+    approved: bool,
     method: &str,
     event_kind: &str,
     case_id: &str,
@@ -2661,25 +2660,40 @@ async fn decide(
         }
     }
 
+    // Attribute the resolution to the actor the gate verified. Without this
+    // the resolution would be recorded against a generic actor, so every
+    // approval resolved over SFWP would name the wrong resolver in the audit
+    // trail — and the separation-of-duty check inside the library would
+    // compare against the wrong actor. In-process callers with no verified
+    // identity keep the CLI's historical default actor.
+    let actor = actor_id.unwrap_or("operator_local").to_string();
+    // The CLI leg this replaces ran `sea-forge approve` without `--policy`,
+    // so it resolved against the cell's active policy at
+    // `<root>/authority/active-policy.json`; the same spelling keeps one
+    // authorization path over both entrances.
+    let policy = state.root.join("authority/active-policy.json");
+    // F-24: the resolution verifies and replays the case ledger and commits
+    // authority decisions — blocking work belongs on a blocking thread.
     let root = state.root.clone();
-    let mut args = vec![
-        cli_verb,
-        case_id,
-        approval_id,
-        "--root",
-        root.to_str().unwrap_or("."),
-    ];
-    // Attribute the resolution to the actor the gate verified. Without this the
-    // CLI falls back to its own default (`operator_local`), so every approval
-    // resolved over SFWP was recorded as `resolved_by=operator_local` no matter
-    // who decided it — an audit trail naming the wrong person, and a
-    // separation-of-duty check downstream comparing against the wrong actor.
-    if let Some(actor_id) = actor_id {
-        args.extend_from_slice(&["--actor", actor_id]);
-    }
-    let result = run_cli(&root, &args, note).await;
+    let case = case_id.to_string();
+    let approval = approval_id.to_string();
+    let note_owned = note.map(str::to_owned);
+    let actor_for_task = actor.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        sea_forge_case_runner::case_ops::resolve_approval(
+            &root,
+            &policy,
+            &case,
+            &approval,
+            &actor_for_task,
+            note_owned.as_deref(),
+            approved,
+        )
+    })
+    .await
+    .map_err(|error| ForgeError::Internal(format!("approval resolution task panic: {error}")));
     let response = match result {
-        Ok(output) => {
+        Ok(Ok(resolved)) => {
             let _ = state.permission_broker.resolve(approval_id).await;
             let _ = state
                 .publish_event(
@@ -2689,9 +2703,16 @@ async fn decide(
                     serde_json::json!({"approval_id": approval_id}),
                 )
                 .await;
+            // Render the same lines the CLI printed, so consumers of the
+            // `output` field see the shape they always did.
+            let output = format!(
+                "approval_id={approval_id}\nstatus={:?}\nresolved_by={actor}\n",
+                resolved.status
+            );
             serde_json::json!({"ok": true, "output": output})
         }
-        Err(e) => serde_json::json!({"error": e}),
+        Ok(Err(error)) => serde_json::json!({"error": error.to_string()}),
+        Err(error) => serde_json::json!({"error": error.to_string()}),
     };
     record_outcome(state, request_id, method, &response);
     response
@@ -2990,35 +3011,6 @@ struct DispatchOutcome {
     case_id: String,
     state: &'static str,
     exit_code: u8,
-}
-
-async fn run_cli(_root: &Path, args: &[&str], note: Option<&str>) -> Result<String, String> {
-    let exe = std::env::current_exe()
-        .map_err(|e| format!("resolve exe: {e}"))?
-        .to_string_lossy()
-        .into_owned();
-    let cli_exe = {
-        let p = std::path::PathBuf::from(&exe);
-        let dir = p.parent().unwrap_or(std::path::Path::new("."));
-        let cli = dir.join("sea-forge");
-        if cli.exists() {
-            cli.to_string_lossy().into_owned()
-        } else {
-            exe.clone()
-        }
-    };
-    let mut cmd = Command::new(&cli_exe);
-    cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
-    if let Some(note) = note {
-        cmd.arg("--note").arg(note);
-    }
-    let output = cmd.output().await.map_err(|e| format!("spawn: {e}"))?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("exit {:?}: {stderr}", output.status.code()));
-    }
-    Ok(stdout)
 }
 
 /// Wall-clock bound for the operator-configured `notify_command` hook.
