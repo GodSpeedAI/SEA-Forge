@@ -1001,3 +1001,21 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   pointed at a `--plan` run.
 - Scope: outside T05's frozen preregistered delta (mainline pipeline only);
   recorded during independent confirmation.
+
+## Open: local UI e2e ladder deterministically red at J1 (focus identity/state) at plan baseline HEAD
+
+- Observed: 2026-09-23 (casework-live-wiring T00 baseline; two independent runs)
+- Evidence: `bun e2e/run.ts` at 44ffadd with no code changes by this effort —
+  J0 PASS, J1 "Focus substrate" FAIL at step "focus again: identity and state
+  survive" (both runs; logs under
+  .agents/evidence/casework-live-wiring/T00/baseline/gate-e2e-ladder*.log),
+  J2+ blocked by dependency. The 11/11 PASS evidence committed IN 44ffadd
+  (.agents/evidence/godspeed-casework-cognitive-environment/ui-journeys/latest/)
+  is stale relative to that commit's own UI rework.
+- Impact: the plan's regression gate for T08/T09 has a red floor; committing
+  evidence that does not match the shipped code state is an honesty hazard.
+- Next move: T09 (UI journey wiring) owns restoring the ladder to green and
+  regenerating its evidence; until then every global-gate run must treat
+  "J1 red, J2+ blocked" as the recorded baseline, not a new regression.
+- Scope: outside T00 (scaffolding-only changes); recorded during baseline
+  capture.

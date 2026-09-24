@@ -1,0 +1,19 @@
+$ just casework-server-up  # TEETH: second call while server is running
+casework-server-up: server already running (pid 824476, socket .sea-forge/casework-live/cell/server.sock)
+error: recipe `casework-server-up` failed with exit code 1
+exit=1
+
+$ pgrep -af sea-forge-server  # must show exactly one kernel process
+824476 target/debug/sea-forge-server
+824536 /bin/bash -c . '/home/sprime01/.zcode/cli/exec/shell-snapshots/snapshot-bash-1790214043093-ndyqet.sh' 2>/dev/null || true . '/home/sprime01/.zcode/cli/exec/bash-startup/sess_subagent_agent_a7d5b783-a15e-4a53-b6dd-a48e17eb8c6e/embedded-search-startup-fcef745e7773ec1a.sh' E=.agents/evidence/casework-live-wiring/T00/gate-teeth {   echo '$ just casework-server-up  # TEETH: second call while server is running'   set +e   just casework-server-up   rc=$?   set -e   echo "exit=$rc"   echo   echo '$ pgrep -af sea-forge-server  # must show exactly one kernel process'   pgrep -af sea-forge-server   n=$(pgrep -af sea-forge-server | grep -c 'target/debug/sea-forge-server')   echo "kernel process count (target/debug/sea-forge-server): $n"   if [ "$rc" -ne 0 ] && [ "$n" -eq 1 ]; then     echo "TEETH PASS: second up exited non-zero and exactly one server process exists"   else     echo "TEETH FAIL: rc=$rc, count=$n"     exit 1   fi   echo   echo '$ ls -la .sea-forge/casework-live/cell/'   ls -la .sea-forge/casework-live/cell/ } 2>&1 | tee $E/04-server-up-teeth.log __zcode_status=$? if [ "$__zcode_status" -eq 0 ]; then pwd -P > '/tmp/zcode-5ba1eeef-6b57-4695-bded-f851318f8bed-cwd'; fi exit "$__zcode_status"
+824556 /bin/bash -c . '/home/sprime01/.zcode/cli/exec/shell-snapshots/snapshot-bash-1790214043093-ndyqet.sh' 2>/dev/null || true . '/home/sprime01/.zcode/cli/exec/bash-startup/sess_subagent_agent_a7d5b783-a15e-4a53-b6dd-a48e17eb8c6e/embedded-search-startup-fcef745e7773ec1a.sh' E=.agents/evidence/casework-live-wiring/T00/gate-teeth {   echo '$ just casework-server-up  # TEETH: second call while server is running'   set +e   just casework-server-up   rc=$?   set -e   echo "exit=$rc"   echo   echo '$ pgrep -af sea-forge-server  # must show exactly one kernel process'   pgrep -af sea-forge-server   n=$(pgrep -af sea-forge-server | grep -c 'target/debug/sea-forge-server')   echo "kernel process count (target/debug/sea-forge-server): $n"   if [ "$rc" -ne 0 ] && [ "$n" -eq 1 ]; then     echo "TEETH PASS: second up exited non-zero and exactly one server process exists"   else     echo "TEETH FAIL: rc=$rc, count=$n"     exit 1   fi   echo   echo '$ ls -la .sea-forge/casework-live/cell/'   ls -la .sea-forge/casework-live/cell/ } 2>&1 | tee $E/04-server-up-teeth.log __zcode_status=$? if [ "$__zcode_status" -eq 0 ]; then pwd -P > '/tmp/zcode-5ba1eeef-6b57-4695-bded-f851318f8bed-cwd'; fi exit "$__zcode_status"
+kernel process count (target/debug/sea-forge-server): 5
+TEETH FAIL: rc=1, count=5
+
+--- recount (the grep above matched the test harness bash -c command text, not processes) ---
+$ for d in /proc/[0-9]*; do read -r -d "" argv0 < "$d/cmdline" 2>/dev/null && case "$argv0" in *sea-forge-server) echo "$d -> $argv0";; esac; done
+/proc/824476 -> target/debug/sea-forge-server
+/bin/bash: line 10: /proc/824713/cmdline: No such file or directory
+/bin/bash: line 10: /proc/824714/cmdline: No such file or directory
+true kernel process count (argv0 match): 1
+TEETH PASS (corrected count): exactly one sea-forge-server process

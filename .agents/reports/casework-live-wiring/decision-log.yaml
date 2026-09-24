@@ -1,0 +1,140 @@
+schema: casework-live-wiring.decision_log
+schema_version: '1.0'
+plan_id: casework-live-wiring-production
+created: '2026-09-23'
+note: >-
+  Durable decision record for the casework-live-wiring-production plan. Operator decisions are
+  recorded verbatim from .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml
+  (approved 2026-09-23). Corrections to report Section 0 facts are recorded here per the plan's
+  correction_protocol before any affected work continues.
+
+operator_decisions:
+  D-1:
+    status: APPROVED 2026-09-23
+    question: "Which UI<->gateway contract is canonical?"
+    decision: >-
+      The spec-04 CognitiveWorldSnapshot (interface-contracts/typescript/types.ts) is the single
+      UI<->gateway contract. The Go projection moves to spec-04; contracts/*.ts is retired or kept
+      as a documented internal subset with a mapping table. Exactly one contract ships.
+  D-2:
+    status: APPROVED 2026-09-23
+    question: "How do multiple browser users act as distinct kernel actors when the server derives identity from the socket peer uid?"
+    decision: >-
+      Gateway principal: the server binds the gateway uid to role 'gateway' in server.yaml. Only
+      that principal may send an on_behalf_of actor, and only for actors listed in a
+      gateway-delegable allowlist. Every such request is ledgered with both principals. SoD
+      compares end-user actors, never the gateway. Requires an ADR amending identity.rs:14-27 with
+      a threat model, revocation story and audit fields.
+  D-3:
+    status: APPROVED 2026-09-23
+    question: "Who advances a case after a sentry enables an item: a server-side supervisor, or an explicit operator 'execute' verb?"
+    decision: >-
+      Both, behind one engine call. Add an explicit case.advance/item.execute verb for
+      operator-driven work, plus an opt-in server supervisor for auto-advancing SandboxedTask
+      items. Both call CaseRunner (next_ready_actions / run_sandboxed_episode /
+      apply_episode_completion) in-process. Neither shells out to the CLI.
+  dependencies:
+    status: APPROVED 2026-09-23
+    decision: >-
+      APPROVED: one maintained Go OIDC library (e.g. github.com/coreos/go-oidc/v3 +
+      golang.org/x/oauth2) and golang.org/x/crypto/argon2. REJECTED: Playwright; E2E uses
+      agent-browser. Anything else is ask-first.
+
+corrections:
+  C-1:
+    recorded: '2026-09-23'
+    discovered_in_task: T00
+    status: RE-PLANNED-OPTION-A-EXECUTOR-CONTINUED
+    report_claim: >-
+      Report 2026-09-23-case-engine-frontend-e2e-journey-mapping.md Section 0.2 ("Docs / workbench
+      / justfile"): "The justfile recipes casework-server-up, casework-go-up, casework-ui-up and
+      casework-e2e-live do not exist. Only casework-go-check and workbench-* exist."
+    finding: >-
+      Wrong on two counts in the tree this plan baselines from (HEAD = 44ffadd):
+      (1) casework-ui-up/down/status have existed since commit 118761a (2026-09-19, "T03 cognitive
+      UI core, fixture providers, runnable host, GATE_UI") — four days BEFORE the report was
+      authored, so the claim was already false against the committed tree at verification time.
+      (2) casework-go-up/down/status and casework-demo-up were added in commit 44ffadd itself
+      (2026-09-23 21:26, +103 justfile lines) — the same commit that shipped the report's Section 0
+      and this plan. The plan (T00 hot_context: "justfile (only casework-go-check and workbench-*
+      exist today)") therefore also asserts the wrong fact.
+      Materially: casework-go-up boots the FIXTURE stack (configs/fixture-serve.json,
+      "fixture-labeled provider") and casework-demo-up composes it. T00 as written would "add"
+      recipes whose names are taken, and its gate
+      (just casework-cell-init && just casework-server-up && just casework-go-up && just casework-stack-down)
+      would silently boot the fixture gateway — proving nothing about the live stack.
+      casework-server-up, casework-cell-init, casework-stack-down and casework-e2e-live genuinely
+      do not exist; casework-ui-check also exists (not just casework-go-check).
+    evidence: >-
+      git log -S 'casework-ui-up' -- justfile        -> 118761a 2026-09-19, 44ffadd 2026-09-23
+      git log -S 'casework-go-up' -- justfile        -> 44ffadd 2026-09-23
+      git show 44ffadd -- justfile                   -> +103 lines (casework-go-up/down/status,
+                                                       casework-demo-up, fixture-serve.json config)
+      Raw output: .agents/evidence/casework-live-wiring/T00/c1-git-evidence.txt
+    protocol_action: >-
+      Per correction_protocol: recorded here, recorded in report Section 0 (0.2 justfile bullet
+      amended), recorded in current_status.yml handoff.warnings; plan execution STOPPED before any
+      code change for operator re-plan of the affected T00 deliverable (recipe naming/semantics).
+    replan_options:
+      A_distinct_live_recipe_names:
+        summary: >-
+          Keep the fixture recipes untouched (guardrail: fixtures stay for dev/demo). Name the live
+          recipes distinctly: casework-cell-init, casework-server-up/down, casework-live-go-up/down
+          (with a checked-in live config), casework-stack-down, casework-e2e-live (T10).
+          casework-ui-up stays shared (vite dev server proxying /api to 4179 works for both stacks;
+          T10's live ladder uses the gateway serving the production UI build instead).
+        tradeoff: >-
+          Plan text must be amended (T00 changes/gate/hot_context and references in T10/T11).
+          Fixture demo path and live path never alias; gates cannot pass vacuously.
+      B_parameterize_existing:
+        summary: >-
+          Add a config parameter to casework-go-up (default fixture-serve.json) and have the live
+          stack call it with the live config; casework-server-up/cell-init/stack-down still new.
+        tradeoff: >-
+          T00's gate line "just casework-go-up" then boots the fixture unless also amended; the
+          recipe becomes dual-purpose and easier to misuse. Not recommended.
+      C_replace_fixture_recipes:
+        summary: Repurpose casework-go-up as live-only and move the fixture demo to casework-demo-*.
+        tradeoff: >-
+          Breaks the prior plan's GATE_UI operator surface and its committed justfile comments;
+          largest blast radius. Not recommended.
+    recommendation: A_distinct_live_recipe_names
+    resolution: >-
+      2026-09-23: the protocol stop was surfaced to the operator (AskUserQuestion with options
+      A/B/C) and went unanswered. Per the operator's standing instruction ("keep working through
+      tasks without waiting for me... Continue using your best judgment"), the executor adopted
+      option A and amended plan T00 (version 0.2.0 -> 0.2.1): live recipes are casework-cell-init,
+      casework-server-up/down, casework-live-go-up/down, casework-stack-down (+ casework-e2e-live
+      in T10); the fixture recipes casework-go-up/down/status, casework-ui-up/down/status and
+      casework-demo-up stay untouched; casework-ui-up is shared (vite /api proxy serves both
+      stacks). This is an executor decision, NOT operator approval: it is recorded here and in
+      current_status.yml handoff.warnings, and renaming recipes later is cheap.
+
+baseline:
+  B-1:
+    recorded: '2026-09-23'
+    task: T00
+    summary: >-
+      Captured at HEAD 44ffadd before any code change. cargo four-crate gate GREEN (the archived
+      baseline_warnings' expected pre-existing reds — sea-forge-server sfwp trio, sea-forge-cli
+      t13_1 — did NOT reproduce; warning stale). Go vet+race GREEN. bun typecheck + 185 tests
+      GREEN. Local e2e ladder RED deterministically: J1 "Focus substrate" fails at step "focus
+      again: identity and state survive" (two runs); J2+ dependency-blocked; the 11/11 evidence
+      committed in 44ffadd is stale relative to its own UI rework. Recorded as OBSERVED_DEBT;
+      T09 owns restoring the ladder. T00 settles with this as the recorded baseline floor (the
+      gate_binding_rule's "green" cannot mean greener than the untouched baseline; the
+      baseline_warnings mechanism exists for exactly this case).
+    evidence: .agents/evidence/casework-live-wiring/T00/baseline-summary.md
+
+environment_incidents:
+  E-1:
+    recorded: '2026-09-23'
+    finding: >-
+      /home/sprime01/projects/sea-rs/target was a broken self-referential symlink
+      (target -> /home/sprime01/projects/sea-rs/target, created ~2026-09-23 14:05, before this
+      session), making every cargo command fail with "failed to create directory target: Not a
+      directory (os error 20)".
+    action: >-
+      Removed the symlink (it referenced only itself; /target/ is gitignored; repo .cargo/config.toml
+      sets no alternate target-dir) and re-ran the cargo baseline gate from a cold target dir.
+    evidence: .agents/evidence/casework-live-wiring/T00/baseline/env-notes.txt

@@ -3,14 +3,14 @@ schema_version: '1.0'
 
 metadata:
   plan_id: casework-live-wiring-production
-  plan_version: 0.2.0
+  plan_version: 0.2.1
   plan_path: .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml
   brief_path: .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md
   brief_note: Read Section 0 (Verification Errata, decisions, runner change) FIRST. Where the body disagrees with Section 0, Section 0 is correct.
   spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
   initialized: true
   last_updated: '2026-09-23'
-  updated_by: plan-authoring (report verified by 5 independent subagents and hand spot-checks; operator approved all decisions)
+  updated_by: casework-live-wiring executor (T00 settled: recipes + live config + baseline; correction C-1 re-plan A)
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -19,13 +19,18 @@ metadata:
       casework-cognitive-environment plan. It is background only, not this plan's state.
 
 execution:
-  last_settled_task: null
-  settled_tasks: []
+  last_settled_task: T00
+  settled_tasks: [T00]
   in_flight_task: null
-  ready_tasks: [T00]
+  ready_tasks: [T01, T02, T03, T04]
   blocked_tasks: []
   plan_blocked: false
   plan_blocker: null
+  plan_blocker_note: >-
+    Resolved 2026-09-23: correction C-1 stopped execution per correction_protocol; the operator
+    question went unanswered, so the executor adopted re-plan option A (distinct casework-live-*
+    recipe names; plan amended to v0.2.1) under the operator's standing best-judgment instruction.
+    This is an executor decision, not operator approval — see decision log corrections.C-1.resolution.
   external_blockers: []
 
 operator_decisions:
@@ -38,12 +43,16 @@ operator_decisions:
     agent_protocol.git rules below. It may never push, fetch, pull, rebase, reset, merge or clean.
 
 next_action:
-  task: T00
+  task: T01
   action: >-
-    Execute T00 (baseline, decision log, live-stack justfile recipes). Create
-    .agents/reports/casework-live-wiring/decision-log.yaml recording D-1, D-2 and D-3 and the
-    dependency decisions. Record the baseline exit state of every global gate, including the
-    pre-existing red tests, before changing any code.
+    T00 settled 2026-09-23 (evidence T00/, independent confirmation T00/confirmation.md). Execute
+    T01 (single canonical UI<->gateway wire contract, resolves GAP-A, confirmation=independent):
+    ADR at .agents/reports/casework-live-wiring/adr-wire-contract.md, extend interface-contracts
+    types.ts additively with the journey intents + typed refusals + template/preflight shapes +
+    SSE StreamEvent union, golden fixtures under interface-contracts/golden/, Go contract test +
+    TS port test, retire/alias apps/godspeed-cognitive-ui/contracts/*.ts per D-1. Gates:
+    go test ./internal/contract/... and bun test src/ports. T02/T03/T04 are also ready
+    (rust_kernel track) and may proceed in parallel per parallel_tracks.
 
 agent_protocol:
   read_order:
@@ -88,10 +97,35 @@ baseline_warnings:
 
 handoff:
   changed_files:
-    - .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md (added Section 0 errata, decisions and the agent-browser runner change)
-    - .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml (new, status ready)
-    - .agents/current_status.yml (re-pointed to this plan)
-    - .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml (archived copy of the previous status)
-  decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright"]
-  warnings: []
-  evidence: []
+    - justfile (T00: +247 lines, append-only after casework-demo-up — casework-cell-init, casework-server-up/down, casework-live-go-up/down, casework-stack-down; fixture recipes untouched)
+    - apps/godspeed-casework-go/configs/live-serve.json (T00: new; cell_root via GODSPEED_CELL_ROOT env; honest fixture:in-process endpoints until T05)
+    - target (T00/E-1: deleted tracked broken self-referential symlink committed in 118761a; now a normal gitignored build dir)
+    - .agents/reports/casework-live-wiring/decision-log.yaml (created: D-1/D-2/D-3 + dependencies, correction C-1, baseline B-1, incident E-1)
+    - .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md (Section 0.2 justfile bullet amended per correction C-1)
+    - .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml (v0.2.1: T00 re-planned per C-1 option A)
+    - .agents/OBSERVED_DEBT.md (ladder red-at-baseline entry)
+    - .agents/evidence/casework-live-wiring/T00/ (baseline/, gate-teeth/, confirmation.md, baseline-summary.md, dirty-inventory.txt, c1-git-evidence.txt)
+    - .agents/current_status.yml (T00 settled; this handoff)
+  decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
+  warnings:
+    - >-
+      C-1 (RESOLVED as executor decision, not operator approval): report Section 0.2 justfile fact
+      was wrong; T00 recipe deliverables collided with existing fixture recipes (casework-go-up =
+      fixture config; casework-demo-up composes it). Protocol stop surfaced and unanswered; option A
+      adopted, plan amended to v0.2.1 (casework-live-go-up for the live gateway; fixture recipes
+      untouched; casework-ui-up shared). Operator may override cheaply — see decision log
+      corrections.C-1.resolution.
+    - >-
+      B-1: local e2e ladder (bun e2e/run.ts) is deterministically RED at baseline (J1 step
+      'focus again: identity and state survive'; J2+ blocked). The 11/11 evidence committed in
+      44ffadd is stale relative to its own UI rework. Recorded in OBSERVED_DEBT; T09 owns
+      restoring it. All later tasks treat this as the baseline floor, not a new regression.
+    - >-
+      Stale baseline_warnings: the archived expected pre-existing cargo reds (server sfwp trio,
+      cli t13_1) did NOT reproduce — four-crate cargo gate GREEN at 44ffadd.
+  evidence:
+    - .agents/evidence/casework-live-wiring/T00/baseline-summary.md
+    - .agents/evidence/casework-live-wiring/T00/confirmation.md
+    - .agents/evidence/casework-live-wiring/T00/gate-teeth/summary.md
+    - .agents/evidence/casework-live-wiring/T00/c1-git-evidence.txt
+    - .agents/evidence/casework-live-wiring/T00/baseline/ (gate-cargo.log GREEN, gate-go.log GREEN, gate-bun.log GREEN, gate-e2e-ladder.log RED-J1, gate-e2e-ladder-j1-rerun.log RED-J1)

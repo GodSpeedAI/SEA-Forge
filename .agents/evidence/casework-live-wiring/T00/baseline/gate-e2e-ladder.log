@@ -1,0 +1,20 @@
+casework-ui-up: something already answers at http://127.0.0.1:4178 - reusing it (log: .sea-forge/casework-ui/ui.log)
+UI_UP_EXIT=0
+Checking if dev server is running at http://127.0.0.1:4178
+Dev server is ready. Running tests with base=http://127.0.0.1:4178
+Output directory: /home/sprime01/projects/sea-rs/.agents/evidence/casework-live-wiring/T00/baseline/ui-ladder
+[PASS] J0: Boot / orientation substrate (6/6 steps, 62583ms)
+[FAIL] J1: Focus substrate (4/5 steps, 113608ms)
+  Error: same objects by identity after refocus
+[BLOCKED] J2: Artifact inspection substrate (— steps, 0ms)
+[BLOCKED] J3: Representation-switching substrate (— steps, 0ms)
+[BLOCKED] J4: Temporal + comparison substrate (— steps, 0ms)
+[BLOCKED] J5: Narrated semantic-beat journey (— steps, 0ms)
+[BLOCKED] J6: Causal reasoning journey (— steps, 0ms)
+[BLOCKED] J7: Case Design journey (— steps, 0ms)
+[BLOCKED] J8: Consequential-action UI journey (contract adapter) (— steps, 0ms)
+[BLOCKED] J9: Integrated cognitive-environment journey (contract adapter) (— steps, 0ms)
+[BLOCKED] RECOVERY: UI-level recovery (bounded failures) (— steps, 0ms)
+LADDER_EXIT=1
+casework-ui-down: stopped (pid 157245)
+UI_DOWN_EXIT=0

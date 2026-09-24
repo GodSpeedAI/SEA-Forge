@@ -5,7 +5,13 @@ metadata:
   id: casework-live-wiring-production
   title: "Wire the SEA-Forge case management system to the GodSpeed front end (Go gateway + Cognitive UI) to production readiness"
   status: ready
-  version: "0.2.0"
+  version: "0.2.1"
+  amendment_note: >-
+    v0.2.1 (2026-09-23): T00 recipe naming re-planned per correction C-1 (decision log
+    corrections.C-1, option A). casework-go-up and casework-ui-up already exist as the prior plan's
+    fixture-stack recipes (118761a, 44ffadd); the live gateway recipe is therefore
+    casework-live-go-up. casework-ui-up stays shared. Executor decision taken after the
+    correction_protocol stop went unanswered; operator may override.
   approved: "2026-09-23 — operator approved D-1, D-2, D-3 recommendations and the OIDC/argon2 dependencies; Playwright replaced by agent-browser"
   created: "2026-09-23"
   purpose: >-
@@ -170,8 +176,10 @@ tasks:
     changes: >-
       Records decisions D-1, D-2 and D-3 in the decision log. Adds justfile recipes that boot the
       real stack on a temp cell: casework-cell-init, casework-server-up (env SEA_FORGE_ROOT and
-      SEA_FORGE_SOCKET, no flags), casework-go-up (-serve -addr 127.0.0.1:4179 -config <live cfg>),
-      casework-ui-up (vite :4178), and casework-stack-down. Records baseline gate results.
+      SEA_FORGE_SOCKET, no flags), casework-live-go-up (-serve -addr 127.0.0.1:4179 -config
+      <live cfg>; distinct name per correction C-1 because casework-go-up is the pre-existing
+      fixture-stack recipe), casework-ui-up (vite :4178, shared with the fixture stack), and
+      casework-stack-down. Records baseline gate results.
     proves: "The three processes start against one temp cell, and the recipes are idempotent and tear down cleanly."
     does_not_prove: "Any data flows between the processes."
     hot_context:
@@ -179,13 +187,13 @@ tasks:
       - "crates/sea-forge-server/src/main.rs (zero-arg binary)"
       - "apps/godspeed-casework-go/cmd/godspeed-casework/main.go:50-52 (flags)"
       - "apps/godspeed-cognitive-ui/vite.config.ts (4178, /api proxy to 4179)"
-      - "justfile (only casework-go-check and workbench-* exist today)"
+      - "justfile (existing fixture recipes casework-go-up/ui-up/down/status and casework-demo-up MUST stay untouched; casework-go-check, casework-ui-check, workbench-* also exist — correction C-1)"
     steps:
       - "Create .agents/reports/casework-live-wiring/decision-log.yaml and record D-1, D-2 and D-3 as APPROVED 2026-09-23 (recommendations adopted), and the dependency approvals (OIDC library, argon2; Playwright rejected in favour of agent-browser)."
       - "Add the justfile recipes above, with pidfiles and a readiness wait on the socket file and on /api/healthz."
       - "Capture the baseline: all global gates, and the existing local ladder."
     gate:
-      - "just casework-cell-init && just casework-server-up && just casework-go-up && just casework-stack-down"
+      - "just casework-cell-init && just casework-server-up && just casework-live-go-up && just casework-stack-down"
     teeth:
       - attack: "Start casework-server-up twice."
         expected: "The second call detects the running server and exits non-zero with a clear message. It does not start a second listener."

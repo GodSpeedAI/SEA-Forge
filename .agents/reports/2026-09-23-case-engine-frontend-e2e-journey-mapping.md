@@ -63,7 +63,7 @@ This report was checked against the working tree by five independent verifiers, 
 - `.sea/interaction/interaction-model.sea` and the 12 CJ names are correct. The 8 steps are modeled as `IS1..IS8`, and the phase labels in §3 are narrative, not source.
 - The interface-contracts files 04 and 08 and `02-JOURNEY-CUBE.md` exist, and their line references are correct.
 - The workbench has 17 routes (correct). It talks to the server through the Tauri SFWP bridge (GAP-E).
-- The justfile recipes `casework-server-up`, `casework-go-up`, `casework-ui-up` and `casework-e2e-live` **do not exist**. Only `casework-go-check` and `workbench-*` exist.
+- ~~The justfile recipes `casework-server-up`, `casework-go-up`, `casework-ui-up` and `casework-e2e-live` **do not exist**. Only `casework-go-check` and `workbench-*` exist.~~ **CORRECTED 2026-09-23 (correction C-1, decision log `casework-live-wiring/decision-log.yaml`):** this claim was wrong even at verification time. `casework-ui-up/down/status` have existed since commit 118761a (2026-09-19), and `casework-go-up/down/status` + `casework-demo-up` were added in commit 44ffadd (2026-09-23, +103 justfile lines) — the same commit that shipped this Section 0 and the wiring plan. Both `casework-go-up` (config `configs/fixture-serve.json`) and `casework-demo-up` boot the FIXTURE stack. Also existing: `casework-ui-check`. Still true: `casework-server-up`, `casework-cell-init`, `casework-stack-down` and `casework-e2e-live` do not exist.
 
 ### 0.3 Operator decisions (2026-09-23) and E2E runner change
 

@@ -4048,3 +4048,15 @@ Core whisper "1 thing needs you" inside the event horizon), pointer-driven wake 
 double-click artifact open, imperceptible orbit from authored angles, resting relationship
 hairlines only where attention is. Verified live (evidence screenshots 24-31); core untouched,
 72/72 tests green, typecheck clean. Decisions D-2026-09-19-PE-01..05 and D-2026-09-20-PE-06.
+
+> **2026-09-23 (later) PLAN SWITCH — casework-live-wiring-production (T00 settled):**
+> The active plan is now `.agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml`
+> (v0.2.1); machine state lives in `.agents/current_status.yml` (this file remains the narrative).
+> T00 settled: live-stack justfile recipes (`casework-cell-init`, `casework-server-up/down`,
+> `casework-live-go-up/down`, `casework-stack-down`) + `apps/godspeed-casework-go/configs/live-serve.json`;
+> correction C-1 re-planned the gateway recipe name (fixture `casework-go-up` pre-existed);
+> baseline captured (cargo/Go/bun GREEN; local ladder deterministically RED at J1 —
+> OBSERVED_DEBT, T09 owns the fix; the 11/11 evidence above predates the spatial rework in
+> 44ffadd and is stale). Decision log + evidence:
+> `.agents/reports/casework-live-wiring/decision-log.yaml`,
+> `.agents/evidence/casework-live-wiring/T00/`.

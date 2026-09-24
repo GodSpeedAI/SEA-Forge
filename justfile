@@ -1398,3 +1398,250 @@ casework-go-status addr=casework_go_addr:
 casework-demo-up: casework-go-up casework-ui-up
     @echo "casework-demo-up: cognitive environment at http://127.0.0.1:4178 (go boundary at {{casework_go_addr}})"
 
+# --- casework live-stack wiring (plan: .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml) ---
+# Operator controls for the REAL live stack: the Rust sea-forge-server kernel plus the Go
+# godspeed-casework gateway, both against one durable cell under .sea-forge/casework-live/
+# (gitignored). The fixture-stack recipes above (casework-go-up/down/status, casework-demo-up)
+# are untouched; the UI dev-server recipes (casework-ui-up/down/status) are shared by both
+# stacks (vite on :4178 proxies /api to the gateway addr).
+#
+# Honesty note: until plan task T05 lands, the live gateway still serves FIXTURE-LABELED
+# in-process providers (configs/live-serve.json endpoints are "fixture:in-process"); only the
+# cell/evidence roots are live. The `up` recipes have teeth: a second server or gateway start
+# exits non-zero instead of silently reusing or double-starting.
+casework_live_dir := ".sea-forge/casework-live"
+
+# Initialize the live cell (idempotent): create .sea-forge/casework-live/cell and, on first run,
+# a minimal documented server.yaml. Identity bindings are deliberately absent — protected verbs
+# fail closed until T02/T03 — and an existing server.yaml is never modified.
+[group('casework')]
+casework-cell-init:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    cell="$live_dir/cell"
+    mkdir -p "$live_dir" "$cell"
+    if [ -f "$cell/server.yaml" ]; then
+      echo "casework-cell-init: cell already initialized at $cell (server.yaml present; not modified)"
+      echo "casework-cell-init: cell path: $(cd "$cell" && pwd)"
+      exit 0
+    fi
+    cat > "$cell/server.yaml" <<'YAML'
+    # Live-stack cell (plan casework-live-wiring-production T00).
+    # Identity bindings are deliberately absent: protected verbs fail closed until T02/T03.
+    YAML
+    echo "casework-cell-init: wrote $cell/server.yaml (comment-only; ServerConfig::load yields defaults)"
+    echo "casework-cell-init: cell path: $(cd "$cell" && pwd)"
+
+# Build and start the sea-forge-server kernel against the live cell, configured only via
+# SEA_FORGE_ROOT/SEA_FORGE_SOCKET plus <cell>/server.yaml (the server takes no CLI arguments).
+# Teeth: refuses to start when our pidfile is live, or when the cell socket already exists.
+[group('casework')]
+casework-server-up:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    cell="$live_dir/cell"
+    pidfile="$live_dir/server.pid"
+    logfile="$live_dir/server.log"
+    socket="$cell/server.sock"
+    mkdir -p "$live_dir"
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && grep -aq "sea-forge-server" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-server-up: server already running (pid $pid, socket $socket)" >&2
+        exit 1
+      fi
+    fi
+    if [ -S "$socket" ]; then
+      echo "casework-server-up: socket $socket already exists; if no server owns it, remove it manually" >&2
+      exit 1
+    fi
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      echo "casework-server-up: removing stale pidfile (pid ${pid:-empty} not alive or not the server)"
+      rm -f "$pidfile"
+    fi
+    echo "casework-server-up: building sea-forge-server (waits politely if another cargo holds the target lock)"
+    cargo build --locked -p sea-forge-server --bin sea-forge-server
+    echo "casework-server-up: starting server (cell $cell, socket $socket, log: $logfile)"
+    SEA_FORGE_ROOT="$cell" SEA_FORGE_SOCKET="$socket" setsid nohup target/debug/sea-forge-server >>"$logfile" 2>&1 &
+    echo $! >"$pidfile"
+    for _ in $(seq 1 120); do
+      if [ -S "$socket" ]; then
+        echo "casework-server-up: listening (pid $(cat "$pidfile"), socket $socket, log: $logfile)"
+        exit 0
+      fi
+      pid="$(cat "$pidfile")"
+      if ! kill -0 "$pid" 2>/dev/null; then
+        echo "casework-server-up: server exited during startup; log tail:" >&2
+        tail -20 "$logfile" >&2 || true
+        rm -f "$pidfile"
+        exit 1
+      fi
+      sleep 0.5
+    done
+    echo "casework-server-up: socket $socket did not appear within 60s; log tail:" >&2
+    tail -20 "$logfile" >&2 || true
+    if ! kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      rm -f "$pidfile"
+    fi
+    exit 1
+
+# Stop the sea-forge-server kernel. Mirrors casework-go-down discipline: idempotent, refuses to
+# kill a pid that is not the server, removes a lingering socket only once no server owns it.
+# Cell data under the live dir is never touched.
+[group('casework')]
+casework-server-down:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    pidfile="$live_dir/server.pid"
+    socket="$live_dir/cell/server.sock"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-server-down: not running (no pidfile)"
+    else
+      pid="$(cat "$pidfile")"
+      if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$pidfile"
+        echo "casework-server-down: not running (stale pidfile removed)"
+      elif ! grep -aq "sea-forge-server" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-server-down: pid $pid does not look like sea-forge-server; not killing it" >&2
+        rm -f "$pidfile"
+        exit 1
+      else
+        kill -TERM "$pid" 2>/dev/null || true
+        for _ in $(seq 1 25); do
+          kill -0 "$pid" 2>/dev/null || break
+          sleep 0.2
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+          kill -KILL "$pid" 2>/dev/null || true
+        fi
+        rm -f "$pidfile"
+        echo "casework-server-down: stopped (pid $pid)"
+      fi
+    fi
+    # The server removes its own socket on shutdown; clear a lingering one only when no live
+    # server owns it. The server holds an exclusive flock on server.sock.lock for its lifetime,
+    # so a lock we can take proves the owner is gone — no cmdline string-matching heuristics.
+    if [ -S "$socket" ]; then
+      if flock -n "$socket.lock" true 2>/dev/null; then
+        rm -f "$socket"
+        echo "casework-server-down: removed lingering socket $socket (socket lock free; no server owns it)"
+      else
+        echo "casework-server-down: socket $socket is still owned by a live server (socket lock held); leaving it"
+      fi
+    fi
+
+# Build and start the Go gateway in serve mode against the LIVE cell (default 127.0.0.1:4179).
+# Like casework-go-up, but pointed at apps/godspeed-casework-go/configs/live-serve.json with the
+# cell injected via GODSPEED_CELL_ROOT (the file deliberately omits cell_root so the temp cell
+# location stays a recipe-level decision). Until T05 the gateway serves FIXTURE-LABELED
+# in-process providers against live cell roots. Teeth: refuses to silently reuse a foreign
+# process that already answers /api/healthz (e.g. the fixture casework-go-up).
+[group('casework')]
+casework-live-go-up addr="127.0.0.1:4179":
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    module="apps/godspeed-casework-go"
+    live_dir="{{casework_live_dir}}"
+    cell="$live_dir/cell"
+    pidfile="$live_dir/go.pid"
+    logfile="$live_dir/go.log"
+    bin="$live_dir/go-bin"
+    health="http://127.0.0.1:${addr#*:}/api/healthz"
+    mkdir -p "$live_dir"
+    if [ ! -f "$cell/server.yaml" ]; then
+      echo "casework-live-go-up: no cell at $cell - run just casework-cell-init first" >&2
+      exit 1
+    fi
+    if curl -sSf -o /dev/null --max-time 2 "$health" 2>/dev/null; then
+      if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null \
+        && grep -aq "casework-live/go-bin" "/proc/$(cat "$pidfile")/cmdline" 2>/dev/null; then
+        echo "casework-live-go-up: our gateway already answers at $health - reusing it (log: $logfile)"
+        exit 0
+      fi
+      echo "casework-live-go-up: a foreign process is answering /api/healthz at $addr (possibly the fixture casework-go-up); stop it first (just casework-go-down)" >&2
+      exit 1
+    fi
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        echo "casework-live-go-up: pid $pid is alive but nothing answers on the addr; stopping it" >&2
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+      fi
+      rm -f "$pidfile"
+    fi
+    echo "casework-live-go-up: building gateway binary"
+    (cd "$module" && go build -o "../../$bin" ./cmd/godspeed-casework) || exit 1
+    echo "casework-live-go-up: starting on $addr against live cell $cell (FIXTURE-LABELED providers until T05)"
+    GODSPEED_CELL_ROOT="$cell" setsid nohup "$bin" -serve -addr "$addr" -config "$module/configs/live-serve.json" >>"$logfile" 2>&1 &
+    echo $! >"$pidfile"
+    for _ in $(seq 1 40); do
+      if curl -sSf -o /dev/null --max-time 1 "$health" 2>/dev/null; then
+        echo "casework-live-go-up: answering at $health (pid $(cat "$pidfile"), log: $logfile)"
+        exit 0
+      fi
+      sleep 0.5
+    done
+    echo "casework-live-go-up: gateway did not become healthy; see $logfile" >&2
+    tail -20 "$logfile" >&2 || true
+    exit 1
+
+# Stop the live Go gateway. Mirrors casework-go-down with the live pidfile and a cmdline guard
+# that recognizes only the casework-live go-bin (never the fixture gateway's binary).
+[group('casework')]
+casework-live-go-down addr="127.0.0.1:4179":
+    #!/usr/bin/env bash
+    {{set}}
+    pidfile="{{casework_live_dir}}/go.pid"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-live-go-down: no pidfile (nothing to stop)"
+      exit 0
+    fi
+    pid="$(cat "$pidfile")"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      if ! grep -aq "casework-live/go-bin" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-live-go-down: pid $pid is not the live casework gateway; refusing to kill it" >&2
+        exit 1
+      fi
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+      echo "casework-live-go-down: stopped $pid"
+    else
+      echo "casework-live-go-down: pid ${pid:-empty} is not running"
+    fi
+    rm -f "$pidfile"
+
+# Tear down the whole live stack: gateway first, then the kernel. Processes only — the cell
+# data at .sea-forge/casework-live/cell (ledgers, requests, server.yaml) is always preserved.
+[group('casework')]
+casework-stack-down:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    set +e
+    just casework-live-go-down
+    go_rc=$?
+    just casework-server-down
+    server_rc=$?
+    set -e
+    if [ "$go_rc" -eq 0 ]; then
+      echo "casework-stack-down: casework-live-go-down ok"
+    else
+      echo "casework-stack-down: casework-live-go-down FAILED (exit $go_rc)" >&2
+    fi
+    if [ "$server_rc" -eq 0 ]; then
+      echo "casework-stack-down: casework-server-down ok"
+    else
+      echo "casework-stack-down: casework-server-down FAILED (exit $server_rc)" >&2
+    fi
+    echo "casework-stack-down: cell data preserved at $live_dir/cell (teardown is processes-only, never data)"
+    if [ "$go_rc" -ne 0 ] || [ "$server_rc" -ne 0 ]; then
+      exit 1
+    fi
+
