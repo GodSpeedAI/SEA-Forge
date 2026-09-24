@@ -1,0 +1,47 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0004",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "COMPLETE_HUMAN_TASK",
+    "target_object_id": "item-verify-15",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000416",
+    "actor": {
+      "actor_id": "actor-op-7",
+      "role": "agent_operator"
+    },
+    "parameters": {
+      "item_id": "item-verify-15",
+      "justification": "Load verification finished green; numbers attached.",
+      "result": {
+        "checks_run": 12,
+        "finding": "no issues"
+      }
+    }
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0004",
+      "success": true,
+      "new_cursor": "1.0000000417",
+      "resulting_object": {
+        "id": "item-verify-15",
+        "kind": "work_item",
+        "name": "Verify migration under load",
+        "status": "COMPLETED",
+        "badge": "Done",
+        "salience": 0.3,
+        "parent_id": "stage-remediation",
+        "actions": []
+      }
+    },
+    {
+      "intent_id": "intent-3f9c2a81-0004",
+      "success": false,
+      "refusal": {
+        "refusal_kind": "SOD_VIOLATION",
+        "message": "The actor who proposed this work cannot also complete it; separation of duties requires a different completer."
+      }
+    }
+  ]
+}

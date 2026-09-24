@@ -1,0 +1,20 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0008",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "OPEN_ARTIFACT",
+    "target_object_id": "evidence-88",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000410",
+    "actor": {
+      "actor_id": "actor-rso-2",
+      "role": "security_officer"
+    }
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0008",
+      "success": true
+    }
+  ]
+}

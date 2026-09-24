@@ -10,7 +10,7 @@ metadata:
   spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
   initialized: true
   last_updated: '2026-09-23'
-  updated_by: casework-live-wiring executor (T00 settled: recipes + live config + baseline; correction C-1 re-plan A)
+  updated_by: casework-live-wiring executor (T01 settled: canonical wire contract + goldens + two-sided drift tests; T04 unit A in verification)
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -19,10 +19,10 @@ metadata:
       casework-cognitive-environment plan. It is background only, not this plan's state.
 
 execution:
-  last_settled_task: T00
-  settled_tasks: [T00]
-  in_flight_task: null
-  ready_tasks: [T01, T02, T03, T04]
+  last_settled_task: T01
+  settled_tasks: [T00, T01]
+  in_flight_task: T04
+  ready_tasks: [T02, T03]
   blocked_tasks: []
   plan_blocked: false
   plan_blocker: null
@@ -43,16 +43,16 @@ operator_decisions:
     agent_protocol.git rules below. It may never push, fetch, pull, rebase, reset, merge or clean.
 
 next_action:
-  task: T01
+  task: T04
   action: >-
-    T00 settled 2026-09-23 (evidence T00/, independent confirmation T00/confirmation.md). Execute
-    T01 (single canonical UI<->gateway wire contract, resolves GAP-A, confirmation=independent):
-    ADR at .agents/reports/casework-live-wiring/adr-wire-contract.md, extend interface-contracts
-    types.ts additively with the journey intents + typed refusals + template/preflight shapes +
-    SSE StreamEvent union, golden fixtures under interface-contracts/golden/, Go contract test +
-    TS port test, retire/alias apps/godspeed-cognitive-ui/contracts/*.ts per D-1. Gates:
-    go test ./internal/contract/... and bun test src/ports. T02/T03/T04 are also ready
-    (rust_kernel track) and may proceed in parallel per parallel_tracks.
+    T01 settled 2026-09-23 (evidence T01/, independent confirmation T01/confirmation.md: additive
+    types.ts extension, 15 golden fixtures, Go internal/contract byte-stable round-trip + exhaustive
+    kinds, TS wireContract pins, kebab dialect deleted; gates green, teeth reproduced). T04 in
+    flight in units: A (case-ops library extraction + approval.decide in-process) builder done,
+    critic running; then B (new SFWP verbs case.add_item/reopen/terminate/advance + item.execute +
+    human_task.complete + artifact.get, event-bus publishing + replay) and C (opt-in supervisor).
+    T02 (prereg written) and T03 are ready and follow on the kernel track. Note: settling T01
+    unlocks nothing until T05 exists (T06 needs T01+T05).
 
 agent_protocol:
   read_order:
@@ -97,15 +97,9 @@ baseline_warnings:
 
 handoff:
   changed_files:
-    - justfile (T00: +247 lines, append-only after casework-demo-up — casework-cell-init, casework-server-up/down, casework-live-go-up/down, casework-stack-down; fixture recipes untouched)
-    - apps/godspeed-casework-go/configs/live-serve.json (T00: new; cell_root via GODSPEED_CELL_ROOT env; honest fixture:in-process endpoints until T05)
-    - target (T00/E-1: deleted tracked broken self-referential symlink committed in 118761a; now a normal gitignored build dir)
-    - .agents/reports/casework-live-wiring/decision-log.yaml (created: D-1/D-2/D-3 + dependencies, correction C-1, baseline B-1, incident E-1)
-    - .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md (Section 0.2 justfile bullet amended per correction C-1)
-    - .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml (v0.2.1: T00 re-planned per C-1 option A)
-    - .agents/OBSERVED_DEBT.md (ladder red-at-baseline entry)
-    - .agents/evidence/casework-live-wiring/T00/ (baseline/, gate-teeth/, confirmation.md, baseline-summary.md, dirty-inventory.txt, c1-git-evidence.txt)
-    - .agents/current_status.yml (T00 settled; this handoff)
+    - T01 (settled, uncommitted-to-be-committed-with-T01): .agents/reports/interface-contracts/typescript/types.ts (+151 additive), .agents/reports/interface-contracts/golden/ (15 fixtures), apps/godspeed-casework-go/internal/contract/ (stdlib mirror + golden/exhaustive tests), apps/godspeed-cognitive-ui/src/ports/wireContract.test.ts, apps/godspeed-cognitive-ui/tsconfig.json (drop retired include), apps/godspeed-cognitive-ui/contracts/ DELETED (kebab dialect retired per D-1), .agents/reports/casework-live-wiring/adr-wire-contract.md, .agents/evidence/casework-live-wiring/T01/, .agents/OBSERVED_DEBT.md (coordinator flake entry)
+    - T04 unit A (in flight, critic pending): crates/sea-forge-case-runner/src/case_ops/ (new library), crates/sea-forge-cli thin callers, crates/sea-forge-server approval.decide in-process + run_cli deleted, tests + evidence T04A/
+    - committed at T00 (8ad72ac): justfile live recipes, live-serve.json, decision log, plan v0.2.1, report §0.2 correction, target symlink removal, baseline evidence
   decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
   warnings:
     - >-
@@ -123,7 +117,14 @@ handoff:
     - >-
       Stale baseline_warnings: the archived expected pre-existing cargo reds (server sfwp trio,
       cli t13_1) did NOT reproduce — four-crate cargo gate GREEN at 44ffadd.
+    - >-
+      Pre-existing Go flake (T01 critic finding, OBSERVED_DEBT): internal/coordinator
+      TestIdempotencyReplayAndConflict fails ~1/5 in isolation; if go test -race ./... goes red
+      on that suite alone, rerun it in isolation before calling a regression.
   evidence:
+    - .agents/evidence/casework-live-wiring/T01/confirmation.md (independent APPROVE with reproduced teeth)
+    - .agents/evidence/casework-live-wiring/T01/gates/ (go vet+race, contract tests, typecheck, 195 tests, build — all green)
+    - .agents/evidence/casework-live-wiring/T01/teeth/ (tag-rename and bogus-kind transcripts)
     - .agents/evidence/casework-live-wiring/T00/baseline-summary.md
     - .agents/evidence/casework-live-wiring/T00/confirmation.md
     - .agents/evidence/casework-live-wiring/T00/gate-teeth/summary.md

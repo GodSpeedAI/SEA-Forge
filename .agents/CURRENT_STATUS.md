@@ -4060,3 +4060,11 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > 44ffadd and is stale). Decision log + evidence:
 > `.agents/reports/casework-live-wiring/decision-log.yaml`,
 > `.agents/evidence/casework-live-wiring/T00/`.
+
+> **2026-09-23 (latest) T01 SETTLED — canonical wire contract:** spec-04 `types.ts` extended
+> additively (10 journey intent kinds, 7 typed refusals, payloads, template/preflight DTOs, SSE
+> union), 15 golden fixtures under `interface-contracts/golden/`, Go `internal/contract` mirror
+> with byte-stable round-trip + exhaustive-kind tests, TS `wireContract` pins, kebab dialect
+> `apps/godspeed-cognitive-ui/contracts/` deleted per D-1. Independent confirmation:
+> `.agents/evidence/casework-live-wiring/T01/confirmation.md`. New OBSERVED_DEBT: pre-existing
+> Go coordinator idempotency flake (~1/5). T04 in flight (unit A: case-ops extraction).

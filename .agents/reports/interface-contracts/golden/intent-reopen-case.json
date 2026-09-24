@@ -1,0 +1,25 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0009",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "REOPEN_CASE",
+    "target_object_id": "case-31ab",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000420",
+    "actor": {
+      "actor_id": "actor-lc-4",
+      "role": "case_architect"
+    },
+    "parameters": {
+      "case_id": "case-31ab",
+      "reason": "A regression traced back to the closed migration; the remediation stage must run again."
+    }
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0009",
+      "success": true,
+      "new_cursor": "1.0000000421"
+    }
+  ]
+}

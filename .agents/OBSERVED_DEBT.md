@@ -1019,3 +1019,18 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   "J1 red, J2+ blocked" as the recorded baseline, not a new regression.
 - Scope: outside T00 (scaffolding-only changes); recorded during baseline
   capture.
+
+## Open: pre-existing Go coordinator idempotency flake makes the global race gate intermittently red
+
+- Observed: 2026-09-23 (casework-live-wiring T01 independent confirmation; reproduces with zero
+  local modifications to the package)
+- Evidence: `TestIdempotencyReplayAndConflict` in apps/godspeed-casework-go/internal/coordinator
+  fails roughly 1 in 5 runs even in isolation (go test -race -count=1 -run
+  TestIdempotencyReplayAndConflict ./internal/coordinator/...); transcript in
+  .agents/evidence/casework-live-wiring/T01/confirmation.md.
+- Impact: `go test -race ./...` (a plan global gate) is intermittently red for reasons unrelated
+  to any task's delta; reruns hide it.
+- Next move: stabilize the test's timing/concurrency assumptions (or the coordinator's lease/idempotency
+  window) when T06 replaces the coordinator's fixture core; until then, gate runners must rerun a
+  red coordinator suite once in isolation before treating it as a task regression.
+- Scope: pre-existing at T01; not introduced or worsened by this plan's changes.
