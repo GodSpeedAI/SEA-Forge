@@ -1412,25 +1412,44 @@ casework-demo-up: casework-go-up casework-ui-up
 casework_live_dir := ".sea-forge/casework-live"
 
 # Initialize the live cell (idempotent): create .sea-forge/casework-live/cell and, on first run,
-# a minimal documented server.yaml. Identity bindings are deliberately absent — protected verbs
-# fail closed until T02/T03 — and an existing server.yaml is never modified.
+# the T03 seed — server.yaml with the invoking OS user bound to the operator actor, the E2E plan
+# templates from fixtures/cells/e2e/templates/, and the E2E authority policy at
+# authority/active-policy.json. Gateway/security-officer/lifecycle-custodian bindings are still
+# absent (they arrive with T02). An existing server.yaml is never modified: on a re-run the recipe
+# only prints what is installed.
 [group('casework')]
 casework-cell-init:
     #!/usr/bin/env bash
     {{set}}
     live_dir="{{casework_live_dir}}"
     cell="$live_dir/cell"
+    fixtures="fixtures/cells/e2e"
     mkdir -p "$live_dir" "$cell"
     if [ -f "$cell/server.yaml" ]; then
       echo "casework-cell-init: cell already initialized at $cell (server.yaml present; not modified)"
+      echo "casework-cell-init: installed templates: $(ls "$cell/templates"/*.yaml 2>/dev/null | xargs -r -n1 basename | tr '\n' ' ')"
+      echo "casework-cell-init: active policy: $([ -f "$cell/authority/active-policy.json" ] && echo "$cell/authority/active-policy.json" || echo ABSENT)"
+      echo "casework-cell-init: identity bindings in server.yaml: $(grep -c 'actor_id:' "$cell/server.yaml" 2>/dev/null || echo 0)"
       echo "casework-cell-init: cell path: $(cd "$cell" && pwd)"
       exit 0
     fi
-    cat > "$cell/server.yaml" <<'YAML'
-    # Live-stack cell (plan casework-live-wiring-production T00).
-    # Identity bindings are deliberately absent: protected verbs fail closed until T02/T03.
+    uid="$(id -u)"
+    cat > "$cell/server.yaml" <<YAML
+    # Live-stack cell (plan casework-live-wiring-production T00/T03).
+    # T03 seed: the invoking OS user (uid $uid) is bound to the operator actor.
+    # Gateway/security-officer/lifecycle-custodian bindings arrive with T02.
+    identity:
+      bindings:
+        - uid: $uid
+          actor_id: operator_local
+          roles: ["operator"]
     YAML
-    echo "casework-cell-init: wrote $cell/server.yaml (comment-only; ServerConfig::load yields defaults)"
+    mkdir -p "$cell/templates" "$cell/authority"
+    cp "$fixtures"/templates/*.yaml "$cell/templates/"
+    cp "$fixtures/policy.yaml" "$cell/authority/active-policy.json"
+    echo "casework-cell-init: wrote $cell/server.yaml (operator identity bound to uid $uid)"
+    echo "casework-cell-init: installed templates: $(ls "$cell/templates"/*.yaml | xargs -n1 basename | tr '\n' ' ')"
+    echo "casework-cell-init: wrote $cell/authority/active-policy.json (E2E policy: write_file + approval_resolution for operator)"
     echo "casework-cell-init: cell path: $(cd "$cell" && pwd)"
 
 # Build and start the sea-forge-server kernel against the live cell, configured only via

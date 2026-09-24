@@ -19,10 +19,10 @@ metadata:
       casework-cognitive-environment plan. It is background only, not this plan's state.
 
 execution:
-  last_settled_task: T01
-  settled_tasks: [T00, T01]
+  last_settled_task: T03
+  settled_tasks: [T00, T01, T03]
   in_flight_task: T04
-  ready_tasks: [T02, T03]
+  ready_tasks: [T02]
   blocked_tasks: []
   plan_blocked: false
   plan_blocker: null
@@ -45,14 +45,16 @@ operator_decisions:
 next_action:
   task: T04
   action: >-
-    T01 settled 2026-09-23 (evidence T01/, independent confirmation T01/confirmation.md: additive
-    types.ts extension, 15 golden fixtures, Go internal/contract byte-stable round-trip + exhaustive
-    kinds, TS wireContract pins, kebab dialect deleted; gates green, teeth reproduced). T04 in
-    flight in units: A (case-ops library extraction + approval.decide in-process) builder done,
-    critic running; then B (new SFWP verbs case.add_item/reopen/terminate/advance + item.execute +
-    human_task.complete + artifact.get, event-bus publishing + replay) and C (opt-in supervisor).
-    T02 (prereg written) and T03 are ready and follow on the kernel track. Note: settling T01
-    unlocks nothing until T05 exists (T06 needs T01+T05).
+    T03 settled 2026-09-24 (evidence T03/confirmation.md: independent APPROVE with re-run gates,
+    hash-proven idempotent seed, independently authored cyclic teeth; templates + policy load
+    through the real loader; case_templates_live 7/7). T04 in flight: unit B (7 SFWP verbs + event
+    publishing + sfwp_case_mutations tests + workbench schema regen) is implemented and its gate
+    logs are green but its builder died on a usage limit before reporting and independent
+    confirmation is PENDING — orchestrator is re-verifying inline (gates, diff review, teeth),
+    then unit C (opt-in supervisor) follows; when subagent capacity returns, run the independent
+    T04 critic over units B+C before settling T04. T02 (prereg written) is ready. NOTE: two
+    usage-limit windows killed subagents on 2026-09-24; verification work continued inline by the
+    orchestrator where honest (T03's critic had completed before dying).
 
 agent_protocol:
   read_order:

@@ -1,0 +1,29 @@
+# E2E cell authority policy (plan casework-live-wiring-production T03).
+#
+# Installed by `just casework-cell-init` as <cell>/authority/active-policy.json
+# for the disposable E2E cell under .sea-forge/casework-live/ only. It grants
+# the operator role exactly the operation kinds the E2E journeys need:
+#
+#   - write_file            the e2e-sentry-chain / e2e-signoff-gate templates'
+#                           governed writes (their only operation kind)
+#   - approval_resolution   resolving the approvals authority escalations open
+#                           (approval.decide / approve / reject authorize
+#                           against this same file)
+#
+# Everything else stays denied by default. No rule here weakens any policy
+# outside this temp cell.
+version: "0.1"
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+rules:
+  - name: allow-e2e-write-file
+    verdict: allow
+    actor_role: operator
+    operation_kind: write_file
+    path_prefix: ""
+  - name: allow-e2e-approval-resolution
+    verdict: allow
+    actor_role: operator
+    operation_kind: approval_resolution

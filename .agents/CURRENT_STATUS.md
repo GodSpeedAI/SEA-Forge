@@ -4068,3 +4068,13 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > `apps/godspeed-cognitive-ui/contracts/` deleted per D-1. Independent confirmation:
 > `.agents/evidence/casework-live-wiring/T01/confirmation.md`. New OBSERVED_DEBT: pre-existing
 > Go coordinator idempotency flake (~1/5). T04 in flight (unit A: case-ops extraction).
+
+> **2026-09-24 T03 SETTLED — real templates + seeded E2E cell (GAP-D):** fixtures/cells/e2e/
+> (sentry-chain + signoff-gate templates, operator policy), casework-cell-init now seeds identity +
+> templates + policy (idempotent, hash-proven), case_templates_live 7/7 over the real socket;
+> independently confirmed with re-run gates and independently authored cyclic teeth
+> (`.agents/evidence/casework-live-wiring/T03/confirmation.md`). Plan-fact note: the SFWP commit
+> path emits CaseCreated + case_plan ledger record (never PlanCreated — CLI-pipeline-only); tests
+> assert the real truth. T04 unit B implemented, awaiting orchestrator re-verification + independent
+> confirmation; unit C (supervisor) next. Two usage-limit windows killed subagents today; inline
+> verification continued where honest.

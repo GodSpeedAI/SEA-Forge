@@ -1,0 +1,441 @@
+# gate: cargo fmt --all -- --check
+# exit 1 — every remaining diff is in the parallel T04 unit's in-flight files
+# (case_ops/*, sfwp_case_mutations.rs, case_mutations.rs, lib.rs, cli/commands/task.rs).
+# T03's own file (tests/case_templates_live.rs) is rustfmt-clean (verified: exit 0).
+
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-case-runner/src/case_ops/advance.rs:65:
+ /// runtime, then settlement); the engine commits the settlement event and the
+ /// completion trace events itself so their ordering cannot drift from the
+ /// dispatcher's.
+-pub type EpisodeExecutor<'a> = &'a mut dyn FnMut(&PlanItem, &str) -> Result<SettlementEvent, ForgeError>;
++pub type EpisodeExecutor<'a> =
++    &'a mut dyn FnMut(&PlanItem, &str) -> Result<SettlementEvent, ForgeError>;
+ 
+ /// Append a case trace event through the runner's own recorder (the same
+ /// append the dispatch loop uses, ordinals included) and notify the host sink.
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-case-runner/src/case_ops/advance.rs:226:
+             if terminal.is_some() || parked_human {
+                 break;
+             }
+-            let Some(item) = plan
+-                .items
+-                .iter()
+-                .find(|item| &item.plan_item_id == item_id)
+-            else {
++            let Some(item) = plan.items.iter().find(|item| &item.plan_item_id == item_id) else {
+                 continue;
+             };
+             // This engine executes sandboxed tasks only. Agent tasks advance
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-case-runner/src/case_ops/mod.rs:75:
+     item_id: Option<&str>,
+     payload: serde_json::Value,
+ ) -> Result<(), ForgeError> {
+-    append_case_event_with(root, case_id, actor, kind, item_id, payload, &mut noop_notifier)
++    append_case_event_with(
++        root,
++        case_id,
++        actor,
++        kind,
++        item_id,
++        payload,
++        &mut noop_notifier,
++    )
+ }
+ 
+ /// [`append_case_event`], notifying the host sink after the append is durable.
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-case-runner/src/case_ops/mod.rs:310:
+     item_id: &str,
+     note: Option<&str>,
+ ) -> Result<u8, ForgeError> {
+-    complete_human_task_with(root, policy, actor, case_id, item_id, note, &mut noop_notifier)
++    complete_human_task_with(
++        root,
++        policy,
++        actor,
++        case_id,
++        item_id,
++        note,
++        &mut noop_notifier,
++    )
+ }
+ 
+ /// [`complete_human_task`], notifying the host sink of each appended event.
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-case-runner/src/case_ops/mod.rs:412:
+ pub fn load_case_plan(
+     root: &Path,
+     case_id: &str,
+-) -> Result<(Case, CasePlan, Vec<TraceEvent>), ForgeError> {    let (case_path, plan_path, events_path) = paths(root, case_id);
++) -> Result<(Case, CasePlan, Vec<TraceEvent>), ForgeError> {
++    let (case_path, plan_path, events_path) = paths(root, case_id);
+     let events = fs::read_to_string(events_path)
+         .map_err(|error| ForgeError::io("read case events", error))?
+         .lines()
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-cli/src/commands/task.rs:17:
+     item_id: &str,
+     note: Option<&str>,
+ ) -> Result<u8, ForgeError> {
+-    sea_forge_case_runner::case_ops::complete_human_task(root, policy, actor, case_id, item_id, note)
++    sea_forge_case_runner::case_ops::complete_human_task(
++        root, policy, actor, case_id, item_id, note,
++    )
+ }
+ 
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/src/lib.rs:2440:
+             )
+             .await
+             {
+-                Ok(result) => serde_json::to_value(result)
+-                    .unwrap_or_else(|_| serde_json::json!({"error": "add_item serialization failed"})),
++                Ok(result) => serde_json::to_value(result).unwrap_or_else(
++                    |_| serde_json::json!({"error": "add_item serialization failed"}),
++                ),
+                 Err(error) => forge_error_response(&error),
+             };
+             record_outcome(state, request_id.as_deref(), "case.add_item", &response);
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/src/lib.rs:2456:
+             let actor = actor_id.unwrap_or("operator_local").to_string();
+             let response =
+                 match sfwp::case_mutations::reopen(state, &actor, &case_id, &policy).await {
+-                    Ok(result) => serde_json::to_value(result).unwrap_or_else(|_| {
+-                        serde_json::json!({"error": "reopen serialization failed"})
+-                    }),
++                    Ok(result) => serde_json::to_value(result).unwrap_or_else(
++                        |_| serde_json::json!({"error": "reopen serialization failed"}),
++                    ),
+                     Err(error) => forge_error_response(&error),
+                 };
+             record_outcome(state, request_id.as_deref(), "case.reopen", &response);
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/src/lib.rs:2472:
+         } => {
+             record_pending(state, request_id.as_deref(), "case.terminate");
+             let actor = actor_id.unwrap_or("operator_local").to_string();
+-            let response = match sfwp::case_mutations::terminate(
+-                state, &actor, &case_id, &reason, &policy,
+-            )
+-            .await
+-            {
+-                Ok(result) => serde_json::to_value(result).unwrap_or_else(|_| {
+-                    serde_json::json!({"error": "terminate serialization failed"})
+-                }),
+-                Err(error) => forge_error_response(&error),
+-            };
++            let response =
++                match sfwp::case_mutations::terminate(state, &actor, &case_id, &reason, &policy)
++                    .await
++                {
++                    Ok(result) => serde_json::to_value(result).unwrap_or_else(
++                        |_| serde_json::json!({"error": "terminate serialization failed"}),
++                    ),
++                    Err(error) => forge_error_response(&error),
++                };
+             record_outcome(state, request_id.as_deref(), "case.terminate", &response);
+             response
+         }
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/src/lib.rs:2545:
+             )
+             .await
+             {
+-                Ok(result) => serde_json::to_value(result).unwrap_or_else(|_| {
+-                    serde_json::json!({"error": "human_task_complete serialization failed"})
+-                }),
++                Ok(result) => serde_json::to_value(result).unwrap_or_else(
++                    |_| serde_json::json!({"error": "human_task_complete serialization failed"}),
++                ),
+                 Err(error) => forge_error_response(&error),
+             };
+-            record_outcome(state, request_id.as_deref(), "human_task.complete", &response);
++            record_outcome(
++                state,
++                request_id.as_deref(),
++                "human_task.complete",
++                &response,
++            );
+             response
+         }
+         Request::ArtifactGet { digest } => {
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/src/lib.rs:2560:
+             })
+             .await
+             {
+-                Ok(Ok(view)) => serde_json::to_value(view)
+-                    .unwrap_or_else(|_| serde_json::json!({"error": "artifact serialization failed"})),
++                Ok(Ok(view)) => serde_json::to_value(view).unwrap_or_else(
++                    |_| serde_json::json!({"error": "artifact serialization failed"}),
++                ),
+                 Ok(Err(error)) => forge_error_response(&error),
+                 Err(error) => serde_json::json!({
+                     "error": format!("artifact fetch task panic: {error}"),
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/src/sfwp/case_mutations.rs:198:
+     let case_id_for_task = case_id.clone();
+     run_case_mutation(state, &case_id, move |notify| {
+         sea_forge_case_runner::case_ops::propose_item_with(
+-            &root, &policy_path, &actor, &case_id_for_task, item, notify,
++            &root,
++            &policy_path,
++            &actor,
++            &case_id_for_task,
++            item,
++            notify,
+         )
+     })
+     .await?;
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/src/sfwp/case_mutations.rs:387:
+                 actor_role.clone(),
+             )
+         };
+-        advance_case(&root, &actor, &case_id_for_task, scope, notify, &mut execute_episode)
++        advance_case(
++            &root,
++            &actor,
++            &case_id_for_task,
++            scope,
++            notify,
++            &mut execute_episode,
++        )
+     })
+     .await?;
+     drop(permit);
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:167:
+ const EXIT_ZERO: &[&str] = &["--exact", "__no_test_matches_this_name__"];
+ 
+ fn execute_operation(dir: &Path) -> Value {
+-    let mut argv = vec![trusted_self_executable(dir)
+-        .to_string_lossy()
+-        .into_owned()];
++    let mut argv = vec![trusted_self_executable(dir).to_string_lossy().into_owned()];
+     argv.extend(EXIT_ZERO.iter().map(|arg| (*arg).to_owned()));
+     json!({"kind": "execute_command", "argv": argv, "cwd": "."})
+ }
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:305:
+     let (root, socket) = boot(local_operator()).await;
+     let policy = full_policy(root.path());
+     let mut client = Client::connect(&socket).await;
+-    let case_id = submit_plan(client_ref(&mut client), root.path(), human_task_plan(), &policy).await;
++    let case_id = submit_plan(
++        client_ref(&mut client),
++        root.path(),
++        human_task_plan(),
++        &policy,
++    )
++    .await;
+ 
+     let response = client
+         .call(json!({
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:359:
+     let (root, socket) = boot(local_operator()).await;
+     let policy = full_policy(root.path());
+     let mut client = Client::connect(&socket).await;
+-    let case_id = submit_plan(client_ref(&mut client), root.path(), human_task_plan(), &policy).await;
++    let case_id = submit_plan(
++        client_ref(&mut client),
++        root.path(),
++        human_task_plan(),
++        &policy,
++    )
++    .await;
+ 
+     let plan_path = root.path().join("cases").join(&case_id).join("plan.json");
+     let before = fs::read(&plan_path).unwrap();
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:408:
+     let (root, socket) = boot(local_operator()).await;
+     let policy = full_policy(root.path());
+     let mut client = Client::connect(&socket).await;
+-    let case_id = submit_plan(client_ref(&mut client), root.path(), human_task_plan(), &policy).await;
++    let case_id = submit_plan(
++        client_ref(&mut client),
++        root.path(),
++        human_task_plan(),
++        &policy,
++    )
++    .await;
+ 
+     // Close the case for real: complete its human task.
+     let complete = client
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:442:
+     let events = case_events(root.path(), &case_id);
+     assert_eq!(
+         kinds_of(&events),
+-        vec!["case_created", "item_activated", "human_task_completed", "case_closed", "case_reopened"],
++        vec![
++            "case_created",
++            "item_activated",
++            "human_task_completed",
++            "case_closed",
++            "case_reopened"
++        ],
+         "full case history must be exactly the documented kinds"
+     );
+     assert_eq!(case_state(root.path(), &case_id), "active");
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:499:
+     assert_eq!(response["case_state"], "terminated");
+ 
+     let events = case_events(root.path(), &case_id);
+-    assert_eq!(events.len(), events_before + 1, "exactly one event appended");
+-    assert_eq!(kinds_of(&events)[events.len() - 1..], vec!["case_terminated"]);
++    assert_eq!(
++        events.len(),
++        events_before + 1,
++        "exactly one event appended"
++    );
++    assert_eq!(
++        kinds_of(&events)[events.len() - 1..],
++        vec!["case_terminated"]
++    );
+     assert_eq!(case_state(root.path(), &case_id), "terminated");
+ 
+     let case: Value = serde_json::from_slice(
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:507:
+         &fs::read(root.path().join("cases").join(&case_id).join("case.json")).unwrap(),
+     )
+     .unwrap();
+-    assert_eq!(case["close_reason"], "operator_terminated:superseded by case-2");
++    assert_eq!(
++        case["close_reason"],
++        "operator_terminated:superseded by case-2"
++    );
+ 
+     // A terminated case is not terminable again.
+     let refused = client
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:631:
+         }))
+         .await;
+     assert!(
+-        unknown["error"].as_str().unwrap_or_default().contains("not in the plan"),
++        unknown["error"]
++            .as_str()
++            .unwrap_or_default()
++            .contains("not in the plan"),
+         "{unknown}"
+     );
+     assert_eq!(
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:678:
+         }))
+         .await;
+     assert!(
+-        spent["error"].as_str().unwrap_or_default().contains("not ready"),
++        spent["error"]
++            .as_str()
++            .unwrap_or_default()
++            .contains("not ready"),
+         "{spent}"
+     );
+     assert_eq!(case_events(root.path(), &case_id).len(), 7);
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:693:
+     let (root, socket) = boot(local_operator()).await;
+     let policy = full_policy(root.path());
+     let mut client = Client::connect(&socket).await;
+-    let case_id = submit_plan(client_ref(&mut client), root.path(), human_task_plan(), &policy).await;
++    let case_id = submit_plan(
++        client_ref(&mut client),
++        root.path(),
++        human_task_plan(),
++        &policy,
++    )
++    .await;
+ 
+     // Missing justification: refused, no event, case unchanged.
+     let missing = client
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:735:
+ 
+     assert_eq!(
+         kinds_of(&case_events(root.path(), &case_id)),
+-        vec!["case_created", "item_activated", "human_task_completed", "case_closed"]
++        vec![
++            "case_created",
++            "item_activated",
++            "human_task_completed",
++            "case_closed"
++        ]
+     );
+     assert_eq!(case_state(root.path(), &case_id), "completed");
+ 
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:783:
+     let artifact_record = evidence
+         .iter()
+         .find(|record| {
+-            record["kind"] == "artifact" && record["uri"].as_str().unwrap_or_default().ends_with("stdout.txt")
++            record["kind"] == "artifact"
++                && record["uri"]
++                    .as_str()
++                    .unwrap_or_default()
++                    .ends_with("stdout.txt")
+         })
+         .expect("the episode captured stdout as an evidence artifact");
+     let digest = artifact_record["sha256"].as_str().unwrap().to_owned();
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:790:
+-    let expected_bytes = fs::read(dirs.last().unwrap().join("artifacts").join("stdout.txt")).unwrap();
++    let expected_bytes =
++        fs::read(dirs.last().unwrap().join("artifacts").join("stdout.txt")).unwrap();
+ 
+     // Inspect verb: no actor block required.
+-    let fetched = client.call(json!({"verb": "artifact_get", "digest": digest})).await;
++    let fetched = client
++        .call(json!({"verb": "artifact_get", "digest": digest}))
++        .await;
+     assert_eq!(fetched["digest"], digest, "{fetched}");
+     assert_eq!(fetched["uri"], "artifacts/stdout.txt");
+     assert_eq!(fetched["run_id"], artifact_record["run_id"]);
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:797:
+     assert_eq!(fetched["evidence_id"], artifact_record["evidence_id"]);
+     let content = fetched["content"].as_str().unwrap().as_bytes().to_vec();
+-    assert_eq!(content, expected_bytes, "content-addressed bytes must match");
++    assert_eq!(
++        content, expected_bytes,
++        "content-addressed bytes must match"
++    );
+ 
+     // Wrong digest: a typed refusal, not a wildcard read.
+     let wrong = client
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:803:
+         .call(json!({"verb": "artifact_get", "digest": "b".repeat(64)}))
+         .await;
+     assert!(
+-        wrong["error"].as_str().unwrap_or_default().contains("artifact_not_found"),
++        wrong["error"]
++            .as_str()
++            .unwrap_or_default()
++            .contains("artifact_not_found"),
+         "{wrong}"
+     );
+ 
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:810:
+     // Malformed digest: refused before touching disk.
+-    let malformed = client.call(json!({"verb": "artifact_get", "digest": "not-a-digest"})).await;
++    let malformed = client
++        .call(json!({"verb": "artifact_get", "digest": "not-a-digest"}))
++        .await;
+     assert!(
+         malformed["error"]
+             .as_str()
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:1027:
+         .iter()
+         .map(|frame| frame["cursor"].as_str().unwrap().to_owned())
+         .collect();
+-    assert!(!ledger_order.is_empty(), "ledger must hold the missed frames");
++    assert!(
++        !ledger_order.is_empty(),
++        "ledger must hold the missed frames"
++    );
+     assert_eq!(
+         ledger_order.len(),
+-        ledger_order.iter().collect::<std::collections::HashSet<_>>().len(),
++        ledger_order
++            .iter()
++            .collect::<std::collections::HashSet<_>>()
++            .len(),
+         "durable ledger itself must not repeat cursors"
+     );
+ 
+Diff in /home/sprime01/projects/sea-rs/crates/sea-forge-server/tests/sfwp_case_mutations.rs:1044:
+         .chain(replayed_cursors.iter().cloned())
+         .collect();
+     let unique: std::collections::HashSet<&String> = combined.iter().collect();
+-    assert_eq!(unique.len(), combined.len(), "duplicate cursors after resume: {combined:?}");
++    assert_eq!(
++        unique.len(),
++        combined.len(),
++        "duplicate cursors after resume: {combined:?}"
++    );
+     for pair in combined.windows(2) {
+         assert!(
+             pair[0] < pair[1],
