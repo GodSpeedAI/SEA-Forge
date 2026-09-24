@@ -4078,3 +4078,11 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > assert the real truth. T04 unit B implemented, awaiting orchestrator re-verification + independent
 > confirmation; unit C (supervisor) next. Two usage-limit windows killed subagents today; inline
 > verification continued where honest.
+
+> **2026-09-24 SESSION 1 HANDOFF — read `.agents/current_status.yml` for machine state.**
+> Settled with independent confirmation: T00, T01, T03. T04: unit A confirmed (1b73724), unit B
+> committed cb28329 (7 SFWP verbs + event publishing; builder died on a usage limit; orchestrator
+> re-verified gates/diff/tests; INDEPENDENT CONFIRMATION PENDING — required before T04 settles).
+> Unit C (supervisor) not started; T02 preregistered (prereg/T02.yaml) and ready. Branch
+> casework/live-wiring, tree clean. Usage limits killed subagents twice today; delegation caveat
+> and the full resume recipe are in current_status.yml next_action + agent_protocol.
