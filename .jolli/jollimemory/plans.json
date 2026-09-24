@@ -120,6 +120,54 @@
 			"addedAt": "2026-08-31T23:38:31.601Z",
 			"updatedAt": "2026-08-31T23:38:31.601Z",
 			"commitHash": null
+		},
+		"GodSpeed_Cognitive_Environment_DESIGN": {
+			"slug": "GodSpeed_Cognitive_Environment_DESIGN",
+			"title": "GodSpeed Cognitive Environment — DESIGN.md",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.tmp/SEA-Forge-UI-mocks/GodSpeed_Cognitive_Environment_DESIGN.md",
+			"addedAt": "2026-09-22T23:37:52.711Z",
+			"updatedAt": "2026-09-22T23:37:52.711Z",
+			"commitHash": null
+		},
+		"RUN_PLAN": {
+			"slug": "RUN_PLAN",
+			"title": "Cognitive Environment: Unattended Build Run Plan",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/specs/cognitive-environment/RUN_PLAN.md",
+			"addedAt": "2026-09-22T23:47:43.422Z",
+			"updatedAt": "2026-09-23T03:42:34.801Z",
+			"commitHash": null
+		},
+		"01-SCENE-INVENTORY": {
+			"slug": "01-SCENE-INVENTORY",
+			"title": "Cognitive UI: scene inventory and representation mapping (2026-09-23)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/godspeed-cognitive-ui-functional/01-SCENE-INVENTORY.md",
+			"addedAt": "2026-09-23T17:47:39.257Z",
+			"updatedAt": "2026-09-23T17:47:39.257Z",
+			"commitHash": null
+		},
+		"03-CONTRACT-PORTS-AND-SEAMS": {
+			"slug": "03-CONTRACT-PORTS-AND-SEAMS",
+			"title": "Cognitive UI: contract ports, local adapter and seams (2026-09-23)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/godspeed-cognitive-ui-functional/03-CONTRACT-PORTS-AND-SEAMS.md",
+			"addedAt": "2026-09-23T17:47:39.257Z",
+			"updatedAt": "2026-09-23T17:47:39.257Z",
+			"commitHash": null
+		},
+		"02-JOURNEY-CUBE": {
+			"slug": "02-JOURNEY-CUBE",
+			"title": "Cognitive UI: affordance-dependency ladder and Journey Cube (2026-09-23)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/godspeed-cognitive-ui-functional/02-JOURNEY-CUBE.md",
+			"addedAt": "2026-09-23T17:47:39.257Z",
+			"updatedAt": "2026-09-23T17:47:39.257Z",
+			"commitHash": null
+		},
+		"2026-09-23-case-engine-frontend-e2e-journey-mapping": {
+			"slug": "2026-09-23-case-engine-frontend-e2e-journey-mapping",
+			"title": "SEA-Forge End-to-End User Journey, Case Engine & Frontend Contract Mapping Report",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md",
+			"addedAt": "2026-09-24T00:54:16.249Z",
+			"updatedAt": "2026-09-24T01:05:48.700Z",
+			"commitHash": null
 		}
 	},
 	"skills": {
@@ -154,6 +202,39 @@
 				}
 			},
 			"sourcePath": "/home/sprime01/projects/sea-rs/.jolli/jollimemory/skills/claude/doctor-72f4be89.md",
+			"commitHash": null
+		},
+		"claude:agent-browser": {
+			"source": "claude",
+			"skill": "agent-browser",
+			"entryPaths": [
+				"tool"
+			],
+			"invocations": [
+				{
+					"at": "2026-09-23T15:50:58.384Z",
+					"bodyChars": 15320,
+					"ok": true
+				}
+			],
+			"invocationCount": 1,
+			"firstUsedAt": "2026-09-23T15:50:58.384Z",
+			"lastUsedAt": "2026-09-23T15:50:58.384Z",
+			"usage": {
+				"input": 1918,
+				"cached": 454568,
+				"output": 101397,
+				"confidence": "attributed"
+			},
+			"usageBySession": {
+				"claude:68755a62-33c0-4892-b86b-95827f57c221": {
+					"input": 1918,
+					"cached": 454568,
+					"output": 101397,
+					"confidence": "attributed"
+				}
+			},
+			"sourcePath": "/home/sprime01/projects/sea-rs/.jolli/jollimemory/skills/claude/agent-browser-b7c8dd11.md",
 			"commitHash": null
 		}
 	}

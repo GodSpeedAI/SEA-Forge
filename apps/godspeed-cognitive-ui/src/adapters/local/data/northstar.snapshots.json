@@ -1,0 +1,3975 @@
+[
+ {
+  "world_id": "world-northstar",
+  "case_id": "case-northstar",
+  "cursor": "1.0000000001",
+  "timestamp": "2026-09-17T09:00:00Z",
+  "summary": {
+   "headline": "Northstar claims pilot",
+   "phase": "Pilot scoped",
+   "status_phrase": "Pilot scoped",
+   "progress_percent": 16.666666666666664
+  },
+  "available_actions": [],
+  "attention_focus": {
+   "primary_object_id": "ns-secondary"
+  },
+  "visible_objects": [
+   {
+    "id": "cat-ideas",
+    "kind": "stage",
+    "name": "Ideas",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": -201,
+     "y": -280,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-projects",
+    "kind": "stage",
+    "name": "Projects",
+    "badge": "Analyzing",
+    "salience": 0.9,
+    "spatial_layout": {
+     "x": 350,
+     "y": -224,
+     "z": 0,
+     "radius": 13
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "region",
+     "metric": "3 items"
+    }
+   },
+   {
+    "id": "cat-people",
+    "kind": "stage",
+    "name": "People",
+    "badge": "On track",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": 463,
+     "y": 5,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "metric": "5 items"
+    }
+   },
+   {
+    "id": "cat-insights",
+    "kind": "stage",
+    "name": "Insights",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": 240,
+     "y": 246,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region"
+    }
+   },
+   {
+    "id": "cat-tasks",
+    "kind": "stage",
+    "name": "Tasks",
+    "badge": "On track",
+    "salience": 0.55,
+    "spatial_layout": {
+     "x": -308,
+     "y": 179,
+     "z": 0,
+     "radius": 7,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-knowledge",
+    "kind": "stage",
+    "name": "Knowledge",
+    "badge": "In progress",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": -438,
+     "y": -59,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "northstar",
+    "kind": "work_item",
+    "name": "Northstar",
+    "explanation": "Implementation",
+    "badge": "Planning",
+    "salience": 0.95,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "artifacts": [
+      {
+       "ref": "evi-case-timeline",
+       "kind": "decision_record",
+       "title": "Case timeline",
+       "boundObject": "northstar",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-case-timeline"
+      }
+     ]
+    }
+   },
+   {
+    "id": "platform",
+    "kind": "work_item",
+    "name": "Platform",
+    "explanation": "Runtime",
+    "badge": "Healthy",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "case"
+    }
+   },
+   {
+    "id": "gauntlet",
+    "kind": "work_item",
+    "name": "Gauntlet",
+    "explanation": "Executions",
+    "badge": "Running",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "metric": "2 running"
+    }
+   },
+   {
+    "id": "p-alexr",
+    "kind": "work_item",
+    "name": "Alex R.",
+    "explanation": "Engineer",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-sam",
+    "kind": "work_item",
+    "name": "Sam P.",
+    "explanation": "Owner",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "t-rollout",
+    "kind": "work_item",
+    "name": "Plan rollout",
+    "badge": "In progress",
+    "salience": 0.2,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-eligibility",
+    "kind": "work_item",
+    "name": "Eligibility rules",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-ehr",
+    "kind": "work_item",
+    "name": "EHR record API",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "i-cohort",
+    "kind": "work_item",
+    "name": "Cohort-based rollout",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-ideas",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-workflow",
+    "kind": "stage",
+    "name": "Customer Workflow",
+    "explanation": "Acme Health",
+    "badge": "Mapping",
+    "salience": 0.55,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -514,
+     "y": -147,
+     "z": 0,
+     "radius": 33
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 1,
+       "role": "expected",
+       "label": "Expected Workflow",
+       "explanation": "Standard process",
+       "badge": "As designed",
+       "tone": "progress"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-evidence",
+    "kind": "stage",
+    "name": "Evidence",
+    "badge": "Not started",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 405,
+     "y": -143,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "metric": "0 items",
+     "artifacts": [
+      {
+       "ref": "evi-rejections-chart",
+       "kind": "data_table",
+       "title": "Claim rejections by day",
+       "boundObject": "ns-evidence",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-rejections-chart"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-impl",
+    "kind": "stage",
+    "name": "Implementation",
+    "badge": "Scoping",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 560,
+     "y": 91,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "metric": "1 task",
+     "artifacts": [
+      {
+       "ref": "evi-impl-graph",
+       "kind": "document",
+       "title": "Northstar dependency graph",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-impl-graph"
+      },
+      {
+       "ref": "evi-checks-table",
+       "kind": "test_report",
+       "title": "Nightly checks: coverage validation",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-checks-table"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-secondary",
+    "kind": "stage",
+    "name": "Secondary Coverage",
+    "explanation": "Not yet identified",
+    "badge": "Not in scope",
+    "salience": 0.3,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 295,
+     "y": 240,
+     "z": 0,
+     "radius": 43
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "ghost": true,
+     "representations": {
+      "causal": {
+       "order": 4,
+       "role": "missing",
+       "label": "Missing Secondary Coverage",
+       "explanation": "Eligibility validation skipped",
+       "badge": "Critical condition",
+       "tone": "critical"
+      }
+     },
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      },
+      {
+       "ref": "evi-coverage-trace",
+       "kind": "test_report",
+       "title": "Reality trace: secondary coverage",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-coverage-trace"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-assumption",
+    "kind": "stage",
+    "name": "Initial Assumption",
+    "explanation": "Secondary not required",
+    "badge": "Hypothesis",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -40,
+     "y": -270,
+     "z": 0,
+     "radius": 31
+    },
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "hypothesis",
+     "presentation": "facet",
+     "artifacts": [
+      {
+       "ref": "evi-assumption",
+       "kind": "document",
+       "title": "Initial assumption: primary-only scope",
+       "boundObject": "ns-assumption",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-assumption"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 2,
+       "role": "assumption",
+       "label": "Implementation Assumption",
+       "explanation": "Secondary coverage sufficient"
+      }
+     }
+    }
+   }
+  ],
+  "x": {
+   "label": "Sep 17",
+   "relationships": [
+    {
+     "id": "rel-impl-secondary",
+     "from": "ns-impl",
+     "to": "ns-secondary",
+     "kind": "depends-on"
+    }
+   ]
+  }
+ },
+ {
+  "world_id": "world-northstar",
+  "case_id": "case-northstar",
+  "cursor": "1.0000000002",
+  "timestamp": "2026-09-17T14:40:00Z",
+  "summary": {
+   "headline": "Northstar claims pilot",
+   "phase": "Before secondary coverage was identified",
+   "status_phrase": "Planning phase",
+   "progress_percent": 33.33333333333333
+  },
+  "available_actions": [],
+  "attention_focus": {
+   "primary_object_id": "ns-secondary"
+  },
+  "visible_objects": [
+   {
+    "id": "cat-ideas",
+    "kind": "stage",
+    "name": "Ideas",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": -201,
+     "y": -280,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-projects",
+    "kind": "stage",
+    "name": "Projects",
+    "badge": "Analyzing",
+    "salience": 0.9,
+    "spatial_layout": {
+     "x": 350,
+     "y": -224,
+     "z": 0,
+     "radius": 13
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "region",
+     "metric": "3 items"
+    }
+   },
+   {
+    "id": "cat-people",
+    "kind": "stage",
+    "name": "People",
+    "badge": "On track",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": 463,
+     "y": 5,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "metric": "5 items"
+    }
+   },
+   {
+    "id": "cat-insights",
+    "kind": "stage",
+    "name": "Insights",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": 240,
+     "y": 246,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region"
+    }
+   },
+   {
+    "id": "cat-tasks",
+    "kind": "stage",
+    "name": "Tasks",
+    "badge": "On track",
+    "salience": 0.55,
+    "spatial_layout": {
+     "x": -308,
+     "y": 179,
+     "z": 0,
+     "radius": 7,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-knowledge",
+    "kind": "stage",
+    "name": "Knowledge",
+    "badge": "In progress",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": -438,
+     "y": -59,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "northstar",
+    "kind": "work_item",
+    "name": "Northstar",
+    "explanation": "Implementation",
+    "badge": "Planning",
+    "salience": 0.95,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "artifacts": [
+      {
+       "ref": "evi-case-timeline",
+       "kind": "decision_record",
+       "title": "Case timeline",
+       "boundObject": "northstar",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-case-timeline"
+      }
+     ]
+    }
+   },
+   {
+    "id": "platform",
+    "kind": "work_item",
+    "name": "Platform",
+    "explanation": "Runtime",
+    "badge": "Healthy",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "case"
+    }
+   },
+   {
+    "id": "gauntlet",
+    "kind": "work_item",
+    "name": "Gauntlet",
+    "explanation": "Executions",
+    "badge": "Running",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "metric": "2 running"
+    }
+   },
+   {
+    "id": "p-alexr",
+    "kind": "work_item",
+    "name": "Alex R.",
+    "explanation": "Engineer",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-maya",
+    "kind": "work_item",
+    "name": "Maya L.",
+    "explanation": "Clinical ops",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-sam",
+    "kind": "work_item",
+    "name": "Sam P.",
+    "explanation": "Owner",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "t-rollout",
+    "kind": "work_item",
+    "name": "Plan rollout",
+    "badge": "In progress",
+    "salience": 0.2,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-eligibility",
+    "kind": "work_item",
+    "name": "Eligibility rules",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-ehr",
+    "kind": "work_item",
+    "name": "EHR record API",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "i-cohort",
+    "kind": "work_item",
+    "name": "Cohort-based rollout",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-ideas",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-workflow",
+    "kind": "stage",
+    "name": "Customer Workflow",
+    "explanation": "Acme Health",
+    "badge": "In progress",
+    "salience": 0.55,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -514,
+     "y": -147,
+     "z": 0,
+     "radius": 33
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 1,
+       "role": "expected",
+       "label": "Expected Workflow",
+       "explanation": "Standard process",
+       "badge": "As designed",
+       "tone": "progress"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-evidence",
+    "kind": "stage",
+    "name": "Evidence",
+    "badge": "Collecting",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 405,
+     "y": -143,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "metric": "1 item",
+     "artifacts": [
+      {
+       "ref": "evi-rejections-chart",
+       "kind": "data_table",
+       "title": "Claim rejections by day",
+       "boundObject": "ns-evidence",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-rejections-chart"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-impl",
+    "kind": "stage",
+    "name": "Implementation",
+    "badge": "Planning",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 560,
+     "y": 91,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "metric": "3 tasks",
+     "artifacts": [
+      {
+       "ref": "evi-impl-graph",
+       "kind": "document",
+       "title": "Northstar dependency graph",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-impl-graph"
+      },
+      {
+       "ref": "evi-checks-table",
+       "kind": "test_report",
+       "title": "Nightly checks: coverage validation",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-checks-table"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-release",
+    "kind": "stage",
+    "name": "Release",
+    "explanation": "v0.2.0",
+    "badge": "Not started",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -407,
+     "y": 210,
+     "z": 0,
+     "radius": 36
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "decision_gate",
+     "dormant": true
+    }
+   },
+   {
+    "id": "ns-secondary",
+    "kind": "stage",
+    "name": "Secondary Coverage",
+    "explanation": "Not yet identified",
+    "badge": "Not in scope",
+    "salience": 0.3,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 295,
+     "y": 240,
+     "z": 0,
+     "radius": 43
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "ghost": true,
+     "representations": {
+      "causal": {
+       "order": 4,
+       "role": "missing",
+       "label": "Missing Secondary Coverage",
+       "explanation": "Eligibility validation skipped",
+       "badge": "Critical condition",
+       "tone": "critical"
+      }
+     },
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      },
+      {
+       "ref": "evi-coverage-trace",
+       "kind": "test_report",
+       "title": "Reality trace: secondary coverage",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-coverage-trace"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-assumption",
+    "kind": "stage",
+    "name": "Initial Assumption",
+    "explanation": "Secondary not required",
+    "badge": "Hypothesis",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -40,
+     "y": -270,
+     "z": 0,
+     "radius": 31
+    },
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "hypothesis",
+     "presentation": "facet",
+     "artifacts": [
+      {
+       "ref": "evi-assumption",
+       "kind": "document",
+       "title": "Initial assumption: primary-only scope",
+       "boundObject": "ns-assumption",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-assumption"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 2,
+       "role": "assumption",
+       "label": "Implementation Assumption",
+       "explanation": "Secondary coverage sufficient"
+      }
+     }
+    }
+   }
+  ],
+  "x": {
+   "label": "Sep 17",
+   "relationships": [
+    {
+     "id": "rel-assumes",
+     "from": "ns-workflow",
+     "to": "ns-assumption",
+     "kind": "depends-on",
+     "label": "Assumes"
+    },
+    {
+     "id": "rel-impl-secondary",
+     "from": "ns-impl",
+     "to": "ns-secondary",
+     "kind": "depends-on"
+    },
+    {
+     "id": "rel-release-impl",
+     "from": "ns-release",
+     "to": "ns-impl",
+     "kind": "depends-on"
+    }
+   ]
+  }
+ },
+ {
+  "world_id": "world-northstar",
+  "case_id": "case-northstar",
+  "cursor": "1.0000000003",
+  "timestamp": "2026-09-18T09:15:00Z",
+  "summary": {
+   "headline": "Northstar claims pilot",
+   "phase": "Customer record examined",
+   "status_phrase": "Gap identified",
+   "progress_percent": 50
+  },
+  "available_actions": [],
+  "attention_focus": {
+   "primary_object_id": "ns-secondary"
+  },
+  "visible_objects": [
+   {
+    "id": "cat-ideas",
+    "kind": "stage",
+    "name": "Ideas",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": -201,
+     "y": -280,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-projects",
+    "kind": "stage",
+    "name": "Projects",
+    "badge": "Analyzing",
+    "salience": 0.9,
+    "spatial_layout": {
+     "x": 350,
+     "y": -224,
+     "z": 0,
+     "radius": 13
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "region",
+     "metric": "3 items"
+    }
+   },
+   {
+    "id": "cat-people",
+    "kind": "stage",
+    "name": "People",
+    "badge": "On track",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": 463,
+     "y": 5,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "metric": "5 items"
+    }
+   },
+   {
+    "id": "cat-insights",
+    "kind": "stage",
+    "name": "Insights",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": 240,
+     "y": 246,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region"
+    }
+   },
+   {
+    "id": "cat-tasks",
+    "kind": "stage",
+    "name": "Tasks",
+    "badge": "On track",
+    "salience": 0.55,
+    "spatial_layout": {
+     "x": -308,
+     "y": 179,
+     "z": 0,
+     "radius": 7,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-knowledge",
+    "kind": "stage",
+    "name": "Knowledge",
+    "badge": "In progress",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": -438,
+     "y": -59,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "northstar",
+    "kind": "work_item",
+    "name": "Northstar",
+    "explanation": "Implementation",
+    "badge": "1 needs you",
+    "salience": 0.95,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "case",
+     "residue": {
+      "label": "1 question open",
+      "tone": "hypothesis"
+     },
+     "artifacts": [
+      {
+       "ref": "evi-case-timeline",
+       "kind": "decision_record",
+       "title": "Case timeline",
+       "boundObject": "northstar",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-case-timeline"
+      }
+     ]
+    }
+   },
+   {
+    "id": "platform",
+    "kind": "work_item",
+    "name": "Platform",
+    "explanation": "Runtime",
+    "badge": "Healthy",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "case"
+    }
+   },
+   {
+    "id": "gauntlet",
+    "kind": "work_item",
+    "name": "Gauntlet",
+    "explanation": "Executions",
+    "badge": "Running",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "metric": "2 running"
+    }
+   },
+   {
+    "id": "p-alexr",
+    "kind": "work_item",
+    "name": "Alex R.",
+    "explanation": "Engineer",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-maya",
+    "kind": "work_item",
+    "name": "Maya L.",
+    "explanation": "Clinical ops",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-sam",
+    "kind": "work_item",
+    "name": "Sam P.",
+    "explanation": "Owner",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "t-rollout",
+    "kind": "work_item",
+    "name": "Plan rollout",
+    "badge": "In progress",
+    "salience": 0.2,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-eligibility",
+    "kind": "work_item",
+    "name": "Eligibility rules",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-ehr",
+    "kind": "work_item",
+    "name": "EHR record API",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "i-cohort",
+    "kind": "work_item",
+    "name": "Cohort-based rollout",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-ideas",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "n-divergence",
+    "kind": "work_item",
+    "name": "Secondary coverage gap",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-insights",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-goal",
+    "kind": "stage",
+    "name": "Goal",
+    "explanation": "Claims pilot",
+    "badge": "On track",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -40,
+     "y": -270,
+     "z": 0,
+     "radius": 31
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "facet"
+    }
+   },
+   {
+    "id": "ns-workflow",
+    "kind": "stage",
+    "name": "Customer Workflow",
+    "explanation": "Acme Health",
+    "badge": "In progress",
+    "salience": 0.55,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -514,
+     "y": -147,
+     "z": 0,
+     "radius": 33
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 1,
+       "role": "expected",
+       "label": "Expected Workflow",
+       "explanation": "Standard process",
+       "badge": "As designed",
+       "tone": "progress"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-evidence",
+    "kind": "stage",
+    "name": "Evidence",
+    "badge": "Collecting",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 405,
+     "y": -143,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "metric": "2 items",
+     "artifacts": [
+      {
+       "ref": "evi-rejections-chart",
+       "kind": "data_table",
+       "title": "Claim rejections by day",
+       "boundObject": "ns-evidence",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-rejections-chart"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-impl",
+    "kind": "stage",
+    "name": "Implementation",
+    "badge": "In progress",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 560,
+     "y": 91,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "metric": "4 tasks",
+     "artifacts": [
+      {
+       "ref": "evi-impl-graph",
+       "kind": "document",
+       "title": "Northstar dependency graph",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-impl-graph"
+      },
+      {
+       "ref": "evi-checks-table",
+       "kind": "test_report",
+       "title": "Nightly checks: coverage validation",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-checks-table"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-release",
+    "kind": "stage",
+    "name": "Release",
+    "explanation": "v0.2.0",
+    "badge": "Blocked",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -407,
+     "y": 210,
+     "z": 0,
+     "radius": 36
+    },
+    "actions": [
+     {
+      "id": "approve-rollout",
+      "label": "Approve release",
+      "intent": "APPROVE_HUMAN_TASK",
+      "consequential": true,
+      "requires_justification": true
+     }
+    ],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "decision_gate"
+    }
+   },
+   {
+    "id": "ns-secondary",
+    "kind": "stage",
+    "name": "Secondary Coverage",
+    "explanation": "Possible gap",
+    "badge": "Suspected",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 295,
+     "y": 240,
+     "z": 0,
+     "radius": 43
+    },
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "hypothesis",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 4,
+       "role": "missing",
+       "label": "Missing Secondary Coverage",
+       "explanation": "Eligibility validation skipped",
+       "badge": "Critical condition",
+       "tone": "critical"
+      }
+     },
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      },
+      {
+       "ref": "evi-coverage-trace",
+       "kind": "test_report",
+       "title": "Reality trace: secondary coverage",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-coverage-trace"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-assumption",
+    "kind": "work_item",
+    "name": "Implementation Assumption",
+    "explanation": "Secondary coverage sufficient",
+    "badge": "In code / config",
+    "salience": 0.45,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item",
+     "artifacts": [
+      {
+       "ref": "evi-assumption",
+       "kind": "document",
+       "title": "Initial assumption: primary-only scope",
+       "boundObject": "ns-assumption",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-assumption"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 2,
+       "role": "assumption",
+       "label": "Implementation Assumption",
+       "explanation": "Secondary coverage sufficient"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-claims-api",
+    "kind": "work_item",
+    "name": "Claims API",
+    "explanation": "Verified",
+    "badge": "Verified",
+    "salience": 0.3,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-session",
+    "kind": "work_item",
+    "name": "Session Migration",
+    "explanation": "Complete",
+    "badge": "Complete",
+    "salience": 0.25,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-record",
+    "kind": "work_item",
+    "name": "Customer Record",
+    "explanation": "No secondary coverage",
+    "badge": "Actual data",
+    "salience": 0.45,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "hypothesis",
+     "presentation": "evidence_record",
+     "artifacts": [
+      {
+       "ref": "evi-record",
+       "kind": "decision_record",
+       "title": "Customer record EHR-77392",
+       "boundObject": "ns-record",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-record"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 3,
+       "role": "condition"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-interview",
+    "kind": "work_item",
+    "name": "Interview",
+    "explanation": "Clinical ops lead",
+    "badge": "Quoted",
+    "salience": 0.25,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "evidence_record"
+    }
+   }
+  ],
+  "x": {
+   "label": "Sep 18",
+   "relationships": [
+    {
+     "id": "rel-assumes",
+     "from": "ns-workflow",
+     "to": "ns-assumption",
+     "kind": "depends-on",
+     "label": "Assumes"
+    },
+    {
+     "id": "rel-leads",
+     "from": "ns-assumption",
+     "to": "ns-record",
+     "kind": "produces",
+     "label": "Leads to"
+    },
+    {
+     "id": "rel-evidence-record",
+     "from": "ns-evidence",
+     "to": "ns-record",
+     "kind": "attests"
+    },
+    {
+     "id": "rel-impl-secondary",
+     "from": "ns-impl",
+     "to": "ns-secondary",
+     "kind": "depends-on"
+    },
+    {
+     "id": "rel-release-impl",
+     "from": "ns-release",
+     "to": "ns-impl",
+     "kind": "depends-on"
+    }
+   ]
+  }
+ },
+ {
+  "world_id": "world-northstar",
+  "case_id": "case-northstar",
+  "cursor": "1.0000000004",
+  "timestamp": "2026-09-18T16:30:00Z",
+  "summary": {
+   "headline": "Northstar claims pilot",
+   "phase": "Coverage gap confirmed",
+   "status_phrase": "Gap confirmed",
+   "progress_percent": 66.66666666666666
+  },
+  "available_actions": [],
+  "attention_focus": {
+   "primary_object_id": "ns-secondary"
+  },
+  "visible_objects": [
+   {
+    "id": "cat-ideas",
+    "kind": "stage",
+    "name": "Ideas",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": -201,
+     "y": -280,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-projects",
+    "kind": "stage",
+    "name": "Projects",
+    "badge": "Analyzing",
+    "salience": 0.9,
+    "spatial_layout": {
+     "x": 350,
+     "y": -224,
+     "z": 0,
+     "radius": 13
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "region",
+     "metric": "3 items"
+    }
+   },
+   {
+    "id": "cat-people",
+    "kind": "stage",
+    "name": "People",
+    "badge": "On track",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": 463,
+     "y": 5,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "metric": "5 items"
+    }
+   },
+   {
+    "id": "cat-insights",
+    "kind": "stage",
+    "name": "Insights",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": 240,
+     "y": 246,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region"
+    }
+   },
+   {
+    "id": "cat-tasks",
+    "kind": "stage",
+    "name": "Tasks",
+    "badge": "On track",
+    "salience": 0.55,
+    "spatial_layout": {
+     "x": -308,
+     "y": 179,
+     "z": 0,
+     "radius": 7,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-knowledge",
+    "kind": "stage",
+    "name": "Knowledge",
+    "badge": "In progress",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": -438,
+     "y": -59,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "northstar",
+    "kind": "work_item",
+    "name": "Northstar",
+    "explanation": "Implementation",
+    "badge": "1 needs you",
+    "salience": 0.95,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "case",
+     "residue": {
+      "label": "1 gap confirmed",
+      "tone": "attention"
+     },
+     "artifacts": [
+      {
+       "ref": "evi-case-timeline",
+       "kind": "decision_record",
+       "title": "Case timeline",
+       "boundObject": "northstar",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-case-timeline"
+      }
+     ]
+    }
+   },
+   {
+    "id": "platform",
+    "kind": "work_item",
+    "name": "Platform",
+    "explanation": "Runtime",
+    "badge": "Healthy",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "case"
+    }
+   },
+   {
+    "id": "gauntlet",
+    "kind": "work_item",
+    "name": "Gauntlet",
+    "explanation": "Executions",
+    "badge": "Running",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "metric": "2 running"
+    }
+   },
+   {
+    "id": "p-alexr",
+    "kind": "work_item",
+    "name": "Alex R.",
+    "explanation": "Engineer",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-maya",
+    "kind": "work_item",
+    "name": "Maya L.",
+    "explanation": "Clinical ops",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-sam",
+    "kind": "work_item",
+    "name": "Sam P.",
+    "explanation": "Owner",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "t-rollout",
+    "kind": "work_item",
+    "name": "Plan rollout",
+    "badge": "In progress",
+    "salience": 0.2,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-eligibility",
+    "kind": "work_item",
+    "name": "Eligibility rules",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-ehr",
+    "kind": "work_item",
+    "name": "EHR record API",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "i-cohort",
+    "kind": "work_item",
+    "name": "Cohort-based rollout",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-ideas",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "n-divergence",
+    "kind": "work_item",
+    "name": "Secondary coverage gap",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-insights",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-goal",
+    "kind": "stage",
+    "name": "Goal",
+    "explanation": "Claims pilot",
+    "badge": "On track",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -40,
+     "y": -270,
+     "z": 0,
+     "radius": 31
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "facet"
+    }
+   },
+   {
+    "id": "ns-workflow",
+    "kind": "stage",
+    "name": "Customer Workflow",
+    "explanation": "Acme Health",
+    "badge": "In progress",
+    "salience": 0.55,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -514,
+     "y": -147,
+     "z": 0,
+     "radius": 33
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 1,
+       "role": "expected",
+       "label": "Expected Workflow",
+       "explanation": "Standard process",
+       "badge": "As designed",
+       "tone": "progress"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-evidence",
+    "kind": "stage",
+    "name": "Evidence",
+    "badge": "Analyzing",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 405,
+     "y": -143,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "metric": "3 items",
+     "artifacts": [
+      {
+       "ref": "evi-rejections-chart",
+       "kind": "data_table",
+       "title": "Claim rejections by day",
+       "boundObject": "ns-evidence",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-rejections-chart"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-impl",
+    "kind": "stage",
+    "name": "Implementation",
+    "badge": "In progress",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 560,
+     "y": 91,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "metric": "5 tasks",
+     "artifacts": [
+      {
+       "ref": "evi-impl-graph",
+       "kind": "document",
+       "title": "Northstar dependency graph",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-impl-graph"
+      },
+      {
+       "ref": "evi-checks-table",
+       "kind": "test_report",
+       "title": "Nightly checks: coverage validation",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-checks-table"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-release",
+    "kind": "stage",
+    "name": "Release",
+    "explanation": "v0.2.0",
+    "badge": "Blocked",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -407,
+     "y": 210,
+     "z": 0,
+     "radius": 36
+    },
+    "actions": [
+     {
+      "id": "approve-rollout",
+      "label": "Approve release",
+      "intent": "APPROVE_HUMAN_TASK",
+      "consequential": true,
+      "requires_justification": true
+     }
+    ],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "decision_gate"
+    }
+   },
+   {
+    "id": "ns-secondary",
+    "kind": "stage",
+    "name": "Secondary Coverage",
+    "explanation": "Gap confirmed",
+    "badge": "Investigating",
+    "salience": 1,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 295,
+     "y": 240,
+     "z": 0,
+     "radius": 43
+    },
+    "actions": [],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 4,
+       "role": "missing",
+       "label": "Missing Secondary Coverage",
+       "explanation": "Eligibility validation skipped",
+       "badge": "Critical condition",
+       "tone": "critical"
+      }
+     },
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      },
+      {
+       "ref": "evi-coverage-trace",
+       "kind": "test_report",
+       "title": "Reality trace: secondary coverage",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-coverage-trace"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-assumption",
+    "kind": "work_item",
+    "name": "Implementation Assumption",
+    "explanation": "Secondary coverage sufficient",
+    "badge": "In code / config",
+    "salience": 0.45,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item",
+     "artifacts": [
+      {
+       "ref": "evi-assumption",
+       "kind": "document",
+       "title": "Initial assumption: primary-only scope",
+       "boundObject": "ns-assumption",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-assumption"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 2,
+       "role": "assumption",
+       "label": "Implementation Assumption",
+       "explanation": "Secondary coverage sufficient"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-claims-api",
+    "kind": "work_item",
+    "name": "Claims API",
+    "explanation": "Verified",
+    "badge": "Verified",
+    "salience": 0.3,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-session",
+    "kind": "work_item",
+    "name": "Session Migration",
+    "explanation": "Complete",
+    "badge": "Complete",
+    "salience": 0.25,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-record",
+    "kind": "work_item",
+    "name": "Customer Record",
+    "explanation": "No secondary coverage",
+    "badge": "Actual data",
+    "salience": 0.45,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "hypothesis",
+     "presentation": "evidence_record",
+     "artifacts": [
+      {
+       "ref": "evi-record",
+       "kind": "decision_record",
+       "title": "Customer record EHR-77392",
+       "boundObject": "ns-record",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-record"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 3,
+       "role": "condition"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-interview",
+    "kind": "work_item",
+    "name": "Interview",
+    "explanation": "Clinical ops lead",
+    "badge": "Quoted",
+    "salience": 0.25,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "evidence_record"
+    }
+   },
+   {
+    "id": "ns-observation",
+    "kind": "work_item",
+    "name": "Observation",
+    "explanation": "Front desk intake",
+    "badge": "Noted",
+    "salience": 0.25,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "evidence_record"
+    }
+   }
+  ],
+  "x": {
+   "label": "Sep 18",
+   "relationships": [
+    {
+     "id": "rel-assumes",
+     "from": "ns-workflow",
+     "to": "ns-assumption",
+     "kind": "depends-on",
+     "label": "Assumes"
+    },
+    {
+     "id": "rel-leads",
+     "from": "ns-assumption",
+     "to": "ns-record",
+     "kind": "produces",
+     "label": "Leads to"
+    },
+    {
+     "id": "rel-triggers",
+     "from": "ns-record",
+     "to": "ns-secondary",
+     "kind": "produces",
+     "label": "Triggers"
+    },
+    {
+     "id": "rel-evidence-record",
+     "from": "ns-evidence",
+     "to": "ns-record",
+     "kind": "attests"
+    },
+    {
+     "id": "rel-impl-secondary",
+     "from": "ns-impl",
+     "to": "ns-secondary",
+     "kind": "depends-on"
+    },
+    {
+     "id": "rel-release-impl",
+     "from": "ns-release",
+     "to": "ns-impl",
+     "kind": "depends-on"
+    }
+   ]
+  }
+ },
+ {
+  "world_id": "world-northstar",
+  "case_id": "case-northstar",
+  "cursor": "1.0000000005",
+  "timestamp": "2026-09-19T08:05:00Z",
+  "summary": {
+   "headline": "Northstar claims pilot",
+   "phase": "PR #491 opened",
+   "status_phrase": "Fix in progress",
+   "progress_percent": 83.33333333333334
+  },
+  "available_actions": [],
+  "attention_focus": {
+   "primary_object_id": "ns-secondary"
+  },
+  "visible_objects": [
+   {
+    "id": "cat-ideas",
+    "kind": "stage",
+    "name": "Ideas",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": -201,
+     "y": -280,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-projects",
+    "kind": "stage",
+    "name": "Projects",
+    "badge": "Analyzing",
+    "salience": 0.9,
+    "spatial_layout": {
+     "x": 350,
+     "y": -224,
+     "z": 0,
+     "radius": 13
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "region",
+     "metric": "3 items"
+    }
+   },
+   {
+    "id": "cat-people",
+    "kind": "stage",
+    "name": "People",
+    "badge": "On track",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": 463,
+     "y": 5,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "metric": "5 items"
+    }
+   },
+   {
+    "id": "cat-insights",
+    "kind": "stage",
+    "name": "Insights",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": 240,
+     "y": 246,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region"
+    }
+   },
+   {
+    "id": "cat-tasks",
+    "kind": "stage",
+    "name": "Tasks",
+    "badge": "On track",
+    "salience": 0.55,
+    "spatial_layout": {
+     "x": -308,
+     "y": 179,
+     "z": 0,
+     "radius": 7,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-knowledge",
+    "kind": "stage",
+    "name": "Knowledge",
+    "badge": "In progress",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": -438,
+     "y": -59,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "northstar",
+    "kind": "work_item",
+    "name": "Northstar",
+    "explanation": "Implementation",
+    "badge": "1 needs you",
+    "salience": 0.95,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "case",
+     "residue": {
+      "label": "1 issue needs review",
+      "tone": "critical"
+     },
+     "artifacts": [
+      {
+       "ref": "evi-case-timeline",
+       "kind": "decision_record",
+       "title": "Case timeline",
+       "boundObject": "northstar",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-case-timeline"
+      }
+     ]
+    }
+   },
+   {
+    "id": "platform",
+    "kind": "work_item",
+    "name": "Platform",
+    "explanation": "Runtime",
+    "badge": "Healthy",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "case"
+    }
+   },
+   {
+    "id": "gauntlet",
+    "kind": "work_item",
+    "name": "Gauntlet",
+    "explanation": "Executions",
+    "badge": "Running",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "metric": "2 running"
+    }
+   },
+   {
+    "id": "p-alexr",
+    "kind": "work_item",
+    "name": "Alex R.",
+    "explanation": "Engineer",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-maya",
+    "kind": "work_item",
+    "name": "Maya L.",
+    "explanation": "Clinical ops",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-sam",
+    "kind": "work_item",
+    "name": "Sam P.",
+    "explanation": "Owner",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "t-review",
+    "kind": "work_item",
+    "name": "Review PR #491",
+    "badge": "Needs you",
+    "salience": 0.4,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "t-rollout",
+    "kind": "work_item",
+    "name": "Plan rollout",
+    "badge": "In progress",
+    "salience": 0.2,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-eligibility",
+    "kind": "work_item",
+    "name": "Eligibility rules",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-ehr",
+    "kind": "work_item",
+    "name": "EHR record API",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "i-cohort",
+    "kind": "work_item",
+    "name": "Cohort-based rollout",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-ideas",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "n-divergence",
+    "kind": "work_item",
+    "name": "Secondary coverage gap",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-insights",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-goal",
+    "kind": "stage",
+    "name": "Goal",
+    "explanation": "Claims pilot",
+    "badge": "On track",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -40,
+     "y": -270,
+     "z": 0,
+     "radius": 31
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "facet"
+    }
+   },
+   {
+    "id": "ns-workflow",
+    "kind": "stage",
+    "name": "Customer Workflow",
+    "explanation": "Acme Health",
+    "badge": "In progress",
+    "salience": 0.55,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -514,
+     "y": -147,
+     "z": 0,
+     "radius": 33
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 1,
+       "role": "expected",
+       "label": "Expected Workflow",
+       "explanation": "Standard process",
+       "badge": "As designed",
+       "tone": "progress"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-evidence",
+    "kind": "stage",
+    "name": "Evidence",
+    "badge": "Analyzing",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 405,
+     "y": -143,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "metric": "3 items",
+     "artifacts": [
+      {
+       "ref": "evi-rejections-chart",
+       "kind": "data_table",
+       "title": "Claim rejections by day",
+       "boundObject": "ns-evidence",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-rejections-chart"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-impl",
+    "kind": "stage",
+    "name": "Implementation",
+    "badge": "In progress",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 560,
+     "y": 91,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "metric": "5 tasks",
+     "artifacts": [
+      {
+       "ref": "evi-impl-graph",
+       "kind": "document",
+       "title": "Northstar dependency graph",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-impl-graph"
+      },
+      {
+       "ref": "evi-checks-table",
+       "kind": "test_report",
+       "title": "Nightly checks: coverage validation",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-checks-table"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-release",
+    "kind": "stage",
+    "name": "Release",
+    "explanation": "v0.3.0",
+    "badge": "Staging",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -407,
+     "y": 210,
+     "z": 0,
+     "radius": 36
+    },
+    "actions": [
+     {
+      "id": "approve-release",
+      "label": "Approve release",
+      "intent": "APPROVE_HUMAN_TASK",
+      "consequential": true,
+      "variant": "PRIMARY"
+     },
+     {
+      "id": "request-changes",
+      "label": "Request changes",
+      "intent": "REJECT_HUMAN_TASK",
+      "consequential": true,
+      "variant": "SECONDARY"
+     },
+     {
+      "id": "escalate",
+      "label": "Escalate",
+      "intent": "ESCALATE_OR_OVERRIDE",
+      "consequential": true,
+      "variant": "GHOST",
+      "requires_justification": true
+     }
+    ],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "decision_gate",
+     "artifacts": [
+      {
+       "ref": "evi-release-log",
+       "kind": "document",
+       "title": "Release staging log",
+       "boundObject": "ns-release",
+       "currentLevel": "minimal",
+       "mediaType": "text/plain",
+       "sourceProvenance": "sxr:cas://evi-release-log"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-secondary",
+    "kind": "stage",
+    "name": "Secondary Coverage",
+    "explanation": "Eligibility validation",
+    "badge": "Needs attention",
+    "salience": 1,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 295,
+     "y": 240,
+     "z": 0,
+     "radius": 43
+    },
+    "actions": [
+     {
+      "id": "review-change",
+      "label": "Review change",
+      "intent": "OPEN_ARTIFACT",
+      "consequential": false
+     }
+    ],
+    "status": "FAILED",
+    "x": {
+     "tone": "critical",
+     "presentation": "facet",
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      },
+      {
+       "ref": "evi-coverage-trace",
+       "kind": "test_report",
+       "title": "Reality trace: secondary coverage",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-coverage-trace"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 4,
+       "role": "missing",
+       "label": "Missing Secondary Coverage",
+       "explanation": "Eligibility validation skipped",
+       "badge": "Critical condition",
+       "tone": "critical"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-assumption",
+    "kind": "work_item",
+    "name": "Implementation Assumption",
+    "explanation": "Secondary coverage sufficient",
+    "badge": "In code / config",
+    "salience": 0.45,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item",
+     "artifacts": [
+      {
+       "ref": "evi-assumption",
+       "kind": "document",
+       "title": "Initial assumption: primary-only scope",
+       "boundObject": "ns-assumption",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-assumption"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 2,
+       "role": "assumption",
+       "label": "Implementation Assumption",
+       "explanation": "Secondary coverage sufficient"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-claims-api",
+    "kind": "work_item",
+    "name": "Claims API",
+    "explanation": "Verified",
+    "badge": "Verified",
+    "salience": 0.3,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-session",
+    "kind": "work_item",
+    "name": "Session Migration",
+    "explanation": "Complete",
+    "badge": "Complete",
+    "salience": 0.25,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-record",
+    "kind": "work_item",
+    "name": "Customer Record",
+    "explanation": "No secondary coverage",
+    "badge": "Actual data",
+    "salience": 0.45,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "hypothesis",
+     "presentation": "evidence_record",
+     "artifacts": [
+      {
+       "ref": "evi-record",
+       "kind": "decision_record",
+       "title": "Customer record EHR-77392",
+       "boundObject": "ns-record",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-record"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 3,
+       "role": "condition"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-interview",
+    "kind": "work_item",
+    "name": "Interview",
+    "explanation": "Clinical ops lead",
+    "badge": "Quoted",
+    "salience": 0.25,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "evidence_record"
+    }
+   },
+   {
+    "id": "ns-observation",
+    "kind": "work_item",
+    "name": "Observation",
+    "explanation": "Front desk intake",
+    "badge": "Noted",
+    "salience": 0.25,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "evidence_record"
+    }
+   },
+   {
+    "id": "ns-pr491",
+    "kind": "work_item",
+    "name": "PR #491",
+    "explanation": "Coverage guard",
+    "badge": "Review",
+    "salience": 0.6,
+    "parent_id": "ns-secondary",
+    "actions": [
+     {
+      "id": "review-change",
+      "label": "Review change",
+      "intent": "OPEN_ARTIFACT",
+      "consequential": false,
+      "variant": "SECONDARY"
+     }
+    ],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "item",
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-pr491",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      }
+     ]
+    }
+   }
+  ],
+  "x": {
+   "label": "Sep 19",
+   "relationships": [
+    {
+     "id": "rel-assumes",
+     "from": "ns-workflow",
+     "to": "ns-assumption",
+     "kind": "depends-on",
+     "label": "Assumes"
+    },
+    {
+     "id": "rel-leads",
+     "from": "ns-assumption",
+     "to": "ns-record",
+     "kind": "produces",
+     "label": "Leads to"
+    },
+    {
+     "id": "rel-triggers",
+     "from": "ns-record",
+     "to": "ns-secondary",
+     "kind": "produces",
+     "label": "Triggers"
+    },
+    {
+     "id": "rel-evidence-record",
+     "from": "ns-evidence",
+     "to": "ns-record",
+     "kind": "attests"
+    },
+    {
+     "id": "rel-impl-secondary",
+     "from": "ns-impl",
+     "to": "ns-secondary",
+     "kind": "depends-on"
+    },
+    {
+     "id": "rel-release-impl",
+     "from": "ns-release",
+     "to": "ns-impl",
+     "kind": "depends-on"
+    }
+   ]
+  }
+ },
+ {
+  "world_id": "world-northstar",
+  "case_id": "case-northstar",
+  "cursor": "1.0000000006",
+  "timestamp": "2026-09-19T10:24:00Z",
+  "summary": {
+   "headline": "Northstar claims pilot",
+   "phase": "Latest",
+   "status_phrase": "Ready for approval",
+   "progress_percent": 100
+  },
+  "available_actions": [],
+  "attention_focus": {
+   "primary_object_id": "ns-secondary"
+  },
+  "visible_objects": [
+   {
+    "id": "cat-ideas",
+    "kind": "stage",
+    "name": "Ideas",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": -201,
+     "y": -280,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-projects",
+    "kind": "stage",
+    "name": "Projects",
+    "badge": "Analyzing",
+    "salience": 0.9,
+    "spatial_layout": {
+     "x": 350,
+     "y": -224,
+     "z": 0,
+     "radius": 13
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "region",
+     "metric": "3 items"
+    }
+   },
+   {
+    "id": "cat-people",
+    "kind": "stage",
+    "name": "People",
+    "badge": "On track",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": 463,
+     "y": 5,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "metric": "5 items"
+    }
+   },
+   {
+    "id": "cat-insights",
+    "kind": "stage",
+    "name": "Insights",
+    "badge": "On track",
+    "salience": 0.35,
+    "spatial_layout": {
+     "x": 240,
+     "y": 246,
+     "z": 0,
+     "radius": 6
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region"
+    }
+   },
+   {
+    "id": "cat-tasks",
+    "kind": "stage",
+    "name": "Tasks",
+    "badge": "On track",
+    "salience": 0.55,
+    "spatial_layout": {
+     "x": -308,
+     "y": 179,
+     "z": 0,
+     "radius": 7,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "cat-knowledge",
+    "kind": "stage",
+    "name": "Knowledge",
+    "badge": "In progress",
+    "salience": 0.4,
+    "spatial_layout": {
+     "x": -438,
+     "y": -59,
+     "z": 0,
+     "radius": 6,
+     "label_side": "left"
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "region",
+     "label_side": "left"
+    }
+   },
+   {
+    "id": "northstar",
+    "kind": "work_item",
+    "name": "Northstar",
+    "explanation": "Implementation",
+    "badge": "1 needs you",
+    "salience": 0.95,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "case",
+     "residue": {
+      "label": "1 issue needs review",
+      "tone": "critical"
+     },
+     "artifacts": [
+      {
+       "ref": "evi-case-timeline",
+       "kind": "decision_record",
+       "title": "Case timeline",
+       "boundObject": "northstar",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-case-timeline"
+      }
+     ]
+    }
+   },
+   {
+    "id": "platform",
+    "kind": "work_item",
+    "name": "Platform",
+    "explanation": "Runtime",
+    "badge": "Healthy",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "case"
+    }
+   },
+   {
+    "id": "gauntlet",
+    "kind": "work_item",
+    "name": "Gauntlet",
+    "explanation": "Executions",
+    "badge": "Running",
+    "salience": 0.3,
+    "parent_id": "cat-projects",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "case",
+     "metric": "2 running"
+    }
+   },
+   {
+    "id": "p-alexr",
+    "kind": "work_item",
+    "name": "Alex R.",
+    "explanation": "Engineer",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-maya",
+    "kind": "work_item",
+    "name": "Maya L.",
+    "explanation": "Clinical ops",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "p-sam",
+    "kind": "work_item",
+    "name": "Sam P.",
+    "explanation": "Owner",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-people",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "person"
+    }
+   },
+   {
+    "id": "t-review",
+    "kind": "work_item",
+    "name": "Review PR #491",
+    "badge": "Needs you",
+    "salience": 0.4,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "t-rollout",
+    "kind": "work_item",
+    "name": "Plan rollout",
+    "badge": "In progress",
+    "salience": 0.2,
+    "parent_id": "cat-tasks",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-eligibility",
+    "kind": "work_item",
+    "name": "Eligibility rules",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "k-ehr",
+    "kind": "work_item",
+    "name": "EHR record API",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-knowledge",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "i-cohort",
+    "kind": "work_item",
+    "name": "Cohort-based rollout",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-ideas",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "n-divergence",
+    "kind": "work_item",
+    "name": "Secondary coverage gap",
+    "badge": "",
+    "salience": 0.2,
+    "parent_id": "cat-insights",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "none",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-goal",
+    "kind": "stage",
+    "name": "Goal",
+    "explanation": "Claims pilot",
+    "badge": "On track",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -40,
+     "y": -270,
+     "z": 0,
+     "radius": 31
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "facet"
+    }
+   },
+   {
+    "id": "ns-workflow",
+    "kind": "stage",
+    "name": "Customer Workflow",
+    "explanation": "Acme Health",
+    "badge": "In progress",
+    "salience": 0.55,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -514,
+     "y": -147,
+     "z": 0,
+     "radius": 33
+    },
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "facet",
+     "representations": {
+      "causal": {
+       "order": 1,
+       "role": "expected",
+       "label": "Expected Workflow",
+       "explanation": "Standard process",
+       "badge": "As designed",
+       "tone": "progress"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-evidence",
+    "kind": "stage",
+    "name": "Evidence",
+    "badge": "Analyzing",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 405,
+     "y": -143,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "facet",
+     "metric": "3 items",
+     "artifacts": [
+      {
+       "ref": "evi-rejections-chart",
+       "kind": "data_table",
+       "title": "Claim rejections by day",
+       "boundObject": "ns-evidence",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-rejections-chart"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-impl",
+    "kind": "stage",
+    "name": "Implementation",
+    "badge": "On track",
+    "salience": 0.6,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 560,
+     "y": 91,
+     "z": 0,
+     "radius": 35
+    },
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "facet",
+     "metric": "5 tasks",
+     "artifacts": [
+      {
+       "ref": "evi-impl-graph",
+       "kind": "document",
+       "title": "Northstar dependency graph",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-impl-graph"
+      },
+      {
+       "ref": "evi-checks-table",
+       "kind": "test_report",
+       "title": "Nightly checks: coverage validation",
+       "boundObject": "ns-impl",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-checks-table"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-release",
+    "kind": "stage",
+    "name": "Release",
+    "explanation": "v0.3.0",
+    "badge": "In progress",
+    "salience": 0.5,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": -407,
+     "y": 210,
+     "z": 0,
+     "radius": 36
+    },
+    "actions": [
+     {
+      "id": "approve-release",
+      "label": "Approve release",
+      "intent": "APPROVE_HUMAN_TASK",
+      "consequential": true,
+      "variant": "PRIMARY"
+     },
+     {
+      "id": "request-changes",
+      "label": "Request changes",
+      "intent": "REJECT_HUMAN_TASK",
+      "consequential": true,
+      "variant": "SECONDARY"
+     },
+     {
+      "id": "escalate",
+      "label": "Escalate",
+      "intent": "ESCALATE_OR_OVERRIDE",
+      "consequential": true,
+      "variant": "GHOST",
+      "requires_justification": true
+     }
+    ],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "decision_gate",
+     "artifacts": [
+      {
+       "ref": "evi-release-log",
+       "kind": "document",
+       "title": "Release staging log",
+       "boundObject": "ns-release",
+       "currentLevel": "minimal",
+       "mediaType": "text/plain",
+       "sourceProvenance": "sxr:cas://evi-release-log"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-secondary",
+    "kind": "stage",
+    "name": "Secondary Coverage",
+    "explanation": "Eligibility validation",
+    "badge": "Needs attention",
+    "salience": 1,
+    "parent_id": "northstar",
+    "spatial_layout": {
+     "x": 295,
+     "y": 240,
+     "z": 0,
+     "radius": 43
+    },
+    "actions": [
+     {
+      "id": "review-change",
+      "label": "Review change",
+      "intent": "OPEN_ARTIFACT",
+      "consequential": false
+     }
+    ],
+    "status": "FAILED",
+    "x": {
+     "tone": "critical",
+     "presentation": "facet",
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      },
+      {
+       "ref": "evi-coverage-trace",
+       "kind": "test_report",
+       "title": "Reality trace: secondary coverage",
+       "boundObject": "ns-secondary",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-coverage-trace"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 4,
+       "role": "missing",
+       "label": "Missing Secondary Coverage",
+       "explanation": "Eligibility validation skipped",
+       "badge": "Critical condition",
+       "tone": "critical"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-assumption",
+    "kind": "work_item",
+    "name": "Implementation Assumption",
+    "explanation": "Secondary coverage sufficient",
+    "badge": "In code / config",
+    "salience": 0.45,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "IN_PROGRESS",
+    "x": {
+     "tone": "progress",
+     "presentation": "item",
+     "artifacts": [
+      {
+       "ref": "evi-assumption",
+       "kind": "document",
+       "title": "Initial assumption: primary-only scope",
+       "boundObject": "ns-assumption",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-assumption"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 2,
+       "role": "assumption",
+       "label": "Implementation Assumption",
+       "explanation": "Secondary coverage sufficient"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-claims-api",
+    "kind": "work_item",
+    "name": "Claims API",
+    "explanation": "Verified",
+    "badge": "Verified",
+    "salience": 0.3,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-session",
+    "kind": "work_item",
+    "name": "Session Migration",
+    "explanation": "Complete",
+    "badge": "Complete",
+    "salience": 0.25,
+    "parent_id": "ns-impl",
+    "actions": [],
+    "status": "COMPLETED",
+    "x": {
+     "tone": "ok",
+     "presentation": "item"
+    }
+   },
+   {
+    "id": "ns-record",
+    "kind": "work_item",
+    "name": "Customer Record",
+    "explanation": "No secondary coverage",
+    "badge": "Actual data",
+    "salience": 0.45,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "ACTIVE",
+    "x": {
+     "tone": "hypothesis",
+     "presentation": "evidence_record",
+     "artifacts": [
+      {
+       "ref": "evi-record",
+       "kind": "decision_record",
+       "title": "Customer record EHR-77392",
+       "boundObject": "ns-record",
+       "currentLevel": "minimal",
+       "mediaType": "text/markdown",
+       "sourceProvenance": "sxr:cas://evi-record"
+      }
+     ],
+     "representations": {
+      "causal": {
+       "order": 3,
+       "role": "condition"
+      }
+     }
+    }
+   },
+   {
+    "id": "ns-interview",
+    "kind": "work_item",
+    "name": "Interview",
+    "explanation": "Clinical ops lead",
+    "badge": "Quoted",
+    "salience": 0.25,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "evidence_record"
+    }
+   },
+   {
+    "id": "ns-observation",
+    "kind": "work_item",
+    "name": "Observation",
+    "explanation": "Front desk intake",
+    "badge": "Noted",
+    "salience": 0.25,
+    "parent_id": "ns-evidence",
+    "actions": [],
+    "status": "WAITING",
+    "x": {
+     "tone": "muted",
+     "presentation": "evidence_record"
+    }
+   },
+   {
+    "id": "ns-pr491",
+    "kind": "work_item",
+    "name": "PR #491",
+    "explanation": "Coverage guard",
+    "badge": "Review",
+    "salience": 0.6,
+    "parent_id": "ns-secondary",
+    "actions": [
+     {
+      "id": "review-change",
+      "label": "Review change",
+      "intent": "OPEN_ARTIFACT",
+      "consequential": false,
+      "variant": "SECONDARY"
+     }
+    ],
+    "status": "ACTION_REQUIRED",
+    "x": {
+     "tone": "attention",
+     "presentation": "item",
+     "artifacts": [
+      {
+       "ref": "evi-diff-491",
+       "kind": "code_diff",
+       "title": "PR #491 \u00b7 Add secondary coverage guard",
+       "boundObject": "ns-pr491",
+       "currentLevel": "minimal",
+       "mediaType": "text/x-diff",
+       "sourceProvenance": "sxr:cas://evi-diff-491"
+      }
+     ]
+    }
+   },
+   {
+    "id": "ns-failure",
+    "kind": "work_item",
+    "name": "Observed Failure",
+    "explanation": "Claim rejected",
+    "badge": "Actual outcome",
+    "salience": 0.7,
+    "parent_id": "ns-release",
+    "actions": [],
+    "status": "FAILED",
+    "x": {
+     "tone": "critical",
+     "presentation": "execution_trace",
+     "representations": {
+      "causal": {
+       "order": 5,
+       "role": "observed"
+      }
+     },
+     "artifacts": [
+      {
+       "ref": "evi-coverage-trace",
+       "kind": "test_report",
+       "title": "Reality trace: secondary coverage",
+       "boundObject": "ns-failure",
+       "currentLevel": "minimal",
+       "mediaType": "application/json",
+       "sourceProvenance": "sxr:cas://evi-coverage-trace"
+      }
+     ]
+    }
+   }
+  ],
+  "x": {
+   "label": "Now",
+   "relationships": [
+    {
+     "id": "rel-assumes",
+     "from": "ns-workflow",
+     "to": "ns-assumption",
+     "kind": "depends-on",
+     "label": "Assumes"
+    },
+    {
+     "id": "rel-leads",
+     "from": "ns-assumption",
+     "to": "ns-record",
+     "kind": "produces",
+     "label": "Leads to"
+    },
+    {
+     "id": "rel-triggers",
+     "from": "ns-record",
+     "to": "ns-secondary",
+     "kind": "produces",
+     "label": "Triggers"
+    },
+    {
+     "id": "rel-results",
+     "from": "ns-secondary",
+     "to": "ns-failure",
+     "kind": "produces",
+     "label": "Results in"
+    },
+    {
+     "id": "rel-evidence-record",
+     "from": "ns-evidence",
+     "to": "ns-record",
+     "kind": "attests"
+    },
+    {
+     "id": "rel-impl-secondary",
+     "from": "ns-impl",
+     "to": "ns-secondary",
+     "kind": "depends-on"
+    },
+    {
+     "id": "rel-release-impl",
+     "from": "ns-release",
+     "to": "ns-impl",
+     "kind": "depends-on"
+    }
+   ]
+  }
+ }
+]

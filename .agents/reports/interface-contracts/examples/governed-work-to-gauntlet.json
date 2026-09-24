@@ -1,0 +1,70 @@
+{
+  "description": "Complete 4-edge convergence data flow connecting SEA-Forge Governed Work to Gauntlet Execution",
+  "opportunity": {
+    "opportunity_id": "opp-pi-stage_impl-004-9a8b7c6d",
+    "case_id": "case-auth-v2-001",
+    "plan_item_id": "pi-stage_impl-004",
+    "required_role": "developer",
+    "contract_slug": "run-ed25519-bridge",
+    "status": "CLAIMED",
+    "created_at": "2026-09-20T10:14:00Z"
+  },
+  "lease": {
+    "lease_id": "lease-opp-pi-stage_impl-004-9a8b7c6d-f1e2d3c4",
+    "opportunity_id": "opp-pi-stage_impl-004-9a8b7c6d",
+    "worker_id": "worker-node-04",
+    "role": "developer",
+    "expires_at": "2026-09-20T10:19:00Z",
+    "nonce": "nonce-77291038"
+  },
+  "authorized_invocation_edge_e5a": {
+    "invocation_id": "inv-lease-opp-pi-7b8c9d0e1f2a3b4c",
+    "case_id": "case-auth-v2-001",
+    "plan_item_id": "pi-stage_impl-004",
+    "lease_id": "lease-opp-pi-stage_impl-004-9a8b7c6d-f1e2d3c4",
+    "max_duration_seconds": 600,
+    "sandbox_profile": "bounded_container_net_deny",
+    "permitted_capabilities": ["fs_read", "fs_write_workspace", "cargo_test"],
+    "signature": "ed25519:3a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d"
+  },
+  "gauntlet_run": {
+    "run_id": "run-ed25519-bridge-20260920101500",
+    "units": [
+      { "unit_id": "unit-orchestrator-01", "role": "orchestrator", "status": "COMPLETED" },
+      { "unit_id": "unit-builder-02", "role": "builder", "status": "COMPLETED" },
+      { "unit_id": "unit-critic-03", "role": "critic", "status": "COMPLETED" },
+      { "unit_id": "unit-verifier-04", "role": "verifier", "status": "COMPLETED" }
+    ],
+    "ruler_digest": "sha256:4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c"
+  },
+  "execution_observation_edge_e5b": {
+    "run_id": "run-ed25519-bridge-20260920101500",
+    "invocation_id": "inv-lease-opp-pi-7b8c9d0e1f2a3b4c",
+    "exit_code": 0,
+    "status": "SUCCEEDED",
+    "duration_ms": 34200,
+    "artifacts": [
+      {
+        "name": "cargo_test_report.json",
+        "digest": "sha256:5a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b",
+        "size_bytes": 1420
+      }
+    ],
+    "reality_trace": {
+      "question_id": "q-ed25519-sig-valid",
+      "evidence_id": "evi-5a1b2c3d4e5f6a7b",
+      "discrepancy_count": 0,
+      "attribution_locus": null
+    }
+  },
+  "operational_settlement_edge_e6": {
+    "settlement_id": "set-case-auth-v2-001-4b5c6d7e8f9a",
+    "case_id": "case-auth-v2-001",
+    "plan_item_id": "pi-stage_impl-004",
+    "invocation_id": "inv-lease-opp-pi-7b8c9d0e1f2a3b4c",
+    "decision": "ACCEPTED",
+    "evidence_id": "evi-5a1b2c3d4e5f6a7b",
+    "settled_at": "2026-09-20T10:15:35Z",
+    "consequence_summary": "Ed25519 test suite passed with 0 discrepancies against frozen answer key. Plan item transitioned to COMPLETED. Stage gate evaluated."
+  }
+}

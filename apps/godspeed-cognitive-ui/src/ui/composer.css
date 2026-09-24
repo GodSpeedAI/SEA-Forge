@@ -1,0 +1,155 @@
+.composer-wrapper {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  transition: opacity 500ms ease;
+}
+
+.composer-wrapper[data-visible='false'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.composer-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-bottom: 12px;
+  font-family: var(--font-sans);
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 57px;
+  border-radius: 29px;
+  background: var(--composer-bg);
+  border: 1px solid var(--composer-border);
+  box-shadow: var(--composer-shadow);
+  backdrop-filter: blur(10px);
+  padding: 0 16px;
+  transition: width 220ms ease;
+}
+
+.composer-wrapper[data-variant='home'] {
+  bottom: 92px;
+}
+.composer-wrapper[data-variant='focused'] {
+  bottom: 56px;
+}
+.composer[data-variant='home'] {
+  width: 655px;
+}
+.composer[data-variant='focused'] {
+  width: 590px;
+}
+
+@media (max-width: 800px) {
+  .composer {
+    width: calc(100vw - 32px) !important;
+    max-width: 92vw;
+  }
+}
+
+.composer:focus-within {
+  width: calc(655px + 24px);
+}
+
+.composer[data-variant='focused']:focus-within {
+  width: calc(590px + 24px);
+}
+
+.composer-icon-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+
+.composer-icon-left svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.composer-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+.composer-input::placeholder {
+  color: var(--ink-3);
+}
+
+.composer-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.composer-icon-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+
+.composer-icon-right svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.composer-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 150ms ease;
+}
+
+:root[data-theme='dark'] .composer-submit-button {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.composer-submit-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme='dark'] .composer-submit-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.composer-submit-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+  color: var(--ink);
+}

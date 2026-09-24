@@ -1,0 +1,31 @@
+{
+  "version": "1",
+  "cell_root": ".godspeed/cell",
+  "evidence_root": ".godspeed/evidence",
+  "capabilities": [
+    {
+      "name": "authority",
+      "kind": "authority",
+      "required": false,
+      "endpoint": "fixture:in-process"
+    },
+    {
+      "name": "execution",
+      "kind": "execution",
+      "required": false,
+      "endpoint": "fixture:in-process"
+    },
+    {
+      "name": "repository",
+      "kind": "repository",
+      "required": false,
+      "endpoint": "fixture:in-process"
+    },
+    {
+      "name": "artifact",
+      "kind": "artifact",
+      "required": false,
+      "endpoint": "fixture:in-process"
+    }
+  ]
+}

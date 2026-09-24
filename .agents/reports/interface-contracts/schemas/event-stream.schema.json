@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/schemas/event-stream.schema.json",
+  "title": "EventStreamEnvelope",
+  "description": "SSE Event Stream Envelope schemas for real-time Cognitive Environment updates.",
+  "type": "object",
+  "required": ["event_type", "cursor", "timestamp", "payload"],
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "snapshot",
+        "patch",
+        "execution_progress",
+        "settlement_recorded",
+        "lease_expired",
+        "resync_required",
+        "heartbeat"
+      ]
+    },
+    "cursor": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]{10}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific typed data payload."
+    }
+  },
+  "definitions": {
+    "ExecutionProgressPayload": {
+      "type": "object",
+      "required": ["run_id", "phase", "progress_percent", "log_line"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "phase": {
+          "type": "string",
+          "enum": ["orchestrator", "builder", "critic", "verifier", "settling"]
+        },
+        "progress_percent": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "log_line": { "type": "string" }
+      }
+    },
+    "ResyncRequiredPayload": {
+      "type": "object",
+      "required": ["requested_cursor", "oldest_available_cursor", "reason"],
+      "properties": {
+        "requested_cursor": { "type": "string" },
+        "oldest_available_cursor": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

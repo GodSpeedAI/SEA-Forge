@@ -1,184 +1,244 @@
-import { useState, useEffect } from "react";
+// AppShell — the spatial application shell.
+//
+// Root composition (task §5):
+//
+//   AppShell
+//   ├── CoreViewport   (persistent; mounted once, never remounts on focus/surface change)
+//   ├── SpatialSurface (route content framed as Surface/Object/Artifact)
+//   ├── Composer       (persistent, context-bound)
+//   └── transient/contextual overlays (identity, readout, hints, evidence, alerts)
+//
+// What was removed: the page-based SaaS chrome (Sidebar, GlobalHeader,
+// JourneyRibbon, mockup fidelity kit). What was retained: every underlying
+// capability and integration contract — guards, hooks/ports, pages (now
+// composed as surfaces), the evidence drawer, connection state, and the cell
+// availability alert.
+
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import styles from "./AppShell.module.css";
-import { GlobalHeader } from "./GlobalHeader";
-import { Sidebar } from "./Sidebar";
-import { JourneyRibbon } from "./JourneyRibbon";
+import { CoreViewport } from "../core/CoreViewport";
+import type { CoreRenderer } from "../core/CoreRenderer";
+import { DEFAULT_VISUAL_PARAMS, type CoreVisualParams } from "../core/CoreVisualState";
+import { ContextIdentity } from "../core/chrome/ContextIdentity";
+import { ContextReadout } from "../core/chrome/ContextReadout";
+import { InteractionHints } from "../core/chrome/InteractionHints";
+import { SurfaceRail } from "./SurfaceRail";
+import { Composer } from "../composer/Composer";
+import { CoreTuningPanel } from "../dev/CoreTuningPanel";
 import { EvidenceDrawer, type EvidenceRecord } from "@sea-forge/ui-components";
 import { EvidenceContextProvider } from "./EvidenceContext";
-import { OPERATE_ROUTE_BY_PATH } from "../pages/operateRoutes";
+import { focusController, type FocusTarget } from "../spatial/focus/FocusController";
+import { zoomController } from "../spatial/zoom/ZoomController";
+import { projectAffordances } from "../projections/AffordanceProjection";
+import {
+  activityFromPendingWork,
+  projectCoreVisual,
+} from "../projections/CoreVisualProjection";
 import { useIdentity } from "../hooks/useIdentity";
 import { useGuardContext } from "../guards/useGuardContext";
 import { useApprovals } from "../hooks/useApprovals";
+import { useCaseList } from "../hooks/useCases";
 import { useServerContract } from "../hooks/useServerContract";
 import { describeConnection } from "./connectionState";
+import styles from "./AppShell.module.css";
 
 export interface AppShellProps {
   children: React.ReactNode;
-  currentJourneyStep?: string;
-  guardFailed?: boolean;
 }
 
-interface ShellRouteContext {
-  label: string;
-  journeyStep: string;
-  reason: string;
+const SURFACE_BY_PATH: Array<{ prefix: string; id: string }> = [
+  { prefix: "/cases/new", id: "case-design" },
+  { prefix: "/cases", id: "case" },
+  { prefix: "/thoth", id: "semantic-beat" },
+  { prefix: "/artifacts", id: "artifacts" },
+  { prefix: "/operations", id: "temporal" },
+  { prefix: "/evidence", id: "causal" },
+  { prefix: "/inbox", id: "judgment" },
+  { prefix: "/delegate", id: "execution" },
+  { prefix: "/runs", id: "temporal" },
+];
+
+function surfaceIdFor(pathname: string): string {
+  if (pathname === "/") return "home";
+  for (const { prefix, id } of SURFACE_BY_PATH) {
+    if (pathname.startsWith(prefix)) return id;
+  }
+  return "home";
 }
 
-const ROUTE_CONTEXT: Record<string, ShellRouteContext> = {
-  "/readiness": {
-    label: "readiness",
-    journeyStep: "Readiness",
-    reason:
-      "External delegation needs a verified endpoint and an authority boundary before the path becomes spendable.",
-  },
-  ...Object.fromEntries(
-    Object.entries(OPERATE_ROUTE_BY_PATH).map(([path, route]) => [
-      path,
-      {
-        label: route.shellLabel,
-        journeyStep: route.journeyStep,
-        reason: route.reason,
-      },
-    ]),
-  ),
-};
+function focusLabel(target: FocusTarget): string {
+  if (target.kind === "object") return target.objectId;
+  if (target.kind === "anchor") return "anchor";
+  return "CORE";
+}
 
-export function AppShell({ children, currentJourneyStep }: AppShellProps) {
+export function AppShell({ children }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  // The governance context bar reads the same sources every surface does, so
-  // the header can never disagree with the page under it.
-  const { identity, cellId, cellRoot, supervision, selectActor } = useIdentity();
-  const { integrityStatus } = useGuardContext();
+  const surfaceId = surfaceIdFor(location.pathname);
+
+  // Same governed sources every surface reads; the chrome can never disagree
+  // with the content under it.
+  const { supervision } = useIdentity();
   const approvals = useApprovals();
+  const cases = useCaseList();
   const contract = useServerContract();
   const connection = describeConnection(supervision, contract);
-  const routeContext =
-    ROUTE_CONTEXT[location.pathname === "/" ? "/readiness" : location.pathname] ??
-    ROUTE_CONTEXT["/readiness"];
-  // `undefined` unless the inbox was actually read. An unread inbox, an
-  // unreadable journal, and an empty queue are three different things,
-  // and only the third is "0 approvals". Shared by header and sidebar
-  // so the badge can never disagree with the bar.
+
   const inboxCount =
     approvals.isLoading || approvals.error || approvals.unreadable
       ? undefined
       : approvals.approvals.length;
+
+  const [renderer, setRenderer] = useState<CoreRenderer | null>(null);
+  const [focus, setFocus] = useState<FocusTarget>(focusController.current);
+  const [zoom, setZoom] = useState(zoomController.current);
+  const [tuning, setTuning] = useState<CoreVisualParams>({ ...DEFAULT_VISUAL_PARAMS });
+  const [tuningActive, setTuningActive] = useState(false);
+  const [fps, setFps] = useState<number | null>(null);
   const [isEvidenceOpen, setIsEvidenceOpen] = useState(true);
-  // No evidence until a surface hands over a real record.
-  //
-  // This used to be seeded with a written-in `readiness_evaluation_summary`
-  // whose payload was the object literal above it, re-synthesized on every
-  // navigation. It rendered in the evidence drawer, beside real records, with
-  // the same affordances — a claim about the cell sourced from this file. The
-  // drawer already renders an honest empty state, which is the correct thing to
-  // show when nothing has been inspected.
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord | undefined>(
     undefined,
   );
 
+  useEffect(() => focusController.subscribe(setFocus), []);
+  useEffect(() => zoomController.subscribe(setZoom), []);
+
+  // FocusController owns semantic intent; the renderer executes visual
+  // intent. Returning to CORE restores the canonical Home framing.
+  useEffect(() => {
+    if (!renderer) return;
+    renderer.setFocus(focusController.toCoreFocus());
+    if (focusController.isHome()) renderer.setCameraIntent({ returnHome: true });
+  }, [renderer, focus]);
+
+  useEffect(() => {
+    renderer?.setZoom(zoom);
+  }, [renderer, zoom]);
+
+  const visualState = useMemo(() => {
+    const activity = activityFromPendingWork({
+      pendingApprovals: inboxCount ?? null,
+      unreadableCases: cases.error ? null : cases.unreadable.length,
+    });
+    const intent = projectCoreVisual({
+      activity,
+      focusDisplaced: focus.kind !== "core",
+    });
+    return {
+      params: tuningActive ? tuning : intent.params,
+      focus: focusController.toCoreFocus(),
+      zoom,
+      activity: intent.activity,
+    };
+  }, [inboxCount, cases.error, cases.unreadable.length, tuning, tuningActive, focus, zoom]);
+
+  const affordances = useMemo(
+    () =>
+      projectAffordances({
+        surfaceId,
+        focusedObjectId: focus.kind === "object" ? focus.objectId : null,
+        inboxCount,
+        connectionReady: connection.ready,
+      }),
+    [surfaceId, focus, inboxCount, connection.ready],
+  );
+
   // Changing surface clears the previous surface's evidence rather than
-  // carrying it over, which would attribute one page's record to another.
+  // carrying it over, which would attribute one surface's record to another.
   useEffect(() => {
     setSelectedEvidence(undefined);
   }, [location.pathname]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Ignore if input/textarea is active
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      if (
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+      ) {
         return;
       }
-
       if (event.key === "r" || event.key === "R") {
         event.preventDefault();
-        navigate({ to: "/readiness" });
-      } else if (event.key === "/") {
-        event.preventDefault();
-        const searchBtn = document.getElementById("searchButton");
-        searchBtn?.focus();
+        void navigate({ to: "/readiness" });
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [navigate]);
 
+  const { integrityStatus } = useGuardContext();
+
   return (
-    <div
-      className={`${styles.appShell} app-shell ${!isEvidenceOpen ? `${styles.drawerClosed} drawer-closed` : ""}`}
-      data-od-id="application-shell"
-    >
+    <div className={styles.appShell} data-testid="application-shell">
       <a className={styles.skipLink} href="#main-content">
         Skip to governed focus
       </a>
 
-      {/*
-        A window with no kernel behind it must say so once, loudly, rather than
-        letting every surface report its own call failure. `role="alert"` because
-        nothing in the application will work until this is resolved, and the
-        message carries the cell root so the operator knows which cell failed.
-      */}
+      <CoreViewport
+        visualState={visualState}
+        onRendererReady={setRenderer}
+        onFps={setFps}
+      />
+
       {supervision?.state === "unavailable" && (
-        <div className={styles.cellAlert} role="alert" data-od-id="cell-unavailable">
+        <div className={styles.cellAlert} role="alert" data-testid="cell-unavailable">
           <strong>No cell is running.</strong> {supervision.message}
-          {cellRoot ? <span className="machine-value"> ({cellRoot})</span> : null}
         </div>
       )}
 
-      <GlobalHeader
-        actorName={identity?.actor?.actorId}
-        roleName={identity?.actor?.role}
-        availableActors={identity?.available.flatMap((actor) =>
-          actor.roles.slice(0, 1).map((role) => ({ actorId: actor.actor_id, role })),
-        )}
-        onSelectActor={selectActor}
-        cellName={cellId}
-        integrityStatus={integrityStatus}
-        inboxCount={inboxCount}
-        onOpenInbox={() => navigate({ to: "/inbox" })}
-        onToggleEvidence={() => setIsEvidenceOpen((prev) => !prev)}
+      <ContextIdentity />
+      <ContextReadout
+        focus={focusLabel(focus)}
+        surface={surfaceId}
+        settlement={integrityStatus ?? (connection.ready ? "connected" : "unknown")}
+        activity={visualState.activity >= 0.75 ? "elevated" : "nominal"}
       />
+      <InteractionHints />
 
-      <Sidebar inboxCount={inboxCount} />
+      <SurfaceRail surfaceId={surfaceId} inboxCount={inboxCount} />
+      <Composer surfaceId={surfaceId} affordances={affordances} />
 
-      <div className={`${styles.mainWorkspace} main-workspace`} data-od-id="readiness-workspace">
-        <JourneyRibbon
-          currentStep={currentJourneyStep ?? routeContext.journeyStep}
-        />
-        <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
-          <EvidenceContextProvider
-            value={{
-              inspectEvidence: (evidence) => {
-                setSelectedEvidence(evidence);
-                setIsEvidenceOpen(true);
-              },
-            }}
-          >
-            {children}
-          </EvidenceContextProvider>
-        </main>
-      </div>
+      <main id="main-content" tabIndex={-1} className={styles.surfaceLayer}>
+        <EvidenceContextProvider
+          value={{
+            inspectEvidence: (evidence) => {
+              setSelectedEvidence(evidence);
+              setIsEvidenceOpen(true);
+            },
+          }}
+        >
+          {children}
+        </EvidenceContextProvider>
+      </main>
 
-      <footer
-        className={`${styles.connectionBar} connection-bar`}
-        data-od-id="connection-state-bar"
-      >
+      <footer className={styles.connectionBar} data-testid="connection-state-bar">
         <span>
-          <span className={`state-dot ${connection.ready ? "state-dot--ready" : ""}`} />
+          <span
+            className={styles.stateDot}
+            data-ready={connection.ready ? "true" : "false"}
+          />
           {connection.label}
         </span>
-        <span className="machine-value">Keyboard: R readiness</span>
       </footer>
 
       <EvidenceDrawer
         isOpen={isEvidenceOpen}
         onClose={() => setIsEvidenceOpen(false)}
         evidence={selectedEvidence}
-        className="evidence-drawer"
       />
+
+      {import.meta.env.DEV ? (
+        <CoreTuningPanel
+          params={tuning}
+          fps={fps}
+          onChange={(params) => {
+            setTuning(params);
+            setTuningActive(true);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

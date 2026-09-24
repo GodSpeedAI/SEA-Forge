@@ -1,21 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-/**
- * The T03 host is a small fixture-backed surface served on a fixed, documented port so the
- * `casework-ui-up` / `-down` / `-status` recipes can manage it deterministically. strictPort keeps
- * "the URL we print" and "the URL we serve" the same thing.
- */
+// Fixed port so the `casework-ui-up` / `-down` / `-status` recipes can manage the dev server.
+// /api is proxied to the Go casework service (the UI's only backend) so the browser stays same-origin.
+const api = { '/api': { target: 'http://127.0.0.1:4179', changeOrigin: false } }
+
 export default defineConfig({
   plugins: [react()],
-  server: {
-    host: '127.0.0.1',
-    port: 4178,
-    strictPort: true,
-  },
-  preview: {
-    host: '127.0.0.1',
-    port: 4178,
-    strictPort: true,
-  },
+  server: { host: '127.0.0.1', port: 4178, strictPort: true, proxy: api },
+  preview: { host: '127.0.0.1', port: 4178, strictPort: true, proxy: api },
 })

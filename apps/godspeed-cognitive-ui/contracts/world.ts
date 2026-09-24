@@ -10,6 +10,13 @@
 
 export type ObjectId = string
 
+/**
+ * Representational resolution bands. The renderer never decides what is visible from geometry alone:
+ * the core maps (focus, zoom) to the set of objects in the current representation, so zooming changes
+ * WHAT is represented, not merely how large it is drawn.
+ */
+export type ZoomLevel = 'system' | 'local' | 'detail'
+
 export interface WorldObject {
   readonly id: ObjectId
   /** Stable, application-owned kind used by the grammar (surface/object/relationship). */
@@ -19,6 +26,15 @@ export interface WorldObject {
   readonly position: { x: number; y: number; depth: number }
   /** Relevance in [0,1] as computed by the projection, never by the renderer. */
   readonly salience: number
+  /**
+   * Optional parent: an object with a parent enters the representation only when the parent (or one
+   * of its ancestors) is focused and the zoom resolves deeper. This is the semantic-zoom seam.
+   */
+  readonly parentId?: ObjectId
+  /** Ordinary-language state line supplied by the projection, never backend vocabulary. */
+  readonly note?: string
+  /** Projection attention hint. Absent means quiet; the renderer must not invent importance. */
+  readonly attention?: 'notable' | 'requires-judgment'
 }
 
 export interface WorldRelationship {
@@ -42,9 +58,17 @@ export interface WorldSnapshot {
   readonly surfaces: readonly WorldSurface[]
   readonly objects: readonly WorldObject[]
   readonly relationships: readonly WorldRelationship[]
+  /** Honest labeling of who produced this projection, e.g. "fixture:harbour" or "go:casework". */
+  readonly provenance?: string
 }
 
 export interface WorldAdapter {
   snapshot(): Promise<WorldSnapshot>
   subscribe(listener: (snapshot: WorldSnapshot) => void): () => void
+  /**
+   * Optional: the world as it stood at a temporal cursor. Providers that cannot project history
+   * omit this method; the environment then records an honest degradation instead of presenting the
+   * present as the past.
+   */
+  snapshotAt?(cursor: number): Promise<WorldSnapshot>
 }

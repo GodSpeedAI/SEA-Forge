@@ -1,168 +1,114 @@
-.appShell {
-  height: 100vh;
-  display: grid;
-  grid-template-columns: 236px minmax(640px, 1fr) 380px;
-  grid-template-rows: 56px minmax(0, 1fr) 28px;
-  grid-template-areas:
-    "top top top"
-    "nav main drawer"
-    "nav footer drawer";
-  background-color: var(--surface-workspace, #0b1220);
-  color: var(--fg-primary, #f0f6fc);
-}
+/* AppShell: spatial shell over the persistent CORE viewport. CORE stays
+ * centered and mounted; surfaces arrange around it with generous negative
+ * space. Glass treatment shared with the donor chrome. */
 
-.drawerClosed {
-  grid-template-columns: 236px minmax(640px, 1fr) 0;
+.appShell {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: rgba(233, 240, 248, 0.92);
+  font-family: "IBM Plex Mono", monospace;
+  overflow: hidden;
 }
 
 .skipLink {
-  position: fixed;
-  z-index: 100;
-  top: var(--space-2, 8px);
-  left: var(--space-2, 8px);
-  transform: translateY(-160%);
-  padding: var(--space-2, 8px) var(--space-3, 12px);
-  background: var(--color-focus-primary, #238636);
-  color: var(--fg-primary, #f0f6fc);
-  border-radius: var(--radius-control, 6px);
-  transition: transform var(--motion-enter, 180ms) var(--ease-governed, cubic-bezier(0.16, 1, 0.3, 1));
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 200;
+  background: #0c1017;
+  color: #ffb35c;
+  padding: 8px 12px;
 }
 
 .skipLink:focus {
-  transform: translateY(0);
+  left: 8px;
+  top: 8px;
 }
 
-/*
-  Overlaid rather than placed in the grid: `.appShell` uses named template
-  areas, so an unplaced child would be auto-placed into a cell and displace the
-  shell. Fixed positioning keeps the alert out of that negotiation entirely.
-*/
 .cellAlert {
   position: fixed;
-  z-index: 90;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: var(--space-2, 8px) var(--space-4, 16px);
-  background: var(--surface-danger, #4a1216);
-  color: var(--fg-primary, #f0f6fc);
-  border-bottom: 1px solid var(--border-danger, #8b2c34);
-  font: var(--text-body, 13px / 1.5 system-ui, sans-serif);
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: 560px;
+  padding: 12px 18px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  background: rgba(10, 14, 22, 0.72);
+  border: 1px solid rgba(255, 179, 92, 0.45);
+  border-radius: 12px;
+  backdrop-filter: blur(22px) saturate(1.35);
 }
 
-.mainWorkspace {
-  grid-area: main;
-  min-width: 0;
-  min-height: 0;
+.surfaceLayer {
+  position: fixed;
+  z-index: 5;
+  right: 360px;
+  left: 200px;
+  top: 110px;
+  bottom: 40px;
   overflow-y: auto;
-  padding: var(--space-4, 16px);
+  padding: 18px 22px;
+  background: rgba(6, 9, 14, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  backdrop-filter: blur(18px) saturate(1.2);
   outline: none;
-  container: workspace / inline-size;
+}
+
+.surfaceLayer:empty {
+  display: none;
 }
 
 .connectionBar {
-  grid-area: footer;
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3, 12px);
-  padding: 0 var(--space-4, 16px);
-  background: var(--surface-code, #0d1117);
-  border-top: var(--border-standard, 1px solid #30363d);
-  color: var(--fg-secondary, #8b949e);
-  font: var(--text-meta, 11px / 1.4 system-ui, sans-serif);
+  gap: 16px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(200, 214, 229, 0.55);
+  pointer-events: none;
 }
 
-.connectionBar > span:first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2, 8px);
+.stateDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background: rgba(200, 214, 229, 0.4);
 }
 
-.appShell > :global([data-testid="evidence-drawer-backdrop"]) {
-  position: static;
-  grid-area: drawer;
-  min-width: 0;
-  min-height: 0;
-  display: block;
-  background: transparent;
-  backdrop-filter: none;
-  z-index: auto;
+.stateDot[data-ready="true"] {
+  background: #ffb35c;
+  box-shadow: 0 0 8px rgba(255, 179, 92, 0.8);
 }
 
-.appShell > :global([data-testid="evidence-drawer-backdrop"]) > :global(.evidence-drawer) {
-  width: 100%;
-  max-width: none;
-  height: 100%;
-}
-
-@media (max-width: 1420px) {
-  .appShell,
-  .drawerClosed {
-    grid-template-columns: 224px minmax(620px, 1fr);
-    grid-template-areas:
-      "top top"
-      "nav main"
-      "nav footer";
-  }
-
-  .appShell > :global([data-testid="evidence-drawer-backdrop"]) {
-    position: fixed;
-    z-index: 20;
-    top: 56px;
-    right: 0;
-    bottom: 0;
-    left: auto;
-    width: min(400px, 92vw);
-    height: auto;
-    overflow: hidden;
-  }
-
-  .appShell > :global([data-testid="evidence-drawer-backdrop"]) > :global(.evidence-drawer) {
-    position: static;
-    inset: auto;
-    width: 100%;
-    height: 100%;
+@media (max-width: 1100px) {
+  .surfaceLayer {
+    left: 120px;
+    right: 24px;
   }
 }
 
-@media (max-width: 1020px) {
-  .appShell,
-  .drawerClosed {
-    grid-template-columns: 64px minmax(0, 1fr);
+@media (max-width: 760px) {
+  .surfaceLayer {
+    left: 16px;
+    right: 16px;
+    top: 90px;
+    bottom: 120px;
   }
 
-  .connectionBar :global(.machine-value) {
-    display: none;
-  }
-}
-
-@media (max-width: 720px) {
-  .appShell,
-  .drawerClosed {
-    height: auto;
-    min-height: 100vh;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 56px auto minmax(0, 1fr) 32px;
-    grid-template-areas:
-      "top"
-      "nav"
-      "main"
-      "footer";
-  }
-
-  .mainWorkspace {
-    padding: var(--space-3, 12px);
-  }
-
-  .connectionBar {
-    position: sticky;
-    bottom: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .skipLink {
-    transition: none;
+  .cellAlert {
+    left: 16px;
+    right: 16px;
+    transform: none;
   }
 }

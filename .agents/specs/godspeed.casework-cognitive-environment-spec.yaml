@@ -4,9 +4,9 @@ metadata:
   id: godspeed.casework-cognitive-environment
   title: GodSpeed Casework System Front End and Cognitive Environment
   status: authoritative
-  version: "0.2.1"
+  version: "0.2.4"
   created: "2026-09-18"
-  revised: "2026-09-19"
+  revised: "2026-09-22"
   purpose: >-
     Define the replacement Go operational front end and React cognitive environment
     for governed SEA Forge casework, with explicit authority, migration, and proof
@@ -29,6 +29,34 @@ authority:
     repository_facts: GitHub through a server-side adapter when the workflow uses GitHub
     operational_coordination: New Go application; leases never grant semantic authority
     representation: New React cognitive environment; local state never grants authority
+  frozen_interface_contract:
+    path: .agents/reports/interface-contracts/
+    status: authoritative_input
+    required_inputs:
+      - 04-REACT-COGNITIVE-ENVIRONMENT-CONTRACT-SPECIFICATION.md
+      - 07-SEMANTIC-MEANING-GUIDE-AND-ROLE-PROJECTIONS.md
+      - 09-COLD-AGENT-HANDOFF-AND-WALKTHROUGH.md
+      - typescript/types.ts
+      - typescript/client.ts
+      - typescript/mock-adapter.ts
+      - schemas/
+      - examples/
+    implementation_rule: >-
+      UI implementation MUST verify this package exists and its conformance tests pass,
+      bind to its frozen types and contracts, and continue without rediscovering or
+      duplicating SEA Forge, Gauntlet, RealityTrace, CMMN, SFWP, or case semantics.
+    consistency_resolution: >-
+      Reconciled 2026-09-20: the contract prose, TypeScript types, JSON schemas,
+      examples, and focused conformance test use the CognitiveWorldSnapshot wire
+      shape with string cursors, visible_objects, available_actions, and action
+      descriptors carrying id, label, intent, and consequential. InteractionIntent
+      uses intent_id, kind, action_name, target_object_id, case_id, client_cursor,
+      and actor. The explicit InteractionActionName union contains the schema's
+      fourteen action names plus RESUME_LIVE_STREAM, which the mock adapter emits.
+      The package test checks required fields, rejects the stale numeric/object/
+      actionId shapes, and checks TypeScript/schema action-name parity. It does not
+      perform full draft-2020-12 JSON Schema semantic validation; that limitation
+      remains explicit and does not block the structural package conformance gate.
   current_substrate:
     sea_forge: crates/sea-forge-server and its typed SFWP Unix-socket NDJSON boundary
     current_gui: workbench/apps/desktop React renderer plus Rust Tauri host
@@ -69,13 +97,75 @@ target_layout:
     SEA Forge authorization. Reuse existing AG-UI/agent substrate where it fits;
     CopilotKit is an optional adapter, not a prerequisite.
   renderer_boundary: >-
-    The small spatial grammar is required; Three.js/R3F is optional. Prefer the
-    simplest renderer that proves focus, orientation, semantic zoom, attention,
-    and accessibility before adding a graphics dependency.
+    React Three Fiber / Three.js / Drei is the selected and REQUIRED primary scene
+    renderer for this implementation. The architecture remains UI core ->
+    GodSpeed-owned scene adapter -> R3F/Three implementation: the UI core MUST remain
+    renderer-independent and renderer replaceability remains an architectural property.
+    DOM remains the precision layer for documents, code, tables, forms, and other
+    exact interaction surfaces. A generic graph, SVG, ordinary DOM layout, or
+    conventional React application MUST NOT replace the required real-time scene.
+    Renderer layer composition is explicit: the persistent CORE is rendered by a
+    GodSpeed-owned Three.js renderer that MAY own its own WebGL context and canvas
+    instead of being an R3F scene graph, and the R3F/Three/Drei scene renders objects,
+    relationships, spatial projections, and interaction geometry in a canvas layered
+    above it with alpha so CORE remains visible through it. A non-R3F Three.js CORE
+    renderer is permitted because it stays inside the same GodSpeed-owned
+    scene-adapter seam, keeps the UI core renderer-independent, and remains
+    independently replaceable. Both layers are Three.js; neither is a substitute for
+    the required real-time scene, and CORE remains a visual entity rather than a
+    precision interaction surface.
   donor_boundary: >-
-    Open MCT and OpenMontage are optional design references. No donor checkout
-    or source reuse is required for conformance. Copying code requires provenance
-    and license review; absent donors cannot block a native implementation.
+    The selected implementation donors MUST be inspected under .tmp/donor/ unless a
+    concrete incompatibility is demonstrated: jshor/tycho, pmndrs/racing-game,
+    rmarchet/blackhole-ts, frag2win/BLACK-HOLE, and AmitDigga/threejs-galaxy-shader.
+    They are mechanic donors, not product dependencies. T02 MUST freeze exact
+    revisions, licenses/notices, extraction boundaries, supplied affordances,
+    candidate source symbols, copied versus independently adapted mechanics, and
+    GodSpeed-owned target seams. Donor ontology MUST NOT enter application contracts;
+    provenance and license requirements remain mandatory.
+# SUPERSEDED IN PART 2026-09-22 (operator): R3F is not required. Rendering is hybrid:
+# Three.js only for Core/particles/depth; DOM/SVG for labels, artifacts, panels, all driven by one
+# shared camera. Gargantua is not the Core renderer. See
+# .agents/specs/cognitive-environment/GodSpeed_Cognitive_Environment_DESIGN.md §0.1 (authoritative for UI).
+visual_experience:
+  game_world: >-
+    The cognitive environment MUST be implemented as a real-time video-game-like
+    scene graph for work, rather than a web application with 3D decoration.
+  opening_frame:
+    - Full-browser R3F/Three scene on a pure or near-pure white background.
+    - No dashboard shell, sidebar, card grid, or ordinary application navigation.
+    - Core precisely centered, with a compact bottom-center search/composer.
+    - Small CognitiveObjects distributed around Core with subtle orbital/drift motion.
+    - Very faint graph-like relationships and substantial intentional empty space.
+  core: >-
+    Core MUST be a rendered black-hole-like entity with dark central mass, extremely
+    subtle gravitational lensing, restrained accretion/lensing ring, sparse
+    swirling matter or particles, and very slow ambient motion; it MUST NOT be a
+    flat CSS circle.
+  focus: >-
+    Clicking a CognitiveObject MUST move the camera to it. It MUST NOT navigate to a
+    page or open a details panel; the selected object becomes the local center and
+    Core becomes a subordinate home/orientation anchor.
+  recursive_semantic_zoom: >-
+    Objects MUST be able to become local worlds across System -> Case -> Work ->
+    Execution/Evidence -> Source. Increasing depth MUST change representation, not
+    merely geometrically scale an object.
+  dynamic_surfaces: >-
+    The same world MUST smoothly rearrange into orbital/orientation, causal,
+    comparison, and temporal representations without becoming separate application
+    modules.
+  interruptible_cutscene: >-
+    Narrated multi-beat explanations MUST be composed and rendered in-engine as an
+    interruptible cutscene over the scene world. User interaction MUST be able to
+    pause, branch, inspect, or resume it while preserving source evidence and
+    authority boundaries.
+  perceptual_acceptance: >-
+    T06 MUST include actual rendered inspection, not only unit or integration tests,
+    of a quiet Core world, a salient work object among quiet objects, a focused case
+    with Core reduced to home/orientation, and a deeper semantic-zoom state. The
+    result is acceptable only when it looks and behaves like a restrained real-time
+    game world for work, rather than primarily a dashboard, SaaS application, graph
+    editor, card interface, or chat application.
 domain_contract:
   work_opportunity: >-
     Stable id plus governed authority reference and bounded execution-contract
@@ -154,7 +244,7 @@ requirements:
   - id: REQ-GOAL-001
     text: "The system MUST provide a Go operational front end that coordinates live casework across application-owned ports while preserving SEA-Forge as the governed case and authority owner."
   - id: REQ-GOAL-002
-    text: "The system MUST provide a React cognitive environment whose interaction model remains independent of SEA-Forge, Go transport, Three.js, CopilotKit, repository providers, and artifact-renderer implementations."
+    text: "The system MUST provide a React cognitive environment whose UI core interaction model remains independent of SEA-Forge, Go transport, Three.js, CopilotKit, repository providers, and artifact-renderer implementations, while the product scene MUST use the GodSpeed-owned adapter to the required R3F/Three/Drei primary renderer."
   - id: REQ-GOAL-003
     text: "The cognitive environment MUST express useful work through a small compositional grammar of surfaces, objects, relationships, focus, zoom, time/version, composer interaction, and bounded cognitive artifacts."
   - id: REQ-GOAL-004
@@ -220,13 +310,13 @@ requirements:
   - id: REQ-PROJ-004
     text: "Low-level machine-operational state MAY be exposed through deeper projections without being permanently present in the primary cognitive surface."
   - id: REQ-UI-001
-    text: "The primary cognitive environment MUST support persistent spatial orientation, object focus, return, selection, and semantic zoom."
+    text: "The primary cognitive environment MUST be a full-browser R3F/Three scene that supports persistent spatial orientation, object focus by camera movement, return to Core as a subordinate home/orientation anchor, selection, and recursive semantic zoom."
   - id: REQ-UI-002
     text: "Increasing representational resolution MUST be able to reveal richer internal structure rather than only geometrically scaling an object."
   - id: REQ-UI-003
     text: "Relationships MUST be rendered contextually and MUST NOT be required to display every underlying relation simultaneously."
   - id: REQ-UI-004
-    text: "The scene SHOULD remain predominantly 2.5D, using depth to improve focus, hierarchy, continuity, transition, and aesthetics rather than requiring arbitrary 3D navigation."
+    text: "The scene SHOULD remain predominantly 2.5D, using depth to improve focus, hierarchy, continuity, transition, and aesthetics rather than requiring arbitrary 3D navigation, while preserving the required real-time game-world scene model."
   - id: REQ-UI-005
     text: "Core MUST provide a stable route to broader system orientation while remaining visually subordinate when local focus is more useful."
   - id: REQ-UI-006
@@ -262,7 +352,7 @@ requirements:
   - id: REQ-NAR-002
     text: "Narration beats MAY change focus, visible objects, relationships, artifacts, temporal position, evidence, and annotations."
   - id: REQ-NAR-003
-    text: "Narrated explanations MUST remain interruptible; user interaction MAY pause, branch, inspect, or resume the sequence."
+    text: "Narrated explanations MUST remain interruptible in-engine cutscenes; user interaction MAY pause, branch, inspect, or resume the sequence without leaving the scene world."
   - id: REQ-NAR-004
     text: "Narrated composition SHOULD reveal actual source evidence when a source artifact communicates a consequential claim more directly than abstraction."
   - id: REQ-NAR-005
@@ -298,11 +388,11 @@ requirements:
   - id: REQ-ARTDEP-008
     text: "Dense timeline rendering MAY use a dedicated timeline adapter, but the renderer MUST NOT own application temporal state."
   - id: REQ-DONOR-001
-    text: "Open MCT MAY be used as an implementation donor for the minimum temporal, provider, or time-aware-view mechanics that materially reduce engineering cost, subject to preservation of applicable license notices."
+    text: "The implementation MUST inspect the selected donor repositories under .tmp/donor/—jshor/tycho, pmndrs/racing-game, rmarchet/blackhole-ts, frag2win/BLACK-HOLE, and AmitDigga/threejs-galaxy-shader—unless a concrete incompatibility is demonstrated, and MUST record exact revisions, licenses, and notices before extraction."
   - id: REQ-DONOR-002
-    text: "OpenMontage MAY inform semantic-beat, narration, choreography, renderer routing, and evidence-insertion mechanics; source-code reuse MUST follow explicit license review before incorporation."
+    text: "Selected donors MUST be used as mechanic donors by affordance where applicable: Tycho for spatial/orbital/camera mechanics and R3F/DOM coexistence; racing-game for game-world, input, loop, effects, and scene/UI separation; black-hole donors for Core rendering, lensing, accretion, photon, and shader mechanics; and galaxy-shader for restrained particulate/accretion motion."
   - id: REQ-DONOR-003
-    text: "Donor-derived implementation MUST be reduced behind GodSpeed-owned ports and MUST NOT import the donor product's application ontology when the required mechanic can stand independently."
+    text: "Donor-derived implementation MUST be reduced behind GodSpeed-owned ports and target seams, MUST NOT import donor product ontology into application contracts, and MUST preserve license/provenance notices; copied and independently adapted mechanics MUST be identified separately."
   - id: REQ-SAFE-001
     text: "Uncertain operational state MUST enter reconciliation before any retry capable of duplicating consequential effects."
   - id: REQ-SAFE-002

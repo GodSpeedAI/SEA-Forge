@@ -1,5 +1,5 @@
 schema: godspeed-bounded-judgment.t27-paired-report
-created_utc: '2026-09-19T17:30:36Z'
+created_utc: '2026-09-19T18:17:12Z'
 prereg_sha256: 41af1921285bdbea33684d06b226fc8add83a59ed71378dbed464ab5b4b74343
 addendum1_sha256: a7fb31e295dfcca4c1fe6aba32f9345857d22187038b7c29f918b28681e07609
 provider: deepseek-v4.1-flash-via-clinepass
@@ -40,11 +40,11 @@ per_case:
   A_readout: settled
   A_degraded: false
   A_per_call:
+  - settled
+  - settled
+  - settled
+  - settled
   - not_settled
-  - settled
-  - settled
-  - settled
-  - settled
   A_correct: true
   B_readout: settled
   B_degraded: false
@@ -73,9 +73,9 @@ per_case:
   B_readout: settled
   B_degraded: false
   B_per_call:
-  - settled
-  - settled
   - insufficient_evidence
+  - settled
+  - settled
   - insufficient_evidence
   - settled
   B_correct: true
@@ -97,11 +97,11 @@ per_case:
   B_readout: settled
   B_degraded: false
   B_per_call:
-  - insufficient_evidence
-  - settled
-  - settled
   - not_settled
   - settled
+  - settled
+  - settled
+  - insufficient_evidence
   B_correct: true
   A_to_B_transition: unchanged-correct
 - case_id: accepted-A12
@@ -113,9 +113,9 @@ per_case:
   A_degraded: false
   A_per_call:
   - settled
-  - settled
-  - settled
   - not_settled
+  - settled
+  - settled
   - settled
   A_correct: true
   B_readout: settled
@@ -123,8 +123,8 @@ per_case:
   B_per_call:
   - settled
   - settled
-  - insufficient_evidence
   - settled
+  - insufficient_evidence
   - insufficient_evidence
   B_correct: true
   A_to_B_transition: unchanged-correct
@@ -137,9 +137,9 @@ per_case:
   A_degraded: false
   A_per_call:
   - settled
+  - settled
+  - settled
   - not_settled
-  - settled
-  - settled
   - settled
   A_correct: true
   B_readout: settled
@@ -147,8 +147,8 @@ per_case:
   B_per_call:
   - settled
   - insufficient_evidence
-  - settled
   - insufficient_evidence
+  - settled
   - settled
   B_correct: true
   A_to_B_transition: unchanged-correct
@@ -170,8 +170,8 @@ per_case:
   B_degraded: false
   B_per_call:
   - insufficient_evidence
-  - settled
   - insufficient_evidence
+  - settled
   - insufficient_evidence
   - insufficient_evidence
   B_correct: false
@@ -185,9 +185,9 @@ per_case:
   A_degraded: false
   A_per_call:
   - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
   - not_settled
-  - insufficient_evidence
-  - insufficient_evidence
   - insufficient_evidence
   A_correct: false
   B_readout: insufficient_evidence
@@ -232,8 +232,8 @@ per_case:
   A_readout: settled
   A_degraded: false
   A_per_call:
-  - settled
   - not_settled
+  - settled
   - settled
   - settled
   - settled
@@ -241,11 +241,11 @@ per_case:
   B_readout: settled
   B_degraded: false
   B_per_call:
-  - settled
-  - settled
-  - settled
-  - settled
   - insufficient_evidence
+  - settled
+  - settled
+  - settled
+  - settled
   B_correct: false
   A_to_B_transition: unchanged-wrong
 - case_id: budget-C4
@@ -257,10 +257,10 @@ per_case:
   A_degraded: false
   A_per_call:
   - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
   - not_settled
-  - insufficient_evidence
-  - insufficient_evidence
-  - insufficient_evidence
   A_correct: false
   B_readout: insufficient_evidence
   B_degraded: false
@@ -280,10 +280,10 @@ per_case:
   A_readout: insufficient_evidence
   A_degraded: false
   A_per_call:
+  - insufficient_evidence
+  - insufficient_evidence
+  - insufficient_evidence
   - settled
-  - insufficient_evidence
-  - insufficient_evidence
-  - insufficient_evidence
   - insufficient_evidence
   A_correct: false
   B_readout: insufficient_evidence

@@ -1981,3 +1981,87 @@ entries:
       frozen evidence as the plan's independent confirmation/disposition
       task and was NOT executed here. done_when items 1-5 all satisfied.
     evidence: ".agents/evidence/godspeed-bounded-judgment/T27/t27-settlement-report.md"
+
+  - id: D-2026-09-19-T28-01
+    date: "2026-09-19"
+    task: T28
+    kind: task-settled
+    decided: >-
+      T28 SETTLED (P2, independent adversarial confirmation). Fresh verifier
+      (no involvement in T27, shielded from builder narrative and preferred
+      outcome per the plan's verifier_should_not_receive; packet = frozen
+      prereg + addendum-1, harness/renderers/scoring, 140 raw observations,
+      teeth log, corpus manifest, repeatability partition, read-only DBs)
+      returned VERDICT: CONFIRM. Orchestrator additionally ran its own
+      standalone recomputation importing nothing from the T27 harness
+      (truth re-derived from DB run_terminal events; own modal/binomial
+      code). BOTH recomputations reproduce every reported number exactly:
+      accA 9/14 (0.6429), accB 8/14 (0.5714), b=0, c=1 (accepted-A4
+      decided->abstain), b_f=0, c_f=1, c_ctrl=0, unchanged-correct 8,
+      unchanged-wrong 5, target budget-C3 unchanged-wrong, McNemar exact
+      two-sided p=1.0, practical criterion unmet, guard passes, C-rule
+      traversal -> C5(boundary) — mechanically required (C3 defeated by
+      c_f=1; under the superseded decided-only rule the label would be C3,
+      equally non-supporting). Integrity: 14/14 corpus hashes; selection
+      rule replay MATCH; 140/140 store keys bound to the prereg file-bytes
+      hash; 70/70 condition-A prompt bytes reproduced from the frozen
+      template text alone; verifier's independent B renderer matched 14/14
+      case hashes; atom equivalence both directions; no correctness or
+      terminal leakage; freeze timing proven (prereg 11:38:04 < addendum
+      11:41:48 < harness 11:47:34 < first call 11:49:19); harness on disk =
+      recorded cc21e465...; addendum proven anti-self-serving on this
+      dataset. Claim separation: behavior shift CONFIRMED (per-call
+      abstentions A 18/70 -> B 32/70; typed structure made pre-terminal
+      record status salient); judgment-quality improvement NOT supported
+      (0 corrections, p=1.0). Stable-wrong case: provider acknowledges
+      supported claims and the truncated trace yet answers from local
+      positive valence (session label, PASS-shaped observation); the
+      evidence-supported missing distinction is LOCAL POSITIVE EVIDENCE vs
+      SUFFICIENCY/COMPLETENESS OF THE WHOLE-CASE RECORD FOR SETTLEMENT
+      (strict no-terminal-evidence skepticism is not the answer either —
+      all inputs are pre-terminal by design). Branch pruned: claim-vs-
+      observation provenance typing is not sufficient to improve this
+      bounded-judgment failure on this surface (with T18's independent
+      negative, the input-representation branch is closed here).
+      DISPOSITION: CONFIRMED WITH QUALIFICATION — qualifications recorded
+      append-only, none verdict-changing: (a) frozen prereg baseline
+      fraction '4/14' arithmetically wrong (actual 6/14 = 0.4286; the
+      report's decimal is correct, its fraction label is not; gates
+      nothing); (b) frozen prereg file fails strict YAML parsing in
+      relation_rules (contract intact as frozen text/hash; terms
+      transcribed faithfully into the harness and independently verified);
+      (c) on-disk teeth-results.yml is a post-verification rewrite
+      artifact (pre-acquisition pass evidenced by D-2026-09-19-T27-03,
+      fail-closed harness ordering, and two independent re-verifications);
+      (d) C5 vs C3 distinction preserved with the substantive reading
+      stated. Architecture boundaries held: no truth/settlement/authority
+      for the provider; no .sea grammar implication; future representational
+      work remains a projection/composition concern. Next affordable move
+      (operator decision; nothing authorized or executed): zero-provider-
+      cost inspection of the budget-C3 vs accepted deterministic settlement
+      pattern first; only if a new developmental experiment is later
+      authorized, a preregistered settlement-sufficiency representation
+      probe (required vs observed vs missing evidence coverage) is the one
+      candidate the evidence pays for. With T28 settled, every plan task is
+      settled or blocked by evidence/physics; readiness is empty by design.
+    evidence: ".agents/evidence/godspeed-bounded-judgment/T28/t28-disposition-report.md"
+
+  - id: D-2026-09-20-CONTRACT-01
+    date: "2026-09-20"
+    task: interface-contract-reconciliation
+    kind: authority-consistency-resolution
+    decided: >-
+      Append-only resolution of the previously recorded interface-package
+      consistency issue. The authoritative spec is now v0.2.3, sha256
+      09d4292b956b09066b84bb03014413cae2b14a2c89f5338b34b6ebf542ab1dae.
+      The contract prose, TypeScript types, JSON schemas, examples, and focused
+      Bun conformance test agree on CognitiveWorldSnapshot string cursors,
+      visible_objects, available_actions, action descriptors with id/label/intent/
+      consequential, and InteractionIntent fields intent_id/kind/action_name/
+      target_object_id/case_id/client_cursor/actor. The 15-name wire action union
+      preserves the schema's 14 names and adds RESUME_LIVE_STREAM emitted by the
+      mock adapter. The stale numeric/object/actionId shape is rejected by tests.
+      Full draft-2020-12 JSON Schema semantic validation is not implemented and
+      remains an explicit limitation. T03/T10 now verify reconciled package parity;
+      no requirement IDs or task count changed.
+    evidence: ".agents/reports/interface-contracts/tests/contract-conformance.test.ts"

@@ -1,197 +1,307 @@
 # Current Status
 
-Updated: 2026-09-20
+Updated: 2026-09-23
+
+> **2026-09-23 COGNITIVE UI FUNCTIONAL-COMPLETION PHASE (contract adapter, not Go):**
+> The UI in `apps/godspeed-cognitive-ui` now consumes the interface-contract port
+> (`src/ports/contract.ts`), served by a local contract-conformant adapter
+> (`src/adapters/local/`: contract data at rest, authority, execution events,
+> snapshot-borne settlement). Layout is data-driven and no fixture ids appear in UI code.
+> Added:
+> - the comparison representation, time marks and compare, and case-design drafts and compare;
+> - lazy source renderers (diff, text, markdown, table, chart, JSON, graph, trace, timeline) behind an error boundary;
+> - the narration port with an interruptible, resumable streamed player;
+> - one intent path shared by human and agent.
+> **Affordance-dependency E2E ladder** (`e2e/`, real pointer input through
+> agent-browser): J0–J9 + RECOVERY **11/11 PASS, 78/78 steps**. **GATE_UI PASS**
+> (`just casework-ui-check`: 185 tests / 633 assertions). VAR-001..007 are exercised UI-side.
+> Deferred: RECOV-001/002, and real Go, SEA Forge and Gauntlet integration.
+> Report: `.agents/reports/godspeed-cognitive-ui-functional/`.
+> Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/ui-journeys/latest/`.
+> Nothing committed.
+
+> **2026-09-22 COGNITIVE-UI CORE INTEGRATION (PATH B) HANDOFF:** Continued the
+> opencode session that died mid-turn (`ses_f36860523ffenPfOlcyO6sXAdM` looped
+> on a repeated bash command, emitted malformed tool JSON, then returned empty
+> responses after compaction). Its port had landed as a blind `cp -a` and was
+> never validated: nothing imported it and `just casework-ui-check` was RED.
+> Repaired the relocation (import depth, deduped `CoreVisualProjection`,
+> vitest→`bun:test`, `?raw` golden import → on-disk read, 16 stale provenance
+> paths), proved provenance (golden `sha256:9cfdc399…c93cd` identical in both
+> copies; `diff -rq` clean against `workbench/.../src/core/`; 22 donor tests
+> compare every shader module to the on-disk golden), **settled T06 in the
+> governing artifact** (spec v0.2.4 `renderer_boundary` now states layer
+> composition explicitly; plan v0.2.5 re-bound; ADR-006 dated addendum;
+> decision log D-2026-09-22-T06-01) — no requirement ID added, validator PASS
+> 86/86 — then integrated Gargantua as the **canonical persistent CORE**: new
+> `src/host/scene/coreVisualIntent.ts`, `CoreLayer.tsx`, `CoreLayer.module.css`;
+> `App.tsx` mounts CORE as the deepest layer; `SceneCanvas.tsx` is now
+> alpha-composited above it and no longer draws the system-scale
+> `CoreObject`/`AccretionSwirl`. **GATE_UI PASS: `just casework-ui-check` —
+> frozen install, typecheck, production build, 140 tests / 823 assertions / 23
+> files.** Honest gaps: **no GPU here, so there is NO rendered acceptance** (the
+> four T06 perceptual states are unrecorded); `CoreObject`/`AccretionSwirl` files
+> are not yet retired (acceptance-gated, and `LocalHomeAnchor` still
+> uses `CoreObject` as a local marker); donor drag-orbit is unreachable under
+> the R3F canvas; reduced-motion for CORE unimplemented; `workbench/` NOT
+> deleted (GATE_REMOVAL activates at T14). Nothing committed; all pre-existing
+> dirty/untracked work preserved.
+
+> **2026-09-22 GARGANTUA WHITE-LABEL CORE MIGRATION HANDOFF:** The Workbench
+> product shell was replaced around the supplied Gargantua single-file WebGL
+> implementation by surgical extraction (copy → preserve → separate →
+> relocate → wrap → map → integrate), not reimplementation. Golden reference
+> `workbench/apps/desktop/public/reference/gargantua.html` (sha256
+> `9cfdc399…c93cd`, verified identical at copy). `src/core/` holds the donor
+> renderer (verbatim shaders/camera/quality/pipeline + narrow API);
+> `src/spatial/`, 9 `src/surfaces/`, `src/projections/`, persistent
+> `Composer`, dev-only `CoreTuningPanel`, and `docs/CORE_ARCHITECTURE.md`
+> establish the Surface/Object/Relationship/Focus/Zoom/Time grammar with Home
+> as canonical CORE state. Legacy SaaS chrome removed (Sidebar, GlobalHeader,
+> JourneyRibbon, mockup kit); all pages/hooks/guards/contracts retained and
+> composed as surfaces. Gates: workbench renderer frozen-install + typecheck +
+> lint + production build + **178 tests** PASS, ui-components 17 PASS,
+> `workbench-contracts-gate` PASS, tauri `cargo fmt --check` PASS. Honest
+> gaps: GPU side-by-side vs golden pending a GPU host (shader byte-parity
+> tests hold); Tauri host build/tests unrunnable here (pre-existing tracked
+> self-symlink `target` breaks all root cargo builds + cold compile exceeds
+> budget; `src-tauri` untouched); Rust kernel gates not run (same pre-existing
+> blocker). Nothing committed. Preserve all unrelated dirty/untracked work.
 
 ## Objective
 
-Execute `.agents/plans/godspeed-casework-cognitive-environment.plan.yaml` v0.2.2 (tasks T00–T14)
-in this dedicated worktree: build the Go operational front end
-(`apps/godspeed-casework-go`) and the React cognitive environment
-(`apps/godspeed-cognitive-ui`) over the existing SEA Forge authority and Gauntlet executor
-boundaries, prove governed integration and parity, and only then remove the SEA Forge
-Tauri/Rust GUI and the Gauntlet TUI. SPEC: `.agents/specs/godspeed.casework-cognitive-environment-spec.yaml`
-v0.2.1, sha256 `6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641`.
-
-> **Scope note for readers:** the headings below are this plan's handoff. The material that
-> follows them is inherited history from the Godspeed bounded-judgment plan that shared this
-> repository at commit `6ce518f`; it is **not** this plan's state. This worktree's status files
-> are canonical for the casework-environment plan only, and the operator's active checkout's own
-> status files were not edited.
+Continue the died-mid-turn opencode session by making Gargantua's raymarched
+black hole the **canonical persistent CORE** of the React cognitive
+environment, with the required R3F/Three/Drei scene retained for what it is
+good at — objects, relationships, spatial projections, interaction geometry —
+composited above it, and DOM surfaces above that. Repair the broken relocation
+first, prove donor provenance, and settle the renderer composition in the
+governing spec/ADR before integrating. Retire the superseded R3F CORE
+(`CoreObject`, `AccretionSwirl`) only once integration *and* acceptance hold;
+do not maintain them as an alternate or fallback CORE.
 
 ## Worktree State
 
-- SEA Forge plan worktree: `/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment`
-  on branch `godspeed/casework-cognitive-environment`, base `6ce518fcd9b01bc5a7037f80f5d8986a33cd2924`.
-- Dedicated Gauntlet worktree (`GAUNTLET_WORKTREE`): `/home/sprime01/projects/gauntlet-godspeed-casework`
-  on branch `godspeed/casework-environment` @ `fe75108d62129ffb179b6773b67f3ee92213e44d`.
-- Operator checkouts excluded from every write and gate: `/home/sprime01/projects/sea-rs`
-  (branch `ultracode/sea-forge-completion`) and `/home/sprime01/projects/gauntlet`
-  (branch `task26-dcritic-apparatus-repair`, unrelated in-flight work preserved — git-status md5
-  identical before and after worktree creation: `5abbc212bfc9a43667d42295ca86a557`).
-- The worktree carries a `target` symlink to the operator checkout's warm Rust cache so that
-  recipes reading the relative path `target/debug/sea-forge` still resolve; create it again if
-  `just proof` ever fails with exit 127 on a missing `target/debug/sea-forge`.
+Worktree carries this work uncommitted, on top of a large pre-existing dirty
+set that is preserved untouched (staged Workbench removals, unstaged
+`workbench/` sources, `.agents/` evidence/plan/spec edits from other efforts,
+and two stray opencode session exports
+`.agents/.session_export_f38e87{,.clean}.json` — the `.json` is 0 bytes).
+New this work: `apps/godspeed-cognitive-ui/src/host/scene/{coreVisualIntent.ts,
+coreVisualIntent.test.ts,CoreLayer.tsx,CoreLayer.module.css}`; modified
+`src/host/App.tsx` and `src/host/scene/SceneCanvas.tsx`; the relocated donor
+tree `src/host/gargantua/**` was repaired in place. Governing artifacts
+changed: spec v0.2.3→0.2.4, plan v0.2.4→0.2.5 (re-bound), ADR-006 addendum,
+decision log entry. Tracked self-symlink `target` (pre-existing, committed)
+still breaks root cargo builds; left as-is. `workbench/` deliberately NOT
+deleted.
 
 ## Changed Files
 
-T00 adds plan-scoped artifacts and changes no product code:
-
-- `.agents/preregistrations/godspeed-casework-cognitive-environment/T00.prereg.yaml` (frozen first)
-- `.agents/plans/godspeed-casework-cognitive-environment.implementation.md` (T00 gate artifact)
-- `.agents/evidence/godspeed-casework-cognitive-environment/T00/` — settlement report, spec
-  authority verification, resource preflight, both gate baselines, `teeth/`, `raw-logs/`
-- `.agents/reports/godspeed-casework-cognitive-environment/decision-log.yaml` (D-…-T00-01 … -09)
-- `.agents/CURRENT_STATUS.md`, `.agents/current_status.yml` (this handoff)
-- `target` (symlink to the operator checkout's build cache; **untracked, not ignored** —
-  `.gitignore`'s `/target/` pattern does not match a symlink, so `git status` lists it as `?? target`)
-
-T01 adds `apps/godspeed-casework-go` (ports, config authority, typed errors, preflight, boundary
-gate, CLI), the `apps/godspeed-cognitive-ui/contracts` package, the `casework-go-check` recipe,
-and `mise.toml`'s declared Go toolchain (approved B1 remediation); `.gitleaks.toml` carries the
-approved narrow B2 allowlist. T02 adds only its evidence and decision records.
-
-T03 adds the runnable cognitive environment at `apps/godspeed-cognitive-ui` — `src/core/` (model,
-store, actions, engine, core ports + purity test), `src/adapters/fixture/` (fixture provider set +
-structurally different alt provider), `src/adapters/test/` (no-op/test adapters), `src/host/`
-(React 19 renderer), `index.html`, `package.json` + `bun.lock` + `tsconfig.json` + `vite.config.ts`
-+ app `.gitignore` + `README.md` — plus the root recipes `casework-ui-check` (GATE_UI) and
-`casework-ui-up/-down/-status`, the frozen `T03.prereg.yaml`, and `T03/` evidence.
-
-No file under `crates/`, `workbench/`, or the operator's checkout was modified.
+- Added: `apps/godspeed-cognitive-ui/src/host/scene/coreVisualIntent.ts`
+  (the only application-state → CORE-renderer path; pure and unit-tested).
+- Added: `.../scene/CoreLayer.tsx` + `CoreLayer.module.css` (persistent CORE
+  mount; deepest layer, `pointer-events: none`).
+- Added: `.../scene/coreVisualIntent.test.ts` (12 tests).
+- Changed: `.../src/host/App.tsx` (mounts `CoreLayer` before `SceneCanvas`),
+  `.../src/host/scene/SceneCanvas.tsx` (alpha canvas, `clearAlpha 0`,
+  `scene.background = null`, fog kept; system-scale `CoreObject` +
+  `AccretionSwirl` removed from the render path).
+- Repaired in place: `apps/godspeed-cognitive-ui/src/host/gargantua/**`
+  (import depth, deduped `CoreVisualProjection`, `bun:test` conversions,
+  on-disk golden read, 16 provenance-header paths, `PROVENANCE.md`).
+- Governing artifacts: the casework spec (v0.2.4), the casework plan (v0.2.5,
+  re-bound to the new spec hash), `docs/decisions/ADR-006` (2026-09-22
+  addendum), and the casework decision log (`D-2026-09-22-T06-01`).
+- Not changed: `workbench/**` and every pre-existing dirty file from other
+  efforts; `workbench/` deletion is held for T14/`GATE_REMOVAL`.
 
 ## Completed
 
-- **T03 — SETTLED (P2, peer confirmation pending).** The cognitive environment exists and runs:
-  `apps/godspeed-cognitive-ui` with a framework-free UI core (`src/core/`: representations, store,
-  action vocabulary, engine), the fixture provider set (a representative FDE world with bounded
-  artifacts and history, plus a deliberately different second provider for the provider-swap
-  tooth), no-op/test adapters, and a React 19 host that maps mouse and keyboard onto the same
-  action vocabulary the tests call. `GATE_UI` (`just casework-ui-check`: frozen install, tsc,
-  vite build, bun test — 8 tests, 226 assertions) **PASS**; teeth exit 0 — scene/agent replaced by
-  test adapters, ONE shared interaction scenario passing under both providers with zero hardcoded
-  ids, and a **real injection** of `react` into `src/core` that makes the purity gate FAIL.
-  Operator controls `casework-ui-up/-down/-status` verified over the full cycle (up → curl 200 →
-  status → reuse-on-up → down → port free → idempotent down → repeatable up). The app and README
-  state plainly: **fixture-backed, not connected to SEA Forge, GitHub, Gauntlet, or any agent.**
-  Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T03/`.
-- **T01 — SETTLED (P2) and INDEPENDENTLY CONFIRMED (verification round 1: CONFIRM, one minor
-  representation finding F1 corrected in the same round).** The Go front end exists at
-  `apps/godspeed-casework-go` with application-owned ports (authority, execution, repository, plus an
-  **optional** artifact store), **one** documented configuration authority (defaults < file <
-  environment < explicit override) with secret indirection only, a typed error model that carries
-  capability attribution, and per-capability preflight (ready / degraded / blocking). The React
-  contract package `apps/godspeed-cognitive-ui/contracts` declares the world/interaction/temporal/
-  artifact/agent adapter interfaces with no renderer, agent-framework or transport dependency.
-  `GATE_GO` (`just casework-go-check`: gofmt, `go vet`, `go test`) **PASS**; `GATE_SPEC_TRACE` PASS;
-  teeth exit 0. The independent verifier reproduced every claim from the sources, re-ran the gate
-  and teeth, and failed to break the product with three attacks (provider type in `internal/config`,
-  required capability with endpoint but no credential, one capability healthy while another blocks).
-  Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T01/`, including
-  `T01-verification-round-1-CONFIRM.md`.
-- **T02 — SETTLED (P2) and INDEPENDENTLY CONFIRMED (verification round 1: CONFIRM).** Donors:
-  **Open MCT OMITTED** (REQ-DONOR-001) and **OpenMontage OMITTED** (REQ-DONOR-002); no dependency
-  admitted (REQ-DONOR-003 respected). The verifier re-searched the roots independently, re-ran the
-  teeth — which now inspect the **real** T01 module and contract surfaces — and restated plainly
-  that the tooth's strongest form remains a re-run obligation for T04 and T07 (their ports do not
-  exist yet). Evidence: `.agents/evidence/godspeed-casework-cognitive-environment/T02/`, including
-  `T02-verification-round-1-CONFIRM.md`.
-- **T00 — SETTLED (P2), CORRECTION ROUND 6 APPLIED, and INDEPENDENTLY CONFIRMED (verification
-  round 6: CONFIRM, after five NOT_CONFIRM rounds).** Frozen spec hash
-  reproduced; `GATE_SPEC_TRACE` PASS; 86/86 requirements mapped; implementation brief with exact
-  SFWP/Gauntlet/Workbench interfaces and both removal inventories; both plan teeth executed and
-  passing; SEA Forge gate baselines recorded (lint/typecheck/test/proof/build PASS; `security` RED
-  with exact assertion, and `just check`/`just ci` red only at that step); Gauntlet gates
-  RESOURCE_DEFERRED with readings and exact commands. Round 6 reproduced the authority binding,
-  traceability, DAG, isolation, baselines, missing-seam inventory, and teeth independently; proved
-  validator non-vacuity by injecting a fabricated 87th requirement (caught four ways); exercised
-  the teeth relocation guard (exit 2); and checked decision-log semantics beyond the audit's
-  content assertion (id grammar, uniqueness, claim_state vocabulary). All five earlier adversarial
-  rounds and their evidence-layer findings remain preserved. Evidence: `T00/`, including
-  `T00-verification-round-6-CONFIRM.md`.
+Phase 1 (relocation repaired: GATE_UI restored from RED); Phase 2 (T06 settled
+in the governing artifact — spec `renderer_boundary` now states the CORE/R3F
+layer composition explicitly, plan re-bound, ADR addendum, decision logged,
+validator PASS 86/86 with no requirement ID added); Phase 3 (Gargantua
+`CoreViewport` is the canonical persistent CORE beneath a transparent R3F
+layer, driven only by projected visual intent; the system-scale R3F CORE was
+removed so exactly one CORE renders).
 
 ## Verification
 
-- `sha256sum .agents/specs/godspeed.casework-cognitive-environment-spec.yaml` → `6312453f…d6641` (equals `source.spec.sha256`).
-- `python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py` → PASS (exit 0), re-run at T03.
-- `just casework-go-check` → PASS (re-run during the T01 confirmation).
-- `just casework-ui-check` → PASS: frozen install, `tsc --noEmit`, `vite build`, `bun test`
-  (8 tests, 226 assertions). Raw logs in `T03/raw-logs/`.
-- `T03/teeth/run-teeth.sh` → exit 0 (adapter replacement, provider swap on one shared scenario with
-  zero hardcoded ids, and a real `react` injection that fails the purity gate until removed).
-- Operator controls verified end to end in `T03/raw-logs/operator-cycle.log` (up → curl 200 →
-  status → reuse → down → port free → idempotent down → repeatable up → down).
-- T00 self-audit: `SELF-AUDIT: PASS` (mechanical/arithmetic only, as its header states) and
-  `SELF-TEST: PASS` (9/9 injected classes detected).
-- **Independent confirmations: T00 round 6 CONFIRM · T01 round 1 CONFIRM (F1 corrected) · T02
-  round 1 CONFIRM.** Records: `T00/T00-verification-round-6-CONFIRM.md`,
-  `T01/T01-verification-round-1-CONFIRM.md`, `T02/T02-verification-round-1-CONFIRM.md`; rounds
-  1–5 NOT_CONFIRM records preserved alongside.
-- Baselines recorded at T00 remain as they were: `just lint`/`typecheck`/`test`/`proof`/`build`
-  PASS; **`just security` was RED (14 identifier-class gitleaks findings) before the approved B2
-  remediation and is now green** ("no leaks found" over 492 commits). `just check`/`just ci` were
-  red only at `security` when last run and **must be re-run at T05** — they were NOT re-run this
-  session (resource policy: MemAvailable 2.1–2.4 GiB throughout, thinner than the T00 baseline
-  window; deferred gates stay pending and are never passed).
-- Gauntlet gates: RESOURCE_DEFERRED (not run, not claimed passed) with readings, a narrow
-  single-crate observation (exit 0, 137 s), and the exact commands recorded.
-- `just context-check` → PASS after this update.
+- `python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py`:
+  PASS (spec hash, 86/86 requirements, 15-task DAG, gate activation, UI
+  removal) — run at baseline, after the spec/plan rebind, and at the end.
+- `just casework-ui-check`: **PASS** — frozen install (no changes), `tsc
+  --noEmit` clean, `vite build` clean, **140 tests / 823 assertions / 23
+  files** (was 128 before this work; 106 before the relocation).
+- Donor provenance proven: golden reference
+  `sha256:9cfdc399c3fdf5fc73cbaf0545ef2fa7a49b4d6e9f8772a817949b10883c93cd`
+  identical in both copies; `diff -rq` between `workbench/.../src/core` and
+  the ported tree reports no differing files; the 22 donor tests read the
+  golden file from disk and compare every shader module plus the preserved
+  numerical contracts, camera orbit, and quality hysteresis.
+- Rendered acceptance: **NOT RUN** — no GPU in this environment, so the
+  integrated composition has never been drawn.
+- Rust/Go gates: not run for this work (GATE_UI is the applicable gate for a
+  UI change; Rust compilation is resource-deferred and pre-existing broken by
+  the tracked `target` self-symlink).
 
 ## Remaining
 
-- **T04, T06 and T08 are now ready** (T04 was blocked on T01 — settled; T06 and T08 were blocked on
-  T03 — settled): T04 implements the Go casework core and projection model (`GATE_GO`); T06 the
-  spatial cognitive scene and semantic focus/zoom (`GATE_UI`); T08 the bounded artifact runtime and
-  renderer adapters (`GATE_UI`). They may run in parallel. T07 becomes ready when T04 settles.
-- T05 must **re-run** `just check` and `just ci` (last observed red only at `security`, now green
-  there, but unverified since) and the three deferred Gauntlet gates before it can settle; a
-  deferred gate stays pending.
-- T09–T14 remain blocked per the plan DAG.
-- **B4 —** `docs/reference/sfwp-protocol-reference.md` is stale by five methods; harmonise in the
-  T04/T05 window and cross-link from the brief.
-- **B5 — SFWP capability gaps are load-bearing** (no governed lease/claim, no durable artifact
-  persistence, no typed object-version history, no repository-fact execution, no narration beats);
-  adding any is a separately reviewed Rust contract change. T05 takes duplicate-execution safety
-  from `request_id` correlation; T07 builds history from events/episode records; T08 cannot settle
-  REQ-ART-004 by fixture; the GitHub authority surface is PRESENT while repository-fact execution
-  is ABSENT.
-- **Final integration reconciliation:** reconcile this worktree's canonical status and evidence
-  with the then-current active checkout; never overwrite newer status from other work and never
-  claim a worktree-local `just context-check` validates the operator's handoff state.
-- Not verified at all (unchanged): anything requiring a live SEA Forge cell, a live Gauntlet run,
-  or GitHub. No adapter exists; both new applications report unavailable rather than pretending.
+- Rendered acceptance of the integrated composition on a GPU host: the four
+  T06 perceptual states (quiet system/Core world; salient work object among
+  quiet objects; focused case with Core reduced to home/orientation; deeper
+  semantic zoom), including camera travel and the near-pure-white opening.
+- Then retire `src/host/scene/CoreObject.tsx` and `AccretionSwirl.tsx` (and
+  decide the `LocalHomeAnchor` marker's replacement) — acceptance-gated, not
+  before. Do not keep either as an alternate or fallback CORE.
+- Donor drag-to-orbit / wheel-to-CORE interaction routing under the R3F canvas.
+- Reduced-motion handling for CORE (would be a new documented donor deviation).
+- Formal frame cost for two live WebGL contexts.
+- `workbench/` removal remains gated on T14/`GATE_REMOVAL`.
 
 ## Blockers
 
-- **Resource condition (not a blocker):** through the 2026-09-19/20 session `MemAvailable` stayed
-  at ~2.0–2.4 GiB with ~1.5–1.6 GiB swap free (vs 3.2 GiB / 7.1 GiB at the T00 baselines). Per the
-  build-resource policy the Rust-wide gates (`just check`, `just ci`, `just test` re-runs) were
-  **deferred, not run, and remain pending**; the Bun/Go gates T03 and the confirmations needed ran
-  one at a time with readings recorded (`T03/raw-logs/resource-preflight.log`). Re-measure before
-  T05; defer again rather than risking an OOM.
-- **B5 — SFWP capability gaps** (as above). Each would be a separately reviewed Rust contract
-  change and must not be invented by Go or React.
-- **B4 — the SFWP reference document is stale** by five methods; `sfwp/mod.rs::IMPLEMENTED_METHODS`
-  is authoritative.
-- Planning risk (not a blocker): the Gauntlet TUI removal target exists only on the branch
-  containing `fe75108` — `main` has no `workbench/` TUI — so T14's removal is branch-bound.
+- No GPU in this environment: WebGL paths execute only under failure-surface
+  tests, so no rendered evidence can be produced here.
+- `target` tracked self-symlink (pre-existing, committed): blocks every root
+  cargo recipe. Operator decision required; untouched.
+- `workbench/` deletion explicitly held: the plan removes superseded UIs only
+  after replacement parity and real integration (`GATE_REMOVAL` @ T14), and
+  `resource_deferred_mode` forbids removing old UIs in that mode.
 
 ## Decisions
 
-See `.agents/reports/godspeed-casework-cognitive-environment/decision-log.yaml` for the full
-records (14 entries: T00-01…10, T02-01, T01-01, T03-01, T03-02). Headlines: isolate work in
-dedicated worktrees and pin the Gauntlet worktree to `fe75108`; share the warm Rust cache for
-baseline gates plus a `target` symlink; record the pre-existing red `security` baseline and
-withhold the repair pending approval (then apply the approved narrow allowlist); correct the GitHub
-verdict to PARTIAL; treat the missing Go toolchain and missing SFWP seams as blocking prerequisites
-rather than inventing capability; settle T00 on its own gates with those prerequisites recorded
-rather than claiming green; build the cognitive UI as a React 19 + Vite app whose core imports no
-renderer/transport/backend module, with the fixture provider chosen only in the host bootstrap, and
-serve the demo on fixed port 4178 with honest refusal of consequential intents.
+- The persistent CORE renderer is a GodSpeed-owned Three.js renderer with its
+  own WebGL context, not an R3F scene graph; R3F keeps objects, relationships,
+  projections and interaction geometry above it. Settled in spec v0.2.4
+  `renderer_boundary`, ADR-006 (2026-09-22), and
+  `D-2026-09-22-T06-01`; no requirement ID added or removed.
+- Application state reaches CORE only through `coreVisualIntent.ts`, and CORE
+  reports nothing back. Mass/spin stay at donor defaults; activity moves temp
+  only within ±0.05 and bloom within ±0.15; semantic zoom is recorded as depth
+  and deliberately does not drive camera radius (that would be the
+  geometric-only zoom REQ-UI-002 rejects).
+- Framing is asserted on focus transitions only, so CORE does not fight the
+  user's orbit or the donor's idle drift.
+- The relocated donor code was repaired mechanically, never rewritten; the
+  move added no dependency (`three@^0.186.0` was already present).
 
-<!-- END OF GODSPEED CASEWORK-ENVIRONMENT HANDOFF.
-     Everything below this marker is inherited history from the Godspeed bounded-judgment plan and
-     is NOT this plan's state. The mechanical self-audit
-     (.agents/evidence/godspeed-casework-cognitive-environment/T00/self-audit.sh) stops here. -->
+> **2026-09-21 GODSPEED COGNITIVE WORLD INTEGRATION HANDOFF:** The donor-based
+> replacement world is integrated and the latest `just casework-ui-check`
+> passes frozen install, TypeScript, production build, and **106 tests**.
+> Architect-inspected renders now show a recognizable 3D black hole with
+> lensing and a slow inclined accretion disk, shaded celestial CognitiveObjects,
+> clean desktop/390px/320px openings, camera travel, local Core home anchor,
+> causal comparison, historical projection/comparison, role actions, and a
+> bounded artifact that expands to readable DOM and restores its exact context.
+> The canonical frozen Casework mock adaptation supplies role-scoped actions,
+> subscribed execution updates, object-distinct history, and artifact
+> provenance; it stays visibly labeled `fixture`, grants no SEA authority, and
+> refuses stale/unauthorized/unknown requests. CopilotKit exposes eleven typed
+> semantic commands through `CognitiveEnvironment`; default and configured
+> builds pass, but no live Copilot endpoint was available. Final supporting
+> gates: casework plan validator PASS (86/86, 15 tasks), interface package 9
+> conformance tests PASS, `casework-go-check` PASS, and `git diff --check` PASS.
+> Remaining honest gaps: current Go demo wire shape is legacy and is not proven
+> against the frozen rich contract or real SEA/Gauntlet authority; formal frame
+> cost profiling and a live Copilot service demonstration remain unrecorded;
+> the governing 15-task replacement/removal plan is not settled by this UI
+> implementation. Preserve all unrelated dirty/untracked work. Execution and
+> rendered evidence are tracked in
+> `.agents/plans/godspeed-cognitive-world-execution.md`.
+
+> **2026-09-20 GODSPEED COGNITIVE WORLD RESUMED AFTER USAGE RESET:**
+> The user resumed implementation. The latest visual criterion supersedes the
+> recent screenshots: Core must unmistakably read as a **3D black hole in space**
+> with visible lensing and a **slow moving accretion disk**; surrounding
+> CognitiveObjects must read as **3D celestial bodies orbiting Core**. The
+> current `CoreObject` camera-facing shader and `ObjectNode` flat discs fail
+> that criterion. A Terra Core rebuild has resumed but has no validated result
+> yet. The focused layout pass also
+> regression was repaired: `bun run typecheck` and the focused layout tests
+> now pass. The UI build bottleneck was narrowed to optional CopilotKit loading;
+> the build-time guard makes the default fixture build complete. Integrated
+> `just casework-ui-check` passed frozen install, typecheck, production build,
+> and 78 tests. It must be rerun after the current adapter/visual/a11y edits.
+> Preserve all dirty/untracked work; do not reset or clean. The five-donor
+> provenance report is at `.agents/reports/godspeed-casework-cognitive-environment/godspeed-cognitive-world-donor-provenance-2026-09-20.md`.
+> A Luna StarDust adaptation from the selected galaxy donor is present, with
+> one focused test passing. Terra completed a donor-based 3D Core rebuild;
+> Luna completed 3D orbiting ObjectNode bodies. Rendered visual acceptance is
+> still open because focused labels and edge bodies remain crowded. The
+> frozen rich contract is not yet consumed by the current UI: a Terra agent
+> is implementing its typed adapter and role-aware action seam. A Luna agent
+> is fixing Recap/Clear contrast (axe observed 3.52:1), and another is
+> refining focused-scene framing. The
+> user explicitly prefers copying coherent licensed donor source and tailoring
+> it, with exact revision/source attribution and retained notices. Racing-game
+> mechanic integration remains pending until its new owner verifies it.
+> Verified this turn: pinned-Go `just casework-go-check` PASS; casework plan
+> validator PASS; frozen interface contract Bun test 9 pass; browser opening
+> audit 0 axe violations and no runtime errors before the latest edits. Camera
+> journey tests passed 11 focused cases and settled Core return was visually
+> observed; new visual criterion keeps its scene acceptance open.
+
+> **2026-09-20 GODSPEED CASEWORK CONTRACT PARITY RESOLVED:** Spec v0.2.3 and
+> plan v0.2.4 are bound to SHA-256
+> `09d4292b956b09066b84bb03014413cae2b14a2c89f5338b34b6ebf542ab1dae`;
+> the ADR addendum remains recorded. The casework validator PASS and focused
+> interface contract Bun conformance test (9 pass) are recorded; 86 IDs across
+> 15 tasks remain unchanged. The interface package now agrees across prose,
+> TypeScript, JSON schemas, examples, and tests on the string-cursor snapshot
+> shape and 15-name wire action union. Structural conformance is proven; full
+> draft-2020-12 JSON Schema semantic validation remains an explicit limitation.
+> The authority correction is complete and no longer blocks UI work. Prior valid
+> work is preserved; visual acceptance remains open. Core donor provenance/render
+> verification and the camera journey are pending, and T06 visual acceptance is
+> not claimed.
+
+> **2026-09-20 GODSPEED CASEWORK NEXT MOVE:** Continue with evidence-led UI
+> verification now that the authority gate is clear. Verify retained donor
+> revisions/licenses/provenance, inspect the combined first frame, then run the
+> rendered Core and camera journeys. Keep Core and camera acceptance open until
+> those artifacts and renders are reviewed.
+
+> **2026-09-19 GODSPEED — T28 SETTLED (P2, CONFIRMED WITH QUALIFICATION; FRESH
+> VERIFIER: CONFIRM): T27 VALIDLY EXECUTED AND REPRODUCED; REPRESENTATION
+> BRANCH CLOSED ON THIS SURFACE; PLAN REACHES EMPTY READINESS.**
+> A fresh independent verifier (shielded from all builder narrative and the
+> preferred outcome) plus an orchestrator-standalone recomputation importing
+> nothing from the T27 harness BOTH reproduce every number exactly: A 9/14
+> (0.643) vs B 8/14 (0.571); corrections 0; regressions 1 (accepted-A4
+> decided→abstain); c_ctrl 0; McNemar exact p = 1.0; C5(boundary)
+> mechanically required (C3 defeated by the single frontier regression;
+> under the superseded decided-only rule the label would be C3 — equally
+> non-supporting). Integrity proven end-to-end: 14/14 corpus hashes,
+> selection-rule replay MATCH, 140/140 store keys bound to the prereg
+> file-bytes hash, 70/70 condition-A prompt bytes and 14/14 condition-B case
+> hashes reproduced from the frozen specs alone, freeze timing proven
+> (prereg 11:38:04 < addendum 11:41:48 < harness 11:47:34 < first call
+> 11:49:19), harness = recorded sha, addendum anti-self-serving. Claim
+> separation held: behavior shift CONFIRMED (per-call abstentions 18/70 →
+> 32/70 — typed structure made pre-terminal record status salient) WITHOUT
+> judgment improvement. Stable-wrong `budget-C3`: the provider acknowledges
+> supported claims and the truncated trace yet answers from local positive
+> valence — the evidence-supported missing distinction is **local positive
+> evidence vs sufficiency/completeness of the whole-case record for
+> settlement**. Branch pruned: with T18's and T27's independent negatives,
+> input-representation provenance typing is closed as a fix on this surface.
+> Qualifications recorded append-only, none verdict-changing: frozen
+> baseline fraction label 4/14 (actual 6/14 = 0.4286; decimal was correct);
+> prereg strict-YAML parse defect in relation_rules (frozen text/hash
+> intact, terms independently verified); teeth log is a post-verification
+> rewrite artifact. Architecture boundaries held (no provider truth/
+> settlement/authority; no `.sea` grammar implication). Next affordable move
+> is an OPERATOR DECISION — nothing executed: zero-provider-cost inspection
+> of the budget-C3 vs accepted deterministic settlement pattern first; a
+> preregistered settlement-sufficiency representation probe (required vs
+> observed vs missing evidence coverage) is the one candidate the evidence
+> pays for, only if a new developmental experiment is later authorized.
+> Evidence: `.agents/evidence/godspeed-bounded-judgment/T28/` (disposition
+> report with the full 16-item audit, verifier confirmation record,
+> standalone recompute script + output, `verify_disposition.py` gate —
+> PASS). Decision D-2026-09-19-T28-01. Nothing committed.
 
 > **2026-09-19 GODSPEED — T27 SETTLED (P2, DISPOSITION C5): CLAIM-VS-OBSERVATION
 > TYPING DOES NOT CHANGE CASE-LEVEL BOUNDED JUDGMENT ON THE FRONTIER; TARGET
@@ -3901,3 +4011,40 @@ records termination, transcript hash, and harvested refs, and `run.get` resolves
 the rest; the gap is a termination-complete evidence view that proves failure
 cannot erase the record. The alternative remains `thoth.ask`'s response contract
 (journey 3): still the largest unclaimed block, still at least two slices wide.
+
+---
+
+# Casework cognitive environment: product-experience implementation (2026-09-19)
+
+Section owner: the godspeed-casework-cognitive-environment plan (this block is additive; the
+bounded-judgment handoff above is untouched).
+
+**What happened**: operator-ordered takeover run that carried the T03 interaction core to the
+full product experience. Built: the R3F spatial world (raymarched gravitational-lens Core,
+orbital attention physics, semantic zoom via wheel/double-click, contextual relationship lines,
+comparison/time-comparison arrangements), the bounded artifact runtime with six lazy renderer
+families and boundary-crossing persistence intent, the bottom-center composer with narrated
+choreography (pause/resume/interrupt, no transcript), the temporal strip, search palette,
+outline (list alternative), a11y announcer, dark mode; the Go boundary server (-serve mode:
+projections, SSE with replay, intents with idempotency + fixture authority + leases, artifacts)
+embedding the canonical Northstar dataset; operator recipes casework-go-up/-down/-status and
+casework-demo-up.
+
+**Gates this run**: GATE_UI PASS (72 tests / 471 assertions, suite run 5x clean), GATE_GO PASS,
+GATE_SPEC_TRACE PASS, production build + preview verified, live walkthrough of the reference FDE
+journey captured (22 screenshots + report at
+`.agents/evidence/godspeed-casework-cognitive-environment/product-experience/`), two full
+consequential crossings observed over SSE with the world settling quiet.
+
+**Status of plan tasks**: T04/T06/T07/T08/T09/T10 substance implemented (see implementation
+report); NOT settled — the plan's preregistration/teeth/confirmation process was not executed for
+them in this run. T05/T11 real SEA-Forge/Gauntlet integration, T12 journey settlement, T13/T14
+confirmation and removal remain open. No fixture behavior is claimed as governed integration.
+
+**Game-first reframe (2026-09-20)**: operator reframe applied as a presentation pass: first frame
+is Core + composer + white space (peripheral chrome fades, temporal strip only in history mode,
+Core whisper "1 thing needs you" inside the event horizon), pointer-driven wake physics (rAF +
+`--wake` custom property, no React state), click = camera travel with shift-click select and
+double-click artifact open, imperceptible orbit from authored angles, resting relationship
+hairlines only where attention is. Verified live (evidence screenshots 24-31); core untouched,
+72/72 tests green, typecheck clean. Decisions D-2026-09-19-PE-01..05 and D-2026-09-20-PE-06.

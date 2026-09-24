@@ -13,6 +13,8 @@ export type IntentKind =
   | 'request-explanation'
   | 'propose-consequence'
   | 'decide-approval'
+  /** Durably persisting an artifact is consequential: it crosses the boundary, never a local write. */
+  | 'persist-artifact'
 
 export interface InteractionIntent {
   readonly id: string

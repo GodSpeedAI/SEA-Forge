@@ -3024,3 +3024,166 @@
 [2026-09-19T17:22:32.699Z] INFO  [McpServer] [trace=89e79590a6cd16687c38782f3bf9384a] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
 [2026-09-19T17:22:49.397Z] INFO  [StorageFactory] [trace=fdd8851580898a301df4bcdc30a4140e] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
 [2026-09-19T17:22:49.437Z] INFO  [McpServer] [trace=fdd8851580898a301df4bcdc30a4140e] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T17:48:59.646Z] INFO  [StorageFactory] [trace=ea0699a8767a071d55561e55975df213] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T17:48:59.697Z] INFO  [McpServer] [trace=ea0699a8767a071d55561e55975df213] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T17:49:08.605Z] INFO  [StorageFactory] [trace=8b500092dbab097ba5d907610cc9f1d3] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T17:49:08.625Z] INFO  [McpServer] [trace=8b500092dbab097ba5d907610cc9f1d3] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T17:49:53.690Z] INFO  [StorageFactory] [trace=56fdd3e891103b69e5750c07e03e582a] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T17:49:53.705Z] INFO  [McpServer] [trace=56fdd3e891103b69e5750c07e03e582a] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T19:08:52.987Z] INFO  [StorageFactory] [trace=82cccd6e32635654199aad8775f81413] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T19:08:53.009Z] INFO  [McpServer] [trace=82cccd6e32635654199aad8775f81413] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T19:12:40.103Z] INFO  [StorageFactory] [trace=3522422061c0d40e4418e96ce225d319] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T19:12:40.124Z] INFO  [McpServer] [trace=3522422061c0d40e4418e96ce225d319] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T19:13:24.229Z] INFO  [StorageFactory] [trace=e51354d948b4b2c0939d1de969d5f432] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T19:13:24.246Z] INFO  [McpServer] [trace=e51354d948b4b2c0939d1de969d5f432] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T19:13:53.765Z] INFO  [StorageFactory] [trace=a56684ccc0a520ba3d9729a01efb6936] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T19:13:53.789Z] INFO  [McpServer] [trace=a56684ccc0a520ba3d9729a01efb6936] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-19T19:14:34.511Z] INFO  [StorageFactory] [trace=457abaf47663ac7937976168501f11d1] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-19T19:14:34.529Z] INFO  [McpServer] [trace=457abaf47663ac7937976168501f11d1] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-21T22:47:18.941Z] INFO  [StorageFactory] [trace=fa56b26d93d1a2ccb893ead85fc0b581] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-21T22:47:19.014Z] INFO  [McpServer] [trace=fa56b26d93d1a2ccb893ead85fc0b581] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-21T22:47:22.842Z] INFO  [StorageFactory] [trace=861a6c48a3cc440a90d84a74db71e1c9] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-21T22:47:22.894Z] INFO  [McpServer] [trace=861a6c48a3cc440a90d84a74db71e1c9] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-21T23:04:02.750Z] INFO  [StorageFactory] [trace=b37890dade19b788cffdce201637a45f] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-21T23:04:02.777Z] INFO  [McpServer] [trace=b37890dade19b788cffdce201637a45f] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-21T23:05:22.248Z] INFO  [StorageFactory] [trace=48b9c8fdd55ee3205f207257ff6e5284] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-21T23:05:22.268Z] INFO  [McpServer] [trace=48b9c8fdd55ee3205f207257ff6e5284] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-21T23:07:20.176Z] INFO  [StatsWriter] pruned 27 projected events older than 2026-09-07
+[2026-09-22T03:09:29.307Z] INFO  [StorageFactory] [trace=7e7f9a16ccf8b3ac36bb2219f4f336a7] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-22T03:09:29.350Z] INFO  [McpServer] [trace=7e7f9a16ccf8b3ac36bb2219f4f336a7] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T14:11:25.749Z] INFO  [StorageFactory] [trace=029a8466195fae015a9dfcab4b252dae] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-22T14:11:25.800Z] INFO  [McpServer] [trace=029a8466195fae015a9dfcab4b252dae] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T14:15:13.862Z] INFO  [StorageFactory] [trace=c47df60e2b5631384f057ecbd198ba1a] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-22T14:15:14.034Z] INFO  [McpServer] [trace=c47df60e2b5631384f057ecbd198ba1a] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T14:16:12.878Z] INFO  [StorageFactory] [trace=7978e788d4d41cfeac93706bce3c62ec] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-22T14:16:12.947Z] INFO  [McpServer] [trace=7978e788d4d41cfeac93706bce3c62ec] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T14:30:58.790Z] INFO  [StorageFactory] [trace=c6fe9625a057a49cc1318176030348b9] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-22T14:30:58.831Z] INFO  [McpServer] [trace=c6fe9625a057a49cc1318176030348b9] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T14:31:17.259Z] INFO  [StorageFactory] [trace=01f55ccc22098182d2a02f85d07d2c22] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-22T14:31:17.319Z] INFO  [McpServer] [trace=01f55ccc22098182d2a02f85d07d2c22] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T22:45:24.448Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T22:45:24.822Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-09-22T22:52:07.053Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T22:52:07.275Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-09-22T23:04:04.115Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:04:04.129Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:04:04.137Z] INFO  [SessionTracker] Pruning stale session c0880ee6-0e11-4b9d-b34b-cb835dff43e0 (age: 428h)
+[2026-09-22T23:04:04.151Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:04:04.346Z] INFO  [StatsWriter] pruned 33 projected events older than 2026-09-08
+[2026-09-22T23:05:05.639Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:05:05.678Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:05:05.718Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:05:15.423Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:05:15.432Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:05:15.444Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:05:20.622Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:05:20.629Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:05:20.637Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:05:27.571Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:05:27.578Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:05:27.583Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:05:34.190Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:05:34.196Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:05:34.204Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:06:09.861Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:06:09.872Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:06:09.880Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:06:14.411Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:06:14.420Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:06:14.428Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:26:25.012Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:26:25.025Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:26:25.045Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:37:52.395Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:37:52.408Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:37:52.430Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:37:52.730Z] INFO  [PlanDiscovery] Plan discovery: upserted 0 slug(s) + 1 external path(s) into plans.json
+[2026-09-22T23:47:43.038Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-22T23:47:43.077Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-22T23:47:43.104Z] INFO  [StopHook] Session saved successfully
+[2026-09-22T23:47:43.382Z] INFO  [StatsWriter] pruned 1 projected events older than 2026-09-08
+[2026-09-22T23:47:43.428Z] INFO  [PlanDiscovery] Plan discovery: upserted 0 slug(s) + 1 external path(s) into plans.json
+[2026-09-22T23:48:58.338Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-22T23:48:58.406Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-09-23T03:42:31.799Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T03:42:31.822Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T03:42:31.843Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T03:42:34.307Z] INFO  [StatsWriter] pruned 9 projected events older than 2026-09-09
+[2026-09-23T03:42:34.808Z] INFO  [PlanDiscovery] Plan discovery: upserted 1 slug(s) + 1 external path(s) into plans.json
+[2026-09-23T14:41:21.570Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-23T14:41:22.097Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-09-23T14:42:53.053Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-23T14:42:53.096Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-09-23T15:23:16.502Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T15:23:16.516Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T15:23:16.529Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T15:23:17.959Z] INFO  [StatsWriter] pruned 3 projected events older than 2026-09-09
+[2026-09-23T15:25:25.483Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T15:25:25.495Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T15:25:25.504Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T17:47:34.301Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T17:47:34.355Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T17:47:34.397Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T17:47:38.516Z] INFO  [StatsWriter] pruned 11 projected events older than 2026-09-09
+[2026-09-23T17:47:39.308Z] INFO  [PlanDiscovery] Plan discovery: upserted 1 slug(s) + 3 external path(s) into plans.json
+[2026-09-23T17:47:48.870Z] INFO  [SessionTracker] upsertSkillEntry: claude:agent-browser (new, ×1)
+[2026-09-23T17:47:48.871Z] INFO  [SkillDiscovery] Persisted 1 skill(s) from 68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T18:05:37.953Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T18:05:38.636Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T18:05:38.724Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T18:06:02.031Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T18:06:02.070Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T18:06:02.129Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T18:07:51.944Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T18:07:51.981Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T18:07:52.003Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T18:10:46.519Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T18:10:46.571Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T18:10:46.613Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T18:13:03.366Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T18:13:03.412Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T18:13:03.431Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T19:43:38.370Z] INFO  [StopHook] Stop hook triggered (session=68755a62-33c0-4892-b86b-95827f57c221)
+[2026-09-23T19:43:38.388Z] INFO  [StopHook] Hook input — session_id=68755a62-33c0-4892-b86b-95827f57c221, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/68755a62-33c0-4892-b86b-95827f57c221.jsonl
+[2026-09-23T19:43:38.399Z] INFO  [StopHook] Session saved successfully
+[2026-09-23T20:07:41.625Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-23T20:07:41.718Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-09-24T00:32:38.738Z] INFO  [SessionStartHook] SessionStartHook invoked (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-24T00:32:39.067Z] INFO  [SessionStartHook] No briefing or reminder generated (skipped or timed out)
+[2026-09-24T00:45:55.141Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:45:55.159Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:45:55.181Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:45:55.457Z] INFO  [StatsWriter] pruned 6 projected events older than 2026-09-10
+[2026-09-24T00:47:56.311Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:47:56.322Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:47:56.333Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:48:01.854Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:48:01.870Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:48:01.888Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:48:08.736Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:48:08.773Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:48:08.790Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:48:14.889Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:48:14.899Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:48:14.909Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:48:24.206Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:48:24.218Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:48:24.234Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:48:34.184Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:48:34.192Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:48:34.202Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:48:41.005Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:48:41.018Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:48:41.026Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:54:16.128Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T00:54:16.135Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T00:54:16.146Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T00:54:16.259Z] INFO  [PlanDiscovery] Plan discovery: upserted 0 slug(s) + 1 external path(s) into plans.json
+[2026-09-24T01:03:44.113Z] INFO  [StorageFactory] [trace=b8e8e2856179ce7f80781db33ac18a06] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-24T01:03:44.275Z] INFO  [McpServer] [trace=b8e8e2856179ce7f80781db33ac18a06] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-24T01:04:44.370Z] INFO  [StorageFactory] [trace=9bfd9030570f0fb9dc6fc8dc18e48c4d] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-24T01:04:44.533Z] INFO  [McpServer] [trace=9bfd9030570f0fb9dc6fc8dc18e48c4d] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-24T01:05:48.306Z] INFO  [StopHook] Stop hook triggered (session=166e81df-ae53-4a2f-94ef-261256657430)
+[2026-09-24T01:05:48.317Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
+[2026-09-24T01:05:48.334Z] INFO  [StopHook] Session saved successfully
+[2026-09-24T01:05:48.706Z] INFO  [PlanDiscovery] Plan discovery: upserted 0 slug(s) + 1 external path(s) into plans.json

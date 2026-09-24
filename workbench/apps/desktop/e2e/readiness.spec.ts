@@ -17,7 +17,7 @@ function captureBrowserErrors(page: Page): string[] {
 }
 
 test.describe("Readiness primary-path journey", () => {
-  test("matches the reference desktop shell geometry and keeps evidence docked", async ({
+  test("spatial shell keeps CORE mounted with rail, composer, and chrome", async ({
     page,
   }) => {
     const browserErrors = captureBrowserErrors(page);
@@ -25,157 +25,66 @@ test.describe("Readiness primary-path journey", () => {
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto("/readiness");
 
-    const shell = page.locator('[data-od-id="application-shell"]');
-    const header = page.locator('[data-od-id="global-context-bar"]');
-    const navigation = page.locator('[data-od-id="primary-navigation"]');
-    const workspace = page.locator('[data-od-id="readiness-workspace"]');
-    const drawer = page.getByTestId("evidence-drawer");
-    const footer = page.locator('[data-od-id="connection-state-bar"]');
+    // CoreViewport is persistent: canvas mounted once, never remounted by
+    // surface changes. (Headless CI has no WebGL2, so the failure surface —
+    // not a black screen — may render over it; either way the viewport owns
+    // the lifetime.)
+    await expect(page.getByTestId("core-viewport")).toBeAttached();
+    await expect(page.getByTestId("core-canvas")).toBeAttached();
 
-    await expect(shell).toBeVisible();
-    await expect(drawer).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Why" })).toBeVisible();
+    // White-labeled donor chrome, no demo copy.
+    await expect(page.getByTestId("context-identity")).toBeVisible();
+    await expect(page.getByTestId("context-readout")).toBeVisible();
+    await expect(page.getByTestId("interaction-hints")).toBeVisible();
+    await expect(page.getByTestId("surface-rail")).toBeVisible();
+    await expect(page.getByTestId("composer")).toBeVisible();
+    await expect(page.getByTestId("connection-state-bar")).toBeVisible();
 
-    const [headerBox, navigationBox, workspaceBox, drawerBox, footerBox] =
-      await Promise.all([
-        header.boundingBox(),
-        navigation.boundingBox(),
-        workspace.boundingBox(),
-        drawer.boundingBox(),
-        footer.boundingBox(),
-      ]);
+    // Nine spatial surfaces, CORE first — the legacy thirteen-link page nav
+    // is gone and must not reappear.
+    const railLinks = page.getByTestId("surface-rail").getByRole("link");
+    await expect(railLinks).toHaveCount(9);
+    await expect(railLinks.first()).toHaveText(/CORE/);
 
-    expect(headerBox?.height).toBe(56);
-    expect(navigationBox?.width).toBe(236);
-    expect(workspaceBox?.x).toBe(236);
-    expect(drawerBox?.width).toBe(380);
-    expect(drawerBox?.x).toBe(1220);
-    expect(footerBox?.height).toBe(28);
+    // Evidence drawer still opens by default, as before the migration.
+    await expect(page.getByTestId("evidence-drawer")).toBeVisible();
 
-    await page.setViewportSize({ width: 1280, height: 800 });
-
-    const overlayBox = await drawer.boundingBox();
-    const responsiveNavigationBox = await navigation.boundingBox();
-    const responsiveWorkspaceBox = await workspace.boundingBox();
-    const overlayStyles = await drawer.evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        position: styles.position,
-        transitionDuration: styles.transitionDuration,
-        transitionTimingFunction: styles.transitionTimingFunction,
-      };
-    });
-    const backdropStyles = await page
-      .getByTestId("evidence-drawer-backdrop")
-      .evaluate((element) => {
-        const styles = getComputedStyle(element);
-        return {
-          backgroundColor: styles.backgroundColor,
-          width: styles.width,
-        };
-      });
-
-    expect(overlayBox).toMatchObject({
-      x: 880,
-      y: 56,
-      width: 400,
-      height: 744,
-    });
-    expect(responsiveNavigationBox?.width).toBe(224);
-    expect(responsiveWorkspaceBox?.x).toBe(224);
-    expect(overlayStyles).toEqual({
-      position: "static",
-      transitionDuration: "0.18s",
-      transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
-    });
-    expect(backdropStyles).toEqual({
-      backgroundColor: "rgba(0, 0, 0, 0)",
-      width: "400px",
-    });
-
-    await page.getByRole("button", { name: "Close evidence drawer" }).click();
-    await expect(drawer).toBeHidden();
-    const closedTransform = await drawer.evaluate(
-      (element) => getComputedStyle(element).transform,
-    );
-    expect(closedTransform).not.toBe("none");
-
-    await page
-      .getByRole("button", { name: "Toggle active work evidence" })
-      .click();
-    await expect(drawer).toBeVisible();
-    await expect
-      .poll(async () => {
-        const box = await drawer.boundingBox();
-        return box
-          ? {
-              x: Math.round(box.x),
-              y: Math.round(box.y),
-              width: Math.round(box.width),
-              height: Math.round(box.height),
-            }
-          : null;
-      })
-      .toEqual({
-        x: 880,
-        y: 56,
-        width: 400,
-        height: 744,
-      });
+    // Composer offers only projected affordances for this context.
+    await expect(page.getByTestId("composer")).toContainText(/CORE|Compose|Review|Return/);
     expect(browserErrors).toEqual([]);
   });
 
-  test("Operate navigation swaps governed views and route context", async ({ page }) => {
+  test("Surface rail swaps governed surfaces without remounting CORE", async ({ page }) => {
     const browserErrors = captureBrowserErrors(page);
     await installTauriMock(page, degradedReadinessView());
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto("/readiness");
 
+    const viewport = page.getByTestId("core-viewport");
+    await expect(viewport).toBeAttached();
+
     const routes = [
-      ["Thoth", "/thoth", "Thoth workspace", "thoth-question-composer", "Thoth"],
-      ["Assets", "/assets", "Asset catalog", "asset-catalog-table", "Assets"],
-      ["Domain Models", "/models", "Domain models", "domain-model-workbench", "Domain"],
-      ["Cases", "/cases", "Case horizon", "case-horizon-board", "Cases"],
-      ["Inbox", "/inbox", "Inbox and approvals", "approval-decision-panel", "Inbox"],
-      ["Operations", "/operations", "Operations monitor", "execution-console", "Operations"],
+      ["Beat", "/thoth", "Thoth workspace", "thoth-question-composer"],
+      ["Case", "/cases", "Case horizon", "case-horizon-board"],
+      ["Judge", "/inbox", "Inbox and approvals", "approval-decision-panel"],
+      ["Time", "/operations", "Operations monitor", "execution-console"],
     ] as const;
 
-    for (const [label, path, heading, region, journeyStep] of routes) {
-      await page.getByRole("link", { name: new RegExp(label, "i") }).click();
+    for (const [label, path, heading, region] of routes) {
+      await page.getByTestId("surface-rail").getByRole("link", { name: label }).click();
       await expect(page).toHaveURL(new RegExp(`${path}$`));
       await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
       await expect(page.locator(`[data-od-id="${region}"]`)).toBeVisible();
-      await expect(
-        page.locator('[aria-label="Governed journey"] strong'),
-      ).toHaveText(journeyStep);
       await expect(page.getByTestId("evidence-drawer")).toBeVisible();
+      // CORE persists across surface changes: same viewport element, still
+      // attached — no WebGL context recreation on navigation.
+      await expect(viewport).toBeAttached();
       const routeA11y = await new AxeBuilder({ page })
         .include("#main-content")
         .analyze();
       expect(routeA11y.violations).toEqual([]);
     }
 
-    await page.getByRole("link", { name: /^Assets$/i }).click();
-    const workspaceFits = await page
-      .locator('[data-od-id="readiness-workspace"]')
-      .evaluate((element) => element.scrollWidth <= element.clientWidth);
-    const primaryAction = page.getByRole("button", {
-      name: "Inspect selected asset",
-    });
-    const actionFits = await primaryAction.evaluate(
-      (element) => element.scrollWidth <= element.clientWidth,
-    );
-    const assetGrid = await page.locator(".asset-row").first().evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        display: styles.display,
-        columns: styles.gridTemplateColumns,
-      };
-    });
-    expect(workspaceFits).toBe(true);
-    expect(actionFits).toBe(true);
-    expect(assetGrid.display).toBe("grid");
-    expect(assetGrid.columns.split(" ").length).toBe(4);
     expect(browserErrors).toEqual([]);
   });
 

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/schemas/execution-contracts.schema.json",
+  "title": "ExecutionContracts",
+  "description": "Convergence contracts connecting SEA-Forge Governed Work to Gauntlet Execution.",
+  "type": "object",
+  "definitions": {
+    "ExecutionOpportunity": {
+      "type": "object",
+      "required": ["opportunity_id", "case_id", "plan_item_id", "required_role", "status", "created_at"],
+      "properties": {
+        "opportunity_id": { "type": "string", "pattern": "^opp-[a-z0-9_.-]+-[a-f0-9]{8}$" },
+        "case_id": { "type": "string", "pattern": "^case-[a-z0-9_.-]+$" },
+        "plan_item_id": { "type": "string" },
+        "required_role": { "type": "string" },
+        "contract_slug": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLAIMED", "EXPIRED"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ExecutionLease": {
+      "type": "object",
+      "required": ["lease_id", "opportunity_id", "worker_id", "role", "expires_at", "nonce"],
+      "properties": {
+        "lease_id": { "type": "string", "pattern": "^lease-[a-z0-9_.-]+-[a-f0-9]{8}$" },
+        "opportunity_id": { "type": "string" },
+        "worker_id": { "type": "string" },
+        "role": { "type": "string" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "nonce": { "type": "string" }
+      }
+    },
+    "AuthorizedInvocation": {
+      "type": "object",
+      "required": [
+        "invocation_id",
+        "case_id",
+        "plan_item_id",
+        "lease_id",
+        "max_duration_seconds",
+        "sandbox_profile",
+        "signature"
+      ],
+      "properties": {
+        "invocation_id": { "type": "string", "pattern": "^inv-[a-z0-9_.-]+-[a-f0-9]{16}$" },
+        "case_id": { "type": "string" },
+        "plan_item_id": { "type": "string" },
+        "lease_id": { "type": "string" },
+        "max_duration_seconds": { "type": "integer", "minimum": 1 },
+        "sandbox_profile": { "type": "string" },
+        "permitted_capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "signature": { "type": "string" }
+      }
+    },
+    "ExecutionObservation": {
+      "type": "object",
+      "required": ["run_id", "invocation_id", "exit_code", "status", "duration_ms", "artifacts"],
+      "properties": {
+        "run_id": { "type": "string", "pattern": "^run-[a-z0-9_.-]+-[0-9]{14}$" },
+        "invocation_id": { "type": "string" },
+        "exit_code": { "type": "integer" },
+        "status": { "type": "string", "enum": ["SUCCEEDED", "FAILED", "TIMED_OUT", "CANCELLED"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "digest", "size_bytes"],
+            "properties": {
+              "name": { "type": "string" },
+              "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+              "size_bytes": { "type": "integer" }
+            }
+          }
+        },
+        "reality_trace": {
+          "type": "object",
+          "required": ["question_id", "evidence_id", "discrepancy_count"],
+          "properties": {
+            "question_id": { "type": "string" },
+            "evidence_id": { "type": "string" },
+            "discrepancy_count": { "type": "integer" },
+            "attribution_locus": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "OperationalSettlement": {
+      "type": "object",
+      "required": [
+        "settlement_id",
+        "case_id",
+        "plan_item_id",
+        "invocation_id",
+        "decision",
+        "settled_at"
+      ],
+      "properties": {
+        "settlement_id": { "type": "string", "pattern": "^set-[a-z0-9_.-]+-[a-f0-9]{12}$" },
+        "case_id": { "type": "string" },
+        "plan_item_id": { "type": "string" },
+        "invocation_id": { "type": "string" },
+        "decision": { "type": "string", "enum": ["ACCEPTED", "REJECTED", "INCONCLUSIVE"] },
+        "evidence_id": { "type": "string" },
+        "settled_at": { "type": "string", "format": "date-time" },
+        "consequence_summary": { "type": "string" }
+      }
+    }
+  }
+}

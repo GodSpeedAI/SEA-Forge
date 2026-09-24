@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -16,7 +20,15 @@
     "verbatimModuleSyntax": true,
     "useDefineForClassFields": true,
     "noEmit": true,
-    "types": ["bun-types"]
+    "types": [
+      "bun-types"
+    ],
+    "resolveJsonModule": true
   },
-  "include": ["src", "contracts", "vite.config.ts"]
+  "include": [
+    "src",
+    "contracts",
+    "e2e",
+    "vite.config.ts"
+  ]
 }

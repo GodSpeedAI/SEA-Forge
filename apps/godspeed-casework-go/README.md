@@ -63,6 +63,69 @@ problem rather than stopping at the first, `config.Fatal` selects the document-l
 prevent startup, and capability-scoped faults travel into preflight so unrelated capabilities keep
 their own honest states. The end-to-end behaviour is recorded in the T01 teeth.
 
+## Serve mode (fixture-labeled)
+
+`-serve` starts the casework boundary's HTTP+SSE surface after preflight. It binds loopback
+(`-addr`, default `127.0.0.1:4179`), blocks on SIGINT/SIGTERM, and shuts down gracefully. Serve
+mode still requires a configuration file (the `-config` flow is unchanged; a missing or invalid
+config exits 2 exactly as in CLI mode); `configs/fixture-serve.json` is a minimal valid example:
+
+```sh
+go run ./cmd/godspeed-casework -serve -config configs/fixture-serve.json
+```
+
+In serve mode every configured capability is answered by the FIXTURE-LABELED in-process provider,
+so preflight reports them `ready` instead of `unavailable`. The example config marks them all
+`required: false`; an operator may flip a capability to `required: true`, which additionally
+demands an `endpoint` and a credential indirection per the schema rules below — the fixture
+provider never reads the credential, but the configuration discipline still applies.
+
+### Endpoints
+
+Wire contract: `apps/godspeed-cognitive-ui/src/adapters/go/WIRE.md` (authoritative for shapes).
+
+| Endpoint | Behaviour |
+|---|---|
+| `GET /api/healthz` | `{ "status": "ok", "provenance": "go:fixture:northstar", "liveCursor": N }` |
+| `GET /api/world` | `{ "snapshot": … }` at the live cursor; `?cursor=` serves that revision, unknown or malformed cursor → 404 typed error `{"error":{"kind":"invalid","note":"unknown cursor"}}` |
+| `GET /api/time` | `{ "positions": [{ "cursor", "at", "summary" }, …], "truncated": false }` — the full revision window, ascending; grows as lease-driven revisions append |
+| `GET /api/events?last=<cursor>` | SSE (`text/event-stream`): `hello`, replay of every revision with cursor > `last` (each `revision` event's `id:` field is its cursor), then live `revision` and `lease` events; a `: heartbeat` comment every 15 s; one flush per event; client disconnect cancels all server-side subscriptions |
+| `POST /api/intents` | Body `{ "id", "kind", "target", "parameters", "cursor" }`; refusals are NORMAL 200 outcomes `{"status":"refused","reason":"authority_denied|invalid|stale_projection","note":"…"}`; acceptances carry `{ "status": "accepted", "note": "…", "lease": { "id", "state", "summary" } }` (lease present only when one was minted) |
+| `GET /api/artifacts` | `{ "descriptors": [{ "ref", "kind", "title", "boundObject" }, …] }` — the artifact catalog (fixture seed plus anything persisted at runtime) |
+| `POST /api/artifacts` | Body `{ "ref", "boundObject", "title" }` → `{"status":"accepted"}` or the refusal shape; fixture-scoped durability (see limitations) |
+| `GET /api/artifacts/{ref}?level=minimal\|summary\|source` | The level's bytes with its `mediaType` (default level `minimal`); unknown ref → 404 typed error, unknown level → 400 typed error |
+
+POST endpoints are strict: `Content-Type` must be `application/json` (else 415), bodies over 1 MiB
+are rejected (413), and JSON decoding rejects unknown top-level fields and trailing values (400).
+`reason: "unavailable"` is part of the wire vocabulary but no fixture path emits it — the fixture
+provider is in-process and cannot be unreachable.
+
+### Consequential flow (fixture demo)
+
+`POST /api/intents` with kind `propose-consequence`, target `ns-migration` (or `ns-secondary`),
+parameters `{ "action": "implement", "cursor": <liveCursor> }`: validate → fixture authority
+allowlist → lease `claimed` → `active` → append revisions 1151–1153 (the `ns-fix-layer`
+compatibility layer appears, candidate checks run, the world quiets) → `released`. Every revision
+streams over SSE; the UI world reorganizes from these events alone. Intent ids are idempotent:
+the same id with an identical body replays the recorded outcome; the same id with a different body
+is refused `invalid`.
+
+### FIXTURE labeling and limitations (stated, not hidden)
+
+* **No governed authority.** The intent decision point is an allowlist over the Northstar fixture.
+  `decide-approval` is refused `authority_denied` because the fixture has no review capability;
+  `implement` is accepted only for `ns-migration`/`ns-secondary`; every other consequential request
+  is refused with ZERO effects (no lease, no revision — tested).
+* **In-memory durability.** Persisted artifacts survive for the process lifetime only; a restart
+  reseeds from the fixture.
+* **Restart clears leases and idempotency records.** Leases and recorded intent outcomes live in
+  the coordinator process; a restarted server starts with none (tested).
+* **Fixture dataset drift.** The embedded `internal/projection/fixturedata/northstar.world.json`
+  must stay byte-equal to the canonical dataset in the cognitive-ui app; a test enforces this and
+  skips only when the sibling app is absent from the checkout.
+* Real SEA-Forge/Gauntlet wiring is later milestone work; nothing served here is governed
+  integration.
+
 ## Gate
 
 `just casework-go-check` (repository root) runs `gofmt -l`, `go vet ./...` and `go test ./...` in this
@@ -70,5 +133,6 @@ module. It is plan gate `GATE_GO`.
 
 ## Not implemented here (by design)
 
-No transport, no live adapters, and no work acceptance: those are T04/T05/T11. Until an adapter is
-registered, a capability reports a typed `unavailable` error rather than pretending to be connected.
+No live adapters and no governed work acceptance: those are later tasks. Until an adapter is
+registered, a capability reports a typed `unavailable` error rather than pretending to be
+connected; the serve-mode surface above is fixture-labeled end to end.

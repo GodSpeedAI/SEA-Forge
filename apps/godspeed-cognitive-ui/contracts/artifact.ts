@@ -17,8 +17,11 @@ export type DisclosureLevel = 'minimal' | 'summary' | 'source'
 
 export interface ArtifactAdapter {
   resolve(ref: string, level: DisclosureLevel): Promise<ArtifactRef>
-  /** Reads the payload. Only called once the interaction reaches the required depth. */
-  read(ref: string): Promise<Uint8Array>
+  /**
+   * Reads the payload. Only called once the interaction reaches the required depth; the optional
+   * level selects which bounded representation the provider returns for multi-level artifacts.
+   */
+  read(ref: string, level?: DisclosureLevel): Promise<Uint8Array>
 }
 
 export interface ArtifactRendererDescriptor {

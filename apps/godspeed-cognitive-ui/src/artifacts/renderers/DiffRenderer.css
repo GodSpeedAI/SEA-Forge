@@ -1,0 +1,187 @@
+.gs-r-diff-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--dock-bg);
+  color: var(--dock-ink);
+}
+
+.gs-r-diff-file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--dock-line);
+  background: var(--dock-bg);
+  overflow-x: auto;
+  min-height: 40px;
+  align-items: center;
+}
+
+.gs-r-diff-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--dock-line);
+  background: var(--dock-bg-2);
+  color: var(--dock-ink);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 0;
+  transition: all 0.15s ease-out;
+}
+
+.gs-r-diff-file-btn:hover {
+  background: var(--dock-bg);
+  border-color: var(--dock-ink-2);
+}
+
+.gs-r-diff-file-btn[aria-current] {
+  background: var(--dock-bg);
+  border-color: var(--tone-progress);
+  color: var(--tone-progress);
+}
+
+.gs-r-diff-file-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gs-r-diff-file-stat {
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.gs-r-diff-file-added {
+  color: var(--tone-ok);
+}
+
+.gs-r-diff-file-removed {
+  color: var(--tone-critical);
+}
+
+.gs-r-diff-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--dock-bg);
+}
+
+.gs-r-diff-file {
+  border-bottom: 1px solid var(--dock-line);
+}
+
+.gs-r-diff-file-header {
+  position: sticky;
+  top: 0;
+  padding: 6px 8px;
+  background: var(--dock-bg-2);
+  color: var(--dock-ink-2);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--dock-line);
+  z-index: 1;
+}
+
+.gs-r-diff-lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.gs-r-diff-line {
+  display: flex;
+  align-items: stretch;
+  min-height: 20px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+  word-break: break-all;
+  cursor: pointer;
+  transition: background 0.1s ease-out;
+}
+
+.gs-r-diff-line[data-selected='true'] {
+  background: rgba(62, 139, 240, 0.15);
+}
+
+.gs-r-diff-line--add {
+  background: var(--diff-add-bg);
+}
+
+.gs-r-diff-line--del {
+  background: var(--diff-del-bg);
+}
+
+.gs-r-diff-line--hunk {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--dock-ink-2);
+}
+
+.gs-r-diff-line--add .gs-r-diff-code mark,
+.gs-r-diff-line--del .gs-r-diff-code mark,
+.gs-r-diff-line--ctx .gs-r-diff-code mark {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.gs-r-diff-gutter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 6px;
+  min-width: 36px;
+  color: var(--dock-ink-2);
+  font-size: 11px;
+  border-right: 1px solid var(--dock-line);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.gs-r-diff-gutter-old {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.gs-r-diff-gutter-new {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gs-r-diff-sign {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  min-width: 20px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.gs-r-diff-code {
+  flex: 1;
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-r-diff-code mark {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 1px 2px;
+  border-radius: 0;
+  color: inherit;
+}
+
+.gs-r-diff-footer {
+  padding: 6px 8px;
+  border-top: 1px solid var(--dock-line);
+  background: var(--dock-bg-2);
+  font-size: 11px;
+  color: var(--dock-ink-2);
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+}

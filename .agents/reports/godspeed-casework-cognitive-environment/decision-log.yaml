@@ -1,7 +1,7 @@
 schema: agent.decision_log
 schema_version: '1.0'
 plan_id: godspeed.casework-cognitive-environment.implementation
-plan_version: 0.2.2
+plan_version: 0.2.5
 evidence_root: .agents/evidence/godspeed-casework-cognitive-environment
 restoration_note: >-
   This file was found EMPTY (0 bytes) by independent verification round 5, which also showed that
@@ -245,3 +245,168 @@ decisions:
       recipes were verified for the full cycle (up, curl 200, status, reuse, down, port free,
       idempotent down, repeatable up) as recorded in T03/raw-logs/operator-cycle.log. The demo must
       be replaced by real transports at T10/T11, never presented as governed integration.
+  - id: D-2026-09-19-PE-01
+    task: product-experience
+    title: Operator-mandated dependency stack adopted behind host adapters
+    claim_state: DECIDED
+    decision: >-
+      three/@react-three/fiber/@react-three/drei, zustand, motion, Radix primitives, @copilotkit/react-core,
+      @tanstack/react-table+virtual+charts, d3-force/hierarchy, elkjs, shiki, react-diff-view+diff, codejar,
+      react-data-grid, xlsx, mammoth, pdfjs-dist, and @fontsource IBM Plex/Josefin families were added to
+      apps/godspeed-cognitive-ui per the operator's explicit implementation-stack instruction (the takeover
+      brief names every one). All live behind host-side adapters; src/core remains purity-fenced and the
+      heavy artifact families load lazily as separate build chunks.
+    basis:
+      - 'Operator instruction (takeover brief, "Required implementation stack"); AGENTS.md ask-first satisfied by that explicit order.'
+      - 'REQ-ARCH-003/004 and REQ-ARTDEP-001..008: adapters and lazy loading are mandatory regardless of library choice.'
+    consequence: >-
+      GATE_UI stays green with the frozen lockfile updated in the same change; bundle evidence in the
+      implementation report proves heavy families are absent from the entry chunk.
+  - id: D-2026-09-19-PE-02
+    task: product-experience
+    title: Go boundary serves the demo with a fixture-labeled provider; CORS limited to colocated loopback origins
+    claim_state: DECIDED
+    decision: >-
+      The Go app gained -serve mode (healthz, world(+cursor), time, SSE events with replay, intents,
+      artifacts list/persist/get) over the canonical embedded Northstar dataset, with intent validation,
+      idempotency, a fixture authority allowlist (implement only on ns-migration/ns-secondary; zero
+      effects on denial), leases, and staged quieting revisions. Cross-origin access is granted only to
+      same-machine origins (127.0.0.1/localhost/[::1], any port) for the colocated UI; no other Origin
+      receives a grant. Tested, including the refusal case.
+    basis:
+      - 'The takeover brief requires the consequential action to visibly cross the Go boundary; the spec transport_initial_choice names versioned JSON + SSE with a monotonic cursor.'
+      - 'The UI (4178) and Go (4179) are separate loopback origins; without the grant the honest probe fails and the app degrades to fixtures.'
+      - 'SEA Forge authority remains unwired: the provider is labeled go:fixture:northstar and no governed integration is claimed.'
+    consequence: >-
+      The reference FDE journey runs end to end against the boundary (revisions 1151-1153 and 1154-1156
+      observed twice via SSE with the world settling to ordinary-language notes). T05/T11 real
+      integration remains open.
+  - id: D-2026-09-19-PE-03
+    task: product-experience
+    title: Chart family rendered as a restrained hand-built SVG behind the chart adapter
+    claim_state: DECIDED
+    decision: >-
+      @tanstack/react-charts 0.18 was installed per the operator stack but its Chart shell requires
+      definitions from @tanstack/charts (not a declared dependency of the package as published) and its
+      theme wants literal color strings that cannot honor the host token contract. The chart artifact
+      family therefore renders from the same JSON through a small token-driven SVG bar chart behind the
+      identical renderer interface, per the implementing agent's no-API-fighting instruction.
+    basis:
+      - 'The library as published is not usable without undeclared transitive internals; fighting it would violate the adapter/token discipline (hallmark locked tokens, impeccable color law).'
+    consequence: >-
+      Chart artifacts render correctly and lazily; swapping to TanStack Charts later is a renderer-file
+      change behind the registry, not an architecture change.
+  - id: D-2026-09-19-PE-04
+    task: product-experience
+    title: CopilotKit mounted lazily; no runtime configured this milestone
+    claim_state: DECIDED
+    decision: >-
+      The CopilotKit seam (readable cognitive context + UI-owned actions incl. propose-consequence) is
+      implemented but loads only when VITE_COGNITIVE_RUNTIME_URL is set; without it the seam is absent
+      from the running app and the bundle baseline. The scripted scenario agent drives the same engine
+      vocabulary for the reference experience.
+    basis:
+      - 'Spec agent_boundary: CopilotKit is an optional adapter, not a prerequisite; no CopilotKit runtime exists in this deployment.'
+      - 'REQ-ARCH-004: the UI core must not know the agent framework; the seam composes the vocabulary from outside.'
+    consequence: >-
+      The baseline bundle carries no CopilotKit/zod/graphql weight; configuring a runtime later
+      activates the seam with zero core changes.
+  - id: D-2026-09-19-PE-05
+    task: product-experience
+    title: Attention, not geometry, decides satellite and grandchild visibility
+    claim_state: DECIDED
+    decision: >-
+      Surface members (whatever their hierarchy parent) are the arrangement units at every band; at
+      system scale requires-judgment children surface as fanned quiet satellites; at local scale
+      grandchildren carrying attention surface while work is consequential and recede when the
+      projection drops the attention hint. Narration overlays (reveal/conceal/emphasis/annotations/
+      contextual relationships) clear when a new explanation starts; unpinned artifacts dematerialize.
+    basis:
+      - 'Operator visual correction: attention is visual physics; settled material becomes quiet; temporary explanatory graphics fade when the thought is finished.'
+      - 'REQ-ATTN-001..004, REQ-UI-004.'
+    consequence: >-
+      The handoff and settling moments read through the scene (compatibility layer appears while
+      running checks, disappears when merged); no badge system exists anywhere.
+  - id: D-2026-09-20-PE-06
+    task: product-experience
+    title: Game-first presentation pass; click means travel; emptiness is the resting design
+    claim_state: DECIDED
+    decision: >-
+      The operator's UX reframe (treat the environment as a restrained real-time game scene, the
+      first frame being Core, composer, and white space) is applied as the presentation contract:
+      peripheral chrome fades until approached; the temporal control exists only in historical or
+      comparison mode; the composer is a search-field proportioned pill that widens only when
+      focused; Core carries a whisper surface (greeting, then the attention count) rendered as type
+      inside the event horizon; pointer activity drives a continuous wake signal (one rAF loop, a
+      CSS custom property and scene reads, never React state) that raises label/disc/chrome/lensing
+      legibility; single click travels the camera into a body, clicking the centered body steps
+      deeper, shift-click selects without travel, double-click opens the bound artifact, Esc unwinds
+      one level; top-level bodies revolve imperceptibly from their authored angles; at rest only
+      attention-involving relationship hairlines are barely visible.
+    basis:
+      - 'Operator reframe message (2026-09-20): "think of this as a video game"; the visual test is "I moved into it", not "the app opened its details".'
+      - 'REQ-ATTN-001..004 (emptiness communicates nothing needs you), REQ-UI-002/003 (focus as camera, back), REQ-NAR-005 (scene choreography).'
+    consequence: >-
+      The first frame and the travel interaction were re-verified live (screenshots 24-31); core
+      contracts and tests unchanged (72/72 green); no new dependency.
+  - id: D-2026-09-20-AUTH-01
+    task: authority-correction
+    title: Select the required scene renderer and mechanic donors while preserving authority boundaries
+    claim_state: DECIDED
+    decision: >-
+      The original renderer and donor optionality was intentional while the product
+      representation was unsettled. Later UX and donor work selected React Three Fiber /
+      Three.js / Drei as the required primary scene renderer and selected jshor/tycho,
+      pmndrs/racing-game, rmarchet/blackhole-ts, frag2win/BLACK-HOLE, and
+      AmitDigga/threejs-galaxy-shader as mechanic donors. The UI core remains
+      renderer-independent behind a GodSpeed-owned adapter; SEA Forge authority,
+      settlement, safety, and donor-ontology boundaries remain unchanged.
+    basis:
+    - 'Spec v0.2.2: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml.'
+    - 'Plan v0.2.3: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml.'
+    - 'ADR-006 dated 2026-09-20 addendum: docs/decisions/ADR-006-godspeed-casework-ui-replacement.md.'
+    - >-
+      The frozen interface package has an internal prose/type/schema contradiction:
+      prose uses a numeric cursor and WorldSnapshot.objects/actionId while TypeScript
+      uses a string cursor and CognitiveWorldSnapshot.visible_objects. This is an
+      explicit typed-parity blocker requiring reconciliation; it is not silently resolved.
+    consequence: >-
+      Implementation must use the selected renderer and inspect the five donors under
+      .tmp/donor/ with revision, license, provenance, extraction, and seam records, while
+      typed UI parity remains unclaimed until the interface-package contradiction is resolved.
+  - id: D-2026-09-22-T06-01
+    task: T06
+    title: Settle the persistent CORE renderer as a GodSpeed-owned non-R3F Three.js layer
+    claim_state: DECIDED
+    decision: >-
+      The application DOES permit a non-R3F Three.js renderer as the persistent canonical CORE. Gargantua's
+      raymarched black-hole implementation owns its own WebGL context and canvas and becomes the deepest visual
+      layer; the required R3F/Three/Drei scene keeps objects, relationships, spatial projections, and interaction
+      geometry in an alpha-composited canvas above it, and React/DOM keeps the contextual surfaces. The existing
+      R3F Core (src/host/scene/CoreObject.tsx, src/host/scene/AccretionSwirl.tsx) is retired once the relocated CORE
+      renderer is integrated and accepted, and is NOT maintained as a parallel or fallback CORE. The operator gave
+      this decision explicitly after the prior session ended mid-turn, so it is recorded here rather than inferred.
+    basis:
+      - >-
+        Spec v0.2.3 renderer_boundary named R3F/Three/Drei as the required primary scene renderer but did not state
+        layer composition, so the architecture would have been silently violated rather than clarified. Per ADR-006
+        change_rule the governing artifact was updated BEFORE implementation.
+      - >-
+        Spec v0.2.4 renderer_boundary now states the composition explicitly: the persistent CORE MAY be a
+        GodSpeed-owned Three.js renderer with its own canvas, inside the same GodSpeed-owned scene-adapter seam, with
+        the UI core still renderer-independent and the CORE renderer still independently replaceable.
+      - >-
+        ADR-006 carries a dated 2026-09-22 addendum recording the same settlement.
+      - >-
+        No requirement ID was added or removed: the validator pins exactly 86 requirements, 15 tasks, and 6 high-risk
+        groups, and it PASSES against the new spec bytes (sha256 4baac560…f2891).
+      - >-
+        REQ-UI-001 already said "full-browser R3F/Three scene" and donor_boundary already sanctioned black-hole
+        donors for Core rendering; this settlement makes the previously ambiguous layer composition explicit.
+    consequence: >-
+      T06 stays P2 and keeps its existing preregistration, teeth, and rendered perceptual acceptance for the four
+      states. The relocated renderer must keep donor code verbatim (provenance at
+      apps/godspeed-cognitive-ui/src/host/gargantua/PROVENANCE.md, golden reference sha256 9cfdc399…c93cd) and must be
+      driven only by visual intent projected from application state. Removal of the superseded interfaces remains
+      gated on T14/GATE_REMOVAL after replacement parity and real integration; relocating donor code into the
+      replacement app is not a removal step.

@@ -1295,3 +1295,106 @@ casework-ui-status port=casework_ui_port:
       echo "casework-ui-status: last log lines ($logfile):"
       tail -5 "$logfile" | sed 's/^/  /'
     fi
+
+# Operator controls for the Go casework boundary (serve mode, fixture-labeled provider). Mirrors
+# the cognitive UI recipe discipline: fixed loopback address, idempotent up, pidfile + log under
+# .sea-forge/casework-go/ (gitignored), down refuses to kill a foreign pid.
+casework_go_addr := "127.0.0.1:4179"
+
+# Build and start the Go casework boundary server in the background (default 127.0.0.1:4179).
+[group('casework')]
+casework-go-up addr=casework_go_addr:
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    module="apps/godspeed-casework-go"
+    run_dir=".sea-forge/casework-go"
+    pidfile="$run_dir/server.pid"
+    logfile="$run_dir/server.log"
+    bin="$run_dir/server-bin"
+    health="http://127.0.0.1:${addr#*:}/api/healthz"
+    mkdir -p "$run_dir"
+    if curl -sSf -o /dev/null --max-time 2 "$health" 2>/dev/null; then
+      echo "casework-go-up: something already answers at $health - reusing it (log: $logfile)"
+      exit 0
+    fi
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        echo "casework-go-up: pid $pid is alive but nothing answers on the addr; stopping it" >&2
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+      fi
+      rm -f "$pidfile"
+    fi
+    echo "casework-go-up: building server binary"
+    (cd "$module" && go build -o "../../$bin" ./cmd/godspeed-casework) || exit 1
+    echo "casework-go-up: starting (fixture-labeled provider) on $addr"
+    setsid nohup "$bin" -serve -addr "$addr" -config "$module/configs/fixture-serve.json" >>"$logfile" 2>&1 &
+    echo $! > "$pidfile"
+    for _ in $(seq 1 40); do
+      if curl -sSf -o /dev/null --max-time 1 "$health" 2>/dev/null; then
+        echo "casework-go-up: answering at $health (pid $(cat "$pidfile"), log: $logfile)"
+        exit 0
+      fi
+      sleep 0.5
+    done
+    echo "casework-go-up: server did not become healthy; see $logfile" >&2
+    exit 1
+
+# Stop the Go casework boundary server.
+[group('casework')]
+casework-go-down addr=casework_go_addr:
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    pidfile=".sea-forge/casework-go/server.pid"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-go-down: no pidfile (nothing to stop)"
+      exit 0
+    fi
+    pid="$(cat "$pidfile")"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      if ! grep -aq "godspeed-casework" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-go-down: pid $pid is not the casework server; refusing to kill it" >&2
+        exit 1
+      fi
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+      echo "casework-go-down: stopped $pid"
+    else
+      echo "casework-go-down: pid $pid is not running"
+    fi
+    rm -f "$pidfile"
+
+# Report up/down status, health endpoint, pid, and logs for the Go casework boundary server.
+[group('casework')]
+casework-go-status addr=casework_go_addr:
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    pidfile=".sea-forge/casework-go/server.pid"
+    logfile=".sea-forge/casework-go/server.log"
+    health="http://127.0.0.1:${addr#*:}/api/healthz"
+    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      echo "casework-go-status: up (pid $(cat "$pidfile"))"
+    else
+      echo "casework-go-status: down"
+    fi
+    if curl -sSf --max-time 2 "$health" 2>/dev/null; then
+      echo ""
+      echo "casework-go-status: answering at $health"
+    else
+      echo "casework-go-status: nothing answers at $health"
+    fi
+    if [ -f "$logfile" ]; then
+      echo "casework-go-status: last log lines ($logfile):"
+      tail -5 "$logfile" | sed 's/^/  /'
+    fi
+
+# Start both Go casework boundary and cognitive UI dev servers for the full demo experience.
+[group('casework')]
+casework-demo-up: casework-go-up casework-ui-up
+    @echo "casework-demo-up: cognitive environment at http://127.0.0.1:4178 (go boundary at {{casework_go_addr}})"
+

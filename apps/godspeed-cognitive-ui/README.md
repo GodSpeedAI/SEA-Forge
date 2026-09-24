@@ -1,60 +1,62 @@
 # @godspeed/cognitive-ui
 
-The GodSpeed casework cognitive environment (plan `godspeed-casework-cognitive-environment`,
-task T03): a renderer-independent UI core, a local fixture world adapter, and a small React host
-that demonstrates the interaction grammar.
+The GodSpeed cognitive environment: a persistent 2.5D world with one camera, over the Go
+casework service (`apps/godspeed-casework-go`). Spec:
+`.agents/specs/cognitive-environment/GodSpeed_Cognitive_Environment_DESIGN.md` (§0.1 + Appendix A).
+Build log and verification: `.agents/specs/cognitive-environment/RUN_PLAN.md` and `verification/`.
 
-**What this is:** a fixture-backed interaction prototype. The core (surfaces, objects,
-relationships, focus, selection, disclosure, time positions, narration state, consequential-intent
-refusals) runs entirely against local fixture providers.
+## Run
 
-**What this is not:** connected to SEA Forge, GitHub, Gauntlet, CopilotKit, or any governed
-authority. No case truth, settlement, or execution lives here, and nothing consequential can be
-concluded locally — a consequential intent is dispatched to the interaction adapter and the fixture
-adapter refuses it. The same banner is shown inside the running app.
+```
+just casework-ui-up          # dev server at http://127.0.0.1:4178
+just casework-ui-check       # frozen install, typecheck, build, tests
+```
 
-## Layout
+- **World source.** The UI talks only to the contract port (`src/ports/contract.ts`), which this phase serves from a
+  local, contract-conformant adapter (`src/adapters/local/`). The status bar says **Local contract adapter**.
+  The Go system front end is intentionally not connected yet. See
+  `.agents/reports/godspeed-cognitive-ui-functional/03-CONTRACT-PORTS-AND-SEAMS.md`.
+- **Try:** move the pointer (the world wakes), click Projects then Northstar, click an object's "▤ artifacts" pill
+  and a card to open the right-hand viewer, use the center chips (Causal view, History, Compare with earlier,
+  Design case), ask "Why did the pilot fail?", hover Release and choose "Approve release →", or type
+  "let the agent approve the release" to watch authority refuse the agent.
+- **E2E ladder:** `bun run e2e` (dev server must be up) runs J0→J9 plus RECOVERY through the real rendered UI; see
+  `e2e/README.md` and `.agents/reports/godspeed-cognitive-ui-functional/02-JOURNEY-CUBE.md`.
+- **Switches (tests and recovery):** `?speed=N`, `?beatPace=N`, `?failArtifact=<ref>`, `?corruptArtifact=<ref>`,
+  `?failRenderer=<kind>`, `?agent=off`, `?agentFailAfter=N`.
 
-| Path | Role |
+## Keyboard
+
+| Key | Action |
 |---|---|
-| `contracts/` | The adapter contract shapes (frozen by T01): world, interaction, temporal, artifact, agent |
-| `src/core/` | The UI core: representations (`model.ts`), store, action vocabulary (`actions.ts`), engine (`engine.ts`), core-owned ports (`ports.ts`) |
-| `src/adapters/fixture/` | The fixture provider set: worlds, world/temporal/artifact/catalog adapters, plus a deliberately different second provider (`alt-provider.ts`) used by the provider-swap tooth |
-| `src/adapters/test/` | No-op/test adapters: unavailable agent, scripted agent, recording scene renderer |
-| `src/host/` | The React 19 host: composes the fixture environment, renders state, maps mouse and keyboard onto the same action vocabulary the tests call |
+| Esc | back one level (closes dock/judgment/workbench first) |
+| h / Home | Core (Home) |
+| `/` or Ctrl/Cmd+K | composer |
+| Tab, then Enter or Space | focus an object |
+| arrows, + / − | pan, zoom |
+| Shift/right-drag | restrained orbit (tilt) |
+| t, `[` `]` | time strip, step back/forward (the past is read-only) |
+| o | outline (non-spatial list of what's on screen) |
+| d | dark / light |
+| Space | pause / resume the current explanation ("continue" also resumes) |
 
-The core imports nothing but the contract types: `purity.test.ts` fails the suite if `react`,
-`three`, `@copilotkit`, a transport API, or a backend noun appears under `src/core` (REQ-ARCH-003).
+`prefers-reduced-motion` makes the camera arrive instead of fly and slows the Core.
 
-## Commands
+## Layout of the code
 
-```sh
-bun install --frozen-lockfile   # frozen install
-bun run typecheck               # tsc --noEmit
-bun run build                   # vite production build
-bun test                        # core + interaction suites
+```
+src/ports/     contract port (types from .agents/reports/interface-contracts) + projection to the internal model
+src/adapters/  local contract-conformant adapter: contract data at rest, authority, execution events
+src/model/     internal model, reducer, world view (live / historical / compare / design)
+src/layout/    pure, data-driven layout: orbital, causal, judgment, design, comparison annotations
+src/camera/    projection, pan/zoom/tilt, flights
+src/scene/     runtime (per-frame camera, tweens, LOD, SVG), CoreCanvas (the only WebGL), ObjectNode (LOD reps)
+src/artifacts/ payload parsing, artifact service (resolveArtifact), lazy source renderers + error boundary
+src/narrative/ narration port conductor, beat player (pause/checkpoint/resume), scripted local agent
+src/ui/        composer, chrome, excerpt, dock, time strip, compare bar, judgment, execution, workbench, design, outline
+src/app/       App shell, composer commands, intent path (human = agent path), live events, case design helpers
+e2e/           affordance-dependency ladder (agent-browser, real pointer input)
 ```
 
-`just casework-ui-check` runs all four as `GATE_UI`.
-
-## Running the demo
-
-From the repository root:
-
-```sh
-just casework-ui-up            # serves http://127.0.0.1:4178 (fixed port, strict)
-just casework-ui-status        # up/down, pid, last log lines
-just casework-ui-down          # stop; idempotent
-```
-
-In the app: click an object to focus it, double-click to select, `↑`/`↓` move focus, `←`/`→` change
-surface, `e` discloses the focused object one level deeper (minimal → summary → source, content from
-the fixture artifact adapter), `t` steps back in time, `n` returns to now, `x` proposes a
-consequential action (refused by the fixture adapter), `Esc` clears.
-
-## Honest limits (T03 scope)
-
-The spatial scene, semantic zoom, real temporal projection of historical world content, durable
-artifacts, and live agent narration are later tasks (T06–T09). Time positions here are metadata
-state only; narration shows the honest "no agent adapter configured" state; the Go transport does
-not exist yet.
+Deep links (verification only; all reachable through the UI): `?focus=`, `surface=causal`, `time=<cursor>`,
+`timeline=1`, `awake=1`, `theme=dark`, `judge=<object>`.

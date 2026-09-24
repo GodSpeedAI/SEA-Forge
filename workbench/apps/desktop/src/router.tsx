@@ -7,23 +7,24 @@ import {
 } from "@tanstack/react-router";
 import { AppShell } from "./shell/AppShell";
 import { ReadinessPage } from "./pages/ReadinessPage";
-import { CaseCreationWorkbench } from "./pages/CaseCreationWorkbench";
-import { CaseHorizonPage } from "./pages/CaseHorizonPage";
-import { DelegationWorkbench } from "./pages/DelegationWorkbench";
-import { ApprovalInboxPage } from "./pages/ApprovalInboxPage";
-import { EvidencePage } from "./pages/EvidencePage";
 import { RunRecordPage } from "./pages/RunRecordPage";
 import {
-  ThothPage,
   AssetsPage,
   ModelsPage,
-  OperationsPage,
   MemoryPage,
   CapabilitiesPage,
-  ArtifactsPage,
   FederationPage,
   AdminPage,
 } from "./pages/SurfacesPages";
+import { HomeSurface } from "./surfaces/home/HomeSurface";
+import { CaseSurface } from "./surfaces/case/CaseSurface";
+import { SemanticBeatSurface } from "./surfaces/semantic-beat/SemanticBeatSurface";
+import { ArtifactsSurface } from "./surfaces/artifacts/ArtifactsSurface";
+import { TemporalSurface } from "./surfaces/temporal/TemporalSurface";
+import { CausalSurface } from "./surfaces/causal/CausalSurface";
+import { JudgmentSurface } from "./surfaces/judgment/JudgmentSurface";
+import { ExecutionSurface } from "./surfaces/execution/ExecutionSurface";
+import { CaseDesignSurface } from "./surfaces/case-design/CaseDesignSurface";
 import { evaluateGuard, type GuardId } from "./guards/guards";
 import { GovernedDenialSurface } from "./guards/GovernedDenialSurface";
 import { useGuardContext, BLOCKING_GUARDS } from "./guards/useGuardContext";
@@ -82,10 +83,14 @@ const rootRoute = createRootRoute({
   component: RootComponent,
 });
 
+/**
+ * Home is the canonical CORE-centered orientation state, not a destination
+ * containing CORE. `/` renders the HomeSurface over the persistent viewport.
+ */
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: ReadinessPage,
+  component: HomeSurface,
 });
 
 const readinessRoute = createRoute({
@@ -97,7 +102,7 @@ const readinessRoute = createRoute({
 const thothRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/thoth",
-  component: ThothPage,
+  component: SemanticBeatSurface,
 });
 
 const assetsRoute = createRoute({
@@ -116,7 +121,7 @@ const assetsRoute = createRoute({
 const delegateRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/delegate",
-  component: DelegationWorkbench,
+  component: ExecutionSurface,
 });
 
 const modelsRoute = createRoute({
@@ -128,31 +133,31 @@ const modelsRoute = createRoute({
 const casesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/cases",
-  component: CaseHorizonPage,
+  component: CaseSurface,
 });
 
 const caseCreationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/cases/new",
-  component: CaseCreationWorkbench,
+  component: CaseDesignSurface,
 });
 
 const inboxRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/inbox",
-  component: ApprovalInboxPage,
+  component: JudgmentSurface,
 });
 
 const operationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/operations",
-  component: OperationsPage,
+  component: TemporalSurface,
 });
 
 const evidenceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/evidence",
-  component: EvidencePage,
+  component: CausalSurface,
 });
 
 /**
@@ -183,7 +188,7 @@ const capabilitiesRoute = createRoute({
 const artifactsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/artifacts",
-  component: ArtifactsPage,
+  component: ArtifactsSurface,
 });
 
 const federationRoute = createRoute({

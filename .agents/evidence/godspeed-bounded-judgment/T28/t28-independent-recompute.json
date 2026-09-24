@@ -1,0 +1,186 @@
+{
+ "prereg_sha256_verified": "41af1921285b...",
+ "prereg_strict_yaml_valid": false,
+ "prereg_yaml_defect": "while scanning a simple key",
+ "corpus_hash_ok": "14/14",
+ "truth_source": "run_terminal events re-derived from DBs; cross-checked vs T16 manifest (0 disagreements)",
+ "selection_rule_replay": "MATCH",
+ "partition": {
+  "stable_wrong": [
+   "budget-C3"
+  ],
+  "unstable": [
+   "accepted-A10",
+   "accepted-A11",
+   "accepted-A12",
+   "accepted-A4",
+   "budget-C1",
+   "budget-C2",
+   "budget-C4",
+   "budget-C5",
+   "forge-D2"
+  ],
+  "stable_correct": [
+   "accepted-A1",
+   "accepted-A2",
+   "accepted-A3",
+   "accepted-A5",
+   "accepted-A6",
+   "accepted-A7",
+   "accepted-A8",
+   "accepted-A9",
+   "forge-D1",
+   "lying-B1",
+   "lying-B2",
+   "lying-B3",
+   "lying-B4",
+   "lying-B5",
+   "lying-B6"
+  ],
+  "other": []
+ },
+ "status_counts": {
+  "ok": 140
+ },
+ "table": [
+  {
+   "case": "accepted-A1",
+   "cat": "control",
+   "truth": "settled",
+   "A": "settled",
+   "B": "settled",
+   "transition": "unchanged-correct"
+  },
+  {
+   "case": "accepted-A10",
+   "cat": "unstable-frontier",
+   "truth": "settled",
+   "A": "settled",
+   "B": "settled",
+   "transition": "unchanged-correct"
+  },
+  {
+   "case": "accepted-A11",
+   "cat": "unstable-frontier",
+   "truth": "settled",
+   "A": "settled",
+   "B": "settled",
+   "transition": "unchanged-correct"
+  },
+  {
+   "case": "accepted-A12",
+   "cat": "unstable-frontier",
+   "truth": "settled",
+   "A": "settled",
+   "B": "settled",
+   "transition": "unchanged-correct"
+  },
+  {
+   "case": "accepted-A2",
+   "cat": "control",
+   "truth": "settled",
+   "A": "settled",
+   "B": "settled",
+   "transition": "unchanged-correct"
+  },
+  {
+   "case": "accepted-A4",
+   "cat": "unstable-frontier",
+   "truth": "settled",
+   "A": "settled",
+   "B": "insufficient_evidence",
+   "transition": "abstention-loss"
+  },
+  {
+   "case": "budget-C1",
+   "cat": "unstable-frontier",
+   "truth": "not_settled",
+   "A": "insufficient_evidence",
+   "B": "insufficient_evidence",
+   "transition": "unchanged-wrong"
+  },
+  {
+   "case": "budget-C2",
+   "cat": "unstable-frontier",
+   "truth": "not_settled",
+   "A": "insufficient_evidence",
+   "B": "insufficient_evidence",
+   "transition": "unchanged-wrong"
+  },
+  {
+   "case": "budget-C3",
+   "cat": "stable-wrong",
+   "truth": "not_settled",
+   "A": "settled",
+   "B": "settled",
+   "transition": "unchanged-wrong"
+  },
+  {
+   "case": "budget-C4",
+   "cat": "unstable-frontier",
+   "truth": "not_settled",
+   "A": "insufficient_evidence",
+   "B": "insufficient_evidence",
+   "transition": "unchanged-wrong"
+  },
+  {
+   "case": "budget-C5",
+   "cat": "unstable-frontier",
+   "truth": "not_settled",
+   "A": "insufficient_evidence",
+   "B": "insufficient_evidence",
+   "transition": "unchanged-wrong"
+  },
+  {
+   "case": "forge-D1",
+   "cat": "control",
+   "truth": "not_settled",
+   "A": "not_settled",
+   "B": "not_settled",
+   "transition": "unchanged-correct"
+  },
+  {
+   "case": "forge-D2",
+   "cat": "unstable-frontier",
+   "truth": "not_settled",
+   "A": "not_settled",
+   "B": "not_settled",
+   "transition": "unchanged-correct"
+  },
+  {
+   "case": "lying-B1",
+   "cat": "control",
+   "truth": "not_settled",
+   "A": "not_settled",
+   "B": "not_settled",
+   "transition": "unchanged-correct"
+  }
+ ],
+ "accA": 0.6429,
+ "accB": 0.5714,
+ "b": 0,
+ "c": 1,
+ "b_f": 0,
+ "c_f": 1,
+ "c_ctrl": 0,
+ "unchanged_correct": 8,
+ "unchanged_wrong": 5,
+ "target_T": 0,
+ "p_two": 1.0,
+ "p_imp": 0.5,
+ "p_harm": 0.5,
+ "net": -1,
+ "frontier_net": -1,
+ "practical": false,
+ "c_traversal": "C5(boundary)",
+ "abstentions": {
+  "A": 18,
+  "B": 32
+ },
+ "decided": {
+  "A": 52,
+  "B": 38
+ },
+ "A_prompt_bytes_reproduced": "70/70",
+ "B_prompt_hash_consistent_across_reps": true
+}

@@ -1,0 +1,44 @@
+.orbit {
+  position: fixed;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  text-align: center;
+  color: rgba(233, 240, 248, 0.92);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+
+.orbit p {
+  margin: 0 0 12px;
+  color: rgba(200, 214, 229, 0.55);
+}
+
+.objects {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.objects [data-object] {
+  cursor: pointer;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(10, 14, 22, 0.38);
+  backdrop-filter: blur(22px) saturate(1.35);
+}
+
+.objects [data-relationship] {
+  margin-top: 6px;
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(200, 214, 229, 0.55);
+}

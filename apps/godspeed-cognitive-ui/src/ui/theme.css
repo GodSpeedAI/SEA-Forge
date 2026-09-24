@@ -1,0 +1,108 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+/* Design tokens. Dark mode is a designed alternate system (mock 13 / 06), not an inversion. */
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --bg: #ffffff;
+  --bg-vignette: radial-gradient(ellipse at 50% 46%, #ffffff 0%, #fefefe 60%, #fafafa 100%);
+  --ink: #111214;
+  --ink-2: #4b4d52;
+  --ink-3: #8a8c91;
+  --ink-4: #b9bbbf;
+  --line: rgba(20, 22, 26, 0.13);
+  --line-strong: rgba(20, 22, 26, 0.28);
+  --surface: #ffffff;
+  --surface-border: rgba(20, 22, 26, 0.08);
+  --shadow-soft: 0 10px 34px rgba(20, 22, 30, 0.08), 0 2px 6px rgba(20, 22, 30, 0.04);
+
+  --tone-ok: #1fae6b;
+  --tone-progress: #3b8bf0;
+  --tone-attention: #f0643a;
+  --tone-critical: #ee5a2e;
+  --tone-hypothesis: #f0a929;
+  --tone-muted: #9a9ca1;
+  --link-causal: #8fa3bb;
+
+  --diff-add-bg: #1f5f3a;
+  --diff-del-bg: #6a2a2c;
+  --dock-bg: #16181c;
+  --dock-bg-2: #1d2025;
+  --dock-ink: #eceef1;
+  --dock-ink-2: #a3a8b0;
+  --dock-line: rgba(255, 255, 255, 0.09);
+
+  --composer-bg: #ffffff;
+  --composer-border: rgba(20, 22, 26, 0.07);
+  --composer-shadow: 0 14px 40px rgba(20, 22, 30, 0.09), 0 2px 8px rgba(20, 22, 30, 0.05);
+}
+
+:root[data-theme='dark'] {
+  --bg: #04070f;
+  --bg-vignette: radial-gradient(ellipse at 50% 46%, #0a1430 0%, #050a17 50%, #02040a 100%);
+  --ink: #f2f5fb;
+  --ink-2: #aab6cc;
+  --ink-3: #6f7c95;
+  --ink-4: #3c4660;
+  --line: rgba(90, 140, 255, 0.22);
+  --line-strong: rgba(110, 160, 255, 0.45);
+  --surface: #0b1224;
+  --surface-border: rgba(90, 140, 255, 0.22);
+  --shadow-soft: 0 10px 34px rgba(0, 0, 0, 0.5);
+
+  --tone-ok: #22c3a6;
+  --tone-progress: #3d7bff;
+  --tone-attention: #ff8a3d;
+  --tone-critical: #ff7040;
+  --tone-hypothesis: #f5b43a;
+  --tone-muted: #6f7c95;
+  --link-causal: #5b7fc4;
+
+  --composer-bg: rgba(8, 14, 30, 0.72);
+  --composer-border: rgba(90, 140, 255, 0.45);
+  --composer-shadow: 0 0 0 1px rgba(60, 110, 255, 0.12), 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

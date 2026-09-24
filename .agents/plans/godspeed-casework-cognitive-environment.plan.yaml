@@ -4,7 +4,7 @@ metadata:
   id: godspeed.casework-cognitive-environment.implementation
   title: "GodSpeed Casework System Front End and Cognitive Environment — Implementation Settlement Plan"
   status: draft
-  version: 0.2.2
+  version: 0.2.5
   created: '2026-09-19'
   purpose: >-
     Implement the frozen authoritative specification through a Go operational application and
@@ -15,8 +15,8 @@ source:
     intended_repository_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
     artifact_name: godspeed.casework-cognitive-environment-spec.yaml
     spec_id: godspeed.casework-cognitive-environment
-    spec_version: 0.2.1
-    sha256: 6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641
+    spec_version: 0.2.4
+    sha256: 4baac56017bfcff8ba51c58190f66a4b9a29de1baff267a66f66dc626c1f2891
     authority: normative
   implementation_brief:
     intended_repository_path: .agents/plans/godspeed-casework-cognitive-environment.implementation.md
@@ -38,8 +38,12 @@ source:
     role: Existing React/Tauri GUI is a migration inventory and removal target, not the new application's transport.
   - path: $GAUNTLET_WORKTREE
     role: Isolated Gauntlet checkout; retain its Rust executor and remove its TUI after proven workflow parity.
-  - path: Open MCT and OpenMontage, if locally available and licensed
-    role: Optional design references only; native implementations may satisfy every requirement.
+  - path: .agents/reports/interface-contracts/
+    role: Frozen application contract package; verify package existence and conformance before binding its types.
+  - path: .tmp/donor/
+    role: >-
+      Selected mechanic donor checkouts: jshor/tycho, pmndrs/racing-game, rmarchet/blackhole-ts, frag2win/BLACK-HOLE,
+      and AmitDigga/threejs-galaxy-shader.
 target_settlement: >-
   A decoupled GodSpeed operating environment exists in which the Go system front end continuously coordinates governed
   casework through application-owned ports, the React cognitive environment renders and manipulates live cognitive
@@ -120,7 +124,8 @@ operating_contract:
     Fixture/local adapters may prove UI-core isolation and interaction behavior; they MUST NOT be used as evidence
     of governed integration or settlement.
   - >-
-    Donor repositories are optional. Any copied code must remain license-compatible and source provenance must be recorded.
+    The selected donor repositories are implementation inputs for the scene mechanics. Any copied code must remain
+    license-compatible, source provenance must be recorded, and extraction must terminate at GodSpeed-owned seams.
   claim_states:
   - OBSERVED
   - INFERRED
@@ -416,9 +421,8 @@ tasks:
     - REQ-ARCH-001
     - REQ-ARCH-002
     changes: >-
-      Creates apps/godspeed-casework-go and the minimum React contract package
-      for the replacement app, establishes one config/secret authority per
-      application, typed errors, port ownership, and preflight.
+      Creates apps/godspeed-casework-go, binds the frozen React application contract package, and establishes one
+      config/secret authority per application, typed errors, port ownership, and preflight.
     proves: >-
       Provider/runtime technologies can be connected without becoming the stable application model, and invalid/missing
       configuration fails with the specified blast radius before consequential operation.
@@ -439,16 +443,21 @@ tasks:
       confirmation_condition: Peer review plus boundary tests show provider replacement points terminate at adapters.
     hot_context:
     - .agents/plans/godspeed-casework-cognitive-environment.implementation.md
+    - .agents/reports/interface-contracts/ (frozen application contract package)
     - Existing project config conventions and secret hierarchy discovered by T00
     - Current SEA-Forge/Gauntlet public interfaces only for shape discovery, not semantic duplication
     - Source spec domain_contract, target_layout, and REQ-CONFIG/REQ-ARCH records
     steps:
     - >-
+      Verify .agents/reports/interface-contracts/ exists and its conformance tests pass; bind the application to its
+      frozen TypeScript types/contracts and examples without rediscovering or duplicating SEA-Forge, Gauntlet,
+      RealityTrace, CMMN, SFWP, or case semantics.
+    - >-
       Define Go-owned port interfaces and stable application error/result types without embedding provider-native
       payloads in core packages.
     - >-
-      Define React-owned world/interaction/agent/artifact/temporal adapter interfaces without depending on R3F,
-      CopilotKit, or Go transport types.
+      Bind React-owned world/interaction/agent/artifact/temporal adapter seams to the frozen application contract
+      package without depending on R3F, CopilotKit, or Go transport types.
     - >-
       Implement a single documented configuration precedence/validation path per application, including secret indirection
       and runtime/provider endpoint configuration.
@@ -478,7 +487,7 @@ tasks:
     - Provider-object leakage teeth pass.
     - All applicable global gates remain green.
   T02:
-    title: Decide optional donor mechanics and dependency/license boundaries
+    title: Freeze selected donor revisions, licenses, extraction boundaries, and GodSpeed target seams
     initial_status: blocked
     depends_on:
     - T00
@@ -489,22 +498,21 @@ tasks:
     - REQ-DONOR-002
     - REQ-DONOR-003
     changes: >-
-      Records whether any donor or new dependency materially improves the
-      required behavior. Native Go/React implementations are valid. Copying is
-      optional and requires license/provenance review and prior dependency approval.
+      Freezes the selected donor revisions, licenses/notices, supplied affordances, extraction boundaries, candidate
+      source files/symbols, copied versus independently adapted mechanics, and GodSpeed-owned target seams.
     proves: >-
-      The temporal and narration contracts do not depend on unavailable donor
-      checkouts or unapproved dependencies.
+      Selected donor mechanics can be extracted and adapted without importing donor ontology into GodSpeed contracts
+      or crossing an unreviewed license/dependency boundary.
     does_not_prove: Does not prove the resulting temporal or narration behavior; later tasks must integrate and
       verify those mechanics.
     preregistration:
       required: true
       artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T02.prereg.yaml
       claim: >-
-        No donor implementation enters the codebase by default; any selected
-        reuse remains narrow, replaceable, licensed, and reviewed.
+        Each selected donor has an exact revision, license/notice record, bounded extraction plan, and GodSpeed-owned
+        receiving seam before implementation begins.
       falsifier: >-
-        A copied donor component requires importing donor application ontology, or source license obligations conflict
+        A selected donor cannot be narrowed to the declared affordance and seam, or source license obligations conflict
         with the intended project distribution and cannot be cleanly isolated.
       known_confounds:
       - Forks/clones may carry different licenses from canonical donor repositories.
@@ -512,26 +520,28 @@ tasks:
         independence.
     hot_context:
     - Target dependency inventory and repository approval rules
-    - Optional donor source and license only if T02 elects reuse
+    - >-
+      Selected donors: jshor/tycho, pmndrs/racing-game, rmarchet/blackhole-ts, frag2win/BLACK-HOLE,
+      AmitDigga/threejs-galaxy-shader
+    - Selected donor checkouts under .tmp/donor/ and their canonical revision/license/notice records.
     steps:
-    - Compare native implementation against available licensed donor mechanics.
-    - Record a use-or-omit decision for each donor; absence is a valid omit.
-    - For selected reuse, freeze exact revision/license/notices and obtain required review before copying.
+    - Deterministically narrow each selected donor to candidate source files/symbols and its supplied affordance.
+    - Freeze what will be copied, what will be independently adapted, and the GodSpeed-owned interface receiving it.
+    - Obtain required license/provenance and dependency review before copying or adapting donor mechanics.
     - Keep donor nouns and types out of GodSpeed application contracts.
     gate:
     - GATE_SPEC_TRACE
     teeth:
-    - attack: Search application-core public interfaces for OpenMCT/OpenMontage product types or namespaces.
-      expected: No donor-product ontology leaks into stable application contracts.
-    - attack: Remove access to both donor checkouts.
-      expected: T02 still settles with a native implementation decision and no copied code.
+    - attack: Search application-core public interfaces for selected donor ontology or donor product types/namespaces.
+      expected: No selected donor ontology leaks into stable application contracts.
+    - attack: Attempt to copy donor code outside the frozen extraction boundary.
+      expected: Review rejects the change or requires a revised, explicit GodSpeed-owned seam before implementation.
     redesign_trigger: >-
-      The needed mechanic cannot be legally reused under the target distribution posture or cannot be reduced without
-      importing the donor's product model; replace it with an independent implementation behind the same GodSpeed
-      port.
+      A selected mechanic cannot be legally reused or reduced without importing donor ontology; replace only that
+      mechanic with an independent implementation behind the same GodSpeed-owned port and record the exception.
     evidence: .agents/evidence/godspeed-casework-cognitive-environment/T02/
     done_when:
-    - Donor decision records use or omit, with provenance/notices for any copied file.
+    - Donor records freeze exact revisions, affordances, extraction boundaries, provenance/notices, and copied/adapted scope.
     - GodSpeed-owned temporal/choreography interfaces are independent of donor product models.
     - License/provenance review is complete for every copied file.
     - All applicable global gates remain green.
@@ -571,9 +581,15 @@ tasks:
         abstractions.
     hot_context:
     - Source spec domain_contract and REQ-GOAL/REQ-ARCH records
+    - .agents/reports/interface-contracts/ (frozen types, client, mock adapter, schemas, and examples)
     - T01 React-owned port interfaces
     - Current frontend conventions/package manager discovered by T00
     steps:
+    - >-
+      Use the reconciled frozen interface-contract package as the type authority; verify its
+      prose/type/schema wire-shape parity and focused conformance test during T03's typed parity
+      check. Full draft-2020-12 JSON Schema semantic validation is not part of this package gate;
+      do not rediscover backend or case semantics.
     - >-
       Implement stable UI-core representations: SurfaceProjection, CognitiveObject, CognitiveRelationship, TemporalContext,
       CognitiveArtifact descriptor, and InteractionIntent/action vocabulary.
@@ -592,7 +608,7 @@ tasks:
     - GATE_SPEC_TRACE
     - GATE_UI
     teeth:
-    - attack: Replace the optional scene and agent adapters with test adapters.
+    - attack: Replace the scene and agent adapters with test adapters.
       expected: UI-core tests still execute against the fixture adapter.
     - attack: Swap the fixture provider for a second structurally different provider implementing the same world
         port.
@@ -803,12 +819,13 @@ tasks:
     - REQ-ATTN-003
     - REQ-ATTN-004
     changes: >-
-      Connects the UI core to an accessible spatial renderer, implements Core,
-      scene objects/relationships, focus/back, semantic zoom, pointer/keyboard
-      actions, restrained motion, and projection-driven salience/quieting.
+      Connects the renderer-independent UI core through a GodSpeed-owned scene adapter to the required React Three
+      Fiber/Three.js/Drei game-world renderer; implements the centered black-hole-like Core as a persistent
+      GodSpeed-owned Three.js renderer composited beneath the R3F scene layer, scene objects/relationships,
+      focus/back, semantic zoom, pointer/keyboard actions, restrained motion, and projection-driven salience/quieting.
     proves: >-
-      The approved spatial interaction grammar works as the real renderer while the UI core remains renderer-independent
-      and visible complexity is driven by current projection/relevance rather than stored object count.
+      The approved spatial interaction grammar works as a real game-world renderer while the UI core remains
+      renderer-independent and visible complexity is driven by current projection/relevance rather than stored object count.
     does_not_prove: >-
       Does not prove agent narration, real backend integration, temporal history, cognitive artifacts, or user research
       outcomes.
@@ -825,22 +842,33 @@ tasks:
       - Fixture-specific hand positioning can make the scene appear generic while layout code is actually special-cased.
       confirmation_condition: >-
         Peer review plus fixture variation shows generic object/relationship rendering and common application actions
-        across surfaces.
+        across surfaces, and rendered inspection accepts four states: quiet system/Core world; salient work object among
+        quiet objects; focused case with Core reduced to home/orientation; and deeper semantic zoom.
     hot_context:
     - T03 UI core and fixture adapter
     - Existing React/browser rendering and accessibility patterns
     - Source spec REQ-UI-* and REQ-ATTN-*
     - Source spec verification_contract.reference_journey as design context
     steps:
-    - Implement a restrained spatial scene and Core using the simplest
-      accessible renderer that satisfies semantic focus and sparse attention.
-      Any new graphics dependency requires the repository's prior review.
+    - >-
+      Implement the required full-browser R3F/Three.js/Drei scene through a GodSpeed-owned scene adapter: near-pure
+      white opening, precisely centered black-hole-like Core with restrained lensing/accretion/particles, substantial
+      empty space, small orbiting CognitiveObjects, faint relationships, and a compact floating bottom-center composer.
+    - >-
+      Render CORE through a persistent GodSpeed-owned Three.js CORE renderer beneath the R3F scene layer, mounted once
+      and never remounted by focus or surface changes, driven only by visual intent projected from application state.
+      Keep the R3F canvas alpha-composited above it so objects, relationships, projections, and interaction geometry
+      remain visible over CORE, and retire the superseded R3F Core implementation once this renderer is accepted.
     - >-
       Render generic cognitive objects and contextual relationships from projection data rather than domain-specific
       components.
     - >-
       Implement focus/back and camera continuity; expose semantic zoom thresholds to the UI core so deeper projections/content
       can replace simple representations.
+    - >-
+      Implement camera travel so focus moves the camera into the selected scene entity, makes it the local center, and
+      leaves Core as a subordinate home/orientation anchor; implement recursive semantic zoom through System → Case →
+      Work → Execution/Evidence → Source with representation changes, not geometric scaling alone.
     - Map pointer/keyboard interactions onto the same application actions used by other adapters.
     - Implement salience/quieting rules and demand rendering so non-consequential work can remain visually quiet.
     - Exercise representative sparse, dense-underlying, focused, comparison-ready, and deep-zoom fixtures.
@@ -848,6 +876,8 @@ tasks:
     - GATE_SPEC_TRACE
     - GATE_UI
     teeth:
+    - attack: Capture and inspect the four required rendered states, including camera travel, Core, near-pure white opening, compact composer, and recursive semantic zoom.
+      expected: Each state is inspectable as the intended restrained real-time game world and remains free of dashboard, sidebar, card-grid, or chat-shell presentation.
     - attack: Load a fixture with 100+ underlying objects but a projection exposing only three useful objects.
       expected: Scene remains sparse and does not discover/render hidden objects merely because they exist.
     - attack: Mark an active-looking object as settled/non-actionable and a single object as requiring judgment.
@@ -862,6 +892,7 @@ tasks:
     - Spatial fixture journeys complete using application actions.
     - Semantic zoom changes representational resolution rather than only object scale.
     - Attention/sparsity teeth pass.
+    - Explicit rendered perceptual acceptance passes for four states: quiet system/Core world, salient work object among quiet objects, focused case with Core reduced to home/orientation, and deeper semantic zoom; inspect camera travel, Core rendering, near-pure white opening, compact composer, and recursive zoom.
     - All applicable global gates remain green.
   T07:
     title: Implement shared temporal control, historical projection, comparison, and return-to-now
@@ -879,7 +910,7 @@ tasks:
     - REQ-TIME-004
     - REQ-TIME-005
     changes: >-
-      Adds a GodSpeed-owned temporal controller using native or reviewed optional donor mechanics, supports live and
+      Adds a GodSpeed-owned temporal controller using the reviewed selected donor mechanics where applicable, supports live and
       historical positions/ranges, coordinates time-aware surfaces/artifacts, requests historical projections through
       the Go boundary, compares versions, and returns deterministically to live state.
     proves: >-
@@ -898,7 +929,7 @@ tasks:
       - Fixture snapshots may hide inability of real adapters to resolve historical references.
       confirmation_condition: Independent review runs temporal tests against both fixture and Go projection adapters.
     hot_context:
-    - T02 use-or-omit decision for optional donor mechanics
+    - T02 frozen donor revisions, extraction boundaries, and GodSpeed target seams
     - T03 TemporalContext/UI actions
     - T04 projection references/history capabilities
     - Source spec domain_contract.temporal_context and REQ-TIME records
@@ -1063,17 +1094,16 @@ tasks:
     - REQ-NAR-005
     changes: >-
       Adds a bounded adapter to the existing agent/AG-UI substrate, publishes current surface/focus/selection/time, maps agent requests
-      onto UI-owned actions, implements semantic-beat/narration choreography with scene/artifact/evidence directives,
-      and supports pause/branch/inspect/resume.
+      onto UI-owned actions, and implements an interruptible in-engine cutscene whose semantic beats drive camera, focus,
+      visibility, relationships, arrangement, temporal state, artifacts, evidence, and annotations with pause/branch/inspect/resume.
     proves: >-
-      The agent can participate in the same represented world as the human and explain by composing the established
-      UI/artifact grammar rather than by owning a separate chat UI or mutating renderer internals.
+      The agent can participate in the same represented world as the human and explain through an interruptible
+      in-engine cutscene that composes the established UI/artifact grammar rather than a separate chat UI or renderer mutation.
     does_not_prove: Does not prove consequential backend authority, real Go action handoff, or final FDE integration.
     preregistration:
       required: true
       artifact: .agents/preregistrations/godspeed-casework-cognitive-environment/T09.prereg.yaml
-      claim: The selected agent adapter can direct the cognitive environment entirely through UI-owned actions and a bounded choreography
-        grammar.
+      claim: The selected agent adapter can direct an interruptible in-engine cutscene entirely through UI-owned actions and a bounded choreography grammar.
       falsifier: >-
         Required narration can only be implemented by letting the agent generate arbitrary renderer/UI internals
         or by maintaining a separate authoritative chat state.
@@ -1088,17 +1118,17 @@ tasks:
     - T03 UI action/context ports
     - T06 scene adapter actions
     - T08 artifact registry/lifecycle
-    - T02 optional donor decision
+    - T02 frozen donor revisions, extraction boundaries, and GodSpeed target seams
     - Existing AG-UI/agent integration contracts; add a new framework only with prior dependency approval
     steps:
     - Implement an agent adapter that reads UI context and emits validated application-owned representational actions.
-    - Implement semantic-beat sequence representation independent of agent framework and scene renderer internals.
+    - Implement an interruptible in-engine cutscene sequence representation independent of agent framework and scene renderer internals.
     - >-
       Implement choreography execution for focus, reveal, relationship, annotation, artifact, evidence, and temporal
       directives currently supported by the UI.
     - >-
-      Implement interruption semantics: pause on user inspection, branch on follow-up question/selection, resume
-      or abandon deterministically.
+      Implement interruption semantics: pause the cutscene on user inspection, branch on follow-up question/selection,
+      resume or abandon deterministically, and preserve the represented scene context.
     - Implement evidence insertion so source artifacts can replace abstract narration where available.
     - Add fixture conversations covering direct manipulation, visual answer, and multi-beat narrated explanation.
     gate:
@@ -1118,7 +1148,7 @@ tasks:
     done_when:
     - Agent receives current surface/focus/selection/time context.
     - All agent visual changes pass through UI-owned actions.
-    - Interruptible multi-beat narration with evidence/artifacts passes.
+    - Interruptible multi-beat in-engine cutscene narration with evidence/artifacts passes; users can inspect, branch, and resume.
     - Independent review confirms the selected agent integration remains an adapter.
     - All applicable global gates remain green.
   T10:
@@ -1153,14 +1183,15 @@ tasks:
       - Generated client types can silently become the application model.
       confirmation_condition: Peer review plus alternate in-process adapter demonstrates boundary independence.
     hot_context:
+    - .agents/reports/interface-contracts/ (frozen client/types/schemas and conformance tests)
     - T03 React world/interaction ports
     - T04 Go Projection/Event ports and cognitive projection model
     - T01 configuration/error/preflight contracts
     steps:
     - >-
-      Implement the spec's versioned HTTP JSON snapshot/intent and
-      server-sent projection-event adapter. Freeze schemas, cursor ordering,
-      authentication, and resync semantics before integration.
+      Verify the reconciled frozen interface-contract package, its prose/type/schema wire-shape parity,
+      and conformance tests during T10's typed parity check, then implement the spec's versioned HTTP JSON snapshot/intent and
+      server-sent projection-event adapter without rediscovering or duplicating application semantics.
     - Implement Go projection snapshot and update publication plus React adapter translation into UI-core projections.
     - Implement interaction-intent transport in the opposite direction without exposing transport DTOs to UI core.
     - >-
