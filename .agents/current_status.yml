@@ -11,9 +11,10 @@ metadata:
   initialized: true
   last_updated: '2026-09-24'
   updated_by: >-
-    casework-live-wiring executor session 1 (T00/T01/T03 settled with independent confirmation;
-    T04 units A+B built, A confirmed, B orchestrator-verified with independent confirmation pending;
-    handoff written for session 2)
+    casework-live-wiring executor session 2 (T04 SETTLED: units A+B+C verified;
+    independent critic t04-critic ran, procedural REJECT reconciled with zero code
+    findings; confirmation at evidence/casework-live-wiring/T04/confirmation.md;
+    unit C committed; T02 now in flight)
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -21,10 +22,10 @@ metadata:
       is the historical narrative; the machine state is THIS file.
 
 execution:
-  last_settled_task: T03
-  settled_tasks: [T00, T01, T03]
-  in_flight_task: T04
-  ready_tasks: [T02]
+  last_settled_task: T04
+  settled_tasks: [T00, T01, T03, T04]
+  in_flight_task: T02
+  ready_tasks: []
   blocked_tasks: [T05, T06, T07, T08, T09, T10, T11, T12, T13]
   plan_blocked: false
   plan_blocker: null
@@ -32,18 +33,22 @@ execution:
   task_detail:
     T04:
       units: >-
-        Decomposed by session 1 into A (extraction), B (verbs + events), C (supervisor). A: DONE,
-        independently confirmed (commit 1b73724). B: DONE, committed 9c153b2 — builder was killed
-        by a usage limit before reporting; the orchestrator re-verified inline (gates re-run with
-        true exit codes, diff review, tests review) but INDEPENDENT CONFIRMATION IS PENDING and
-        required before T04 settles. C (opt-in supervisor, plan T04 step 5: config flag default
-        off, bounded concurrency Semaphore, auto-advance enabled SandboxedTask items via the same
-        case_ops/advance engine path, sandbox-class selection test): NOT STARTED.
-      settle_when: >-
-        Unit C implemented; T04 gates green (cargo test -p sea-forge-cli -p sea-forge-case-runner
-        -p sea-forge-server; cargo test -p sea-forge-server --test sfwp_case_mutations); T04 teeth
-        pass; an INDEPENDENT critic (subagent that did not build it) re-runs gates + teeth over
-        units A+B+C and writes .agents/evidence/casework-live-wiring/T04/confirmation.md.
+        SETTLED 2026-09-24 (session 2). A: DONE, confirmed (1b73724). B: DONE,
+        committed 9c153b2, orchestrator re-verified + critic reviewed (no
+        findings). C: DONE — opt-in supervisor (SupervisorConfig fail-closed
+        default off, slot+run-pool bounded concurrency, same case_ops/advance
+        path, sandbox-class selection), committed this session; gates green
+        (3-crate 57 ok/0 fail, mutations 10/10, supervisor 4/4, config 15,
+        fmt + no-async-kernel EXIT 0); teeth pass incl. TDD baseline.
+      confirmation: .agents/evidence/casework-live-wiring/T04/confirmation.md
+      critic: >-
+        Independent t04-critic (run_00001, did not build T04) ran 2026-09-24:
+        full report via team mailbox (msg_00002+msg_00003). Verdict REJECT on
+        procedural grounds only (C uncommitted at review time; no T04/
+        confirmation.md; its live cargo re-runs hit a 30s env timeout) with
+        ZERO code findings and an APPROVE-gate checklist — every item closed
+        in confirmation.md. Standing as received; grounds remedied here.
+      settle_when: satisfied — see confirmation.md.
     T02:
       prereg: .agents/evidence/casework-live-wiring/prereg/T02.yaml # written 2026-09-23, BEFORE implementation; read it first
       note: >-
@@ -62,24 +67,21 @@ operator_decisions:
   dependencies: "APPROVED: a Go OIDC library and golang.org/x/crypto/argon2. REJECTED: Playwright; use agent-browser. Anything else is ask-first."
   git: >-
     The implementing agent may create a local branch and make local commits, following the
-    agent_protocol.git rules below. Make frequent commits at meaninful milestones. It may never push, fetch, pull, rebase, reset, merge or clean.
+    agent_protocol.git rules below. Make frequent commits at meaningful milestones. It may never push, fetch, pull, rebase, reset, merge or clean.
 
 next_action:
-  task: T04
+  task: T02
   action: >-
     Resume HERE. Branch casework/live-wiring; commits 8ad72ac (T00), 23e90b8 (T01), 1b73724 (T04A),
-    b271a99 (T03), 9c153b2 (T04B) are in. Working tree is CLEAN. Do these in order:
-    (1) T04 unit C: opt-in supervisor (spec in execution.task_detail.T04.units; plan T04 step 5).
-    (2) Re-run T04 gates + teeth (sfwp_case_mutations covers the teeth as permanent tests).
-    (3) Independent T04 critic: a subagent that did NOT build T04 gets the plan's T04 entry + the
-    commits 1b73724/9c153b2 + unit C, re-runs gates/teeth, reviews the diffs (esp. identity.rs
-    protected-verb classification, ADR-003 additivity of the Request enum, the event-publishing
-    cannot-miss argument in sfwp/case_mutations.rs), and writes
-    .agents/evidence/casework-live-wiring/T04/confirmation.md. If it REJECTS: fix with a fresh
-    builder and repeat, per the delegation loop below.
-    (4) Settle T04 (update this file), commit unit C.
-    (5) T02 (prereg already written; spec in execution.task_detail.T02).
-    (6) Then T05 (needs T02+T03+T04), T06 (T01+T05), T07 (T04+T05), T08 (T01+T06+T07), T09
+    b271a99 (T03), 9c153b2 (T04B) + unit-C commit (this session, T04 SETTLED) are in.
+    Do these in order:
+    (1) T02 (prereg already written at prereg/T02.yaml; spec in
+    execution.task_detail.T02: ADR-first, gateway section default NONE
+    fail-closed, effective actor through EVERY protected verb incl. T04B
+    verbs, both principals ledgered, SoD on end users, identity.get
+    effective actor; gates: cargo test -p sea-forge-server identity +
+    --test '*delegat*'; teeth per prereg; confirmation per plan).
+    (2) Then T05 (needs T02+T03+T04), T06 (T01+T05), T07 (T04+T05), T08 (T01+T06+T07), T09
     (T03+T06+T08), T10 (T08+T09; prereg required per plan — write it before implementation),
     T11, T12. T13: split into tasks in the plan and STOP for operator review first.
 
@@ -140,13 +142,13 @@ baseline_warnings:
   - "Global gates (plan verification.global_gates): cargo four-crate test; cd apps/godspeed-casework-go && go vet ./... && go test -race ./...; cd apps/godspeed-cognitive-ui && bun run typecheck && bun test; bun e2e/run.ts (baseline floor above); just casework-e2e-live (exists from T10 only). Go gates need -count=1 for golden-file tests."
 
 handoff:
-  session: 1
+  session: 2
   state_summary: >-
-    T00, T01, T03 settled with independent confirmation; T04 units A (confirmed) and B
-    (orchestrator-verified, independent confirmation PENDING) committed; unit C not started; T02
-    preregistered and ready. Working tree clean; branch casework/live-wiring; no processes left
-    running (live stack recipes tear down cleanly — verify with `pgrep -af sea-forge-server` if
-    in doubt).
+    T00, T01, T03, T04 settled (T04: units A+B+C verified; independent critic
+    t04-critic ran, procedural REJECT reconciled with zero code findings;
+    confirmation.md written). Unit C committed here. T02 in flight (prereg
+    written 2026-09-23, ADR-first). Branch casework/live-wiring; no processes
+    left running (verify with `pgrep -af sea-forge-server` if in doubt).
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
     - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."
@@ -160,9 +162,10 @@ handoff:
     - "committed 1b73724: case_ops library; CLI thin callers; approval.decide in-process; run_cli deleted; T04A evidence"
     - "committed b271a99: fixtures/cells/e2e (templates+policy); casework-cell-init seed; tests/case_templates_live.rs; T03 evidence"
     - "committed 9c153b2: 7 SFWP verbs + identity classification + case_mutations event publishing + advance.rs + CLI task move + regenerated workbench contracts + sfwp_case_mutations tests + T04B evidence + T02 prereg"
+    - "committed this session (T04C): SupervisorConfig + supervisor.rs + AdvanceCaller/AdvanceScope::Supervisor + per-case key locks + sfwp_supervisor tests + T04C gates/teeth + T04/confirmation.md; T04 SETTLED"
   decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
   warnings:
-    - "T04 unit B's independent confirmation is PENDING — do not settle T04 without the critic pass described in next_action step (3)."
+    - "Critic t04-critic returned procedural REJECT (C uncommitted at review; no T04/confirmation.md; its live cargo re-runs hit a 30s env timeout) with ZERO code findings; grounds closed in T04/confirmation.md, which stands as the settlement record. Report via team mailbox msg_00002+msg_00003."
     - "Two subagent usage-limit windows on 2026-09-24 killed in-flight agents; check spawn health before relying on delegation (see agent_protocol.delegation caveat)."
     - "C-1 resolution is an executor decision under an unanswered protocol stop, NOT operator approval; operator may still override the casework-live-* recipe naming cheaply."
   evidence:
@@ -170,5 +173,7 @@ handoff:
     - .agents/evidence/casework-live-wiring/T01/ (confirmation.md, gates/, teeth/)
     - .agents/evidence/casework-live-wiring/T03/ (confirmation.md, gates/, teeth-cyclic-template.log)
     - .agents/evidence/casework-live-wiring/T04A/ (confirmation.md, gates/, teeth/)
-    - .agents/evidence/casework-live-wiring/T04B/ (builder gates + orchestrator re-runs incl. true-exit gate1, contracts gate pre/post commit, teeth transcripts; NO confirmation.md yet)
+    - .agents/evidence/casework-live-wiring/T04B/ (builder gates + orchestrator re-runs incl. true-exit gate1, contracts gate pre/post commit, teeth transcripts)
+    - .agents/evidence/casework-live-wiring/T04C/ (TDD baseline + post-impl pass + fresh 2026-09-24 session-2 re-runs: 3-crate, mutations, supervisor, config units, fmt, no-async-kernel)
+    - .agents/evidence/casework-live-wiring/T04/confirmation.md (settlement record: gates, teeth, diff review, critic reconciliation)
     - .agents/evidence/casework-live-wiring/prereg/T02.yaml

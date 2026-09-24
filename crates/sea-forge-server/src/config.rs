@@ -7,6 +7,61 @@ use std::path::{Path, PathBuf};
 const MAX_CONCURRENT_RUNS: usize = 64;
 const MAX_APPROVAL_TTL_HOURS: u64 = 8_760;
 
+/// Bounds for the opt-in case-advance supervisor (plan T04 step 5, decision
+/// D-3). The poll ceiling keeps a malformed interval from starving the loop
+/// into uselessness; the concurrency ceiling exists because every supervisor
+/// pass also holds one permit from the shared run pool for its duration, so
+/// beyond roughly twice the pool (`max_concurrent_runs`, itself capped at 64)
+/// extra passes would only queue — 8 bounds task and permit allocation while
+/// staying a sane parallelism for any realistic pool.
+const MIN_SUPERVISOR_POLL_INTERVAL_SECS: u64 = 1;
+const MAX_SUPERVISOR_POLL_INTERVAL_SECS: u64 = 3600;
+const MAX_SUPERVISOR_CONCURRENT_CASES: usize = 8;
+const MAX_SUPERVISOR_ACTOR_LEN: usize = 128;
+
+/// Settings for the opt-in case-advance supervisor (plan T04 step 5, D-3).
+///
+/// Every field carries a serde default so an absent `supervisor:` section
+/// parses to [`SupervisorConfig::default`] — which is *disabled*. The
+/// supervisor is fail-closed off: only an operator who writes
+/// `supervisor: {enabled: true}` gets a background task that advances cases.
+///
+/// These settings are read once at server startup (the task is spawned from
+/// `run()`); a config reload does not resize, restart, or stop a running
+/// supervisor — that takes a restart, consistent with `server.yaml` living
+/// inside the cell it configures.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SupervisorConfig {
+    /// Whether the supervisor task is spawned at startup. Default `false`.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Seconds between poll passes. Valid range 1..=3600. Default 5.
+    #[serde(default = "default_supervisor_poll_interval_secs")]
+    pub poll_interval_secs: u64,
+    /// How many case passes may run concurrently inside one poll wave, on top
+    /// of (not instead of) a permit from the shared run pool. Valid range
+    /// 1..=8. Default 2.
+    #[serde(default = "default_supervisor_max_concurrent_cases")]
+    pub max_concurrent_cases: usize,
+    /// The supervisor's attributed effective actor — the actor id recorded
+    /// honestly in every ledger/trace record a supervisor pass produces.
+    /// Never an end user's identity. Default `"supervisor"`.
+    #[serde(default = "default_supervisor_actor")]
+    pub actor: String,
+}
+
+impl Default for SupervisorConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            poll_interval_secs: default_supervisor_poll_interval_secs(),
+            max_concurrent_cases: default_supervisor_max_concurrent_cases(),
+            actor: default_supervisor_actor(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
@@ -22,6 +77,14 @@ pub struct ServerConfig {
     pub root: PathBuf,
     #[serde(default)]
     pub agent: AgentConfig,
+    /// The opt-in case-advance supervisor (plan T04 step 5, D-3).
+    ///
+    /// Absent means [`SupervisorConfig::default`], whose `enabled` is `false`:
+    /// existing configs keep parsing (this section's key is new, and
+    /// `deny_unknown_fields` above rejects only *unknown* keys) and the
+    /// supervisor stays fail-closed off until an operator opts in.
+    #[serde(default)]
+    pub supervisor: SupervisorConfig,
     /// uid -> actor bindings for protected verbs (SF-005, decision U-07).
     ///
     /// Absent means *unconfigured*, and an unconfigured cell refuses every
@@ -52,6 +115,15 @@ fn default_approval_ttl() -> u64 {
 }
 fn default_root() -> PathBuf {
     PathBuf::from(DEFAULT_ROOT_DIR)
+}
+fn default_supervisor_poll_interval_secs() -> u64 {
+    5
+}
+fn default_supervisor_max_concurrent_cases() -> usize {
+    2
+}
+fn default_supervisor_actor() -> String {
+    "supervisor".into()
 }
 
 /// Make `path` absolute without requiring it to exist yet.
@@ -104,6 +176,8 @@ impl Default for ServerConfig {
             // Empty by default, and empty refuses every protected verb. A cell
             // that has not said who may act does not get to guess.
             identity: crate::identity::IdentityBindings::default(),
+            // Disabled by default: the supervisor is opt-in (fail-closed).
+            supervisor: SupervisorConfig::default(),
         }
     }
 }
@@ -137,6 +211,37 @@ impl ServerConfig {
         if self.approval_ttl_hours == 0 || self.approval_ttl_hours > MAX_APPROVAL_TTL_HOURS {
             return Err(format!(
                 "approval_ttl_hours must be between 1 and {MAX_APPROVAL_TTL_HOURS}"
+            ));
+        }
+        // Supervisor bounds (T04C). Validated even while disabled: a section
+        // an operator wrote must be coherent before the first side effect, and
+        // an out-of-range value must never silently re-enable or reshape a
+        // task that a later `enabled: true` would spawn.
+        if !(MIN_SUPERVISOR_POLL_INTERVAL_SECS..=MAX_SUPERVISOR_POLL_INTERVAL_SECS)
+            .contains(&self.supervisor.poll_interval_secs)
+        {
+            return Err(format!(
+                "supervisor.poll_interval_secs must be between {MIN_SUPERVISOR_POLL_INTERVAL_SECS} and {MAX_SUPERVISOR_POLL_INTERVAL_SECS} (got {})",
+                self.supervisor.poll_interval_secs
+            ));
+        }
+        if self.supervisor.max_concurrent_cases == 0
+            || self.supervisor.max_concurrent_cases > MAX_SUPERVISOR_CONCURRENT_CASES
+        {
+            return Err(format!(
+                "supervisor.max_concurrent_cases must be between 1 and {MAX_SUPERVISOR_CONCURRENT_CASES} (got {})",
+                self.supervisor.max_concurrent_cases
+            ));
+        }
+        // The actor id is attributed in ledgers, traces and authority
+        // evaluations, so it must be a bounded identifier — never empty, never
+        // free text that could masquerade as a sentence or smuggle control
+        // characters into a record.
+        if !sea_forge_core::path::valid_id_segment(&self.supervisor.actor, MAX_SUPERVISOR_ACTOR_LEN)
+        {
+            return Err(format!(
+                "supervisor.actor must be a non-empty identifier of at most {MAX_SUPERVISOR_ACTOR_LEN} characters using only [A-Za-z0-9_-] (got {:?})",
+                self.supervisor.actor
             ));
         }
         self.agent
@@ -289,5 +394,97 @@ mod tests {
         .unwrap();
         let config = ServerConfig::load(&path).unwrap();
         assert_eq!(config.agent.endpoints.len(), 1);
+    }
+
+    // -----------------------------------------------------------------------
+    // The opt-in case-advance supervisor section (T04C, requirement 7a/7f).
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn an_absent_supervisor_section_parses_to_disabled_bounded_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(&path, "max_concurrent_runs: 4\n").unwrap();
+
+        let config = ServerConfig::load(&path).unwrap();
+        // Opt-in, fail-closed: no section means no supervisor task.
+        assert!(!config.supervisor.enabled);
+        assert_eq!(config.supervisor.poll_interval_secs, 5);
+        assert_eq!(config.supervisor.max_concurrent_cases, 2);
+        assert_eq!(config.supervisor.actor, "supervisor");
+        // The parse default and the struct default must be the same value, or
+        // a missing file and an empty file would disagree.
+        let default = ServerConfig::default();
+        assert!(!default.supervisor.enabled);
+        assert_eq!(default.supervisor, config.supervisor);
+    }
+
+    #[test]
+    fn an_explicit_supervisor_section_parses_field_by_field() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "supervisor:\n  enabled: true\n  poll_interval_secs: 60\n  max_concurrent_cases: 4\n  actor: cell_supervisor\n",
+        )
+        .unwrap();
+
+        let config = ServerConfig::load(&path).unwrap();
+        assert!(config.supervisor.enabled);
+        assert_eq!(config.supervisor.poll_interval_secs, 60);
+        assert_eq!(config.supervisor.max_concurrent_cases, 4);
+        assert_eq!(config.supervisor.actor, "cell_supervisor");
+    }
+
+    #[test]
+    fn an_unknown_supervisor_field_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "supervisor:\n  enabled: true\n  pol_interval_secs: 5\n",
+        )
+        .unwrap();
+
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("unknown field"), "{error}");
+    }
+
+    #[test]
+    fn load_rejects_out_of_range_supervisor_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+
+        std::fs::write(&path, "supervisor:\n  poll_interval_secs: 0\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("supervisor.poll_interval_secs"), "{error}");
+        assert!(error.contains("between 1 and 3600"), "{error}");
+
+        std::fs::write(&path, "supervisor:\n  poll_interval_secs: 3601\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("between 1 and 3600"), "{error}");
+
+        std::fs::write(&path, "supervisor:\n  max_concurrent_cases: 0\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("supervisor.max_concurrent_cases"), "{error}");
+        assert!(error.contains("between 1 and 8"), "{error}");
+
+        std::fs::write(&path, "supervisor:\n  max_concurrent_cases: 9\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("between 1 and 8"), "{error}");
+
+        // The actor id is attributed in durable records: empty and free text
+        // are both refused.
+        std::fs::write(&path, "supervisor:\n  actor: \"\"\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("supervisor.actor"), "{error}");
+
+        std::fs::write(&path, "supervisor:\n  actor: \"two words\"\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("supervisor.actor"), "{error}");
+
+        std::fs::write(&path, "supervisor:\n  actor: \"a;rm -rf\"\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("supervisor.actor"), "{error}");
     }
 }

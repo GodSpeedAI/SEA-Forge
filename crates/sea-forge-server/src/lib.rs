@@ -47,6 +47,7 @@ pub mod governed_settlement_return;
 pub mod governed_work_ingress;
 pub mod identity;
 pub mod sfwp;
+mod supervisor;
 pub mod swe_seed_reconciliation;
 mod transcript_seal;
 
@@ -74,6 +75,14 @@ pub struct ServerState {
     config: std::sync::RwLock<Arc<ServerConfig>>,
     pub cases: Mutex<HashMap<String, CaseEntry>>,
     delegations: Mutex<HashMap<String, DelegationHandle>>,
+    /// Per-case advance serialization (T04C): keyed async mutexes, one per
+    /// case id, acquired by BOTH the `case.advance`/`item.execute` verb path
+    /// and every supervisor pass before any `case-events.jsonl` append, so a
+    /// client-driven advance and an unattended pass can never interleave
+    /// appends on the same case. Entries are created on demand and pruned on
+    /// release (see [`ServerState::acquire_case_lock`]), so the map's size
+    /// follows in-flight passes rather than the cell's total case count.
+    case_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
     pub(crate) permission_broker: delegation::AcpApprovalBroker,
     pub semaphore: Arc<Semaphore>,
     /// Server-wide request-work admission. Its capacity matches
@@ -177,6 +186,7 @@ impl ServerState {
             config: std::sync::RwLock::new(Arc::new(config)),
             cases: Mutex::new(cases),
             delegations: Mutex::new(HashMap::new()),
+            case_locks: Mutex::new(HashMap::new()),
             permission_broker: delegation::AcpApprovalBroker::default(),
             semaphore: Arc::new(Semaphore::new(max)),
             request_admission: Arc::new(Semaphore::new(max)),
@@ -327,6 +337,44 @@ impl ServerState {
 
     pub(crate) async fn end_delegation(&self, run_id: &str) {
         self.delegations.lock().await.remove(run_id);
+    }
+
+    /// Acquire this case's advance lock (T04C). The guard must be held for
+    /// the whole of an advance pass — verb or supervisor — so the two writers
+    /// serialize their `case-events.jsonl` appends on one case. Lock order
+    /// everywhere is: shared run-pool permit → this lock (the supervisor adds
+    /// only its own slot semaphore outermost), so no cycle can form.
+    pub(crate) async fn acquire_case_lock(
+        &self,
+        case_id: &str,
+    ) -> tokio::sync::OwnedMutexGuard<()> {
+        let mutex = {
+            let mut map = self.case_locks.lock().await;
+            Arc::clone(
+                map.entry(case_id.to_owned())
+                    .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(()))),
+            )
+        };
+        mutex.lock_owned().await
+    }
+
+    /// Drop a case's key-map entry once no pass holds or awaits its lock.
+    /// Called by every advance pass right after releasing its guard: if this
+    /// is the last reference (only the map's own `Arc` remains) the entry is
+    /// removed; a pass that fetched the mutex concurrently keeps the count at
+    /// ≥ 2 and either still serializes on the surviving entry or becomes the
+    /// last user that prunes. The map therefore never grows past cases with
+    /// in-flight (or imminently starting) passes; if a pass is ever cancelled
+    /// between release and prune, the lingering entry is removed by that
+    /// case's next pass instead.
+    pub(crate) async fn prune_case_lock(&self, case_id: &str) {
+        let mut map = self.case_locks.lock().await;
+        if map
+            .get(case_id)
+            .is_some_and(|mutex| Arc::strong_count(mutex) == 1)
+        {
+            map.remove(case_id);
+        }
     }
 }
 
@@ -1134,6 +1182,11 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
     // socket override unable to create a second concurrent writer for one cell.
     let _cell_lock = lock_cell_root(&config.root)?;
     let _socket_lock = lock_socket_path(&socket_path)?;
+    // The case-advance supervisor is opt-in (D-3): capture the startup
+    // snapshot before `config` moves into the state. A config reload does
+    // not spawn, stop, resize, or re-attribute a running supervisor — that
+    // takes a restart, like the cell root itself.
+    let supervisor_settings = config.supervisor.clone();
     let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.
@@ -1164,6 +1217,12 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
     // run permits: slow or idle peers must not create unbounded Tokio tasks.
     const MAX_CONNECTIONS: usize = 64;
     let connection_permits = Arc::new(Semaphore::new(MAX_CONNECTIONS));
+
+    // Fail-closed opt-in: the supervisor task exists only when the operator
+    // enabled it (absent section ⇒ `enabled: false` ⇒ never spawned).
+    if supervisor_settings.enabled {
+        supervisor::spawn(&state, supervisor_settings);
+    }
 
     loop {
         let (stream, _) = match listener.accept().await {
@@ -2615,7 +2674,12 @@ async fn advance_response(
         &actor,
         verified_role,
         case_id,
-        scope_item,
+        // The verb's wire scope, unchanged: `None` → `All`, `Some` → `Item`.
+        // The shared helper (and its per-case lock) is identical for the
+        // supervisor, which passes `AdvanceCaller::Supervisor`.
+        sfwp::case_mutations::AdvanceCaller::Verb {
+            item: scope_item.map(str::to_owned),
+        },
         policy,
         timeout,
         permit,

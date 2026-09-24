@@ -4086,3 +4086,17 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > Unit C (supervisor) not started; T02 preregistered (prereg/T02.yaml) and ready. Branch
 > casework/live-wiring, tree clean. Usage limits killed subagents twice today; delegation caveat
 > and the full resume recipe are in current_status.yml next_action + agent_protocol.
+>
+> **2026-09-24 SESSION 2 — T04 SETTLED (unit C: opt-in supervisor, D-3 step 5).**
+> Unit C: `SupervisorConfig` (fail-closed `enabled:false`, 1..=3600s poll, 1..=8 cases,
+> actor-id validation) + `supervisor.rs` poll loop (slot + shared run-pool permits, per-case
+> key locks, missing-policy skip) + `AdvanceCaller::{Verb,Supervisor}` sharing one
+> `run_case_mutation` choke point + `AdvanceScope::Supervisor` (SandboxedTask-only, human work
+> reads `idle` with zero writes) + 4 `sfwp_supervisor` tests (TDD baseline 1 expected failure →
+> 4/4). Fresh re-runs: 3-crate 57 ok suites/0 fail, mutations 10/10, supervisor 4/4, config 15,
+> fmt + no-async-kernel EXIT 0. Independent critic t04-critic ran (team run_00001, report via
+> mailbox msg_00002+msg_00003): procedural REJECT only (C uncommitted at review, no T04/
+> confirmation.md, its live cargo runs hit a 30s env timeout) with ZERO code findings — grounds
+> closed in `.agents/evidence/casework-live-wiring/T04/confirmation.md`, which settles T04.
+> Unit C committed; T02 in flight (prereg written, ADR-first). Machine state: `current_status.yml`
+> (settled [T00,T01,T03,T04], in-flight T02).

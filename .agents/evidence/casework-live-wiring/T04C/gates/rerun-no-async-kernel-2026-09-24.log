@@ -1,0 +1,2 @@
+ok: no async runtime or HTTP client in 19 kernel crates
+EXIT=0

@@ -33,6 +33,16 @@ pub enum AdvanceScope {
     All,
     /// `item.execute`: exactly this item, which must itself be ready.
     Item(String),
+    /// The opt-in case-advance supervisor (server-internal, D-3): a strict
+    /// subset of `All` for unattended passes. Only `SandboxedTask` items may
+    /// be activated/run, `ParkHumanTask` actions are filtered out before the
+    /// idle check — the supervisor never activates or completes human work,
+    /// never writes `approvals.jsonl`, and a case whose only ready work is
+    /// human therefore reads `idle` with zero writes. Everything else
+    /// (`Enable`, sentries, milestones, case close/terminate) is engine
+    /// semantics re-derived from events and stays identical to the verb, so
+    /// event publishing and episode execution remain literally one code path.
+    Supervisor,
 }
 
 /// One executed episode, as recorded by the engine.
@@ -117,7 +127,25 @@ pub fn advance_case(
         if case.state == CaseState::AwaitingApproval {
             break "awaiting_approval";
         }
-        let actions = next_case_actions(&plan.items, &events);
+        let mut actions = next_case_actions(&plan.items, &events);
+        // Supervisor scope (T04C): an unattended pass must never activate
+        // human/agent work, so `ParkHumanTask` — which appends
+        // `ItemActivated {human_task: true}` — and `Activate` of any
+        // non-SandboxedTask target are dropped before the idle check (the
+        // `Activate` arm never writes on its own; it only feeds the
+        // activation set below, which is filtered by kind anyway). A case
+        // whose only ready work is non-sandboxed reads `idle` for the
+        // supervisor: zero writes, and the verb drives that work when an
+        // operator does. The verb's scope is untouched.
+        if matches!(scope, AdvanceScope::Supervisor) {
+            actions.retain(|action| match action {
+                CaseAction::ParkHumanTask(_) => false,
+                CaseAction::Activate(item_id) => !plan.items.iter().any(|item| {
+                    item.plan_item_id == *item_id && item.item_kind != ItemKind::SandboxedTask
+                }),
+                _ => true,
+            });
+        }
         // The operator activation set: items the engine would activate now
         // (Available, criteria satisfied) plus items a sentry already enabled
         // — the manual-activation items `next_case_actions` never returns
@@ -143,6 +171,19 @@ pub fn advance_case(
             .collect();
         if let AdvanceScope::Item(target) = &scope {
             activations.retain(|item| item == target);
+        }
+        // Supervisor scope (T04C): only SandboxedTask items may be
+        // activated/run by an unattended pass. Filtering here (not only in
+        // the episode loop below) keeps the idle check honest: a case whose
+        // Enabled items are all human/agent/milestone work reads `idle`
+        // instead of looping to `blocked`, so the supervisor's poll appends
+        // nothing at all. The verb's scopes are untouched.
+        if matches!(scope, AdvanceScope::Supervisor) {
+            activations.retain(|item_id| {
+                plan.items.iter().any(|item| {
+                    item.plan_item_id == *item_id && item.item_kind == ItemKind::SandboxedTask
+                })
+            });
         }
         if actions.is_empty() && activations.is_empty() {
             break "idle";

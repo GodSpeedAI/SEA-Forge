@@ -1,0 +1,12 @@
+test case_add_item_appends_exactly_one_plan_mutated_with_the_verified_proposer ... ok
+test case_add_item_cycle_refusal_leaves_the_plan_byte_identical ... ok
+test case_terminate_appends_case_terminated_on_an_active_case ... ok
+test case_advance_runs_a_parked_sandboxed_item_end_to_end ... ok
+test case_reopen_appends_case_reopened_only_after_closure ... ok
+test artifact_get_returns_content_addressed_bytes_and_refuses_unknown_digests ... ok
+test item_execute_scopes_to_one_item_and_refuses_non_ready_targets ... ok
+test human_task_complete_closes_the_case_and_mandates_a_justification ... ok
+test the_proposer_cannot_resolve_its_own_discretionary_items_approval ... ok
+test subscriber_kill_and_resume_replays_without_gaps_or_duplicates ... ok
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+EXIT=0

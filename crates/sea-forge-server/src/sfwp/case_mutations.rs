@@ -348,18 +348,43 @@ fn advance_result(case_id: &str, outcome: AdvanceOutcome) -> CaseAdvanceResult {
     }
 }
 
-/// `case.advance` / `item.execute`: run the shared advance engine in-process,
-/// executing each sandboxed episode through the same governed path
-/// `case_dispatch` uses (`execute_sandbox`), so there is no second
-/// authority/execution path. The caller acquires the run-semaphore permit and
-/// it is held for the duration of the episodes (bounded concurrency, §11.1).
+/// Who is running the shared advance engine. This selects the engine's
+/// [`AdvanceScope`] — never a second code path: the verb and the opt-in
+/// supervisor both run through [`advance`], so event publishing
+/// (cannot-miss) and governed execution (`execute_sandbox`) are literally the
+/// same code for both callers.
+#[derive(Clone, Debug)]
+pub(crate) enum AdvanceCaller {
+    /// `case.advance` / `item.execute`: scope follows the identity-gated
+    /// request — `All`, or exactly one `Item`.
+    Verb { item: Option<String> },
+    /// The server-internal case-advance supervisor (T04C): the strict
+    /// `SandboxedTask`-only scope the engine defines for unattended passes.
+    Supervisor,
+}
+
+/// `case.advance` / `item.execute` / supervisor pass: run the shared advance
+/// engine in-process, executing each sandboxed episode through the same
+/// governed path `case_dispatch` uses (`execute_sandbox`), so there is no
+/// second authority/execution path. The caller acquires the run-semaphore
+/// permit and it is held for the duration of the episodes (bounded
+/// concurrency, §11.1).
+///
+/// # Per-case serialization (T04C)
+///
+/// The whole mutation runs under this case's keyed async lock (acquired
+/// here, before any append, released after the last one), so a client-driven
+/// advance and a supervisor pass on the same case can never interleave
+/// `case-events.jsonl` appends. Different cases lock independently; the map
+/// entry is pruned on release once no pass holds or awaits it, so the key
+/// map cannot grow without bound.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn advance(
     state: &Arc<ServerState>,
     actor: &str,
     actor_role: ActorRole,
     case_id: &str,
-    scope_item: Option<&str>,
+    caller: AdvanceCaller,
     policy: &str,
     timeout: u64,
     permit: tokio::sync::OwnedSemaphorePermit,
@@ -372,13 +397,17 @@ pub(crate) async fn advance(
     let root = state.root.clone();
     let actor = actor.to_string();
     let case_id = case_id.to_string();
-    let scope = match scope_item {
-        Some(item_id) => AdvanceScope::Item(item_id.to_string()),
-        None => AdvanceScope::All,
+    let scope = match caller {
+        AdvanceCaller::Verb {
+            item: Some(item_id),
+        } => AdvanceScope::Item(item_id),
+        AdvanceCaller::Verb { item: None } => AdvanceScope::All,
+        AdvanceCaller::Supervisor => AdvanceScope::Supervisor,
     };
     let policy_for_task = policy.to_string();
     let case_id_for_task = case_id.clone();
-    let outcome = run_case_mutation(state, &case_id, move |notify| {
+    let case_lock = state.acquire_case_lock(&case_id).await;
+    let result = run_case_mutation(state, &case_id, move |notify| {
         let mut execute_episode = |item: &PlanItem, run_id: &str| {
             // F-08: the episode's authority decision is evaluated for the
             // role the identity gate verified, exactly like a dispatched run.
@@ -404,7 +433,16 @@ pub(crate) async fn advance(
             &mut execute_episode,
         )
     })
-    .await?;
+    .await;
+    drop(case_lock);
+    // Release-then-prune: the entry goes back to the map unlocked, then is
+    // removed if no other pass holds or awaits it (strong_count == 1 is only
+    // the map's own Arc). A task that fetched the Arc concurrently keeps the
+    // count ≥ 2 and stays correctly serialized on the surviving mutex; the
+    // last pass over a case prunes, so the key map tracks in-flight work,
+    // not every case id ever seen.
+    state.prune_case_lock(&case_id).await;
+    let outcome = result?;
     drop(permit);
     Ok(advance_result(&case_id, outcome))
 }
