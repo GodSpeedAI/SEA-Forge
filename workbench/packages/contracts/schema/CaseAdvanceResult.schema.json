@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaseAdvanceResult",
+  "description": "`case.advance` / `item.execute` result body.",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "episodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EpisodeSummary"
+      }
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "state": {
+      "description": "Terminal standing of the pass: `completed`, `terminated`,\n`awaiting_approval`, `parked_human_task`, `idle`, `blocked`, or\n`episode_budget_reached`.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "case_id",
+    "state",
+    "episodes"
+  ],
+  "$defs": {
+    "EpisodeSummary": {
+      "description": "One executed episode reported by `case.advance` / `item.execute`.",
+      "type": "object",
+      "properties": {
+        "item_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "settlement_status": {
+          "description": "Wire spelling of the settlement status (`accepted`, `rejected`, ...).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_id",
+        "run_id",
+        "settlement_status"
+      ]
+    }
+  }
+}

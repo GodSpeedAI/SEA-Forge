@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaseReopenResult",
+  "description": "`case.reopen` result body.",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "case_state": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "case_id",
+    "case_state"
+  ]
+}

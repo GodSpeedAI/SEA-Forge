@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaseAddItemResult",
+  "description": "`case.add_item` result body.",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "plan_item_id": {
+      "type": "string"
+    },
+    "proposed_by": {
+      "description": "The actor the identity gate verified — the proposer of record. A\nclient-supplied `proposed_by` is overwritten, never trusted.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "case_id",
+    "plan_item_id",
+    "proposed_by"
+  ]
+}

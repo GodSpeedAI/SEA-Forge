@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EpisodeSummary",
+  "description": "One executed episode reported by `case.advance` / `item.execute`.",
+  "type": "object",
+  "properties": {
+    "item_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "settlement_status": {
+      "description": "Wire spelling of the settlement status (`accepted`, `rejected`, ...).",
+      "type": "string"
+    }
+  },
+  "required": [
+    "item_id",
+    "run_id",
+    "settlement_status"
+  ]
+}

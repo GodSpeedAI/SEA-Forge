@@ -507,7 +507,13 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::Ask { .. }
         | Request::AgentProbe { .. }
         | Request::CaseCommit { .. }
-        | Request::ApprovalDecide { .. } => true,
+        | Request::ApprovalDecide { .. }
+        | Request::CaseAddItem { .. }
+        | Request::CaseReopen { .. }
+        | Request::CaseTerminate { .. }
+        | Request::CaseAdvance { .. }
+        | Request::ItemExecute { .. }
+        | Request::HumanTaskComplete { .. } => true,
 
         // Read-only projections and protocol chatter. An old client that never
         // learned about the actor block keeps working against all of these.
@@ -535,7 +541,9 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::RunGet { .. }
         | Request::AssetList
         | Request::DelegationPreview { .. }
-        | Request::DelegationList => false,
+        | Request::DelegationList
+        // Content-addressed read over already-committed evidence records.
+        | Request::ArtifactGet { .. } => false,
     }
 }
 

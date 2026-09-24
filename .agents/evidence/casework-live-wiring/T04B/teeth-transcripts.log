@@ -1,0 +1,106 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling ring v0.17.14
+   Compiling rustls v0.23.45
+   Compiling rustls-webpki v0.103.15
+   Compiling tokio-rustls v0.26.4
+   Compiling hyper-rustls v0.27.9
+   Compiling reqwest v0.12.28
+   Compiling sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+warning: value assigned to `last_cursor` is never read
+   --> crates/sea-forge-server/tests/t04b_teeth.rs:217:27
+    |
+217 |     let mut last_cursor = String::new();
+    |                           ^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sea-forge-server` (test "t04b_teeth") generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 56.02s
+     Running tests/t04b_teeth.rs (target/debug/deps/t04b_teeth-42f4faaed123c27d)
+
+running 3 tests
+test tooth1_add_item_cycle ... == tooth 1: case.add_item with a self-dependent item ==
+server response (verbatim): {"error":"plan_cycle_error: sentry dependency cycle detected","error_class":"plan_cycle_error"}
+plan.json byte-identical: true
+case-events.jsonl kinds: ["case_created", "item_activated"]
+PlanMutated emitted: false
+ok
+test tooth2_proposer_self_approval ... == tooth 2: proposer resolves its own discretionary item's approval ==
+case_add_item response: {"case_id":"case_20260924T044818Z_4aaa08","ok":true,"plan_item_id":"disc","proposed_by":"operator_local"}
+item_execute (escalated, approval opened): {"case_id":"case_20260924T044818Z_4aaa08","episodes":[{"item_id":"disc","run_id":"run_20260924T044819Z_c4c700","settlement_status":"escalated"}],"ok":true,"state":"idle"}
+server response (verbatim): {"error":"actor `operator_local` requested the work approval `apr_0001` gates and cannot resolve it; approval requires a different actor","error_class":"separation_of_duty","next_lawful_action":"Ask an independently bound approver to decide","no_side_effect":true}
+approvals.jsonl byte-identical: true
+ok
+test tooth3_subscriber_kill_resume ... == tooth 3: subscriber killed mid-stream, resumed from cursor ==
+initial subscribe ack: {"ok":true,"replayed":0,"subscribed":true}
+case_add_item response: {"case_id":"case_20260924T044819Z_300d23","ok":true,"plan_item_id":"extra","proposed_by":"operator_local"}
+live frame: kind="case.submitted" cursor="01M38VWDKTHJ2WYK9ZJ694K9H5"
+live frame: kind="case.trace.planmutated" cursor="01M38VWDN1YQQPPDJ1GRGEZ8K3"
+subscriber killed; mutating while nobody listens
+case_terminate response: {"case_id":"case_20260924T044819Z_300d23","case_state":"terminated","close_reason":"operator_terminated:tooth3","ok":true}
+resubscribe ack: {"event":{"case_id":"case_20260924T044819Z_300d23","committed_at":"2026-09-24T04:48:19.138339786+00:00","cursor":"01M38VWDP2MGMVK2PQQHBBAVN9","detail":{"actor_id":"operator_local","event_id":"cev_000004","kind":"case_terminated","payload":{"reason":"tooth3","requested_by":"operator_local"},"plan_item_id":null,"run_id":"case","timestamp":"2026-09-24T04:48:19.136595098+00:00","version":"0.1"},"kind":"case.trace.caseterminated"},"type":"event"}
+cursors: ["01M38VWDN1YQQPPDJ1GRGEZ8K3"]
+no duplicates: true; strictly monotonic: true
+durable ledger order after cursor: ["01M38VWDP2MGMVK2PQQHBBAVN9"]
+replayed matches durable order: true
+ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.20s
+

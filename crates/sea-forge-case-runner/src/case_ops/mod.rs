@@ -5,7 +5,21 @@
 //! exactly one implementation: the CLI renders their results, the server calls
 //! them in-process, and neither carries a private copy of a governed write.
 //! The library performs no printing — callers render typed results.
+//!
+//! Every function that appends to `case-events.jsonl` comes in a `_with`
+//! spelling that takes a notify callback invoked after each event is durably
+//! appended. The callback is the host's event-sink: the async SFWP server
+//! passes one that forwards to its event bus, so no append can land without a
+//! frame being published, while this kernel crate stays free of any bus
+//! dependency. The plain spellings delegate with a no-op sink.
 
+/// Host callback invoked after a case trace event has been durably appended
+/// to `case-events.jsonl` and the case ledger.
+pub type CaseEventNotifier<'a> = &'a mut dyn FnMut(&TraceEvent);
+
+fn noop_notifier(_: &TraceEvent) {}
+
+pub mod advance;
 pub mod authority_views;
 pub mod mediation;
 
@@ -15,8 +29,8 @@ use sea_forge_core::{
     ids,
     types::{
         Actor, ActorRole, ApprovalRequest, ApprovalStatus, AuthorityAction, AuthorityDecision,
-        Case, CasePlan, CaseState, NormalizedDisposition, PlanItem, SettlementCriteriaRecord,
-        TraceEvent, TraceKind, Verdict,
+        Case, CasePlan, CaseState, ItemKind, NormalizedDisposition, PlanItem,
+        SettlementCriteriaRecord, TraceEvent, TraceKind, Verdict,
     },
     RECORD_VERSION,
 };
@@ -61,6 +75,27 @@ pub fn append_case_event(
     item_id: Option<&str>,
     payload: serde_json::Value,
 ) -> Result<(), ForgeError> {
+    append_case_event_with(
+        root,
+        case_id,
+        actor,
+        kind,
+        item_id,
+        payload,
+        &mut noop_notifier,
+    )
+}
+
+/// [`append_case_event`], notifying the host sink after the append is durable.
+pub fn append_case_event_with(
+    root: &Path,
+    case_id: &str,
+    actor: &str,
+    kind: TraceKind,
+    item_id: Option<&str>,
+    payload: serde_json::Value,
+    notify: CaseEventNotifier<'_>,
+) -> Result<(), ForgeError> {
     let (_, _, events_path) = paths(root, case_id);
     let count = fs::read_to_string(&events_path)
         .map(|value| value.lines().count())
@@ -89,10 +124,23 @@ pub fn append_case_event(
         .map_err(|error| ForgeError::io("open case events", error))?;
     serde_json::to_writer(&mut file, &event)?;
     file.write_all(b"\n")
-        .map_err(|error| ForgeError::io("append case event", error))
+        .map_err(|error| ForgeError::io("append case event", error))?;
+    notify(&event);
+    Ok(())
 }
 
 pub fn reopen(root: &Path, policy: &Path, actor: &str, case_id: &str) -> Result<u8, ForgeError> {
+    reopen_with(root, policy, actor, case_id, &mut noop_notifier)
+}
+
+/// [`reopen`], notifying the host sink of each appended event.
+pub fn reopen_with(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    notify: CaseEventNotifier<'_>,
+) -> Result<u8, ForgeError> {
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
@@ -113,17 +161,79 @@ pub fn reopen(root: &Path, policy: &Path, actor: &str, case_id: &str) -> Result<
             parameters: json!({}),
         },
     )?;
-    append_case_event(
+    append_case_event_with(
         root,
         case_id,
         actor,
         TraceKind::CaseReopened,
         None,
         json!({}),
+        notify,
     )?;
     case.state = CaseState::Active;
     case.close_reason = None;
     case.closed_at = None;
+    write_json(&case_path, &case)?;
+    Ok(0)
+}
+
+/// Operator-requested lifecycle termination of an existing case: the same
+/// terminal shape the case engine's own `TerminateCase` action produces
+/// (state `Terminated`, a close reason, a `CaseTerminated` trace event), but
+/// requested by a governed actor with a reason instead of forced by a failed
+/// required item. No new trace kinds — `CaseTerminated` is the one the engine
+/// already emits.
+pub fn terminate(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    reason: &str,
+) -> Result<u8, ForgeError> {
+    terminate_with(root, policy, actor, case_id, reason, &mut noop_notifier)
+}
+
+/// [`terminate`], notifying the host sink of the appended event.
+pub fn terminate_with(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    reason: &str,
+    notify: CaseEventNotifier<'_>,
+) -> Result<u8, ForgeError> {
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
+    }
+    let (case_path, _, _) = paths(root, case_id);
+    let mut case: Case = read_json(&case_path)?;
+    if !matches!(case.state, CaseState::Active | CaseState::AwaitingApproval) {
+        return Err(ForgeError::Input(
+            "only active cases can be terminated".into(),
+        ));
+    }
+    mediation::authorize_read(
+        root,
+        policy,
+        actor,
+        &AuthorityAction::Reserved {
+            resource_type: "case_terminate".into(),
+            resource_id: case_id.into(),
+            parameters: json!({"reason": reason}),
+        },
+    )?;
+    append_case_event_with(
+        root,
+        case_id,
+        actor,
+        TraceKind::CaseTerminated,
+        None,
+        json!({"reason": reason, "requested_by": actor}),
+        notify,
+    )?;
+    case.state = CaseState::Terminated;
+    case.close_reason = Some(format!("operator_terminated:{reason}"));
+    case.closed_at = Some(Utc::now().to_rfc3339());
     write_json(&case_path, &case)?;
     Ok(0)
 }
@@ -139,6 +249,23 @@ pub fn propose_item(
     case_id: &str,
     item: PlanItem,
 ) -> Result<u8, ForgeError> {
+    propose_item_with(root, policy, actor, case_id, item, &mut noop_notifier)
+}
+
+/// [`propose_item`], notifying the host sink of the appended `PlanMutated`
+/// event. The event is only appended after the ledger commit and the
+/// `plan.json` view materialize, so a refused proposal notifies nothing.
+pub fn propose_item_with(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    item: PlanItem,
+    notify: CaseEventNotifier<'_>,
+) -> Result<u8, ForgeError> {
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
+    }
     let (_, plan_path, _) = paths(root, case_id);
     let mut plan: CasePlan = read_json(&plan_path)?;
     plan.items.push(item.clone());
@@ -164,15 +291,138 @@ pub fn propose_item(
         &plan_path,
         &serde_json::to_vec_pretty(&plan)?,
     )?;
-    append_case_event(
+    append_case_event_with(
         root,
         case_id,
         actor,
         TraceKind::PlanMutated,
         Some(&item.plan_item_id),
         json!({"operation": "add_task"}),
+        notify,
     )?;
     Ok(0)
+}
+
+/// Complete a human-task item (moved verbatim from the CLI's `task complete`
+/// so the server and the CLI share one implementation). The completion,
+/// any milestones it unlocks, and a resulting case closure are all appended
+/// through the governed mutation path and reported to the host sink.
+///
+/// Exit codes match the CLI contract: `0` when the case closed, `5` when the
+/// item completed but the case still has work left.
+pub fn complete_human_task(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    item_id: &str,
+    note: Option<&str>,
+) -> Result<u8, ForgeError> {
+    complete_human_task_with(
+        root,
+        policy,
+        actor,
+        case_id,
+        item_id,
+        note,
+        &mut noop_notifier,
+    )
+}
+
+/// [`complete_human_task`], notifying the host sink of each appended event.
+pub fn complete_human_task_with(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    item_id: &str,
+    note: Option<&str>,
+    notify: CaseEventNotifier<'_>,
+) -> Result<u8, ForgeError> {
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
+    }
+    let (mut case, plan, mut events) = load_case_plan(root, case_id)?;
+    let item = plan
+        .items
+        .iter()
+        .find(|item| item.plan_item_id == item_id)
+        .ok_or_else(|| ForgeError::Input("human task not found".into()))?;
+    if item.item_kind != ItemKind::HumanTask {
+        return Err(ForgeError::Input("item is not a human task".into()));
+    }
+    mediation::authorize_read(
+        root,
+        policy,
+        actor,
+        &AuthorityAction::Reserved {
+            resource_type: "human_task_completion".into(),
+            resource_id: format!("{case_id}:{item_id}"),
+            parameters: json!({"note": note}),
+        },
+    )?;
+    append_case_event_with(
+        root,
+        case_id,
+        actor,
+        TraceKind::HumanTaskCompleted,
+        Some(item_id),
+        json!({"note": note}),
+        notify,
+    )?;
+    events.push(TraceEvent {
+        version: RECORD_VERSION.into(),
+        event_id: "projection".into(),
+        run_id: "case".into(),
+        plan_item_id: Some(item_id.into()),
+        kind: TraceKind::HumanTaskCompleted,
+        actor_id: actor.into(),
+        timestamp: Utc::now().to_rfc3339(),
+        payload: json!({"note": note}),
+        cell_id: None,
+    });
+    loop {
+        match sea_forge_planner::case_engine::next_case_actions(&plan.items, &events).as_slice() {
+            [sea_forge_planner::case_engine::CaseAction::AchieveMilestone(id)] => {
+                append_case_event_with(
+                    root,
+                    case_id,
+                    actor,
+                    TraceKind::MilestoneAchieved,
+                    Some(id),
+                    json!({}),
+                    notify,
+                )?;
+                events.push(TraceEvent {
+                    version: RECORD_VERSION.into(),
+                    event_id: "projection".into(),
+                    run_id: "case".into(),
+                    plan_item_id: Some(id.clone()),
+                    kind: TraceKind::MilestoneAchieved,
+                    actor_id: actor.into(),
+                    timestamp: Utc::now().to_rfc3339(),
+                    payload: json!({}),
+                    cell_id: None,
+                });
+            }
+            [sea_forge_planner::case_engine::CaseAction::CompleteCase] => {
+                append_case_event_with(
+                    root,
+                    case_id,
+                    actor,
+                    TraceKind::CaseClosed,
+                    None,
+                    json!({}),
+                    notify,
+                )?;
+                case.state = CaseState::Completed;
+                case.closed_at = Some(Utc::now().to_rfc3339());
+                save_case(root, case_id, &case)?;
+                return Ok(0);
+            }
+            _ => return Ok(5),
+        }
+    }
 }
 
 pub fn load_case_plan(

@@ -702,7 +702,7 @@ fn commit_item_criteria(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn execute_sandbox(
+pub(crate) fn execute_sandbox(
     config: &crate::ServerConfig,
     item: &sea_forge_core::types::PlanItem,
     policy_path: &str,
@@ -924,6 +924,27 @@ fn execute_sandbox(
             finished,
             BTreeMap::new(),
         )?;
+        // Capture the execution's own outputs as content-addressed artifacts,
+        // exactly as the CLI pipeline does (`cli/src/pipeline.rs`): stdout and
+        // stderr become `ArtifactCaptured` trace events plus evidence records,
+        // which is also what sentries with `ArtifactExists` predicates read.
+        // Before this, a server-dispatched episode produced files no derived
+        // workspace state could ever see.
+        for name in ["stdout.txt", "stderr.txt"] {
+            let event = trace.append(
+                TraceKind::ArtifactCaptured,
+                Some(item.plan_item_id.clone()),
+                serde_json::json!({"artifact": name}),
+            )?;
+            sea_forge_evidence::capture_file(
+                &artifacts.join(name),
+                &artifacts,
+                name,
+                &mut evidence,
+                event,
+                None,
+            )?;
+        }
         Some(result)
     } else {
         // Nothing ran. Reporting this as a `SpawnFailed` execution — as this

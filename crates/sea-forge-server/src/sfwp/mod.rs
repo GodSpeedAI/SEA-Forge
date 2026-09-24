@@ -15,6 +15,7 @@
 pub mod approvals;
 pub mod assets;
 pub mod case;
+pub mod case_mutations;
 pub mod case_views;
 pub mod correlation;
 pub mod delegation_preview;
@@ -246,6 +247,39 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
         method: "delegation.list",
         class: InteractionClass::Inspect,
     },
+    // --- SFWP additive case-mutation methods (T04, ADR-003) ---
+    // Each verb envelopes the shared `case_ops` library the CLI calls, so
+    // authority and SoD bind in one place. `artifact.get` is the one inspect:
+    // a content-addressed read over evidence records the kernel already
+    // committed.
+    MethodDescriptor {
+        method: "case.add_item",
+        class: InteractionClass::Command,
+    },
+    MethodDescriptor {
+        method: "case.reopen",
+        class: InteractionClass::Command,
+    },
+    MethodDescriptor {
+        method: "case.terminate",
+        class: InteractionClass::Command,
+    },
+    MethodDescriptor {
+        method: "case.advance",
+        class: InteractionClass::Command,
+    },
+    MethodDescriptor {
+        method: "item.execute",
+        class: InteractionClass::Command,
+    },
+    MethodDescriptor {
+        method: "human_task.complete",
+        class: InteractionClass::Command,
+    },
+    MethodDescriptor {
+        method: "artifact.get",
+        class: InteractionClass::Inspect,
+    },
 ];
 
 /// True if `requested` names a supported protocol major version.
@@ -366,6 +400,13 @@ pub const SCHEMA_TYPES: &[&str] = &[
     "DelegationListResult",
     "DelegationRow",
     "DelegationStanding",
+    "CaseAddItemResult",
+    "CaseReopenResult",
+    "CaseTerminateResult",
+    "EpisodeSummary",
+    "CaseAdvanceResult",
+    "HumanTaskCompleteResult",
+    "ArtifactView",
 ];
 
 /// Build the `system.hello` result, or an `unsupported_version` error if the

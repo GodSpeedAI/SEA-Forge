@@ -17,6 +17,10 @@ use sea_forge_server::sfwp::case::{
     EntryOptionsResult, PlanItemSummary, PreflightParams, PreflightResult, TemplateOption,
     TemplateParameter,
 };
+use sea_forge_server::sfwp::case_mutations::{
+    ArtifactView, CaseAddItemResult, CaseAdvanceResult, CaseReopenResult, CaseTerminateResult,
+    EpisodeSummary, HumanTaskCompleteResult,
+};
 use sea_forge_server::sfwp::case_views::{
     CaseHorizon, CaseListResult, CaseOverview, CaseSummary, HorizonItem, RunSettlement,
 };
@@ -116,6 +120,13 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(DelegationListResult, "DelegationListResult"),
         schema!(DelegationRow, "DelegationRow"),
         schema!(DelegationStanding, "DelegationStanding"),
+        schema!(CaseAddItemResult, "CaseAddItemResult"),
+        schema!(CaseReopenResult, "CaseReopenResult"),
+        schema!(CaseTerminateResult, "CaseTerminateResult"),
+        schema!(EpisodeSummary, "EpisodeSummary"),
+        schema!(CaseAdvanceResult, "CaseAdvanceResult"),
+        schema!(HumanTaskCompleteResult, "HumanTaskCompleteResult"),
+        schema!(ArtifactView, "ArtifactView"),
     ]
 }
 

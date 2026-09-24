@@ -8,17 +8,6 @@
 use sea_forge_core::{errors::ForgeError, types::*};
 use std::path::Path;
 
-pub(crate) fn append_case_event(
-    root: &Path,
-    case_id: &str,
-    actor: &str,
-    kind: TraceKind,
-    item_id: Option<&str>,
-    payload: serde_json::Value,
-) -> Result<(), ForgeError> {
-    sea_forge_case_runner::case_ops::append_case_event(root, case_id, actor, kind, item_id, payload)
-}
-
 pub fn reopen(root: &Path, policy: &Path, actor: &str, case_id: &str) -> Result<u8, ForgeError> {
     sea_forge_case_runner::case_ops::reopen(root, policy, actor, case_id)
 }

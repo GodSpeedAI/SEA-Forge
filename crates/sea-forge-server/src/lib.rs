@@ -843,6 +843,75 @@ pub enum Request {
     /// Creates nothing; see `sfwp::delegations` for why a run with neither a
     /// handle nor a settlement is reported as unresolved rather than guessed at.
     DelegationList,
+    /// Case mutation and execution verbs (T04, ADR-003). Each envelopes the
+    /// shared `case_ops` library the CLI calls, in-process on a blocking
+    /// thread, attributed to the identity-gate-verified actor. Every append
+    /// to the case's trace publishes an EventFrame (see `sfwp::case_mutations`).
+    CaseAddItem {
+        case_id: String,
+        /// The discretionary item to propose. `proposed_by` is overwritten
+        /// with the verified actor; the item still passes the library's
+        /// `validate_proposal` and cycle checks before any write.
+        item: sea_forge_core::types::PlanItem,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    CaseReopen {
+        case_id: String,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    CaseTerminate {
+        case_id: String,
+        reason: String,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Advances a case: computes ready actions via the case engine and runs
+    /// enabled SandboxedTask items in-process. The explicit operator verb
+    /// (D-3) scopes the same engine to one item.
+    CaseAdvance {
+        case_id: String,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default = "default_timeout")]
+        timeout: u64,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    ItemExecute {
+        case_id: String,
+        item_id: String,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default = "default_timeout")]
+        timeout: u64,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    HumanTaskComplete {
+        case_id: String,
+        item_id: String,
+        /// Mandatory: a judgment with no recorded reason is not a governed
+        /// completion.
+        justification: String,
+        #[serde(default = "default_policy")]
+        policy: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Content-addressed artifact fetch by SHA-256 digest, bounded in size.
+    /// Read-only projection over evidence records the kernel already
+    /// committed; the returned bytes are re-hashed and must match.
+    ArtifactGet {
+        digest: String,
+    },
 }
 
 #[derive(Deserialize)]
@@ -1298,7 +1367,13 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
         | Request::CaseCommit { request_id, .. }
-        | Request::ApprovalDecide { request_id, .. } => {
+        | Request::ApprovalDecide { request_id, .. }
+        | Request::CaseAddItem { request_id, .. }
+        | Request::CaseReopen { request_id, .. }
+        | Request::CaseTerminate { request_id, .. }
+        | Request::CaseAdvance { request_id, .. }
+        | Request::ItemExecute { request_id, .. }
+        | Request::HumanTaskComplete { request_id, .. } => {
             request_id.as_deref().filter(|id| !id.is_empty())
         }
         _ => None,
@@ -1323,6 +1398,12 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::CancelDelegation { .. }
             | Request::CaseCommit { .. }
             | Request::ApprovalDecide { .. }
+            | Request::CaseAddItem { .. }
+            | Request::CaseReopen { .. }
+            | Request::CaseTerminate { .. }
+            | Request::CaseAdvance { .. }
+            | Request::ItemExecute { .. }
+            | Request::HumanTaskComplete { .. }
     )
 }
 
@@ -2341,6 +2422,209 @@ pub async fn handle_request_as(
             record_outcome(state, request_id.as_deref(), "case.commit", &response);
             response
         }
+        // --- Case mutation and execution verbs (T04, ADR-003) -------------
+        // All attributed to the identity-gate-verified actor (the historical
+        // local-operator default for in-process callers), all executed on a
+        // blocking thread, all publishing one EventFrame per case trace
+        // append (see `sfwp::case_mutations`).
+        Request::CaseAddItem {
+            case_id,
+            item,
+            policy,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "case.add_item");
+            let actor = actor_id.unwrap_or("operator_local").to_string();
+            let response = match sfwp::case_mutations::add_item(
+                state, &actor, &case_id, item, &policy,
+            )
+            .await
+            {
+                Ok(result) => serde_json::to_value(result).unwrap_or_else(
+                    |_| serde_json::json!({"error": "add_item serialization failed"}),
+                ),
+                Err(error) => forge_error_response(&error),
+            };
+            record_outcome(state, request_id.as_deref(), "case.add_item", &response);
+            response
+        }
+        Request::CaseReopen {
+            case_id,
+            policy,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "case.reopen");
+            let actor = actor_id.unwrap_or("operator_local").to_string();
+            let response =
+                match sfwp::case_mutations::reopen(state, &actor, &case_id, &policy).await {
+                    Ok(result) => serde_json::to_value(result).unwrap_or_else(
+                        |_| serde_json::json!({"error": "reopen serialization failed"}),
+                    ),
+                    Err(error) => forge_error_response(&error),
+                };
+            record_outcome(state, request_id.as_deref(), "case.reopen", &response);
+            response
+        }
+        Request::CaseTerminate {
+            case_id,
+            reason,
+            policy,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "case.terminate");
+            let actor = actor_id.unwrap_or("operator_local").to_string();
+            let response =
+                match sfwp::case_mutations::terminate(state, &actor, &case_id, &reason, &policy)
+                    .await
+                {
+                    Ok(result) => serde_json::to_value(result).unwrap_or_else(
+                        |_| serde_json::json!({"error": "terminate serialization failed"}),
+                    ),
+                    Err(error) => forge_error_response(&error),
+                };
+            record_outcome(state, request_id.as_deref(), "case.terminate", &response);
+            response
+        }
+        Request::CaseAdvance {
+            case_id,
+            policy,
+            timeout,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "case.advance");
+            let response = advance_response(
+                state,
+                actor_id,
+                verified_role,
+                &case_id,
+                None,
+                &policy,
+                timeout,
+            )
+            .await;
+            record_outcome(state, request_id.as_deref(), "case.advance", &response);
+            response
+        }
+        Request::ItemExecute {
+            case_id,
+            item_id,
+            policy,
+            timeout,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "item.execute");
+            let response = advance_response(
+                state,
+                actor_id,
+                verified_role,
+                &case_id,
+                Some(&item_id),
+                &policy,
+                timeout,
+            )
+            .await;
+            record_outcome(state, request_id.as_deref(), "item.execute", &response);
+            response
+        }
+        Request::HumanTaskComplete {
+            case_id,
+            item_id,
+            justification,
+            policy,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "human_task.complete");
+            let actor = actor_id.unwrap_or("operator_local").to_string();
+            let response = match sfwp::case_mutations::human_task_complete(
+                state,
+                &actor,
+                &case_id,
+                &item_id,
+                &justification,
+                &policy,
+            )
+            .await
+            {
+                Ok(result) => serde_json::to_value(result).unwrap_or_else(
+                    |_| serde_json::json!({"error": "human_task_complete serialization failed"}),
+                ),
+                Err(error) => forge_error_response(&error),
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "human_task.complete",
+                &response,
+            );
+            response
+        }
+        Request::ArtifactGet { digest } => {
+            let root = state.root.clone();
+            match tokio::task::spawn_blocking(move || {
+                sfwp::case_mutations::artifact_get(&root, &digest)
+            })
+            .await
+            {
+                Ok(Ok(view)) => serde_json::to_value(view).unwrap_or_else(
+                    |_| serde_json::json!({"error": "artifact serialization failed"}),
+                ),
+                Ok(Err(error)) => forge_error_response(&error),
+                Err(error) => serde_json::json!({
+                    "error": format!("artifact fetch task panic: {error}"),
+                    "error_class": "internal_error",
+                }),
+            }
+        }
+    }
+}
+
+/// Shared response shape for a failed case mutation: the error class so a
+/// client can distinguish a refusal (input/policy/SoD) from an internal
+/// failure, matching the rest of the SFWP error vocabulary.
+fn forge_error_response(error: &ForgeError) -> serde_json::Value {
+    serde_json::json!({
+        "error": error.to_string(),
+        "error_class": error.class(),
+    })
+}
+
+/// `case.advance` / `item.execute` handler: acquire one run-semaphore permit
+/// for the duration of the episodes (the same bounded-concurrency pool a
+/// dispatched episode uses), then run the shared engine.
+async fn advance_response(
+    state: &Arc<ServerState>,
+    actor_id: Option<&str>,
+    verified_role: ActorRole,
+    case_id: &str,
+    scope_item: Option<&str>,
+    policy: &str,
+    timeout: u64,
+) -> serde_json::Value {
+    let actor = actor_id.unwrap_or("operator_local").to_string();
+    let permit = match state.semaphore.clone().acquire_owned().await {
+        Ok(permit) => permit,
+        Err(_) => {
+            return serde_json::json!({
+                "error": "server semaphore unavailable",
+                "error_class": "server_unavailable",
+            })
+        }
+    };
+    match sfwp::case_mutations::advance(
+        state,
+        &actor,
+        verified_role,
+        case_id,
+        scope_item,
+        policy,
+        timeout,
+        permit,
+    )
+    .await
+    {
+        Ok(result) => serde_json::to_value(result)
+            .unwrap_or_else(|_| serde_json::json!({"error": "advance serialization failed"})),
+        Err(error) => forge_error_response(&error),
     }
 }
 
@@ -2711,8 +2995,11 @@ async fn decide(
             );
             serde_json::json!({"ok": true, "output": output})
         }
-        Ok(Err(error)) => serde_json::json!({"error": error.to_string()}),
-        Err(error) => serde_json::json!({"error": error.to_string()}),
+        // The error class matters as much as the message here: an SoD refusal
+        // is a typed refusal a client must be able to branch on, not a
+        // string to substring-match.
+        Ok(Err(error)) => forge_error_response(&error),
+        Err(error) => forge_error_response(&error),
     };
     record_outcome(state, request_id, method, &response);
     response
