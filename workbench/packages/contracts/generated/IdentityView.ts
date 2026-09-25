@@ -22,6 +22,12 @@ export interface IdentityView {
    */
   configured: boolean;
   /**
+   * The actor a *delegated* request would be attributed to, when this
+   * request carried both an `actor` and an `on_behalf_of` block the gateway
+   * rules accept (T02, D-2). Absent on a direct connection.
+   */
+  effective_actor?: EffectiveActorView | null;
+  /**
    * Present exactly when `available` is empty.
    */
   refusal?: RefusalView | null;
@@ -40,6 +46,31 @@ export interface AvailableActor {
    * the cell still records who they are, but they can claim nothing.
    */
   roles: string[];
+}
+/**
+ * The actor a delegated request is attributed to (`identity.get`, T02).
+ *
+ * Reported only when the connection presented both an `actor` block and an
+ * `on_behalf_of` block that the gateway rules accept. A direct connection
+ * learns its own claimable actors from `available` instead.
+ */
+export interface EffectiveActorView {
+  /**
+   * The end-user actor every record from this request will name.
+   */
+  actor_id: string;
+  delegated_by: DelegatedByView;
+  /**
+   * The wire spelling of the role that actor holds and was claimed for it.
+   */
+  role: string;
+}
+/**
+ * The gateway principal that spoke for this actor, and its uid.
+ */
+export interface DelegatedByView {
+  actor_id: string;
+  uid: number;
 }
 /**
  * Why nothing can be claimed on this connection, in the same vocabulary a

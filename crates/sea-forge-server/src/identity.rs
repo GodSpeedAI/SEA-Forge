@@ -27,6 +27,7 @@
 //! believing the assertion would move the fabricated identity one layer down
 //! rather than remove it.
 
+use crate::config::GatewayConfig;
 use crate::Request;
 use schemars::JsonSchema;
 use sea_forge_core::types::ActorRole;
@@ -34,11 +35,12 @@ use serde::{Deserialize, Serialize};
 
 /// The wire spelling of a role (`operator`, `R-SO`, …).
 ///
-/// The view below reports roles as these strings rather than as `ActorRole`.
+/// The views below report roles as these strings rather than as `ActorRole`.
 /// `ActorRole` lives in `sea-forge-core`, a kernel crate, and deriving
 /// `JsonSchema` on it would pull `schemars` across the kernel boundary to
-/// describe a value whose wire form is already just this string.
-fn role_wire_name(role: &ActorRole) -> String {
+/// describe a value whose wire form is already just this string. Public so the
+/// delegation audit record spells roles the same way the wire does.
+pub fn role_wire_name(role: &ActorRole) -> String {
     serde_json::to_value(role)
         .ok()
         .and_then(|value| value.as_str().map(str::to_owned))
@@ -103,10 +105,31 @@ impl ActorClaim {
     /// denial as an absent one. An inspect verb with a garbled actor block is
     /// simply an inspect verb.
     pub fn parse(raw_line: &str) -> Option<Self> {
+        Self::block(raw_line, "actor")
+    }
+
+    /// Pull the `on_behalf_of` object out of a raw NDJSON request line, if
+    /// present (T02, D-2).
+    ///
+    /// Same shape and same failure mode as [`Self::parse`], deliberately: a
+    /// garbled `on_behalf_of` reads as *absent*, so the request falls back to
+    /// the direct path and is attributed to the actor block it does carry —
+    /// never to the end user a mangled block half-names. The gateway's own
+    /// standing polices that path, so a mangled block cannot become a
+    /// privilege: it can only lose the delegation.
+    ///
+    /// A *well-formed* `on_behalf_of` on a connection that is not the
+    /// configured gateway is refused by [`IdentityBindings::resolve_delegated`]
+    /// — presence alone authorizes nothing.
+    pub fn parse_on_behalf_of(raw_line: &str) -> Option<Self> {
+        Self::block(raw_line, "on_behalf_of")
+    }
+
+    fn block(raw_line: &str, key: &str) -> Option<Self> {
         serde_json::from_str::<serde_json::Value>(raw_line)
             .ok()?
-            .get("actor")
-            .and_then(|actor| serde_json::from_value(actor.clone()).ok())
+            .get(key)
+            .and_then(|block| serde_json::from_value(block.clone()).ok())
     }
 }
 
@@ -115,11 +138,23 @@ impl ActorClaim {
 /// Only constructible through [`IdentityBindings::resolve`], so a value of this
 /// type is evidence the check ran — a resolved actor cannot be fabricated by
 /// assembling the struct at a call site.
+///
+/// A delegated resolution additionally carries the gateway principal that
+/// spoke for the end user (T02, D-2): the effective actor is always the end
+/// user, and the gateway attribution rides alongside for the audit trail.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ResolvedActor {
     actor_id: String,
     role: ActorRole,
     uid: u32,
+    delegation: Option<DelegationProvenance>,
+}
+
+/// Which gateway spoke for this end-user actor, on a delegated request.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DelegationProvenance {
+    gateway_actor_id: String,
+    gateway_uid: u32,
 }
 
 impl ResolvedActor {
@@ -129,8 +164,32 @@ impl ResolvedActor {
     pub fn role(&self) -> &ActorRole {
         &self.role
     }
+    /// The uid the kernel reported for this connection's peer.
+    ///
+    /// On a delegated resolution this is the *gateway's* uid — the connection
+    /// is the gateway's, not the end user's. [`Self::actor_id`] and
+    /// [`Self::role`] are the end user's; [`Self::delegation`] names the
+    /// gateway principal that spoke for them.
     pub fn uid(&self) -> u32 {
         self.uid
+    }
+    /// The gateway principal that presented `on_behalf_of`, if this request
+    /// was delegated. `None` on direct (non-delegated) resolutions.
+    pub fn delegation(&self) -> Option<&DelegationProvenance> {
+        self.delegation.as_ref()
+    }
+    /// Whether this request was delegated by the gateway principal.
+    pub fn is_delegated(&self) -> bool {
+        self.delegation.is_some()
+    }
+}
+
+impl DelegationProvenance {
+    pub fn gateway_actor_id(&self) -> &str {
+        &self.gateway_actor_id
+    }
+    pub fn gateway_uid(&self) -> u32 {
+        self.gateway_uid
     }
 }
 
@@ -167,6 +226,13 @@ pub enum IdentityRefusal {
         actor_id: String,
         approval_id: String,
     },
+    /// An `on_behalf_of` block the gateway rules refuse (T02, D-2).
+    ///
+    /// Deliberately distinct from `NotBound`: `identity_not_bound` means "not
+    /// your actor", while this means "not the gateway, not allowlisted, role
+    /// widened, or delegation unconfigured". Operators triaging a refusal
+    /// must be able to tell the two apart.
+    DelegationRefused { reason: String },
 }
 
 impl IdentityRefusal {
@@ -179,6 +245,7 @@ impl IdentityRefusal {
             Self::RoleNotHeld { .. } => "identity_role_not_held",
             Self::EntityMismatch { .. } => "identity_entity_mismatch",
             Self::SelfApproval { .. } => "separation_of_duty",
+            Self::DelegationRefused { .. } => "identity_delegation_refused",
         }
     }
 
@@ -211,6 +278,7 @@ impl IdentityRefusal {
                 "actor `{actor_id}` requested the work approval `{approval_id}` gates and \
                  cannot resolve it; approval requires a different actor"
             ),
+            Self::DelegationRefused { reason } => format!("delegated identity refused: {reason}"),
         }
     }
 
@@ -226,6 +294,9 @@ impl IdentityRefusal {
             Self::RoleNotHeld { .. } => "Select a role held by the bound actor",
             Self::EntityMismatch { .. } => "Attribute the operation to the verified actor",
             Self::SelfApproval { .. } => "Ask an independently bound approver to decide",
+            Self::DelegationRefused { .. } => {
+                "Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role"
+            }
         }
     }
 
@@ -319,6 +390,7 @@ impl IdentityBindings {
                 uid: None,
                 configured: !self.is_empty(),
                 available: Vec::new(),
+                effective_actor: None,
                 refusal: refusal(IdentityRefusal::UnknownPeer),
             };
         };
@@ -328,6 +400,7 @@ impl IdentityBindings {
                 uid: Some(peer.uid),
                 configured: false,
                 available: Vec::new(),
+                effective_actor: None,
                 refusal: refusal(IdentityRefusal::Unconfigured),
             };
         }
@@ -356,12 +429,189 @@ impl IdentityBindings {
             uid: Some(peer.uid),
             configured: true,
             available,
+            effective_actor: None,
             refusal,
         }
     }
 
+    /// [`Self::describe`], plus the effective actor a *delegated* inspect
+    /// presents (T02, D-2): `identity.get` must be able to report the actor a
+    /// delegated request will be attributed to, not only what the connection
+    /// may claim directly.
+    ///
+    /// A delegation that does not resolve replaces the refusal with its own
+    /// reason — the same vocabulary a refused protected verb uses — so a
+    /// client can show why delegation will fail before attempting it. The
+    /// connection's own `available` set is reported either way: the gateway is
+    /// still entitled to act as itself directly.
+    pub fn describe_delegated(
+        &self,
+        claim: Option<&ActorClaim>,
+        on_behalf_of: Option<&ActorClaim>,
+        gateway: Option<&GatewayConfig>,
+        peer: Option<PeerIdentity>,
+    ) -> IdentityView {
+        let mut view = self.describe(peer);
+        if on_behalf_of.is_none() {
+            return view;
+        }
+        match self.resolve_delegated(claim, on_behalf_of, gateway, peer) {
+            Ok(actor) => view.effective_actor = EffectiveActorView::of(&actor),
+            Err(refusal) => {
+                view.refusal = Some(RefusalView {
+                    error_class: refusal.error_class().into(),
+                    message: refusal.message(),
+                    no_side_effect: Some(true),
+                    next_lawful_action: Some(refusal.next_lawful_action().into()),
+                })
+            }
+        }
+        view
+    }
+
     /// Check a claim against the peer's uid and this cell's bindings.
+    ///
+    /// The direct path: the actor a connection claims must be bound to that
+    /// connection's own uid. Delegation is the other path,
+    /// [`Self::resolve_delegated`].
     pub fn resolve(
+        &self,
+        claim: Option<&ActorClaim>,
+        peer: Option<PeerIdentity>,
+    ) -> Result<ResolvedActor, IdentityRefusal> {
+        self.resolve_delegated(claim, None, None, peer)
+    }
+
+    /// [`Self::resolve`], plus the gateway delegation path (T02, D-2).
+    ///
+    /// `on_behalf_of` is honoured only when *every* one of these holds:
+    ///
+    /// 1. this cell configures a gateway principal at all (`gateway`);
+    /// 2. the connection's uid is that principal's uid, read from
+    ///    `SO_PEERCRED` — a client cannot assert it;
+    /// 3. the request's own `actor` block names the configured gateway actor
+    ///    and holds the role it claims, so the gateway is governed like any
+    ///    other principal rather than exempted from the gate;
+    /// 4. the target actor is in the gateway-delegable allowlist and is not
+    ///    the gateway itself;
+    /// 5. the target actor's own binding declares the role claimed for it —
+    ///    delegation may narrow a role, never widen one.
+    ///
+    /// Everything else is an [`IdentityRefusal::DelegationRefused`]: a distinct
+    /// error class, because "you are not the gateway", "that actor is not
+    /// delegable" and "that role is not theirs" are different operator stories
+    /// from `identity_not_bound`. A refusal leaves nothing behind — the audit
+    /// record of a delegated request is written only after this returns `Ok`
+    /// (`record_delegation_audit` in the server).
+    ///
+    /// The target's roles are read from *its* binding, at whichever uid that
+    /// binding names. A delegated request has no connection of the end user's
+    /// own, so the binding is consulted for the standing it declares; its uid
+    /// answers only the separate question of which connection may act as that
+    /// actor directly.
+    pub fn resolve_delegated(
+        &self,
+        claim: Option<&ActorClaim>,
+        on_behalf_of: Option<&ActorClaim>,
+        gateway: Option<&GatewayConfig>,
+        peer: Option<PeerIdentity>,
+    ) -> Result<ResolvedActor, IdentityRefusal> {
+        let Some(target) = on_behalf_of else {
+            return self.resolve_direct(claim, peer);
+        };
+        let claim = claim.ok_or(IdentityRefusal::Missing)?;
+        let peer = peer.ok_or(IdentityRefusal::UnknownPeer)?;
+        if self.is_empty() {
+            return Err(IdentityRefusal::Unconfigured);
+        }
+        let Some(gateway) = gateway else {
+            return Err(delegation_refused(format!(
+                "this cell configures no `gateway` principal, so no connection may send \
+                 `on_behalf_of` (uid {} did)",
+                peer.uid
+            )));
+        };
+        if peer.uid != gateway.uid {
+            return Err(delegation_refused(format!(
+                "uid {} is not the configured gateway uid {}, so it may not send `on_behalf_of`",
+                peer.uid, gateway.uid
+            )));
+        }
+        if claim.actor_id != gateway.actor {
+            return Err(delegation_refused(format!(
+                "`on_behalf_of` may only be sent by the gateway principal `{}`; this request \
+                 claims to be `{}`",
+                gateway.actor, claim.actor_id
+            )));
+        }
+        // The gateway is a governed principal too: its own claim must name the
+        // configured gateway actor at the configured uid, holding the role it
+        // claims, before anything it delegates is considered at all.
+        let Some(gateway_binding) = self
+            .bindings
+            .iter()
+            .find(|binding| binding.uid == gateway.uid && binding.actor_id == gateway.actor)
+        else {
+            return Err(delegation_refused(format!(
+                "the configured gateway principal `{}` has no binding for uid {}",
+                gateway.actor, gateway.uid
+            )));
+        };
+        if !gateway_binding.roles.contains(&claim.role) {
+            return Err(IdentityRefusal::RoleNotHeld {
+                actor_id: claim.actor_id.clone(),
+                role: claim.role.clone(),
+            });
+        }
+        if target.actor_id == gateway.actor {
+            return Err(delegation_refused(format!(
+                "the gateway principal `{}` may not act as itself through `on_behalf_of`",
+                gateway.actor
+            )));
+        }
+        if !gateway
+            .delegable_actors
+            .iter()
+            .any(|actor| actor == &target.actor_id)
+        {
+            return Err(delegation_refused(format!(
+                "actor `{}` is not in this cell's gateway-delegable allowlist",
+                target.actor_id
+            )));
+        }
+        // The end user's roles, collected from every binding that names them.
+        // No binding means no established standing: refused, never assumed.
+        let held: Vec<&ActorRole> = self
+            .bindings
+            .iter()
+            .filter(|binding| binding.actor_id == target.actor_id)
+            .flat_map(|binding| binding.roles.iter())
+            .collect();
+        if held.is_empty() {
+            return Err(delegation_refused(format!(
+                "actor `{}` has no binding in this cell, so its standing cannot be established",
+                target.actor_id
+            )));
+        }
+        if !held.contains(&&target.role) {
+            return Err(delegation_refused(format!(
+                "role {:?} exceeds the roles bound to `{}`",
+                target.role, target.actor_id
+            )));
+        }
+        Ok(ResolvedActor {
+            actor_id: target.actor_id.clone(),
+            role: target.role.clone(),
+            uid: peer.uid,
+            delegation: Some(DelegationProvenance {
+                gateway_actor_id: gateway.actor.clone(),
+                gateway_uid: gateway.uid,
+            }),
+        })
+    }
+
+    /// The direct resolution: `claim` against the connection's own uid.
+    fn resolve_direct(
         &self,
         claim: Option<&ActorClaim>,
         peer: Option<PeerIdentity>,
@@ -389,8 +639,17 @@ impl IdentityBindings {
             actor_id: bound.actor_id.clone(),
             role: claim.role.clone(),
             uid: peer.uid,
+            delegation: None,
         })
     }
+}
+
+/// An `on_behalf_of` the gateway rules refuse (T02, D-2).
+///
+/// Built as a typed variant rather than spelled at each of the six refusal
+/// sites, so the class and the message stay one vocabulary.
+fn delegation_refused(reason: String) -> IdentityRefusal {
+    IdentityRefusal::DelegationRefused { reason }
 }
 
 /// The actor who requested the work an approval gates, per the ledger.
@@ -451,6 +710,46 @@ pub struct AvailableActor {
     pub roles: Vec<String>,
 }
 
+/// The actor a delegated request is attributed to (`identity.get`, T02).
+///
+/// Reported only when the connection presented both an `actor` block and an
+/// `on_behalf_of` block that the gateway rules accept. A direct connection
+/// learns its own claimable actors from `available` instead.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
+pub struct EffectiveActorView {
+    /// The end-user actor every record from this request will name.
+    pub actor_id: String,
+    /// The wire spelling of the role that actor holds and was claimed for it.
+    pub role: String,
+    /// The gateway principal that spoke for this actor, and its uid.
+    pub delegated_by: DelegatedByView,
+}
+
+/// The gateway principal behind a delegated request.
+///
+/// Reported on the gateway's own connection, so it reveals nothing the caller
+/// did not already present — and nothing about any other uid's bindings.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
+pub struct DelegatedByView {
+    pub actor_id: String,
+    pub uid: u32,
+}
+
+impl EffectiveActorView {
+    /// The view of a *delegated* resolution, or `None` for a direct one.
+    pub fn of(actor: &ResolvedActor) -> Option<Self> {
+        let provenance = actor.delegation()?;
+        Some(Self {
+            actor_id: actor.actor_id().into(),
+            role: role_wire_name(actor.role()),
+            delegated_by: DelegatedByView {
+                actor_id: provenance.gateway_actor_id().into(),
+                uid: provenance.gateway_uid(),
+            },
+        })
+    }
+}
+
 /// Why nothing can be claimed on this connection, in the same vocabulary a
 /// refused protected verb uses — so a client never has to map one set of
 /// reasons onto another.
@@ -485,6 +784,11 @@ pub struct IdentityView {
     pub configured: bool,
     /// Every actor this connection may claim. Empty when nothing resolves.
     pub available: Vec<AvailableActor>,
+    /// The actor a *delegated* request would be attributed to, when this
+    /// request carried both an `actor` and an `on_behalf_of` block the gateway
+    /// rules accept (T02, D-2). Absent on a direct connection.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effective_actor: Option<EffectiveActorView>,
     /// Present exactly when `available` is empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refusal: Option<RefusalView>,
@@ -669,6 +973,230 @@ mod tests {
         assert_eq!(ActorClaim::parse("not json at all"), None);
     }
 
+    // -----------------------------------------------------------------------
+    // Delegated identity (T02, D-2)
+    // -----------------------------------------------------------------------
+
+    /// A cell with a gateway principal at uid 2000, two delegable end users
+    /// bound at uids no connection presents, and a security officer bound but
+    /// *not* delegable.
+    fn gateway_cell() -> (IdentityBindings, GatewayConfig) {
+        let bindings = IdentityBindings {
+            bindings: vec![
+                IdentityBinding {
+                    uid: 2000,
+                    actor_id: "gateway".into(),
+                    roles: vec![ActorRole::Service],
+                },
+                IdentityBinding {
+                    uid: 4242,
+                    actor_id: "operator_a".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+                IdentityBinding {
+                    uid: 4243,
+                    actor_id: "operator_b".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+                IdentityBinding {
+                    uid: 4244,
+                    actor_id: "security_officer".into(),
+                    roles: vec![ActorRole::SecurityOfficer],
+                },
+            ],
+        };
+        let gateway = GatewayConfig {
+            uid: 2000,
+            actor: "gateway".into(),
+            delegable_actors: vec!["operator_a".into(), "operator_b".into()],
+        };
+        (bindings, gateway)
+    }
+
+    fn gateway_claim() -> ActorClaim {
+        claim("gateway", ActorRole::Service)
+    }
+
+    #[test]
+    fn the_gateway_may_act_for_an_allowlisted_end_user() {
+        let (bindings, gateway) = gateway_cell();
+        let resolved = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                Some(&claim("operator_a", ActorRole::Operator)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect("an allowlisted end user must resolve");
+
+        // The effective actor is the end user; the gateway rides alongside.
+        assert_eq!(resolved.actor_id(), "operator_a");
+        assert_eq!(resolved.role(), &ActorRole::Operator);
+        assert_eq!(resolved.uid(), 2000, "the connection is the gateway's");
+        let provenance = resolved.delegation().expect("delegated");
+        assert_eq!(provenance.gateway_actor_id(), "gateway");
+        assert_eq!(provenance.gateway_uid(), 2000);
+        assert!(resolved.is_delegated());
+    }
+
+    /// The end user's binding is consulted for standing, not for the socket it
+    /// owns: this connection is uid 2000 and the binding says 4242.
+    #[test]
+    fn the_end_users_binding_uid_is_not_the_connection_uid() {
+        let (bindings, gateway) = gateway_cell();
+        let resolved = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                Some(&claim("operator_b", ActorRole::Operator)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect("the end user's binding uid is not the connection's");
+        assert_eq!(resolved.actor_id(), "operator_b");
+    }
+
+    #[test]
+    fn a_non_gateway_uid_sending_on_behalf_of_is_refused() {
+        let (bindings, gateway) = gateway_cell();
+        let refusal = bindings
+            .resolve_delegated(
+                Some(&claim("operator_a", ActorRole::Operator)),
+                Some(&claim("operator_b", ActorRole::Operator)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 4242 }),
+            )
+            .expect_err("uid 4242 is not the gateway");
+        assert_eq!(refusal.error_class(), "identity_delegation_refused");
+        assert_eq!(refusal.response()["no_side_effect"], true);
+    }
+
+    #[test]
+    fn an_unconfigured_gateway_refuses_every_delegation() {
+        let (bindings, _gateway) = gateway_cell();
+        let refusal = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                Some(&claim("operator_a", ActorRole::Operator)),
+                None,
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect_err("a cell with no gateway section must refuse all delegation");
+        assert_eq!(refusal.error_class(), "identity_delegation_refused");
+        assert!(
+            refusal
+                .message()
+                .contains("configures no `gateway` principal"),
+            "{}",
+            refusal.message()
+        );
+    }
+
+    #[test]
+    fn an_actor_outside_the_allowlist_is_refused() {
+        let (bindings, gateway) = gateway_cell();
+        let refusal = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                // Bound, holds the role, but the operator never allowlisted an
+                // actor for the gateway to speak for it.
+                Some(&claim("security_officer", ActorRole::SecurityOfficer)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect_err("not delegable");
+        assert_eq!(refusal.error_class(), "identity_delegation_refused");
+        assert!(
+            refusal.message().contains("allowlist"),
+            "{}",
+            refusal.message()
+        );
+    }
+
+    /// Delegation may narrow a role, never widen one.
+    #[test]
+    fn a_role_the_end_user_does_not_hold_is_refused() {
+        let (bindings, gateway) = gateway_cell();
+        let refusal = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                Some(&claim("operator_a", ActorRole::SecurityOfficer)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect_err("operator_a holds only operator");
+        assert_eq!(refusal.error_class(), "identity_delegation_refused");
+        assert!(
+            refusal.message().contains("exceeds the roles bound to"),
+            "{}",
+            refusal.message()
+        );
+    }
+
+    #[test]
+    fn an_allowlisted_actor_with_no_binding_is_refused() {
+        let (bindings, mut gateway) = gateway_cell();
+        gateway.delegable_actors.push("ghost".into());
+        let refusal = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                Some(&claim("ghost", ActorRole::Operator)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect_err("nothing binds `ghost`, so nothing establishes its standing");
+        assert_eq!(refusal.error_class(), "identity_delegation_refused");
+        assert!(
+            refusal.message().contains("no binding"),
+            "{}",
+            refusal.message()
+        );
+    }
+
+    /// The gateway's own standing is checked too: it must claim the actor the
+    /// cell bound it as, and hold the role it claims.
+    #[test]
+    fn the_gateway_claim_must_be_the_configured_gateway_actor() {
+        let (bindings, gateway) = gateway_cell();
+        let refusal = bindings
+            .resolve_delegated(
+                // uid 2000's *other* claimable actor, acting as the gateway.
+                Some(&claim("operator_a", ActorRole::Operator)),
+                Some(&claim("operator_b", ActorRole::Operator)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect_err("only the gateway principal may delegate");
+        assert_eq!(refusal.error_class(), "identity_delegation_refused");
+    }
+
+    #[test]
+    fn a_gateway_role_it_does_not_hold_is_refused() {
+        let (bindings, gateway) = gateway_cell();
+        let refusal = bindings
+            .resolve_delegated(
+                Some(&claim("gateway", ActorRole::Operator)),
+                Some(&claim("operator_a", ActorRole::Operator)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect_err("the gateway holds service, not operator");
+        assert_eq!(refusal.error_class(), "identity_role_not_held");
+    }
+
+    #[test]
+    fn the_gateway_may_not_act_as_itself() {
+        let (bindings, gateway) = gateway_cell();
+        let refusal = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                Some(&claim("gateway", ActorRole::Service)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect_err("delegating to itself is not delegation");
+        assert_eq!(refusal.error_class(), "identity_delegation_refused");
+    }
+
     #[test]
     fn a_binding_with_no_roles_authorizes_nothing() {
         let suspended = IdentityBindings {
@@ -685,5 +1213,81 @@ mod tests {
             )
             .expect_err("a suspended actor holds no role");
         assert_eq!(refusal.error_class(), "identity_role_not_held");
+    }
+
+    /// `on_behalf_of` parses off the raw line exactly as documented, and a
+    /// garbled block reads as absent — never as a half-believed actor.
+    #[test]
+    fn an_on_behalf_of_block_is_read_off_the_raw_line() {
+        assert_eq!(
+            ActorClaim::parse_on_behalf_of(
+                r#"{"verb":"case_commit","actor":{"actor_id":"gateway","role":"service"},"on_behalf_of":{"actor_id":"operator_a","role":"operator"}}"#
+            ),
+            Some(claim("operator_a", ActorRole::Operator))
+        );
+        assert_eq!(ActorClaim::parse_on_behalf_of(r#"{"verb":"submit"}"#), None);
+        assert_eq!(
+            ActorClaim::parse_on_behalf_of(r#"{"verb":"submit","on_behalf_of":"operator_a"}"#),
+            None
+        );
+        assert_eq!(
+            ActorClaim::parse_on_behalf_of(r#"{"verb":"submit","on_behalf_of":{"actor_id":"x"}}"#),
+            None,
+            "a delegation without a role is not a delegation"
+        );
+    }
+
+    /// The direct path is untouched: an absent `on_behalf_of` resolves exactly
+    /// as it always did, with no provenance attached.
+    #[test]
+    fn a_direct_resolution_carries_no_delegation() {
+        let (bindings, _gateway) = gateway_cell();
+        let resolved = bindings
+            .resolve(Some(&gateway_claim()), Some(PeerIdentity { uid: 2000 }))
+            .expect("the gateway's own claim resolves directly");
+        assert_eq!(resolved.actor_id(), "gateway");
+        assert!(!resolved.is_delegated());
+        assert!(resolved.delegation().is_none());
+    }
+
+    /// The inspect view reports the effective actor, and reports refusals in
+    /// the same vocabulary a protected verb uses.
+    #[test]
+    fn describe_delegated_reports_the_effective_actor_and_refusals() {
+        let (bindings, gateway) = gateway_cell();
+
+        let view = bindings.describe_delegated(
+            Some(&gateway_claim()),
+            Some(&claim("operator_a", ActorRole::Operator)),
+            Some(&gateway),
+            Some(PeerIdentity { uid: 2000 }),
+        );
+        let effective = view.effective_actor.expect("reported");
+        assert_eq!(effective.actor_id, "operator_a");
+        assert_eq!(effective.role, "operator");
+        assert_eq!(effective.delegated_by.actor_id, "gateway");
+        assert!(view.refusal.is_none());
+
+        let refused = bindings.describe_delegated(
+            Some(&gateway_claim()),
+            Some(&claim("security_officer", ActorRole::SecurityOfficer)),
+            Some(&gateway),
+            Some(PeerIdentity { uid: 2000 }),
+        );
+        assert!(refused.effective_actor.is_none());
+        assert_eq!(
+            refused.refusal.expect("refusal view").error_class,
+            "identity_delegation_refused"
+        );
+
+        // Without `on_behalf_of` the view is the plain connection view.
+        let plain = bindings.describe_delegated(
+            Some(&gateway_claim()),
+            None,
+            Some(&gateway),
+            Some(PeerIdentity { uid: 2000 }),
+        );
+        assert!(plain.effective_actor.is_none());
+        assert_eq!(plain.available.len(), 1);
     }
 }

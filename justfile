@@ -1435,19 +1435,36 @@ casework-cell-init:
     fi
     uid="$(id -u)"
     cat > "$cell/server.yaml" <<YAML
-    # Live-stack cell (plan casework-live-wiring-production T00/T03).
-    # T03 seed: the invoking OS user (uid $uid) is bound to the operator actor.
-    # Gateway/security-officer/lifecycle-custodian bindings arrive with T02.
+    # Live-stack cell (plan casework-live-wiring-production T00/T03/T02).
+    # The invoking OS user (uid $uid) is bound to the operator actor; the
+    # gateway section (T02, decision D-2) makes that same uid the gateway
+    # principal and allowlists the end-user actors it may speak for with
+    # `on_behalf_of`. One uid carries every binding here because the whole
+    # local stack runs as one OS user; the allowlist is what bounds it.
     identity:
       bindings:
         - uid: $uid
           actor_id: operator_local
           roles: ["operator"]
+        - uid: $uid
+          actor_id: security_officer
+          roles: ["R-SO"]
+        - uid: $uid
+          actor_id: lifecycle_custodian
+          roles: ["R-LC"]
+        - uid: $uid
+          actor_id: gateway
+          roles: ["service"]
+    gateway:
+      uid: $uid
+      actor: gateway
+      delegable_actors: [operator_local, security_officer, lifecycle_custodian]
     YAML
     mkdir -p "$cell/templates" "$cell/authority"
     cp "$fixtures"/templates/*.yaml "$cell/templates/"
     cp "$fixtures/policy.yaml" "$cell/authority/active-policy.json"
-    echo "casework-cell-init: wrote $cell/server.yaml (operator identity bound to uid $uid)"
+    echo "casework-cell-init: wrote $cell/server.yaml (operator + security-officer + lifecycle-custodian bound to uid $uid; uid $uid is the T02 gateway principal)"
+    echo "casework-cell-init: delegable actors: operator_local, security_officer, lifecycle_custodian"
     echo "casework-cell-init: installed templates: $(ls "$cell/templates"/*.yaml | xargs -n1 basename | tr '\n' ' ')"
     echo "casework-cell-init: wrote $cell/authority/active-policy.json (E2E policy: write_file + approval_resolution for operator)"
     echo "casework-cell-init: cell path: $(cd "$cell" && pwd)"

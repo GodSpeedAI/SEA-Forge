@@ -15,6 +15,17 @@
       "description": "Whether this cell configures any bindings at all. False means every\nprotected verb will be refused regardless of what is claimed.",
       "type": "boolean"
     },
+    "effective_actor": {
+      "description": "The actor a *delegated* request would be attributed to, when this\nrequest carried both an `actor` and an `on_behalf_of` block the gateway\nrules accept (T02, D-2). Absent on a direct connection.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EffectiveActorView"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "refusal": {
       "description": "Present exactly when `available` is empty.",
       "anyOf": [
@@ -59,6 +70,47 @@
       "required": [
         "actor_id",
         "roles"
+      ]
+    },
+    "DelegatedByView": {
+      "description": "The gateway principal behind a delegated request.\n\nReported on the gateway's own connection, so it reveals nothing the caller\ndid not already present — and nothing about any other uid's bindings.",
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "actor_id",
+        "uid"
+      ]
+    },
+    "EffectiveActorView": {
+      "description": "The actor a delegated request is attributed to (`identity.get`, T02).\n\nReported only when the connection presented both an `actor` block and an\n`on_behalf_of` block that the gateway rules accept. A direct connection\nlearns its own claimable actors from `available` instead.",
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "description": "The end-user actor every record from this request will name.",
+          "type": "string"
+        },
+        "delegated_by": {
+          "description": "The gateway principal that spoke for this actor, and its uid.",
+          "$ref": "#/$defs/DelegatedByView"
+        },
+        "role": {
+          "description": "The wire spelling of the role that actor holds and was claimed for it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_id",
+        "role",
+        "delegated_by"
       ]
     },
     "RefusalView": {

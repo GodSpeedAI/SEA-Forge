@@ -19,7 +19,41 @@ const MAX_SUPERVISOR_POLL_INTERVAL_SECS: u64 = 3600;
 const MAX_SUPERVISOR_CONCURRENT_CASES: usize = 8;
 const MAX_SUPERVISOR_ACTOR_LEN: usize = 128;
 
-/// Settings for the opt-in case-advance supervisor (plan T04 step 5, D-3).
+/// Bounds for the gateway delegation section (plan T02, decision D-2).
+/// Actor ids ride into ledger/trace records, so they share the
+/// supervisor-actor identifier grammar; the allowlist length cap keeps a
+/// malformed operator file from turning the per-request membership scan
+/// into an unbounded loop.
+const MAX_GATEWAY_ACTOR_LEN: usize = 128;
+const MAX_GATEWAY_DELEGABLE_ACTORS: usize = 256;
+
+/// Which OS uid is the multi-user gateway, and which end-user actors it
+/// may speak for (plan T02, operator decision D-2).
+///
+/// Absent (`None`) means delegation is *unconfigured*, and unconfigured
+/// refuses every `on_behalf_of` block rather than letting any uid assert
+/// any actor. There is deliberately no uid default: this section names one
+/// concrete principal, and a default would be a fail-open that let
+/// whatever connected first claim the gateway's standing.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GatewayConfig {
+    /// The OS uid of the gateway process, as `SO_PEERCRED` reports it.
+    pub uid: u32,
+    /// The gateway principal's own actor id (bound to `uid` with the
+    /// gateway role). Defaults to `"gateway"`.
+    #[serde(default = "default_gateway_actor")]
+    pub actor: String,
+    /// End-user actor ids the gateway may present `on_behalf_of`. Empty by
+    /// default — a gateway with no allowlist delegates nothing.
+    #[serde(default)]
+    pub delegable_actors: Vec<String>,
+}
+
+fn default_gateway_actor() -> String {
+    "gateway".into()
+}
+
 ///
 /// Every field carries a serde default so an absent `supervisor:` section
 /// parses to [`SupervisorConfig::default`] — which is *disabled*. The
@@ -85,6 +119,15 @@ pub struct ServerConfig {
     /// supervisor stays fail-closed off until an operator opts in.
     #[serde(default)]
     pub supervisor: SupervisorConfig,
+    /// The gateway delegation principal (plan T02, operator decision D-2).
+    ///
+    /// Absent means [`GatewayConfig`] is `None`, which refuses every
+    /// `on_behalf_of` block: existing configs keep parsing (this section's
+    /// key is new, and `deny_unknown_fields` above rejects only *unknown*
+    /// keys) and delegation stays fail-closed off until an operator binds a
+    /// gateway uid with a delegable allowlist.
+    #[serde(default)]
+    pub gateway: Option<GatewayConfig>,
     /// uid -> actor bindings for protected verbs (SF-005, decision U-07).
     ///
     /// Absent means *unconfigured*, and an unconfigured cell refuses every
@@ -178,6 +221,8 @@ impl Default for ServerConfig {
             identity: crate::identity::IdentityBindings::default(),
             // Disabled by default: the supervisor is opt-in (fail-closed).
             supervisor: SupervisorConfig::default(),
+            // Absent by default: no gateway principal, no delegation.
+            gateway: None,
         }
     }
 }
@@ -243,6 +288,80 @@ impl ServerConfig {
                 "supervisor.actor must be a non-empty identifier of at most {MAX_SUPERVISOR_ACTOR_LEN} characters using only [A-Za-z0-9_-] (got {:?})",
                 self.supervisor.actor
             ));
+        }
+        // Gateway delegation bounds (T02, D-2). Validated even with an empty
+        // allowlist: a section an operator wrote must be coherent before the
+        // first delegated side effect, and duplicates are refused (not
+        // silently deduped) so the operator sees exactly the allowlist that
+        // will be enforced.
+        if let Some(gateway) = &self.gateway {
+            if !sea_forge_core::path::valid_id_segment(&gateway.actor, MAX_GATEWAY_ACTOR_LEN) {
+                return Err(format!(
+                    "gateway.actor must be a non-empty identifier of at most {MAX_GATEWAY_ACTOR_LEN} characters using only [A-Za-z0-9_-] (got {:?})",
+                    gateway.actor
+                ));
+            }
+            if gateway.delegable_actors.len() > MAX_GATEWAY_DELEGABLE_ACTORS {
+                return Err(format!(
+                    "gateway.delegable_actors must hold at most {MAX_GATEWAY_DELEGABLE_ACTORS} actors (got {})",
+                    gateway.delegable_actors.len()
+                ));
+            }
+            let mut seen = std::collections::HashSet::new();
+            for actor in &gateway.delegable_actors {
+                if !sea_forge_core::path::valid_id_segment(actor, MAX_GATEWAY_ACTOR_LEN) {
+                    return Err(format!(
+                        "gateway.delegable_actors must be non-empty identifiers of at most {MAX_GATEWAY_ACTOR_LEN} characters using only [A-Za-z0-9_-] (got {actor:?})",
+                    ));
+                }
+                if !seen.insert(actor) {
+                    return Err(format!(
+                        "gateway.delegable_actors must not contain duplicates (got {actor:?} twice)"
+                    ));
+                }
+                if *actor == gateway.actor {
+                    return Err(format!(
+                        "gateway.delegable_actors must not contain the gateway actor itself (got {actor:?})"
+                    ));
+                }
+                if *actor == self.supervisor.actor {
+                    return Err(format!(
+                        "gateway.delegable_actors must not contain the supervisor actor (got {actor:?}); supervisor passes are never end-user work"
+                    ));
+                }
+            }
+            // Both halves of a delegation must be resolvable, or the section is
+            // a promise the cell cannot keep: the gateway could never present
+            // its own claim, or an allowlisted actor could never resolve to any
+            // standing. Refused at load, where the operator can fix the file,
+            // rather than discovered as a runtime refusal at the first
+            // delegated request in production.
+            if !self
+                .identity
+                .bindings
+                .iter()
+                .any(|binding| binding.uid == gateway.uid && binding.actor_id == gateway.actor)
+            {
+                return Err(format!(
+                    "gateway.uid {} must be bound to the gateway actor {:?} in `identity.bindings` \
+                     (expected `- uid: {}, actor_id: {}, roles: [...]`), or the gateway can never \
+                     present its own claim",
+                    gateway.uid, gateway.actor, gateway.uid, gateway.actor
+                ));
+            }
+            for actor in &gateway.delegable_actors {
+                if !self
+                    .identity
+                    .bindings
+                    .iter()
+                    .any(|binding| binding.actor_id == *actor && !binding.roles.is_empty())
+                {
+                    return Err(format!(
+                        "gateway.delegable_actors names {actor:?}, which no `identity.bindings` \
+                         entry binds to a role, so a delegation to it could never resolve"
+                    ));
+                }
+            }
         }
         self.agent
             .validate()
@@ -486,5 +605,173 @@ mod tests {
         std::fs::write(&path, "supervisor:\n  actor: \"a;rm -rf\"\n").unwrap();
         let error = ServerConfig::load(&path).unwrap_err();
         assert!(error.contains("supervisor.actor"), "{error}");
+    }
+
+    // -----------------------------------------------------------------------
+    // The gateway delegation section (T02, decision D-2).
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn an_absent_gateway_section_parses_to_none_fail_closed() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(&path, "max_concurrent_runs: 4\n").unwrap();
+
+        let config = ServerConfig::load(&path).unwrap();
+        // Fail-closed: no section means no delegation principal.
+        assert!(config.gateway.is_none());
+        let default = ServerConfig::default();
+        assert!(default.gateway.is_none());
+    }
+
+    #[test]
+    fn an_explicit_gateway_section_parses_field_by_field() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "identity:\n  bindings:\n    - uid: 2000\n      actor_id: cell_gateway\n      roles: [\"service\"]\n    - uid: 3101\n      actor_id: operator_a\n      roles: [\"operator\"]\n    - uid: 3102\n      actor_id: operator_b\n      roles: [\"operator\"]\ngateway:\n  uid: 2000\n  actor: cell_gateway\n  delegable_actors: [operator_a, operator_b]\n",
+        )
+        .unwrap();
+
+        let config = ServerConfig::load(&path).unwrap();
+        let gateway = config.gateway.expect("gateway section must parse");
+        assert_eq!(gateway.uid, 2000);
+        assert_eq!(gateway.actor, "cell_gateway");
+        assert_eq!(gateway.delegable_actors, vec!["operator_a", "operator_b"]);
+    }
+
+    #[test]
+    fn a_gateway_actor_defaults_to_gateway() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "identity:\n  bindings:\n    - uid: 2000\n      actor_id: gateway\n      roles: [\"service\"]\ngateway:\n  uid: 2000\n",
+        )
+        .unwrap();
+
+        let config = ServerConfig::load(&path).unwrap();
+        let gateway = config.gateway.expect("gateway section must parse");
+        assert_eq!(gateway.actor, "gateway");
+        assert!(gateway.delegable_actors.is_empty());
+    }
+
+    /// A gateway section that names a uid no binding covers is a cell where
+    /// delegation could never resolve. Refused at load: an operator who wrote
+    /// the section meant it to work.
+    #[test]
+    fn load_rejects_a_gateway_uid_with_no_binding() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "identity:\n  bindings:\n    - uid: 3101\n      actor_id: operator_a\n      roles: [\"operator\"]\ngateway:\n  uid: 2000\n  actor: gateway\n  delegable_actors: [operator_a]\n",
+        )
+        .unwrap();
+
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(
+            error.contains("gateway.uid 2000 must be bound to the gateway actor"),
+            "{error}"
+        );
+    }
+
+    /// ... and an allowlisted actor no binding covers, for the same reason on
+    /// the other side of the delegation.
+    #[test]
+    fn load_rejects_a_delegable_actor_with_no_binding() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "identity:\n  bindings:\n    - uid: 2000\n      actor_id: gateway\n      roles: [\"service\"]\ngateway:\n  uid: 2000\n  actor: gateway\n  delegable_actors: [operator_a]\n",
+        )
+        .unwrap();
+
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(
+            error.contains("gateway.delegable_actors names \"operator_a\""),
+            "{error}"
+        );
+
+        // A binding that exists but declares no role is not standing either:
+        // the actor could claim nothing, so the allowlist entry would be a
+        // promise the cell cannot keep.
+        std::fs::write(
+            &path,
+            "identity:\n  bindings:\n    - uid: 2000\n      actor_id: gateway\n      roles: [\"service\"]\n    - uid: 3101\n      actor_id: operator_a\n      roles: []\ngateway:\n  uid: 2000\n  actor: gateway\n  delegable_actors: [operator_a]\n",
+        )
+        .unwrap();
+
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(
+            error.contains("gateway.delegable_actors names \"operator_a\""),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn an_unknown_gateway_field_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(&path, "gateway:\n  uid: 2000\n  uidd: 2000\n").unwrap();
+
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("unknown field"), "{error}");
+    }
+
+    #[test]
+    fn load_rejects_invalid_gateway_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+
+        std::fs::write(&path, "gateway:\n  uid: 2000\n  actor: \"\"\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("gateway.actor"), "{error}");
+
+        std::fs::write(&path, "gateway:\n  uid: 2000\n  actor: \"two words\"\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("gateway.actor"), "{error}");
+
+        std::fs::write(&path, "gateway:\n  uid: 2000\n  delegable_actors: [\"\"]\n").unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("gateway.delegable_actors"), "{error}");
+
+        std::fs::write(
+            &path,
+            "gateway:\n  uid: 2000\n  delegable_actors: [\"two words\"]\n",
+        )
+        .unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("gateway.delegable_actors"), "{error}");
+
+        // Duplicates are refused, not silently deduped: the operator sees
+        // exactly the allowlist that will be enforced.
+        std::fs::write(
+            &path,
+            "gateway:\n  uid: 2000\n  delegable_actors: [operator_a, operator_a]\n",
+        )
+        .unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("duplicates"), "{error}");
+
+        // The gateway may never speak as itself through delegation.
+        std::fs::write(
+            &path,
+            "gateway:\n  uid: 2000\n  delegable_actors: [gateway]\n",
+        )
+        .unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("gateway actor itself"), "{error}");
+
+        // The supervisor actor is never delegable (D-2 / D-3).
+        std::fs::write(
+            &path,
+            "gateway:\n  uid: 2000\n  delegable_actors: [supervisor]\n",
+        )
+        .unwrap();
+        let error = ServerConfig::load(&path).unwrap_err();
+        assert!(error.contains("supervisor actor"), "{error}");
     }
 }

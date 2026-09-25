@@ -4100,3 +4100,12 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > closed in `.agents/evidence/casework-live-wiring/T04/confirmation.md`, which settles T04.
 > Unit C committed; T02 in flight (prereg written, ADR-first). Machine state: `current_status.yml`
 > (settled [T00,T01,T03,T04], in-flight T02).
+
+> **2026-09-24 (session 3) T02 builder-complete (confirmation pending):** gateway-principal
+> delegation implemented (ADR, fail-closed config, raw-line on_behalf_of per ADR-003,
+> dual-principal audit record written before handlers, SoD on end users, identity.get effective
+> actor); prereg teeth all permanent tests (9/9); gates green incl. three-crate, mutations,
+> supervisor; workbench IdentityView contracts regenerated. Independent critic next. ALSO:
+> session-2's T04 settlement rests on a builder-written reconciliation of a critic REJECT (the
+> critic's report is not in the repo) — session 3 is re-running the independent T04 verification
+> (T04/confirmation-independent.md) before treating T04 as confirmed-settled.

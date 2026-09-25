@@ -42,6 +42,7 @@ pub mod agent_probe;
 pub mod case_dispatch;
 pub mod config;
 pub mod delegation;
+pub mod delegation_audit;
 pub mod governed_execution_boundary;
 pub mod governed_settlement_return;
 pub mod governed_work_ingress;
@@ -1561,6 +1562,37 @@ async fn dispatch_admitted(
         drop(_correlation_admission);
     }
 
+    // T02/D-2: a delegated request is recorded with BOTH principals before it
+    // runs. The kernel's own records name the end user — that is what
+    // attribution and separation of duty need — so this is where "which
+    // gateway spoke for them" becomes durable, once per admitted request. It
+    // sits after the dedupe gate so a replayed or pending duplicate does not
+    // write a second record, and before any handler so the record covers
+    // exactly the requests that may have an effect. Fail-closed: an
+    // unrecordable delegation is refused rather than run unattributed, and
+    // nothing has run yet, so that refusal still leaves nothing behind.
+    if let Some(actor) = verified_actor.as_ref().filter(|actor| actor.is_delegated()) {
+        let record = crate::delegation_audit::DelegatedRequestRecord::of(
+            &raw_line,
+            request_id(&request),
+            actor,
+        )
+        .expect("a delegated actor always yields a record");
+        if let Err(message) =
+            crate::delegation_audit::record_delegated_request(&state.root, record).await
+        {
+            tracing::warn!("delegated request refused: delegation audit unwritable: {message}");
+            return serde_json::json!({
+                "error": format!(
+                    "the delegation audit record for this request could not be written, so the \
+                     gateway's attribution cannot be established: {message}"
+                ),
+                "error_class": "delegation_audit_unwritable",
+                "no_side_effect": true,
+            });
+        }
+    }
+
     handle_request_as(request, &state, verified_actor.as_ref()).await
 }
 
@@ -1576,7 +1608,16 @@ async fn dispatch_bounded(
     // SF-005 / U-07. The identity gate remains before admission: a refused
     // request never enters the waiting room and cannot have an effect to undo.
     if matches!(request, Request::IdentityGet) {
-        let view = state.config().identity.describe(peer);
+        // T02/D-2: an inspect that presents both an `actor` and an
+        // `on_behalf_of` block reports the actor a delegated request would be
+        // attributed to — in the same vocabulary a refused protected verb
+        // uses. Without `on_behalf_of` the view is the connection's own.
+        let view = state.config().identity.describe_delegated(
+            crate::identity::ActorClaim::parse(raw_line).as_ref(),
+            crate::identity::ActorClaim::parse_on_behalf_of(raw_line).as_ref(),
+            state.config().gateway.as_ref(),
+            peer,
+        );
         return serde_json::to_value(view)
             .unwrap_or_else(|_| serde_json::json!({"error": "identity serialization failed"}));
     }
@@ -1584,13 +1625,27 @@ async fn dispatch_bounded(
     let mut verified_actor: Option<crate::identity::ResolvedActor> = None;
     if crate::identity::is_protected(&request) {
         let claim = crate::identity::ActorClaim::parse(raw_line);
-        match state.config().identity.resolve(claim.as_ref(), peer) {
+        let on_behalf_of = crate::identity::ActorClaim::parse_on_behalf_of(raw_line);
+        match state.config().identity.resolve_delegated(
+            claim.as_ref(),
+            on_behalf_of.as_ref(),
+            state.config().gateway.as_ref(),
+            peer,
+        ) {
             Ok(actor) => {
                 tracing::debug!(
                     actor_id = actor.actor_id(),
                     uid = actor.uid(),
                     "protected request attributed"
                 );
+                if let Some(provenance) = actor.delegation() {
+                    tracing::debug!(
+                        gateway_actor_id = provenance.gateway_actor_id(),
+                        gateway_uid = provenance.gateway_uid(),
+                        effective_actor_id = actor.actor_id(),
+                        "delegated request admitted under the gateway principal"
+                    );
+                }
                 if let Some(entity) = request_entity(raw_line) {
                     if entity != actor.actor_id() {
                         let refusal = crate::identity::IdentityRefusal::EntityMismatch {
