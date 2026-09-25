@@ -4,188 +4,110 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
 )
 
-func newFixtureStore(t *testing.T) *Store {
-	t.Helper()
-	ds, err := Fixture()
-	if err != nil {
-		t.Fatalf("decode embedded fixture: %v", err)
-	}
-	store, err := NewStore(ds)
-	if err != nil {
-		t.Fatalf("build store: %v", err)
-	}
-	return store
-}
-
-func TestLiveIsLatestRevision(t *testing.T) {
-	store := newFixtureStore(t)
-	if got := store.LiveCursor(); got != 1150 {
-		t.Fatalf("live cursor: got %d, want 1150", got)
-	}
-	snap := store.Live()
-	if snap.Cursor != 1150 {
-		t.Fatalf("live snapshot cursor: got %d", snap.Cursor)
-	}
-	if snap.Provenance != ProvenanceLabel {
-		t.Fatalf("live snapshot provenance: got %q", snap.Provenance)
+func rev(cursor string, caseID string) Revision {
+	return Revision{
+		Cursor:   cursor,
+		At:       time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC),
+		CaseID:   caseID,
+		Summary:  "case.trace.item_activated",
+		Snapshot: emptyTestSnapshot(cursor, caseID),
 	}
 }
 
-func TestAtKnownAndUnknownCursor(t *testing.T) {
-	store := newFixtureStore(t)
-	snap, err := store.At(900)
-	if err != nil {
-		t.Fatalf("At(900): %v", err)
+func emptyTestSnapshot(cursor, caseID string) contract.CognitiveWorldSnapshot {
+	return contract.CognitiveWorldSnapshot{Cursor: cursor, CaseID: caseID}
+}
+
+func TestStoreAppendLookUpAndMonotonicity(t *testing.T) {
+	s := NewStore()
+	if _, ok := s.Live(); ok {
+		t.Fatal("an empty store must have no live revision")
 	}
-	if snap.Cursor != 900 || snap.Provenance != ProvenanceLabel {
-		t.Fatalf("At(900) returned cursor=%d provenance=%q", snap.Cursor, snap.Provenance)
+	if err := s.Append(rev("01AAA", "case_1")); err != nil {
+		t.Fatal(err)
 	}
-	if _, err := store.At(901); !errors.Is(err, ErrUnknownCursor) {
-		t.Fatalf("At(901) must fail with ErrUnknownCursor, got %v", err)
+	if err := s.Append(rev("01BBB", "case_1")); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Head(); got != "01BBB" {
+		t.Fatalf("head = %q", got)
+	}
+	if got := s.Oldest(); got != "01AAA" {
+		t.Fatalf("oldest = %q", got)
+	}
+	revAt, err := s.At("01AAA")
+	if err != nil || revAt.CaseID != "case_1" {
+		t.Fatalf("At: %v %+v", err, revAt)
+	}
+	// Kernel cursors are monotonic: a non-advancing append is a relay bug and is refused rather
+	// than silently reordering history.
+	if err := s.Append(rev("01AAA", "case_1")); err == nil {
+		t.Fatal("a repeated cursor must be refused")
+	}
+	if err := s.Append(rev("01AAA0-earlier", "case_1")); err == nil {
+		t.Fatal("a cursor that sorts before head must be refused")
+	}
+	if err := s.Append(Revision{CaseID: "case_1"}); err == nil {
+		t.Fatal("an empty kernel cursor must be refused: the store never mints cursors")
 	}
 }
 
-func TestWindowIsMonotonic(t *testing.T) {
-	store := newFixtureStore(t)
-	window := store.Window()
-	if len(window) != 7 {
-		t.Fatalf("window length: got %d, want 7", len(window))
-	}
-	for i := 1; i < len(window); i++ {
-		if window[i].Cursor <= window[i-1].Cursor {
-			t.Fatalf("window cursors not strictly monotonic at %d: %d then %d", i, window[i-1].Cursor, window[i].Cursor)
+func TestStoreBoundedRetentionAndDocumentedEviction(t *testing.T) {
+	s := NewStoreWithRetention(2)
+	for _, c := range []string{"01AAA", "01BBB", "01CCC"} {
+		if err := s.Append(rev(c, "case_1")); err != nil {
+			t.Fatal(err)
 		}
 	}
-	if window[0].Cursor != 900 || window[len(window)-1].Cursor != 1150 {
-		t.Fatalf("window bounds: %d..%d", window[0].Cursor, window[len(window)-1].Cursor)
+	if s.Len() != 2 {
+		t.Fatalf("retention must bound the store, len = %d", s.Len())
 	}
-	if window[0].At == "" || window[0].Summary == "" {
-		t.Fatalf("window entries must carry at and summary: %+v", window[0])
+	if _, err := s.At("01AAA"); !errors.Is(err, ErrUnknownCursor) {
+		t.Fatalf("an evicted cursor must answer ErrUnknownCursor, got %v", err)
 	}
-}
-
-func TestAppendEnforcesStrictMonotonicCursors(t *testing.T) {
-	store := newFixtureStore(t)
-	if err := store.Append(Revision{Cursor: 1150}); err == nil {
-		t.Fatal("appending the live cursor again must be refused")
+	if _, err := s.At("01ZZZ"); !errors.Is(err, ErrUnknownCursor) {
+		t.Fatalf("an unknown cursor must answer ErrUnknownCursor, got %v", err)
 	}
-	if err := store.Append(Revision{Cursor: 1149}); err == nil {
-		t.Fatal("appending a cursor below live must be refused")
-	}
-	if err := store.Append(Revision{Cursor: 1151, Summary: "first appended", At: time.Now().UTC().Format(time.RFC3339)}); err != nil {
-		t.Fatalf("append 1151: %v", err)
-	}
-	if got := store.LiveCursor(); got != 1151 {
-		t.Fatalf("live cursor after append: got %d", got)
-	}
-	if _, err := store.At(1151); err != nil {
-		t.Fatalf("At(1151) after append: %v", err)
-	}
-	if got := len(store.Window()); got != 8 {
-		t.Fatalf("window length after append: got %d, want 8", got)
+	if got := s.Oldest(); got != "01BBB" {
+		t.Fatalf("oldest after eviction = %q", got)
 	}
 }
 
-func TestNewStoreRejectsInconsistentDataset(t *testing.T) {
-	ds, err := Fixture()
-	if err != nil {
-		t.Fatalf("decode embedded fixture: %v", err)
-	}
-	ds.LiveCursor = 9999
-	if _, err := NewStore(ds); err == nil {
-		t.Fatal("a dataset whose liveCursor disagrees with its last revision must be rejected")
-	}
-	ds2, err := Fixture()
-	if err != nil {
-		t.Fatalf("decode embedded fixture: %v", err)
-	}
-	ds2.Revisions = append(ds2.Revisions, ds2.Revisions[len(ds2.Revisions)-1])
-	if _, err := NewStore(ds2); err == nil {
-		t.Fatal("a dataset with a repeated cursor must be rejected")
-	}
-	if _, err := NewStore(Dataset{}); err == nil {
-		t.Fatal("an empty dataset must be rejected")
-	}
-}
+func TestStoreSubscribeReplayThenLive(t *testing.T) {
+	s := NewStore()
+	s.Append(rev("01AAA", "case_1"))
+	s.Append(rev("01BBB", "case_1"))
 
-// Handed-out snapshots must be deep copies: mutating one may never reach stored state or other
-// callers.
-func TestSnapshotsAreDeepCopies(t *testing.T) {
-	store := newFixtureStore(t)
-	a := store.Live()
-	before := store.Live()
-	if len(a.Objects) == 0 || len(a.Surfaces) == 0 {
-		t.Fatal("fixture snapshot is unexpectedly empty")
-	}
-	a.Objects[0].Note = "mutated"
-	a.Objects[0].Position.X = -99
-	a.Surfaces[0].ObjectIDs[0] = "clobbered"
-	after := store.Live()
-	if after.Objects[0].Note != before.Objects[0].Note {
-		t.Fatalf("object mutation escaped the snapshot copy: %q", after.Objects[0].Note)
-	}
-	if after.Objects[0].Position.X != before.Objects[0].Position.X {
-		t.Fatalf("position mutation escaped the snapshot copy: %v", after.Objects[0].Position.X)
-	}
-	if after.Surfaces[0].ObjectIDs[0] != before.Surfaces[0].ObjectIDs[0] {
-		t.Fatalf("surface mutation escaped the snapshot copy: %q", after.Surfaces[0].ObjectIDs[0])
-	}
-}
-
-func TestSubscribeReplaysThenStreamsLive(t *testing.T) {
-	store := newFixtureStore(t)
-	ch, cancel := store.Subscribe(1070)
+	ch, cancel := s.Subscribe("01AAA")
 	defer cancel()
-
-	wantReplay := []int64{1110, 1150}
-	for _, want := range wantReplay {
-		select {
-		case snap := <-ch:
-			if snap.Cursor != want {
-				t.Fatalf("replay order: got cursor %d, want %d", snap.Cursor, want)
-			}
-		case <-time.After(2 * time.Second):
-			t.Fatalf("timed out waiting for replay of %d", want)
-		}
-	}
-
-	if err := store.Append(Revision{Cursor: 1151, Summary: "live"}); err != nil {
-		t.Fatalf("append: %v", err)
-	}
 	select {
-	case snap := <-ch:
-		if snap.Cursor != 1151 {
-			t.Fatalf("live event: got cursor %d, want 1151", snap.Cursor)
+	case rev, ok := <-ch:
+		if !ok || rev.Cursor != "01BBB" {
+			t.Fatalf("replay must deliver the revision after the requested cursor, got %v", rev.Cursor)
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for the live revision")
+	default:
+		t.Fatal("the replay must be buffered, not dropped")
 	}
-
-	if got := store.SubscriberCount(); got != 1 {
-		t.Fatalf("subscriber count: got %d, want 1", got)
+	// No more replays pending; a live append arrives on the same channel in cursor order.
+	s.Append(rev("01CCC", "case_1"))
+	select {
+	case rev := <-ch:
+		if rev.Cursor != "01CCC" {
+			t.Fatalf("live revision = %q", rev.Cursor)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("live revision never delivered")
+	}
+	if s.SubscriberCount() != 1 {
+		t.Fatalf("subscriber count = %d", s.SubscriberCount())
 	}
 	cancel()
-	if got := store.SubscriberCount(); got != 0 {
-		t.Fatalf("subscriber count after cancel: got %d, want 0", got)
-	}
-	cancel() // must be safe to call twice
-}
-
-func TestSubscribeWithoutReplay(t *testing.T) {
-	store := newFixtureStore(t)
-	ch, cancel := store.Subscribe(1150)
-	defer cancel()
-	if err := store.Append(Revision{Cursor: 1151}); err != nil {
-		t.Fatalf("append: %v", err)
-	}
-	select {
-	case snap := <-ch:
-		if snap.Cursor != 1151 {
-			t.Fatalf("expected only the live revision, got cursor %d", snap.Cursor)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for the live revision")
+	cancel() // safe to call more than once
+	if s.SubscriberCount() != 0 {
+		t.Fatalf("cancel must deregister the subscriber, count = %d", s.SubscriberCount())
 	}
 }

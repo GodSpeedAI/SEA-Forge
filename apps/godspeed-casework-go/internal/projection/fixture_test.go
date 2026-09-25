@@ -1,3 +1,5 @@
+//go:build casework_fixture
+
 package projection
 
 import (
@@ -43,10 +45,10 @@ func TestFixtureDecodes(t *testing.T) {
 	if ds.LiveCursor != 1150 {
 		t.Fatalf("dataset liveCursor: got %d, want 1150", ds.LiveCursor)
 	}
-	if len(ds.Revisions) != 7 {
-		t.Fatalf("dataset revisions: got %d, want 7", len(ds.Revisions))
+	if len(ds.FixtureRevisions) != 7 {
+		t.Fatalf("dataset revisions: got %d, want 7", len(ds.FixtureRevisions))
 	}
-	if first, last := ds.Revisions[0].Cursor, ds.Revisions[6].Cursor; first != 900 || last != 1150 {
+	if first, last := ds.FixtureRevisions[0].Cursor, ds.FixtureRevisions[6].Cursor; first != 900 || last != 1150 {
 		t.Fatalf("dataset revision cursors run %d..%d, want 900..1150", first, last)
 	}
 	if len(ds.Artifacts) != 9 {

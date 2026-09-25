@@ -59,6 +59,10 @@ func (e *Error) Error() string {
 // Unwrap supports errors.Is/As against the wrapped cause.
 func (e *Error) Unwrap() error { return e.Err }
 
+// With attaches a wrapped cause to e and returns e, so a typed error can carry a provider
+// refusal (with its class) through the error chain at its construction site.
+func (e *Error) With(err error) *Error { e.Err = err; return e }
+
 // New builds a typed error with no wrapped cause.
 func New(kind Kind, capability, op, message string) *Error {
 	return &Error{Kind: kind, Capability: capability, Op: op, Message: message}

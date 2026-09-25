@@ -206,6 +206,49 @@ func (a *Authority) CaseHorizon(ctx context.Context, ref ports.CaseRef) (ports.C
 	return out, nil
 }
 
+// RunsList implements ports.CaseAuthorityPort.
+func (a *Authority) RunsList(ctx context.Context) ([]ports.RunSummary, error) {
+	resp, err := a.client.Do(ctx, NewRunList())
+	if err != nil {
+		return nil, err
+	}
+	var view RunListView
+	if err := resp.Into(&view); err != nil {
+		return nil, err
+	}
+	out := make([]ports.RunSummary, 0, len(view.Runs))
+	for _, row := range view.Runs {
+		run := ports.RunSummary{
+			RunID:         row.RunID,
+			Execution:     row.Execution,
+			Settlement:    row.Settlement,
+			EvidenceCount: row.EvidenceCount,
+		}
+		if row.CaseID != nil {
+			run.CaseID = *row.CaseID
+		}
+		if row.PlanItemID != nil {
+			run.PlanItemID = *row.PlanItemID
+		}
+		if row.StartedAt != nil && *row.StartedAt != "" {
+			started, err := parseTime(*row.StartedAt, "run started_at")
+			if err != nil {
+				return nil, err
+			}
+			run.StartedAt, run.HasStarted = started, true
+		}
+		if row.FinishedAt != nil && *row.FinishedAt != "" {
+			finished, err := parseTime(*row.FinishedAt, "run finished_at")
+			if err != nil {
+				return nil, err
+			}
+			run.FinishedAt, run.HasFinished = finished, true
+		}
+		out = append(out, run)
+	}
+	return out, nil
+}
+
 // PendingApprovals implements ports.CaseAuthorityPort. An empty ref lists every case's approvals.
 func (a *Authority) PendingApprovals(ctx context.Context, ref ports.CaseRef) ([]ports.ApprovalRecord, error) {
 	resp, err := a.client.Do(ctx, NewApprovalList(string(ref)))
@@ -319,6 +362,20 @@ func (a *Authority) CommitCase(ctx context.Context, draft ports.CaseDraft, pin p
 		return ports.CommitReceipt{}, err
 	}
 	var view CommitView
+	// The kernel verifies carried preconditions BEFORE committing: a stale preflight digest is
+	// rejected with a normal (non-error) frame whose outcome is "rejected_as_stale" and whose
+	// code is "precondition_failed" - no case exists, no side effect. Probed live in T06 and
+	// surfaced as a typed refusal rather than a zero-value receipt.
+	var stale struct {
+		Outcome string          `json:"outcome"`
+		Code    string          `json:"code"`
+		Changed json.RawMessage `json:"changed_records"`
+	}
+	if err := json.Unmarshal(resp.Raw, &stale); err == nil && stale.Code == "precondition_failed" {
+		return ports.CommitReceipt{}, apperr.New(apperr.KindInvalid, "", "case_commit",
+			"the kernel rejected the commit as stale: the preflight this digest pins no longer matches the template").
+			With(&Refusal{Class: "precondition_failed", Message: string(stale.Changed), NoSideEffect: true})
+	}
 	if err := resp.Into(&view); err != nil {
 		return ports.CommitReceipt{}, err
 	}

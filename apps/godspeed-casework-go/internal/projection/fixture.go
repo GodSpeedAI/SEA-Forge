@@ -1,3 +1,5 @@
+//go:build casework_fixture
+
 // Fixture loading. The canonical Northstar fixture dataset is copied verbatim into
 // fixturedata/northstar.world.json and embedded, so the binary serves exactly the bytes the
 // cognitive-ui fixture directory holds. TestEmbeddedFixtureMatchesCanonical (fixture_test.go)

@@ -1,204 +1,218 @@
-// Package server is the casework boundary's HTTP+SSE surface (FIXTURE-LABELED): it serves the
-// cognitive projections built from the Northstar fixture and accepts interaction intents.
+// Package server is the casework boundary's LIVE HTTP+SSE surface: it serves canonical spec-04
+// CognitiveWorldSnapshots built from the governed kernel through the T05 SFWP client (operator
+// decision D-1), translates the T01 consequential intents onto governed SFWP verbs, and relays
+// kernel event frames as SSE revision events keyed by the kernel's own event cursor.
 //
-// The wire contract is apps/godspeed-cognitive-ui/src/adapters/go/WIRE.md; the shapes here must
-// not drift from it. The server holds no state of its own: the projection, coordinator, and
-// artifact stores are injected, and there are no globals.
+// The wire contract is the T01 ADR (.agents/reports/casework-live-wiring/adr-wire-contract.md):
+// /api/world, /api/intents, /api/templates, /api/templates/preflight and /api/events serve the
+// internal/contract shapes; refusals are typed outcomes, never transport errors. The server holds
+// no state of its own: the world source, intent dispatcher, template source, and relay are
+// injected, and there are no globals. The FIXTURE-LABELED surface of the same package lives in
+// fixture_server.go behind the casework_fixture build tag (tests and dev/demo only).
+//
+// Authentication (sessions, cookies, the browser-user to kernel-actor mapping) is T07: until it
+// lands, /api/world accepts an explicit ?actor=&role= perspective (verified against the kernel's
+// identity.get delegation rules), and intents carry the acting user in their envelope.
 package server
 
 import (
-	"encoding/json"
-	"errors"
+	"context"
 	"fmt"
-	"mime"
 	"net/http"
-	"regexp"
-	"strconv"
 	"time"
 
-	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/artifactstore"
-	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/coordinator"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
 )
 
-// maxBodyBytes bounds request bodies on the POST endpoints.
-const maxBodyBytes = 1 << 20 // 1 MiB
-
-// Options tunes server behaviour; the zero value is the production default.
-type Options struct {
-	// Heartbeat is the SSE comment interval. Default 15s.
-	Heartbeat time.Duration
+// WorldSource is the live snapshot builder (projection.LiveSource in production, fakes in tests).
+type WorldSource interface {
+	Snapshot(ctx context.Context, caseID string, actor ports.ActorClaim, cursor string) (contract.CognitiveWorldSnapshot, error)
+	NewestCaseID(ctx context.Context) (string, error)
 }
 
-func (o Options) heartbeat() time.Duration {
-	if o.Heartbeat > 0 {
-		return o.Heartbeat
-	}
-	return 15 * time.Second
+// PerspectiveVerifier optionally verifies an explicit ?actor=&role= perspective against the
+// kernel's identity rules before serving it.
+type PerspectiveVerifier interface {
+	VerifyPerspective(ctx context.Context, actor ports.ActorClaim) error
 }
 
-// Server wires the injected stores into the HTTP surface.
+// TemplateSource serves the template discovery/preflight endpoints.
+type TemplateSource interface {
+	EntryOptions(ctx context.Context) ([]contract.TemplateEntryOption, error)
+	Preflight(ctx context.Context, templateRef string, params map[string]any) (contract.TemplatePreflightResult, error)
+}
+
+// IntentDispatcher translates one intent (internal/intents.Handler in production).
+type IntentDispatcher interface {
+	Handle(ctx context.Context, in contract.InteractionIntent) contract.IntentResponse
+}
+
+// RevisionHistory is the relay's served history (projection.Store).
+type RevisionHistory interface {
+	At(cursor string) (projection.Revision, error)
+	Oldest() string
+	Head() string
+	Live() (projection.Revision, bool)
+	Subscribe(after string) (<-chan projection.Revision, func())
+}
+
+// RelayCursors is the per-case kernel-cursor view (Relay; fakes in tests).
+type RelayCursors interface {
+	CursorForCase(caseID string) (string, bool)
+	Head() string
+}
+
+// Server wires the injected live stack into the HTTP surface.
 type Server struct {
-	proj  *projection.Store
-	coord *coordinator.Coordinator
-	arts  *artifactstore.Store
-	opts  Options
+	world   WorldSource
+	intents IntentDispatcher
+	tpl     TemplateSource
+	store   RevisionHistory
+	relay   RelayCursors
+	opts    Options
 }
 
-// New builds the server. Every dependency is injected; the server owns none of the state itself.
-func New(proj *projection.Store, coord *coordinator.Coordinator, arts *artifactstore.Store, opts Options) *Server {
-	return &Server{proj: proj, coord: coord, arts: arts, opts: opts}
+// New builds the live server. Every dependency is injected.
+func New(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, store RevisionHistory, relay RelayCursors, opts Options) *Server {
+	return &Server{world: world, intents: dispatcher, tpl: tpl, store: store, relay: relay, opts: opts}
 }
 
-// Handler returns the routed HTTP handler, wrapped for colocated browser access: the React host
-// runs on a different loopback port, so same-machine origins (127.0.0.1 / localhost, any port)
-// are allowed cross-origin callers. Nothing else: the server binds loopback by default and this
-// never widens to non-local Origins.
+// Handler returns the routed HTTP handler, wrapped for colocated browser access (the same
+// loopback-only CORS posture the boundary has always had).
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", s.handleHealthz)
 	mux.HandleFunc("GET /api/world", s.handleWorld)
-	mux.HandleFunc("GET /api/time", s.handleTime)
 	mux.HandleFunc("GET /api/events", s.handleEvents)
 	mux.HandleFunc("POST /api/intents", s.handleIntent)
-	mux.HandleFunc("GET /api/artifacts", s.handleArtifactList)
-	mux.HandleFunc("POST /api/artifacts", s.handleArtifactPersist)
-	mux.HandleFunc("GET /api/artifacts/{ref}", s.handleArtifactGet)
+	mux.HandleFunc("GET /api/templates", s.handleTemplates)
+	mux.HandleFunc("POST /api/templates/preflight", s.handlePreflight)
 	return withLocalCORS(mux)
 }
 
-var localOriginPattern = regexp.MustCompile(`^http://(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$`)
+func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, healthResponse{
+		Status:       "ok",
+		Provenance:   projection.ProvenanceLabelLive,
+		KernelCursor: s.relay.Head(),
+	})
+}
 
-func withLocalCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin != "" && localOriginPattern.MatchString(origin) {
-			h := w.Header()
-			h.Set("Access-Control-Allow-Origin", origin)
-			h.Set("Vary", "Origin")
-			h.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			h.Set("Access-Control-Allow-Headers", "Content-Type")
-			h.Set("Access-Control-Max-Age", "600")
-		}
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
+// handleWorld serves the canonical snapshot: live-built by default, or the stored revision at
+// ?cursor= (true kernel history; 404 for a cursor that is evicted or never existed - the client
+// refetches the live world either way).
+func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if raw := r.URL.Query().Get("cursor"); raw != "" {
+		rev, err := s.store.At(raw)
+		if err != nil {
+			writeTypedError(w, http.StatusNotFound, "invalid",
+				"unknown or evicted kernel cursor "+raw+"; refetch the live world")
 			return
 		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, healthBody{
-		Status:     "ok",
-		Provenance: projection.ProvenanceLabel,
-		LiveCursor: s.proj.LiveCursor(),
-	})
-}
-
-func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
-	raw := r.URL.Query().Get("cursor")
-	if raw == "" {
-		writeJSON(w, http.StatusOK, worldBody{Snapshot: s.proj.Live()})
+		writeJSON(w, http.StatusOK, worldResponse{Snapshot: rev.Snapshot})
 		return
 	}
-	cursor, err := strconv.ParseInt(raw, 10, 64)
+
+	actor, ok := s.perspective(w, r)
+	if !ok {
+		return
+	}
+	caseID := r.URL.Query().Get("case_id")
+	if caseID == "" {
+		newest, err := s.world.NewestCaseID(ctx)
+		if err != nil {
+			writeTypedError(w, http.StatusBadGateway, "unavailable", "the kernel view is unreachable: "+err.Error())
+			return
+		}
+		caseID = newest
+	}
+	if caseID == "" {
+		writeJSON(w, http.StatusOK, worldResponse{Snapshot: projection.EmptyWorld(actor, s.relay.Head(), time.Now())})
+		return
+	}
+	// The snapshot exists at the case's newest observed kernel cursor: the same address space the
+	// intents' staleness guard compares against.
+	cursor, _ := s.relay.CursorForCase(caseID)
+	snap, err := s.world.Snapshot(ctx, caseID, actor, cursor)
 	if err != nil {
-		writeTypedError(w, http.StatusNotFound, "invalid", "cursor must be an integer")
+		writeTypedError(w, http.StatusBadGateway, "unavailable", "the kernel view could not be built: "+err.Error())
 		return
 	}
-	snap, err := s.proj.At(cursor)
-	if err != nil {
-		writeTypedError(w, http.StatusNotFound, "invalid", "unknown cursor")
-		return
+	writeJSON(w, http.StatusOK, worldResponse{Snapshot: snap})
+}
+
+// perspective resolves the snapshot's viewpoint. Default: the gateway's own configured
+// perspective (also the relay's revision perspective). Explicit ?actor=&role= overrides are
+// kernel-verified when the world source supports it, so a snapshot can never render a standing
+// the kernel would not grant this connection; both fields must be given together or not at all.
+func (s *Server) perspective(w http.ResponseWriter, r *http.Request) (ports.ActorClaim, bool) {
+	actor := ports.ActorClaim{ActorID: r.URL.Query().Get("actor"), Role: r.URL.Query().Get("role")}
+	if actor.ActorID == "" && actor.Role == "" {
+		return s.opts.Perspective, true
 	}
-	writeJSON(w, http.StatusOK, worldBody{Snapshot: snap})
+	if actor.ActorID == "" || actor.Role == "" {
+		writeTypedError(w, http.StatusBadRequest, "invalid", "actor and role must be given together")
+		return ports.ActorClaim{}, false
+	}
+	if v, ok := s.world.(PerspectiveVerifier); ok {
+		if err := v.VerifyPerspective(r.Context(), actor); err != nil {
+			writeTypedError(w, http.StatusForbidden, "authority_denied",
+				"the kernel does not allow this connection to act as "+actor.ActorID+": "+err.Error())
+			return ports.ActorClaim{}, false
+		}
+	}
+	return actor, true
 }
 
-func (s *Server) handleTime(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, timeBody{Positions: s.proj.Window(), Truncated: false})
-}
-
+// handleIntent accepts one consequential intent; refusals are typed outcomes (HTTP 200).
 func (s *Server) handleIntent(w http.ResponseWriter, r *http.Request) {
 	if !requireJSON(w, r) {
 		return
 	}
-	var in coordinator.Intent
+	var in contract.InteractionIntent
 	if !decodeStrict(w, r, &in) {
 		return
 	}
-	writeJSON(w, http.StatusOK, s.coord.Submit(in))
+	writeJSON(w, http.StatusOK, s.intents.Handle(r.Context(), in))
 }
 
-func (s *Server) handleArtifactPersist(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleTemplates(w http.ResponseWriter, r *http.Request) {
+	opts, err := s.tpl.EntryOptions(r.Context())
+	if err != nil {
+		writeTypedError(w, http.StatusBadGateway, "unavailable", "the kernel template view could not be read: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, templatesResponse{Templates: opts})
+}
+
+func (s *Server) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	if !requireJSON(w, r) {
 		return
 	}
-	var body artifactPersistBody
+	var body preflightRequest
 	if !decodeStrict(w, r, &body) {
 		return
 	}
-	if body.Ref == "" {
-		writeJSON(w, http.StatusOK, coordinator.Outcome{
-			Status: "refused", Reason: "invalid", Note: "ref is required",
-		})
+	if body.TemplateRef == "" {
+		writeTypedError(w, http.StatusBadRequest, "invalid", "template_ref is required")
 		return
 	}
-	s.arts.Persist(body.Ref, body.BoundObject, body.Title)
-	writeJSON(w, http.StatusOK, artifactPersistResponse{Status: "accepted"})
-}
-
-func (s *Server) handleArtifactGet(w http.ResponseWriter, r *http.Request) {
-	ref := r.PathValue("ref")
-	art, ok := s.arts.Get(ref)
-	if !ok {
-		writeTypedError(w, http.StatusNotFound, "invalid", "unknown artifact ref")
+	result, err := s.tpl.Preflight(r.Context(), body.TemplateRef, body.Params)
+	if err != nil {
+		writeTypedError(w, http.StatusBadGateway, "unavailable", "the kernel preflight could not be run: "+err.Error())
 		return
 	}
-	level := r.URL.Query().Get("level")
-	if level == "" {
-		level = "minimal"
-	}
-	switch level {
-	case "minimal", "summary", "source":
-	default:
-		writeTypedError(w, http.StatusBadRequest, "invalid", "level must be minimal, summary, or source")
-		return
-	}
-	content, mediaType, ok := art.Content(level)
-	if !ok {
-		writeTypedError(w, http.StatusNotFound, "invalid", "artifact has no "+level+" level")
-		return
-	}
-	w.Header().Set("Content-Type", mediaType)
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Length", strconv.Itoa(len(content)))
-	w.WriteHeader(http.StatusOK)
-	if r.Method == http.MethodGet {
-		w.Write(content)
-	}
+	writeJSON(w, http.StatusOK, result)
 }
 
-// artifactDescriptors is the catalog join the UI performs by boundObject.
-type artifactDescriptor struct {
-	Ref         string `json:"ref"`
-	Kind        string `json:"kind"`
-	Title       string `json:"title"`
-	BoundObject string `json:"boundObject"`
-}
-
-func (s *Server) handleArtifactList(w http.ResponseWriter, r *http.Request) {
-	all := s.arts.List()
-	out := make([]artifactDescriptor, 0, len(all))
-	for _, a := range all {
-		out = append(out, artifactDescriptor{Ref: a.Ref, Kind: a.Kind, Title: a.Title, BoundObject: a.BoundObject})
-	}
-	writeJSON(w, http.StatusOK, artifactListBody{Descriptors: out})
-}
-
-// handleEvents streams the SSE feed: hello, the replay of revisions newer than ?last=, then live
-// revisions and lease transitions, with a heartbeat comment and a flush per event. When the client
-// disconnects, every subscription is cancelled so no goroutine or channel leaks.
+// handleEvents streams the SSE feed: hello, resync_required when the requested position predates
+// the retained history, the replay of stored revisions newer than Last-Event-ID / ?last=, then
+// live revisions as the relay records them - each with id=kernel cursor. There are no
+// command-level frames on the kernel bus (decision-log D-3-followups), so execution progress
+// reaches clients through the snapshot revisions themselves.
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -206,28 +220,42 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	last := int64(0)
-	if raw := r.URL.Query().Get("last"); raw != "" {
-		if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil {
-			last = parsed
-		}
-		// An unparsable last is treated as "from the beginning": the client asked for a position
-		// that does not exist, and a full replay is the recoverable answer.
+	last := r.URL.Query().Get("last")
+	if last == "" {
+		// The EventSource resume contract: the browser sends the last event's id back on
+		// reconnect. ?last= is honoured equally (fetch-based streams and tests).
+		last = r.Header.Get("Last-Event-ID")
 	}
 
-	// Subscriptions are registered before the hello is written, so anything the world does while
-	// the hello is in flight is queued rather than missed.
-	revCh, cancelRevisions := s.proj.Subscribe(last)
-	leaseCh, cancelLeases := s.coord.SubscribeLeases()
-	defer cancelRevisions()
-	defer cancelLeases()
+	// The subscription is registered before the hello is written, so anything the relay records
+	// while the hello is in flight is queued rather than missed.
+	revCh, cancel := s.store.Subscribe(last)
+	defer cancel()
 
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
-	writeSSE(w, "", "hello", helloBody{Provenance: projection.ProvenanceLabel, LiveCursor: s.proj.LiveCursor()})
+	writeSSE(w, "", "hello", helloBody{Provenance: projection.ProvenanceLabelLive, KernelCursor: s.relay.Head()})
 	flusher.Flush()
+
+	if last != "" {
+		if oldest := s.store.Oldest(); oldest != "" && last < oldest {
+			// The requested position predates the retained history: a gap-free replay is not
+			// possible, and pretending otherwise would silently skip kernel truth.
+			writeSSE(w, oldest, "resync_required", contract.StreamEvent{
+				EventType: "resync_required",
+				Cursor:    oldest,
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+				Payload: contract.ResyncRequiredPayload{
+					RequestedCursor:       last,
+					OldestAvailableCursor: oldest,
+					Reason:                "retention window evicted the requested revision",
+				},
+			})
+			flusher.Flush()
+		}
+	}
 
 	heartbeat := time.NewTicker(s.opts.heartbeat())
 	defer heartbeat.Stop()
@@ -239,17 +267,17 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		case <-heartbeat.C:
 			fmt.Fprint(w, ": heartbeat\n\n")
 			flusher.Flush()
-		case snap, ok := <-revCh:
+		case rev, ok := <-revCh:
 			if !ok {
-				return // evicted: the client replays from ?last= on reconnect
-			}
-			writeSSE(w, strconv.FormatInt(snap.Cursor, 10), "revision", worldBody{Snapshot: snap})
-			flusher.Flush()
-		case lease, ok := <-leaseCh:
-			if !ok {
+				// Evicted for falling behind: the client reconnects with Last-Event-ID and replays.
 				return
 			}
-			writeSSE(w, "", "lease", lease)
+			writeSSE(w, rev.Cursor, "snapshot", contract.StreamEvent{
+				EventType: "snapshot",
+				Cursor:    rev.Cursor,
+				Timestamp: rev.At.UTC().Format(time.RFC3339),
+				Payload:   rev.Snapshot,
+			})
 			flusher.Flush()
 		}
 	}
@@ -257,108 +285,21 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 
 // wire response shapes
 
-type healthBody struct {
-	Status     string `json:"status"`
-	Provenance string `json:"provenance"`
-	LiveCursor int64  `json:"liveCursor"`
+type healthResponse struct {
+	Status       string `json:"status"`
+	Provenance   string `json:"provenance"`
+	KernelCursor string `json:"kernel_cursor"`
 }
 
-type worldBody struct {
-	Snapshot projection.Snapshot `json:"snapshot"`
+type worldResponse struct {
+	Snapshot contract.CognitiveWorldSnapshot `json:"snapshot"`
 }
 
-type timeBody struct {
-	Positions []projection.WindowEntry `json:"positions"`
-	Truncated bool                     `json:"truncated"`
+type templatesResponse struct {
+	Templates []contract.TemplateEntryOption `json:"templates"`
 }
 
-type helloBody struct {
-	Provenance string `json:"provenance"`
-	LiveCursor int64  `json:"liveCursor"`
-}
-
-type artifactPersistBody struct {
-	Ref         string `json:"ref"`
-	BoundObject string `json:"boundObject"`
-	Title       string `json:"title"`
-}
-
-type artifactPersistResponse struct {
-	Status string `json:"status"`
-}
-
-type artifactListBody struct {
-	Descriptors []artifactDescriptor `json:"descriptors"`
-}
-
-type wireError struct {
-	Kind string `json:"kind"`
-	Note string `json:"note"`
-}
-
-type errorBody struct {
-	Error wireError `json:"error"`
-}
-
-// helpers
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	// An encode failure after the status is sent cannot be reported; the short write surfaces to
-	// the client as a broken body, which is the honest outcome.
-	_ = enc.Encode(v)
-}
-
-func writeTypedError(w http.ResponseWriter, status int, kind, note string) {
-	writeJSON(w, status, errorBody{Error: wireError{Kind: kind, Note: note}})
-}
-
-// requireJSON enforces the strict POST content type.
-func requireJSON(w http.ResponseWriter, r *http.Request) bool {
-	mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || mt != "application/json" {
-		writeTypedError(w, http.StatusUnsupportedMediaType, "invalid", "content-type must be application/json")
-		return false
-	}
-	return true
-}
-
-// decodeStrict reads one JSON value with unknown fields rejected and the body size bounded.
-func decodeStrict(w http.ResponseWriter, r *http.Request, v any) bool {
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
-		var tooBig *http.MaxBytesError
-		if errors.As(err, &tooBig) {
-			writeTypedError(w, http.StatusRequestEntityTooLarge, "invalid", "request body exceeds 1 MiB")
-			return false
-		}
-		writeTypedError(w, http.StatusBadRequest, "invalid", "request body is not valid JSON for this endpoint: "+err.Error())
-		return false
-	}
-	var extra json.RawMessage
-	if err := dec.Decode(&extra); err == nil {
-		writeTypedError(w, http.StatusBadRequest, "invalid", "request body must contain a single JSON object")
-		return false
-	}
-	return true
-}
-
-// writeSSE writes one event. Data is marshalled onto a single line (JSON string escaping never
-// emits a raw newline), matching the text/event-stream framing.
-func writeSSE(w interface{ Write([]byte) (int, error) }, id, event string, data any) {
-	if id != "" {
-		fmt.Fprintf(w, "id: %s\n", id)
-	}
-	if event != "" {
-		fmt.Fprintf(w, "event: %s\n", event)
-	}
-	payload, err := json.Marshal(data)
-	if err != nil {
-		payload = []byte(`{}`)
-	}
-	fmt.Fprintf(w, "data: %s\n\n", payload)
+type preflightRequest struct {
+	TemplateRef string         `json:"template_ref"`
+	Params      map[string]any `json:"params,omitempty"`
 }

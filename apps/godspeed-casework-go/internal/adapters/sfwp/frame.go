@@ -283,6 +283,10 @@ func NewApprovalDecide(caseID, approvalID, decision, note, requestID string, g G
 // NewCaseList lists committed cases.
 func NewCaseList() *Request { return newRequest("case_list") }
 
+// NewRunList lists the governed run records (episodes) the cell holds, newest first. Runs whose
+// directory no case claims are reported by the authority rather than dropped.
+func NewRunList() *Request { return newRequest("run_list") }
+
 // NewCaseGetOverview projects one case's committed records.
 func NewCaseGetOverview(caseID string) *Request {
 	r := newRequest("case_get_overview")
@@ -458,6 +462,11 @@ type Refusal struct {
 	UnknownVerb bool
 }
 
+// RefusalClass exposes the authority's own error class without string-parsing prose. It lets
+// application-layer refusers (internal/intents) map kernel classes onto the typed refusal
+// vocabulary through the ports.ClassRefusal interface without importing this adapter.
+func (e *Refusal) RefusalClass() string { return e.Class }
+
 func (e *Refusal) Error() string {
 	if e.Class == "" {
 		return e.Message
@@ -630,6 +639,23 @@ type CaseSummaryView struct {
 type CaseListView struct {
 	Cases      []CaseSummaryView `json:"cases"`
 	Unreadable []string          `json:"unreadable"`
+}
+
+// RunSummaryView mirrors one run.list row.
+type RunSummaryView struct {
+	RunID         string  `json:"run_id"`
+	CaseID        *string `json:"case_id"`
+	PlanItemID    *string `json:"plan_item_id"`
+	Execution     string  `json:"execution"`
+	Settlement    string  `json:"settlement"`
+	StartedAt     *string `json:"started_at"`
+	FinishedAt    *string `json:"finished_at"`
+	EvidenceCount int     `json:"evidence_count"`
+}
+
+type RunListView struct {
+	Runs       []RunSummaryView `json:"runs"`
+	Unreadable []string         `json:"unreadable"`
 }
 
 // RunSettlementView mirrors one settlement row of case.get_overview.

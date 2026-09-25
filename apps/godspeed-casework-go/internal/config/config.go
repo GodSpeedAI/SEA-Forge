@@ -59,12 +59,51 @@ type Capability struct {
 	Adapter string `json:"adapter,omitempty"`
 }
 
+// ServeSection holds the live-serve posture (T06, additive): the gateway principal claim the
+// kernel's server.yaml must mirror, the authority policy the governed verbs authorize against,
+// and the perspective relay-built revisions are rendered for. Every default is explicit below;
+// nothing is invented from the environment.
+type ServeSection struct {
+	GatewayActorID string `json:"gateway_actor_id,omitempty"`
+	GatewayRole    string `json:"gateway_role,omitempty"`
+	PolicyRef      string `json:"policy_ref,omitempty"`
+	// Perspective* is who relay-built revision snapshots speak for. Unset means the gateway
+	// principal itself (the honest default: the gateway's own kernel view).
+	PerspectiveActorID string `json:"perspective_actor_id,omitempty"`
+	PerspectiveRole    string `json:"perspective_role,omitempty"`
+}
+
 // Document is the on-disk configuration schema.
 type Document struct {
-	Version      string       `json:"version"`
-	CellRoot     string       `json:"cell_root"`
-	EvidenceRoot string       `json:"evidence_root"`
-	Capabilities []Capability `json:"capabilities"`
+	Version      string        `json:"version"`
+	CellRoot     string        `json:"cell_root"`
+	EvidenceRoot string        `json:"evidence_root"`
+	Capabilities []Capability  `json:"capabilities"`
+	Serve        *ServeSection `json:"serve,omitempty"`
+}
+
+// ServeDefaults returns the ServeSection with every unset field filled from the schema's
+// documented defaults: the kernel's own default gateway spelling ("gateway" at the service role),
+// the E2E cell's authority-policy location, and the gateway-principal perspective.
+func ServeDefaults(section *ServeSection) ServeSection {
+	out := ServeSection{}
+	if section != nil {
+		out = *section
+	}
+	if out.GatewayActorID == "" {
+		out.GatewayActorID = "gateway"
+	}
+	if out.GatewayRole == "" {
+		out.GatewayRole = "service"
+	}
+	if out.PolicyRef == "" {
+		out.PolicyRef = "authority/active-policy.json"
+	}
+	if out.PerspectiveActorID == "" {
+		out.PerspectiveActorID = out.GatewayActorID
+		out.PerspectiveRole = out.GatewayRole
+	}
+	return out
 }
 
 // Options controls loading. Env and Overrides are injected so tests never depend on the process
@@ -200,6 +239,9 @@ func merge(base, over Document) Document {
 	if over.Capabilities != nil {
 		out.Capabilities = over.Capabilities
 	}
+	if over.Serve != nil {
+		out.Serve = over.Serve
+	}
 	return out
 }
 
@@ -227,8 +269,11 @@ func applyEnvironment(doc Document, env func(string) (string, bool)) Document {
 		// The live adapter's socket follows the kernel's own env posture
 		// (crates/sea-forge-server resolves its socket from SEA_FORGE_SOCKET):
 		// a capability that selects it may omit the endpoint and inherit the
-		// same environment variable. Anything still empty fails validation,
-		// so the fallback stays fail-closed.
+		// same environment variable. An EXPLICIT endpoint in the configuration
+		// file wins over the ambient environment (pinned by the T05 tests: the
+		// deployment's declared choice must not be overridden by whatever the
+		// ambient kernel socket happens to be). Anything still empty fails
+		// validation, so the fallback stays fail-closed.
 		if c.Endpoint == "" && c.Adapter == AdapterLive {
 			if v, ok := env(liveSocketEnv); ok {
 				c.Endpoint = v
@@ -334,6 +379,13 @@ func Validate(doc Document) []*apperr.Error {
 		if !knownAdapters[c.Adapter] {
 			problems = append(problems, apperr.New(apperr.KindConfig, c.Name, "validate",
 				"unknown adapter selection "+c.Adapter+" (known: fixture, sfwp)"))
+		}
+		// Plan guardrail: the production build must not be able to select the fixture adapters.
+		// The dev/demo fixture stack builds with -tags casework_fixture (just casework-go-up),
+		// which is the only place this selection is legal.
+		if c.Adapter == AdapterFixture && !fixtureBuildEnabled {
+			problems = append(problems, apperr.New(apperr.KindConfig, c.Name, "validate",
+				"the fixture adapter selection is refused by this build (production binaries cannot select fixtures; the dev fixture stack builds with -tags casework_fixture)"))
 		}
 		if c.Adapter == AdapterLive && strings.TrimSpace(c.Endpoint) == "" {
 			problems = append(problems, apperr.New(apperr.KindConfig, c.Name, "validate",

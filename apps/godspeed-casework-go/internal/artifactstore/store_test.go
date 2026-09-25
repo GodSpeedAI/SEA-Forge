@@ -1,3 +1,5 @@
+//go:build casework_fixture
+
 package artifactstore
 
 import (

@@ -1,3 +1,5 @@
+//go:build casework_fixture
+
 // Package artifactstore is the FIXTURE-SCOPED artifact persistence for this milestone.
 //
 // Limitation, stated rather than hidden: durability here is the running process's memory. A

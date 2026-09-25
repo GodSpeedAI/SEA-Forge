@@ -4,13 +4,14 @@
 // secret indirections, run preflight, and report each configured capability's state with a typed
 // error. It deliberately does NOT start any transport or accept work in that mode.
 //
-// With -serve it runs the same preflight first, then serves the cognitive
-// projection API over HTTP+SSE from the Northstar fixture. FIXTURE-LABELED:
-// the served projections and the intent decisions still come from the fixture
-// allowlist, never from a governed authority (T06 wires the live projection).
-// What IS live since T05: a capability that selects adapter=sfwp is probed by
-// preflight through the real SFWP client (system.hello, readiness.get,
-// identity.get), and the fixture provider never stands in for it.
+// With -serve it runs the same preflight first, then serves the LIVE cognitive projection over
+// HTTP+SSE (T06): canonical spec-04 snapshots built from the governed kernel through the T05 SFWP
+// client, intents translated one-to-one onto governed kernel verbs with the effective actor sent
+// as on_behalf_of (T02), and kernel event frames relayed as SSE revisions keyed by the kernel's
+// own event cursor. The served provenance is "go:live:sfwp" - nothing here is fixture-backed.
+// A capability that selects adapter=sfwp is probed by preflight through the real SFWP client
+// (system.hello, readiness.get, identity.get), and the fixture provider never stands in for it.
+// The dev/demo fixture stack exists only behind -tags casework_fixture (see main_fixture.go).
 package main
 
 import (
@@ -18,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,9 +29,8 @@ import (
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
-	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/artifactstore"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config"
-	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/coordinator"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
@@ -40,10 +41,9 @@ import (
 // a calling script) never has to read the message to know the application refused to proceed.
 const exitBlocked = 2
 
-// fixtureProvider is the FIXTURE-LABELED in-process provider registered in serve mode: the
-// projection, artifacts, and intent decisions are all served from the embedded fixture inside
-// this process, so every configured capability answers health from here. It is an honest
-// stand-in, not a governed authority.
+// fixtureProvider is the stand-in health prober registered in serve mode for capabilities that
+// select the (build-tag-gated) in-process fixture stack. It exists ONLY in the tagged build; the
+// production build refuses fixture selections at configuration validation.
 type fixtureProvider struct{}
 
 // Health implements ports.Health: the fixture provider lives in-process and cannot be unreachable.
@@ -51,7 +51,7 @@ func (fixtureProvider) Health(ctx context.Context) error { return nil }
 
 func main() {
 	configPath := flag.String("config", os.Getenv("GODSPEED_CONFIG"), "path to the configuration file")
-	serve := flag.Bool("serve", false, "after preflight, serve the fixture cognitive projection API over HTTP+SSE")
+	serve := flag.Bool("serve", false, "after preflight, serve the live cognitive projection API over HTTP+SSE")
 	addr := flag.String("addr", "127.0.0.1:4179", "listen address in -serve mode (loopback by default)")
 	flag.Parse()
 
@@ -77,21 +77,25 @@ func main() {
 	// in BOTH modes: preflight must probe the real governed authority (Health
 	// negotiates system.hello, reads readiness.get, and resolves identity.get)
 	// whenever the configuration selects it - never a fixture standing in for
-	// it. Construction can only fail on an empty socket path, which validation
-	// has already reported as that capability's own problem; the prober is
-	// then simply not registered, and preflight carries the typed config fault.
+	// it. The endpoint is the kernel's Unix socket (a "unix://" prefix is
+	// accepted and stripped); construction can only fail on an empty socket
+	// path, which validation has already reported as that capability's own
+	// problem, so the prober is then simply not registered and preflight
+	// carries the typed config fault.
 	liveClients := map[string]*sfwp.Client{}
+	liveAuthorities := map[string]*sfwp.Authority{}
 	probers := map[string]ports.Health{}
 	for _, c := range resolved.Capabilities {
 		if c.Adapter != config.AdapterLive {
 			continue
 		}
-		client, err := sfwp.New(sfwp.Config{SocketPath: c.Endpoint})
+		client, err := sfwp.New(sfwp.Config{SocketPath: strings.TrimPrefix(c.Endpoint, "unix://")})
 		if err != nil {
 			continue
 		}
 		liveClients[c.Name] = client
-		probers[c.Name] = sfwp.NewAuthority(client)
+		liveAuthorities[c.Name] = sfwp.NewAuthority(client)
+		probers[c.Name] = liveAuthorities[c.Name]
 	}
 	defer func() {
 		for _, client := range liveClients {
@@ -99,13 +103,16 @@ func main() {
 		}
 	}()
 	if *serve {
-		// Serve mode registers the FIXTURE-LABELED in-process provider for the
-		// remaining capabilities, so preflight sees them ready rather than "no
-		// adapter registered". The projection/intent wiring onto the live
-		// authority is T06's work and must not be pretended here.
-		for _, c := range resolved.Capabilities {
-			if _, live := liveClients[c.Name]; !live {
-				probers[c.Name] = fixtureProvider{}
+		// Serve mode registers the build-tag-gated in-process fixture provider
+		// for the remaining capabilities, so preflight sees them ready rather
+		// than "no adapter registered". It compiles only with
+		// -tags casework_fixture; the production build reports such capabilities
+		// as unconfigured instead (and validation refuses the selection outright).
+		if fixtureStackAvailable {
+			for _, c := range resolved.Capabilities {
+				if _, live := liveClients[c.Name]; !live {
+					probers[c.Name] = fixtureProvider{}
+				}
 			}
 		}
 	}
@@ -116,7 +123,7 @@ func main() {
 	for _, r := range results {
 		switch r.State {
 		case preflight.StateReady:
-			fmt.Printf("  ready     %-14s kind=%s required=%t\n", r.Capability.Name, r.Capability.Kind, r.Capability.Required)
+			fmt.Printf("  ready     %-14s kind=%s required=%t adapter=%s\n", r.Capability.Name, r.Capability.Kind, r.Capability.Required, adapterOf(resolved, r.Capability.Name))
 		default:
 			fmt.Printf("  %-9s %-14s kind=%s required=%t err=%v\n",
 				r.State, r.Capability.Name, r.Capability.Kind, r.Capability.Required, r.Err)
@@ -132,28 +139,99 @@ func main() {
 	fmt.Println("godspeed-casework: preflight clear (no required capability blocking)")
 
 	if *serve {
-		if err := serveForever(ctx, *addr); err != nil {
-			report(apperr.Wrap(apperr.KindInternal, "", "serve", "server stopped", err))
+		authorityName, authority, err := liveAuthorityForServe(resolved, results, liveAuthorities)
+		if err != nil {
+			report(err)
+			os.Exit(exitBlocked)
+		}
+		if authority == nil {
+			// No live authority: the only legal way here is the tagged fixture stack.
+			if !fixtureStackAvailable {
+				report(apperr.New(apperr.KindConfig, "", "serve",
+					"live serve requires an authority capability selecting adapter=sfwp (the fixture stack builds with -tags casework_fixture)"))
+				os.Exit(exitBlocked)
+			}
+			if err := serveFixtureStack(ctx, *addr, resolved); err != nil {
+				report(apperr.Wrap(apperr.KindInternal, authorityName, "serve", "fixture stack stopped", err))
+				os.Exit(1)
+			}
+			return
+		}
+		if err := serveLive(ctx, *addr, resolved, authority, liveClients[authorityName]); err != nil {
+			report(apperr.Wrap(apperr.KindInternal, authorityName, "serve", "server stopped", err))
 			os.Exit(1)
 		}
 	}
 }
 
-// serveForever builds the fixture-labeled stack and blocks until SIGINT or SIGTERM, then shuts
-// down gracefully.
-func serveForever(ctx context.Context, addr string) error {
-	dataset, err := projection.Fixture()
-	if err != nil {
-		return err
+// liveAuthorityForServe resolves the capability that backs live serve: an authority-kind
+// capability selecting adapter=sfwp whose preflight state is ready. Anything else is a typed
+// refusal - the gateway never serves a fixture world as if it were governed truth.
+func liveAuthorityForServe(resolved config.Resolved, results []preflight.Result, liveAuthorities map[string]*sfwp.Authority) (string, *sfwp.Authority, error) {
+	for _, c := range resolved.Capabilities {
+		if c.Kind != config.KindAuthority || c.Adapter != config.AdapterLive {
+			continue
+		}
+		for _, r := range results {
+			if r.Capability.Name != c.Name {
+				continue
+			}
+			if r.State != preflight.StateReady {
+				return c.Name, nil, apperr.New(apperr.KindUnavailable, c.Name, "serve",
+					"the live gateway refuses to serve: the governed authority capability did not pass preflight")
+			}
+			return c.Name, liveAuthorities[r.Capability.Name], nil
+		}
 	}
-	proj, err := projection.NewStore(dataset)
-	if err != nil {
-		return err
-	}
-	arts := artifactstore.New(dataset.Artifacts)
-	coord := coordinator.New(proj, arts, coordinator.Options{})
-	api := server.New(proj, coord, arts, server.Options{})
+	return "", nil, nil
+}
 
+func adapterOf(resolved config.Resolved, name string) string {
+	for _, c := range resolved.Capabilities {
+		if c.Name == name && c.Adapter != "" {
+			return c.Adapter
+		}
+	}
+	return "in-process"
+}
+
+// serveLive assembles the T06 live stack and blocks until SIGINT or SIGTERM, then shuts down
+// gracefully:
+//
+//	sfwp.Client (Unix-socket NDJSON, T05)
+//	  -> sfwp.Authority (ports.CaseAuthorityPort)
+//	     -> projection.LiveSource (fetches case views, builds spec-04 snapshots)
+//	     -> server.Relay (subscribes to kernel frames; per-case cursors; revision store)
+//	     -> intents.Handler (T01 intent table; on_behalf_of; typed refusals)
+//	  -> server.Server (HTTP+SSE surface)
+func serveLive(ctx context.Context, addr string, resolved config.Resolved, authority *sfwp.Authority, client *sfwp.Client) error {
+	serve := config.ServeDefaults(resolved.Serve)
+	source := projection.NewLiveSource(authority)
+	store := projection.NewStore()
+
+	// The subscription and relay run for the process lifetime: they are the gateway's window on
+	// kernel truth (per-case cursors and revision history).
+	sub, err := client.Subscribe(ctx)
+	if err != nil {
+		return err
+	}
+	relay := server.NewRelay(server.NewSFWPFeed(sub), source, store, server.RelayOptions{
+		DefaultActor: ports.ActorClaim{ActorID: serve.PerspectiveActorID, Role: serve.PerspectiveRole},
+		Logger:       log.New(os.Stderr, "godspeed-casework: ", 0),
+	})
+	relayCtx, cancelRelay := context.WithCancel(ctx)
+	defer cancelRelay()
+	go relay.Run(relayCtx)
+
+	dispatcher := intents.NewHandler(authority, relay, authority, intents.Options{
+		Gateway:             ports.ActorClaim{ActorID: serve.GatewayActorID, Role: serve.GatewayRole},
+		PolicyRef:           serve.PolicyRef,
+		ExecutionTimeoutSec: 60,
+	})
+
+	api := server.New(source, dispatcher, source, store, relay, server.Options{
+		Perspective: ports.ActorClaim{ActorID: serve.PerspectiveActorID, Role: serve.PerspectiveRole},
+	})
 	httpServer := &http.Server{
 		Addr:              addr,
 		Handler:           api.Handler(),
@@ -162,7 +240,8 @@ func serveForever(ctx context.Context, addr string) error {
 
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- httpServer.ListenAndServe() }()
-	fmt.Printf("godspeed-casework: serving cognitive projection on http://%s (FIXTURE-LABELED: %s)\n", addr, projection.ProvenanceLabel)
+	fmt.Printf("godspeed-casework: serving LIVE cognitive projection on http://%s (provenance %s; kernel socket %s)\n",
+		addr, projection.ProvenanceLabelLive, client.SocketPath())
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
@@ -171,6 +250,7 @@ func serveForever(ctx context.Context, addr string) error {
 		return err
 	case sig := <-signals:
 		fmt.Printf("godspeed-casework: %s received - shutting down\n", sig)
+		cancelRelay()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		return httpServer.Shutdown(shutdownCtx)

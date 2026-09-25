@@ -1327,8 +1327,8 @@ casework-go-up addr=casework_go_addr:
       fi
       rm -f "$pidfile"
     fi
-    echo "casework-go-up: building server binary"
-    (cd "$module" && go build -o "../../$bin" ./cmd/godspeed-casework) || exit 1
+    echo "casework-go-up: building server binary (fixture stack builds with -tags casework_fixture; the default build cannot select fixtures)"
+    (cd "$module" && go build -tags casework_fixture -o "../../$bin" ./cmd/godspeed-casework) || exit 1
     echo "casework-go-up: starting (fixture-labeled provider) on $addr"
     setsid nohup "$bin" -serve -addr "$addr" -config "$module/configs/fixture-serve.json" >>"$logfile" 2>&1 &
     echo $! > "$pidfile"
@@ -1613,7 +1613,7 @@ casework-live-go-up addr="127.0.0.1:4179":
     fi
     echo "casework-live-go-up: building gateway binary"
     (cd "$module" && go build -o "../../$bin" ./cmd/godspeed-casework) || exit 1
-    echo "casework-live-go-up: starting on $addr against live cell $cell (FIXTURE-LABELED providers until T05)"
+    echo "casework-live-go-up: starting LIVE gateway on $addr against live cell $cell (provenance go:live:sfwp, T06)"
     GODSPEED_CELL_ROOT="$cell" setsid nohup "$bin" -serve -addr "$addr" -config "$module/configs/live-serve.json" >>"$logfile" 2>&1 &
     echo $! >"$pidfile"
     for _ in $(seq 1 40); do

@@ -1,3 +1,6 @@
+// The live server's HTTP+SSE tests over fakes and a real relay + revision store: the served
+// shapes, the cursor-keyed history with its documented 404, template endpoints, intent envelope
+// pass-through, and the SSE replay/resume contract (Last-Event-ID AND ?last=) with no gaps.
 package server
 
 import (
@@ -8,380 +11,335 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/artifactstore"
-	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/coordinator"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
 )
 
-// harness wires a real server over the fixture with instant staged timings.
-type harness struct {
-	proj  *projection.Store
-	arts  *artifactstore.Store
-	coord *coordinator.Coordinator
-	ts    *httptest.Server
+// fakeWorld is a canned WorldSource.
+type fakeWorld struct {
+	mu       sync.Mutex
+	snaps    map[string]contract.CognitiveWorldSnapshot
+	newestID string
+	verify   func(ports.ActorClaim) error
 }
 
-func newHarness(t *testing.T) *harness {
-	t.Helper()
-	return newHarnessWithOptions(t, Options{})
+func (f *fakeWorld) set(caseID string, snap contract.CognitiveWorldSnapshot) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.snaps[caseID] = snap
 }
 
-func newHarnessWithOptions(t *testing.T, opts Options) *harness {
+func (f *fakeWorld) Snapshot(ctx context.Context, caseID string, actor ports.ActorClaim, cursor string) (contract.CognitiveWorldSnapshot, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	snap, ok := f.snaps[caseID]
+	if !ok {
+		return contract.CognitiveWorldSnapshot{}, context.DeadlineExceeded
+	}
+	snap.Perspective = contract.ActorPerspective{ActorID: actor.ActorID, Role: actor.Role}
+	snap.Cursor = cursor
+	return snap, nil
+}
+
+func (f *fakeWorld) NewestCaseID(ctx context.Context) (string, error) { return f.newestID, nil }
+
+func (f *fakeWorld) VerifyPerspective(ctx context.Context, actor ports.ActorClaim) error {
+	if f.verify != nil {
+		return f.verify(actor)
+	}
+	return nil
+}
+
+// fakeTemplates is a canned TemplateSource.
+type fakeTemplates struct{}
+
+func (fakeTemplates) EntryOptions(ctx context.Context) ([]contract.TemplateEntryOption, error) {
+	return []contract.TemplateEntryOption{{
+		TemplateRef: "e2e-sentry-chain@0.1.0",
+		Title:       "e2e-sentry-chain",
+		Parameters:  []contract.TemplateParameter{{Name: "dataset_name", Type: "string", Required: boolPtr(true)}},
+	}}, nil
+}
+
+func (fakeTemplates) Preflight(ctx context.Context, ref string, params map[string]any) (contract.TemplatePreflightResult, error) {
+	digest := "sha256:385e"
+	return contract.TemplatePreflightResult{
+		TemplateRef: ref, Params: params, Passed: params != nil, Reasons: []string{}, Digest: &digest,
+	}, nil
+}
+
+func boolPtr(b bool) *bool { return &b }
+
+// fakeIntents records the last intent and answers a canned response.
+type fakeIntents struct {
+	mu   sync.Mutex
+	last contract.InteractionIntent
+	resp contract.IntentResponse
+}
+
+func (f *fakeIntents) Handle(ctx context.Context, in contract.InteractionIntent) contract.IntentResponse {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.last = in
+	return f.resp
+}
+
+// fakeFeed is a drivable EventFeed.
+type fakeFeed struct {
+	ch   chan KernelEvent
+	done chan struct{}
+}
+
+func newFakeFeed() *fakeFeed {
+	return &fakeFeed{ch: make(chan KernelEvent, 16), done: make(chan struct{})}
+}
+
+func (f *fakeFeed) Events() <-chan KernelEvent { return f.ch }
+func (f *fakeFeed) Done() <-chan struct{}      { return f.done }
+func (f *fakeFeed) push(ev KernelEvent)        { f.ch <- ev }
+
+func snapshotFor(cursor, caseID string) contract.CognitiveWorldSnapshot {
+	return contract.CognitiveWorldSnapshot{
+		WorldID:          "world-" + caseID,
+		CaseID:           caseID,
+		Cursor:           cursor,
+		Timestamp:        time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC).Format(time.RFC3339),
+		Perspective:      contract.ActorPerspective{ActorID: "operator_local", Role: "operator"},
+		VisibleObjects:   []contract.CognitiveObject{},
+		AvailableActions: []contract.ActionDescriptor{},
+	}
+}
+
+// liveHarness assembles the live server over fakes plus a real relay + store driven by a fake feed.
+type liveHarness struct {
+	feed   *fakeFeed
+	world  *fakeWorld
+	ints   *fakeIntents
+	store  *projection.Store
+	relay  *Relay
+	ts     *httptest.Server
+	cancel func()
+}
+
+func newLiveHarness(t *testing.T) *liveHarness {
 	t.Helper()
-	ds, err := projection.Fixture()
-	if err != nil {
-		t.Fatalf("decode embedded fixture: %v", err)
-	}
-	proj, err := projection.NewStore(ds)
-	if err != nil {
-		t.Fatalf("build store: %v", err)
-	}
-	arts := artifactstore.New(ds.Artifacts)
-	coord := coordinator.New(proj, arts, coordinator.Options{
-		Sleep:  func(time.Duration) {},
-		Stage1: time.Millisecond,
-		Stage2: time.Millisecond,
+	feed := newFakeFeed()
+	world := &fakeWorld{snaps: map[string]contract.CognitiveWorldSnapshot{}, newestID: "case_1"}
+	ints := &fakeIntents{resp: contract.IntentResponse{IntentID: "i-1", Success: true}}
+	store := projection.NewStore()
+	relay := NewRelay(feed, world, store, RelayOptions{
+		DefaultActor: ports.ActorClaim{ActorID: "operator_local", Role: "operator"},
 	})
-	ts := httptest.NewServer(New(proj, coord, arts, opts).Handler())
-	t.Cleanup(ts.Close)
-	return &harness{proj: proj, arts: arts, coord: coord, ts: ts}
+	ctx, cancel := context.WithCancel(context.Background())
+	go relay.Run(ctx)
+	api := New(world, ints, fakeTemplates{}, store, relay, Options{Heartbeat: time.Hour})
+	ts := httptest.NewServer(api.Handler())
+	t.Cleanup(func() { cancel(); ts.Close() })
+	return &liveHarness{feed: feed, world: world, ints: ints, store: store, relay: relay, ts: ts, cancel: cancel}
 }
 
-func (h *harness) post(t *testing.T, path, body string) (int, string) {
+func (h *liveHarness) pushRevision(t *testing.T, cursor, caseID string) {
 	t.Helper()
-	resp, err := http.Post(h.ts.URL+path, "application/json", strings.NewReader(body))
-	if err != nil {
-		t.Fatalf("POST %s: %v", path, err)
-	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
-	return resp.StatusCode, string(raw)
-}
-
-func (h *harness) postRaw(t *testing.T, path, contentType, body string) (int, string) {
-	t.Helper()
-	resp, err := http.Post(h.ts.URL+path, contentType, strings.NewReader(body))
-	if err != nil {
-		t.Fatalf("POST %s: %v", path, err)
-	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
-	return resp.StatusCode, string(raw)
-}
-
-func get(t *testing.T, url string) (int, string, string) {
-	t.Helper()
-	resp, err := http.Get(url)
-	if err != nil {
-		t.Fatalf("GET %s: %v", url, err)
-	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
-	return resp.StatusCode, string(raw), resp.Header.Get("Content-Type")
-}
-
-func decode(t *testing.T, body string, v any) {
-	t.Helper()
-	if err := json.Unmarshal([]byte(body), v); err != nil {
-		t.Fatalf("decode %q into %T: %v", body, v, err)
-	}
-}
-
-func TestHealthz(t *testing.T) {
-	h := newHarness(t)
-	status, body, ct := get(t, h.ts.URL+"/api/healthz")
-	if status != 200 || !strings.Contains(ct, "application/json") {
-		t.Fatalf("healthz: %d %s", status, ct)
-	}
-	var got struct {
-		Status     string `json:"status"`
-		Provenance string `json:"provenance"`
-		LiveCursor int64  `json:"liveCursor"`
-	}
-	decode(t, body, &got)
-	if got.Status != "ok" || got.Provenance != "go:fixture:northstar" || got.LiveCursor != 1150 {
-		t.Fatalf("healthz body: %s", body)
-	}
-}
-
-func TestWorldLiveAtUnknownAndMalformed(t *testing.T) {
-	h := newHarness(t)
-
-	status, body, _ := get(t, h.ts.URL+"/api/world")
-	if status != 200 {
-		t.Fatalf("live world: %d", status)
-	}
-	var live struct {
-		Snapshot projection.Snapshot `json:"snapshot"`
-	}
-	decode(t, body, &live)
-	if live.Snapshot.Cursor != 1150 || live.Snapshot.Provenance != "go:fixture:northstar" {
-		t.Fatalf("live world body: cursor=%d provenance=%q", live.Snapshot.Cursor, live.Snapshot.Provenance)
-	}
-	if len(live.Snapshot.Objects) == 0 || len(live.Snapshot.Surfaces) == 0 {
-		t.Fatal("live snapshot must carry objects and surfaces")
-	}
-
-	status, body, _ = get(t, h.ts.URL+"/api/world?cursor=900")
-	if status != 200 {
-		t.Fatalf("world at 900: %d", status)
-	}
-	var at900 struct {
-		Snapshot projection.Snapshot `json:"snapshot"`
-	}
-	decode(t, body, &at900)
-	if at900.Snapshot.Cursor != 900 {
-		t.Fatalf("world at 900 returned cursor %d", at900.Snapshot.Cursor)
-	}
-
-	status, body, _ = get(t, h.ts.URL+"/api/world?cursor=901")
-	if status != 404 {
-		t.Fatalf("unknown cursor must 404, got %d", status)
-	}
-	var e errorBody
-	decode(t, body, &e)
-	if e.Error.Kind != "invalid" || e.Error.Note != "unknown cursor" {
-		t.Fatalf("unknown cursor error body: %s", body)
-	}
-
-	if status, _, _ = get(t, h.ts.URL+"/api/world?cursor=abc"); status != 404 {
-		t.Fatalf("malformed cursor must 404, got %d", status)
-	}
-}
-
-func TestTimeEndpointListsAscendingPositionsAndGrows(t *testing.T) {
-	h := newHarness(t)
-	status, body, _ := get(t, h.ts.URL+"/api/time")
-	if status != 200 {
-		t.Fatalf("time: %d", status)
-	}
-	var got timeBody
-	decode(t, body, &got)
-	if len(got.Positions) != 7 || got.Positions[0].Cursor != 900 || got.Positions[6].Cursor != 1150 {
-		t.Fatalf("time positions: %s", body)
-	}
-	if got.Positions[0].At != "2026-09-15T09:00:00Z" || got.Positions[0].Summary == "" {
-		t.Fatalf("time position shape: %+v", got.Positions[0])
-	}
-	if got.Truncated {
-		t.Fatal("the full history is served; truncated must be false")
-	}
-
-	// A consequential append grows the window: the time feed tracks the live world.
-	code, respBody := h.post(t, "/api/intents", `{"id":"time-1","kind":"propose-consequence","target":"ns-migration","parameters":{"action":"implement","cursor":1150}}`)
-	if code != 200 || !strings.Contains(respBody, `"accepted"`) {
-		t.Fatalf("intent: %d %s", code, respBody)
-	}
+	h.world.snaps[caseID] = snapshotFor(cursor, caseID)
+	h.feed.push(KernelEvent{Cursor: cursor, Kind: "case.trace.item_activated", CaseID: caseID, At: time.Now()})
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		_, body, _ = get(t, h.ts.URL+"/api/time")
-		decode(t, body, &got)
-		if len(got.Positions) == 10 {
+		if _, err := h.store.At(cursor); err == nil {
 			return
 		}
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
-	t.Fatalf("positions did not grow to 10 after the consequential flow: %d", len(got.Positions))
+	t.Fatalf("relay never recorded revision %s", cursor)
 }
 
-func TestArtifactCatalogMatchesFixtureAndGrowsOnPersist(t *testing.T) {
-	h := newHarness(t)
-	status, body, _ := get(t, h.ts.URL+"/api/artifacts")
-	if status != 200 {
-		t.Fatalf("artifact list: %d", status)
+func TestHealthzProvenanceIsTheLiveLabel(t *testing.T) {
+	h := newLiveHarness(t)
+	resp, err := http.Get(h.ts.URL + "/api/healthz")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	var got struct {
-		Descriptors []artifactDescriptor `json:"descriptors"`
+		Status       string `json:"status"`
+		Provenance   string `json:"provenance"`
+		KernelCursor string `json:"kernel_cursor"`
 	}
-	decode(t, body, &got)
-	if len(got.Descriptors) != 9 {
-		t.Fatalf("artifact catalog: got %d descriptors, want the fixture's 9 (%s)", len(got.Descriptors), body)
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
 	}
-	found := map[string]artifactDescriptor{}
-	for _, d := range got.Descriptors {
-		found[d.Ref] = d
-	}
-	if q := found["art-interview-quote"]; q.Kind != "quotation" || q.BoundObject != "ns-interview" || q.Title != "Interview - clinical ops lead" {
-		t.Fatalf("descriptor shape drifted: %+v", q)
-	}
-
-	h.post(t, "/api/artifacts", `{"ref":"art-live-note","boundObject":"ns-workflow","title":"Live note"}`)
-	_, body, _ = get(t, h.ts.URL+"/api/artifacts")
-	decode(t, body, &got)
-	if len(got.Descriptors) != 10 {
-		t.Fatalf("catalog must grow after a persist: %d", len(got.Descriptors))
+	if got.Status != "ok" || got.Provenance != "go:live:sfwp" {
+		t.Fatalf("healthz: %+v", got)
 	}
 }
 
-func TestArtifactBytesAreLevelAware(t *testing.T) {
-	h := newHarness(t)
+func TestWorldServesLiveSnapshotAtPerCaseCursor(t *testing.T) {
+	h := newLiveHarness(t)
+	h.pushRevision(t, "01AAA", "case_1")
 
-	status, body, ct := get(t, h.ts.URL+"/api/artifacts/art-interview-quote?level=minimal")
-	if status != 200 || ct != "text/plain" || body != "Secondary coverage is not optional." {
-		t.Fatalf("minimal level: %d %q %q", status, ct, body)
+	resp, err := http.Get(h.ts.URL + "/api/world")
+	if err != nil {
+		t.Fatal(err)
 	}
-	status, body, ct = get(t, h.ts.URL+"/api/artifacts/art-workflow-fragment?level=summary")
-	if status != 200 || ct != "text/html" || !strings.Contains(body, "external record lookup") {
-		t.Fatalf("summary level: %d %q", status, ct)
+	defer resp.Body.Close()
+	var got worldResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
 	}
-	// Default level is minimal.
-	status, body, ct = get(t, h.ts.URL+"/api/artifacts/art-interview-quote")
-	if status != 200 || body != "Secondary coverage is not optional." {
-		t.Fatalf("default level: %d %q", status, body)
-	}
-	// Binary artifact levels decode to their bytes and media type.
-	status, raw, ct := get(t, h.ts.URL+"/api/artifacts/art-pilot-report?level=source")
-	if status != 200 || ct != "application/pdf" || !strings.HasPrefix(raw, "%PDF") {
-		t.Fatalf("pdf level: %d %q %q", status, ct, raw[:min(8, len(raw))])
+	if got.Snapshot.CaseID != "case_1" || got.Snapshot.Cursor != "01AAA" {
+		t.Fatalf("world: case=%q cursor=%q", got.Snapshot.CaseID, got.Snapshot.Cursor)
 	}
 }
 
-func TestArtifactUnknownRefAndBadLevel(t *testing.T) {
-	h := newHarness(t)
-	status, body, _ := get(t, h.ts.URL+"/api/artifacts/art-nope")
-	if status != 404 {
-		t.Fatalf("unknown ref must 404, got %d", status)
+func TestWorldServesKernelHistoryAtCursorAnd404sEvicted(t *testing.T) {
+	h := newLiveHarness(t)
+	h.pushRevision(t, "01AAA", "case_1")
+	h.pushRevision(t, "01BBB", "case_1")
+
+	resp, err := http.Get(h.ts.URL + "/api/world?cursor=01AAA")
+	if err != nil {
+		t.Fatal(err)
 	}
-	var e errorBody
-	decode(t, body, &e)
-	if e.Error.Kind != "invalid" || e.Error.Note != "unknown artifact ref" {
-		t.Fatalf("unknown ref body: %s", body)
+	defer resp.Body.Close()
+	var got worldResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
 	}
-	if status, _, _ = get(t, h.ts.URL+"/api/artifacts/art-interview-quote?level=verbose"); status != 400 {
-		t.Fatalf("unknown level must 400, got %d", status)
+	if got.Snapshot.Cursor != "01AAA" {
+		t.Fatalf("history must serve the revision at the requested kernel cursor, got %q", got.Snapshot.Cursor)
+	}
+
+	resp2, err := http.Get(h.ts.URL + "/api/world?cursor=01ZZZ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusNotFound {
+		t.Fatalf("an unknown/evicted cursor must 404, got %d", resp2.StatusCode)
 	}
 }
 
-// Durability, pinned at the boundary: an artifact persisted over HTTP is served afterwards, with
-// honest placeholder levels, for the life of the process (the test server).
-func TestArtifactPersistDurability(t *testing.T) {
-	h := newHarness(t)
-	code, body := h.post(t, "/api/artifacts", `{"ref":"art-durable","boundObject":"ns-validation","title":"Durable note"}`)
-	if code != 200 || !strings.Contains(body, `"status":"accepted"`) {
-		t.Fatalf("persist: %d %s", code, body)
+func TestWorldEmptyCellServesHonestEmptyWorld(t *testing.T) {
+	h := newLiveHarness(t)
+	h.world.newestID = ""
+	resp, err := http.Get(h.ts.URL + "/api/world")
+	if err != nil {
+		t.Fatal(err)
 	}
-	// Re-persist is accepted and idempotent.
-	code, _ = h.post(t, "/api/artifacts", `{"ref":"art-durable","boundObject":"ns-validation","title":"Durable note"}`)
-	if code != 200 {
-		t.Fatalf("re-persist: %d", code)
+	defer resp.Body.Close()
+	var got worldResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
 	}
-	// Intervening traffic must not evict it.
-	h.post(t, "/api/intents", `{"id":"dur-1","kind":"focus-object","target":"ns-goal"}`)
-	status, body, ct := get(t, h.ts.URL+"/api/artifacts/art-durable?level=source")
-	if status != 200 || ct != "text/plain" || !strings.Contains(body, "not governed persistence") {
-		t.Fatalf("durable artifact: %d %q %q", status, ct, body)
-	}
-
-	// A refusal for a body without a ref is a normal outcome, not a transport error.
-	code, body = h.post(t, "/api/artifacts", `{"boundObject":"ns-validation"}`)
-	if code != 200 || !strings.Contains(body, `"reason":"invalid"`) {
-		t.Fatalf("refless persist: %d %s", code, body)
+	if got.Snapshot.CaseID != "" || got.Snapshot.Summary.Headline != "No cases yet" {
+		t.Fatalf("empty world: %+v", got.Snapshot)
 	}
 }
 
-func TestIntentEndpointValidationAndIdempotency(t *testing.T) {
-	h := newHarness(t)
-
-	// Happy path over HTTP with the response shape the wire specifies.
-	code, body := h.post(t, "/api/intents", `{"id":"http-1","kind":"propose-consequence","target":"ns-migration","parameters":{"action":"implement","approach":"compat-layer","cursor":1150}}`)
-	if code != 200 {
-		t.Fatalf("accepted intent http: %d %s", code, body)
+func TestWorldExplicitPerspectiveIsVerified(t *testing.T) {
+	h := newLiveHarness(t)
+	h.world.verify = func(a ports.ActorClaim) error { return errDenied{} }
+	resp, err := http.Get(h.ts.URL + "/api/world?actor=operator_local&role=operator")
+	if err != nil {
+		t.Fatal(err)
 	}
-	var accepted coordinator.Outcome
-	decode(t, body, &accepted)
-	if accepted.Status != "accepted" || accepted.Lease == nil || accepted.Lease.State != "active" {
-		t.Fatalf("accepted shape: %s", body)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("a kernel-refused perspective must be 403, got %d", resp.StatusCode)
 	}
-
-	// Idempotent replay over HTTP returns the identical body.
-	code, replay := h.post(t, "/api/intents", `{ "parameters" : {"cursor":1150,"approach":"compat-layer","action":"implement"}, "target":"ns-migration", "kind":"propose-consequence", "id":"http-1" }`)
-	if code != 200 || replay != body {
-		t.Fatalf("replay must be byte-stable across key order:\n%s\n%s", body, replay)
-	}
-
-	// Same id, different body.
-	code, body = h.post(t, "/api/intents", `{"id":"http-1","kind":"propose-consequence","target":"ns-secondary","parameters":{"action":"implement"}}`)
-	if code != 200 || !strings.Contains(body, `"reason":"invalid"`) {
-		t.Fatalf("conflicting id: %d %s", code, body)
-	}
-
-	// Stale cursor.
-	code, body = h.post(t, "/api/intents", `{"id":"http-2","kind":"propose-consequence","target":"ns-migration","parameters":{"action":"implement","cursor":900}}`)
-	if code != 200 || !strings.Contains(body, `"reason":"stale_projection"`) {
-		t.Fatalf("stale: %d %s", code, body)
-	}
-
-	// Authority denial over HTTP leaves the world untouched.
-	code, body = h.post(t, "/api/intents", `{"id":"http-3","kind":"decide-approval","target":"ns-pr-491"}`)
-	if code != 200 || !strings.Contains(body, `"reason":"authority_denied"`) {
-		t.Fatalf("decide-approval: %d %s", code, body)
-	}
-
-	// Unknown kind is a normal refusal.
-	code, body = h.post(t, "/api/intents", `{"id":"http-4","kind":"teleport","target":"ns-goal"}`)
-	if code != 200 || !strings.Contains(body, `"reason":"invalid"`) {
-		t.Fatalf("unknown kind: %d %s", code, body)
+	resp2, _ := http.Get(h.ts.URL + "/api/world?actor=solo")
+	if resp2 != nil {
+		resp2.Body.Close()
+		if resp2.StatusCode != http.StatusBadRequest {
+			t.Fatalf("a half-named actor must be 400, got %d", resp2.StatusCode)
+		}
 	}
 }
 
-func TestIntentEndpointTransportStrictness(t *testing.T) {
-	h := newHarness(t)
+type errDenied struct{}
 
-	// Wrong content type.
-	code, body := h.postRaw(t, "/api/intents", "text/plain", `{"id":"t1","kind":"focus-object","target":"ns-goal"}`)
-	if code != 415 {
-		t.Fatalf("content type: %d %s", code, body)
-	}
-	code, _ = h.postRaw(t, "/api/artifacts", "", `{"ref":"x"}`)
-	if code != 415 {
-		t.Fatalf("artifact content type: %d", code)
-	}
+func (errDenied) Error() string { return "refused" }
 
-	// Unknown top-level field.
-	code, body = h.post(t, "/api/intents", `{"id":"t2","kind":"focus-object","target":"ns-goal","surprise":1}`)
-	if code != 400 || !strings.Contains(body, `"kind":"invalid"`) {
-		t.Fatalf("unknown field: %d %s", code, body)
+func TestIntentsPassthroughAndStrictness(t *testing.T) {
+	h := newLiveHarness(t)
+	body := `{"intent_id":"i-1","kind":"CONSEQUENTIAL_CASE","action_name":"EXECUTE_ITEM","target_object_id":"item-1","case_id":"case_1","client_cursor":"01AAA","actor":{"actor_id":"operator_local","role":"operator"},"parameters":{"item_id":"item-1"}}`
+	resp, err := http.Post(h.ts.URL+"/api/intents", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	// Trailing second JSON value.
-	code, _ = h.post(t, "/api/intents", `{"id":"t3","kind":"focus-object","target":"ns-goal"} {"id":"t4"}`)
-	if code != 400 {
-		t.Fatalf("trailing value: %d", code)
+	defer resp.Body.Close()
+	var got contract.IntentResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !got.Success || got.IntentID != "i-1" {
+		t.Fatalf("intent response: %+v", got)
+	}
+	if h.ints.last.Actor.Role != "operator" || h.ints.last.ClientCursor != "01AAA" {
+		t.Fatalf("the intent envelope must pass through intact: %+v", h.ints.last)
 	}
 
-	// Malformed JSON.
-	code, _ = h.post(t, "/api/intents", `{nope`)
-	if code != 400 {
-		t.Fatalf("malformed json: %d", code)
+	// Unknown fields are refused at the envelope (the contract is the wire).
+	bad := strings.Replace(body, `"parameters":`, `"surprise":1,"parameters":`, 1)
+	resp2, err := http.Post(h.ts.URL+"/api/intents", "application/json", strings.NewReader(bad))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp2.Body.Close()
+	if resp2.StatusCode != http.StatusBadRequest {
+		t.Fatalf("an unknown envelope field must be 400, got %d", resp2.StatusCode)
+	}
+}
+
+func TestTemplatesAndPreflight(t *testing.T) {
+	h := newLiveHarness(t)
+	resp, err := http.Get(h.ts.URL + "/api/templates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var got templatesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Templates) != 1 || got.Templates[0].TemplateRef != "e2e-sentry-chain@0.1.0" {
+		t.Fatalf("templates: %+v", got)
 	}
 
-	// Oversized body (> 1 MiB).
-	big := `{"id":"t5","kind":"focus-object","target":"` + strings.Repeat("x", 1<<20) + `"}`
-	code, _ = h.post(t, "/api/intents", big)
-	if code != 413 {
-		t.Fatalf("oversized body: %d", code)
+	resp2, err := http.Post(h.ts.URL+"/api/templates/preflight", "application/json",
+		strings.NewReader(`{"template_ref":"e2e-sentry-chain@0.1.0","params":{"dataset_name":"orders"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp2.Body.Close()
+	var pf contract.TemplatePreflightResult
+	if err := json.NewDecoder(resp2.Body).Decode(&pf); err != nil {
+		t.Fatal(err)
+	}
+	if !pf.Passed || pf.Digest == nil || *pf.Digest != "sha256:385e" {
+		t.Fatalf("preflight: %+v", pf)
 	}
 }
 
 // --- SSE ---
 
-type sseEvent struct {
+type liveSSEEvent struct {
 	id    string
 	event string
 	data  string
 }
 
-// streamSSE reads the event stream into a channel, preserving arrival order.
-func streamSSE(t *testing.T, body io.Reader) <-chan sseEvent {
+func streamLiveSSE(t *testing.T, body io.Reader) <-chan liveSSEEvent {
 	t.Helper()
-	ch := make(chan sseEvent, 256)
+	ch := make(chan liveSSEEvent, 256)
 	go func() {
 		defer close(ch)
 		reader := bufio.NewReader(body)
-		var ev sseEvent
+		var ev liveSSEEvent
 		for {
 			line, err := reader.ReadString('\n')
 			switch {
@@ -392,14 +350,11 @@ func streamSSE(t *testing.T, body io.Reader) <-chan sseEvent {
 			case strings.HasPrefix(line, "data: "):
 				ev.data = strings.TrimSuffix(strings.TrimPrefix(line, "data: "), "\n")
 			case strings.HasPrefix(line, ":"):
-				ch <- sseEvent{event: "comment", data: strings.TrimSuffix(strings.TrimPrefix(line, ":"), "\n")}
+				ch <- liveSSEEvent{event: "comment", data: strings.TrimSuffix(strings.TrimPrefix(line, ":"), "\n")}
 			case line == "\n" || line == "":
 				if ev.event != "" || ev.data != "" {
 					ch <- ev
-					ev = sseEvent{}
-				}
-				if line == "" && err != nil {
-					return
+					ev = liveSSEEvent{}
 				}
 			}
 			if err != nil {
@@ -410,7 +365,7 @@ func streamSSE(t *testing.T, body io.Reader) <-chan sseEvent {
 	return ch
 }
 
-func nextEvent(t *testing.T, ch <-chan sseEvent, what string) sseEvent {
+func nextLiveEvent(t *testing.T, ch <-chan liveSSEEvent, what string) liveSSEEvent {
 	t.Helper()
 	select {
 	case ev, ok := <-ch:
@@ -421,211 +376,148 @@ func nextEvent(t *testing.T, ch <-chan sseEvent, what string) sseEvent {
 	case <-time.After(3 * time.Second):
 		t.Fatalf("timed out waiting for %s", what)
 	}
-	return sseEvent{}
+	return liveSSEEvent{}
 }
 
-func TestSSEHelloReplayLiveAndLeases(t *testing.T) {
-	h := newHarness(t)
+func TestSSEReplayFromLastAndLiveWithKernelCursorIDs(t *testing.T) {
+	h := newLiveHarness(t)
+	h.pushRevision(t, "01AAA", "case_1")
+	h.pushRevision(t, "01BBB", "case_1")
 
-	resp, err := http.Get(h.ts.URL + "/api/events?last=1070")
+	resp, err := http.Get(h.ts.URL + "/api/events?last=01AAA")
 	if err != nil {
-		t.Fatalf("open events: %v", err)
+		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
 		t.Fatalf("events content type: %q", ct)
 	}
-	events := streamSSE(t, resp.Body)
+	events := streamLiveSSE(t, resp.Body)
 
-	hello := nextEvent(t, events, "hello")
-	if hello.event != "hello" || !strings.Contains(hello.data, `"provenance":"go:fixture:northstar"`) || !strings.Contains(hello.data, `"liveCursor":1150`) {
-		t.Fatalf("hello event: %+v", hello)
-	}
-
-	// Replay of everything newer than last=1070.
-	for _, want := range []string{"1110", "1150"} {
-		ev := nextEvent(t, events, "replay "+want)
-		if ev.event != "revision" || ev.id != want || !strings.Contains(ev.data, `"cursor":`+want) {
-			t.Fatalf("replay event for %s: %+v", want, ev)
-		}
+	hello := nextLiveEvent(t, events, "hello")
+	if hello.event != "hello" || !strings.Contains(hello.data, `"go:live:sfwp"`) {
+		t.Fatalf("hello: %+v", hello)
 	}
 
-	// A consequential intent drives the rest of the stream live.
-	code, body := h.post(t, "/api/intents", `{"id":"sse-1","kind":"propose-consequence","target":"ns-migration","parameters":{"action":"implement","cursor":1150}}`)
-	if code != 200 || !strings.Contains(body, `"accepted"`) {
-		t.Fatalf("intent: %d %s", code, body)
+	// Replay is exactly the revisions after the requested cursor, id = kernel cursor.
+	ev := nextLiveEvent(t, events, "replay 01BBB")
+	if ev.event != "snapshot" || ev.id != "01BBB" {
+		t.Fatalf("replay event: %+v", ev)
+	}
+	var frame contract.StreamEvent
+	if err := json.Unmarshal([]byte(ev.data), &frame); err != nil {
+		t.Fatal(err)
+	}
+	if frame.EventType != "snapshot" || frame.Cursor != "01BBB" {
+		t.Fatalf("frame envelope: %+v", frame)
+	}
+	snap, ok := frame.Payload.(map[string]any)
+	if !ok || snap["case_id"] != "case_1" {
+		t.Fatalf("frame payload must be the snapshot: %v", frame.Payload)
 	}
 
-	// Collect the live flow. The two feeds (revisions, leases) are ordered per feed but not
-	// against each other, so the collection waits for BOTH the three staged revisions and the
-	// released transition rather than breaking on whichever arrives first.
-	var revisions, leases []sseEvent
-	sawReleased := false
-	deadline := time.After(5 * time.Second)
-	for len(revisions) < 3 || !sawReleased {
-		select {
-		case ev := <-events:
-			switch ev.event {
-			case "revision":
-				revisions = append(revisions, ev)
-			case "lease":
-				leases = append(leases, ev)
-				if strings.Contains(ev.data, `"released"`) {
-					sawReleased = true
-				}
-			}
-		case <-deadline:
-			t.Fatalf("timed out collecting the live flow; revisions=%d leases=%d released=%t", len(revisions), len(leases), sawReleased)
-		}
-	}
-
-	if len(revisions) != 3 {
-		t.Fatalf("live revisions: got %d, want 3 (1151, 1152, 1153)", len(revisions))
-	}
-	for i, want := range []string{"1151", "1152", "1153"} {
-		if revisions[i].id != want {
-			t.Fatalf("live revision order: position %d has id %q, want %q", i, revisions[i].id, want)
-		}
-		if !strings.Contains(revisions[i].data, `"snapshot"`) {
-			t.Fatalf("revision data must wrap a snapshot: %s", revisions[i].data)
-		}
-	}
-	if !strings.Contains(revisions[0].data, "ns-fix-layer") || !strings.Contains(revisions[0].data, `"attention":"notable"`) {
-		t.Fatalf("revision 1151 must introduce the claimed compatibility layer: %s", truncateFor(revisions[0].data, 300))
-	}
-	if !strings.Contains(revisions[2].data, `"Pilot ready for review"`) {
-		t.Fatalf("revision 1153 must quiet the world: %s", truncateFor(revisions[2].data, 300))
-	}
-
-	if len(leases) != 3 {
-		t.Fatalf("lease events: got %d, want 3 (claimed, active, released): %v", len(leases), leases)
-	}
-	for i, want := range []string{"claimed", "active", "released"} {
-		if !strings.Contains(leases[i].data, `"state":"`+want+`"`) || !strings.Contains(leases[i].data, `"summary"`) {
-			t.Fatalf("lease event %d: %s", i, leases[i].data)
-		}
-	}
-	if leases[0].id != "" || !strings.HasPrefix(extractJSONField(leases[0].data, "id"), "lease-") {
-		t.Fatalf("lease events carry an id field inside data and none outside: %+v", leases[0])
+	// A live mutation arrives on the same stream, again keyed by the kernel cursor.
+	h.pushRevision(t, "01CCC", "case_1")
+	ev = nextLiveEvent(t, events, "live 01CCC")
+	if ev.id != "01CCC" || ev.event != "snapshot" {
+		t.Fatalf("live event: %+v", ev)
 	}
 }
 
-func TestSSEWithoutLastReplaysEverything(t *testing.T) {
-	h := newHarness(t)
-	resp, err := http.Get(h.ts.URL + "/api/events")
-	if err != nil {
-		t.Fatalf("open events: %v", err)
-	}
-	defer resp.Body.Close()
-	events := streamSSE(t, resp.Body)
-	nextEvent(t, events, "hello")
-	for _, want := range []string{"900", "940", "980", "1030", "1070", "1110", "1150"} {
-		if ev := nextEvent(t, events, "replay "+want); ev.id != want {
-			t.Fatalf("full replay: got id %q, want %q", ev.id, want)
-		}
-	}
-}
+func TestSSEHonoursLastEventIDHeader(t *testing.T) {
+	h := newLiveHarness(t)
+	h.pushRevision(t, "01AAA", "case_1")
+	h.pushRevision(t, "01BBB", "case_1")
 
-func TestSSEHeartbeatComment(t *testing.T) {
-	h := newHarnessWithOptions(t, Options{Heartbeat: 20 * time.Millisecond})
-	resp, err := http.Get(h.ts.URL + "/api/events")
+	req, err := http.NewRequest(http.MethodGet, h.ts.URL+"/api/events", nil)
 	if err != nil {
-		t.Fatalf("open events: %v", err)
+		t.Fatal(err)
 	}
-	defer resp.Body.Close()
-	events := streamSSE(t, resp.Body)
-	nextEvent(t, events, "hello")
-	// Skip the replay quickly.
-	for i := 0; i < 7; i++ {
-		nextEvent(t, events, "replay")
-	}
-	ev := nextEvent(t, events, "heartbeat comment")
-	if ev.event != "comment" || strings.TrimSpace(ev.data) != "heartbeat" {
-		t.Fatalf("heartbeat comment: %+v", ev)
-	}
-}
-
-// A client disconnect must stop the server-side work for that stream: subscriptions are
-// cancelled, no goroutine keeps writing.
-func TestSSEClientDisconnectCancelsSubscriptions(t *testing.T) {
-	h := newHarness(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.ts.URL+"/api/events", nil)
-	if err != nil {
-		t.Fatalf("request: %v", err)
-	}
+	req.Header.Set("Last-Event-ID", "01AAA")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatalf("open events: %v", err)
+		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	events := streamSSE(t, resp.Body)
-	nextEvent(t, events, "hello")
-
-	if got := h.proj.SubscriberCount(); got != 1 {
-		t.Fatalf("subscriber count while streaming: %d", got)
+	events := streamLiveSSE(t, resp.Body)
+	nextLiveEvent(t, events, "hello")
+	if ev := nextLiveEvent(t, events, "replay after header resume"); ev.id != "01BBB" {
+		t.Fatalf("Last-Event-ID resume must replay from the header's cursor, got id %q", ev.id)
 	}
-	cancel()
+}
+
+func TestSSEResyncRequiredWhenLastPredatesRetention(t *testing.T) {
+	// A small store: push three revisions, evicting the first; a client holding the evicted cursor
+	// gets resync_required, not a silently gapped replay.
+	feed := newFakeFeed()
+	world := &fakeWorld{snaps: map[string]contract.CognitiveWorldSnapshot{}, newestID: "case_1"}
+	store := projection.NewStoreWithRetention(2)
+	relay := NewRelay(feed, world, store, RelayOptions{DefaultActor: ports.ActorClaim{ActorID: "op", Role: "operator"}})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go relay.Run(ctx)
+	api := New(world, &fakeIntents{}, fakeTemplates{}, store, relay, Options{Heartbeat: time.Hour})
+	ts := httptest.NewServer(api.Handler())
+	defer ts.Close()
+
+	for _, c := range []string{"01AAA", "01BBB", "01CCC"} {
+		world.set("case_1", snapshotFor(c, "case_1"))
+		feed.push(KernelEvent{Cursor: c, Kind: "case.trace.item_activated", CaseID: "case_1", At: time.Now()})
+	}
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		if h.proj.SubscriberCount() == 0 {
-			return
+		if store.Len() == 2 {
+			break
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
-	t.Fatal("subscriptions survived the client disconnect")
-}
 
-func truncateFor(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
-}
-
-func extractJSONField(jsonLine, field string) string {
-	var m map[string]any
-	if err := json.Unmarshal([]byte(jsonLine), &m); err != nil {
-		return ""
-	}
-	v, _ := m[field].(string)
-	return v
-}
-
-func TestLocalCORSAllowsColocatedUIAndRefusesOthers(t *testing.T) {
-	h := newHarnessWithOptions(t, Options{Heartbeat: time.Hour})
-
-	req, err := http.NewRequest(http.MethodGet, h.ts.URL+"/api/healthz", nil)
+	resp, err := http.Get(ts.URL + "/api/events?last=01AAA")
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("Origin", "http://127.0.0.1:4178")
-	rec := httptest.NewRecorder()
-	New(h.proj, h.coord, h.arts, Options{}).Handler().ServeHTTP(rec, req)
-	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:4178" {
-		t.Fatalf("colocated origin not allowed: %q", got)
+	defer resp.Body.Close()
+	events := streamLiveSSE(t, resp.Body)
+	nextLiveEvent(t, events, "resync event")
+	if ev := nextLiveEvent(t, events, "resync event"); ev.event != "resync_required" {
+		t.Fatalf("a pre-retention cursor must trigger resync_required, got %+v", ev)
 	}
+	// The replay then covers everything retained, gap-free within the window.
+	if ev := nextLiveEvent(t, events, "replay 01BBB"); ev.id != "01BBB" {
+		t.Fatalf("replay after resync: %+v", ev)
+	}
+	if ev := nextLiveEvent(t, events, "replay 01CCC"); ev.id != "01CCC" {
+		t.Fatalf("replay after resync: %+v", ev)
+	}
+}
 
-	req2, err := http.NewRequest(http.MethodGet, h.ts.URL+"/api/healthz", nil)
-	if err != nil {
-		t.Fatal(err)
+func TestRelayCursorBookkeepingFeedsStaleness(t *testing.T) {
+	h := newLiveHarness(t)
+	h.pushRevision(t, "01AAA", "case_1")
+	cursor, ok := h.relay.CursorForCase("case_1")
+	if !ok || cursor != "01AAA" {
+		t.Fatalf("CursorForCase: %q %v", cursor, ok)
 	}
-	req2.Header.Set("Origin", "http://evil.example")
-	rec2 := httptest.NewRecorder()
-	New(h.proj, h.coord, h.arts, Options{}).Handler().ServeHTTP(rec2, req2)
-	if got := rec2.Header().Get("Access-Control-Allow-Origin"); got != "" {
-		t.Fatalf("non-local origin must not receive CORS grant, got %q", got)
+	if got := h.relay.WaitForCaseAdvance(context.Background(), "case_1", ""); got != "01AAA" {
+		t.Fatalf("WaitForCaseAdvance with no advance must return the current cursor, got %q", got)
 	}
+	// An advance unblocks a waiting waiter.
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		h.pushRevision(t, "01BBB", "case_1")
+	}()
+	if got := h.relay.WaitForCaseAdvance(context.Background(), "case_1", "01AAA"); got != "01BBB" {
+		t.Fatalf("WaitForCaseAdvance must observe the advance, got %q", got)
+	}
+}
 
-	req3, err := http.NewRequest(http.MethodOptions, h.ts.URL+"/api/intents", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req3.Header.Set("Origin", "http://localhost:4178")
-	req3.Header.Set("Access-Control-Request-Method", "POST")
-	rec3 := httptest.NewRecorder()
-	New(h.proj, h.coord, h.arts, Options{}).Handler().ServeHTTP(rec3, req3)
-	if rec3.Code != http.StatusNoContent {
-		t.Fatalf("preflight expected 204, got %d", rec3.Code)
+func TestRelayDeduplicatesAndKeepsMonotonicCursors(t *testing.T) {
+	h := newLiveHarness(t)
+	h.pushRevision(t, "01AAA", "case_1")
+	// A duplicate frame (at-least-once delivery) must not store a second revision.
+	h.feed.push(KernelEvent{Cursor: "01AAA", Kind: "case.trace.item_activated", CaseID: "case_1", At: time.Now()})
+	time.Sleep(20 * time.Millisecond)
+	if h.store.Len() != 1 {
+		t.Fatalf("duplicate frames must not duplicate revisions, len = %d", h.store.Len())
 	}
 }

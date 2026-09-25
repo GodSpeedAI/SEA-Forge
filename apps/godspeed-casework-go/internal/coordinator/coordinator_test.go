@@ -1,3 +1,5 @@
+//go:build casework_fixture
+
 package coordinator
 
 import (
@@ -14,7 +16,7 @@ func instantOptions() Options {
 }
 
 type fixture struct {
-	proj  *projection.Store
+	proj  *projection.FixtureStore
 	arts  *artifactstore.Store
 	coord *Coordinator
 }
@@ -25,7 +27,7 @@ func newFixture(t *testing.T) fixture {
 	if err != nil {
 		t.Fatalf("decode embedded fixture: %v", err)
 	}
-	proj, err := projection.NewStore(ds)
+	proj, err := projection.NewFixtureStore(ds)
 	if err != nil {
 		t.Fatalf("build store: %v", err)
 	}
@@ -214,7 +216,7 @@ func TestStaleProjectionRefusal(t *testing.T) {
 }
 
 // The full consequential flow: acceptance, staged revisions 1151-1153, and lease release.
-func TestAcceptedImplementRunsStagedRevisions(t *testing.T) {
+func TestAcceptedImplementRunsStagedFixtureRevisions(t *testing.T) {
 	f := newFixture(t)
 
 	leaseCh, cancel := f.coord.SubscribeLeases()
@@ -309,7 +311,7 @@ func TestAcceptedImplementRunsStagedRevisions(t *testing.T) {
 }
 
 // Earlier revisions must never be rewritten by later stages: the store keeps every position.
-func TestStagedRevisionsDoNotRetroMutate(t *testing.T) {
+func TestStagedFixtureRevisionsDoNotRetroMutate(t *testing.T) {
 	f := newFixture(t)
 	f.coord.Submit(implementIntent("retro-1", "ns-secondary", nil))
 	waitFor(t, 2*time.Second, "staged flow to finish", func() bool { return f.proj.LiveCursor() >= 1153 })
@@ -344,7 +346,7 @@ func TestSecondImplementContinuesCursorSequence(t *testing.T) {
 	}
 }
 
-func TestPersistArtifactIntentUsesFixtureScopedStore(t *testing.T) {
+func TestPersistArtifactIntentUsesFixtureScopedFixtureStore(t *testing.T) {
 	f := newFixture(t)
 	out := f.coord.Submit(Intent{
 		ID: "art-1", Kind: "persist-artifact", Target: "ns-workflow",

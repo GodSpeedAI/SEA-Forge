@@ -1,10 +1,20 @@
 {
   "version": "1",
   "evidence_root": ".sea-forge/casework-live/evidence",
+  "serve": {
+    "gateway_actor_id": "gateway",
+    "gateway_role": "service",
+    "policy_ref": "authority/active-policy.json",
+    "perspective_actor_id": "operator_local",
+    "perspective_role": "operator"
+  },
   "capabilities": [
-    { "name": "authority",  "kind": "authority",  "required": false, "endpoint": "fixture:in-process" },
-    { "name": "execution",  "kind": "execution",  "required": false, "endpoint": "fixture:in-process" },
-    { "name": "repository", "kind": "repository", "required": false, "endpoint": "fixture:in-process" },
-    { "name": "artifact",   "kind": "artifact",   "required": false, "endpoint": "fixture:in-process" }
+    {
+      "name": "authority",
+      "kind": "authority",
+      "required": false,
+      "adapter": "sfwp",
+      "endpoint": "unix://.sea-forge/casework-live/cell/server.sock"
+    }
   ]
 }

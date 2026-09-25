@@ -273,6 +273,21 @@ type CaseHorizon struct {
 	EventsFolded int
 }
 
+// RunSummary is one row of the governed run list: an episode with its separately-derived
+// execution and settlement standing (never collapsed into one fact).
+type RunSummary struct {
+	RunID         string
+	CaseID        string
+	PlanItemID    string
+	Execution     string
+	Settlement    string
+	StartedAt     time.Time
+	HasStarted    bool
+	FinishedAt    time.Time
+	HasFinished   bool
+	EvidenceCount int
+}
+
 // ApprovalRecord is one decision awaiting a resolver.
 type ApprovalRecord struct {
 	ApprovalID  string
@@ -407,6 +422,14 @@ type RequestOutcome struct {
 	Result    *OperationResult
 }
 
+// ClassRefusal is implemented by adapter refusals that carry the authority's own error class
+// verbatim. Application-layer refusers map classes onto the typed refusal vocabulary through
+// errors.As without importing any adapter package.
+type ClassRefusal interface {
+	error
+	RefusalClass() string
+}
+
 // CaseAuthorityPort is the application's view of the live, governed case authority: the full verb
 // surface the cognitive environment needs, in application terms. Like AuthorityPort it grants no
 // authority itself; every method reports or requests what the authority decides. Adapters translate
@@ -418,6 +441,7 @@ type CaseAuthorityPort interface {
 	CaseOverview(ctx context.Context, ref CaseRef) (CaseOverview, error)
 	CaseHorizon(ctx context.Context, ref CaseRef) (CaseHorizon, error)
 	PendingApprovals(ctx context.Context, ref CaseRef) ([]ApprovalRecord, error)
+	RunsList(ctx context.Context) ([]RunSummary, error)
 	EntryOptions(ctx context.Context) ([]TemplateOption, error)
 	PreflightCase(ctx context.Context, draft CaseDraft) (PreflightReport, error)
 	GetArtifact(ctx context.Context, digest string) (ArtifactContent, error)

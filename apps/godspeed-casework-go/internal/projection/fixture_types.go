@@ -1,3 +1,5 @@
+//go:build casework_fixture
+
 // Package projection owns the cognitive projection model the casework boundary serves: world
 // snapshots, their revision history, and the fixture dataset the projections are built from in
 // this milestone.
@@ -57,9 +59,9 @@ type Snapshot struct {
 	Provenance    string         `json:"provenance"`
 }
 
-// Revision is one position of the world's history: a snapshot's content plus when it was recorded
+// FixtureRevision is one position of the world's history: a snapshot's content plus when it was recorded
 // and a one-line summary of what changed.
-type Revision struct {
+type FixtureRevision struct {
 	Cursor        int64          `json:"cursor"`
 	At            string         `json:"at"` // RFC 3339
 	Summary       string         `json:"summary"`
@@ -94,10 +96,10 @@ type Artifact struct {
 
 // Dataset is the fixture document shape: the revision history plus the artifact set.
 type Dataset struct {
-	Provenance string     `json:"provenance"`
-	LiveCursor int64      `json:"liveCursor"`
-	Revisions  []Revision `json:"revisions"`
-	Artifacts  []Artifact `json:"artifacts"`
+	Provenance       string            `json:"provenance"`
+	LiveCursor       int64             `json:"liveCursor"`
+	FixtureRevisions []FixtureRevision `json:"revisions"`
+	Artifacts        []Artifact        `json:"artifacts"`
 }
 
 // Content returns the bytes and media type for one verbosity level of the artifact. Base64-encoded
@@ -123,7 +125,7 @@ func (a Artifact) Content(level string) ([]byte, string, bool) {
 }
 
 // SnapshotOf projects a stored revision into the served snapshot view, labelling the provenance.
-func SnapshotOf(rev Revision) Snapshot {
+func SnapshotOf(rev FixtureRevision) Snapshot {
 	return Snapshot{
 		Cursor:        rev.Cursor,
 		Surfaces:      cloneSurfaces(rev.Surfaces),
@@ -133,10 +135,10 @@ func SnapshotOf(rev Revision) Snapshot {
 	}
 }
 
-// cloneRevision deep-copies a revision so a stored one can never be mutated through a handed-out
+// cloneFixtureRevision deep-copies a revision so a stored one can never be mutated through a handed-out
 // reference.
-func cloneRevision(rev Revision) Revision {
-	return Revision{
+func cloneFixtureRevision(rev FixtureRevision) FixtureRevision {
+	return FixtureRevision{
 		Cursor:        rev.Cursor,
 		At:            rev.At,
 		Summary:       rev.Summary,

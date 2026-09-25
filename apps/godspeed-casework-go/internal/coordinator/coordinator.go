@@ -1,3 +1,5 @@
+//go:build casework_fixture
+
 // Package coordinator owns intent handling for the casework boundary: validation, idempotency,
 // the FIXTURE authority decision, lease lifecycle, and the staged world revisions an accepted
 // consequential intent produces.
@@ -136,7 +138,7 @@ const leaseBuffer = 64
 // live in the Coordinator. A restart - or a second Coordinator over the same projection - starts
 // with none of the first one's leases or intent records.
 type Coordinator struct {
-	proj *projection.Store
+	proj *projection.FixtureStore
 	arts *artifactstore.Store
 	opts Options
 
@@ -153,7 +155,7 @@ type idempotencyRecord struct {
 }
 
 // New builds a coordinator over the projection and artifact stores.
-func New(proj *projection.Store, arts *artifactstore.Store, opts Options) *Coordinator {
+func New(proj *projection.FixtureStore, arts *artifactstore.Store, opts Options) *Coordinator {
 	return &Coordinator{
 		proj:      proj,
 		arts:      arts,
@@ -429,7 +431,7 @@ func (c *Coordinator) appendStage(summary string, mutate func([]projection.Objec
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	live := c.proj.Live() // a fresh deep copy every call
-	rev := projection.Revision{
+	rev := projection.FixtureRevision{
 		Cursor:        live.Cursor + 1,
 		At:            time.Now().UTC().Format(time.RFC3339),
 		Summary:       summary,
