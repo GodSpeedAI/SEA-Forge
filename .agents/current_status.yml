@@ -45,15 +45,16 @@ execution:
         path, sandbox-class selection), committed this session; gates green
         (3-crate 57 ok/0 fail, mutations 10/10, supervisor 4/4, config 15,
         fmt + no-async-kernel EXIT 0); teeth pass incl. TDD baseline.
-      confirmation: .agents/evidence/casework-live-wiring/T04/confirmation.md
-      critic: >-
-        Independent t04-critic (run_00001, did not build T04) ran 2026-09-24:
-        full report via team mailbox (msg_00002+msg_00003). Verdict REJECT on
-        procedural grounds only (C uncommitted at review time; no T04/
-        confirmation.md; its live cargo re-runs hit a 30s env timeout) with
-        ZERO code findings and an APPROVE-gate checklist — every item closed
-        in confirmation.md. Standing as received; grounds remedied here.
-      settle_when: satisfied — see confirmation.md.
+      confirmation: .agents/evidence/casework-live-wiring/T04/confirmation-independent.md
+      confirmation_note: >-
+        OPERATIVE verdict (session-3 independent critic, 2026-09-24): APPROVE for units B+C —
+        gates EXIT=0 first attempt, teeth re-run, fresh-cell runtime attack passed, zero code
+        defects. Unit A retains its own confirmation (T04A/confirmation.md). The builder-written
+        T04/confirmation.md is a superseded historical artifact (session-2 self-reconciled a
+        critic REJECT; see decision log S2-1). Downstream flags in decision log D-2-impl-notes:
+        command frames not on the event bus (SEAM-5: T06/T09 need a bridge or run-trace read);
+        legacy submit/commit path has no per-append frames; artifact_get bound 1 MiB.
+      settle_when: satisfied — independent confirmation exists.
     T02:
       prereg: .agents/evidence/casework-live-wiring/prereg/T02.yaml # written 2026-09-23, BEFORE implementation; read it first
       note: >-

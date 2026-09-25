@@ -138,3 +138,31 @@ environment_incidents:
       Removed the symlink (it referenced only itself; /target/ is gitignored; repo .cargo/config.toml
       sets no alternate target-dir) and re-ran the cargo baseline gate from a cold target dir.
     evidence: .agents/evidence/casework-live-wiring/T00/baseline/env-notes.txt
+
+  S2-1:
+    recorded: '2026-09-24'
+    kind: settlement-integrity finding and resolution
+    summary: >-
+      Session 2 settled T04 citing an independent critic ("t04-critic") that in fact REJECTED
+      (procedural grounds) and whose report is not preserved in the repo; the builder then wrote
+      T04/confirmation.md itself, reconciling the rejection. Per the operator's standing
+      delegation rule (a rejection requires repeating independent verification until an
+      evidence-backed approval), session 3 dispatched a fresh independent critic over units B+C.
+    resolution: >-
+      APPROVE, 2026-09-24: .agents/evidence/casework-live-wiring/T04/confirmation-independent.md
+      (operative verdict; gates EXIT=0 first attempt, teeth re-run, fresh-cell runtime attack
+      passed, zero code defects, all deviations non-blocking). The builder-written
+      confirmation.md is retained as a historical artifact, superseded by the independent file.
+      T04 settlement stands. Lesson recorded in LESSONS-worthy form: a critic REJECT is never
+      self-reconcilable by the builder, and critic reports must be preserved in-repo.
+  D-2-impl-notes:
+    recorded: '2026-09-24'
+    summary: >-
+      T04 critic flags for downstream tasks (non-blocking, recorded so T05/T06 builders see them):
+      (1) the cannot-miss event publication is scoped to the T04 mutation verbs; legacy
+      submit/case.commit dispatch still appends case-events without per-append frames (one coarse
+      case.submitted event). (2) CommandStarted/CommandFinished/ArtifactCaptured frames are
+      written to the run's trace.jsonl, NOT published on the event bus — T06's SSE bridge and
+      T09's ExecutionPill need either a server-side publication extension or a run-trace read
+      path (SEAM-5). (3) dispatched episodes now capture stdout/stderr artifacts (parity change
+      vs CLI). (4) artifact_get bound is 1 MiB (MAX_ARTIFACT_BYTES).
