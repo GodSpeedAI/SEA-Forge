@@ -29,6 +29,23 @@ const (
 	KindArtifact   = "artifact"
 )
 
+// Adapter selections. The empty string selects the historical in-process provider; AdapterFixture
+// pins the test/dev fixture explicitly; AdapterLive selects the governed-kernel client. The
+// production build refuses to select the fixture adapters (plan guardrail), which is why the live
+// selection is named here rather than left to a free-form string.
+const (
+	AdapterEmpty   = ""
+	AdapterFixture = "fixture"
+	AdapterLive    = "sfwp"
+)
+
+// knownAdapters is the closed set of adapter selections a capability may name.
+var knownAdapters = map[string]bool{
+	AdapterEmpty:   true,
+	AdapterFixture: true,
+	AdapterLive:    true,
+}
+
 // Capability is one configured integration point.
 type Capability struct {
 	Name       string `json:"name"`
@@ -36,6 +53,10 @@ type Capability struct {
 	Required   bool   `json:"required"`
 	Endpoint   string `json:"endpoint,omitempty"`
 	Credential string `json:"credential,omitempty"`
+	// Adapter selects which wired implementation serves this capability. Empty means the historical
+	// in-process provider (which in serve mode is the fixture). Additive (T05): files without it
+	// keep their meaning, and the schema major stays "1".
+	Adapter string `json:"adapter,omitempty"`
 }
 
 // Document is the on-disk configuration schema.
@@ -191,6 +212,9 @@ func applyEnvironment(doc Document, env func(string) (string, bool)) Document {
 	}
 	for i := range doc.Capabilities {
 		c := &doc.Capabilities[i]
+		if v, ok := env(envKey("adapter", c.Name)); ok {
+			c.Adapter = v
+		}
 		if v, ok := env(envKey("endpoint", c.Name)); ok {
 			c.Endpoint = v
 		}
@@ -200,9 +224,23 @@ func applyEnvironment(doc Document, env func(string) (string, bool)) Document {
 		if v, ok := env(envKey("required", c.Name)); ok {
 			c.Required = v == "true" || v == "1"
 		}
+		// The live adapter's socket follows the kernel's own env posture
+		// (crates/sea-forge-server resolves its socket from SEA_FORGE_SOCKET):
+		// a capability that selects it may omit the endpoint and inherit the
+		// same environment variable. Anything still empty fails validation,
+		// so the fallback stays fail-closed.
+		if c.Endpoint == "" && c.Adapter == AdapterLive {
+			if v, ok := env(liveSocketEnv); ok {
+				c.Endpoint = v
+			}
+		}
 	}
 	return doc
 }
+
+// liveSocketEnv is the environment variable the governed kernel itself reads
+// its Unix socket path from; the sfwp adapter selection inherits it.
+const liveSocketEnv = "SEA_FORGE_SOCKET"
 
 func applyOverrides(doc Document, overrides map[string]string) Document {
 	for k, v := range overrides {
@@ -228,6 +266,8 @@ func applyOverrides(doc Document, overrides map[string]string) Document {
 					doc.Capabilities[i].Credential = v
 				case "required":
 					doc.Capabilities[i].Required = v == "true" || v == "1"
+				case "adapter":
+					doc.Capabilities[i].Adapter = v
 				}
 			}
 		}
@@ -290,6 +330,14 @@ func Validate(doc Document) []*apperr.Error {
 		default:
 			problems = append(problems, apperr.New(apperr.KindConfig, c.Name, "validate",
 				"unknown capability kind "+c.Kind))
+		}
+		if !knownAdapters[c.Adapter] {
+			problems = append(problems, apperr.New(apperr.KindConfig, c.Name, "validate",
+				"unknown adapter selection "+c.Adapter+" (known: fixture, sfwp)"))
+		}
+		if c.Adapter == AdapterLive && strings.TrimSpace(c.Endpoint) == "" {
+			problems = append(problems, apperr.New(apperr.KindConfig, c.Name, "validate",
+				"live adapter selection has no endpoint (the governed kernel's socket path)"))
 		}
 		if c.Required && strings.TrimSpace(c.Endpoint) == "" {
 			problems = append(problems, apperr.New(apperr.KindConfig, c.Name, "validate",

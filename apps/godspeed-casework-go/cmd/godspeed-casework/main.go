@@ -4,11 +4,13 @@
 // secret indirections, run preflight, and report each configured capability's state with a typed
 // error. It deliberately does NOT start any transport or accept work in that mode.
 //
-// With -serve it runs the same preflight first (registering the FIXTURE-LABELED in-process
-// providers so configured capabilities report honestly as ready), then serves the cognitive
-// projection API over HTTP+SSE from the Northstar fixture. FIXTURE-LABELED: the served
-// projections and the intent decisions come from the fixture allowlist, never from a governed
-// authority; the real adapters remain future work and must not be presented as wired here.
+// With -serve it runs the same preflight first, then serves the cognitive
+// projection API over HTTP+SSE from the Northstar fixture. FIXTURE-LABELED:
+// the served projections and the intent decisions still come from the fixture
+// allowlist, never from a governed authority (T06 wires the live projection).
+// What IS live since T05: a capability that selects adapter=sfwp is probed by
+// preflight through the real SFWP client (system.hello, readiness.get,
+// identity.get), and the fixture provider never stands in for it.
 package main
 
 import (
@@ -23,6 +25,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/artifactstore"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config"
@@ -70,13 +73,40 @@ func main() {
 		caps = append(caps, preflight.Capability{Name: c.Name, Kind: c.Kind, Required: c.Required})
 	}
 
+	// Live adapters are built for every capability that selects adapter=sfwp,
+	// in BOTH modes: preflight must probe the real governed authority (Health
+	// negotiates system.hello, reads readiness.get, and resolves identity.get)
+	// whenever the configuration selects it - never a fixture standing in for
+	// it. Construction can only fail on an empty socket path, which validation
+	// has already reported as that capability's own problem; the prober is
+	// then simply not registered, and preflight carries the typed config fault.
+	liveClients := map[string]*sfwp.Client{}
 	probers := map[string]ports.Health{}
+	for _, c := range resolved.Capabilities {
+		if c.Adapter != config.AdapterLive {
+			continue
+		}
+		client, err := sfwp.New(sfwp.Config{SocketPath: c.Endpoint})
+		if err != nil {
+			continue
+		}
+		liveClients[c.Name] = client
+		probers[c.Name] = sfwp.NewAuthority(client)
+	}
+	defer func() {
+		for _, client := range liveClients {
+			client.Close()
+		}
+	}()
 	if *serve {
-		// Serve mode registers the FIXTURE-LABELED in-process provider for every configured
-		// capability, so preflight sees them ready rather than "no adapter registered". Real
-		// adapter wiring replaces this loop in a later milestone.
+		// Serve mode registers the FIXTURE-LABELED in-process provider for the
+		// remaining capabilities, so preflight sees them ready rather than "no
+		// adapter registered". The projection/intent wiring onto the live
+		// authority is T06's work and must not be pretended here.
 		for _, c := range resolved.Capabilities {
-			probers[c.Name] = fixtureProvider{}
+			if _, live := liveClients[c.Name]; !live {
+				probers[c.Name] = fixtureProvider{}
+			}
 		}
 	}
 

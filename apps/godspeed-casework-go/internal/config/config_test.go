@@ -178,3 +178,72 @@ func TestUnknownKeyIsRejected(t *testing.T) {
 		t.Fatal("an unknown configuration key is a typo, not something to ignore silently")
 	}
 }
+
+// The sfwp adapter selection is selectable via config, env, or overrides, and
+// its socket may be inherited from SEA_FORGE_SOCKET - the same env the
+// governed kernel itself reads (plan T05).
+func TestLiveAdapterSelectionAndSocketFallback(t *testing.T) {
+	capabilityJSON := func(endpoint string) string {
+		if endpoint == "" {
+			return `{"name": "authority", "kind": "authority", "required": false, "adapter": "sfwp"}`
+		}
+		return `{"name": "authority", "kind": "authority", "required": false, "adapter": "sfwp", "endpoint": "` + endpoint + `"}`
+	}
+	load := func(endpoint string, env func(string) (string, bool)) (Capability, []*apperr.Error) {
+		path := writeFile(t, `{
+			"version": "1", "cell_root": "/cell",
+			"capabilities": [`+capabilityJSON(endpoint)+`]
+		}`)
+		resolved, _, problems := Load(path, Options{Env: env})
+		if len(resolved.Capabilities) != 1 {
+			t.Fatalf("want one capability, got %#v", resolved.Capabilities)
+		}
+		return resolved.Capabilities[0], problems
+	}
+	noEnv := func(string) (string, bool) { return "", false }
+
+	// A live selection with an explicit endpoint validates.
+	cap, problems := load("/cell/kernel.sock", noEnv)
+	if len(problems) != 0 {
+		t.Fatalf("a live selection with an endpoint must validate: %v", problems)
+	}
+	if cap.Adapter != AdapterLive || cap.Endpoint != "/cell/kernel.sock" {
+		t.Fatalf("selection not carried: %+v", cap)
+	}
+
+	// Adapter selection via environment, socket inherited from SEA_FORGE_SOCKET.
+	socketEnv := func(k string) (string, bool) {
+		if k == "GODSPEED_CAPABILITY_AUTHORITY_ADAPTER" {
+			return AdapterLive, true
+		}
+		if k == "SEA_FORGE_SOCKET" {
+			return "/run/sea-forge/server.sock", true
+		}
+		return "", false
+	}
+	cap, problems = load("", socketEnv)
+	if len(problems) != 0 {
+		t.Fatalf("live selection via env with SEA_FORGE_SOCKET must validate: %v", problems)
+	}
+	if cap.Adapter != AdapterLive {
+		t.Fatalf("env adapter selection not applied: %+v", cap)
+	}
+	if cap.Endpoint != "/run/sea-forge/server.sock" {
+		t.Fatalf("the socket must be inherited from SEA_FORGE_SOCKET, got %q", cap.Endpoint)
+	}
+
+	// An explicit endpoint wins over the SEA_FORGE_SOCKET inheritance.
+	cap, problems = load("/cell/kernel.sock", socketEnv)
+	if len(problems) != 0 {
+		t.Fatalf("unexpected problems: %v", problems)
+	}
+	if cap.Endpoint != "/cell/kernel.sock" {
+		t.Fatalf("the explicit endpoint must win over SEA_FORGE_SOCKET, got %q", cap.Endpoint)
+	}
+
+	// No endpoint anywhere: validation refuses the live selection (fail-closed).
+	_, problems = load("", noEnv)
+	if len(problems) == 0 || apperr.CapabilityOf(problems[0]) != "authority" {
+		t.Fatalf("a live selection with no socket must be a capability problem: %v", problems)
+	}
+}
