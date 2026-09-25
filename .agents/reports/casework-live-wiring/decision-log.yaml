@@ -166,3 +166,15 @@ environment_incidents:
       T09's ExecutionPill need either a server-side publication extension or a run-trace read
       path (SEAM-5). (3) dispatched episodes now capture stdout/stderr artifacts (parity change
       vs CLI). (4) artifact_get bound is 1 MiB (MAX_ARTIFACT_BYTES).
+
+  D-3-followups:
+    recorded: '2026-09-25'
+    kind: kernel fixes during T05 (T04-scope defects)
+    decisions: >-
+      (1) WriteFile episodes materialize via sea_forge_sandbox::materialize, capture the written
+      file as a content-addressed artifact, and settle on the honest write_only basis (F-10);
+      run traces for write-only episodes contain NO CommandStarted/CommandFinished (no command
+      ran). L4 command-frame expectations apply to execute_command items — T09/T10 must assert
+      per-item-kind. (2) case.trace.<kind> event names are snake_case (item_activated) — the
+      helper now matches its doc; the Go adapter + goldens are the only consumers and were
+      updated. Evidence: .agents/evidence/casework-live-wiring/T05/kernel-fix/summary.md.

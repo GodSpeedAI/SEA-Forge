@@ -869,7 +869,7 @@ pub(crate) fn execute_sandbox(
         )?;
         delegation::append_approval_view(&root, &approval)?;
     }
-    let execution = if decision.verdict == Verdict::Allow {
+    let (execution, write_only) = if decision.verdict == Verdict::Allow {
         // The Allow is committed (`decision_ref`) before anything is written.
         fs::create_dir_all(&workspace).map_err(|e| ForgeError::io("create workspace", e))?;
         fs::create_dir_all(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
@@ -879,73 +879,116 @@ pub(crate) fn execute_sandbox(
             serde_json::json!({"workspace": workspace.display().to_string()}),
         )?;
         let grant = engine.grant(&decision, &decision_ref, &action, None)?;
-        trace.append(
-            TraceKind::CommandStarted,
-            Some(item.plan_item_id.clone()),
-            // `ActionGrant`'s fields are private, so the trace names the
-            // committed decision the grant was minted from — which is the
-            // cross-reference an auditor follows anyway.
-            serde_json::json!({"decision_id": decision.decision_id}),
-        )?;
-        let result = sea_forge_runtime::execute(
-            grant,
-            &ExecutionRequest {
-                plan_item_id: item.plan_item_id.clone(),
-                operation,
-                timeout_secs: timeout,
-                env: BTreeMap::from([
-                    (
-                        String::from("PATH"),
-                        std::env::var("PATH").unwrap_or_default(),
-                    ),
-                    (
-                        String::from("HOME"),
-                        std::env::var("HOME").unwrap_or_default(),
-                    ),
-                ]),
-                compensating_controls: decision.compensating_controls.clone(),
-            },
-            run_id,
-            &workspace,
-            &artifacts,
-        )?;
-        let finished = trace.append(
-            TraceKind::CommandFinished,
-            Some(item.plan_item_id.clone()),
-            serde_json::json!({
-                "status": result.status,
-                "exit_code": result.exit_code,
-            }),
-        )?;
-        evidence.append(
-            EvidenceKind::ExecutionResult,
-            result.stdout_path.clone(),
-            None,
-            finished,
-            BTreeMap::new(),
-        )?;
-        // Capture the execution's own outputs as content-addressed artifacts,
-        // exactly as the CLI pipeline does (`cli/src/pipeline.rs`): stdout and
-        // stderr become `ArtifactCaptured` trace events plus evidence records,
-        // which is also what sentries with `ArtifactExists` predicates read.
-        // Before this, a server-dispatched episode produced files no derived
-        // workspace state could ever see.
-        for name in ["stdout.txt", "stderr.txt"] {
-            let event = trace.append(
-                TraceKind::ArtifactCaptured,
+        if matches!(
+            operation,
+            sea_forge_core::types::Operation::WriteFile { .. }
+        ) {
+            // F-10, write-only item: the operation is a governed file write,
+            // not a process. It materializes under the grant — the same
+            // `sea_forge_sandbox::materialize` path the CLI plan pipeline uses
+            // (`cli/src/pipeline.rs:519`) — and settles on the materialized
+            // workspace with the honest `write_only` basis. Routing it through
+            // the command executor instead produced `input_error`
+            // ("requires non-empty execute_command") for every template that
+            // declares a `write_file` op, i.e. every governed write.
+            // No CommandStarted/CommandFinished: no command ran.
+            sea_forge_sandbox::materialize(
+                grant,
+                &workspace,
+                run_id,
+                &item.plan_item_id,
+                &operation,
+                &decision.compensating_controls,
+            )?;
+            // The written file is the episode's work product: capture it as a
+            // content-addressed artifact (same path stdout/stderr take for
+            // command episodes) so `artifact.get`, sentries with
+            // `ArtifactExists` predicates, and the evidence dock can reach it.
+            if let sea_forge_core::types::Operation::WriteFile { path, .. } = &operation {
+                let event = trace.append(
+                    TraceKind::ArtifactCaptured,
+                    Some(item.plan_item_id.clone()),
+                    serde_json::json!({"artifact": path}),
+                )?;
+                sea_forge_evidence::capture_file(
+                    &workspace.join(path),
+                    &artifacts,
+                    path,
+                    &mut evidence,
+                    event,
+                    None,
+                )?;
+            }
+            (None, true)
+        } else {
+            trace.append(
+                TraceKind::CommandStarted,
                 Some(item.plan_item_id.clone()),
-                serde_json::json!({"artifact": name}),
+                // `ActionGrant`'s fields are private, so the trace names the
+                // committed decision the grant was minted from — which is the
+                // cross-reference an auditor follows anyway.
+                serde_json::json!({"decision_id": decision.decision_id}),
             )?;
-            sea_forge_evidence::capture_file(
-                &artifacts.join(name),
+            let result = sea_forge_runtime::execute(
+                grant,
+                &ExecutionRequest {
+                    plan_item_id: item.plan_item_id.clone(),
+                    operation,
+                    timeout_secs: timeout,
+                    env: BTreeMap::from([
+                        (
+                            String::from("PATH"),
+                            std::env::var("PATH").unwrap_or_default(),
+                        ),
+                        (
+                            String::from("HOME"),
+                            std::env::var("HOME").unwrap_or_default(),
+                        ),
+                    ]),
+                    compensating_controls: decision.compensating_controls.clone(),
+                },
+                run_id,
+                &workspace,
                 &artifacts,
-                name,
-                &mut evidence,
-                event,
-                None,
             )?;
+            let finished = trace.append(
+                TraceKind::CommandFinished,
+                Some(item.plan_item_id.clone()),
+                serde_json::json!({
+                    "status": result.status,
+                    "exit_code": result.exit_code,
+                }),
+            )?;
+            evidence.append(
+                EvidenceKind::ExecutionResult,
+                result.stdout_path.clone(),
+                None,
+                finished,
+                BTreeMap::new(),
+            )?;
+            // Capture the execution's own outputs as content-addressed artifacts,
+            // exactly as the CLI pipeline does (`cli/src/pipeline.rs`): stdout and
+            // stderr become `ArtifactCaptured` trace events plus evidence records,
+            // which is also what sentries with `ArtifactExists` predicates read.
+            // Before this, a server-dispatched episode produced files no derived
+            // workspace state could ever see.
+            for name in ["stdout.txt", "stderr.txt"] {
+                let event = trace.append(
+                    TraceKind::ArtifactCaptured,
+                    Some(item.plan_item_id.clone()),
+                    serde_json::json!({"artifact": name}),
+                )?;
+                sea_forge_evidence::capture_file(
+                    &artifacts.join(name),
+                    &artifacts,
+                    name,
+                    &mut evidence,
+                    event,
+                    None,
+                )?;
+            }
+            (Some(result), false)
         }
-        Some(result)
     } else {
         // Nothing ran. Reporting this as a `SpawnFailed` execution — as this
         // used to — describes a spawn that was attempted and failed, which is
@@ -956,7 +999,7 @@ pub(crate) fn execute_sandbox(
             Some(item.plan_item_id.clone()),
             serde_json::json!({"verdict": decision.verdict}),
         )?;
-        None
+        (None, false)
     };
 
     // Settlement evaluates the declared criteria against the evidence the run
@@ -974,7 +1017,9 @@ pub(crate) fn execute_sandbox(
             authority_verdicts: vec![decision.verdict.clone()],
             evaluator_scores: BTreeMap::new(),
             batch: None,
-            write_only: false,
+            // F-10: a materialized write_file episode has no process result;
+            // the honest basis settles it on the required artifacts it wrote.
+            write_only,
         },
         &workspace,
         &run_dir,

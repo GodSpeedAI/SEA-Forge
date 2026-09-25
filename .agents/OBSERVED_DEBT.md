@@ -1045,3 +1045,50 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   created case directories; typed error class would make recovery deterministic.
 - Next move: T11 (operational hardening) adds a typed commit failure class + scratch-directory
   reconciliation; T05's get_status recovery already avoids double-committing.
+
+## RESOLVED 2026-09-25: sea-forge-server cannot execute write_file plan items (episode dispatch routes every operation through the command sandbox)
+
+- Observed: 2026-09-24 (casework-live-wiring T05 live wiring; reproduced on fresh temp cells).
+- Evidence: item.execute / case.advance on the E2E templates settles `rejected` with durable basis
+  `["episode_dispatch_error","input_error"]` and no CommandFinished/ArtifactCaptured trace
+  (.agents/evidence/casework-live-wiring/T05/gates/go-test-race-live-sfwp.log,
+  TestLiveExecutionProducesAcceptedArtifacts skip transcript). Root cause:
+  crates/sea-forge-server/src/case_dispatch.rs `execute_sandbox` sends every operation through
+  sea_forge_runtime::execute -> sandbox `execute`, which accepts only execute_command
+  (crates/sea-forge-sandbox/src/{local,jail}.rs return input_error for WriteFile), while the CLI
+  routes WriteFile through sea_forge_sandbox::materialize (crates/sea-forge-cli/src/pipeline.rs:519).
+  The T04 Rust tests never hit this because their plans use execute_command against a trusted
+  self-executable; the T03 E2E templates use write_file.
+- Impact: T05's accepted-episode proof (artifact.get happy path, sentry unlocking, advance to
+  completion) is encoded as documented skips that assert the failure shape; plan T10 ladder step L4
+  (execute -> ItemCompleted -> downstream unlock) cannot pass until this is fixed.
+- Next move: smallest fix is in execute_sandbox - route `Operation::WriteFile` through
+  `sea_forge_sandbox::materialize` exactly as the CLI does (authority grant is already evaluated
+  there), then re-capture goldens (`GOLDEN_CAPTURE=testdata go test -tags live -run TestGoldenCapture
+  ./internal/adapters/sfwp/`) and the two skips disappear on their own.
+- Scope: kernel-side, pre-existing since T04; discovered by T05's live proof. T05 was forbidden from
+  touching crates/ so the fix is deliberately left to a kernel-scoped task.
+- RESOLVED 2026-09-25 (orchestrator): execute_sandbox routes Operation::WriteFile through
+  sea_forge_sandbox::materialize, captures the written file as a content-addressed artifact, and
+  settles with the honest write_only basis (F-10). Goldens re-captured; both T05 skips
+  self-resolved. Evidence: .agents/evidence/casework-live-wiring/T05/kernel-fix/summary.md.
+
+## RESOLVED 2026-09-25: server publishes case.trace event kinds in concatenated-lowercase, not snake_case
+
+- Observed: 2026-09-24 (casework-live-wiring T05 subscription proof).
+- Evidence: the events ledger carries `case.trace.itemactivated`, `case.trace.planmutated`,
+  `case.trace.humantaskcompleted` - but crates/sea-forge-server/src/sfwp/case_mutations.rs:122's
+  `trace_kind_snake` doc comment claims `PlanMutated` -> `plan_mutated`. The implementation is
+  `format!("{kind:?}").to_lowercase()`, which never inserts underscores. Recorded verbatim in
+  testdata/frames.json and asserted in the T05 subscription test.
+- Impact: T06 (SSE relay), T09 (ExecutionPill matching) and T10 (ladder TraceKind waits) must match
+  the real spelling. Anyone "fixing" the doc or the helper later changes the wire contract for
+  subscribers (ADR-003 additive rule: treat a spelling change as a breaking change to consumers).
+- Next move: either align the helper with its doc (snake_case) behind an additive dual-publish, or
+  correct the doc; decide before T06 wires SSE, and record the choice in the decision log.
+- Scope: kernel-side naming inconsistency, pre-existing since T04.
+- RESOLVED 2026-09-25 (orchestrator): aligned the helper with its doc — trace_kind_snake now emits
+  real snake_case (item_activated). No dual-publish needed: the only subscriber-side consumer of
+  these names (the Go sfwp adapter, uncommitted at fix time) was updated and its goldens
+  re-captured; tests/sfwp_case_mutations.rs literals corrected. Decision recorded: the wire
+  spelling for case.trace.<kind> events is snake_case going forward (decision log D-3-followups).

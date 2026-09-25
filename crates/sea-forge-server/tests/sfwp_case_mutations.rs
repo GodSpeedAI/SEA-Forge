@@ -1119,7 +1119,7 @@ async fn subscriber_kill_and_resume_replays_without_gaps_or_duplicates() {
         .await;
     assert_eq!(add["ok"], true, "{add}");
 
-    let frame = subscriber.next_event("case.trace.planmutated").await;
+    let frame = subscriber.next_event("case.trace.plan_mutated").await;
     assert_eq!(frame["case_id"], case_id.as_str());
     assert_eq!(frame["detail"]["kind"], "plan_mutated");
     assert_eq!(frame["detail"]["plan_item_id"], "extra");
@@ -1161,7 +1161,7 @@ async fn subscriber_kill_and_resume_replays_without_gaps_or_duplicates() {
         "replayed count must equal the frames delivered before the ack"
     );
     assert_eq!(
-        replayed_frames[0]["kind"], "case.trace.caseterminated",
+        replayed_frames[0]["kind"], "case.trace.case_terminated",
         "replay must lead with the frame the killed subscriber missed"
     );
 

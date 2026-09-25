@@ -119,9 +119,23 @@ pub struct ArtifactView {
 }
 
 /// The snake_case wire spelling of a `TraceKind` (`PlanMutated` →
-/// `plan_mutated`) used for `case.trace.<kind>` event kinds.
+/// `plan_mutated`, `ItemActivated` → `item_activated`) used for
+/// `case.trace.<kind>` event kinds. `{:?}` lowercased would concatenate
+/// humps (`itemactivated`), which no consumer should have to guess at.
 fn trace_kind_snake(kind: sea_forge_core::types::TraceKind) -> String {
-    format!("{kind:?}").to_lowercase()
+    let debug = format!("{kind:?}");
+    let mut out = String::with_capacity(debug.len() + 4);
+    for (index, ch) in debug.chars().enumerate() {
+        if ch.is_ascii_uppercase() {
+            if index > 0 {
+                out.push('_');
+            }
+            out.push(ch.to_ascii_lowercase());
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }
 
 /// Run a synchronous case mutation on a blocking thread, publishing one
