@@ -80,15 +80,24 @@ delegated request.
 
 ## Revocation
 
-Bindings and allowlist entries are read from the live server config on
-every request (the gate resolves against state.config() per request).
-Removing a binding or allowlist entry takes effect on the NEXT request:
-no session, token, or cache exists to expire. In-flight requests keep the
-ResolvedActor they verified; revocation cannot rewrite a verified actor
-mid-flight nor retract committed ledger records (still honestly
-attributed to both principals at decision time). Removing the whole
-gateway section disables all delegation from the next request. Changing
-the gateway uid re-binds the principal; the old uid is refused next.
+Bindings and allowlist entries are resolved against `state.config()` at the
+gate, so a config reload governs the next gate evaluation. WHEN that reload
+happens is narrower than "every request": `reload_config()` is currently
+invoked on the `commit_plan` path (and at process start), so an operator
+editing server.yaml must trigger a commit (or restart the server) before a
+removed binding or allowlist entry stops being honoured on non-commit
+requests. This timing was empirically probed by the independent T02 critic
+(T02/critic/, "removed allowlist entry still honoured until commit/restart")
+and is recorded here as the true revocation semantics — CORRECTED 2026-09-24
+from a draft that overclaimed next-request effect. In-flight requests keep
+the ResolvedActor they verified; revocation cannot rewrite a verified actor
+mid-flight nor retract committed ledger records (still honestly attributed
+to both principals at decision time). Removing the whole gateway section
+disables all delegation once the same reload boundary is crossed; changing
+the gateway uid re-binds the principal the same way. If next-request
+revocation becomes a requirement, extend the `reload_config()` call sites
+(e.g. SIGHUP or a reload verb); until then, treat commit/restart as the
+revocation boundary when operating a gateway cell.
 
 ## Audit fields
 

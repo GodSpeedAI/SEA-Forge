@@ -4109,3 +4109,11 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > session-2's T04 settlement rests on a builder-written reconciliation of a critic REJECT (the
 > critic's report is not in the repo) — session 3 is re-running the independent T04 verification
 > (T04/confirmation-independent.md) before treating T04 as confirmed-settled.
+
+> **2026-09-24 (session 3) T02 SETTLED — delegated actor identity (GAP-B):** independent critic
+> APPROVE (T02/confirmation.md): prereg falsifier never realized; four mandated refusals
+> reproduced as fresh-cell runtime attacks with hash-proven zero writes; dual-principal ledger +
+> effective-actor identity.get verified; wire additivity intact. Critic findings handled: ADR
+> revocation-timing corrected (commit/restart boundary, F-7), OPEN_QUESTIONS ActorRole::Gateway
+> entry (F-8), OBSERVED_DEBT partial-case-dir entry (F-9, T11). T04 also independently confirmed
+> this session (confirmation-independent.md). T05 (Go SFWP client) in flight.

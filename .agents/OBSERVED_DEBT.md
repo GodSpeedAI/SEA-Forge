@@ -1034,3 +1034,14 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   window) when T06 replaces the coordinator's fixture core; until then, gate runners must rerun a
   red coordinator suite once in isolation before treating it as a task regression.
 - Scope: pre-existing at T01; not introduced or worsened by this plan's changes.
+
+## Open: pre-existing untyped mid-handler commit error can leave a partial case directory
+
+- Observed: 2026-09-24 (independent T02 critic, finding F-9; pre-existing, not introduced by T02).
+- Evidence: a mid-handler failure during case.commit leaves a partial `cases/case-*` directory with
+  no correlated terminal state; the error surfaces untyped. Probe transcript in
+  .agents/evidence/casework-live-wiring/T02/critic/.
+- Impact: client retry semantics and T11's operational hardening must account for partially
+  created case directories; typed error class would make recovery deterministic.
+- Next move: T11 (operational hardening) adds a typed commit failure class + scratch-directory
+  reconciliation; T05's get_status recovery already avoids double-committing.

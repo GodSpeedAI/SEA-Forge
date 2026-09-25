@@ -22,16 +22,18 @@ metadata:
       is the historical narrative; the machine state is THIS file.
 
 execution:
-  last_settled_task: T04
-  settled_tasks: [T00, T01, T03, T04]
-  in_flight_task: T02
+  last_settled_task: T02
+  settled_tasks: [T00, T01, T02, T03, T04]
+  in_flight_task: T05
   ready_tasks: []
   blocked_tasks: [T05, T06, T07, T08, T09, T10, T11, T12, T13]
   t02_state: >-
-    Builder-complete 2026-09-24 (session 3): implementation + ADR + 9/9 delegated-identity tests
-    (all prereg teeth as permanent tests) + full gates green with true EXIT capture + dual-principal
-    ledger proof + workbench IdentityView schema/TS regen. Committed with confirmation PENDING:
-    session-3 independent critic must confirm (prereg confirmation_condition) before T02 settles.
+    SETTLED 2026-09-24 (session 3): independent critic APPROVED (T02/confirmation.md) — all prereg
+    refusals reproduced as fresh-cell runtime attacks with hash-proven no-writes, positive
+    dual-principal flows verified, wire additivity confirmed, all gates re-run green. Critic
+    findings handled: F-7 ADR revocation-timing overclaim corrected in the ADR (true boundary is
+    commit_plan/restart); F-8 OPEN_QUESTIONS entry added (ActorRole::Gateway variant); F-9
+    OBSERVED_DEBT entry (pre-existing partial case dir on mid-handler failure, T11).
   plan_blocked: false
   plan_blocker: null
   external_blockers: []
@@ -76,20 +78,21 @@ operator_decisions:
     agent_protocol.git rules below. Make frequent commits at meaningful milestones. It may never push, fetch, pull, rebase, reset, merge or clean.
 
 next_action:
-  task: T02
+  task: T05
   action: >-
-    Resume HERE. Branch casework/live-wiring; commits 8ad72ac (T00), 23e90b8 (T01), 1b73724 (T04A),
-    b271a99 (T03), 9c153b2 (T04B) + unit-C commit (this session, T04 SETTLED) are in.
-    Do these in order:
-    (1) T02 (prereg already written at prereg/T02.yaml; spec in
-    execution.task_detail.T02: ADR-first, gateway section default NONE
-    fail-closed, effective actor through EVERY protected verb incl. T04B
-    verbs, both principals ledgered, SoD on end users, identity.get
-    effective actor; gates: cargo test -p sea-forge-server identity +
-    --test '*delegat*'; teeth per prereg; confirmation per plan).
-    (2) Then T05 (needs T02+T03+T04), T06 (T01+T05), T07 (T04+T05), T08 (T01+T06+T07), T09
-    (T03+T06+T08), T10 (T08+T09; prereg required per plan — write it before implementation),
-    T11, T12. T13: split into tasks in the plan and STOP for operator review first.
+    T02 SETTLED 2026-09-24 (independent critic APPROVE; prereg confirmation_condition satisfied on
+    fresh cells). T05 builder is IN FLIGHT (session 3; Go SFWP client at apps/godspeed-casework-go/
+    internal/adapters/sfwp mirroring bridge.rs discipline: request_id correlation, get_status
+    recovery, typed identity errors, bounded pool, subscribe with cursor resume; ports + config +
+    preflight wiring; live-tagged integration tests starting the real server via TestMain). On
+    builder completion: orchestrator reviews, then independent critic re-runs gates
+    (go vet ./... && go test -race ./...; go test -race -tags live ./internal/adapters/sfwp/...)
+    and teeth (unknown-verb typed unavailable, no retry storm; kill-mid-commit recovery via
+    request.get_status without double-commit), then settle T05. Then T06 (needs T01+T05; see
+    decision log D-2-impl-notes: command frames are NOT on the event bus — the SSE bridge needs a
+    run-trace read path or a server extension; legacy submit/commit has only coarse events).
+    T07 (T04+T05). T08 (T01+T06+T07). T09 (T03+T06+T08). T10 (T08+T09; write prereg first).
+    T11, T12. T13: split into plan tasks and STOP for operator review.
 
 agent_protocol:
   read_order:

@@ -39,3 +39,14 @@ and in .agents/CURRENT_STATUS.md. Gates M13 (TranscriptEvidence). -->
   repeatable refresh/revisit requirement of the golden path.
 
   **recomendation is approved** 
+
+## Open: should ActorRole gain a Gateway variant for the gateway principal? (T02/D-2 deviation)
+
+- Raised: 2026-09-24 (independent T02 critic, finding F-8).
+- D-2's wording says the gateway binds to "role 'gateway'", but `ActorRole` is a kernel enum that
+  serializes into ledgers and has no `Gateway` variant; T02 implements delegation standing via the
+  `gateway:` config section + ordinary identity bindings instead (fail-closed either way).
+- Operator decision needed only if a ledger-visible Gateway role is wanted; nothing in the ADR
+  depends on the answer (adr-identity-delegation.md, "Gateway principal: which role").
+- Related: revocation timing is commit/restart-bounded until `reload_config()` gains more call
+  sites (ADR Revocation section, corrected 2026-09-24 per critic F-7).
