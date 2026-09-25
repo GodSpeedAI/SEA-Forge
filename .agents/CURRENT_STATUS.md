@@ -4117,3 +4117,9 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > revocation-timing corrected (commit/restart boundary, F-7), OPEN_QUESTIONS ActorRole::Gateway
 > entry (F-8), OBSERVED_DEBT partial-case-dir entry (F-9, T11). T04 also independently confirmed
 > this session (confirmation-independent.md). T05 (Go SFWP client) in flight.
+
+> **2026-09-25 T05 SETTLED — Go SFWP client (SEAM-4) + kernel fixes:** independent critic APPROVE
+> (T05/critic/confirmation.md): live suite 14 PASS / 0 skip(except env-gated capture) / 0 races;
+> kill-mid-commit recovery proven from a kept cell (exactly one CaseCreated); kernel fixes 514fc72
+> verified (AUTH-01 ordering, artifact digest re-derived independently, write_only basis, snake_case
+> events). T06 (projection + intents) in flight; T07 sequential after it (shared files).
