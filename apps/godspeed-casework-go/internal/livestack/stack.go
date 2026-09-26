@@ -1,17 +1,28 @@
-// Package livestack assembles the full T06 live gateway over one livetest cell: the same wiring
-// main.go's serveLive performs (T05 client -> authority -> live source -> relay -> intents ->
-// HTTP surface). It exists so the -tags live tests in other packages exercise the gateway exactly
-// the way production wires it, without import cycles into the packages under test.
+// Package livestack assembles the full T06/T07 live gateway over one livetest cell: the same
+// wiring main.go's serveLive performs (T05 client -> authority -> live source -> relay -> intents
+// -> HTTP surface, with the T07 session layer: dev-mode authenticator, sessions, CSRF, rate
+// limits). It exists so the -tags live tests in other packages exercise the gateway exactly the
+// way production wires it, without import cycles into the packages under test.
 package livestack
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/http/cookiejar"
+	"net/http/httptest"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
@@ -35,7 +46,7 @@ type Stack struct {
 	Cancel     func()
 }
 
-// AssembleStack wires the full live stack over the cell's kernel.
+// AssembleStack wires the full live stack (T06 projection + T07 sessions) over the cell's kernel.
 func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -63,6 +74,9 @@ func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
 	})
 	api := server.New(source, dispatcher, source, store, relay, server.Options{
 		Perspective: ports.ActorClaim{ActorID: "operator_local", Role: "operator"},
+		Auth:        TestAuthOptions(t),
+		Ready:       authority,
+		RateLimit:   server.RateLimitOptions{PerMinute: 600, Burst: 100},
 	})
 
 	return &Stack{
@@ -76,6 +90,134 @@ func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
 		API:        api,
 		Cancel:     cancel,
 	}
+}
+
+// TestAuthOptions is the T07 dev-mode session wiring the live tests share: two users mapping to
+// the cell's two delegable end-user actors (the shape T10's two-user L5 ladder needs), short
+// session TTLs, and no cookie Secure flag (plain-HTTP httptest).
+func TestAuthOptions(t *testing.T) server.AuthOptions {
+	t.Helper()
+	store, err := auth.NewLocalUserStore(auth.ModeDev, []auth.User{
+		{Username: "operator", DisplayName: "Operator", ActorID: "operator_local", Role: "operator"},
+		{Username: "rso", DisplayName: "R-SO", ActorID: "rso_local", Role: "R-SO"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return server.AuthOptions{
+		Authenticator: store,
+		Sessions:      auth.NewSessionStore(30*time.Minute, time.Hour, 0, nil),
+		CookieSecure:  false,
+	}
+}
+
+// Session is one authenticated browser user against the stack's HTTP surface: a cookie-jarred
+// client bound to its server-side session, plus the CSRF token every state-changing POST must
+// carry. The kernel standing is fixed by the session (operator_local/operator or rso_local/R-SO).
+type Session struct {
+	t    *testing.T
+	base string
+	// Client is the cookie-jarred HTTP client bound to this server-side session.
+	Client   *http.Client
+	CSRF     string
+	Identity auth.Identity
+}
+
+// Login runs the credential flow against an httptest server wrapping the stack's API and
+// returns the authenticated session. The dev posture does not check passwords; the point of the
+// exercise is the session/CSRF/actor path.
+func (s *Stack) Login(t *testing.T, base, username string) *Session {
+	t.Helper()
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess := &Session{t: t, base: base, Client: &http.Client{Jar: jar}}
+	// Any GET mints the pre-login CSRF cookie (double submit).
+	resp, err := sess.Client.Get(base + "/api/session")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	// POST the credentials with the cookie's value echoed in the header.
+	body := fmt.Sprintf(`{"username":%q,"password":"livetest"}`, username)
+	req, err := http.NewRequest(http.MethodPost, base+"/api/auth/login", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-CSRF-Token", sess.cookieValue(base, "casework_csrf"))
+	resp, err = sess.Client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		t.Fatalf("login as %s: status %d body %s", username, resp.StatusCode, raw)
+	}
+	var wire struct {
+		Authenticated bool   `json:"authenticated"`
+		Username      string `json:"username"`
+		ActorID       string `json:"actor_id"`
+		Role          string `json:"role"`
+		CSRFToken     string `json:"csrf_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
+		t.Fatal(err)
+	}
+	if !wire.Authenticated || wire.CSRFToken == "" {
+		t.Fatalf("login as %s did not start a session: %+v", username, wire)
+	}
+	sess.CSRF = wire.CSRFToken
+	sess.Identity = auth.Identity{Username: wire.Username, ActorID: wire.ActorID, Role: wire.Role}
+	return sess
+}
+
+// HTTPServer wraps the stack's API in an httptest server (each test runs its own instance).
+func (s *Stack) HTTPServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewServer(s.API.Handler())
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+func (s *Session) cookieValue(base, name string) string {
+	s.t.Helper()
+	u, err := url.Parse(base)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	for _, c := range s.Client.Jar.Cookies(u) {
+		if c.Name == name {
+			return c.Value
+		}
+	}
+	return ""
+}
+
+// Get performs an authenticated GET and returns the response (caller closes the body).
+func (s *Session) Get(path string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodGet, s.base+path, nil)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	return s.Client.Do(req)
+}
+
+// PostJSON performs an authenticated state-changing POST with the session's CSRF token.
+func (s *Session) PostJSON(path string, body any) (*http.Response, error) {
+	raw, err := json.Marshal(body)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	req, err := http.NewRequest(http.MethodPost, s.base+path, bytes.NewReader(raw))
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-CSRF-Token", s.CSRF)
+	return s.Client.Do(req)
 }
 
 // CommitSentryChain commits the T03 sentry-chain template as the delegated operator and returns

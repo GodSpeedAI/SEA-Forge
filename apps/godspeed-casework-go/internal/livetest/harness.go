@@ -317,6 +317,39 @@ func (c *Cell) CaseDirs() []string {
 	return out
 }
 
+// DelegationAuditRecords reads the cell's delegation-audit ledger (the T02 durable
+// pair-principal record for every admitted delegated request). The file is JSONL; records that
+// fail to parse are skipped.
+func (c *Cell) DelegationAuditRecords() []map[string]any {
+	raw, err := os.ReadFile(filepath.Join(c.root, "ledgers", "delegation-audit", "entries.jsonl"))
+	if err != nil {
+		return nil
+	}
+	var out []map[string]any
+	for _, line := range splitLines(string(raw)) {
+		var rec map[string]any
+		if jsonUnmarshal([]byte(line), &rec) == nil {
+			out = append(out, rec)
+		}
+	}
+	return out
+}
+
+// FindDelegationRecord returns the payload of the delegation-audit record for one request id
+// (nil when none exists - the proof surface for "this delegated request was never admitted").
+func (c *Cell) FindDelegationRecord(requestID string) map[string]any {
+	for _, rec := range c.DelegationAuditRecords() {
+		payload, _ := rec["payload"].(map[string]any)
+		if payload == nil {
+			continue
+		}
+		if rid, _ := payload["request_id"].(string); rid == requestID {
+			return payload
+		}
+	}
+	return nil
+}
+
 // GatewayGov is the gateway principal's own claim in the T06 cell.
 func GatewayGov() sfwp.Governance {
 	return sfwp.Governance{Actor: sfwp.Actor{ActorID: "gateway", Role: "service"}}

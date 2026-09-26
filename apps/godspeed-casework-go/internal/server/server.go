@@ -6,13 +6,15 @@
 // The wire contract is the T01 ADR (.agents/reports/casework-live-wiring/adr-wire-contract.md):
 // /api/world, /api/intents, /api/templates, /api/templates/preflight and /api/events serve the
 // internal/contract shapes; refusals are typed outcomes, never transport errors. The server holds
-// no state of its own: the world source, intent dispatcher, template source, and relay are
+// no case state of its own: the world source, intent dispatcher, template source, and relay are
 // injected, and there are no globals. The FIXTURE-LABELED surface of the same package lives in
 // fixture_server.go behind the casework_fixture build tag (tests and dev/demo only).
 //
-// Authentication (sessions, cookies, the browser-user to kernel-actor mapping) is T07: until it
-// lands, /api/world accepts an explicit ?actor=&role= perspective (verified against the kernel's
-// identity.get delegation rules), and intents carry the acting user in their envelope.
+// Authentication (T07): every route except /api/healthz, /api/readyz and the auth entry points
+// requires a session. Identity is session-bound and maps to the kernel actor through the T02
+// delegation allowlist; the pre-auth ?actor=&role= dev surface is refused. Sessions, CSRF and
+// the dev static-token mode live in session.go; static UI serving in static.go; the intent rate
+// limit in ratelimit.go; correlation logging in logging.go.
 package server
 
 import (
@@ -66,30 +68,79 @@ type RelayCursors interface {
 
 // Server wires the injected live stack into the HTTP surface.
 type Server struct {
-	world   WorldSource
-	intents IntentDispatcher
-	tpl     TemplateSource
-	store   RevisionHistory
-	relay   RelayCursors
-	opts    Options
+	world          WorldSource
+	intents        IntentDispatcher
+	tpl            TemplateSource
+	store          RevisionHistory
+	relay          RelayCursors
+	opts           Options
+	intentsLimiter *RateLimiter
 }
 
 // New builds the live server. Every dependency is injected.
 func New(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, store RevisionHistory, relay RelayCursors, opts Options) *Server {
-	return &Server{world: world, intents: dispatcher, tpl: tpl, store: store, relay: relay, opts: opts}
+	return &Server{
+		world:          world,
+		intents:        dispatcher,
+		tpl:            tpl,
+		store:          store,
+		relay:          relay,
+		opts:           opts,
+		intentsLimiter: NewRateLimiter(opts.RateLimit.PerMinute, opts.RateLimit.Burst, 0, nil),
+	}
 }
 
-// Handler returns the routed HTTP handler, wrapped for colocated browser access (the same
-// loopback-only CORS posture the boundary has always had).
+// Handler returns the routed HTTP surface. The posture (T07):
+//
+//	public:      GET /api/healthz, GET /api/readyz
+//	auth entry:  GET|POST /api/auth/login, GET /api/auth/callback, POST /api/auth/logout,
+//	             GET /api/session (always answers; unauthenticated = authenticated:false)
+//	protected:   GET /api/world, /api/events, /api/templates  -> session required (401 otherwise)
+//	             POST /api/intents, /api/templates/preflight -> session + CSRF (401/403 otherwise)
+//	             POST /api/intents is additionally rate limited per session and per IP (429)
+//	static:      everything else serves the configured UI root with cache headers + CSP, or a
+//	             typed 404 when no static root is configured
+//
+// Identity comes from the session cookie (or the dev-only static bearer token); the pre-T07
+// ?actor=&role= override is refused for authenticated requests and every intent's actor is
+// overwritten with the session's kernel standing. The chain is:
+//
+//	correlation logging -> security headers -> loopback CORS -> mux
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	// Public surface.
 	mux.HandleFunc("GET /api/healthz", s.handleHealthz)
-	mux.HandleFunc("GET /api/world", s.handleWorld)
-	mux.HandleFunc("GET /api/events", s.handleEvents)
-	mux.HandleFunc("POST /api/intents", s.handleIntent)
-	mux.HandleFunc("GET /api/templates", s.handleTemplates)
-	mux.HandleFunc("POST /api/templates/preflight", s.handlePreflight)
-	return withLocalCORS(mux)
+	mux.HandleFunc("GET /api/readyz", s.handleReadyz)
+	// Auth entry points (the guards are inside the handlers: login/callback are intentionally
+	// pre-session, logout re-checks session + CSRF).
+	mux.HandleFunc("GET /api/auth/login", s.handleLoginStart)
+	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+	mux.HandleFunc("GET /api/auth/callback", s.handleLoginCallback)
+	mux.HandleFunc("POST /api/auth/logout", s.requireSession(s.requireCSRF(s.handleLogout)))
+	mux.HandleFunc("GET /api/session", s.withIdentity(s.handleSession))
+	// Protected reads: session required.
+	mux.HandleFunc("GET /api/world", s.requireSession(s.handleWorld))
+	mux.HandleFunc("GET /api/events", s.requireSession(s.handleEvents))
+	mux.HandleFunc("GET /api/templates", s.requireSession(s.handleTemplates))
+	// State-changing POSTs: session + CSRF; intents are rate limited (before the handler, so a
+	// refused request never reaches the dispatcher).
+	mux.HandleFunc("POST /api/intents", s.requireSession(s.requireCSRF(s.rateLimitIntent(s.handleIntent))))
+	mux.HandleFunc("POST /api/templates/preflight", s.requireSession(s.requireCSRF(s.handlePreflight)))
+	// Unknown /api paths are typed 404s, never the SPA fallback. (Method-scoped so the GET
+	// catch-all below does not conflict; a POST to an unknown /api path is the mux's 405.)
+	mux.HandleFunc("GET /api/", func(w http.ResponseWriter, r *http.Request) {
+		writeTypedError(w, http.StatusNotFound, "invalid", "no such API route")
+	})
+	// Static UI (or a plain 404 when no root is configured).
+	if s.opts.StaticRoot != "" {
+		mux.Handle("GET /", s.staticHandler())
+	}
+
+	var h http.Handler = http.Handler(mux)
+	h = withLocalCORS(h)
+	h = withSecurityHeaders(h)
+	h = s.withCorrelation(h)
+	return h
 }
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +153,9 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 
 // handleWorld serves the canonical snapshot: live-built by default, or the stored revision at
 // ?cursor= (true kernel history; 404 for a cursor that is evicted or never existed - the client
-// refetches the live world either way).
+// refetches the live world either way). The perspective is the SESSION's kernel actor (T07):
+// identity is session-bound, so the pre-auth ?actor=&role= override is refused - a client that
+// asks for someone else's standing gets a typed 400, never a snapshot.
 func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if raw := r.URL.Query().Get("cursor"); raw != "" {
@@ -116,10 +169,12 @@ func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actor, ok := s.perspective(w, r)
-	if !ok {
+	if r.URL.Query().Get("actor") != "" || r.URL.Query().Get("role") != "" {
+		writeTypedError(w, http.StatusBadRequest, "invalid",
+			"identity is session-bound: the ?actor=&role= override was removed in T07; log in as the user you need (the kernel verifies the delegation)")
 		return
 	}
+	actor := sessionIdentityOf(r).Claim()
 	caseID := r.URL.Query().Get("case_id")
 	if caseID == "" {
 		newest, err := s.world.NewestCaseID(ctx)
@@ -144,30 +199,13 @@ func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, worldResponse{Snapshot: snap})
 }
 
-// perspective resolves the snapshot's viewpoint. Default: the gateway's own configured
-// perspective (also the relay's revision perspective). Explicit ?actor=&role= overrides are
-// kernel-verified when the world source supports it, so a snapshot can never render a standing
-// the kernel would not grant this connection; both fields must be given together or not at all.
-func (s *Server) perspective(w http.ResponseWriter, r *http.Request) (ports.ActorClaim, bool) {
-	actor := ports.ActorClaim{ActorID: r.URL.Query().Get("actor"), Role: r.URL.Query().Get("role")}
-	if actor.ActorID == "" && actor.Role == "" {
-		return s.opts.Perspective, true
-	}
-	if actor.ActorID == "" || actor.Role == "" {
-		writeTypedError(w, http.StatusBadRequest, "invalid", "actor and role must be given together")
-		return ports.ActorClaim{}, false
-	}
-	if v, ok := s.world.(PerspectiveVerifier); ok {
-		if err := v.VerifyPerspective(r.Context(), actor); err != nil {
-			writeTypedError(w, http.StatusForbidden, "authority_denied",
-				"the kernel does not allow this connection to act as "+actor.ActorID+": "+err.Error())
-			return ports.ActorClaim{}, false
-		}
-	}
-	return actor, true
-}
-
 // handleIntent accepts one consequential intent; refusals are typed outcomes (HTTP 200).
+// Middleware has already enforced session + CSRF + rate limit before this runs. The intent's
+// client-asserted actor is OVERWRITTEN with the session's kernel standing: identity is never
+// trusted from the client (T07) - a forged payload actor is ignored, and the kernel still
+// verifies the delegation against its own allowlist. The correlation id becomes the intent id
+// (the SFWP request_id the kernel correlates on), joining the gateway's request log to the
+// kernel's durable request record.
 func (s *Server) handleIntent(w http.ResponseWriter, r *http.Request) {
 	if !requireJSON(w, r) {
 		return
@@ -175,6 +213,10 @@ func (s *Server) handleIntent(w http.ResponseWriter, r *http.Request) {
 	var in contract.InteractionIntent
 	if !decodeStrict(w, r, &in) {
 		return
+	}
+	in.Actor = intentActorFromSession(r)
+	if rw, ok := w.(correlationSetter); ok && in.IntentID != "" {
+		rw.setCorrelation(in.IntentID)
 	}
 	writeJSON(w, http.StatusOK, s.intents.Handle(r.Context(), in))
 }

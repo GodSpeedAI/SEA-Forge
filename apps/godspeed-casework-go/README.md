@@ -126,6 +126,106 @@ is refused `invalid`.
 * Real SEA-Forge/Gauntlet wiring is later milestone work; nothing served here is governed
   integration.
 
+## Authentication, sessions and production posture (T07)
+
+The live surface (`internal/server`) is session-gated. Every route except `GET /api/healthz`,
+`GET /api/readyz` and the auth entry points requires an authenticated session; unauthenticated
+reads are `401 {"error":{"kind":"unauthorized",…}}` and state-changing POSTs without a valid CSRF
+token are `403 {"error":{"kind":"csrf_refused",…}}` BEFORE any kernel call. Identity is
+session-bound: the pre-T07 `?actor=&role=` override is refused (`400`), and every intent's
+client-asserted `actor` is overwritten with the session's kernel standing — the kernel still
+verifies each delegation against its own T02 allowlist.
+
+### The `auth` section (serve postures only)
+
+```jsonc
+"auth": {
+  "mode": "local"           // local | oidc | dev
+  , "users": [ { "username": "operator", "display_name": "Ops",
+                 "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$…",   // local mode only
+                 "actor_id": "operator_local", "role": "operator" } ]   // the T02 kernel standing
+  , "oidc": { "issuer": "https://idp…", "client_id": "…",
+              "client_secret": "env:GODSPEED_OIDC_SECRET",             // indirection, always
+              "redirect_url": "https://host/api/auth/callback",
+              "username_claim": "preferred_username",
+              "mappings": [ { "claim": "groups", "equals": "operators",
+                              "actor_id": "operator_local", "role": "operator" } ] }
+  , "insecure_cookie": false        // loopback dev only; REFUSED with production
+  , "session_idle_minutes": 30      // sliding; sessions also die at the absolute bound
+  , "session_absolute_hours": 12
+}
+```
+
+* **local** — users from config, argon2id-verified (OWASP parameters m=19456/t=2/p=1, PHC format;
+  `auth.HashPassword` mints hashes). Unknown users and wrong passwords are indistinguishable.
+* **oidc** — real authorization-code flow (`coreos/go-oidc/v3` + `golang.org/x/oauth2`):
+  discovery at startup (an unreachable issuer refuses to start), single-use bounded states,
+  nonce-verified ID tokens, and claim→kernel-standing mapping rules (first match wins, NO match
+  is a refusal). The mappings are the deployment's trust boundary: a verified identity maps to a
+  kernel actor only through an explicit rule.
+* **dev** — test/dev ONLY: password verification skipped, plus an optional static bearer token
+  (`"static_token": "env:…"` + `"static_token_user"`; `Authorization: Bearer …` authenticates the
+  named user per-request, which is why bearer POSTs skip CSRF — bearer credentials are explicit,
+  not ambient). The production posture refuses this mode at configuration validation and the
+  process exits 2.
+
+Fail-closed defaults: a serve posture with NO `auth` section refuses to start; `serve.production`
+refuses `mode: dev` AND `insecure_cookie: true`; a `static_token` in any non-dev mode is refused.
+
+### Sessions, cookies and CSRF
+
+Server-side sessions (`internal/auth.SessionStore`): in-memory, single-process, 256-bit random
+ids, bounded sliding idle TTL (default 30 min) + absolute expiry (default 12 h), store bounded at
+1024 sessions with a sweep loop. Cookies: `casework_session` is `HttpOnly; SameSite=Strict`
+(+`Secure` unless `insecure_cookie`); `casework_csrf` mirrors the session's synchronizer token and
+is deliberately readable (the UI echoes it back). CSRF mechanism (documented choice): a
+**synchronizer token** minted at session start, presented in `X-CSRF-Token` on every
+state-changing POST and compared constant-time; the pre-login POST (no session yet) uses
+**double-submit** against the cookie any GET issued. Logout destroys the server-side session.
+
+### Rate limits, health, correlation
+
+`POST /api/intents` passes a token bucket **per session AND per remote IP** (config
+`serve.rate_limit`: `intents_per_minute` 60, `burst` 20 by default) — refusal is a typed
+`429 rate_limited` and the kernel is never called. `X-Forwarded-For` is deliberately NOT trusted:
+behind a proxy the per-IP bucket degrades to per-proxy, and the per-session bucket is the
+effective per-user control. `GET /api/healthz` stays cheap (no kernel call); `GET /api/readyz`
+performs the kernel's `readiness.get` through the SFWP client (3 s budget) and reflects its
+verdict (503 when not ready). Request logs are logfmt with a `correlation_id` per request; for
+`POST /api/intents` the correlation id IS the intent id — the `request_id` the kernel correlates
+on — so gateway log lines join to the kernel's durable request records.
+
+### Static UI serving and CSP
+
+`serve.static_root` (e.g. `apps/godspeed-cognitive-ui/dist`) serves the built UI: hashed
+`assets/*` get `Cache-Control: public, max-age=31536000, immutable`, `index.html` (and the SPA
+fallback for unknown non-API GET paths) gets `no-cache`, unknown `/api/*` paths are typed JSON
+404s and never fall through to the shell. Documents carry
+`Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
+frame-ancestors 'none'`. Honesty note: `script-src 'self'` is strict (the current build has no
+inline scripts and no eval); `style-src` keeps `unsafe-inline` because React 19's runtime contains
+a `<style>`-injection path we cannot yet prove never executes at runtime — tightening it is a
+T08/T09 follow-up with runtime verification, not a claimed impossibility.
+
+### Deployment: TLS termination and reverse-proxy guidance
+
+The gateway speaks plain HTTP on `-addr` (default loopback 4179). In production, put it behind a
+TLS-terminating reverse proxy:
+
+* Terminate TLS at the proxy; set `serve.production = true` so the gateway enforces `Secure`
+  cookies and refuses the dev auth surface. Do NOT expose the raw listener beyond the proxy.
+* Keep the proxy and gateway on the same host or a trusted network; the socket to the kernel is a
+  Unix socket and carries no auth of its own beyond SO_PEERCRED.
+* Same-origin serving is the intended browser topology: either proxy `/api/*` and the static
+  assets from ONE origin, or use `serve.static_root` and serve everything from the gateway. The
+  loopback-only CORS default is unchanged and cross-origin credential-bearing requests are not
+  enabled; if you proxy, preserve the `Origin`-independent behaviour of the API (no cookie-based
+  routing between tenants).
+* Pass `Connection`/hop-by-hop headers as your proxy defaults dictate; set a generous read
+  timeout for `/api/events` (the SSE stream holds connections open with 15 s heartbeats).
+* Rate limiting per IP uses the proxy's address (see above); per-session limits are unaffected.
+
 ## Gate
 
 `just casework-go-check` (repository root) runs `gofmt -l`, `go vet ./...` and `go test ./...` in this

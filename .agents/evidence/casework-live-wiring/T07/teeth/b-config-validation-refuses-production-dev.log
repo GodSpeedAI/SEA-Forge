@@ -1,0 +1,9 @@
+=== RUN   TestValidateProductionRefusesDevAuth_T07ToothB
+--- PASS: TestValidateProductionRefusesDevAuth_T07ToothB (0.00s)
+=== RUN   TestValidateProductionWithAbsentAuthDefaultsToDevAndRefuses
+--- PASS: TestValidateProductionWithAbsentAuthDefaultsToDevAndRefuses (0.00s)
+=== RUN   TestValidateProductionRefusesInsecureCookie
+--- PASS: TestValidateProductionRefusesInsecureCookie (0.00s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	0.003s
+EXIT=0

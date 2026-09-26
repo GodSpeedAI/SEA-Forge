@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"mime"
 	"net/http"
 	"regexp"
@@ -23,9 +24,25 @@ const maxBodyBytes = 1 << 20 // 1 MiB
 type Options struct {
 	// Heartbeat is the SSE comment interval. Default 15s.
 	Heartbeat time.Duration
-	// Perspective is the default viewpoint for /api/world snapshots built without an explicit
-	// ?actor=&role= override (the configured serve perspective; T07 sessions replace this).
+	// Perspective is the RELAY's revision perspective (the configured serve perspective). Authenticated
+	// /api/world requests render their own session's perspective; SSE revisions stay at this one
+	// (documented: role-filtered enforcement happens at intent time, and clients refetch
+	// /api/world for their own view).
 	Perspective ports.ActorClaim
+	// Auth wires the session/authentication layer (T07). Zero value fails closed: every
+	// protected endpoint 401s.
+	Auth AuthOptions
+	// StaticRoot serves the built UI from this directory with cache headers, CSP and SPA
+	// fallback. Empty disables static serving.
+	StaticRoot string
+	// Ready is the kernel readiness probe behind /api/readyz (nil -> readyz reports
+	// "no probe wired" as 503).
+	Ready ReadinessProbe
+	// RateLimit bounds POST /api/intents (per session + per IP token buckets). Zero fields take
+	// the documented defaults.
+	RateLimit RateLimitOptions
+	// Logger receives logfmt request lines (nil disables request logging).
+	Logger *log.Logger
 }
 
 func (o Options) heartbeat() time.Duration {
@@ -37,6 +54,10 @@ func (o Options) heartbeat() time.Duration {
 
 var localOriginPattern = regexp.MustCompile(`^http://(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$`)
 
+// withLocalCORS keeps the boundary's loopback-only browser access. The CSRF header joins the
+// allowed set (T07); credentials-bearing cross-origin requests are NOT enabled on purpose: the
+// UI consumes the gateway same-origin (vite proxy or gateway-served dist), so cookies never need
+// to cross origins.
 func withLocalCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -45,13 +66,22 @@ func withLocalCORS(next http.Handler) http.Handler {
 			h.Set("Access-Control-Allow-Origin", origin)
 			h.Set("Vary", "Origin")
 			h.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			h.Set("Access-Control-Allow-Headers", "Content-Type")
+			h.Set("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token")
 			h.Set("Access-Control-Max-Age", "600")
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// withSecurityHeaders applies the API surface's minimal hardening (the CSP for documents lives
+// with the static handler).
+func withSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		next.ServeHTTP(w, r)
 	})
 }

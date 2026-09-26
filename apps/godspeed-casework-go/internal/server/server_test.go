@@ -7,14 +7,18 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
@@ -75,18 +79,35 @@ func (fakeTemplates) Preflight(ctx context.Context, ref string, params map[strin
 
 func boolPtr(b bool) *bool { return &b }
 
-// fakeIntents records the last intent and answers a canned response.
+// fakeIntents records the last intent and answers a canned response; the counter is the proof
+// surface for "the kernel received no call" in the CSRF/rate-limit teeth.
 type fakeIntents struct {
 	mu   sync.Mutex
 	last contract.InteractionIntent
 	resp contract.IntentResponse
+	n    int
 }
 
 func (f *fakeIntents) Handle(ctx context.Context, in contract.InteractionIntent) contract.IntentResponse {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.last = in
+	f.n++
 	return f.resp
+}
+
+// called reports whether ANY intent reached the dispatcher.
+func (f *fakeIntents) called() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.n > 0
+}
+
+// dispatched reports how many intents reached the dispatcher.
+func (f *fakeIntents) dispatched() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.n
 }
 
 // fakeFeed is a drivable EventFeed.
@@ -115,7 +136,9 @@ func snapshotFor(cursor, caseID string) contract.CognitiveWorldSnapshot {
 	}
 }
 
-// liveHarness assembles the live server over fakes plus a real relay + store driven by a fake feed.
+// liveHarness assembles the live server over fakes plus a real relay + store driven by a fake feed,
+// wired with the T07 session layer (dev-mode local users: passwords unchecked, as in the dev
+// posture; credential verification itself is proven in internal/auth's tests).
 type liveHarness struct {
 	feed   *fakeFeed
 	world  *fakeWorld
@@ -124,6 +147,7 @@ type liveHarness struct {
 	relay  *Relay
 	ts     *httptest.Server
 	cancel func()
+	api    *Server
 }
 
 func newLiveHarness(t *testing.T) *liveHarness {
@@ -137,10 +161,152 @@ func newLiveHarness(t *testing.T) *liveHarness {
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	go relay.Run(ctx)
-	api := New(world, ints, fakeTemplates{}, store, relay, Options{Heartbeat: time.Hour})
+	api := newAuthedServer(t, world, ints, fakeTemplates{}, store, relay, Options{Heartbeat: time.Hour})
 	ts := httptest.NewServer(api.Handler())
 	t.Cleanup(func() { cancel(); ts.Close() })
-	return &liveHarness{feed: feed, world: world, ints: ints, store: store, relay: relay, ts: ts, cancel: cancel}
+	return &liveHarness{feed: feed, world: world, ints: ints, store: store, relay: relay, ts: ts, cancel: cancel, api: api}
+}
+
+// login authenticates a harness user (dev posture: the password is unchecked).
+func (h *liveHarness) login(t *testing.T, username, password string) *testUser {
+	t.Helper()
+	return newSessionAs(t, h.ts.URL, username, password)
+}
+
+// testAuthOptions builds the dev-mode auth wiring (passwords unchecked, two users mirroring the
+// live cell's operator + R-SO standing, plus the dev static bearer token).
+func testAuthOptions(t *testing.T) AuthOptions {
+	t.Helper()
+	users := []auth.User{
+		{Username: "operator", DisplayName: "Ops", ActorID: "operator_local", Role: "operator"},
+		{Username: "rso", ActorID: "rso_local", Role: "R-SO"},
+	}
+	store, err := auth.NewLocalUserStore(auth.ModeDev, users)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions := auth.NewSessionStore(auth.DefaultIdleTTL, auth.DefaultAbsoluteTTL, 0, nil)
+	bearerID, err := store.StaticTokenIdentity("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return AuthOptions{
+		Authenticator:  store,
+		Sessions:       sessions,
+		CookieSecure:   false, // loopback dev posture
+		StaticToken:    "dev-bearer-token",
+		BearerIdentity: &bearerID,
+	}
+}
+
+// newAuthedServer is New() with the T07 auth layer and generous rate limits pre-wired.
+func newAuthedServer(t *testing.T, world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, store RevisionHistory, relay RelayCursors, opts Options) *Server {
+	t.Helper()
+	opts.Auth = testAuthOptions(t)
+	opts.RateLimit = RateLimitOptions{PerMinute: 600, Burst: 50}
+	return New(world, dispatcher, tpl, store, relay, opts)
+}
+
+// testUser is one authenticated browser session: a cookie-jarred client plus the CSRF token the
+// login issued (state-changing POSTs must present it).
+type testUser struct {
+	t        *testing.T
+	base     string
+	client   *http.Client
+	csrf     string
+	identity sessionBody
+}
+
+// newSessionFromServer runs the credential flow against any authed server (dev user "operator").
+func newSessionFromServer(t *testing.T, base string) *testUser {
+	t.Helper()
+	return newSessionAs(t, base, "operator", "ignored-in-dev")
+}
+
+// newSessionAs is newSessionFromServer for an explicit credential pair.
+func newSessionAs(t *testing.T, base, username, password string) *testUser {
+	t.Helper()
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := &testUser{t: t, base: base, client: &http.Client{Jar: jar}}
+	// 1. Any GET mints the pre-login CSRF cookie (double submit).
+	resp, err := u.client.Get(u.base + "/api/session")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	// 2. POST the credentials with the cookie's value echoed in the header.
+	header := u.cookieValue(csrfCookieName)
+	body := fmt.Sprintf(`{"username":%q,"password":%q}`, username, password)
+	req, err := http.NewRequest(http.MethodPost, u.base+"/api/auth/login", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(csrfHeader, header)
+	resp, err = u.client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		t.Fatalf("login as %s: status %d body %s", username, resp.StatusCode, raw)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&u.identity); err != nil {
+		t.Fatal(err)
+	}
+	u.csrf = u.identity.CSRFToken
+	if u.csrf == "" {
+		t.Fatal("login must issue a CSRF token")
+	}
+	return u
+}
+
+func (u *testUser) cookieValue(name string) string {
+	u.t.Helper()
+	base, err := url.Parse(u.base)
+	if err != nil {
+		u.t.Fatal(err)
+	}
+	for _, c := range u.client.Jar.Cookies(base) {
+		if c.Name == name {
+			return c.Value
+		}
+	}
+	return ""
+}
+
+// get performs an authenticated GET.
+func (u *testUser) get(path string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodGet, u.base+path, nil)
+	if err != nil {
+		u.t.Fatal(err)
+	}
+	return u.client.Do(req)
+}
+
+// post performs an authenticated state-changing POST with the session's CSRF token.
+func (u *testUser) post(path, contentType, body string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodPost, u.base+path, strings.NewReader(body))
+	if err != nil {
+		u.t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set(csrfHeader, u.csrf)
+	return u.client.Do(req)
+}
+
+// postNoCSRF performs a state-changing POST deliberately WITHOUT the CSRF header (the teeth).
+func (u *testUser) postNoCSRF(path, contentType, body string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodPost, u.base+path, strings.NewReader(body))
+	if err != nil {
+		u.t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", contentType)
+	return u.client.Do(req)
 }
 
 func (h *liveHarness) pushRevision(t *testing.T, cursor, caseID string) {
@@ -180,8 +346,9 @@ func TestHealthzProvenanceIsTheLiveLabel(t *testing.T) {
 func TestWorldServesLiveSnapshotAtPerCaseCursor(t *testing.T) {
 	h := newLiveHarness(t)
 	h.pushRevision(t, "01AAA", "case_1")
+	op := h.login(t, "operator", "ignored-in-dev")
 
-	resp, err := http.Get(h.ts.URL + "/api/world")
+	resp, err := op.get("/api/world")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,14 +360,19 @@ func TestWorldServesLiveSnapshotAtPerCaseCursor(t *testing.T) {
 	if got.Snapshot.CaseID != "case_1" || got.Snapshot.Cursor != "01AAA" {
 		t.Fatalf("world: case=%q cursor=%q", got.Snapshot.CaseID, got.Snapshot.Cursor)
 	}
+	// The snapshot's perspective is the SESSION's kernel actor.
+	if got.Snapshot.Perspective.ActorID != "operator_local" || got.Snapshot.Perspective.Role != "operator" {
+		t.Fatalf("the world must render the session's perspective, got %+v", got.Snapshot.Perspective)
+	}
 }
 
 func TestWorldServesKernelHistoryAtCursorAnd404sEvicted(t *testing.T) {
 	h := newLiveHarness(t)
 	h.pushRevision(t, "01AAA", "case_1")
 	h.pushRevision(t, "01BBB", "case_1")
+	op := h.login(t, "operator", "ignored-in-dev")
 
-	resp, err := http.Get(h.ts.URL + "/api/world?cursor=01AAA")
+	resp, err := op.get("/api/world?cursor=01AAA")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +385,7 @@ func TestWorldServesKernelHistoryAtCursorAnd404sEvicted(t *testing.T) {
 		t.Fatalf("history must serve the revision at the requested kernel cursor, got %q", got.Snapshot.Cursor)
 	}
 
-	resp2, err := http.Get(h.ts.URL + "/api/world?cursor=01ZZZ")
+	resp2, err := op.get("/api/world?cursor=01ZZZ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +398,8 @@ func TestWorldServesKernelHistoryAtCursorAnd404sEvicted(t *testing.T) {
 func TestWorldEmptyCellServesHonestEmptyWorld(t *testing.T) {
 	h := newLiveHarness(t)
 	h.world.newestID = ""
-	resp, err := http.Get(h.ts.URL + "/api/world")
+	op := h.login(t, "operator", "ignored-in-dev")
+	resp, err := op.get("/api/world")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,34 +413,54 @@ func TestWorldEmptyCellServesHonestEmptyWorld(t *testing.T) {
 	}
 }
 
-func TestWorldExplicitPerspectiveIsVerified(t *testing.T) {
+// T07 tooth (c)+part of (d): unauthenticated reads are 401 (no snapshot leak), and the pre-T07
+// ?actor=&role= override is refused for authenticated requests - identity is session-bound.
+func TestWorldIdentityIsSessionBound(t *testing.T) {
 	h := newLiveHarness(t)
-	h.world.verify = func(a ports.ActorClaim) error { return errDenied{} }
-	resp, err := http.Get(h.ts.URL + "/api/world?actor=operator_local&role=operator")
+	h.pushRevision(t, "01AAA", "case_1")
+	op := h.login(t, "operator", "ignored-in-dev")
+
+	// Unauthenticated: 401, and the body is the typed error, not a snapshot.
+	resp, err := http.Get(h.ts.URL + "/api/world")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("a kernel-refused perspective must be 403, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("an unauthenticated world read must be 401, got %d", resp.StatusCode)
 	}
-	resp2, _ := http.Get(h.ts.URL + "/api/world?actor=solo")
-	if resp2 != nil {
-		resp2.Body.Close()
-		if resp2.StatusCode != http.StatusBadRequest {
-			t.Fatalf("a half-named actor must be 400, got %d", resp2.StatusCode)
-		}
+	raw, _ := io.ReadAll(resp.Body)
+	if strings.Contains(string(raw), "visible_objects") || strings.Contains(string(raw), "world_id") {
+		t.Fatalf("the 401 must not leak snapshot content: %s", raw)
+	}
+
+	// The ?actor= override is refused even with a valid session.
+	resp2, err := op.get("/api/world?actor=operator_local&role=operator")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusBadRequest {
+		t.Fatalf("the ?actor= override must be refused, got %d", resp2.StatusCode)
+	}
+
+	// A half-named override is the same refusal.
+	resp3, err := op.get("/api/world?actor=solo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp3.Body.Close()
+	if resp3.StatusCode != http.StatusBadRequest {
+		t.Fatalf("a half-named override must be refused, got %d", resp3.StatusCode)
 	}
 }
 
-type errDenied struct{}
-
-func (errDenied) Error() string { return "refused" }
-
 func TestIntentsPassthroughAndStrictness(t *testing.T) {
 	h := newLiveHarness(t)
-	body := `{"intent_id":"i-1","kind":"CONSEQUENTIAL_CASE","action_name":"EXECUTE_ITEM","target_object_id":"item-1","case_id":"case_1","client_cursor":"01AAA","actor":{"actor_id":"operator_local","role":"operator"},"parameters":{"item_id":"item-1"}}`
-	resp, err := http.Post(h.ts.URL+"/api/intents", "application/json", strings.NewReader(body))
+	op := h.login(t, "operator", "ignored-in-dev")
+	// The payload carries a FORGED actor: the session's standing must overwrite it (T07).
+	body := `{"intent_id":"i-1","kind":"CONSEQUENTIAL_CASE","action_name":"EXECUTE_ITEM","target_object_id":"item-1","case_id":"case_1","client_cursor":"01AAA","actor":{"actor_id":"someone_else","role":"admin"},"parameters":{"item_id":"item-1"}}`
+	resp, err := op.post("/api/intents", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,13 +472,17 @@ func TestIntentsPassthroughAndStrictness(t *testing.T) {
 	if !got.Success || got.IntentID != "i-1" {
 		t.Fatalf("intent response: %+v", got)
 	}
-	if h.ints.last.Actor.Role != "operator" || h.ints.last.ClientCursor != "01AAA" {
-		t.Fatalf("the intent envelope must pass through intact: %+v", h.ints.last)
+	// The dispatcher saw the SESSION's actor, never the forged one.
+	if h.ints.last.Actor.ActorID != "operator_local" || h.ints.last.Actor.Role != "operator" {
+		t.Fatalf("the session's kernel standing must overwrite the payload actor: %+v", h.ints.last.Actor)
+	}
+	if h.ints.last.ClientCursor != "01AAA" {
+		t.Fatalf("the rest of the intent envelope must pass through intact: %+v", h.ints.last)
 	}
 
 	// Unknown fields are refused at the envelope (the contract is the wire).
 	bad := strings.Replace(body, `"parameters":`, `"surprise":1,"parameters":`, 1)
-	resp2, err := http.Post(h.ts.URL+"/api/intents", "application/json", strings.NewReader(bad))
+	resp2, err := op.post("/api/intents", "application/json", bad)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +494,8 @@ func TestIntentsPassthroughAndStrictness(t *testing.T) {
 
 func TestTemplatesAndPreflight(t *testing.T) {
 	h := newLiveHarness(t)
-	resp, err := http.Get(h.ts.URL + "/api/templates")
+	op := h.login(t, "operator", "ignored-in-dev")
+	resp, err := op.get("/api/templates")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,8 +508,8 @@ func TestTemplatesAndPreflight(t *testing.T) {
 		t.Fatalf("templates: %+v", got)
 	}
 
-	resp2, err := http.Post(h.ts.URL+"/api/templates/preflight", "application/json",
-		strings.NewReader(`{"template_ref":"e2e-sentry-chain@0.1.0","params":{"dataset_name":"orders"}}`))
+	resp2, err := op.post("/api/templates/preflight", "application/json",
+		`{"template_ref":"e2e-sentry-chain@0.1.0","params":{"dataset_name":"orders"}}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,8 +581,9 @@ func TestSSEReplayFromLastAndLiveWithKernelCursorIDs(t *testing.T) {
 	h := newLiveHarness(t)
 	h.pushRevision(t, "01AAA", "case_1")
 	h.pushRevision(t, "01BBB", "case_1")
+	op := h.login(t, "operator", "ignored-in-dev")
 
-	resp, err := http.Get(h.ts.URL + "/api/events?last=01AAA")
+	resp, err := op.get("/api/events?last=01AAA")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -428,13 +627,14 @@ func TestSSEHonoursLastEventIDHeader(t *testing.T) {
 	h := newLiveHarness(t)
 	h.pushRevision(t, "01AAA", "case_1")
 	h.pushRevision(t, "01BBB", "case_1")
+	op := h.login(t, "operator", "ignored-in-dev")
 
 	req, err := http.NewRequest(http.MethodGet, h.ts.URL+"/api/events", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	req.Header.Set("Last-Event-ID", "01AAA")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := op.client.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -456,9 +656,10 @@ func TestSSEResyncRequiredWhenLastPredatesRetention(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go relay.Run(ctx)
-	api := New(world, &fakeIntents{}, fakeTemplates{}, store, relay, Options{Heartbeat: time.Hour})
+	api := newAuthedServer(t, world, &fakeIntents{}, fakeTemplates{}, store, relay, Options{Heartbeat: time.Hour})
 	ts := httptest.NewServer(api.Handler())
 	defer ts.Close()
+	op := newSessionFromServer(t, ts.URL)
 
 	for _, c := range []string{"01AAA", "01BBB", "01CCC"} {
 		world.set("case_1", snapshotFor(c, "case_1"))
@@ -472,7 +673,7 @@ func TestSSEResyncRequiredWhenLastPredatesRetention(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 	}
 
-	resp, err := http.Get(ts.URL + "/api/events?last=01AAA")
+	resp, err := op.get("/api/events?last=01AAA")
 	if err != nil {
 		t.Fatal(err)
 	}

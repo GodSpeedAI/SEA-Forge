@@ -1,0 +1,8 @@
+=== RUN   TestLiveTeethAValidCookieWithoutCSRFReachesNoKernel
+--- PASS: TestLiveTeethAValidCookieWithoutCSRFReachesNoKernel (0.46s)
+=== RUN   TestLiveTeethDSessionCannotActAsAnotherActor
+livetest-relay: relay: rebuild of case_20260926T032827Z_7751a6 at 01M3DW3MX0R2AY0232F4ZBC7AF failed: unavailable: the connection to the governed authority failed (read): EOF
+--- PASS: TestLiveTeethDSessionCannotActAsAnotherActor (0.32s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.875s
+EXIT=0

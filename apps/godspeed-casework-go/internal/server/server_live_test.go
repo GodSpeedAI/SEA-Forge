@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -77,18 +76,19 @@ func nextEvent(t *testing.T, ch <-chan sseEvent, what string) sseEvent {
 	return sseEvent{}
 }
 
-// postIntent drives one intent through the gateway's HTTP surface.
-func postIntent(t *testing.T, ts *httptest.Server, in contract.InteractionIntent) contract.IntentResponse {
+// postIntent drives one intent through the gateway's HTTP surface as an authenticated browser
+// session (T07: the session's kernel standing replaces the envelope's client-asserted actor).
+func postIntent(t *testing.T, sess *livestack.Session, in contract.InteractionIntent) contract.IntentResponse {
 	t.Helper()
-	raw, err := json.Marshal(in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err := http.Post(ts.URL+"/api/intents", "application/json", strings.NewReader(string(raw)))
+	resp, err := sess.PostJSON("/api/intents", in)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		t.Fatalf("POST /api/intents: status %d body %s", resp.StatusCode, raw)
+	}
 	var out contract.IntentResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatal(err)
@@ -99,15 +99,15 @@ func postIntent(t *testing.T, ts *httptest.Server, in contract.InteractionIntent
 func TestLiveSSERelayOfKernelFramesWithResume(t *testing.T) {
 	cell := livetest.NewCell(t)
 	stack := livestack.AssembleStack(t, cell)
-	ts := httptest.NewServer(stack.API.Handler())
-	t.Cleanup(ts.Close)
+	ts := stack.HTTPServer(t)
+	op := stack.Login(t, ts.URL, "operator")
 
 	caseID := stack.CommitSentryChain(t, "gw-t06-sse-commit-1")
 	stack.WaitRevision(t, caseID, "")
 	cursor, _ := stack.Relay.CursorForCase(caseID)
 
 	// Open the SSE stream subscribed at the current kernel cursor.
-	resp, err := http.Get(ts.URL + "/api/events?last=" + cursor)
+	resp, err := op.Get("/api/events?last=" + cursor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestLiveSSERelayOfKernelFramesWithResume(t *testing.T) {
 		Actor:          contract.IntentActor{ActorID: "operator_local", Role: "operator"},
 		Parameters:     map[string]any{"item_id": "task_prepare"},
 	}
-	if out := postIntent(t, ts, in); !out.Success {
+	if out := postIntent(t, op, in); !out.Success {
 		t.Fatalf("intent refused: %+v", out.Refusal)
 	}
 
@@ -206,7 +206,7 @@ func TestLiveSSERelayOfKernelFramesWithResume(t *testing.T) {
 	// gaps against the store.
 	resp.Body.Close()
 	time.Sleep(50 * time.Millisecond)
-	resp2, err := http.Get(ts.URL + "/api/events?last=" + last.id)
+	resp2, err := op.Get("/api/events?last=" + last.id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,10 +242,10 @@ func TestLiveSSERelayOfKernelFramesWithResume(t *testing.T) {
 func TestLiveTemplateEndpoints(t *testing.T) {
 	cell := livetest.NewCell(t)
 	stack := livestack.AssembleStack(t, cell)
-	ts := httptest.NewServer(stack.API.Handler())
-	t.Cleanup(ts.Close)
+	ts := stack.HTTPServer(t)
+	op := stack.Login(t, ts.URL, "operator")
 
-	resp, err := http.Get(ts.URL + "/api/templates")
+	resp, err := op.Get("/api/templates")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,8 +264,10 @@ func TestLiveTemplateEndpoints(t *testing.T) {
 		t.Fatalf("both E2E templates must be listed, got %v", refs)
 	}
 
-	body := `{"template_ref":"e2e-sentry-chain@0.1.0","params":{"dataset_name":"t06-sse"}}`
-	resp2, err := http.Post(ts.URL+"/api/templates/preflight", "application/json", strings.NewReader(body))
+	resp2, err := op.PostJSON("/api/templates/preflight", map[string]any{
+		"template_ref": "e2e-sentry-chain@0.1.0",
+		"params":       map[string]any{"dataset_name": "t06-sse"},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,21 +282,23 @@ func TestLiveTemplateEndpoints(t *testing.T) {
 	fmt.Printf("live preflight digest: %s\n", *pf.Digest)
 }
 
-// T06 fix F1, live: the explicit ?actor=&role= perspective must verify against the REAL kernel
-// through the gateway principal (an empty actor block is refused with identity_required, which
-// 403'd every perspective request before the fix). Allowlisted actor -> 200 with real standing;
-// a bound-but-not-allowlisted actor -> 403 typed refusal.
-func TestLiveWorldPerspectiveVerifiesAgainstTheKernel(t *testing.T) {
+// T07, live: the world's perspective is the SESSION's kernel actor. Unauthenticated reads are
+// 401 (no snapshot leak); an authenticated operator session sees the real delegated standing;
+// the ?actor= override is refused even for a valid session; a second session (rso) sees ITS OWN
+// standing. The kernel's own allowlist enforcement beneath this was proven in T06's delegated
+// read tests (sfwp live identity tests) and the T02 teeth.
+func TestLiveWorldPerspectiveComesFromTheSession(t *testing.T) {
 	cell := livetest.NewCell(t)
 	stack := livestack.AssembleStack(t, cell)
-	ts := httptest.NewServer(stack.API.Handler())
-	t.Cleanup(ts.Close)
+	ts := stack.HTTPServer(t)
+	op := stack.Login(t, ts.URL, "operator")
+	rso := stack.Login(t, ts.URL, "rso")
 
-	caseID := stack.CommitSentryChain(t, "gw-t06-persp-commit-1")
+	caseID := stack.CommitSentryChain(t, "gw-t07-persp-commit-1")
 	stack.WaitRevision(t, caseID, "")
 
-	get := func(url string) (int, string) {
-		resp, err := http.Get(url)
+	get := func(sess *livestack.Session, url string) (int, string) {
+		resp, err := sess.Get(url)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -306,21 +310,44 @@ func TestLiveWorldPerspectiveVerifiesAgainstTheKernel(t *testing.T) {
 		return resp.StatusCode, string(raw)
 	}
 
-	code, body := get(ts.URL + "/api/world?case_id=" + caseID +
-		"&actor=operator_local&role=operator")
-	if code != http.StatusOK {
-		t.Fatalf("allowlisted perspective must verify: status %d body %s", code, body)
+	// Unauthenticated: 401 typed, no snapshot content.
+	resp, err := http.Get(ts.URL + "/api/world")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(body, "task_prepare") {
-		t.Fatalf("the perspective world must carry the case's real standing: %s", body)
+	rawUnauth, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("an unauthenticated world read must be 401, got %d", resp.StatusCode)
+	}
+	if !strings.Contains(string(rawUnauth), "unauthorized") || strings.Contains(string(rawUnauth), "task_prepare") {
+		t.Fatalf("the 401 must be typed and leak nothing, got %s", rawUnauth)
 	}
 
-	code, body = get(ts.URL + "/api/world?case_id=" + caseID +
-		"&actor=operator_c&role=operator")
-	if code != http.StatusForbidden {
-		t.Fatalf("a bound-but-not-allowlisted actor must be refused by the kernel: status %d body %s", code, body)
+	// Authenticated operator session: the real delegated standing, no ?actor= needed.
+	code, body := get(op, "/api/world?case_id="+caseID)
+	if code != http.StatusOK {
+		t.Fatalf("a session world must serve: status %d body %s", code, body)
 	}
-	if !strings.Contains(body, "authority_denied") {
-		t.Fatalf("the refusal must be typed: %s", body)
+	if !strings.Contains(body, `"actor_id":"operator_local"`) || !strings.Contains(body, "task_prepare") {
+		t.Fatalf("the session's perspective world must carry the case's real standing: %s", body)
+	}
+
+	// The pre-T07 override is refused for an authenticated session.
+	code, body = get(op, "/api/world?case_id="+caseID+"&actor=rso_local&role=R-SO")
+	if code != http.StatusBadRequest {
+		t.Fatalf("the ?actor= override must be refused, got %d body %s", code, body)
+	}
+	if !strings.Contains(body, "session-bound") {
+		t.Fatalf("the refusal must explain the posture: %s", body)
+	}
+
+	// A second, distinct session renders ITS OWN standing against the same cell.
+	code, body = get(rso, "/api/world?case_id="+caseID)
+	if code != http.StatusOK {
+		t.Fatalf("the rso session must serve its own world: status %d body %s", code, body)
+	}
+	if !strings.Contains(body, `"actor_id":"rso_local"`) {
+		t.Fatalf("the rso session's world must speak as rso_local, got %s", body)
 	}
 }

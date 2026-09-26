@@ -62,15 +62,29 @@ type Capability struct {
 // ServeSection holds the live-serve posture (T06, additive): the gateway principal claim the
 // kernel's server.yaml must mirror, the authority policy the governed verbs authorize against,
 // and the perspective relay-built revisions are rendered for. Every default is explicit below;
-// nothing is invented from the environment.
+// nothing is invented from the environment. T07 adds the production posture, static UI serving
+// and the intent rate limits.
 type ServeSection struct {
 	GatewayActorID string `json:"gateway_actor_id,omitempty"`
 	GatewayRole    string `json:"gateway_role,omitempty"`
 	PolicyRef      string `json:"policy_ref,omitempty"`
 	// Perspective* is who relay-built revision snapshots speak for. Unset means the gateway
-	// principal itself (the honest default: the gateway's own kernel view).
+	// principal itself (the honest default: the gateway's own kernel view). Authenticated
+	// sessions (T07) give /api/world its own per-user perspective; the relay's revision stream
+	// keeps this configured perspective (documented: SSE snapshots render the gateway's view,
+	// role-filtered action enforcement happens at intent time).
 	PerspectiveActorID string `json:"perspective_actor_id,omitempty"`
 	PerspectiveRole    string `json:"perspective_role,omitempty"`
+	// Production is the production posture (T07): cookies must carry Secure, the dev auth surface
+	// is refused, and the listener is expected to sit behind a TLS-terminating trusted proxy.
+	Production bool `json:"production,omitempty"`
+	// StaticRoot is the path of the built UI (apps/godspeed-cognitive-ui/dist) the gateway serves
+	// with cache headers + CSP + SPA fallback. Empty disables static serving (the UI is then
+	// served by a separate host, e.g. a CDN or the vite dev server).
+	StaticRoot string `json:"static_root,omitempty"`
+	// RateLimit bounds POST /api/intents (token bucket per session and per remote IP). Nil/zero
+	// fields take the documented defaults (60/minute, burst 20).
+	RateLimit *RateLimitSection `json:"rate_limit,omitempty"`
 }
 
 // Document is the on-disk configuration schema.
@@ -80,11 +94,16 @@ type Document struct {
 	EvidenceRoot string        `json:"evidence_root"`
 	Capabilities []Capability  `json:"capabilities"`
 	Serve        *ServeSection `json:"serve,omitempty"`
+	// Auth is the browser-authentication section (T07). It is validated (and required) only in a
+	// serve posture: preflight and the fixture stack do not authenticate, and their configs do
+	// not carry a serve section.
+	Auth *AuthSection `json:"auth,omitempty"`
 }
 
 // ServeDefaults returns the ServeSection with every unset field filled from the schema's
 // documented defaults: the kernel's own default gateway spelling ("gateway" at the service role),
-// the E2E cell's authority-policy location, and the gateway-principal perspective.
+// the E2E cell's authority-policy location, the gateway-principal perspective, and the intent
+// rate-limit defaults.
 func ServeDefaults(section *ServeSection) ServeSection {
 	out := ServeSection{}
 	if section != nil {
@@ -104,6 +123,12 @@ func ServeDefaults(section *ServeSection) ServeSection {
 		out.PerspectiveRole = out.GatewayRole
 	}
 	return out
+}
+
+// RateLimitOrDefaults returns the serve section's rate limits with the documented defaults
+// applied. Callers never read ServeSection.RateLimit directly.
+func (s ServeSection) RateLimitOrDefaults() RateLimitSection {
+	return rateLimitDefaults(s.RateLimit)
 }
 
 // Options controls loading. Env and Overrides are injected so tests never depend on the process
@@ -208,6 +233,12 @@ func Load(path string, opts Options) (Resolved, []Secret, []*apperr.Error) {
 		}
 		secrets = append(secrets, Secret{Capability: c.Name, Value: value})
 	}
+	// The auth section's own indirections (dev static token, OIDC client secret) resolve through
+	// the same machinery; their problems are document-level and therefore fatal (T07: a serve
+	// posture whose authentication secrets cannot be resolved must not start).
+	authSecrets, authProblems := resolveAuthSecrets(doc, lookup(opts))
+	problems = append(problems, authProblems...)
+	secrets = append(secrets, authSecrets...)
 	return resolved, secrets, problems
 }
 
@@ -241,6 +272,9 @@ func merge(base, over Document) Document {
 	}
 	if over.Serve != nil {
 		out.Serve = over.Serve
+	}
+	if over.Auth != nil {
+		out.Auth = over.Auth
 	}
 	return out
 }
@@ -359,6 +393,12 @@ func Validate(doc Document) []*apperr.Error {
 	}
 	if strings.TrimSpace(doc.CellRoot) == "" {
 		problems = append(problems, apperr.New(apperr.KindConfig, "", "validate", "cell_root is required"))
+	}
+	// The serve posture's auth + production matrix (T07). A configuration with no serve section
+	// does not authenticate and skips these checks entirely.
+	if doc.Serve != nil {
+		problems = append(problems, validateServe(doc)...)
+		problems = append(problems, validateAuth(doc, ServeDefaults(doc.Serve))...)
 	}
 	seen := map[string]bool{}
 	for _, c := range doc.Capabilities {

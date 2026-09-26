@@ -29,6 +29,7 @@ import (
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
@@ -157,7 +158,11 @@ func main() {
 			}
 			return
 		}
-		if err := serveLive(ctx, *addr, resolved, authority, liveClients[authorityName]); err != nil {
+		secretValues := map[string]string{}
+		for _, s := range secrets {
+			secretValues[s.Capability] = s.Value
+		}
+		if err := serveLive(ctx, *addr, resolved, authority, liveClients[authorityName], secretValues); err != nil {
 			report(apperr.Wrap(apperr.KindInternal, authorityName, "serve", "server stopped", err))
 			os.Exit(1)
 		}
@@ -195,17 +200,29 @@ func adapterOf(resolved config.Resolved, name string) string {
 	return "in-process"
 }
 
-// serveLive assembles the T06 live stack and blocks until SIGINT or SIGTERM, then shuts down
-// gracefully:
+// serveLive assembles the T06 live stack with the T07 session layer and blocks until SIGINT or
+// SIGTERM, then shuts down gracefully:
 //
 //	sfwp.Client (Unix-socket NDJSON, T05)
 //	  -> sfwp.Authority (ports.CaseAuthorityPort)
 //	     -> projection.LiveSource (fetches case views, builds spec-04 snapshots)
 //	     -> server.Relay (subscribes to kernel frames; per-case cursors; revision store)
 //	     -> intents.Handler (T01 intent table; on_behalf_of; typed refusals)
-//	  -> server.Server (HTTP+SSE surface)
-func serveLive(ctx context.Context, addr string, resolved config.Resolved, authority *sfwp.Authority, client *sfwp.Client) error {
+//	  -> server.Server (HTTP+SSE surface; T07: sessions, CSRF, static UI, rate limits, readyz)
+//
+// The authenticator is built from the config's auth section (mode local/dev/oidc) with its
+// secrets resolved from the Load-time indirections. Any assembly failure here is a typed refusal:
+// the gateway never serves unauthenticated because its authentication half-configured.
+func serveLive(ctx context.Context, addr string, resolved config.Resolved, authority *sfwp.Authority, client *sfwp.Client, secrets map[string]string) error {
 	serve := config.ServeDefaults(resolved.Serve)
+	authCfg := resolved.AuthOrDefaults()
+	logger := log.New(os.Stderr, "", 0)
+
+	authOpts, err := buildAuthenticator(ctx, authCfg, secrets)
+	if err != nil {
+		return err
+	}
+
 	source := projection.NewLiveSource(authority, ports.ActorClaim{
 		ActorID: serve.GatewayActorID,
 		Role:    serve.GatewayRole,
@@ -232,8 +249,21 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 		ExecutionTimeoutSec: 60,
 	})
 
+	// Session sweeps keep the bounded store clean without depending on request traffic.
+	sweepCtx, stopSweeps := context.WithCancel(ctx)
+	defer stopSweeps()
+	go sweepSessions(sweepCtx, authOpts.Sessions, time.Minute)
+
 	api := server.New(source, dispatcher, source, store, relay, server.Options{
 		Perspective: ports.ActorClaim{ActorID: serve.PerspectiveActorID, Role: serve.PerspectiveRole},
+		Auth:        authOpts,
+		StaticRoot:  serve.StaticRoot,
+		Ready:       authority,
+		RateLimit: server.RateLimitOptions{
+			PerMinute: serve.RateLimitOrDefaults().IntentsPerMinute,
+			Burst:     serve.RateLimitOrDefaults().Burst,
+		},
+		Logger: logger,
 	})
 	httpServer := &http.Server{
 		Addr:              addr,
@@ -243,8 +273,12 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- httpServer.ListenAndServe() }()
-	fmt.Printf("godspeed-casework: serving LIVE cognitive projection on http://%s (provenance %s; kernel socket %s)\n",
-		addr, projection.ProvenanceLabelLive, client.SocketPath())
+	staticNote := "no static UI"
+	if serve.StaticRoot != "" {
+		staticNote = "static UI " + serve.StaticRoot
+	}
+	fmt.Printf("godspeed-casework: serving LIVE cognitive projection on http://%s (provenance %s; kernel socket %s; auth mode %s; %s)\n",
+		addr, projection.ProvenanceLabelLive, client.SocketPath(), authCfg.Mode, staticNote)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
@@ -253,11 +287,102 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 		return err
 	case sig := <-signals:
 		fmt.Printf("godspeed-casework: %s received - shutting down\n", sig)
+		stopSweeps()
 		cancelRelay()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		return httpServer.Shutdown(shutdownCtx)
 	}
+}
+
+// sweepSessions destroys expired sessions on an interval until ctx is done.
+func sweepSessions(ctx context.Context, sessions *auth.SessionStore, interval time.Duration) {
+	if sessions == nil {
+		return
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			sessions.Sweep()
+		}
+	}
+}
+
+// buildAuthenticator wires the configured authentication mode. Every failure is fatal: a gateway
+// that cannot build its front door refuses to start (the config validation has already refused
+// the inconsistent combinations, e.g. dev mode in the production posture).
+func buildAuthenticator(ctx context.Context, authCfg config.AuthSection, secrets map[string]string) (server.AuthOptions, error) {
+	opts := server.AuthOptions{CookieSecure: !authCfg.InsecureCookie}
+	if len(authCfg.Users) == 0 {
+		return opts, apperr.New(apperr.KindConfig, "", "auth", "the auth section carries no users")
+	}
+	users := make([]auth.User, 0, len(authCfg.Users))
+	for _, u := range authCfg.Users {
+		users = append(users, auth.User{
+			Username: u.Username, DisplayName: u.DisplayName,
+			PasswordHash: u.PasswordHash, ActorID: u.ActorID, Role: u.Role,
+		})
+	}
+	switch authCfg.Mode {
+	case config.AuthModeLocal, config.AuthModeDev:
+		mode := auth.ModeLocal
+		if authCfg.Mode == config.AuthModeDev {
+			mode = auth.ModeDev
+		}
+		store, err := auth.NewLocalUserStore(mode, users)
+		if err != nil {
+			return opts, apperr.New(apperr.KindConfig, "", "auth", err.Error())
+		}
+		opts.Authenticator = store
+		if authCfg.StaticToken != "" {
+			token, ok := secrets["auth.static_token"]
+			if !ok {
+				return opts, apperr.New(apperr.KindConfig, "", "auth",
+					"auth.static_token is configured but did not resolve")
+			}
+			identity, err := store.StaticTokenIdentity(authCfg.StaticTokenUser)
+			if err != nil {
+				return opts, apperr.New(apperr.KindConfig, "", "auth", err.Error())
+			}
+			opts.StaticToken = token
+			opts.BearerIdentity = &identity
+		}
+	case config.AuthModeOIDC:
+		secret, ok := secrets["auth.oidc.client_secret"]
+		if !ok {
+			return opts, apperr.New(apperr.KindConfig, "", "auth",
+				"auth.oidc.client_secret is configured but did not resolve")
+		}
+		mappings := make([]auth.OIDCMapping, 0, len(authCfg.OIDC.Mappings))
+		for _, m := range authCfg.OIDC.Mappings {
+			mappings = append(mappings, auth.OIDCMapping{Claim: m.Claim, Equals: m.Equals, ActorID: m.ActorID, Role: m.Role})
+		}
+		oidcAuth, err := auth.NewOIDC(ctx, auth.OIDCOptions{
+			Issuer:        authCfg.OIDC.Issuer,
+			ClientID:      authCfg.OIDC.ClientID,
+			ClientSecret:  secret,
+			RedirectURL:   authCfg.OIDC.RedirectURL,
+			Scopes:        authCfg.OIDC.Scopes,
+			UsernameClaim: authCfg.OIDC.UsernameClaim,
+			Mappings:      mappings,
+		})
+		if err != nil {
+			return opts, apperr.New(apperr.KindConfig, "", "auth", err.Error())
+		}
+		opts.Authenticator = oidcAuth
+	default:
+		return opts, apperr.New(apperr.KindConfig, "", "auth", "unknown auth mode "+authCfg.Mode)
+	}
+	opts.Sessions = auth.NewSessionStore(
+		time.Duration(authCfg.IdleTTLMinutes)*time.Minute,
+		time.Duration(authCfg.AbsoluteTTLHours)*time.Hour,
+		0, nil,
+	)
+	return opts, nil
 }
 
 // report prints a typed error with its kind and capability, so the exit is explainable without

@@ -1,0 +1,7 @@
+=== RUN   TestToothAValidCookieWithoutCSRFIs403AndKernelUntouched
+--- PASS: TestToothAValidCookieWithoutCSRFIs403AndKernelUntouched (0.11s)
+=== RUN   TestToothCUnauthenticatedWorldIs401NoSnapshotLeak
+--- PASS: TestToothCUnauthenticatedWorldIs401NoSnapshotLeak (0.02s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.275s
+EXIT=0
