@@ -368,6 +368,110 @@ func TestMutationRequiresRequestID(t *testing.T) {
 	}
 }
 
+// F6: the authority closes a connection whose next request line exceeds its server-side line
+// timeout (10s on the real kernel; shrunk here). A pooled connection idled past that threshold is
+// dead on arrival, so acquire must retire it and dial fresh: the first request after an idle gap
+// succeeds instead of surfacing the dead connection as a refused mutation. The mutation is sent
+// exactly once - the reaped connection never carries it.
+func TestRequestAfterIdleGapUsesAFreshConnection(t *testing.T) {
+	const serverIdleClose = 300 * time.Millisecond
+
+	dir, err := os.MkdirTemp("", "sfwp-idle-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	socket := filepath.Join(dir, "idle.sock")
+	ln, err := net.Listen("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+
+	var mu sync.Mutex
+	var requests []string
+	var conns int
+	go func() {
+		for {
+			nc, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func(nc net.Conn) {
+				defer nc.Close()
+				mu.Lock()
+				conns++
+				mu.Unlock()
+				br := bufio.NewReader(nc)
+				for {
+					// The kernel's 10s request-line timeout, shrunk: a connection that sends
+					// nothing within the window is closed by the server.
+					nc.SetReadDeadline(time.Now().Add(serverIdleClose))
+					line, err := br.ReadString('\n')
+					if err != nil {
+						return
+					}
+					mu.Lock()
+					requests = append(requests, line)
+					mu.Unlock()
+					var probe struct {
+						Verb string `json:"verb"`
+					}
+					if json.Unmarshal([]byte(line), &probe) != nil || probe.Verb != "case_add_item" {
+						io.WriteString(nc, `{"error":"unhandled"}`+"\n")
+						return
+					}
+					io.WriteString(nc, `{"ok":true,"case_id":"case_1","plan_item_id":"i1","proposed_by":"operator_local"}`+"\n")
+				}
+			}(nc)
+		}
+	}()
+
+	cfg := testConfig(socket)
+	cfg.IdleTTL = 100 * time.Millisecond // below the server's idle close, with margin
+	client, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	add := func(id string) (*Response, error) {
+		req, err := NewCaseAddItem("case_1", map[string]any{
+			"plan_item_id": "i1", "name": "n", "item_kind": "sandboxed_task",
+			"settlement_criteria": map[string]any{},
+		}, "", id, Governance{Actor: Actor{ActorID: "operator_local", Role: "operator"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return client.Do(context.Background(), req)
+	}
+	if _, err := add("req-idle-1"); err != nil {
+		t.Fatalf("first mutation must succeed: %v", err)
+	}
+
+	// Idle past both the client's IdleTTL and the server's close threshold. Without the reap
+	// the next request would be written onto the connection the server already closed and fail
+	// as an unresolved mutation ("never crossed admission").
+	time.Sleep(serverIdleClose + 300*time.Millisecond)
+
+	resp, err := add("req-idle-2")
+	if err != nil {
+		t.Fatalf("the first request after the idle gap must succeed on a fresh connection, got %v", err)
+	}
+	var view AddItemView
+	if err := resp.Into(&view); err != nil || view.PlanItemID != "i1" {
+		t.Fatalf("the post-idle mutation must return the kernel's answer: %+v %v", view, err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if conns != 2 {
+		t.Fatalf("the pool must have reaped the stale connection and dialed exactly one fresh one, connections = %d", conns)
+	}
+	if n := len(requests); n != 2 {
+		t.Fatalf("each mutation must be sent exactly once, got %d sends", n)
+	}
+}
+
 // The subscription resubscribes from its last delivered cursor after the connection drops, and
 // never delivers a duplicate or non-monotonic cursor.
 func TestSubscriptionResumesFromLastCursor(t *testing.T) {

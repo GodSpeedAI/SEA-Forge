@@ -56,6 +56,13 @@ pub(crate) async fn submit(
     let mint_root = state.root.clone();
     let mint_entity = payload.entity.clone();
     let mint_process = payload.process.clone();
+    // T05 recovery contract: bind the admitted request's correlation record to
+    // the case id the instant it is minted — BEFORE any case ledger write — so
+    // a crash after the durable append is reconcilable at restart (the startup
+    // settlement checks this locator's case ledger instead of reporting an
+    // effect-landed commit as interrupted).
+    let mint_correlation = payload.correlation_request_id.clone();
+    let mint_store = state.correlation.clone();
     let (root, case_id, case_dir, case_events, stream, plan, mut case, mut events) =
         tokio::task::spawn_blocking(move || -> Result<_, ForgeError> {
             let plan_path = crate::agent_probe::resolve_policy_path(&mint_root, &plan_ref)?;
@@ -68,6 +75,9 @@ pub(crate) async fn submit(
                 .canonicalize()
                 .map_err(|e| ForgeError::io("canonicalize state root", e))?;
             let case_id = ids::case_id()?;
+            if let Some(request_id) = &mint_correlation {
+                mint_store.record_locator(request_id, &case_id)?;
+            }
             plan.case_id.clone_from(&case_id);
             let case_dir = root.join("cases").join(&case_id);
             let (_runs_dir, case_events) = CaseRunner::initialize_case(&case_dir)?;

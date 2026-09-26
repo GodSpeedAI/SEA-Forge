@@ -178,3 +178,17 @@ environment_incidents:
       per-item-kind. (2) case.trace.<kind> event names are snake_case (item_activated) — the
       helper now matches its doc; the Go adapter + goldens are the only consumers and were
       updated. Evidence: .agents/evidence/casework-live-wiring/T05/kernel-fix/summary.md.
+
+  D-3-followups-2:
+    recorded: '2026-09-25'
+    kind: kernel recovery-contract reconciliation (T06 fix F7)
+    decision: >-
+      A kill that landed after a case.commit's durable append but before the terminal correlation
+      write used to leave a failed record over a landed effect (the correlated outcome was lost).
+      The pending record is now bound to the minted case id (locator) BEFORE any case ledger
+      write, and the startup settlement reconciles located commits whose case ledger landed to
+      "completed" with the case id; unlanded locators stay interrupted. Locator is additive on
+      RequestRecord (schema regenerated). Live gate posture: go live suites run with -p 1
+      (package serialization) — parallel per-package kernel cells made restart/resume/relay
+      tests load-flaky; -p 1 is green twice consecutively and matches the repo's cargo jobs=1.
+    evidence: .agents/evidence/casework-live-wiring/T06/fixes/summary.md

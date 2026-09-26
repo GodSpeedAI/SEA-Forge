@@ -21,13 +21,21 @@ import (
 // LiveSource builds snapshots from live authority reads.
 type LiveSource struct {
 	auth ports.CaseAuthorityPort
+	// gateway is the gateway principal's own claim: the actor block the kernel requires on
+	// every governed call, perspective verification included. The kernel resolves a delegated
+	// read (resolve_delegated) only when the request's actor block names the configured gateway
+	// principal - the same rule intents.execute satisfies, so VerifyPerspective sends it too
+	// (T06 fix F1: an empty actor block is refused with identity_required).
+	gateway ports.ActorClaim
 	// now stamps rendered snapshots; nil means time.Now.
 	now func() time.Time
 }
 
-// NewLiveSource builds a source over the given authority port.
-func NewLiveSource(auth ports.CaseAuthorityPort) *LiveSource {
-	return &LiveSource{auth: auth}
+// NewLiveSource builds a source over the given authority port. gateway is the gateway
+// principal's claim (config serve.gateway_actor_id/gateway_role in production); it must match
+// the kernel's configured gateway principal or every delegated call is refused.
+func NewLiveSource(auth ports.CaseAuthorityPort, gateway ports.ActorClaim) *LiveSource {
+	return &LiveSource{auth: auth, gateway: gateway}
 }
 
 // Facts fetches one case's views. The case record comes from case.list (the list is the only
@@ -239,10 +247,14 @@ func (s *LiveSource) Preflight(ctx context.Context, templateRef string, params m
 }
 
 // VerifyPerspective checks with the kernel that this connection may act as the requested
-// (actor, role) - the same delegation rules intents are verified against, applied to reads. A
-// refusal here means the kernel would refuse this connection's write as that actor too.
+// (actor, role) - the same delegation rules intents are verified against, applied to reads. The
+// gateway principal is the request's actor and the requested user rides as on_behalf_of, exactly
+// as intents.execute sends it (T02/D-2): identity.get with on_behalf_of resolves through the
+// kernel's resolve_delegated, so a refusal here means the kernel would refuse this connection's
+// write as that actor too.
 func (s *LiveSource) VerifyPerspective(ctx context.Context, actor ports.ActorClaim) error {
 	report, err := s.auth.ResolveIdentity(ctx, ports.Governance{
+		Actor:      s.gateway,
 		OnBehalfOf: &ports.ActorClaim{ActorID: actor.ActorID, Role: actor.Role},
 	})
 	if err != nil {

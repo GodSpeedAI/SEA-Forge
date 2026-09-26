@@ -1,0 +1,92 @@
+=== RUN   TestAcceptedPathsUseGovernanceAndIntentIDAsRequestID
+--- PASS: TestAcceptedPathsUseGovernanceAndIntentIDAsRequestID (0.00s)
+=== RUN   TestEveryIntentKindAcceptedPath
+=== RUN   TestEveryIntentKindAcceptedPath/propose
+=== RUN   TestEveryIntentKindAcceptedPath/add-disc
+=== RUN   TestEveryIntentKindAcceptedPath/execute
+=== RUN   TestEveryIntentKindAcceptedPath/complete
+=== RUN   TestEveryIntentKindAcceptedPath/approve
+=== RUN   TestEveryIntentKindAcceptedPath/reject
+=== RUN   TestEveryIntentKindAcceptedPath/reopen
+=== RUN   TestEveryIntentKindAcceptedPath/terminate
+=== RUN   TestEveryIntentKindAcceptedPath/open
+--- PASS: TestEveryIntentKindAcceptedPath (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/propose (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/add-disc (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/execute (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/complete (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/approve (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/reject (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/reopen (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/terminate (0.00s)
+    --- PASS: TestEveryIntentKindAcceptedPath/open (0.00s)
+=== RUN   TestAddDiscretionaryReturnsProposedObject
+--- PASS: TestAddDiscretionaryReturnsProposedObject (0.00s)
+=== RUN   TestToothOperatorApproveRefusedWithNoKernelCall
+--- PASS: TestToothOperatorApproveRefusedWithNoKernelCall (0.00s)
+=== RUN   TestToothStaleCursorRefusedWithNoKernelWrite
+--- PASS: TestToothStaleCursorRefusedWithNoKernelWrite (0.00s)
+=== RUN   TestMissingCursorOnMutationIsInvalid
+--- PASS: TestMissingCursorOnMutationIsInvalid (0.00s)
+=== RUN   TestJustificationAndReasonRefusals
+=== RUN   TestJustificationAndReasonRefusals/add-disc
+=== RUN   TestJustificationAndReasonRefusals/complete
+=== RUN   TestJustificationAndReasonRefusals/approve-envelope
+=== RUN   TestJustificationAndReasonRefusals/terminate-blank-reason
+--- PASS: TestJustificationAndReasonRefusals (0.00s)
+    --- PASS: TestJustificationAndReasonRefusals/add-disc (0.00s)
+    --- PASS: TestJustificationAndReasonRefusals/complete (0.00s)
+    --- PASS: TestJustificationAndReasonRefusals/approve-envelope (0.00s)
+    --- PASS: TestJustificationAndReasonRefusals/terminate-blank-reason (0.00s)
+=== RUN   TestShapeRefusals
+--- PASS: TestShapeRefusals (0.00s)
+=== RUN   TestEscalateIsHonestUnavailable
+--- PASS: TestEscalateIsHonestUnavailable (0.00s)
+=== RUN   TestApproveResolvesThePendingApprovalFromTheKernelInbox
+--- PASS: TestApproveResolvesThePendingApprovalFromTheKernelInbox (0.00s)
+=== RUN   TestKernelRefusalsMapOntoTypedKinds
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/role-not-held
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/sod
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/self-approval
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/delegation
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/input
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/busy
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/stale-preflight
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/unmapped
+=== RUN   TestKernelRefusalsMapOntoTypedKinds/plain-unavailable
+--- PASS: TestKernelRefusalsMapOntoTypedKinds (0.01s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/role-not-held (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/sod (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/self-approval (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/delegation (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/input (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/busy (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/stale-preflight (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/unmapped (0.00s)
+    --- PASS: TestKernelRefusalsMapOntoTypedKinds/plain-unavailable (0.00s)
+=== RUN   TestIdempotentReplay
+--- PASS: TestIdempotentReplay (0.00s)
+=== RUN   TestUntrackedAndUnknownCasesRefuseHonest
+--- PASS: TestUntrackedAndUnknownCasesRefuseHonest (0.00s)
+=== RUN   TestRefusalMessageNamesTheKernelClassVerbatim
+--- PASS: TestRefusalMessageNamesTheKernelClassVerbatim (0.00s)
+=== RUN   TestLiveAcceptedExecuteAndIdempotentReplay
+livetest-relay: relay: rebuild of case_20260925T225111Z_dd4bfa at 01M3DC7Y97CVEG2AAYTM3MZ5Z8 failed: unavailable: the live authority client is closed (client)
+livetest-relay: relay: rebuild of case_20260925T225111Z_dd4bfa at 01M3DC7Y98X1N6EHMVJ05VCREQ failed: unavailable: the live authority client is closed (client)
+livetest-relay: relay: rebuild of case_20260925T225111Z_dd4bfa at 01M3DC7Y98X1N6EHMVJ05VCRER failed: unavailable: the live authority client is closed (client)
+--- PASS: TestLiveAcceptedExecuteAndIdempotentReplay (0.04s)
+=== RUN   TestLiveToothOperatorApproveRefusedWithNoKernelCall
+--- PASS: TestLiveToothOperatorApproveRefusedWithNoKernelCall (0.03s)
+=== RUN   TestLiveToothStaleCursorRefusedWithNoKernelWrite
+livetest-relay: relay: rebuild of case_20260925T225111Z_32363e at 01M3DC7YBGP8BMKBY4V1YDPHA3 failed: unavailable: the live authority client is closed (client)
+--- PASS: TestLiveToothStaleCursorRefusedWithNoKernelWrite (0.04s)
+=== RUN   TestLiveToothPreflightDigestVerifiedByTheKernel
+livetest-relay: relay: rebuild of case_20260925T225111Z_419fdc at 01M3DC7YC9DVZXNKN75D3AARTA failed: unavailable: the connection to the governed authority failed (read): EOF
+--- PASS: TestLiveToothPreflightDigestVerifiedByTheKernel (0.02s)
+=== RUN   TestLiveKernelDedupsSameRequestIDAcrossGatewayRestart
+    intents_live_test.go:222: restarted-gateway replay outcome: success=true refusal=<nil>
+livetest-relay: relay: rebuild of case_20260925T225111Z_b03749 at 01M3DC7YD8BZQB64HBXSFK4MZE failed: unavailable: the live authority client is closed (client)
+--- PASS: TestLiveKernelDedupsSameRequestIDAcrossGatewayRestart (0.05s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	1.209s
+EXIT=0

@@ -34,6 +34,12 @@ func kernelUnavailable(class, message string) error {
 	return apperr.New(apperr.KindUnavailable, "", "verb", message).With(&fakeClassRefusal{class: class})
 }
 
+// kernelInternal mirrors the real wire shape of a class the adapter's kind() does not know
+// (e.g. plan_schema_error arrives with the default internal kind).
+func kernelInternal(class, message string) error {
+	return apperr.New(apperr.KindInternal, "", "verb", message).With(&fakeClassRefusal{class: class})
+}
+
 // fakeAuth records every governed call (method, options) and can script an execute failure.
 type fakeAuth struct {
 	ports.CaseAuthorityPort // nil-embedded: any unexpected call panics loudly
@@ -47,6 +53,7 @@ type fakeAuth struct {
 	commits   int
 	decided   []string
 	commitID  string
+	lastItem  ports.CaseItemProposal
 
 	executeErr error
 }
@@ -82,6 +89,7 @@ func (f *fakeAuth) AddCaseItem(ctx context.Context, ref ports.CaseRef, item port
 	f.calls = append(f.calls, "case_add_item")
 	f.mutations = append(f.mutations, "case_add_item")
 	f.lastOpts = opts
+	f.lastItem = item
 	return "item-disc-1", nil
 }
 
@@ -271,18 +279,103 @@ func TestEveryIntentKindAcceptedPath(t *testing.T) {
 	}
 }
 
-func TestAddDiscretionaryReturnsProposedObject(t *testing.T) {
+// The T06 fix F2 contract: the gateway constructs a minimal VALID plan item from the intent
+// payload - a governed write_file operation (the kernel refuses an operation-less sandboxed task
+// with plan_schema_error), settlement criteria naming the written path, and depends_on for the
+// stage anchor. proposed_by is never sent: the kernel overwrites it with the verified actor.
+func TestAddDiscretionaryConstructsAValidPlanItem(t *testing.T) {
 	auth := &fakeAuth{listCases: []ports.CaseRecord{{Ref: "case_1", State: "active"}}}
 	h := newHandler(auth, map[string]string{"case_1": "01CURSOR"})
+	summary := "Rehearse the rollback path before the quarter closes."
 	resp := h.Handle(context.Background(), operatorIntent("i-obj", "ADD_DISCRETIONARY_WORK", map[string]any{
-		"case_id": "case_1", "stage_id": "stage_a", "kind": "work_item",
-		"title": "Rollback rehearsal", "justification": "needed"}))
+		"case_id": "case_1", "stage_id": "task_prepare", "kind": "work_item",
+		"title": "Rollback Rehearsal (Q3)", "summary": summary, "justification": "needed"}))
 	if !resp.Success {
 		t.Fatalf("refused: %+v", resp.Refusal)
+	}
+	item := auth.lastItem
+	if item.ItemID == "" || len(item.ItemID) > 128 {
+		t.Fatalf("the proposal needs a well-formed item id, got %q", item.ItemID)
+	}
+	if item.Name != "Rollback Rehearsal (Q3)" {
+		t.Fatalf("the item name comes from the payload title, got %q", item.Name)
+	}
+	if item.Kind != "sandboxed_task" || item.SandboxClass != "local" {
+		t.Fatalf("kind/sandbox class: %+v", item)
+	}
+	if len(item.Operations) != 1 {
+		t.Fatalf("a sandboxed task must carry exactly one operation, got %v", item.Operations)
+	}
+	op := item.Operations[0]
+	if op.Kind != "write_file" {
+		t.Fatalf("the operation must be a governed write_file, got %q", op.Kind)
+	}
+	if op.Path != "discretionary/rollback-rehearsal-q3.md" {
+		t.Fatalf("the write path is the kebab-case slug of the title under discretionary/, got %q", op.Path)
+	}
+	if op.ContentHint != summary {
+		t.Fatalf("content_hint is the payload summary, got %q", op.ContentHint)
+	}
+	if len(item.RequiredArtifacts) != 1 || item.RequiredArtifacts[0] != op.Path {
+		t.Fatalf("settlement criteria must require the written path as an artifact, got %v", item.RequiredArtifacts)
+	}
+	if len(item.DependsOn) != 1 || item.DependsOn[0] != "task_prepare" {
+		t.Fatalf("the stage anchor must become depends_on, got %v", item.DependsOn)
+	}
+	if item.ParentStage != "" {
+		t.Fatalf("parent_stage must stay unset (the anchor may not be a stage item), got %q", item.ParentStage)
 	}
 	if resp.ResultingObject == nil || resp.ResultingObject.ID != "item-disc-1" ||
 		resp.ResultingObject.Status != "WAITING" || resp.ResultingObject.Badge != "Proposed" {
 		t.Fatalf("resulting object: %+v", resp.ResultingObject)
+	}
+	if resp.ResultingObject.ParentID != nil {
+		t.Fatalf("the anchor is a dependency, not a parent; parent_id must be unset: %+v", resp.ResultingObject.ParentID)
+	}
+}
+
+func TestAddDiscretionaryDefaultsAndUnanchoredItems(t *testing.T) {
+	auth := &fakeAuth{listCases: []ports.CaseRecord{{Ref: "case_1", State: "active"}}}
+	h := newHandler(auth, map[string]string{"case_1": "01CURSOR"})
+	// No kind: defaults to sandboxed_task. No stage_id: no entry sentries. No summary:
+	// content_hint falls back to the mandatory justification.
+	resp := h.Handle(context.Background(), operatorIntent("i-def", "ADD_DISCRETIONARY_WORK", map[string]any{
+		"case_id": "case_1", "title": "  --  ", "justification": "because the case needs it"}))
+	if !resp.Success {
+		t.Fatalf("kind and stage_id are optional now, refused: %+v", resp.Refusal)
+	}
+	item := auth.lastItem
+	if item.Kind != "sandboxed_task" {
+		t.Fatalf("an absent kind must default to sandboxed_task, got %q", item.Kind)
+	}
+	if item.DependsOn != nil {
+		t.Fatalf("an unanchored proposal carries no dependency, got %v", item.DependsOn)
+	}
+	if item.Operations[0].ContentHint != "because the case needs it" {
+		t.Fatalf("content_hint must fall back to the justification, got %q", item.Operations[0].ContentHint)
+	}
+	if item.Operations[0].Path != "discretionary/item.md" {
+		t.Fatalf("a slugless title falls back to a valid path, got %q", item.Operations[0].Path)
+	}
+}
+
+// Stage and milestone proposals stay operation-less: the kernel refuses operations on
+// non-sandboxed items ("non-sandboxed item cannot have operations").
+func TestAddDiscretionaryStageAndMilestoneCarryNoOperations(t *testing.T) {
+	for _, kind := range []string{"stage", "milestone"} {
+		auth := &fakeAuth{listCases: []ports.CaseRecord{{Ref: "case_1", State: "active"}}}
+		h := newHandler(auth, map[string]string{"case_1": "01CURSOR"})
+		resp := h.Handle(context.Background(), operatorIntent("i-"+kind, "ADD_DISCRETIONARY_WORK", map[string]any{
+			"case_id": "case_1", "kind": kind, "title": "Gate review", "justification": "needed"}))
+		if !resp.Success {
+			t.Fatalf("%s refused: %+v", kind, resp.Refusal)
+		}
+		if len(auth.lastItem.Operations) != 0 || len(auth.lastItem.RequiredArtifacts) != 0 {
+			t.Fatalf("a %s item must not carry operations or artifact requirements: %+v", kind, auth.lastItem)
+		}
+		if kind == "milestone" && resp.ResultingObject.Kind != "milestone" {
+			t.Fatalf("a milestone proposal renders as a milestone object, got %+v", resp.ResultingObject)
+		}
 	}
 }
 
@@ -449,6 +542,7 @@ func TestKernelRefusalsMapOntoTypedKinds(t *testing.T) {
 		{"self-approval", kernelDenied("separation_of_duty_unverifiable", "soD2"), "SOD_VIOLATION"},
 		{"delegation", kernelDenied("identity_delegation_refused", "nope"), "AUTHORITY_DENIED"},
 		{"input", kernelInvalid("input_error", "bad input"), "INVALID"},
+		{"plan-schema", kernelInternal("plan_schema_error", "sandboxed task item-disc-x must declare at least one operation"), "INVALID"},
 		{"busy", kernelUnavailable("server_busy", "busy"), "UNAVAILABLE"},
 		{"stale-preflight", kernelInvalid("precondition_failed", "stale"), "STALE_PROJECTION"},
 		{"unmapped", kernelDenied("cell_dark", "mystery"), "AUTHORITY_DENIED"},

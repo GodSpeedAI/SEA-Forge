@@ -159,8 +159,11 @@ func TestLiveSSERelayOfKernelFramesWithResume(t *testing.T) {
 		case <-time.After(15 * time.Second):
 			t.Fatalf("no snapshot revision arrived after the mutation; seen=%v", seen)
 		}
-		if last.id != "" {
-			t.Logf("collected first snapshot; events seen so far: %v", seen)
+		// Skip snapshots that merely replay the subscribe point (they carry the pre-mutation
+		// cursor and may arrive late under load); only a revision strictly newer proves the
+		// relay forwarded the mutation's kernel frames.
+		if last.id != "" && last.id != cursor {
+			t.Logf("collected first post-mutation snapshot; events seen so far: %v", seen)
 			break
 		}
 	}
@@ -275,4 +278,49 @@ func TestLiveTemplateEndpoints(t *testing.T) {
 		t.Fatalf("preflight must pass on the live cell: %+v", pf)
 	}
 	fmt.Printf("live preflight digest: %s\n", *pf.Digest)
+}
+
+// T06 fix F1, live: the explicit ?actor=&role= perspective must verify against the REAL kernel
+// through the gateway principal (an empty actor block is refused with identity_required, which
+// 403'd every perspective request before the fix). Allowlisted actor -> 200 with real standing;
+// a bound-but-not-allowlisted actor -> 403 typed refusal.
+func TestLiveWorldPerspectiveVerifiesAgainstTheKernel(t *testing.T) {
+	cell := livetest.NewCell(t)
+	stack := livestack.AssembleStack(t, cell)
+	ts := httptest.NewServer(stack.API.Handler())
+	t.Cleanup(ts.Close)
+
+	caseID := stack.CommitSentryChain(t, "gw-t06-persp-commit-1")
+	stack.WaitRevision(t, caseID, "")
+
+	get := func(url string) (int, string) {
+		resp, err := http.Get(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		raw, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp.StatusCode, string(raw)
+	}
+
+	code, body := get(ts.URL + "/api/world?case_id=" + caseID +
+		"&actor=operator_local&role=operator")
+	if code != http.StatusOK {
+		t.Fatalf("allowlisted perspective must verify: status %d body %s", code, body)
+	}
+	if !strings.Contains(body, "task_prepare") {
+		t.Fatalf("the perspective world must carry the case's real standing: %s", body)
+	}
+
+	code, body = get(ts.URL + "/api/world?case_id=" + caseID +
+		"&actor=operator_c&role=operator")
+	if code != http.StatusForbidden {
+		t.Fatalf("a bound-but-not-allowlisted actor must be refused by the kernel: status %d body %s", code, body)
+	}
+	if !strings.Contains(body, "authority_denied") {
+		t.Fatalf("the refusal must be typed: %s", body)
+	}
 }

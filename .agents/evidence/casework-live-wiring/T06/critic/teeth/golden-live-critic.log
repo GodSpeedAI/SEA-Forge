@@ -1,0 +1,5 @@
+=== RUN   TestLiveGoldenSentryChainSnapshot
+--- PASS: TestLiveGoldenSentryChainSnapshot (0.20s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.213s
+EXIT=0

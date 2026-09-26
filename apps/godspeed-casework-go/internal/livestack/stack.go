@@ -43,7 +43,7 @@ func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
 
 	client := cell.Client()
 	authority := sfwp.NewAuthority(client)
-	source := projection.NewLiveSource(authority)
+	source := projection.NewLiveSource(authority, ports.ActorClaim{ActorID: "gateway", Role: "service"})
 	store := projection.NewStore()
 
 	sub, err := client.Subscribe(ctx)

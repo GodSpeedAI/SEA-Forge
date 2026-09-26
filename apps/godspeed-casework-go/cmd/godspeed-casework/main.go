@@ -206,7 +206,10 @@ func adapterOf(resolved config.Resolved, name string) string {
 //	  -> server.Server (HTTP+SSE surface)
 func serveLive(ctx context.Context, addr string, resolved config.Resolved, authority *sfwp.Authority, client *sfwp.Client) error {
 	serve := config.ServeDefaults(resolved.Serve)
-	source := projection.NewLiveSource(authority)
+	source := projection.NewLiveSource(authority, ports.ActorClaim{
+		ActorID: serve.GatewayActorID,
+		Role:    serve.GatewayRole,
+	})
 	store := projection.NewStore()
 
 	// The subscription and relay run for the process lifetime: they are the gateway's window on

@@ -39,6 +39,13 @@ pub struct RequestRecord {
     /// record without one is not dedupeable (see [`RequestCorrelationStore::check`]).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub payload_hash: Option<String>,
+    /// The durable artifact this admitted request was bound to, written BEFORE
+    /// the effect's first ledger write. For `case.commit` this is the minted
+    /// case id; the startup settlement uses it to reconcile a crash that landed
+    /// after the commit's durable append (whose honest outcome is "completed",
+    /// not "interrupted"). Additive and optional.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub locator: Option<String>,
 }
 
 /// What dispatch should do with a request that carries a `request_id`.
@@ -232,8 +239,38 @@ impl RequestCorrelationStore {
             completed_at: None,
             outcome: None,
             payload_hash: self.carry_hash(request_id, payload_hash)?,
+            locator: self.carry_locator(request_id)?,
         };
         self.write_atomic(&record)
+    }
+
+    /// Bind a pending request to the durable artifact its effect will land in
+    /// (`case.commit` → the minted case id). First write wins and a settled
+    /// record is never touched: the locator is written inside the effect's
+    /// mint step, before any ledger write, so the startup settlement can tell
+    /// "crashed before the effect" from "crashed after the durable append".
+    pub fn record_locator(&self, request_id: &str, locator: &str) -> Result<(), ForgeError> {
+        if self.is_settled(request_id) {
+            return Ok(());
+        }
+        let Some(mut record) = self.get(request_id)? else {
+            // No pending record (caller without a request id): nothing to bind.
+            return Ok(());
+        };
+        if record.status != RequestStatus::Pending {
+            return Ok(());
+        }
+        if record.locator.is_some() {
+            // First write wins: the mint is the only writer and runs once.
+            return Ok(());
+        }
+        record.locator = Some(locator.to_string());
+        self.write_atomic(&record)
+    }
+
+    /// The existing locator for a request, if its record carries one.
+    fn carry_locator(&self, request_id: &str) -> Result<Option<String>, ForgeError> {
+        Ok(self.get(request_id)?.and_then(|record| record.locator))
     }
 
     /// The hash to persist: the supplied one, else whatever the id already has.
@@ -277,6 +314,10 @@ impl RequestCorrelationStore {
             .as_ref()
             .map(|record| record.submitted_at.clone())
             .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+        let (payload_hash, locator) = match &prior {
+            Some(record) => (record.payload_hash.clone(), record.locator.clone()),
+            None => (None, None),
+        };
         let record = RequestRecord {
             request_id: request_id.to_string(),
             method: method.to_string(),
@@ -284,7 +325,8 @@ impl RequestCorrelationStore {
             submitted_at,
             completed_at: Some(chrono::Utc::now().to_rfc3339()),
             outcome: Some(outcome.clone()),
-            payload_hash: prior.and_then(|record| record.payload_hash),
+            payload_hash,
+            locator,
         };
         self.write_atomic(&record)
     }
@@ -314,6 +356,24 @@ impl RequestCorrelationStore {
             if record.status != RequestStatus::Pending {
                 continue;
             }
+            // A located commit whose case ledger already carries its durable
+            // first write landed BEFORE the crash: the honest outcome is the
+            // committed one, not an interruption. Anything else (no locator,
+            // locator's ledger absent or without its first event) stays
+            // interrupted — the effect never became durable.
+            if record.method == "case.commit" {
+                if let Some(locator) = &record.locator {
+                    if self.case_ledger_landed(locator)? {
+                        let outcome = serde_json::json!({
+                            "case_id": locator,
+                            "recovered": true,
+                        });
+                        self.record_outcome(&record.request_id, &record.method, &outcome)?;
+                        settled += 1;
+                        continue;
+                    }
+                }
+            }
             let outcome = serde_json::json!({
                 "error": "server restarted before this admitted request settled",
                 "error_class": "request_interrupted",
@@ -324,6 +384,25 @@ impl RequestCorrelationStore {
             settled += 1;
         }
         Ok(settled)
+    }
+
+    /// True when the located case's ledger exists and already carries its
+    /// `case_created` first write. The case id comes from this store's own
+    /// records, and the path segments are kernel-minted ids — but the id is
+    /// still validated as an id segment before it joins a path.
+    fn case_ledger_landed(&self, locator: &str) -> Result<bool, ForgeError> {
+        if !sea_forge_core::path::valid_id_segment(locator, 128) {
+            return Ok(false);
+        }
+        let Some(root) = self.dir.parent() else {
+            return Ok(false);
+        };
+        let ledger = root.join("cases").join(locator).join("case-events.jsonl");
+        match std::fs::read(&ledger) {
+            Ok(bytes) => Ok(bytes.windows(b"\"kind\":".len()).any(|w| w == b"\"kind\":")),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(ForgeError::io("read located case ledger", error)),
+        }
     }
 
     /// Look up a correlation record; `Ok(None)` if the id is unknown.
@@ -429,6 +508,103 @@ mod tests {
             store.check("req-interrupted", &hash).unwrap(),
             DedupeVerdict::Replay(record.outcome.unwrap())
         );
+    }
+
+    #[test]
+    fn restart_reconciles_a_located_commit_whose_ledger_landed() {
+        let (root, store) = store();
+        let payload = json!({"verb": "case_commit", "template_ref": "e2e@1"});
+        let hash = payload_hash(&payload);
+        store
+            .record_pending("req-located", "case.commit", Some(&hash))
+            .unwrap();
+        store
+            .record_locator("req-located", "case_20260926T000000Z_test1")
+            .unwrap();
+
+        // The crash landed AFTER the durable append: the case ledger exists and
+        // carries its first event. The honest outcome is the committed one.
+        let case_dir = root
+            .path()
+            .join("cases")
+            .join("case_20260926T000000Z_test1");
+        std::fs::create_dir_all(&case_dir).unwrap();
+        std::fs::write(
+            case_dir.join("case-events.jsonl"),
+            r#"{"kind":"case_created","payload":{"case_id":"case_20260926T000000Z_test1"}}\n"#,
+        )
+        .unwrap();
+
+        assert_eq!(store.settle_interrupted_requests().unwrap(), 1);
+        let record = store.get("req-located").unwrap().unwrap();
+        assert_eq!(record.status, RequestStatus::Completed);
+        assert_eq!(
+            record
+                .outcome
+                .as_ref()
+                .and_then(|outcome| outcome["case_id"].as_str()),
+            Some("case_20260926T000000Z_test1")
+        );
+        // Same-id retry replays the committed outcome instead of re-executing.
+        assert!(matches!(
+            store.check("req-located", &hash).unwrap(),
+            DedupeVerdict::Replay(_),
+        ));
+    }
+
+    #[test]
+    fn restart_still_interrupts_a_located_commit_whose_ledger_never_landed() {
+        let (_root, store) = store();
+        store
+            .record_pending(
+                "req-unlanded",
+                "case.commit",
+                Some(&payload_hash(&json!({}))),
+            )
+            .unwrap();
+        store
+            .record_locator("req-unlanded", "case_20260926T000000Z_test2")
+            .unwrap();
+        // No case dir at all: the crash landed before any durable effect.
+
+        assert_eq!(store.settle_interrupted_requests().unwrap(), 1);
+        let record = store.get("req-unlanded").unwrap().unwrap();
+        assert_eq!(record.status, RequestStatus::Failed);
+        assert_eq!(
+            record
+                .outcome
+                .as_ref()
+                .and_then(|outcome| outcome["error_class"].as_str()),
+            Some("request_interrupted")
+        );
+    }
+
+    #[test]
+    fn the_locator_is_never_rewritten_and_survives_the_restart_settlement() {
+        let (root, store) = store();
+        store
+            .record_pending(
+                "req-locator",
+                "case.commit",
+                Some(&payload_hash(&json!({}))),
+            )
+            .unwrap();
+        store.record_locator("req-locator", "case_first").unwrap();
+        store.record_locator("req-locator", "case_second").unwrap();
+        let record = store.get("req-locator").unwrap().unwrap();
+        assert_eq!(record.locator.as_deref(), Some("case_first"));
+
+        // A ledger that landed keeps the locator through the terminal write.
+        let case_dir = root.path().join("cases").join("case_first");
+        std::fs::create_dir_all(&case_dir).unwrap();
+        std::fs::write(
+            case_dir.join("case-events.jsonl"),
+            "{\"kind\":\"case_created\"}\n",
+        )
+        .unwrap();
+        store.settle_interrupted_requests().unwrap();
+        let record = store.get("req-locator").unwrap().unwrap();
+        assert_eq!(record.locator.as_deref(), Some("case_first"));
     }
 
     #[test]

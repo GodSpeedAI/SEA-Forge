@@ -16,8 +16,11 @@ package intents_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack"
@@ -220,4 +223,121 @@ func TestLiveKernelDedupsSameRequestIDAcrossGatewayRestart(t *testing.T) {
 	}
 	// Whatever the kernel answered (replayed outcome or refusal), it answered ONCE durably.
 	t.Logf("restarted-gateway replay outcome: success=%t refusal=%v", resp.Success, resp.Refusal)
+}
+
+// T06 fix F2, live: ADD_DISCRETIONARY_WORK must produce an ACCEPTED kernel write through the
+// served surface. The gateway constructs the governed write_file item (kernel refuses
+// operation-less proposals), the plan mutates durably, and executing the new item settles
+// accepted on the materialized file (kernel commit 514fc72's write_file path).
+func TestLiveDiscretionaryAddProducesAnAcceptedKernelWrite(t *testing.T) {
+	cell := livetest.NewCell(t)
+	stack := livestack.AssembleStack(t, cell)
+	caseID := stack.CommitSentryChain(t, "gw-t06-disc-commit-1")
+	stack.WaitRevision(t, caseID, "")
+	cursor, _ := stack.Relay.CursorForCase(caseID)
+
+	add := contract.InteractionIntent{
+		IntentID:     "gw-t06-disc-add-1",
+		Kind:         "CONSEQUENTIAL_CASE",
+		ActionName:   "ADD_DISCRETIONARY_WORK",
+		CaseID:       caseID,
+		ClientCursor: cursor,
+		Actor:        contract.IntentActor{ActorID: "operator_local", Role: "operator"},
+		Parameters: map[string]any{
+			"case_id":       caseID,
+			"stage_id":      "task_prepare",
+			"kind":          "sandboxed_task",
+			"title":         "Augment dataset notes",
+			"summary":       "Record why the discretionary augmentation was needed.",
+			"justification": "The prepared dataset lacks provenance notes; the reviewer asked for them.",
+		},
+	}
+	resp := stack.Dispatcher.Handle(context.Background(), add)
+	if !resp.Success {
+		t.Fatalf("discretionary add refused: %+v", resp.Refusal)
+	}
+	// Kernel truth: the plan mutated durably, exactly once for this intent.
+	if got := cell.CountTraceKinds(caseID, "plan_mutated"); got != 1 {
+		t.Fatalf("durable plan_mutated count = %d, want 1", got)
+	}
+	if resp.NewCursor == nil || *resp.NewCursor == "" || *resp.NewCursor == cursor {
+		t.Fatalf("accepted add must answer with a NEWER kernel cursor, got %+v", resp.NewCursor)
+	}
+	if resp.ResultingObject == nil || resp.ResultingObject.ID == "" {
+		t.Fatalf("accepted add must surface the proposed object, got %+v", resp.ResultingObject)
+	}
+
+	// The next snapshot offers EXECUTE_ITEM for the new item (it depends on task_prepare, which
+	// is still pending here, so instead execute task_prepare first and re-check the offer).
+	executeFirst := operatorExecute("gw-t06-disc-exec-prepare-1", "task_prepare", *resp.NewCursor)
+	executeFirst.CaseID = caseID
+	if out := stack.Dispatcher.Handle(context.Background(), executeFirst); !out.Success {
+		t.Fatalf("task_prepare execute refused: %+v", out.Refusal)
+	}
+	stack.WaitRevision(t, caseID, *resp.NewCursor)
+	cursorAfterPrepare, _ := stack.Relay.CursorForCase(caseID)
+
+	execNew := contract.InteractionIntent{
+		IntentID:       "gw-t06-disc-exec-1",
+		Kind:           "CONSEQUENTIAL_CASE",
+		ActionName:     "EXECUTE_ITEM",
+		TargetObjectID: resp.ResultingObject.ID,
+		CaseID:         caseID,
+		ClientCursor:   cursorAfterPrepare,
+		Actor:          contract.IntentActor{ActorID: "operator_local", Role: "operator"},
+		Parameters:     map[string]any{"item_id": resp.ResultingObject.ID},
+	}
+	out := stack.Dispatcher.Handle(context.Background(), execNew)
+	if !out.Success {
+		t.Fatalf("discretionary item execute refused: %+v", out.Refusal)
+	}
+
+	// Kernel truth: the discretionary episode settled ACCEPTED — the item_completed event's
+	// own payload records the settlement status — with the honest write_only basis (the
+	// governed write materialized and was captured as an artifact; no command ran).
+	livetest.WaitUntil(t, 15*time.Second, "durable item_completed for the discretionary item", func() bool {
+		for _, ev := range cell.CaseEvents(caseID) {
+			kind, _ := ev["kind"].(string)
+			item, _ := ev["plan_item_id"].(string)
+			if kind == "item_completed" && item == resp.ResultingObject.ID {
+				payload, _ := ev["payload"].(map[string]any)
+				settlement, _ := payload["settlement"].(string)
+				return settlement == "accepted"
+			}
+		}
+		return false
+	})
+	writeOnlyBasis := false
+	basisFiles, _ := filepath.Glob(filepath.Join(cell.Root(), "cases", caseID, "runs", "*", "settlement.json"))
+	for _, f := range basisFiles {
+		raw, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc struct {
+			Status string   `json:"status"`
+			Basis  []string `json:"basis"`
+		}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatal(err)
+		}
+		if doc.Status == "accepted" && containsString(doc.Basis, "write_only") {
+			writeOnlyBasis = true
+		}
+	}
+	if len(basisFiles) == 0 {
+		t.Fatal("expected settlement.json under the case runs for every dispatched episode")
+	}
+	if !writeOnlyBasis {
+		t.Fatal("no accepted settlement in the case carries the honest write_only basis")
+	}
+}
+
+func containsString(list []string, want string) bool {
+	for _, v := range list {
+		if v == want {
+			return true
+		}
+	}
+	return false
 }

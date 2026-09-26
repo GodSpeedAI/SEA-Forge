@@ -981,6 +981,14 @@ pub struct SubmitPayload {
     process: String,
     #[serde(default = "default_timeout")]
     timeout: u64,
+    /// The admitted request's correlation id, when the caller supplied one.
+    /// Set by the `CaseCommit` arm before dispatch (never deserialized from
+    /// client input); `case_dispatch::submit` writes it into the pending
+    /// correlation record as the case locator the moment the case id is
+    /// minted, so a crash after the durable append can still be reconciled
+    /// to its committed outcome at restart (T05 recovery contract).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    correlation_request_id: Option<String>,
 }
 
 fn default_policy() -> String {
@@ -2525,6 +2533,7 @@ pub async fn handle_request_as(
                         entity,
                         process,
                         timeout,
+                        correlation_request_id: request_id.clone(),
                     };
                     commit_plan(state, payload, verified_role).await
                 }

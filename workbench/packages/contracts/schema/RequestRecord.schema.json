@@ -10,6 +10,13 @@
         "null"
       ]
     },
+    "locator": {
+      "description": "The durable artifact this admitted request was bound to, written BEFORE\nthe effect's first ledger write. For `case.commit` this is the minted\ncase id; the startup settlement uses it to reconcile a crash that landed\nafter the commit's durable append (whose honest outcome is \"completed\",\nnot \"interrupted\"). Additive and optional.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "method": {
       "type": "string"
     },

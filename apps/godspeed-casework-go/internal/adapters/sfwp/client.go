@@ -50,6 +50,13 @@ type Config struct {
 	// SubscribeIdle bounds each silent stretch on the subscription connection before it is
 	// treated as dead and re-established from the last cursor. Default 60s.
 	SubscribeIdle time.Duration
+	// IdleTTL bounds how long a pooled connection may sit idle before acquire retires it
+	// (closing it and dialing fresh) instead of handing it out. The authority closes a
+	// connection whose next request line exceeds its 10s server timeout, so any connection
+	// idle longer than that is dead on arrival: the first request on it fails (for a mutation
+	// that means an honest UNAVAILABLE with no kernel record). The default 8s stays below that
+	// threshold with margin (T06 fix F6).
+	IdleTTL time.Duration
 	// Logger receives reconnect/recovery diagnostics. Nil discards them.
 	Logger *log.Logger
 	// Dial replaces the Unix dialer (tests inject fakes here).
@@ -80,6 +87,9 @@ func (c *Config) fill() error {
 	}
 	if c.SubscribeIdle <= 0 {
 		c.SubscribeIdle = 60 * time.Second
+	}
+	if c.IdleTTL <= 0 {
+		c.IdleTTL = 8 * time.Second
 	}
 	if c.Dial == nil {
 		c.Dial = func(ctx context.Context, socketPath string) (net.Conn, error) {
@@ -153,6 +163,8 @@ type conn struct {
 	br   *bufio.Reader
 	mu   sync.Mutex
 	dead bool
+	// idleAt is when the connection was released back to the pool; zero for a fresh dial.
+	idleAt time.Time
 }
 
 func (cn *conn) close() {
@@ -219,8 +231,10 @@ func (c *Client) dial(ctx context.Context) (*conn, error) {
 	return &conn{nc: nc, br: bufio.NewReader(nc)}, nil
 }
 
-// acquire checks out a connection: an idle one if available, a fresh one while under MaxConns,
-// else it waits for a release or the context.
+// acquire checks out a connection: an idle one if available (retiring any that idled past the
+// IdleTTL - the authority closes connections idle past its request-line timeout, so a stale
+// pooled connection must never be handed out), a fresh one while under MaxConns, else it waits
+// for a release or the context.
 func (c *Client) acquire(ctx context.Context) (*conn, error) {
 	for {
 		c.mu.Lock()
@@ -228,11 +242,21 @@ func (c *Client) acquire(ctx context.Context) (*conn, error) {
 			c.mu.Unlock()
 			return nil, errClientClosed
 		}
-		if n := len(c.idle); n > 0 {
-			cn := c.idle[n-1]
-			c.idle = c.idle[:n-1]
-			c.mu.Unlock()
-			return cn, nil
+		reaped := false
+		for len(c.idle) > 0 {
+			cn := c.idle[len(c.idle)-1]
+			c.idle = c.idle[:len(c.idle)-1]
+			if !cn.idleAt.IsZero() && time.Since(cn.idleAt) < c.cfg.IdleTTL {
+				c.mu.Unlock()
+				return cn, nil
+			}
+			cn.close()
+			c.live--
+			reaped = true
+		}
+		if reaped {
+			// Reaping freed capacity: wake a waiter that can now dial.
+			c.signalFree()
 		}
 		if c.live < c.cfg.MaxConns {
 			c.live++
@@ -265,10 +289,12 @@ func (c *Client) discard(cn *conn) {
 	c.signalFree()
 }
 
-// release returns a healthy connection to the pool.
+// release returns a healthy connection to the pool, stamped with its idle time so acquire can
+// retire it before the authority's own idle timeout closes it under us.
 func (c *Client) release(cn *conn) {
 	c.mu.Lock()
 	if !c.closed && !cn.dead && len(c.idle) < c.cfg.MaxConns {
+		cn.idleAt = time.Now()
 		c.idle = append(c.idle, cn)
 		c.mu.Unlock()
 	} else {

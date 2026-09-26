@@ -1092,3 +1092,13 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   these names (the Go sfwp adapter, uncommitted at fix time) was updated and its goldens
   re-captured; tests/sfwp_case_mutations.rs literals corrected. Decision recorded: the wire
   spelling for case.trace.<kind> events is snake_case going forward (decision log D-3-followups).
+
+## RESOLVED 2026-09-25: SFWP client pool had no idle hygiene (first request after >10s idle failed)
+
+- Observed: 2026-09-24 (independent T06 critic, finding F6; controlled reproduction captured).
+- Root cause: the server's per-connection request-line timeout (10s) closes idle pooled
+  connections; the client handed them out without a liveness check, so the first request after
+  an idle gap failed (honest typed refusal, no side effects, but an avoidable one).
+- RESOLVED (T06 fixes): Client.IdleTTL (default 8s, below the server threshold with margin)
+  retires stale pooled connections at acquire; the acquire redials fresh. Recovery contract
+  unchanged (get_status for mutations, never blind re-send).

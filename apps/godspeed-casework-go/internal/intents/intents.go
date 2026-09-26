@@ -20,7 +20,8 @@
 //	UNAVAILABLE            the kernel is unreachable, or the intent is honestly unroutable in this
 //	                       deployment (ESCALATE_OR_OVERRIDE: no kernel verb routes it before T13).
 //	INVALID                malformed shape, unknown payload fields, missing required parameters,
-//	                       unknown case/target, or a kernel input_error (class preserved).
+//	                       unknown case/target, or a kernel malformed-proposal class
+//	                       (input_error, plan_schema_error; class preserved).
 //
 // Idempotency is two-layered: the same intent id with a byte-identical canonical body replays the
 // recorded outcome in-process; and every mutation is correlated to the kernel with request_id =
@@ -198,11 +199,11 @@ func (h *Handler) validate(in contract.InteractionIntent) (bool, error) {
 		if err := decodePayload(in, &p); err != nil {
 			return false, err
 		}
-		if p.CaseID == "" || p.StageID == "" || p.Title == "" {
-			return false, invalid("ADD_DISCRETIONARY_WORK requires parameters.case_id, stage_id and title")
-		}
-		if p.Kind == "" {
-			return false, invalid("ADD_DISCRETIONARY_WORK requires parameters.kind")
+		// stage_id is the optional DAG anchor (T06 fix F2): when given, the proposal depends on
+		// that plan item so the new work lands after it; when absent the item has no entry
+		// sentries. kind defaults to sandboxed_task, justification is never optional.
+		if p.CaseID == "" || p.Title == "" {
+			return false, invalid("ADD_DISCRETIONARY_WORK requires parameters.case_id and title")
 		}
 		if p.Justification == "" {
 			return false, &refusalError{kind: RefJustificationNeeded, message: "Discretionary work is consequential: state why this work is needed before it can be proposed."}
@@ -295,8 +296,9 @@ func (h *Handler) execute(ctx context.Context, in contract.InteractionIntent) (s
 		if err != nil {
 			return "", nil, err
 		}
-		cursor := h.cursors.WaitForCaseAdvance(ctx, receipt.CaseID, "")
-		return cursor, nil, nil
+		// The case did not exist before the commit, so there is no pre-call cursor: the wait is
+		// for the new case's FIRST observed frame, which is the commit's own.
+		return h.postMutationCursor(ctx, receipt.CaseID, ""), nil, nil
 
 	case "ADD_DISCRETIONARY_WORK":
 		var p contract.AddDiscretionaryWorkPayload
@@ -305,64 +307,88 @@ func (h *Handler) execute(ctx context.Context, in contract.InteractionIntent) (s
 		if err != nil {
 			return "", nil, err
 		}
-		itemID, err := h.auth.AddCaseItem(ctx, ports.CaseRef(p.CaseID), ports.CaseItemProposal{
-			ItemID:       newItemID(p.Title),
+		// The gateway constructs a minimal VALID plan item (T06 fix F2): the kernel refuses an
+		// operation-less sandboxed task with plan_schema_error, so the proposal carries one
+		// governed write_file operation whose path is derived from the item name and whose
+		// content_hint is the payload's summary/justification body; the settlement criteria
+		// require that same path as an artifact, so executing the item settles accepted on the
+		// materialized file. The kernel overwrites proposed_by with the verified actor, so the
+		// proposer-side separation of duty applies naturally. stage_id anchors the item in the
+		// DAG (depends_on, not parent_stage - the anchor may not be a stage-kind item).
+		proposal := ports.CaseItemProposal{
+			ItemID:       newItemID(),
 			Name:         p.Title,
 			Kind:         kind,
 			SandboxClass: "local",
-			ParentStage:  p.StageID,
-		}, opts)
+		}
+		if p.StageID != "" {
+			proposal.DependsOn = []string{p.StageID}
+		}
+		if kind == "sandboxed_task" {
+			// The kernel forbids operations on non-sandboxed items (stage/milestone), so the
+			// governed write only exists where the plan schema allows one.
+			path := discretionaryWritePath(p.Title)
+			proposal.Operations = []ports.ItemOperation{{
+				Kind:        "write_file",
+				Path:        path,
+				ContentHint: discretionaryContentHint(p),
+			}}
+			proposal.RequiredArtifacts = []string{path}
+		}
+		before, _ := h.cursors.CursorForCase(p.CaseID)
+		itemID, err := h.auth.AddCaseItem(ctx, ports.CaseRef(p.CaseID), proposal, opts)
 		if err != nil {
 			return "", nil, err
 		}
-		obj := proposedObject(itemID, p.Title, p.StageID, in.Actor.ActorID)
-		cursor := h.cursors.WaitForCaseAdvance(ctx, p.CaseID, "")
-		return cursor, &obj, nil
+		obj := proposedObject(itemID, p.Title, kind, p.StageID, in.Actor.ActorID)
+		return h.postMutationCursor(ctx, p.CaseID, before), &obj, nil
 
 	case "EXECUTE_ITEM":
 		var p contract.ExecuteItemPayload
 		_ = decodePayload(in, &p)
+		before, _ := h.cursors.CursorForCase(caseID)
 		if _, err := h.auth.ExecuteItem(ctx, ports.CaseRef(caseID), p.ItemID, opts); err != nil {
 			return "", nil, err
 		}
-		cursor := h.cursors.WaitForCaseAdvance(ctx, caseID, "")
-		return cursor, nil, nil
+		return h.postMutationCursor(ctx, caseID, before), nil, nil
 
 	case "COMPLETE_HUMAN_TASK":
 		var p contract.CompleteHumanTaskPayload
 		_ = decodePayload(in, &p)
+		before, _ := h.cursors.CursorForCase(caseID)
 		if err := h.auth.CompleteHumanTask(ctx, ports.CaseRef(caseID), p.ItemID, p.Justification, opts); err != nil {
 			return "", nil, err
 		}
-		cursor := h.cursors.WaitForCaseAdvance(ctx, caseID, "")
-		return cursor, nil, nil
+		return h.postMutationCursor(ctx, caseID, before), nil, nil
 
 	case "APPROVE_HUMAN_TASK", "REJECT_HUMAN_TASK":
 		approvalID, err := h.resolveApproval(ctx, caseID, in.TargetObjectID)
 		if err != nil {
 			return "", nil, err
 		}
+		before, _ := h.cursors.CursorForCase(caseID)
 		if err := h.auth.DecideApproval(ctx, approvalID, in.ActionName == "APPROVE_HUMAN_TASK", *in.Justification, opts); err != nil {
 			return "", nil, err
 		}
-		cursor := h.cursors.WaitForCaseAdvance(ctx, caseID, "")
-		return cursor, nil, nil
+		return h.postMutationCursor(ctx, caseID, before), nil, nil
 
 	case "REOPEN_CASE":
 		var p contract.CaseLifecyclePayload
 		_ = decodePayload(in, &p)
+		before, _ := h.cursors.CursorForCase(p.CaseID)
 		if err := h.auth.ReopenCase(ctx, ports.CaseRef(p.CaseID), opts); err != nil {
 			return "", nil, err
 		}
-		return h.cursors.WaitForCaseAdvance(ctx, p.CaseID, ""), nil, nil
+		return h.postMutationCursor(ctx, p.CaseID, before), nil, nil
 
 	case "TERMINATE_CASE":
 		var p contract.CaseLifecyclePayload
 		_ = decodePayload(in, &p)
+		before, _ := h.cursors.CursorForCase(p.CaseID)
 		if err := h.auth.TerminateCase(ctx, ports.CaseRef(p.CaseID), p.Reason, opts); err != nil {
 			return "", nil, err
 		}
-		return h.cursors.WaitForCaseAdvance(ctx, p.CaseID, ""), nil, nil
+		return h.postMutationCursor(ctx, p.CaseID, before), nil, nil
 
 	case "OPEN_ARTIFACT":
 		digest, _ := in.Parameters["digest"].(string)
@@ -377,6 +403,22 @@ func (h *Handler) execute(ctx context.Context, in contract.InteractionIntent) (s
 		return "", nil, nil
 	}
 	return "", nil, invalid("unroutable intent " + in.ActionName)
+}
+
+// postMutationWait bounds the post-mutation cursor wait (T06 fix F4). The kernel's frame
+// normally arrives within milliseconds of the mutation's response; a bound keeps a lost frame
+// from hanging the HTTP request past its own lifetime.
+const postMutationWait = 5 * time.Second
+
+// postMutationCursor returns the cursor the response should carry as new_cursor: the tracked
+// per-case cursor AFTER the mutation, waited for with a strict-advance requirement against the
+// pre-call cursor. Passing `before` (the tracked cursor observed before the kernel call) is what
+// makes the wait real: without it the relay answers with the current observed cursor, which for
+// an already-observed case is the PRE-mutation cursor (T06 fix F4).
+func (h *Handler) postMutationCursor(ctx context.Context, caseID, before string) string {
+	waitCtx, cancel := context.WithTimeout(ctx, postMutationWait)
+	defer cancel()
+	return h.cursors.WaitForCaseAdvance(waitCtx, caseID, before)
 }
 
 // stalenessRefusal applies the cursor rule. It is a refusal exactly when the kernel has moved
@@ -477,7 +519,10 @@ func mapKernelRefusal(typed *apperr.Error, class string) (kind, message string) 
 		"identity_entity_mismatch", "identity_delegation_refused":
 		return RefAuthorityDenied, message
 	case "input_error", "invalid_decision", "unsafe_path_error", "durable_locator_required",
-		"request_id_reused", "not_found", "record_unreadable", "missing_config_error":
+		"request_id_reused", "not_found", "record_unreadable", "missing_config_error",
+		"plan_schema_error":
+		// plan_schema_error is a malformed proposal (T06 fix F5): it belongs with INVALID
+		// (malformed shape), not with the authority refusals.
 		return RefInvalid, message
 	case "unsupported_version", "server_busy", "request_cancelled", "request_interrupted", "events_unknown_cursor":
 		return RefUnavailable, message
@@ -614,10 +659,11 @@ func refuse(in contract.InteractionIntent, kind, message string) contract.Intent
 }
 
 // kernelItemKind translates the contract's cognitive object kind onto the kernel's plan-item kind
-// vocabulary for a discretionary proposal.
+// vocabulary for a discretionary proposal. An absent kind defaults to sandboxed_task (T06 fix F2):
+// it is the one proposed kind that can carry the governed write the proposal constructs.
 func kernelItemKind(kind string) (string, error) {
 	switch kind {
-	case "work_item", "discretionary_opportunity":
+	case "", "work_item", "discretionary_opportunity", "sandboxed_task":
 		return "sandboxed_task", nil
 	case "stage":
 		return "stage", nil
@@ -660,9 +706,8 @@ func lowerKind(s string) string {
 
 // newItemID mints a plan-item id for a discretionary proposal. The kernel re-validates the whole
 // proposal (cycles included) and overwrites the proposer; the id only has to be unique and
-// well-formed.
-func newItemID(title string) string {
-	_ = title
+// well-formed (alphanumerics, `_`, `-`).
+func newItemID() string {
 	var rnd [4]byte
 	if _, err := rand.Read(rnd[:]); err != nil {
 		return "item-disc-" + fmt.Sprintf("%d", time.Now().UnixNano())
@@ -670,9 +715,52 @@ func newItemID(title string) string {
 	return "item-disc-" + hex.EncodeToString(rnd[:])
 }
 
+// discretionaryWritePath derives the proposal's governed write path from the item name: a
+// kebab-case slug under discretionary/, e.g. "Rollback rehearsal!" -> discretionary/rollback-rehearsal.md.
+// The slug keeps only ASCII alphanumerics so the path always passes the kernel's relative-path
+// validation (no `..`, no absolute, no empty segments).
+func discretionaryWritePath(name string) string {
+	var b []byte
+	lastDash := true // suppress a leading dash
+	for i := 0; i < len(name) && len(b) < 80; i++ {
+		c := name[i]
+		switch {
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9':
+			b = append(b, c)
+			lastDash = false
+		case c >= 'A' && c <= 'Z':
+			b = append(b, c+'a'-'A')
+			lastDash = false
+		default:
+			if !lastDash {
+				b = append(b, '-')
+				lastDash = true
+			}
+		}
+	}
+	for len(b) > 0 && b[len(b)-1] == '-' {
+		b = b[:len(b)-1]
+	}
+	if len(b) == 0 {
+		b = []byte("item")
+	}
+	return "discretionary/" + string(b) + ".md"
+}
+
+// discretionaryContentHint is the write operation's content hint: the payload's summary when it
+// carries one, else the mandatory justification body.
+func discretionaryContentHint(p contract.AddDiscretionaryWorkPayload) string {
+	if p.Summary != nil && *p.Summary != "" {
+		return *p.Summary
+	}
+	return p.Justification
+}
+
 // proposedObject renders the resulting_object an accepted ADD_DISCRETIONARY_WORK returns: the
-// proposed item as it exists the moment the kernel accepted it (proposed, not yet enabled).
-func proposedObject(itemID, title, stageID, proposer string) contract.CognitiveObject {
+// proposed item as it exists the moment the kernel accepted it. The object kind mirrors the
+// projection builder's mapping (milestones are their own kind, everything else is a work item);
+// the stage anchor is a dependency, not a parent, so parent_id stays unset for it.
+func proposedObject(itemID, title, kind, anchorID, proposer string) contract.CognitiveObject {
 	obj := contract.CognitiveObject{
 		ID:       itemID,
 		Kind:     "work_item",
@@ -682,11 +770,13 @@ func proposedObject(itemID, title, stageID, proposer string) contract.CognitiveO
 		Salience: 0.5,
 		Actions:  []contract.ActionDescriptor{},
 	}
-	if stageID != "" {
-		parent := stageID
-		obj.ParentID = &parent
+	if kind == "milestone" {
+		obj.Kind = "milestone"
 	}
-	s := "Proposed by " + proposer + "; waiting for its entry sentries."
+	s := "Proposed by " + proposer + "; the kernel's plan_mutated frame carries it into the world."
+	if anchorID != "" {
+		s = "Proposed by " + proposer + "; it waits on " + anchorID + "'s entry sentry."
+	}
 	obj.Explanation = &s
 	return obj
 }

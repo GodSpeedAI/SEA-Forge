@@ -6,7 +6,10 @@
 #
 #   - write_file               the e2e-sentry-chain / e2e-signoff-gate
 #                              templates' governed writes (their only
-#                              operation kind)
+#                              operation kind); the signoff-gate's own
+#                              write path (review/) escalates instead, so
+#                              executing task_draft opens the approval the
+#                              L5 journey resolves (T06 fix F3)
 #   - approval_resolution      resolving the approvals authority escalations
 #                              open (approval.decide / approve / reject
 #                              authorize against this same file)
@@ -30,6 +33,24 @@ identity_bindings:
     actor_type: human
     role: operator
 rules:
+  # T06 fix F3: the ONLY kernel path that opens an approval_request is the episode-dispatch
+  # escalation of an operation whose policy verdict is `escalate`
+  # (crates/sea-forge-server/src/case_dispatch.rs: commit_item_criteria + approval_request after
+  # Verdict::Escalate). human_task.complete never opens one: it authorizes
+  # human_task_completion as a read expecting verdict `allow`, so the signoff-gate template's
+  # HumanTask (require_approval) alone cannot open an approval for the plan's L5 journey
+  # ("the operator is denied and a second user (R-SO) approves"). This rule escalates exactly
+  # one operation the L5 flow evaluates - the e2e-signoff-gate template's governed draft write
+  # (task_draft -> review/draft.md) - so executing it opens a real approval through the served
+  # surface. The prefix is segment-aware (`review` matches review/... but not
+  # review-private/...), so the sentry-chain and discretionary journeys (work/, discretionary/)
+  # still run under the allow rule below. Rules are evaluated in declaration order and the
+  # FIRST match wins, so this rule must stay ABOVE allow-e2e-write-file.
+  - name: escalate-e2e-signoff-gate-write
+    verdict: escalate
+    actor_role: operator
+    operation_kind: write_file
+    path_prefix: review
   - name: allow-e2e-write-file
     verdict: allow
     actor_role: operator
