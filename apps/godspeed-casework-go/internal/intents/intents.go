@@ -298,7 +298,17 @@ func (h *Handler) execute(ctx context.Context, in contract.InteractionIntent) (s
 		}
 		// The case did not exist before the commit, so there is no pre-call cursor: the wait is
 		// for the new case's FIRST observed frame, which is the commit's own.
-		return h.postMutationCursor(ctx, receipt.CaseID, ""), nil, nil
+		cursor := h.postMutationCursor(ctx, receipt.CaseID, "")
+		// T09's case-design journey focuses the new case, so the response must name it
+		// (the object id is the case id; kind/name follow the contract's case object).
+		obj := &contract.CognitiveObject{
+			ID:     receipt.CaseID,
+			Kind:   "case",
+			Name:   p.TemplateRef,
+			Status: "ACTIVE",
+			Badge:  "Committed",
+		}
+		return cursor, obj, nil
 
 	case "ADD_DISCRETIONARY_WORK":
 		var p contract.AddDiscretionaryWorkPayload

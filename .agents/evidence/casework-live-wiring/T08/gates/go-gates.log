@@ -1,0 +1,7 @@
+VET_EXIT=0
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	1.025s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.046s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	4.126s
+UNIT_EXIT=0
+LIVE_EXIT=1
+FMT_EXIT=0

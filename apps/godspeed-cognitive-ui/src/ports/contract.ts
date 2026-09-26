@@ -171,6 +171,31 @@ export interface CaseworkPort {
   ): () => void
 }
 
+/**
+ * Template authoring surface (T08, additive): served by the live gateway
+ * (GET /api/templates, POST /api/templates/preflight). Feature-detect with
+ * `'getTemplates' in port` — the local adapter gains fixture templates in T09.
+ */
+export interface TemplateSourcePort {
+  getTemplates(): Promise<
+    readonly {
+      template_ref: string
+      title: string
+      description?: string
+      parameters: readonly {
+        name: string
+        param_type: string
+        required: boolean
+        default?: string
+      }[]
+    }[]
+  >
+  preflightTemplate(
+    templateRef: string,
+    params: Record<string, unknown>,
+  ): Promise<{ passed: boolean; digest?: string; reasons: readonly string[] }>
+}
+
 /** The agent side of the environment (spec 04 §8). Optional: the UI must work without it. */
 export interface NarrationPort {
   /** Returns null when the agent has nothing to say about this question in this context. */

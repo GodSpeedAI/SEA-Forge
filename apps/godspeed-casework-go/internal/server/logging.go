@@ -58,6 +58,16 @@ func (w *recordingWriter) WriteHeader(status int) {
 
 func (w *recordingWriter) setCorrelation(id string) { w.correlation = id }
 
+// Flush forwards to the wrapped writer: the SSE route asserts http.Flusher, and a wrapper that
+// hid it would break streaming for every client behind the logging middleware (found by the T08
+// live conformance against the real binary — unit tests pass a nil logger, which bypasses this
+// middleware entirely).
+func (w *recordingWriter) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 // withCorrelation wraps the whole surface: security headers, then correlation logging.
 func (s *Server) withCorrelation(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
