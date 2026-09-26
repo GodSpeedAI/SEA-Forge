@@ -4123,3 +4123,10 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > kill-mid-commit recovery proven from a kept cell (exactly one CaseCreated); kernel fixes 514fc72
 > verified (AUTH-01 ordering, artifact digest re-derived independently, write_only basis, snake_case
 > events). T06 (projection + intents) in flight; T07 sequential after it (shared files).
+
+> **2026-09-25 T06 SETTLED — live projection + intents (SEAM-1/2/3/6/7), via a full fix loop:**
+> round-1 critic REJECT (F1 empty-actor 403, F2 discretionary-add translation gap) -> fixes
+> (b5fd2c3, incl. kernel F7: pending commits bound to a case locator before any ledger write +
+> startup reconciliation) -> round-2 critic APPROVE with its own end-to-end drives (perspective
+> 200/403, discretionary accept, L5 approval journey, recovery branch live). Live gate posture:
+> -p 1 (documented). T07 in flight.

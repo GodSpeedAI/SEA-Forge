@@ -11,6 +11,14 @@ export type RequestStatus = "pending" | "completed" | "failed";
  */
 export interface RequestRecord {
   completed_at?: string | null;
+  /**
+   * The durable artifact this admitted request was bound to, written BEFORE
+   * the effect's first ledger write. For `case.commit` this is the minted
+   * case id; the startup settlement uses it to reconcile a crash that landed
+   * after the commit's durable append (whose honest outcome is "completed",
+   * not "interrupted"). Additive and optional.
+   */
+  locator?: string | null;
   method: string;
   /**
    * The original response value once the request reached a terminal state.

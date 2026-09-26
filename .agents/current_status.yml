@@ -22,9 +22,9 @@ metadata:
       is the historical narrative; the machine state is THIS file.
 
 execution:
-  last_settled_task: T05
-  settled_tasks: [T00, T01, T02, T03, T04, T05]
-  in_flight_task: T06
+  last_settled_task: T06
+  settled_tasks: [T00, T01, T02, T03, T04, T05, T06]
+  in_flight_task: T07
   ready_tasks: []
   blocked_tasks: [T05, T06, T07, T08, T09, T10, T11, T12, T13]
   t02_state: >-
@@ -78,20 +78,21 @@ operator_decisions:
     agent_protocol.git rules below. Make frequent commits at meaningful milestones. It may never push, fetch, pull, rebase, reset, merge or clean.
 
 next_action:
-  task: T06
+  task: T07
   action: >-
-    T05 SETTLED 2026-09-25 (independent critic APPROVE: T05/critic/confirmation.md — live proof
-    re-run, no-double-commit proven from a kept cell, kernel fixes 514fc72 verified incl. AUTH-01
-    ordering and artifact digest re-derivation; the two former test skips self-resolved). T06 is
-    IN FLIGHT (session 3): Go projection builder (spec-04 CognitiveWorldSnapshot per D-1 + T01
-    contract) + intent translator + revision store + template endpoints + SSE relay with
-    Last-Event-ID + STALE_PROJECTION staleness. KEY WIRE FACTS for T06 (decision log
-    D-2-impl-notes + D-3-followups): case.trace.<kind> SSE events are snake_case (item_activated);
-    write-only episodes have NO command frames (only execute_command items do); the Go client's
-    AuthorityPort already speaks every verb incl. on_behalf_of; run in-order after T06: T07
-    (gateway auth — SEQUENTIAL with T06 because both touch internal/server + config + main.go),
-    T08, T09, T10 (prereg first), T11, T12. T13: split into plan tasks, STOP for operator review.
-    NOTE: T06/T07 both modify internal/server + config — do NOT run their builders concurrently.
+    T06 SETTLED 2026-09-25 after a full fix loop: round-1 critic REJECT (F1-F6) -> fixes b5fd2c3
+    (incl. kernel F7 locator reconciliation) -> round-2 critic APPROVE (T06/confirmation.md: all
+    findings closed by its own observation, incl. driving the L5 approval journey end-to-end and
+    the F7 recovery branch live; gates green; -p 1 live posture judged sound). T07 IN FLIGHT
+    (gateway production posture: auth, sessions, static serving, config — plan T07; prereg NOT
+    required by the plan but confirmation=independent). WIRE FACTS for T07: sessions map the
+    authenticated user to the T02 kernel actor (allowlist binding); /api/world's ?actor=&role=
+    query parameters are the pre-auth dev surface and T07 replaces them with the session
+    identity (perspective comes from GET /api/session; the query params must stop being trusted
+    for authenticated use); CSRF for POSTs; static UI serving with SPA fallback + CSP; dev-only
+    static-token mode refused in production config; rate limits; /api/readyz includes kernel
+    readiness.get; correlation_id flows to SFWP request_id. Then T08 (T01+T06+T07), T09
+    (T03+T06+T08), T10 (T08+T09; WRITE THE PREREG FIRST), T11, T12. T13: split + STOP.
 
 agent_protocol:
   read_order:

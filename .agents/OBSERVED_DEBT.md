@@ -1102,3 +1102,13 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
 - RESOLVED (T06 fixes): Client.IdleTTL (default 8s, below the server threshold with margin)
   retires stale pooled connections at acquire; the acquire redials fresh. Recovery contract
   unchanged (get_status for mutations, never blind re-send).
+
+## Open: pre-existing order-dependent flake in the Go fixture-tag coordinator suite
+
+- Observed: 2026-09-25 (independent T06 round-2 critic; flaked once at HEAD b5fd2c3 and once at
+  pre-fix a1129f1 with a DIFFERENT test — not introduced by either change; attribution in
+  .agents/evidence/casework-live-wiring/T06/critic2/gates/fixture-tag-flake-note.md).
+- Scope: `go test -tags casework_fixture ./internal/coordinator/` only; the default-build
+  coordinator suite has its own recorded idempotency flake entry above.
+- Next move: stabilize when the fixture stack next changes (T13 at the earliest); live gates are
+  unaffected (-p 1, default build).
