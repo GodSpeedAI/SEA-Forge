@@ -26,6 +26,14 @@ execution:
   settled_tasks: [T00, T01, T02, T03, T04, T05, T06]
   in_flight_task: T07
   ready_tasks: []
+  confirmation_debt: >-
+    T07 (eef7459) and T08 (ce538bf) are implemented and gate-green but NOT independently
+    confirmed: the subagent platform failed six times ("Captcha instance timed out"), so the
+    orchestrator verified T07 inline and implemented T08 inline. Both MUST receive an independent
+    critic pass (T07: gates + runtime teeth incl. CSRF/actor-overwrite/session probes; T08: gates
+    + live conformance re-run) before their claim states may advance past
+    builder/orchestrator-verified. Independent confirmations outstanding: T04 units B+C are
+    confirmed; T07, T08, T09, T10 (once built) are not.
   blocked_tasks: [T05, T06, T07, T08, T09, T10, T11, T12, T13]
   t02_state: >-
     SETTLED 2026-09-24 (session 3): independent critic APPROVED (T02/confirmation.md) — all prereg

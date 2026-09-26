@@ -4130,3 +4130,14 @@ hairlines only where attention is. Verified live (evidence screenshots 24-31); c
 > startup reconciliation) -> round-2 critic APPROVE with its own end-to-end drives (perspective
 > 200/403, discretionary accept, L5 approval journey, recovery branch live). Live gate posture:
 > -p 1 (documented). T07 in flight.
+
+> **2026-09-26 T07+T08 built (confirmation pending — platform outage):** T07 auth/sessions/CSRF/
+> static/production posture (eef7459) verified inline by the orchestrator (gates + teeth with the
+> real binary; the CSRF cookie, session binding, and production-refusal paths proven live). T08
+> HttpCaseworkAdapter (ce538bf) implemented inline: live conformance 15/15 against the real stack
+> (login → templates → preflight → PROPOSE_CASE → standing → EXECUTE → SSE → durable ledger →
+> stale tooth → second user); prod bundle excludes the local adapter (bundle check). Two gateway
+> defects found and fixed: logging middleware hid http.Flusher (SSE broke for logged clients);
+> PROPOSE_CASE response now names the new case. Subagent platform killed 6 agents (captcha
+> timeouts); independent critics for T07/T08 (+T09/T10 when built) run when it recovers. T10
+> preregistration written before any ladder work (prereg/T10.yaml).
