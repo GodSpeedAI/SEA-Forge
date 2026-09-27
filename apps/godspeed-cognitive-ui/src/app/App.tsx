@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createArtifactService, useArtifact, type ArtifactService } from '../artifacts/service'
 import { loadedRenderers } from '../artifacts/registry'
 import { causalMembers, childrenOf } from '../layout/layout'
@@ -7,7 +7,7 @@ import type { Actor, Id, ObjectAction, Theme, UiState, WorldHistory } from '../m
 import { findArtifact, sideLabel, worldView } from '../model/view'
 import { explain } from '../narrative/conduct'
 import { startNarrativePlayer } from '../narrative/player'
-import type { CaseworkPort, CognitiveArtifact, NarrationPort, XSnapshot } from '../ports/contract'
+import type { CaseworkPort, CognitiveArtifact, NarrationPort, SessionIdentity, TemplateSourcePort, XSnapshot } from '../ports/contract'
 import { loadCaseHistory } from '../ports/project'
 import { SceneRuntime } from '../scene/runtime'
 import { Scene, snapshotView, type SceneServices } from '../scene/Scene'
@@ -16,16 +16,21 @@ import { CaseDesignPanel } from '../ui/CaseDesignPanel'
 import { Brand, Breadcrumb, CoreAnchorLabel, StatusBar, UserMark } from '../ui/Chrome'
 import { CompareBar } from '../ui/CompareBar'
 import { Composer } from '../ui/Composer'
+import { DiscretionaryDrawer } from '../ui/DiscretionaryDrawer'
 import { ExecutionPanel } from '../ui/ExecutionPanel'
 import { ExecutionPill } from '../ui/ExecutionPill'
 import { JudgmentPanel } from '../ui/JudgmentPanel'
 import { OutlineView, type OutlineItem } from '../ui/OutlineView'
+import { SessionBadge } from '../ui/SessionBadge'
+import { TemplateDesignPanel } from '../ui/TemplateDesignPanel'
 import { TimeStrip } from '../ui/TimeStrip'
+import { UnavailableActions } from '../ui/UnavailableActions'
 import { WorkbenchChrome } from '../ui/WorkbenchChrome'
 import { runCommand } from './commands'
 import { designModel, isDirty, moveItem, toggleRequired } from './design'
 import { createIntentPath, type IntentPath } from './intents'
 import { connectLive } from './live'
+import { createProposalFlow, loadAndFocusCase } from './proposals'
 
 export interface AppProps {
   port: CaseworkPort
@@ -35,6 +40,9 @@ export interface AppProps {
   summaries: Record<string, string>
   human: Actor
   agentActor: Actor
+  /** The session the adapter resolved (T09). The chrome names it; intents act as it. */
+  session: SessionIdentity | null
+  onLogout?(): void
 }
 
 interface Env {
@@ -56,7 +64,6 @@ function boot(p: AppProps): Env {
   const artifacts = createArtifactService(p.port)
   const intents = createIntentPath(store, p.port)
   startNarrativePlayer(store, undefined, Number(params.get('beatPace') ?? 1) || 1)
-  connectLive(p.port, store, p.history.caseId, p.raw, p.summaries)
 
   // Deep links (verification and E2E setup only; every one of these is also reachable by UI).
   const focus = params.get('focus')
@@ -86,6 +93,90 @@ export function App(p: AppProps) {
   const [hint, setHint] = useState<string | undefined>()
   const [outlineOpen, setOutlineOpen] = useState(false)
   const [savedDraft, setSavedDraft] = useState(false)
+
+  // The event stream follows the case the history shows (PROPOSE_CASE moves it to the new case).
+  const caseId = state.history.caseId
+  const rawByCase = useRef(new Map<string, XSnapshot[]>([[p.history.caseId, p.raw]]))
+  const summariesRef = useRef(p.summaries)
+  useEffect(() => {
+    const disconnect = connectLive(p.port, store, caseId, rawByCase.current.get(caseId) ?? [], summariesRef.current)
+    return disconnect
+  }, [caseId, p.port, store])
+
+  /** The template surface, when this connection offers one (additive port; T08/T09). */
+  const templateSource = 'getTemplates' in p.port && 'preflightTemplate' in p.port ? (p.port as CaseworkPort & TemplateSourcePort) : null
+
+  const actorFor = (): Actor =>
+    p.session
+      ? { id: p.session.actor_id, role: p.session.role, name: p.session.display_name ?? p.session.user ?? p.session.actor_id, kind: p.session.kind ?? 'human' }
+      : p.human
+
+  /** Loads a case's history and focuses it (used after PROPOSE_CASE commits a new case). */
+  const focusCase = async (newId: Id) => {
+    const raw = await loadAndFocusCase(p.port, store, newId, actorFor())
+    rawByCase.current.set(newId, raw)
+    Object.assign(summariesRef.current, Object.fromEntries(raw.map((s) => [s.cursor, s.summary.phase])))
+  }
+  // The case-design proposal flow (T09): template picker → parameters → preflight → commit.
+  const proposalFlow = useMemo(
+    () => createProposalFlow({ store, port: p.port, actor: actorFor, focusCase }),
+    // The flow closes over stable store/port references; actor/focusCase are re-created per
+    // render but the store reads them through deps at call time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [store, p.port],
+  )
+
+  // Templates load when the picker opens (status returns to 'loading').
+  useEffect(() => {
+    if (state.proposal?.status !== 'loading') return
+    if (!templateSource) {
+      store.dispatch({ type: 'proposalsUnavailable', error: 'This connection offers no template source.' })
+      return
+    }
+    let alive = true
+    templateSource
+      .getTemplates()
+      .then((templates) => {
+        if (alive) store.dispatch({ type: 'proposalsLoaded', templates })
+      })
+      .catch((e: unknown) => {
+        if (alive) store.dispatch({ type: 'proposalsUnavailable', error: e instanceof Error ? e.message : String(e) })
+      })
+    return () => {
+      alive = false
+    }
+  }, [state.proposal?.status, templateSource, store])
+
+  // Discretionary drawer outcome tracking (the drawer is not the judgment panel).
+  const [drawerPending, setDrawerPending] = useState(false)
+  const [drawerOutcome, setDrawerOutcome] = useState<{ state: 'accepted' | 'refused'; note?: string; code?: string } | null>(null)
+  const drawerKey = state.drawer ? `${state.drawer.object}:${state.drawer.action.id}` : null
+  useEffect(() => {
+    if (drawerKey) setDrawerOutcome(null)
+  }, [drawerKey])
+
+  const submitDiscretionary = async (payload: { title: string; summary?: string; justification: string }) => {
+    const drawer = store.getState().drawer
+    if (!drawer) return
+    setDrawerPending(true)
+    try {
+      const rec = await intents.submit(actorFor(), drawer.object, drawer.action, {
+        justification: payload.justification,
+        judgment: false,
+        parameters: {
+          case_id: store.getState().history.caseId,
+          stage_id: drawer.object,
+          kind: 'work_item',
+          title: payload.title,
+          ...(payload.summary ? { summary: payload.summary } : {}),
+          justification: payload.justification,
+        },
+      })
+      setDrawerOutcome(rec.state === 'accepted' ? { state: 'accepted', note: rec.note } : rec.state === 'refused' ? { state: 'refused', note: rec.note, code: rec.code } : null)
+    } finally {
+      setDrawerPending(false)
+    }
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme
@@ -155,7 +246,10 @@ export function App(p: AppProps) {
       }
       out.push({ id: 'history', label: s.timeline ? 'Hide history' : 'History', pressed: s.timeline, onClick: () => store.dispatch({ type: 'openTimeline', open: !s.timeline }) })
       if (!s.compare && s.history.revisions.length > 1) out.push({ id: 'compare', label: 'Compare with earlier', onClick: () => void compareDefault() })
+      // Design entry (T09): a fixture-linked template world opens the design surface; otherwise
+      // the template picker loads from the port (the live path).
       if (obj?.templateCaseId) out.push({ id: 'design', label: 'Design case', onClick: () => void enterDesign() })
+      else out.push({ id: 'design', label: 'Design case', onClick: () => void proposalFlow.open() })
       return out
     },
   }
@@ -338,6 +432,10 @@ export function App(p: AppProps) {
       <CoreAnchorLabel visible={!home && !workbench} onHome={() => store.dispatch({ type: 'home' })} />
       <StatusBar state={past ? 'past' : state.history.provenance === 'local-contract' ? 'local' : 'live'} when={formatWhen(nowRev.at)} visible={chromeVisible} />
       <UserMark visible={chromeVisible} />
+      <div className="chrome-element session-badge-container" data-visible={chromeVisible}>
+        <SessionBadge session={p.session} onLogout={p.onLogout ? () => p.onLogout!() : undefined} />
+      </div>
+      <UnavailableActions visible={outlineOpen || workbench} />
       <OutlineView
         visible={outlineOpen}
         title={snapNow.objects[focus ?? 'core']?.title ?? 'Home'}
@@ -485,11 +583,31 @@ export function App(p: AppProps) {
         }}
         onClose={() => store.dispatch({ type: 'closeJudgment' })}
       />
+      <DiscretionaryDrawer
+        visible={!!state.drawer}
+        targetTitle={state.drawer ? snapNow.objects[state.drawer.object]?.title ?? state.drawer.object : ''}
+        proposer={p.session ? actorFor() : p.human}
+        pending={drawerPending}
+        outcome={drawerOutcome}
+        onSubmit={(payload) => void submitDiscretionary(payload)}
+        onClose={() => store.dispatch({ type: 'closeDrawer' })}
+      />
+      {state.proposal && (
+        <TemplateDesignPanel
+          proposal={state.proposal}
+          onSelectTemplate={(ref) => proposalFlow.select(ref)}
+          onSetParam={(name, value) => proposalFlow.setParam(name, value)}
+          onPreflight={() => void proposalFlow.preflight()}
+          onSubmit={() => void proposalFlow.submit()}
+          onClose={() => proposalFlow.close()}
+        />
+      )}
       <ExecutionPill
         visible={!!exec && state.mode === 'world' && !judgment}
         label={execTarget?.title ?? 'Execution'}
-        progress={exec?.progress ?? 0}
+        progress={exec?.progress ?? null}
         state={exec?.state ?? 'running'}
+        reconnecting={state.connection === 'reconnecting'}
         onOpen={() => store.dispatch({ type: 'setMode', mode: 'execution-inspect' })}
       />
       {exp && expDescriptor && <DockHost key="dock" state={state} store={store} artifacts={artifacts} descriptor={expDescriptor} pinned={exp.pinned} source={exp.source} />}

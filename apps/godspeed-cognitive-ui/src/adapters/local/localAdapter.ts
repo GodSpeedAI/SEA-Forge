@@ -6,18 +6,28 @@ import type {
   IntentResponse,
   InteractionIntent,
   OperationalSettlement,
+  SessionIdentity,
+  SessionPort,
   StreamEvent,
+  TemplateEntryOption,
+  TemplateSourcePort,
   TemporalCheckpoint,
   TemporalTrajectoryResponse,
   XObject,
   XSnapshot,
 } from '../../ports/contract'
 import { buildNorthstarHistory, NORTHSTAR_CASE_ID, NORTHSTAR_TRAJECTORY } from './northstarData'
+
+// Re-exported so the boot path can learn the fixture case id through this module alone —
+// importing northstarData directly from main would ship the fixture as its own prod chunk.
+export { NORTHSTAR_CASE_ID }
+import { LOCAL_TEMPLATES, localPreflight, templateByRef, type LocalTemplate } from './localTemplates'
 import { PAYLOADS } from './payloads'
 import { buildTemplateHistory, TEMPLATE_CASE_ID } from './templateData'
 
 // A local, contract-conformant stand-in for the Go system front end. It implements the contract
-// CaseworkAdapter surface (CaseworkPort) over authored Northstar data. It decides authority the
+// CaseworkAdapter surface (CaseworkPort) plus the additive session (SessionPort) and template
+// (TemplateSourcePort) surfaces over authored Northstar data. It decides authority the
 // way the contract describes: role-aware, stale-projection and duplicate checks. It simulates
 // governed execution as contract events: execution_progress, then snapshot, then
 // settlement_recorded. This is NOT backend integration. Every screen that uses it is labelled
@@ -32,6 +42,11 @@ export interface LocalAdapterOptions {
   corruptArtifacts?: string[]
   /** Network latency in ms for reads. */
   latency?: number
+  /**
+   * Session identity the adapter self-reports (T09). Default: the fixture operator.
+   * Pass null to start logged out (login tests): `login()` then establishes a session.
+   */
+  identity?: SessionIdentity | null
 }
 
 interface CaseRecord {
@@ -42,18 +57,28 @@ interface CaseRecord {
 const APPROVER_ROLES: ActorRole[] = ['case_architect', 'security_officer']
 const PLACEHOLDER = { actor_id: 'projection', role: 'developer' as ActorRole }
 
+/** The fixture operator the local adapter self-reports as the session identity. */
+export const LOCAL_IDENTITY: SessionIdentity = {
+  actor_id: 'usr-sam',
+  role: 'case_architect',
+  display_name: 'Sam Prime',
+  kind: 'human',
+}
+
 const clone = <T,>(v: T): T => structuredClone(v)
 const pad = (n: number) => String(n).padStart(10, '0')
 
-export class LocalContractAdapter implements CaseworkPort {
+export class LocalContractAdapter implements CaseworkPort, SessionPort, TemplateSourcePort {
   private cases = new Map<string, CaseRecord>()
   private listeners = new Map<string, Set<(e: StreamEvent) => void>>()
   private seen = new Set<string>()
   private payloads: Record<string, ArtifactPayload> = { ...PAYLOADS }
-  private opts: Required<LocalAdapterOptions>
+  private identity: SessionIdentity | null
+  private opts: Required<Omit<LocalAdapterOptions, 'identity'>>
 
   constructor(opts: LocalAdapterOptions = {}) {
     this.opts = { speed: 1, failArtifacts: [], corruptArtifacts: [], latency: 40, ...opts }
+    this.identity = opts.identity === undefined ? { ...LOCAL_IDENTITY } : opts.identity
     const ns = buildNorthstarHistory(PLACEHOLDER).map((s) => withTemplateLink(s))
     this.cases.set(NORTHSTAR_CASE_ID, { snaps: ns, points: [...NORTHSTAR_TRAJECTORY] })
     const tpl = buildTemplateHistory(PLACEHOLDER)
@@ -71,6 +96,43 @@ export class LocalContractAdapter implements CaseworkPort {
         total_plan_items_count: 0,
       })),
     })
+  }
+
+  // --- session (T09, trivial fixture identity) ---------------------------------
+
+  /** The self-reported identity, or null while logged out. */
+  async session(): Promise<SessionIdentity | null> {
+    await this.wait(10)
+    return this.identity ? { ...this.identity } : null
+  }
+
+  /** Fixture login: any non-empty username is accepted as the case-architect operator. */
+  async login(username: string, _password: string): Promise<SessionIdentity> {
+    await this.wait(60)
+    if (!username.trim()) {
+      const err = new Error('A username is required.') as Error & { code?: string }
+      err.code = 'INVALID'
+      throw err
+    }
+    this.identity = { actor_id: username.trim(), role: 'case_architect', display_name: username.trim(), kind: 'human' }
+    return { ...this.identity }
+  }
+
+  async logout(): Promise<void> {
+    await this.wait(20)
+    this.identity = null
+  }
+
+  // --- templates (T09 fixture surface; the live gateway serves the kernel's) ----------------
+
+  async getTemplates(): Promise<readonly TemplateEntryOption[]> {
+    await this.wait()
+    return clone(LOCAL_TEMPLATES)
+  }
+
+  async preflightTemplate(templateRef: string, params: Record<string, unknown>) {
+    await this.wait(80)
+    return localPreflight(templateRef, params)
   }
 
   // --- reads -----------------------------------------------------------------
@@ -114,9 +176,36 @@ export class LocalContractAdapter implements CaseworkPort {
 
   async dispatchIntent(intent: InteractionIntent): Promise<IntentResponse> {
     await this.wait(180)
-    const refuse = (error_code: string, error_message: string): IntentResponse => ({ intent_id: intent.intent_id, success: false, error_code, error_message })
+    const params = (intent.parameters ?? {}) as Record<string, unknown>
+    // Justification may ride the envelope or the typed payload (golden intent fixtures do both).
+    const justification = String(intent.justification ?? params.justification ?? '').trim()
+    const REFUSAL_KINDS = new Set(['AUTHORITY_DENIED', 'UNAUTHORIZED_ROLE', 'SOD_VIOLATION', 'STALE_PROJECTION', 'JUSTIFICATION_REQUIRED', 'UNAVAILABLE', 'INVALID'])
+    const refuse = (code: string, message: string): IntentResponse => ({
+      intent_id: intent.intent_id,
+      success: false,
+      error_code: code,
+      error_message: message,
+      refusal: { refusal_kind: (REFUSAL_KINDS.has(code) ? code : 'INVALID') as never, message },
+    })
     if (this.seen.has(intent.intent_id)) return refuse('DUPLICATE_IN_FLIGHT', 'This request was already received.')
     this.seen.add(intent.intent_id)
+
+    // PROPOSE_CASE commits a new case from a template; it targets no existing case, so the
+    // stale-projection and target checks do not apply (client_cursor is not required). The
+    // commit must echo a passing preflight's digest.
+    if (intent.action_name === 'PROPOSE_CASE' && intent.kind === 'CONSEQUENTIAL_CASE') {
+      if (intent.actor.role === 'agent_operator') return refuse('AUTHORITY_DENIED', 'Agents may propose but not decide. A human approver must make this decision.')
+      const payload = params as { template_ref?: string; params?: Record<string, unknown>; preflight_digest?: string }
+      if (!payload.template_ref) return refuse('INVALID', 'A template must be chosen before a case can be committed.')
+      const check = await localPreflight(payload.template_ref, payload.params ?? {})
+      if (!check.passed) return refuse('INVALID', `Preflight no longer passes: ${check.reasons.join('; ')}`)
+      if (!payload.preflight_digest) return refuse('INVALID', 'Run preflight and commit the digest it produced.')
+      if (payload.preflight_digest !== check.digest) {
+        return refuse('STALE_PROJECTION', 'The world has moved since the preflight: run preflight again and commit the fresh digest.')
+      }
+      return this.commitCase(payload.template_ref, payload.params ?? {}, payload.preflight_digest, intent)
+    }
+
     const c = this.cases.get(intent.case_id)
     if (!c) return refuse('INVALID', `Unknown case ${intent.case_id}`)
     const head = c.snaps[c.snaps.length - 1]!
@@ -135,10 +224,14 @@ export class LocalContractAdapter implements CaseworkPort {
     if ((action.intent === 'APPROVE_HUMAN_TASK' || action.intent === 'REJECT_HUMAN_TASK') && !APPROVER_ROLES.includes(intent.actor.role)) {
       return refuse('UNAUTHORIZED_ROLE', `Your role (${intent.actor.role}) cannot decide this. It needs a case architect or security officer.`)
     }
-    if (action.requires_justification && !intent.justification?.trim()) {
+    if (action.intent === 'ADD_DISCRETIONARY_WORK' && !String(params.title ?? '').trim()) {
+      return refuse('INVALID', 'Discretionary work needs a title.')
+    }
+    if (action.requires_justification && !justification) {
       return refuse('JUSTIFICATION_REQUIRED', 'This action needs a written justification.')
     }
 
+    let created: XObject | undefined
     const next = this.append(intent.case_id, `${action.intent.toLowerCase()}`, `${action.label} by ${intent.actor.actor_id}`, intent, (objs) => {
       const t = objs.find((o) => o.id === target.id)!
       if (action.intent === 'APPROVE_HUMAN_TASK') {
@@ -148,10 +241,105 @@ export class LocalContractAdapter implements CaseworkPort {
         set(objs, t.id, { status: 'WAITING_ON_OTHERS', badge: 'Changes requested', actions: [], x: { ...t.x, tone: 'attention' } })
       } else if (action.intent === 'ESCALATE_OR_OVERRIDE') {
         set(objs, t.id, { status: 'WAITING_ON_OTHERS', badge: 'Escalated to owner', actions: [], x: { ...t.x, tone: 'muted' } })
+      } else if (action.intent === 'EXECUTE_ITEM') {
+        set(objs, t.id, { status: 'IN_PROGRESS', badge: 'Executing', x: { ...t.x, tone: 'progress' } })
+        objs.push(runObject(t.id, 'IN_PROGRESS', 'Running'))
+      } else if (action.intent === 'COMPLETE_HUMAN_TASK') {
+        set(objs, t.id, { status: 'COMPLETED', badge: 'Completed', actions: [], x: { ...t.x, tone: 'ok' } })
+      } else if (action.intent === 'REOPEN_CASE') {
+        set(objs, t.id, { status: 'IN_PROGRESS', badge: 'Reopened', explanation: `Reopened by ${intent.actor.actor_id}`, actions: [], x: { ...t.x, tone: 'progress' } })
+      } else if (action.intent === 'TERMINATE_CASE') {
+        set(objs, t.id, { status: 'WAITING_ON_OTHERS', badge: 'Terminated', explanation: `Terminated by ${intent.actor.actor_id}: ${justification}`, actions: [], x: { ...t.x, tone: 'muted' } })
+      } else if (action.intent === 'ADD_DISCRETIONARY_WORK') {
+        const title = String(params.title)
+        created = {
+          id: `disc-${Math.random().toString(36).slice(2, 8)}`,
+          kind: 'work_item',
+          name: title,
+          status: 'AVAILABLE_TO_ADD',
+          badge: 'Proposed',
+          explanation: `Proposed by ${intent.actor.actor_id}: ${justification}`,
+          salience: 0.4,
+          parent_id: t.id,
+          actions: [],
+        }
+        objs.push(created)
       }
     })
     if (action.intent === 'APPROVE_HUMAN_TASK') this.execute(intent.case_id, target.id)
-    return { intent_id: intent.intent_id, success: true, new_cursor: next.cursor }
+    if (action.intent === 'EXECUTE_ITEM') this.execute(intent.case_id, target.id)
+    const response: IntentResponse = { intent_id: intent.intent_id, success: true, new_cursor: next.cursor }
+    if (created) response.resulting_object = clone(created)
+    return response
+  }
+
+  /** PROPOSE_CASE commit: builds the new case's initial world from the local template plan. */
+  private commitCase(templateRef: string, params: Record<string, unknown>, _digest: string, intent: InteractionIntent): IntentResponse {
+    const template = templateByRef(templateRef) as LocalTemplate
+    const caseId = `case-${templateRef.replace(/^tpl-/, '')}-${Math.random().toString(36).slice(2, 6)}`
+    const paramNote = Object.entries(params)
+      .filter(([, v]) => v !== undefined && String(v).trim() !== '')
+      .map(([k, v]) => `${k}=${v}`)
+      .join(', ')
+    const caseObj: XObject = {
+      id: caseId,
+      kind: 'work_item',
+      name: template.title,
+      status: 'READY_TO_BEGIN',
+      badge: 'Committed',
+      explanation: paramNote ? `From ${templateRef} · ${paramNote}` : `From ${templateRef}`,
+      salience: 0.95,
+      parent_id: undefined,
+      depends_on: [],
+      actions: [
+        { id: 'add-discretionary', label: 'Add discretionary work', intent: 'ADD_DISCRETIONARY_WORK', consequential: true, variant: 'SECONDARY', requires_justification: true },
+      ],
+      x: { presentation: 'case', tone: 'progress' },
+    }
+    const stageObjs: XObject[] = template.plan.stages.map((st, i) => ({
+      id: `${caseId}-${st.id}`,
+      kind: 'stage',
+      name: st.name,
+      status: i === 0 ? 'READY_TO_BEGIN' : 'WAITING',
+      badge: i === 0 ? 'Ready' : 'Waiting',
+      explanation: st.explanation,
+      salience: 0.55 - i * 0.05,
+      parent_id: caseId,
+      depends_on: st.depends_on?.map((d) => `${caseId}-${d}`),
+      actions: st.action ? [{ id: `${caseId}-${st.action.id}`, label: st.action.label, intent: st.action.intent, consequential: true, variant: 'PRIMARY', ...(st.action.requires_justification ? { requires_justification: true } : {}) }] : [],
+      x: { presentation: 'facet', tone: i === 0 ? 'progress' : 'muted' },
+    }))
+    const now = new Date().toISOString()
+    const snap: XSnapshot = {
+      world_id: `world-${caseId}`,
+      case_id: caseId,
+      cursor: '1.0000000001',
+      timestamp: now,
+      perspective: { actor_id: intent.actor.actor_id, role: intent.actor.role, display_name: this.identity?.display_name },
+      summary: { headline: template.title, phase: 'Case committed', status_phrase: 'Ready to begin', progress_percent: 0 },
+      available_actions: [],
+      attention_focus: { primary_object_id: caseId },
+      visible_objects: [caseObj, ...stageObjs],
+      x: { relationships: stageObjs.flatMap((s) => (s.depends_on ?? []).map((d) => ({ id: `dep:${s.id}>${d}`, from: s.id, to: d, kind: 'depends-on' as const }))) },
+    }
+    this.cases.set(caseId, {
+      snaps: [Object.freeze(snap) as XSnapshot],
+      points: [
+        {
+          cursor: snap.cursor,
+          timestamp: now,
+          event_type: 'case_committed',
+          summary: 'Case committed from template',
+          actor_id: intent.actor.actor_id,
+          actor_role: intent.actor.role,
+          consequential: true,
+          completed_plan_items_count: 0,
+          total_plan_items_count: stageObjs.length,
+        },
+      ],
+    })
+    this.emit(caseId, { event_type: 'snapshot', cursor: snap.cursor, timestamp: now, payload: clone(snap) })
+    return { intent_id: intent.intent_id, success: true, new_cursor: snap.cursor, resulting_object: clone(caseObj) }
   }
 
   // --- governed execution (simulated as contract events) -----------------------

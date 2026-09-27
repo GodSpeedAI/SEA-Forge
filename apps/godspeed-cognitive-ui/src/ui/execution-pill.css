@@ -172,3 +172,8 @@
   background: var(--surface);
   border-color: var(--surface-border);
 }
+
+.execution-pill.reconnecting .execution-pill__button {
+  color: var(--tone-attention);
+  border-color: var(--tone-attention);
+}

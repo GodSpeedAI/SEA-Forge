@@ -29,11 +29,14 @@ export function connectLive(
       const state: ExecutionState['state'] = target?.settlement
         ? target.settlement.decision === 'ACCEPTED' ? 'settled' : 'rejected'
         : run.contractStatus === 'COMPLETED' ? 'executed' : 'running'
+      // Progress is shown only when the stream reported it. Snapshot standing alone never
+      // produces a percentage: an honest pill shows the phase, not a guessed number (T09).
+      const progress: number | null = state === 'settled' ? 1 : ev?.progress ?? null
       const exec: ExecutionState = {
         object: run.parent,
         runId: run.id,
-        phase: state === 'settled' ? 'settled' : ev?.phase ?? 'orchestrator',
-        progress: state === 'running' ? ev?.progress ?? 0.05 : state === 'executed' ? Math.max(ev?.progress ?? 0.9, 0.9) : 1,
+        phase: state === 'settled' ? 'settled' : ev?.phase ?? 'running',
+        progress,
         log: ev?.log ?? [],
         state,
       }
@@ -48,6 +51,8 @@ export function connectLive(
     caseId,
     raw.at(-1)?.cursor,
     (e) => {
+      // Any delivered event is proof the stream is alive again (resume from the cursor).
+      if (store.getState().connection !== 'live') store.dispatch({ type: 'connectionState', connection: 'live' })
       if (e.event_type === 'snapshot' || e.event_type === 'patch') {
         const snap = e.payload as XSnapshot
         if (!snaps.some((x) => x.cursor === snap.cursor)) {
@@ -72,6 +77,11 @@ export function connectLive(
         refreshExecutions()
       }
     },
-    (err) => console.warn('[event stream]', err),
+    (err) => {
+      // Connection interrupted: the UI shows Reconnecting and keeps the last snapshot standing.
+      // No progress is fabricated while offline; the subscription resumes from its cursor.
+      store.dispatch({ type: 'connectionState', connection: 'reconnecting' })
+      console.warn('[event stream]', err)
+    },
   )
 }

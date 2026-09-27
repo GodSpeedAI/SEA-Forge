@@ -34,6 +34,17 @@ export function createArtifactService(port: Pick<CaseworkPort, 'resolveArtifact'
       cache.set(ref, LOADING)
       port.resolveArtifact(ref).then(
         (payload) => {
+          // Digest verification (T09): a content-addressed ref must resolve to exactly that
+          // content. The kernel refuses mismatches; a local/adapter mismatch is surfaced, never
+          // rendered as if it were the requested artifact.
+          if (ref.startsWith('sha256:') && payload.digest && payload.digest !== ref) {
+            set(ref, {
+              status: 'error',
+              error: `The returned content does not match the requested digest (got ${payload.digest.slice(0, 19)}…). The artifact was not opened.`,
+              payload,
+            })
+            return
+          }
           const parsed = parseArtifact(payload)
           set(ref, parsed.ok ? { status: 'ready', payload, model: parsed.model } : { status: 'error', error: parsed.error, payload })
         },

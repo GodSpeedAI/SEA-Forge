@@ -25,6 +25,8 @@ export function initialState(history: WorldHistory): UiState {
     narratives: {},
     overrides: emptyOverrides(),
     judgment: null,
+    drawer: null,
+    proposal: null,
     intents: [],
     timeline: false,
     timeMarks: [],
@@ -32,6 +34,7 @@ export function initialState(history: WorldHistory): UiState {
     executions: {},
     design: null,
     agent: 'available',
+    connection: 'live',
     cameraRequest: 0,
     cameraRestore: null,
     awake: false,
@@ -84,6 +87,8 @@ export function reduce(s: UiState, a: Action): UiState {
     }
     case 'back': {
       if (expandedArtifact(s)) return reduce(s, { type: 'collapseArtifact' })
+      if (s.drawer) return { ...s, drawer: null }
+      if (s.proposal) return { ...s, proposal: null }
       if (s.judgment) return { ...s, judgment: null, surface: 'orbital', ...fly }
       if (s.compare) return reduce(s, { type: 'closeCompare' })
       if (s.mode !== 'world') return reduce(s, { type: 'setMode', mode: 'world' })
@@ -105,6 +110,8 @@ export function reduce(s: UiState, a: Action): UiState {
         narrative: null,
         overrides: emptyOverrides(),
         judgment: null,
+        drawer: null,
+        proposal: null,
         artifacts: pinnedOnly(s),
         expandedFrom: null,
         compare: null,
@@ -216,8 +223,51 @@ export function reduce(s: UiState, a: Action): UiState {
     }
     case 'invoke': {
       if (isPast(s) || !a.action.consequential) return s // the past is read-only
+      // Discretionary work is a typed add-work surface (title + justification), not a choice.
+      if (a.action.intent === 'ADD_DISCRETIONARY_WORK') {
+        return { ...s, drawer: { object: a.object, action: a.action }, judgment: null, ...fly }
+      }
       return { ...s, judgment: { object: a.object, action: a.action }, surface: 'judgment', compare: null, ...fly }
     }
+    case 'openDrawer':
+      return { ...s, drawer: { object: a.object, action: a.action }, judgment: null, ...fly }
+    case 'closeDrawer':
+      return s.drawer ? { ...s, drawer: null } : s
+    case 'openProposals':
+      return {
+        ...s,
+        proposal: { status: 'loading', templates: [], selected: null, params: {}, preflighting: false, preflight: null, submitting: false },
+        judgment: null,
+        drawer: null,
+      }
+    case 'proposalsLoaded':
+      return s.proposal ? { ...s, proposal: { ...s.proposal, status: 'ready', templates: a.templates, error: undefined } } : s
+    case 'proposalsUnavailable':
+      return s.proposal ? { ...s, proposal: { ...s.proposal, status: 'unavailable', error: a.error } } : s
+    case 'selectTemplate':
+      // A new template resets parameters and any previous preflight: the digest binds the params.
+      return s.proposal
+        ? { ...s, proposal: { ...s.proposal, selected: a.templateRef, params: {}, preflight: null, submitError: undefined, submitCode: undefined } }
+        : s
+    case 'setProposalParam': {
+      if (!s.proposal) return s
+      // Changed parameters invalidate the preflight digest; preflight must run again.
+      return { ...s, proposal: { ...s.proposal, params: { ...s.proposal.params, [a.name]: a.value }, preflight: null, submitError: undefined } }
+    }
+    case 'preflightStarted':
+      return s.proposal ? { ...s, proposal: { ...s.proposal, preflighting: true } } : s
+    case 'preflightResult':
+      return s.proposal ? { ...s, proposal: { ...s.proposal, preflighting: false, preflight: a.result } } : s
+    case 'proposalSubmitStarted':
+      return s.proposal ? { ...s, proposal: { ...s.proposal, submitting: true, submitError: undefined, submitCode: undefined } } : s
+    case 'proposalSubmitted':
+      return s.proposal ? { ...s, proposal: { ...s.proposal, submitting: false, result: { caseId: a.caseId } } } : s
+    case 'proposalError':
+      return s.proposal ? { ...s, proposal: { ...s.proposal, submitting: false, submitError: a.error, submitCode: a.code } } : s
+    case 'closeProposals':
+      return s.proposal ? { ...s, proposal: null } : s
+    case 'connectionState':
+      return s.connection === a.connection ? s : { ...s, connection: a.connection }
     case 'intentSent': {
       const intents = [...s.intents, a.record]
       const judgment = a.judgment && s.judgment && !s.judgment.pending ? { ...s.judgment, pending: a.record.id, outcome: undefined } : s.judgment

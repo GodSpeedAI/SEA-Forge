@@ -1,0 +1,245 @@
+.proposal-panel {
+  position: fixed;
+  left: calc(1120 / 1672 * 100vw);
+  top: calc(140 / 941 * 100vh);
+  width: calc(470 / 1672 * 100vw);
+  min-width: 380px;
+  max-height: 74vh;
+  z-index: 46;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid rgba(20, 22, 26, 0.18);
+  box-shadow: var(--shadow-soft);
+}
+
+.proposal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.proposal-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.proposal-close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.proposal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.proposal-status {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.proposal-status--error {
+  color: var(--tone-critical);
+}
+
+.proposal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proposal-heading {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.proposal-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.proposal-template {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.proposal-template:hover {
+  border-color: var(--line-strong);
+}
+
+.proposal-template.selected {
+  border-color: var(--tone-progress);
+  box-shadow: inset 0 0 0 1px var(--tone-progress);
+}
+
+.proposal-template-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.proposal-template-desc {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.proposal-param {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.proposal-param-label {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.proposal-param-required {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tone-attention);
+}
+
+.proposal-param input,
+.proposal-param select {
+  height: 30px;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+}
+
+.proposal-param-desc {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.proposal-preflight {
+  align-self: flex-start;
+  height: 30px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.proposal-preflight:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.proposal-preflight-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.proposal-preflight-result.passed {
+  border-color: var(--tone-ok);
+}
+
+.proposal-preflight-result.failed {
+  border-color: var(--tone-attention);
+}
+
+.proposal-preflight-ok {
+  color: var(--tone-ok);
+  font-weight: 600;
+}
+
+.proposal-preflight-digest {
+  font-size: 10px;
+  color: var(--ink-3);
+  word-break: break-all;
+}
+
+.proposal-preflight-reason {
+  color: var(--tone-attention);
+}
+
+.proposal-error {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--tone-critical);
+  border: 1px solid var(--tone-critical);
+  border-radius: 3px;
+}
+
+.proposal-error-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.proposal-ok {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--tone-ok);
+  border: 1px solid var(--tone-ok);
+  border-radius: 3px;
+}
+
+.proposal-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.proposal-submit {
+  height: 32px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ink);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.proposal-submit:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.proposal-submit-note {
+  font-size: 11px;
+  color: var(--ink-3);
+}

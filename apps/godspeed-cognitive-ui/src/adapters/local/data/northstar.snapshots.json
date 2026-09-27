@@ -3307,7 +3307,32 @@
     "badge": "1 needs you",
     "salience": 0.95,
     "parent_id": "cat-projects",
-    "actions": [],
+    "actions": [
+     {
+      "id": "add-discretionary",
+      "label": "Add discretionary work",
+      "intent": "ADD_DISCRETIONARY_WORK",
+      "consequential": true,
+      "variant": "SECONDARY",
+      "requires_justification": true
+     },
+     {
+      "id": "reopen-case",
+      "label": "Reopen case",
+      "intent": "REOPEN_CASE",
+      "consequential": true,
+      "variant": "SECONDARY",
+      "requires_justification": true
+     },
+     {
+      "id": "terminate-case",
+      "label": "Terminate case",
+      "intent": "TERMINATE_CASE",
+      "consequential": true,
+      "variant": "DANGER",
+      "requires_justification": true
+     }
+    ],
     "status": "ACTION_REQUIRED",
     "x": {
      "tone": "attention",
@@ -3412,12 +3437,24 @@
     "badge": "Needs you",
     "salience": 0.4,
     "parent_id": "cat-tasks",
-    "actions": [],
+    "actions": [
+     {
+      "id": "complete-review",
+      "label": "Complete review",
+      "intent": "COMPLETE_HUMAN_TASK",
+      "consequential": true,
+      "variant": "PRIMARY",
+      "requires_justification": true
+     }
+    ],
     "status": "ACTION_REQUIRED",
     "x": {
      "tone": "attention",
      "presentation": "item"
-    }
+    },
+    "depends_on": [
+     "t-rollout"
+    ]
    },
    {
     "id": "t-rollout",
@@ -3426,7 +3463,15 @@
     "badge": "In progress",
     "salience": 0.2,
     "parent_id": "cat-tasks",
-    "actions": [],
+    "actions": [
+     {
+      "id": "execute-rollout",
+      "label": "Execute rollout",
+      "intent": "EXECUTE_ITEM",
+      "consequential": true,
+      "variant": "PRIMARY"
+     }
+    ],
     "status": "IN_PROGRESS",
     "x": {
      "tone": "progress",

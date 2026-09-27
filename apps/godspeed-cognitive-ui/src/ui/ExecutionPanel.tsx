@@ -4,7 +4,8 @@ export interface ExecutionPanelProps {
   title: string;
   runId: string;
   phase: string;
-  progress: number;
+  /** 0..1 when the stream reported progress; null when only snapshot standing is known. */
+  progress: number | null;
   state: 'running' | 'executed' | 'settled' | 'rejected';
   log: string[];
   evidence: { ref: string; title: string }[];
@@ -45,9 +46,9 @@ export function ExecutionPanel(p: ExecutionPanelProps): JSX.Element {
 
       <div className="exec-progress-container">
         <div className="exec-progress-bar">
-          <div className="exec-progress-fill" style={{ width: `${p.progress * 100}%` }} />
+          <div className="exec-progress-fill" style={{ width: p.progress === null ? '100%' : `${p.progress * 100}%`, opacity: p.progress === null ? 0.25 : 1 }} />
         </div>
-        <span className="exec-progress-percent">{Math.round(p.progress * 100)}%</span>
+        <span className="exec-progress-percent">{p.progress === null ? '—' : `${Math.round(p.progress * 100)}%`}</span>
       </div>
 
       <div className="exec-log-section">

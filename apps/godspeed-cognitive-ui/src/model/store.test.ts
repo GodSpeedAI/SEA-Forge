@@ -163,12 +163,24 @@ describe('store.reduce', () => {
     it('opens judgment for consequential action', () => {
       const snap = snapshotOf(state)
       const objs = Object.values(snap.objects)
-      const obj = objs.find((o) => o.actions?.some((a) => a.consequential))
+      // ADD_DISCRETIONARY_WORK routes to the discretionary drawer instead (T09).
+      const obj = objs.find((o) => o.actions?.some((a) => a.consequential && a.intent !== 'ADD_DISCRETIONARY_WORK'))
       if (!obj || !obj.actions) return
-      const action = obj.actions.find((a) => a.consequential)!
+      const action = obj.actions.find((a) => a.consequential && a.intent !== 'ADD_DISCRETIONARY_WORK')!
       const next = reduce(state, { type: 'invoke', object: obj.id, action })
       expect(next.judgment).not.toBeNull()
       expect(next.surface).toBe('judgment')
+    })
+
+    it('routes ADD_DISCRETIONARY_WORK to the discretionary drawer, not judgment (T09)', () => {
+      const snap = snapshotOf(state)
+      const obj = Object.values(snap.objects).find((o) => o.actions?.some((a) => a.intent === 'ADD_DISCRETIONARY_WORK'))
+      if (!obj || !obj.actions) return
+      const action = obj.actions.find((a) => a.intent === 'ADD_DISCRETIONARY_WORK')!
+      const next = reduce(state, { type: 'invoke', object: obj.id, action })
+      expect(next.judgment).toBeNull()
+      expect(next.drawer?.object).toBe(obj.id)
+      expect(next.drawer?.action.intent).toBe('ADD_DISCRETIONARY_WORK')
     })
 
     it('is a no-op in the past', () => {

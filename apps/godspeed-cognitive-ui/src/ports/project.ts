@@ -1,58 +1,16 @@
-import type { Actor, CaseworkPort, CognitiveRelationship, ToneHint, XObject, XSnapshot } from './contract'
-import type { ObjectKind, Relationship, RelationKind, Revision, Status, Tone, WorldHistory, WorldObject, WorldSnapshot } from '../model/types'
+import type { Actor, CaseworkPort, CognitiveRelationship, XObject, XSnapshot } from './contract'
+import type { ObjectKind, Relationship, RelationKind, Revision, Status, WorldHistory, WorldObject, WorldSnapshot } from '../model/types'
+import { presentationOf, sentryExplanation, statusPhrase, toneOf } from '../model/derive'
 
 // Contract snapshot → internal world. This is the only place contract shapes are read; the
 // layouts, scene and panels only ever see the projection. It is generic: nothing here (or
 // above it) recognises particular ids or names.
+//
+// Presentation (kind class, tone, phrase, sentry explanation) is DERIVED locally from kernel
+// fields (src/model/derive.ts, T09): live snapshots carry no `x` extensions. Authored `x`
+// extensions (the local fixture) win over derivation wherever present.
 
 export const CORE_ID = 'core'
-
-const STATUS_TONE: Record<string, Tone> = {
-  COMPLETED: 'ok',
-  IN_PROGRESS: 'progress',
-  ACTIVE: 'progress',
-  READY_TO_BEGIN: 'progress',
-  ACTION_REQUIRED: 'attention',
-  FAILED: 'critical',
-  REJECTED: 'critical',
-  WAITING: 'muted',
-  WAITING_ON_OTHERS: 'muted',
-  AVAILABLE_TO_ADD: 'hypothesis',
-}
-
-/** Spec 04 axiom 1: never show engine jargon; used only when the backend sent no badge. */
-const STATUS_PHRASE: Record<string, string> = {
-  COMPLETED: 'Completed',
-  IN_PROGRESS: 'In progress',
-  ACTIVE: 'In progress',
-  READY_TO_BEGIN: 'Ready to begin',
-  ACTION_REQUIRED: 'Needs your attention',
-  FAILED: 'Failed',
-  REJECTED: 'Rejected',
-  WAITING: 'Waiting',
-  WAITING_ON_OTHERS: 'Waiting on others',
-  AVAILABLE_TO_ADD: 'Available to add if needed',
-}
-
-const PRESENTATION_KIND: Record<string, ObjectKind> = {
-  core: 'core',
-  region: 'category',
-  case: 'case',
-  facet: 'facet',
-  item: 'item',
-  person: 'person',
-  run: 'run',
-}
-
-const CONTRACT_KIND: Record<string, ObjectKind> = {
-  stage: 'facet',
-  milestone: 'facet',
-  decision_gate: 'facet',
-  work_item: 'item',
-  evidence_record: 'item',
-  discretionary_opportunity: 'item',
-  execution_trace: 'run',
-}
 
 const RELATION_KIND: Record<CognitiveRelationship['kind'], RelationKind> = {
   'depends-on': 'depends',
@@ -62,12 +20,24 @@ const RELATION_KIND: Record<CognitiveRelationship['kind'], RelationKind> = {
   contradicts: 'relates',
 }
 
-const tone = (t: ToneHint | undefined, status: string): Tone => t ?? STATUS_TONE[status] ?? 'muted'
+/** Presentation class for the authored `x.presentation` names, else derived from the kernel kind. */
+function presentationOfX(xPresentation: string | undefined, kind: string): ObjectKind {
+  const byX: Record<string, ObjectKind> = {
+    core: 'core',
+    region: 'category',
+    case: 'case',
+    facet: 'facet',
+    item: 'item',
+    person: 'person',
+    run: 'run',
+  }
+  return (xPresentation && byX[xPresentation]) || presentationOf(kind)
+}
 
 export function projectObject(o: XObject, parentFallback: string | null): WorldObject {
   const x = o.x ?? {}
-  const status: Status = { label: o.badge || STATUS_PHRASE[o.status] || o.status, tone: tone(x.tone, o.status) }
-  const kind = (x.presentation && PRESENTATION_KIND[x.presentation]) || CONTRACT_KIND[o.kind] || 'item'
+  const status: Status = { label: o.badge || statusPhrase(o.status), tone: toneOf(o) }
+  const kind = presentationOfX(x.presentation, o.kind)
   const obj: WorldObject = {
     id: o.id,
     kind,
@@ -136,6 +106,14 @@ export function projectSnapshot(snap: XSnapshot, opts: ProjectOptions): WorldSna
       relationships.push({ id: `dep:${o.id}>${d}`, from: o.id, to: d, kind: 'depends' })
     }
   }
+  // Sentry transparency: when the kernel sent no explanation, derive one from depends_on plus
+  // each dependency's standing, so blocked work says what it is waiting on (T09).
+  const byId: Record<string, XObject> = Object.fromEntries(snap.visible_objects.map((o) => [o.id, o]))
+  for (const o of snap.visible_objects) {
+    if (o.explanation || !o.depends_on?.length) continue
+    const sentry = sentryExplanation(o, byId)
+    if (sentry && objects[o.id]) objects[o.id] = { ...objects[o.id]!, subtitle: sentry }
+  }
   const attention = snap.attention_focus?.primary_object_id
   return { revision: snap.cursor, caseId: snap.case_id, objects, relationships, artifacts, attention: attention && objects[attention] ? attention : undefined }
 }
@@ -171,7 +149,8 @@ export function compareCursor(a: string, b: string): number {
   return ea - eb || sa - sb
 }
 
-/** Loads a case's full history through the port: trajectory first, then each checkpoint. */
+/** Loads a case's history through the port: trajectory first, then each checkpoint. When the
+ * deployment serves no trajectory (an honest adapter limit), falls back to the live head. */
 export async function loadCaseHistory(
   port: CaseworkPort,
   caseId: string,
@@ -179,8 +158,17 @@ export async function loadCaseHistory(
   provenance: WorldHistory['provenance'],
   opts: ProjectOptions,
 ): Promise<{ history: WorldHistory; raw: XSnapshot[] }> {
-  const traj = await port.queryTemporalTrajectory(caseId)
-  const raw = await Promise.all(traj.points.map((p) => port.getSnapshotAt(caseId, p.cursor, actor.actor_id, actor.role)))
-  const summaries = Object.fromEntries(traj.points.map((p) => [p.cursor, p.summary]))
+  let raw: XSnapshot[]
+  let summaries: Record<string, string>
+  try {
+    const traj = await port.queryTemporalTrajectory(caseId)
+    raw = await Promise.all(traj.points.map((p) => port.getSnapshotAt(caseId, p.cursor, actor.actor_id, actor.role)))
+    summaries = Object.fromEntries(traj.points.map((p) => [p.cursor, p.summary]))
+  } catch {
+    // No trajectory in this deployment: one revision, honestly labelled as the current head.
+    const head = await port.getSnapshot(caseId, actor.actor_id, actor.role)
+    raw = [head]
+    summaries = {}
+  }
   return { history: projectHistory(raw, summaries, provenance, opts), raw }
 }

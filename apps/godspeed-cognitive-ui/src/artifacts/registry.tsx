@@ -45,6 +45,9 @@ const LOADERS: Record<RendererKind, Loader> = {
   timeline: track('timeline', () => import('./renderers/TimelineRenderer')),
 }
 
+/** The source renderer kinds, each backed by its own lazy chunk (asserted by tests, VAR-006). */
+export const RENDERER_KINDS = Object.keys(LOADERS) as RendererKind[]
+
 const LAZY = Object.fromEntries(
   Object.entries(LOADERS).map(([k, load]) => [k, lazy(load)]),
 ) as unknown as Record<RendererKind, ComponentType<SourceRendererProps>>

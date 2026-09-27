@@ -6,13 +6,28 @@ import type { CaseworkPort, InteractionIntent } from '../ports/contract'
 // It builds a contract InteractionIntent from what the backend offered (the object's
 // ActionDescriptor), stamps the actor and the cursor the actor was looking at, sends it through
 // the port, and records the backend's answer. The UI never decides authority: a refusal is
-// shown as the backend phrased it, and world changes arrive only as new snapshots.
+// shown as the backend phrased it (the typed refusal envelope when present), and world changes
+// arrive only as new snapshots.
+//
+// Typed payloads (T01): the payload-carrying intents build their wire payloads here so every
+// call site stays honest — EXECUTE_ITEM, COMPLETE_HUMAN_TASK, REOPEN_CASE and TERMINATE_CASE
+// from the envelope, ADD_DISCRETIONARY_WORK from the drawer's typed payload.
 
 export interface IntentPath {
-  submit(actor: Actor, object: Id, action: ObjectAction, opts?: { justification?: string; judgment?: boolean }): Promise<IntentRecord>
+  submit(
+    actor: Actor,
+    object: Id,
+    action: ObjectAction,
+    opts?: {
+      justification?: string
+      judgment?: boolean
+      /** Typed payload (T01) riding in InteractionIntent.parameters; built here when omitted. */
+      parameters?: Record<string, unknown>
+    },
+  ): Promise<IntentRecord>
 }
 
-const uuid = () =>
+export const uuid = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => ((Math.random() * 16) | 0).toString(16))
@@ -21,16 +36,30 @@ export function createIntentPath(store: Store, port: Pick<CaseworkPort, 'dispatc
   return {
     async submit(actor, object, action, opts = {}) {
       const s = store.getState()
+      const caseId = s.history.caseId
+      const justification = opts.justification
+      // Typed payload per action (types.ts IntentRequestPayloads). PROPOSE_CASE is dispatched by
+      // the dedicated design flow; the drawer supplies the full ADD_DISCRETIONARY_WORK payload.
+      const parameters: Record<string, unknown> | undefined =
+        opts.parameters ??
+        (action.intent === 'EXECUTE_ITEM'
+          ? { item_id: object }
+          : action.intent === 'COMPLETE_HUMAN_TASK'
+            ? { item_id: object, result: { note: justification }, justification }
+            : action.intent === 'REOPEN_CASE' || action.intent === 'TERMINATE_CASE'
+              ? { case_id: caseId, reason: justification }
+              : undefined)
       const intent: InteractionIntent = {
         intent_id: uuid(),
         kind: action.consequential ? 'CONSEQUENTIAL_CASE' : 'BACKEND_INFORMATION',
         action_name: action.intent,
         target_object_id: object,
-        case_id: s.history.caseId,
+        case_id: caseId,
         // The newest state this client has seen; the backend refuses stale projections.
         client_cursor: nowRevision(s.history),
         actor: { actor_id: actor.id, role: actor.role as InteractionIntent['actor']['role'] },
-        ...(opts.justification ? { justification: opts.justification } : {}),
+        ...(justification ? { justification } : {}),
+        ...(parameters ? { parameters } : {}),
       }
       const record: IntentRecord = {
         id: intent.intent_id,
@@ -43,14 +72,20 @@ export function createIntentPath(store: Store, port: Pick<CaseworkPort, 'dispatc
       store.dispatch({ type: 'intentSent', record, judgment: opts.judgment })
       try {
         const r = await port.dispatchIntent(intent)
+        const refusal = r.success ? undefined : r.refusal
         store.dispatch({
           type: 'intentSettled',
           id: record.id,
           state: r.success ? 'accepted' : 'refused',
-          note: r.success ? 'Accepted by authority' : r.error_message,
-          code: r.error_code,
+          note: r.success ? 'Accepted by authority' : refusal?.message ?? r.error_message,
+          code: refusal?.refusal_kind ?? r.error_code,
         })
-        return { ...record, state: r.success ? 'accepted' : 'refused', note: r.error_message, code: r.error_code }
+        return {
+          ...record,
+          state: r.success ? 'accepted' : 'refused',
+          note: refusal?.message ?? r.error_message,
+          code: refusal?.refusal_kind ?? r.error_code,
+        }
       } catch (e) {
         const note = e instanceof Error ? e.message : String(e)
         store.dispatch({ type: 'intentSettled', id: record.id, state: 'refused', note: `Not delivered: ${note}`, code: 'UNAVAILABLE' })

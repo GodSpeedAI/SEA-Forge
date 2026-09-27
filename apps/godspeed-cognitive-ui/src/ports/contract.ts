@@ -39,7 +39,15 @@ export type {
   ActionIntentKind,
   CognitiveObjectKind,
   CognitiveObjectStatus,
+  ConsequentialIntentName,
   InteractionActionName,
+  IntentRefusal,
+  IntentRefusalKind,
+  ProposeCasePayload,
+  AddDiscretionaryWorkPayload,
+  ExecuteItemPayload,
+  CompleteHumanTaskPayload,
+  CaseLifecyclePayload,
   TemporalCheckpoint,
 } from '../../../../.agents/reports/interface-contracts/typescript/types'
 
@@ -176,24 +184,52 @@ export interface CaseworkPort {
  * (GET /api/templates, POST /api/templates/preflight). Feature-detect with
  * `'getTemplates' in port` — the local adapter gains fixture templates in T09.
  */
+export interface TemplateParameter {
+  readonly name: string
+  readonly title?: string
+  readonly description?: string
+  /** `string | number | boolean | enum` (wire `type`, golden templates-entry-options.json). */
+  readonly param_type: string
+  readonly required: boolean
+  readonly default?: string
+  readonly options?: readonly string[]
+}
+
+export interface TemplateEntryOption {
+  readonly template_ref: string
+  readonly title: string
+  readonly description?: string
+  readonly parameters: readonly TemplateParameter[]
+}
+
 export interface TemplateSourcePort {
-  getTemplates(): Promise<
-    readonly {
-      template_ref: string
-      title: string
-      description?: string
-      parameters: readonly {
-        name: string
-        param_type: string
-        required: boolean
-        default?: string
-      }[]
-    }[]
-  >
+  getTemplates(): Promise<readonly TemplateEntryOption[]>
   preflightTemplate(
     templateRef: string,
     params: Record<string, unknown>,
   ): Promise<{ passed: boolean; digest?: string; reasons: readonly string[] }>
+}
+
+/**
+ * Session surface (T09, additive; TemplateSourcePort-style optional port). The live adapter
+ * resolves identity from the gateway session (T07); the local adapter self-reports a fixture
+ * identity. Feature-detect with `'session' in port`.
+ */
+export interface SessionIdentity {
+  /** Gateway login name, when the deployment names users. */
+  readonly user?: string
+  readonly actor_id: string
+  readonly role: string
+  readonly roles?: readonly string[]
+  readonly display_name?: string
+  readonly kind?: 'human' | 'agent'
+}
+
+export interface SessionPort {
+  /** The resolved identity, or null while unauthenticated. */
+  session(): Promise<SessionIdentity | null>
+  login(username: string, password: string): Promise<SessionIdentity>
+  logout(): Promise<void>
 }
 
 /** The agent side of the environment (spec 04 §8). Optional: the UI must work without it. */

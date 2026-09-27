@@ -9,6 +9,7 @@ import type {
   CognitiveArtifact,
   ObjectExtensions,
   OperationalSettlement,
+  TemplateEntryOption,
 } from '../ports/contract'
 
 export type Id = string
@@ -399,9 +400,27 @@ export interface ExecutionState {
   object: Id
   runId: string
   phase: string
-  progress: number
+  /** 0..1 when the stream reported progress; null when only snapshot standing is known (never guessed). */
+  progress: number | null
   log: string[]
   state: 'running' | 'executed' | 'settled' | 'rejected'
+}
+
+/** Case design from templates (T09): picker → parameters → preflight → commit. */
+export interface ProposalState {
+  /** Template list loading through the port, ready, or unavailable (shown honestly). */
+  status: 'loading' | 'ready' | 'unavailable'
+  templates: readonly TemplateEntryOption[]
+  error?: string
+  selected: string | null
+  params: Record<string, string>
+  preflighting: boolean
+  preflight: { passed: boolean; digest?: string; reasons: readonly string[] } | null
+  submitting: boolean
+  /** The committed case, ready to focus. */
+  result?: { caseId: string }
+  submitError?: string
+  submitCode?: string
 }
 
 /** Case design: the template world, its authoritative versions and a local proposal. */
@@ -435,6 +454,10 @@ export interface UiState {
   narratives: Record<Id, Narrative>
   overrides: BeatOverrides
   judgment: PendingJudgment | null
+  /** Discretionary-work drawer (T09): a typed add-work surface on a case/stage. */
+  drawer: { object: Id; action: ObjectAction } | null
+  /** Template-based case design (T09): picker → params → preflight → commit. */
+  proposal: ProposalState | null
   intents: IntentRecord[]
   /** Temporal inspection is open (history strip shown). */
   timeline: boolean
@@ -445,6 +468,8 @@ export interface UiState {
   design: DesignState | null
   /** Narration/agent adapter availability. Direct UI never depends on it. */
   agent: 'available' | 'unavailable'
+  /** Event-stream connection: 'reconnecting' while the adapter reports an interruption. */
+  connection: 'live' | 'reconnecting'
   /** Monotonic counter; bump to ask the camera to fly to the current layout's camera. */
   cameraRequest: number
   /** When set with a cameraRequest, fly here instead of the layout camera (artifact collapse). */
@@ -477,6 +502,20 @@ export type Action =
   | { type: 'dismissArtifact'; id: Id }
   | { type: 'pinArtifact'; id: Id; pinned: boolean }
   | { type: 'invoke'; object: Id; action: ObjectAction }
+  | { type: 'openDrawer'; object: Id; action: ObjectAction }
+  | { type: 'closeDrawer' }
+  | { type: 'openProposals' }
+  | { type: 'proposalsLoaded'; templates: readonly TemplateEntryOption[] }
+  | { type: 'proposalsUnavailable'; error: string }
+  | { type: 'selectTemplate'; templateRef: string | null }
+  | { type: 'setProposalParam'; name: string; value: string }
+  | { type: 'preflightStarted' }
+  | { type: 'preflightResult'; result: { passed: boolean; digest?: string; reasons: readonly string[] } }
+  | { type: 'proposalSubmitStarted' }
+  | { type: 'proposalSubmitted'; caseId: string }
+  | { type: 'proposalError'; error: string; code?: string }
+  | { type: 'closeProposals' }
+  | { type: 'connectionState'; connection: 'live' | 'reconnecting' }
   | { type: 'intentSent'; record: IntentRecord; judgment?: boolean }
   | { type: 'closeJudgment' }
   | { type: 'intentSettled'; id: string; state: 'accepted' | 'refused'; note?: string; code?: string }

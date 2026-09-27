@@ -25,6 +25,9 @@ import type {
   ActorRole,
   ArtifactPayload,
   CaseworkPort,
+  SessionIdentity,
+  SessionPort,
+  TemplateEntryOption,
   TemplateSourcePort,
   IntentResponse,
   InteractionIntent,
@@ -44,13 +47,8 @@ export interface HttpAdapterOptions {
   reconnectMaxMs?: number
 }
 
-/** A session the adapter learned from GET /api/session. */
-export interface SessionIdentity {
-  user: string
-  actor_id: string
-  role: string
-  roles: readonly string[]
-}
+/** The session identity this adapter resolves (the contract SessionIdentity, T07/T09). */
+export type { SessionIdentity }
 
 /** Typed refusal from the gateway (T01 envelope), thrown for pre-dispatch rejections. */
 export class HttpRefusalError extends Error {
@@ -70,7 +68,7 @@ const csrfCookie = (): string => {
   return match ? decodeURIComponent(match[1]!) : ''
 }
 
-export class HttpCaseworkAdapter implements CaseworkPort, TemplateSourcePort {
+export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateSourcePort {
   private readonly base: string
   private readonly credentials: RequestCredentials
   private readonly reconnectBaseMs: number
@@ -107,6 +105,8 @@ export class HttpCaseworkAdapter implements CaseworkPort, TemplateSourcePort {
       actor_id: body.actor_id,
       role: body.role ?? body.roles?.[0] ?? '',
       roles: body.roles ?? [],
+      display_name: body.user,
+      kind: 'human',
     }
     return this.identity
   }
@@ -344,19 +344,29 @@ export class HttpCaseworkAdapter implements CaseworkPort, TemplateSourcePort {
 
   // --- templates (additive port surface; optional on CaseworkPort) -----------------
 
-  async getTemplates(): Promise<
-    readonly {
-      template_ref: string
-      title: string
-      description?: string
-      parameters: readonly { name: string; param_type: string; required: boolean; default?: string }[]
-    }[]
-  > {
+  async getTemplates(): Promise<readonly TemplateEntryOption[]> {
     const res = await this.fetchJSON('/api/templates')
     if (res.status === 401) throw new HttpRefusalError('UNAUTHORIZED_ROLE', 'Your session has ended. Sign in again.')
     if (!res.ok) throw await this.refusalFrom(res)
-    return (res.body as { templates: { template_ref: string; title: string; description?: string; parameters: { name: string; param_type: string; required: boolean; default?: string }[] }[] })
-      .templates
+    const wire = (res.body as { templates?: Record<string, unknown>[] }).templates ?? []
+    // Normalize the wire parameter shape (golden templates-entry-options.json: `type`,
+    // `default_value`) onto the port's naming (`param_type`, `default`).
+    return wire.map((t) => ({
+      template_ref: String(t.template_ref),
+      title: String(t.title),
+      ...(t.description !== undefined && t.description !== null ? { description: String(t.description) } : {}),
+      parameters: ((t.parameters ?? []) as Record<string, unknown>[]).map((p) => ({
+        name: String(p.name),
+        ...(p.title !== undefined && p.title !== null ? { title: String(p.title) } : {}),
+        ...(p.description !== undefined && p.description !== null ? { description: String(p.description) } : {}),
+        param_type: String(p.type ?? p.param_type ?? 'string'),
+        required: p.required === undefined ? false : Boolean(p.required),
+        ...(p.default_value !== undefined || p.default !== undefined
+          ? { default: String(p.default_value ?? p.default) }
+          : {}),
+        ...(Array.isArray(p.options) ? { options: (p.options as unknown[]).map(String) } : {}),
+      })),
+    }))
   }
 
   async preflightTemplate(
