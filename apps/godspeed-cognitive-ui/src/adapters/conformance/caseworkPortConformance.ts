@@ -118,12 +118,19 @@ export async function runCaseworkPortConformance(s: CaseworkPortConformanceScena
     if (s.resume === 'replay-retained') {
       const replay = await waitForEvent(
         resumedEvents,
-        (event) => event.cursor > snapshot.cursor,
+        (event) => event.cursor >= accepted.new_cursor!,
         s.waitForMs,
         'retained events after the supplied resume cursor',
       )
-      assertConforms(replay.cursor >= accepted.new_cursor!, 'resumed stream replays the accepted mutation cursor',
-        `got ${replay.cursor}, expected at least ${accepted.new_cursor}`)
+      assertConforms(replay.cursor === accepted.new_cursor, 'resumed stream replays the exact accepted mutation cursor',
+        `got ${replay.cursor}, expected ${accepted.new_cursor}`)
+      const replayIndex = resumedEvents.indexOf(replay)
+      let previousCursor = snapshot.cursor
+      for (const event of resumedEvents.slice(0, replayIndex + 1)) {
+        assertConforms(event.cursor > previousCursor, 'replay cursors advance chronologically',
+          `got ${event.cursor} after ${previousCursor}`)
+        previousCursor = event.cursor
+      }
     } else {
       await new Promise((resolve) => setTimeout(resolve, s.resumeWaitMs))
       assertConforms(resumedEvents.every((event) => event.cursor > headCursorBeforeResume),

@@ -41,6 +41,20 @@ describe('LocalContractAdapter', () => {
     })
   })
 
+  test('shared conformance accepts an ordered retained prefix before the accepted cursor', async () => {
+    await expect(runReplayConformance(adapter, 'prefix-and-receipt')).resolves.toBeUndefined()
+  })
+
+  test('shared conformance rejects a retained prefix that omits the accepted cursor', async () => {
+    await expect(runReplayConformance(adapter, 'prefix-only')).rejects.toThrow('timed out waiting for retained events')
+  })
+
+  test('shared conformance rejects retained replay cursors delivered out of order', async () => {
+    await expect(runReplayConformance(adapter, 'unordered-prefix')).rejects.toThrow(
+      'replay cursors advance chronologically',
+    )
+  })
+
   test('duplicate intent_id returns DUPLICATE_IN_FLIGHT', async () => {
     const intent = await buildValidIntent(adapter, actor)
     intent.intent_id = `test-dup-${randomId()}`
@@ -177,6 +191,73 @@ describe('LocalContractAdapter', () => {
     expect(events.filter((event) => event.event_type === 'settlement_recorded').length).toBeGreaterThanOrEqual(1)
   })
 })
+
+async function runReplayConformance(
+  adapter: LocalContractAdapter,
+  delivery: 'prefix-and-receipt' | 'prefix-only' | 'unordered-prefix',
+): Promise<void> {
+  let subscriptionCount = 0
+  let acceptedCursor = ''
+  const port = new Proxy(adapter, {
+    get(target, property) {
+      if (property === 'dispatchIntent') {
+        return async (intent: InteractionIntent) => {
+          const response = await target.dispatchIntent(intent)
+          acceptedCursor = response.new_cursor ?? ''
+          return response
+        }
+      }
+      if (property === 'subscribeEvents') {
+        return (caseId: string, sinceCursor: string | undefined, onEvent: (event: StreamEvent) => void) => {
+          subscriptionCount += 1
+          if (subscriptionCount !== 2) return target.subscribeEvents(caseId, sinceCursor, onEvent)
+
+          const prefixCursor = `${sinceCursor}~retained-prefix`
+          if (!sinceCursor || !acceptedCursor || !(sinceCursor < prefixCursor && prefixCursor < acceptedCursor)) {
+            throw new Error('test fixture requires a retained cursor between the resume point and accepted receipt')
+          }
+          queueMicrotask(() => {
+            if (delivery === 'unordered-prefix') {
+              const laterPrefixCursor = `${prefixCursor}~later`
+              onEvent({ event_type: 'snapshot', cursor: laterPrefixCursor, timestamp: new Date().toISOString(), payload: { fixture: 'later retained prefix' } })
+              onEvent({ event_type: 'snapshot', cursor: prefixCursor, timestamp: new Date().toISOString(), payload: { fixture: 'earlier retained prefix' } })
+            } else {
+              onEvent({ event_type: 'snapshot', cursor: prefixCursor, timestamp: new Date().toISOString(), payload: { fixture: 'retained prefix' } })
+            }
+            if (delivery !== 'prefix-only') {
+              onEvent({ event_type: 'snapshot', cursor: acceptedCursor, timestamp: new Date().toISOString(), payload: { fixture: 'accepted receipt' } })
+            }
+          })
+          return () => undefined
+        }
+      }
+      const value = Reflect.get(target, property, target)
+      return typeof value === 'function' ? value.bind(target) : value
+    },
+  })
+
+  await runCaseworkPortConformance({
+    port,
+    caseId: NORTHSTAR_CASE_ID,
+    actor: { actor_id: 'usr-sam', role: 'case_architect' },
+    template: { ref: 'tpl-release-rollout', params: { release_version: '3.4.0' } },
+    artifact: {
+      refAfterDispatch: () => 'evi-assumption',
+      expectedProvenance: { case_id: NORTHSTAR_CASE_ID },
+      digestMatchesContent: false,
+    },
+    initialHistoryMinimum: 6,
+    resume: 'replay-retained',
+    resumeWaitMs: 0,
+    waitForMs: 100,
+    acceptedIntent: (cursor) => buildValidIntentAt(cursor, { actor_id: 'usr-sam', role: 'case_architect' }),
+    captureConsequentialState: async () => {
+      const history = await adapter.queryTemporalTrajectory(NORTHSTAR_CASE_ID)
+      return JSON.stringify(history.points.map((point) => point.cursor))
+    },
+    stateBoundaryDescription: 'local fixture trajectory cursor list',
+  })
+}
 
 function buildValidIntentAt(cursor: string, actor: { actor_id: string; role: 'case_architect' }): InteractionIntent {
   return {

@@ -48,6 +48,12 @@ type Stack struct {
 
 // AssembleStack wires the full live stack (T06 projection + T07 sessions) over the cell's kernel.
 func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
+	return AssembleStackWithRetention(t, cell, 0)
+}
+
+// AssembleStackWithRetention wires the live stack with an explicit projection retention limit.
+// Live integration tests use small limits to exercise the real HTTP resync path.
+func AssembleStackWithRetention(t *testing.T, cell *livetest.Cell, retention int) *Stack {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -55,7 +61,7 @@ func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
 	client := cell.Client()
 	authority := sfwp.NewAuthority(client)
 	source := projection.NewLiveSource(authority, ports.ActorClaim{ActorID: "gateway", Role: "service"})
-	store := projection.NewStore()
+	store := projection.NewStoreWithRetention(retention)
 
 	sub, err := client.Subscribe(ctx)
 	if err != nil {

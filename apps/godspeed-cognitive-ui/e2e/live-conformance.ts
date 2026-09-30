@@ -8,7 +8,17 @@
 // Run: CASEWORK_LIVE=1 bun run e2e/live-conformance.ts
 // Skipped (exit 0, logged) without CASEWORK_LIVE=1 so plain `bun test` stays hermetic.
 
-import { mkdtempSync, writeFileSync, mkdirSync, copyFileSync, readFileSync, readdirSync, existsSync } from 'node:fs'
+import {
+  mkdtempSync,
+  writeFileSync,
+  mkdirSync,
+  copyFileSync,
+  readFileSync,
+  readdirSync,
+  readlinkSync,
+  existsSync,
+  rmSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -19,14 +29,15 @@ if (process.env.CASEWORK_LIVE !== '1') {
 
 const repo = resolve(import.meta.dir, '..', '..', '..')
 const kernelBin = join(repo, 'target', 'debug', 'sea-forge-server')
-const gatewayBin = join(tmpdir(), 't08-live-gw')
 if (!existsSync(kernelBin)) {
   console.error('kernel binary missing; run: cargo build -p sea-forge-server --bin sea-forge-server')
   process.exit(1)
 }
 const uid = process.getuid?.() ?? 1000
 
-const cell = mkdtempSync(join(tmpdir(), 't08-live-cell-'))
+const runRoot = mkdtempSync(join(tmpdir(), 't08-live-run-'))
+const gatewayBin = join(runRoot, 'godspeed-casework')
+const cell = join(runRoot, 'cell')
 mkdirSync(join(cell, 'authority'), { recursive: true })
 // Mirror the T06/T07 harness posture: the invoking uid is the gateway principal; the two
 // delegable end users mirror the L5 journey (operator executes, R-SO approves).
@@ -87,6 +98,47 @@ writeFileSync(configFile, JSON.stringify(config))
 
 const addr = '127.0.0.1:4179'
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+function assertPortAvailable(hostname: string, port: number) {
+  let probe: Bun.TCPSocketListener<undefined>
+  try {
+    probe = Bun.listen({ hostname, port, socket: { data() {} } })
+  } catch (err) {
+    throw new Error(`live conformance port ${hostname}:${port} is already in use; leaving its owner untouched`, { cause: err })
+  }
+  probe.stop(true)
+}
+
+function runnerOwnsGatewayListener(proc: Bun.Subprocess, port: number): boolean {
+  if (proc.exitCode !== null) return false
+
+  const localAddress = `0100007F:${port.toString(16).toUpperCase().padStart(4, '0')}`
+  const ownedSocketInodes = new Set<string>()
+  try {
+    // This test stack binds IPv4 loopback explicitly. Walk only the spawned gateway's fds;
+    // unreadable or racing procfs entries simply fail to establish ownership.
+    for (const fd of readdirSync(`/proc/${proc.pid}/fd`)) {
+      try {
+        const socket = /^socket:\[(\d+)\]$/.exec(readlinkSync(`/proc/${proc.pid}/fd/${fd}`))
+        if (socket) ownedSocketInodes.add(socket[1]!)
+      } catch {
+        // The child may close an fd between readdir and readlink.
+      }
+    }
+    const listeningInodes = new Set(
+      readFileSync('/proc/net/tcp', 'utf8')
+        .split(/\r?\n/)
+        .map((line) => line.trim().split(/\s+/))
+        .filter((fields) => fields[1]?.toUpperCase() === localAddress && fields[3] === '0A')
+        .map((fields) => fields[9])
+        .filter((inode): inode is string => typeof inode === 'string'),
+    )
+    return proc.exitCode === null && [...ownedSocketInodes].some((inode) => listeningInodes.has(inode))
+  } catch {
+    // Missing/restricted procfs is not evidence that the runner owns the endpoint.
+    return false
+  }
+}
+
 async function waitFor(what: string, probe: () => boolean | Promise<boolean>, budgetMs = 30_000) {
   const deadline = Date.now() + budgetMs
   while (Date.now() < deadline) {
@@ -94,6 +146,28 @@ async function waitFor(what: string, probe: () => boolean | Promise<boolean>, bu
     await sleep(200)
   }
   throw new Error(`timed out waiting for ${what}`)
+}
+
+async function exitedWithin(proc: Bun.Subprocess, budgetMs: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const outcome = await Promise.race([
+    proc.exited.then(() => true),
+    new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), budgetMs)
+    }),
+  ])
+  if (timer !== undefined) clearTimeout(timer)
+  return outcome
+}
+
+async function stopOwnedProcess(label: string, proc: Bun.Subprocess) {
+  if (proc.exitCode === null) proc.kill('SIGTERM')
+  if (await exitedWithin(proc, 5_000)) return
+
+  if (proc.exitCode === null) proc.kill('SIGKILL')
+  if (!(await exitedWithin(proc, 5_000))) {
+    throw new Error(`${label} did not exit after SIGTERM and SIGKILL`)
+  }
 }
 
 // The adapter under test.
@@ -118,6 +192,9 @@ try {
     throw new Error('gateway build failed')
   }
 
+  // Probe immediately before spawning to narrow the bind race. Readiness additionally proves
+  // that the spawned gateway PID owns the IPv4 loopback listening socket.
+  assertPortAvailable('127.0.0.1', 4179)
   gateway = Bun.spawn([gatewayBin, '-serve', '-addr', addr, '-config', join(cell, 'gateway.json')], {
     env: { ...process.env, GODSPEED_CELL_ROOT: cell },
     stdout: 'inherit',
@@ -130,9 +207,10 @@ try {
   })
   await waitFor('the kernel socket', () => existsSync(join(cell, 'server.sock')))
   await waitFor('gateway healthz', async () => {
+    if (!gateway || gateway.exitCode !== null || !runnerOwnsGatewayListener(gateway, 4179)) return false
     try {
       const res = await fetch(`http://${addr}/api/healthz`)
-      return res.ok
+      return res.ok && gateway.exitCode === null && runnerOwnsGatewayListener(gateway, 4179)
     } catch {
       return false
     }
@@ -264,13 +342,21 @@ try {
   failures++
   console.error('FATAL', err)
 } finally {
-  gateway?.kill()
-  kernel?.kill()
-  await sleep(300)
+  for (const [label, proc] of [['kernel', kernel], ['gateway', gateway]] as const) {
+    if (!proc) continue
+    try {
+      await stopOwnedProcess(label, proc)
+    } catch (err) {
+      failures++
+      console.error(`CLEANUP FAIL ${label}`, err)
+    }
+  }
 }
 
 if (failures > 0) {
+  console.error(`live conformance evidence retained at ${cell}`)
   console.error(`live conformance: ${failures} failure(s)`)
   process.exit(1)
 }
+rmSync(runRoot, { recursive: true, force: true })
 console.log('live conformance: all checks passed')
