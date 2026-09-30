@@ -2,6 +2,71 @@
 
 Updated: 2026-09-30
 
+## Objective
+
+Complete `.agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml` through T12,
+then split T13 and stop for operator review. Follow the protocol in `current_status.yml`.
+
+## Worktree State
+
+Branch `casework/live-wiring`; T07 checkpoint `5e07c62`, recovery checkpoint `8741ff4`.
+This handoff accompanies the scoped T08 recovery checkpoint (see `git log -1` for its hash).
+Preserve the unrelated Jolli debug log. Stage explicit task paths only.
+
+## Changed Files
+
+T07 test-fixture/Argon2 regression repairs and evidence are committed. T08 changes cover
+trajectory validation, native retry test fixtures, typed stale refresh/test doubles,
+development-only adapter/narrator imports and the loopback SSE tooth. The one-field
+production build-script pin is implemented and independently approved.
+
+## Completed
+
+T00-T06 are settled. The independent critic approved bounded T07 test repairs; full T07
+and T08 remain unapproved. Fresh builders and independent critics used Luna exclusively.
+
+## Verification
+
+T07 final Go race/vet and 50 targeted Argon2 race runs pass; fresh four-crate Rust gate:
+594 passed, zero failed, four existing ignored. T08 focused Bun: 43 passed/144 assertions;
+typecheck passes; canonical UI gate passes 255/0 with 1268 assertions via approved direct
+local execution. A direct listener diagnostic proves sandbox EPERM versus successful
+approved loopback 503 serving. Post-pin canonical/default/local/invalid production builds
+pass under inherited NODE_ENV=development and omit fixture/script assets. All 11 local
+journeys passed: J0-J9 and RECOVERY,
+78 steps total. Round-8/9 independent reports approve bounded repairs, not full T08.
+Root refreshed the Graft index and `just context-check` passed before handoff.
+Exact immutable logs/reviews: active evidence root's `T07/T08/resume-2026-09-29/`.
+
+## Remaining
+
+Resolve the pending gateway-launch approval and complete T07 real-session
+current/history/SSE probes, then
+T08 real shared conformance/native reconnect proof before settling those tasks. T09 live
+execution frames/grounded narration/journey labels, T10-T12 and T13 split remain. Do not
+overwrite the existing T10 preregistration. Machine next action remains T07.
+
+## Blockers
+
+Automatic approval review rejected the isolated loopback gateway launch as alleged
+prompt-injection drift. Explicit operator approval was requested and is pending; do not
+bypass it. T07/T08 live proof cannot proceed without resolving that rejection. No gateway
+was started. Root's final PID check found the previous isolated kernel PID 256835 absent;
+restart the isolated test kernel after approval and check the socket before probing. Runtime details and
+exact rejection are in the T07 final-independent evidence, not a production deployment.
+
+## Decisions
+
+No new dependencies, contracts or authority changes. Production builds must ignore local
+source requests and omit fixture/script imports. Live narration stays unavailable until
+T09 provides grounded kernel Ask. Compile ownership is returned to root; check RAM/processes
+before every command and serialize all compilers. Historical
+handoff notes below are superseded by this section and `current_status.yml` for active work.
+
+---
+
+# Historical handoff notes
+
 > **2026-09-29 resumed after usage-limit wrap:** recovery source and evidence were externally
 > committed as `8741ff4`; only the Jolli debug log was dirty at resumption. The final wrap status
 > write was blocked by automatic approval review usage exhaustion. T06 remains last settled.
@@ -37,6 +102,27 @@ Updated: 2026-09-30
 > listener; critic reruns through approved local execution. Live gateway approval is pending.
 > Immutable T07 critic report contains two intentional Markdown hard breaks flagged by
 > `git diff --cached --check`; source whitespace checks pass. No evidence record was rewritten.
+
+> **T07 interim checkpoint:** approved verification repairs and evidence committed as `5e07c62`;
+> live confirmation remains pending. T08 round7 rejects production bundles (default/local/invalid
+> all contain the local adapter) and full Bun (254 pass/1 EPERM listener failure). Fresh builders
+> repair direct DEV import isolation and explicit loopback test binding. Compile token released
+> during source repairs; independent final gates and the local ladder follow on stable source.
+
+> **Stable source ready:** both direct DEV import isolation and loopback listener repairs
+> are complete. `t08_final_static` exclusively owns their fresh independent gates and local
+> agent-browser ladder. Live gateway launch authorization remains pending; no task advanced.
+
+> **Build environment diagnosis:** inherited `NODE_ENV=development` makes Vite's `DEV` flag
+> true even during `vite build`; installed Vite source confirms it. A fresh builder prepared
+> the one-field package script pin to `NODE_ENV=production`, awaiting controlled verification.
+> Local browser ladder is running on stable source (J0 passed). Full Bun passed once 255/0,
+> while canonical repeats still hit the listener error; execution context is being diagnosed.
+
+> **Controlled production build confirmed:** explicit `NODE_ENV=production` with a `local`
+> source override emits only the HTTP adapter and no local adapter/Northstar/narrator markers.
+> The canonical script still needs its planned production environment pin. Local ladder
+> J0-J4 passed; package edits remain held until that run finishes.
 
 > **2026-09-29 takeover in progress:** recovered T07 (`eef7459`), T08 (`ce538bf`), and
 > T09 (`3e2404f`) implementations; independent confirmation remains outstanding for all three.

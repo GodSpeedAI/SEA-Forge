@@ -79,7 +79,7 @@ export function createIntentPath(store: Store, port: Pick<CaseworkPort, 'dispatc
         if (!r.success && code === 'STALE_PROJECTION') {
           try {
             // Refresh standing once after the refusal. The intent itself is never replayed.
-            const fresh = await port.getSnapshot(caseId, actor.id, actor.role)
+            const fresh = await port.getSnapshot(caseId, intent.actor.actor_id, intent.actor.role)
             if (fresh.case_id !== caseId) {
               throw new Error(`snapshot refresh returned case ${String(fresh.case_id)} for requested case ${caseId}`)
             }

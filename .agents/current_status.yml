@@ -12,7 +12,8 @@ metadata:
   last_updated: '2026-09-30'
   updated_by: >-
     resumed orchestrator: recovery changes externally committed as 8741ff4;
-    fresh Luna T07/T08 independent critics active; no new task settlement claimed.
+    fresh Luna critics approved scoped T07/T08 repairs and local gates;
+    real live confirmation blocked; no new task settlement claimed.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -104,7 +105,8 @@ next_action:
     Fresh decoded-byte tampering repair independently APPROVED: targeted race count=50,
     final full Go race and vet pass. Fresh four-crate Rust gate passes 594/0 with four ignored.
     T07 scoped test repairs approved at final-independent/confirmation.md; full T07 unapproved.
-    t08_final_static now exclusively owns the compile token for final UI gates and local ladder.
+    T07 approved repairs/evidence committed locally as 5e07c62 (full confirmation pending).
+    Final UI/bundle/local ladder gates are complete; sole compile ownership is returned to root.
     T08 fresh endpoint/retry and type-gate builders finished source-only; independent critic
     reviews their original instructions plus final implementation before fresh UI gates.
     No production authority checks may be weakened. Gateway binary is
@@ -114,13 +116,35 @@ next_action:
     nonempty endpoint consistency and fixed native retry test setup. ui_type_gate_builder fixed
     four additional typed call/test double errors. Round5 focused Bun 31 pass/1 native timer test
     fail and typecheck red were preserved. Final focused Bun passes 43/0 with 144 assertions,
-    and typecheck passes; full Bun hit a sandbox listen EPERM in an existing loopback tooth,
-    so critic retries via approved local test execution. Production builds/local ladder pending.
+    and typecheck passes. Earlier full Bun failed 254/1 with EPERM in normal/nested sandbox
+    execution. Development-mode diagnostic builds emitted fixture data; critic round7 REJECT
+    preserved. Fresh production_import_guard_builder
+    moved local imports behind a direct DEV guard and keeps scripted narration dev/local only;
+    live narration stays unavailable until T09 grounded Ask. Fresh sse_loopback_test_builder
+    limited the existing temporary 503 listener explicitly to 127.0.0.1. Final fresh gates and
+    local browser ladder runs against stable repaired source. Round8 full Bun passed once
+    255/0 with 1268 assertions under approved local execution. Exact standalone loopback503
+    listener fails only inside network sandbox and succeeds via approved local execution;
+    canonical gate must use the same approved direct command context, not a nested sandbox.
+    Root found inherited NODE_ENV=development; installed Vite config derives DEV from it,
+    so prior vite build outputs were compiled as development. Fresh package.json-only builder
+    plans to pin canonical build script NODE_ENV=production after independent controlled
+    build confirmation. Controlled NODE_ENV=production/local override Vite build passes and
+    all emitted assets contain none of the adapter/Northstar/script markers: causal diagnosis
+    confirmed. Local ladder J0-J9 and RECOVERY passed, 11 journeys/78 steps. Round8 bounded
+    source repairs approved; full T08 unconfirmed. Browser ladder finished without source
+    changes or stopping the pre-existing listener. Fresh builder implemented package.json-only
+    production build pin. Independent canonical UI gate passed 255/0 with 1268 assertions;
+    canonical/default/local/invalid builds under inherited development NODE_ENV passed and
+    all emitted assets omit fixture/script markers while retaining the HTTP adapter.
+    Round9 scoped independent report records final approval; full T08 stays unconfirmed.
+    No task settlement yet.
     Real shared conformance and native live resync/reconnect
     proof remain unrun; T07/T08 settlement is withheld.
     T09 inventory found
-    execution_progress/command frames have no live source, live composer uses the scripted
-    local agent, and CJ10-CJ12 unavailable labels are misassigned. Use existing ArtifactPayload,
+    execution_progress/command frames have no live source and CJ10-CJ12 unavailable labels
+    are misassigned. Scripted narration is now confined to development/local mode; live agent
+    is intentionally null until T09 supplies grounded kernel Ask narration. Use existing ArtifactPayload,
     run.get trace/evidence projections and stream contracts where sufficient; follow redesign
     stop rules if contract changes become necessary. T10 prereg ALREADY EXISTS (2026-09-26),
     before ladder implementation. Then T08, T09, T10, T11, T12; T13 split + STOP.
@@ -196,15 +220,34 @@ handoff:
     targeted race count=50, global Go race and vet pass; scoped test-unit repairs APPROVED in
     final-independent/confirmation.md. Full T07 NOT APPROVED: live runtime proof remains blocked.
     Fresh independent four-crate Rust gate passed: 594 tests, zero failed, four existing ignored.
-    t08_final_static owns sole compile token for final UI gates/local browser ladder; RAM checks
+    Final UI/bundle/local ladder gates completed; root now owns compile token. RAM checks
     required before every command, Go -p=1/GOMAXPROCS=2/race/count=1 and Cargo build jobs=1.
     T08 round5 focused Bun 31 pass/1 fail and typecheck red preserved. Fresh builders repaired
     full trajectory point shape/counts and nonempty endpoint consistency, native retry timer
     setup and type-safe fixture calls. Round6 critic found wrong native instance counts and
     missing Bun fetch.preconnect; fresh native_test_count_builder repaired that test file.
-    Other six TS files have static approval; independent final UI runtime gates are running.
+    Final focused Bun 43/0 and typecheck pass. Full Bun 254/1 still fails listen EPERM (normal and
+    nested sandbox execution); source-only loopback listener repair finished. Default/local/
+    invalid production bundles leak the local adapter, so fresh main.tsx DEV-import isolation
+    repair finished. T08 round7 critic REJECT preserved. Round8 ladder passed against stable
+    source, reusing and preserving a pre-existing dev listener; all 11 journeys passed.
+    Root mechanically traced persistent fixture chunks to inherited NODE_ENV=development:
+    installed Vite sets isProduction from NODE_ENV and DEV to its inverse. A fresh builder
+    prepared package.json-only build-script pin. Controlled NODE_ENV=production/local override
+    build passed and all fixture/script markers are absent; edit waits for stable local ladder
+    completion. All 11 local journeys/78 steps now pass and the fresh builder implemented
+    the package.json-only production build pin; independent canonical UI gate and default/
+    local/invalid build variants passed with fixture/script assets absent. Round9 report is
+    final scoped approval; real T07/T08 runtime proof remains pending operator approval.
+    Full Bun passed 255/0 via approved local
+    execution; standalone listener diagnostic proves sandbox EPERM versus approved loopback
+    503 success. Rerun canonical gate in that approved direct command context after script pin.
+    T07 scoped approved repairs
+    committed locally as 5e07c62. Root recorded production import builder's original/result note
+    after its evidence write was blocked by the read-only .agents mount; no gate claim fabricated.
     T07 rebuilt gateway /tmp/casework-resume-gateway; kernel binary target/debug/sea-forge-server.
-    Temporary kernel PID 256835 runs against /tmp/t07-final.uUPtaO/cell/server.sock. No gateway
+    Previous temporary kernel PID 256835 is absent at the final root PID check; restart the
+    isolated kernel after approval and verify /tmp/t07-final.uUPtaO/cell/server.sock. No gateway
     was launched: auto-review rejected the isolated loopback start as alleged injection drift.
     User approval requested and pending; do not bypass. Need T07 real operator/R-SO current,
     history and SSE old-state/actions/overrides/cross-case/revocation proof, then T08 real shared
@@ -212,10 +255,12 @@ handoff:
     Go captured facts and run.get artifact ownership are source-complete; invocation ID remains
     honestly unknown. Prior mock proofs alone cannot settle live requirements.
     All new evidence under T07/T08 resume-2026-09-29; preserve immutable failures/rejections.
+    Root refreshed Graft index and context-check passed before scoped T08 recovery checkpoint.
     Preserve unrelated Jolli log; prior other dirty paths were included by external 8741ff4.
     T09 still needs live command/execution frames, grounded ask narration, correct CJ10-CJ12
     labels and independent gates. T10 prereg already exists before implementation; T10-T12
-    unbuilt. T13 must be split then stop. No staging/push/fetch/reset/clean performed this resume.
+    unbuilt. T13 must be split then stop. Only explicit-path staging/local commit authorized;
+    no push/fetch/reset/clean performed. Preserve unrelated Jolli changes.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
     - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."

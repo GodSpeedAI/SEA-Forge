@@ -349,7 +349,7 @@ describe('journey: execute + execution pill + sentry', () => {
   test('TOOTH: SSE drop flips the store to reconnecting via the live adapter error path, and an event resumes it', async () => {
     // The live adapter's real error path: a gateway that accepts nothing (every stream request
     // fails fast), so the adapter reports the interruption and retries with backoff.
-    const broken = Bun.serve({ port: 0, fetch: () => new Response('gateway broken', { status: 503 }) })
+    const broken = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response('gateway broken', { status: 503 }) })
     try {
       const dead = new HttpCaseworkAdapter({ base: `http://127.0.0.1:${broken.port}`, reconnectBaseMs: 20, reconnectMaxMs: 40 })
       const { history, raw } = northstarHistory()

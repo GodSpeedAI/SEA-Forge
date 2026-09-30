@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import type { Actor } from './model/types'
-import { createLocalAgent } from './narrative/localAgent'
 import { loadCaseHistory } from './ports/project'
-import type { CaseworkPort, SessionIdentity, SessionPort } from './ports/contract'
+import type { CaseworkPort, NarrationPort, SessionIdentity, SessionPort } from './ports/contract'
 import { LoginScreen } from './ui/LoginScreen'
 import './ui/theme.css'
 
@@ -30,15 +29,13 @@ const list = (k: string) => params.getAll(k).flatMap((v) => v.split(',')).filter
 // Vite replaces `import.meta.env.DEV` at build time. Production builds always select the live
 // source regardless of VITE_CASEWORK_SOURCE; dev builds retain the local default and override.
 const requestedSource = import.meta.env.VITE_CASEWORK_SOURCE ?? 'local'
-const source = import.meta.env.DEV ? (requestedSource === 'live' ? 'live' : 'local') : 'live'
+const source = import.meta.env.DEV && requestedSource !== 'live' ? 'local' : 'live'
 
 let portPromise: Promise<CaseworkPort>
 /** The case a local session boots into (resolved with the local adapter; empty on the live path). */
 let localCaseId = ''
-if (source === 'live') {
-  const { HttpCaseworkAdapter } = await import('./adapters/http/httpCaseworkAdapter')
-  portPromise = Promise.resolve(new HttpCaseworkAdapter())
-} else {
+let agent: NarrationPort | null = null
+if (import.meta.env.DEV && requestedSource !== 'live') {
   const { LocalContractAdapter, NORTHSTAR_CASE_ID } = await import('./adapters/local/localAdapter')
   localCaseId = NORTHSTAR_CASE_ID
   portPromise = Promise.resolve(
@@ -48,11 +45,17 @@ if (source === 'live') {
       corruptArtifacts: list('corruptArtifact'),
     }),
   )
+  const agentParam = params.get('agent')
+  if (agentParam !== 'off') {
+    const { createLocalAgent } = await import('./narrative/localAgent')
+    const failAfter = params.get('agentFailAfter')
+    agent = createLocalAgent(failAfter !== null ? { failAfter: Number(failAfter) } : {})
+  }
+} else {
+  const { HttpCaseworkAdapter } = await import('./adapters/http/httpCaseworkAdapter')
+  portPromise = Promise.resolve(new HttpCaseworkAdapter())
 }
 const port = await portPromise
-const agentParam = params.get('agent')
-const failAfter = params.get('agentFailAfter')
-const agent = agentParam === 'off' ? null : createLocalAgent(failAfter !== null ? { failAfter: Number(failAfter) } : {})
 
 const sessionPort: SessionPort | null =
   'session' in port && 'login' in port && 'logout' in port ? (port as CaseworkPort & SessionPort) : null

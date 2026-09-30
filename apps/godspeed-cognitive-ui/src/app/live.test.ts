@@ -6,6 +6,20 @@ import type { CaseworkPort, StreamEvent, XSnapshot } from '../ports/contract'
 import { connectLive } from './live'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const unexpectedCall = (method: string): never => {
+  throw new Error(`Unexpected CaseworkPort.${method} call in live recovery test`)
+}
+
+function liveTestPort(subscribe: CaseworkPort['subscribeEvents']): CaseworkPort {
+  return {
+    getSnapshot: () => unexpectedCall('getSnapshot'),
+    getSnapshotAt: () => unexpectedCall('getSnapshotAt'),
+    dispatchIntent: () => unexpectedCall('dispatchIntent'),
+    resolveArtifact: () => unexpectedCall('resolveArtifact'),
+    queryTemporalTrajectory: () => unexpectedCall('queryTemporalTrajectory'),
+    subscribeEvents: subscribe,
+  }
+}
 
 describe('connectLive connection recovery', () => {
   it('marks a prolonged outage interrupted and returns live only after a source snapshot', async () => {
@@ -14,18 +28,11 @@ describe('connectLive connection recovery', () => {
     const store = createStore(initialState(history))
     let onEvent: ((event: StreamEvent) => void) | undefined
     let onError: ((error: Error) => void) | undefined
-    const port = {
-      subscribeEvents(
-        _caseId: string,
-        _since: string | undefined,
-        eventHandler: (event: StreamEvent) => void,
-        errorHandler: (error: Error) => void,
-      ) {
-        onEvent = eventHandler
-        onError = errorHandler
-        return () => undefined
-      },
-    } as unknown as Pick<CaseworkPort, 'subscribeEvents'>
+    const port = liveTestPort((_caseId, _since, eventHandler, errorHandler) => {
+      onEvent = eventHandler
+      onError = errorHandler
+      return () => undefined
+    })
     const disconnect = connectLive(port, store, history.caseId, raw, {}, { interruptedAfterMs: 15 })
 
     onError!(new Error('stream disconnected'))
@@ -54,12 +61,10 @@ describe('connectLive connection recovery', () => {
     const history = projectHistory(raw, {}, 'local-contract', { withCore: true })
     const store = createStore(initialState(history))
     let onError: ((error: Error) => void) | undefined
-    const port = {
-      subscribeEvents(_caseId: string, _since: string | undefined, _onEvent: (event: StreamEvent) => void, errorHandler: (error: Error) => void) {
-        onError = errorHandler
-        return () => undefined
-      },
-    } as unknown as Pick<CaseworkPort, 'subscribeEvents'>
+    const port = liveTestPort((_caseId, _since, _onEvent, errorHandler) => {
+      onError = errorHandler
+      return () => undefined
+    })
     const disconnect = connectLive(port, store, history.caseId, raw, {}, { interruptedAfterMs: 15 })
 
     onError!(new Error('stream disconnected'))
@@ -87,12 +92,10 @@ describe('connectLive connection recovery', () => {
       },
     })
     let onEvent: ((event: StreamEvent) => void) | undefined
-    const port = {
-      subscribeEvents(_caseId: string, _since: string | undefined, eventHandler: (event: StreamEvent) => void) {
-        onEvent = eventHandler
-        return () => undefined
-      },
-    } as unknown as Pick<CaseworkPort, 'subscribeEvents'>
+    const port = liveTestPort((_caseId, _since, eventHandler) => {
+      onEvent = eventHandler
+      return () => undefined
+    })
     const disconnect = connectLive(port, store, history.caseId, raw, {})
     const later: XSnapshot = {
       ...raw.at(-1)!,

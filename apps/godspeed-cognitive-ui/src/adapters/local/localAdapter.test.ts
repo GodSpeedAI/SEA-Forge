@@ -148,7 +148,7 @@ describe('LocalContractAdapter', () => {
   test('accepted intent completion precedes settlement', async () => {
     const intent = await buildValidIntent(adapter, actor)
     const events: StreamEvent[] = []
-    const unsubscribe = adapter.subscribeEvents(NORTHSTAR_CASE_ID, undefined, (event) => events.push(event), () => {})
+    const unsubscribe = adapter.subscribeEvents(NORTHSTAR_CASE_ID, undefined, (event) => events.push(event))
 
     await adapter.dispatchIntent(intent)
     await new Promise((resolve) => setTimeout(resolve, 150))
@@ -165,7 +165,7 @@ describe('LocalContractAdapter', () => {
   test('accepted intent emits snapshot, execution progress, and settlement events', async () => {
     const intent = await buildValidIntent(adapter, actor)
     const events: StreamEvent[] = []
-    const unsubscribe = adapter.subscribeEvents(NORTHSTAR_CASE_ID, undefined, (event) => events.push(event), () => {})
+    const unsubscribe = adapter.subscribeEvents(NORTHSTAR_CASE_ID, undefined, (event) => events.push(event))
 
     const response = await adapter.dispatchIntent(intent)
     expect(response.success).toBe(true)

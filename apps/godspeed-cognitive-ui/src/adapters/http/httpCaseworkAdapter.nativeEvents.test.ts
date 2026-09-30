@@ -8,15 +8,16 @@ function installManualTimers() {
   const originalSetTimeout = globalThis.setTimeout
   const originalClearTimeout = globalThis.clearTimeout
   globalThis.setTimeout = ((callback: TimerHandler, delay?: number) => {
+    if (typeof callback !== 'function') throw new TypeError('manual timers require a callback')
     const timer: ScheduledTimer = {
-      callback: callback as () => void,
+      callback: () => callback(),
       delay: Number(delay ?? 0),
       cancelled: false,
       fired: false,
     }
     timers.push(timer)
     return timers.length as unknown as ReturnType<typeof setTimeout>
-  }) as typeof setTimeout
+  }) as unknown as typeof setTimeout
   globalThis.clearTimeout = ((handle: ReturnType<typeof setTimeout>) => {
     const timer = timers[Number(handle) - 1]
     if (timer) timer.cancelled = true
@@ -76,10 +77,13 @@ describe('HttpCaseworkAdapter native EventSource recovery', () => {
     const originalFetch = globalThis.fetch
     let fetchCount = 0
     globalThis.EventSource = FakeEventSource as unknown as typeof EventSource
-    globalThis.fetch = (async () => {
-      fetchCount++
-      throw new Error('native EventSource must not use fetch fallback')
-    }) as typeof fetch
+    globalThis.fetch = Object.assign(
+      (..._args: Parameters<typeof fetch>): ReturnType<typeof fetch> => {
+        fetchCount++
+        return Promise.reject(new Error('native EventSource must not use fetch fallback'))
+      },
+      { preconnect: originalFetch.preconnect },
+    )
     try {
       const errors: Error[] = []
       const received: string[] = []
@@ -192,13 +196,18 @@ describe('HttpCaseworkAdapter native EventSource recovery', () => {
 
       const resumed = FakeEventSource.instances.at(-1)!
       expect(resumed.url).toContain('/api/events?last=01M0')
+      expect(FakeEventSource.instances).toHaveLength(4)
+      const preRetryCount = FakeEventSource.instances.length
       resumed.emit('01M1', '{malformed json')
       resumed.emit('01M2', JSON.stringify({ event_type: 'snapshot', cursor: '01M2', timestamp: 't', payload: { case_id: 'case_b' } }))
       resumed.emit('01M2', JSON.stringify({ event_type: 'snapshot', cursor: '01M2', timestamp: 't', payload: { case_id: 'case_a' } }))
       expect(received).toEqual(['01M2'])
       resumed.fail()
       expect(timers.timers.at(-1)?.delay).toBe(10)
-      expect(FakeEventSource.instances.at(-1)?.url).toContain('/api/events?last=01M2')
+      expect(FakeEventSource.instances).toHaveLength(preRetryCount)
+      timers.runNext()
+      expect(FakeEventSource.instances).toHaveLength(preRetryCount + 1)
+      expect(FakeEventSource.instances.at(-1)?.url).toBe('http://gw.test/api/events?last=01M2')
       unsubscribe()
     } finally {
       globalThis.EventSource = originalSource

@@ -26,6 +26,7 @@ import type {
   CaseworkPort,
   SessionIdentity,
   SessionPort,
+  TemporalCheckpoint,
   TemplateEntryOption,
   TemplateSourcePort,
   IntentResponse,
@@ -102,8 +103,26 @@ function isTemporalTrajectoryResponse(value: unknown, caseId: string): value is 
   if (!isRecord(value) || value.case_id !== caseId) return false
   if (typeof value.base_cursor !== 'string' || value.base_cursor.length === 0) return false
   if (typeof value.head_cursor !== 'string' || value.head_cursor.length === 0) return false
-  return Array.isArray(value.points) && value.points.every((point) =>
-    isRecord(point) && typeof point.cursor === 'string' && point.cursor.length > 0,
+  if (!Array.isArray(value.points) || value.points.length === 0 || !value.points.every(isTemporalCheckpoint)) return false
+  return value.base_cursor === value.points[0].cursor && value.head_cursor === value.points.at(-1)!.cursor
+}
+
+function isTemporalCheckpoint(value: unknown): value is TemporalCheckpoint {
+  if (!isRecord(value)) return false
+  const completed = value.completed_plan_items_count
+  const total = value.total_plan_items_count
+  return (
+    typeof value.cursor === 'string' && value.cursor.length > 0 &&
+    typeof value.timestamp === 'string' &&
+    typeof value.event_type === 'string' &&
+    typeof value.summary === 'string' &&
+    typeof value.actor_id === 'string' &&
+    typeof value.actor_role === 'string' &&
+    typeof value.consequential === 'boolean' &&
+    (value.active_stage_id === undefined || typeof value.active_stage_id === 'string') &&
+    typeof completed === 'number' && Number.isInteger(completed) && completed >= 0 &&
+    typeof total === 'number' && Number.isInteger(total) && total >= 0 &&
+    completed <= total
   )
 }
 

@@ -137,7 +137,7 @@ describe('HttpCaseworkAdapter', () => {
       evidence_id: 'evi-17',
       name: 'résumé.md',
       digest,
-      content_type: 'text/markdown',
+      content_type: 'text/markdown' as const,
       content: '# Résumé ☃\n',
       provenance: { case_id: '', plan_item_id: '', invocation_id: '', run_id: 'run-17' },
     }
