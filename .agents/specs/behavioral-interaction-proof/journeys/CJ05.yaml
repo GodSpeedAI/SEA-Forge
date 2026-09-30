@@ -1,0 +1,171 @@
+# Behavioral IR: CJ05 Navigate and Adapt a Live Case
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ05"
+  slug: "navigate_and_adapt_live_case"
+  title: "Navigate and Adapt a Live Case"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - commitment
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - case_committed
+    - item_state_changed
+    - work_blocked
+    - retry_episode_needed
+    - manager_loop_invoked
+  actor_roles:
+    - CaseOwner
+    - Operator
+    - AutomatedActor
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - committed_case_id
+      - attributable_actor_context
+      - run_records_index
+    context_scope: "Case plan graph, stage standings, horizon projection, sentry states"
+
+  IS2_preflight:
+    checks:
+      - case_exists_in_authoritative_ledger
+      - actor_holds_case_navigation_or_mutation_authority
+      - mutation_valid_against_case_invariants
+      - in_flight_runs_not_invalidated_by_adaptation
+    readiness_classification:
+      expected: "ready | mutation_disallowed | case_terminal"
+      failure_action: "reject_unauthorized_mutation_or_terminal_tampering"
+
+  IS3_authority_resolution:
+    required_role: "CaseOwner"
+    alternate_role: "Operator"
+    grant_scope: "case_adaptation_reopen_replan_terminate"
+    separation_of_duty: "Automated manager loop operates under bounded authority; cannot self-authorize unconstrained replan"
+    approval:
+      status: "unresolved_in_source"
+      note: "Discretionary item admission requires explicit CaseOwner judgment"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "case.adapt_and_navigate"
+      invoked_capabilities:
+        - "case.get_overview"
+        - "case.get_horizon"
+        - "run.list_and_detail"
+        - "discretionary_item_admission"
+        - "case.reopen"
+        - "case.replan"
+        - "case.terminate"
+        - "manager_loop_judgment"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-server / case runner"
+    bounds:
+      mutation_style: "append_event_only"
+      history_preservation: "immutable"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "current_case_state"
+      to: "updated_case_horizon"
+      alternative_states:
+        - "case_active"
+        - "case_waiting"
+        - "case_parked"
+        - "case_failed"
+        - "case_complete"
+        - "case_reopened"
+        - "case_replanned"
+        - "case_terminated"
+    artifacts:
+      - "case_overview_projection"
+      - "horizon_projection"
+      - "appended_lifecycle_event"
+      - "successor_run_link"
+      - "discretionary_work_item_record"
+      - "updated_plan_version"
+    mutation_rule: "History appended; attempts linked via predecessor run IDs; prior truth untouched"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "case_event_log_range"
+        evidence_class: "observed"
+      - item: "sentry_evaluation_evidence"
+        evidence_class: "observed"
+      - item: "mutation_authorization_receipt"
+        evidence_class: "observed"
+      - item: "horizon_snapshot_hash"
+        evidence_class: "observed"
+    integrity_verification:
+      causal_chain_preserved: true
+      unbroken_episode_provenance: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "The user can identify the case's governing outcome, current spendable and blocked work, the evidence for every state, and each presently lawful action."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "horizon_settled_and_explicit"
+        - "adaptation_committed"
+        - "case_parked"
+        - "case_terminated_legally"
+    settlement_vs_termination: "Changing state in UI is not settlement; appended event must be acknowledged by ledger."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "start_enabled_work"
+        target_journey: "CJ07"
+        condition: "outcome == horizon_settled_and_explicit && has_enabled_items"
+      - id: "resolve_blocker_approval"
+        target_journey: "CJ06"
+        condition: "outcome == horizon_settled_and_explicit && has_pending_approvals"
+      - id: "retry_failed_item_as_successor"
+        action: "spawn_successor_run"
+        condition: "outcome == horizon_settled_and_explicit && item_failed_retryable"
+      - id: "replan_or_reopen_case"
+        action: "append_replan_event"
+        condition: "outcome == horizon_settled_and_explicit && requires_structural_change"
+    blocked_affordances:
+      - id: "execute_blocked_stage_items"
+        target_journey: "CJ07"
+        reason: "missing_precondition"
+        explanation: "Stage sentry conditions have not been satisfied by prior milestone evidence"
+
+recovery_paths:
+  - condition: "item_blocked_or_parked"
+    remedy: "Distinguish parked from failed; inspect sentry blocker; satisfy dependency or unpark"
+  - condition: "manager_loop_exhaustion"
+    remedy: "Escalate to human operator after maximum bounded manager loop iterations"
+  - condition: "unauthorized_mutation_attempt"
+    remedy: "Reject edit; retain existing valid case plan without modification"
+
+unresolved_bindings:
+  - component: "runtime_discretionary_item_admission"
+    status: "unresolved_in_source"
+    impact: "Discretionary item insertion is test-covered in kernel but UI surface is partial"

@@ -1,0 +1,111 @@
+# Atomic UI View: cell_readiness_and_context
+# Upstream Behavioral Source: CJ01 Establish Trusted Cell Context
+
+view:
+  id: cell_readiness_and_context
+  purpose: Establish, inspect, and verify trusted cell context, foundation readiness, self-model integrity, and platform compatibility.
+
+sources:
+  journey: CJ01
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    cell_identity: persistent
+    actor_identity: persistent
+    readiness_standing: persistent_across_views
+
+regions:
+  - id: cell_header
+    responsibility: orient_actor_and_anchor_cell_identity
+  - id: readiness_overview
+    responsibility: expose_foundation_readiness_and_skew_checks
+  - id: readiness_items_detail
+    responsibility: inspect_individual_readiness_and_diagnostic_items
+  - id: corrective_actions
+    responsibility: provide_bounded_revalidation_and_repair_affordances
+
+elements:
+  # Cell Header Region
+  - id: cell_identity_display
+    primitive: identity
+    region: cell_header
+    binds: { entity: cell_identity, field: cell_root }
+
+  - id: actor_attribution_display
+    primitive: identity
+    region: cell_header
+    binds: { entity: actor, field: identity_token }
+
+  - id: self_model_hash_display
+    primitive: value
+    region: cell_header
+    binds: { field: self_model_snapshot_sha256 }
+
+  - id: cell_status_indicator
+    primitive: status
+    region: cell_header
+    binds: { field: overall_readiness }
+
+  # Readiness Overview Region
+  - id: foundation_checks_summary
+    primitive: table
+    region: readiness_overview
+    binds: { entity: readiness_categories }
+
+  - id: version_skew_metric
+    primitive: metric
+    region: readiness_overview
+    binds: { field: version_skew_count }
+
+  # Readiness Items Detail Region
+  - id: readiness_item_collection
+    primitive: collection
+    region: readiness_items_detail
+    binds: { entity: readiness_items }
+
+  - id: readiness_diagnostic_message
+    primitive: message
+    region: readiness_items_detail
+    binds: { field: diagnostic_reason }
+
+  - id: item_evidence_receipt
+    primitive: evidence_item
+    region: readiness_items_detail
+    binds: { field: verification_receipt }
+
+  # Corrective Actions Region
+  - id: discover_affordances_action
+    primitive: action
+    region: corrective_actions
+    semantic_action: discover_lawful_affordances
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  - id: form_case_action
+    primitive: action
+    region: corrective_actions
+    semantic_action: form_governed_case
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: rebuild_self_model_action
+    primitive: action
+    region: corrective_actions
+    semantic_action: repair_failed_foundation
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: hold_operation_action
+    primitive: action
+    region: corrective_actions
+    semantic_action: hold_incompatible_operation
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  uninitialized: { when: cell_root_unbound }
+  loading: { when: startup_preflight_in_progress }
+  ready: { when: overall_readiness_is_ready_or_degraded }
+  blocked: { when: overall_readiness_is_blocked }
+  error: { when: identity_or_policy_conflict_detected }

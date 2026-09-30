@@ -1,0 +1,99 @@
+# Atomic UI View: operational_monitor_and_recovery
+# Upstream Behavioral Source: CJ08 Monitor, Intervene, and Recover
+
+view:
+  id: operational_monitor_and_recovery
+  purpose: Monitor concurrent delegations, stream ordered event logs, execute scoped interventions, and reconcile restart recovery.
+
+sources:
+  journey: CJ08
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    cell_context: persistent
+    event_cursor: persistent_during_stream
+
+regions:
+  - id: concurrent_capacity_panel
+    responsibility: project_active_delegations_and_worker_capacity
+  - id: event_stream_timeline
+    responsibility: project_ordered_event_log_and_catchup_cursors
+  - id: failure_diagnostics_panel
+    responsibility: diagnose_typed_failures_orphans_and_debt_queue
+  - id: scoped_control_actions
+    responsibility: perform_scoped_cancellations_resumptions_and_retries
+
+elements:
+  # Concurrent Capacity Region
+  - id: delegations_table
+    primitive: table
+    region: concurrent_capacity_panel
+    binds: { entity: active_delegations }
+
+  - id: active_workers_metric
+    primitive: metric
+    region: concurrent_capacity_panel
+    binds: { field: concurrent_worker_count }
+
+  # Event Stream Timeline Region
+  - id: event_log_timeline
+    primitive: timeline
+    region: event_stream_timeline
+    binds: { entity: ordered_events }
+
+  - id: cursor_position_display
+    primitive: value
+    region: event_stream_timeline
+    binds: { field: monotonic_cursor_offset }
+
+  - id: restart_recovery_receipt
+    primitive: evidence_item
+    region: event_stream_timeline
+    binds: { field: restart_reconciliation_token }
+
+  # Failure Diagnostics Region
+  - id: typed_failure_message
+    primitive: message
+    region: failure_diagnostics_panel
+    binds: { field: failure_diagnostic_summary }
+
+  - id: maintenance_debt_collection
+    primitive: collection
+    region: failure_diagnostics_panel
+    binds: { entity: maintenance_debt_items }
+
+  # Scoped Control Region
+  - id: cancel_run_action
+    primitive: action
+    region: scoped_control_actions
+    semantic_action: monitor_or_cancel_active_work
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: resume_parked_case_action
+    primitive: action
+    region: scoped_control_actions
+    semantic_action: resume_parked_case
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: settle_interruption_action
+    primitive: action
+    region: scoped_control_actions
+    semantic_action: settle_interruption_or_failure
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  - id: retry_successor_action
+    primitive: action
+    region: scoped_control_actions
+    semantic_action: retry_run_as_successor
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: event_stream_connecting }
+  ready: { when: event_stream_live_and_synchronized }
+  blocked: { when: cursor_stale_or_recovery_unsettled }
+  error: { when: event_stream_disconnected }

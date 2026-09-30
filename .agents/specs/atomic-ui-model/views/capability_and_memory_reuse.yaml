@@ -1,0 +1,101 @@
+# Atomic UI View: capability_and_memory_reuse
+# Upstream Behavioral Source: CJ10 Reuse Demonstrated Knowledge and Capability
+
+view:
+  id: capability_and_memory_reuse
+  purpose: Recall governed memory under disclosure control, evaluate capability tiers from qualifying settlements, and track influence.
+
+sources:
+  journey: CJ10
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    actor_identity: persistent
+    disclosure_scope: persistent_during_session
+    active_recalled_memory: persistent_during_planning
+
+regions:
+  - id: memory_query_panel
+    responsibility: capture_governed_recall_queries_within_disclosure_scope
+  - id: recalled_memory_collection
+    responsibility: project_and_filter_memory_items_with_influence_links
+  - id: capability_tier_matrix
+    responsibility: project_capability_standing_and_variation_coverage
+  - id: capability_routing_actions
+    responsibility: route_work_or_trigger_deterministic_rebuilds
+
+elements:
+  # Memory Query Region
+  - id: recall_query_input
+    primitive: input
+    region: memory_query_panel
+    binds: { field: recall_query_terms }
+
+  - id: disclosure_authorization_badge
+    primitive: status
+    region: memory_query_panel
+    binds: { field: disclosure_scope_status }
+
+  - id: execute_recall_action
+    primitive: action
+    region: memory_query_panel
+    semantic_action: memory.recall_and_route
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  # Recalled Memory Collection Region
+  - id: memory_items_table
+    primitive: table
+    region: recalled_memory_collection
+    binds: { entity: recalled_memory_items }
+
+  - id: influence_link_receipt
+    primitive: evidence_item
+    region: recalled_memory_collection
+    binds: { field: influence_link_provenance }
+
+  # Capability Tier Matrix Region
+  - id: capability_standing_collection
+    primitive: collection
+    region: capability_tier_matrix
+    binds: { entity: registered_capabilities }
+
+  - id: variation_coverage_inspector
+    primitive: inspector
+    region: capability_tier_matrix
+    binds: { entity: selected_capability_variation }
+
+  - id: qualifying_settlement_ref
+    primitive: artifact_reference
+    region: capability_tier_matrix
+    binds: { field: qualifying_settlement_reference }
+
+  # Capability Routing Actions Region
+  - id: route_work_action
+    primitive: action
+    region: capability_routing_actions
+    semantic_action: route_work_through_demonstrated_capability
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: gather_evidence_action
+    primitive: action
+    region: capability_routing_actions
+    semantic_action: gather_more_qualifying_evidence
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: rebuild_index_action
+    primitive: action
+    region: capability_routing_actions
+    semantic_action: rebuild_stale_memory_view
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: memory_query_or_index_rebuild_in_progress }
+  ready: { when: recall_results_projected_and_capabilities_derived }
+  empty: { when: zero_matching_settled_memories }
+  blocked: { when: query_exceeds_actor_disclosure_boundary }
+  error: { when: memory_index_unresolvable_fallback_active }
