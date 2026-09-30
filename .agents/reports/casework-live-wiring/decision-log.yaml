@@ -192,3 +192,29 @@ environment_incidents:
       (package serialization) — parallel per-package kernel cells made restart/resume/relay
       tests load-flaky; -p 1 is green twice consecutively and matches the repo's cargo jobs=1.
     evidence: .agents/evidence/casework-live-wiring/T06/fixes/summary.md
+
+redesign_reviews:
+  T09-contract:
+    recorded: '2026-09-30'
+    status: operator_approved_independent_proposal_architecture_approved
+    independent_review: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/proposal-independent-approval-round4.md
+    operator_reply: "i approve"
+    approval_context: >-
+      Operator approved after the proposed T09 contract amendment and its response-size cap,
+      bounded reconnect hydration and UI cache behavior were surfaced. Scope is the additive
+      execution-observation and protected disclosure-complete Ask interface, including the
+      proposed client response bound. Independent review and implementation verification remain
+      required. No new dependency, Rust verb, identity model, deployment or publishing authorized.
+    trigger: "T09 journeys need data that the current contract does not carry; return to T01."
+    findings: >-
+      Existing execution_trace objects and parent_id already represent run children; that
+      implementation gap needs no new object kind. ExecutionProgressPayload requires a
+      measured percentage that run.get does not provide. Grounded Thoth disclosures also
+      need a protected HTTP route and a complete UI answer contract. The logical thoth.ask
+      descriptor uses the actual Request::Ask wire verb ask, not a dotted JSON verb.
+    proposal: .agents/reports/casework-live-wiring/t09-contract-extension-proposal.md
+    boundary: >-
+      Operator approval and independent proposal architecture review are satisfied. Implement
+      the scoped T01 amendment only after T07/T08 settlement; implementation and integration
+      require independent verification. T07/T08 independent work continues.
+      Preserve current identity model, existing kernel verbs and dependency set.

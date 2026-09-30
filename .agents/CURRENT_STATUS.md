@@ -5,64 +5,70 @@ Updated: 2026-09-30
 ## Objective
 
 Complete `.agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml` through T12,
-then split T13 and stop for operator review. Follow the protocol in `current_status.yml`.
+then split T13 and stop for operator review. Follow `current_status.yml`.
 
 ## Worktree State
 
-Branch `casework/live-wiring`; T07 checkpoint `5e07c62`, recovery checkpoint `8741ff4`.
-This handoff accompanies the scoped T08 recovery checkpoint (see `git log -1` for its hash).
-Preserve the unrelated Jolli debug log. Stage explicit task paths only.
+Branch `casework/live-wiring`; prior checkpoints `5e07c62` and `ff7fe6f`.
+Current checkpoint contains settled T07 repairs/evidence and prepared T08/T09 work.
+Preserve unrelated Jolli debug log and behavioral-interaction-proof files; stage explicit paths only.
 
 ## Changed Files
 
-T07 test-fixture/Argon2 regression repairs and evidence are committed. T08 changes cover
-trajectory validation, native retry test fixtures, typed stale refresh/test doubles,
-development-only adapter/narrator imports and the loopback SSE tooth. The one-field
-production build-script pin is implemented and independently approved.
+T07 relay retained-publication fix, current-session perspective guard before intent replay,
+focused red/green tests and immutable independent runtime evidence. T08 native live harness
+is source-reviewed but awaits runtime verification. T09 approved architecture proposal and
+bounded implementation preparation are recorded; no new public contract implemented.
 
 ## Completed
 
-T00-T06 are settled. The independent critic approved bounded T07 test repairs; full T07
-and T08 remain unapproved. Fresh builders and independent critics used Luna exclusively.
+T00-T07 settled. Independent Luna critic approved full T07 after real cursor publication,
+cached-receipt revocation/refusal and restored exact replay without another mutation.
+T08 remains pending. Builders and critics used Luna exclusively; Terra is unavailable here.
 
 ## Verification
 
-T07 final Go race/vet and 50 targeted Argon2 race runs pass; fresh four-crate Rust gate:
-594 passed, zero failed, four existing ignored. T08 focused Bun: 43 passed/144 assertions;
-typecheck passes; canonical UI gate passes 255/0 with 1268 assertions via approved direct
-local execution. A direct listener diagnostic proves sandbox EPERM versus successful
-approved loopback 503 serving. Post-pin canonical/default/local/invalid production builds
-pass under inherited NODE_ENV=development and omit fixture/script assets. All 11 local
-journeys passed: J0-J9 and RECOVERY,
-78 steps total. Round-8/9 independent reports approve bounded repairs, not full T08.
-Root refreshed the Graft index and `just context-check` passed before handoff.
-Exact immutable logs/reviews: active evidence root's `T07/T08/resume-2026-09-29/`.
+T07 focused/global Go race and vet pass; fresh gateway build passes. Real cached POST after
+revocation returns403, operator world/SSE refuse, R-SO reads remain200 and trajectory unchanged.
+Restoration returns byte-identical receipt, world/SSE200 and unchanged trajectory.
+Production dev auth refuses exit2 on unused44281. Record/source hashes verified.
+Evidence: T07/resume-2026-09-30/authorization-green/independent-verification-record.md;
+reference-errata.md corrects the inherited UI evidence path. Missing earlier cursor stdout
+and verifier retrieval-scope deviation are disclosed.
+
+Unchanged-source global evidence: Rust594/0/fourignored; T08 UI255/0/1268assertions,
+typecheck and production bundle variants pass; local ladder11journeys/78steps passes.
+T08 round8/9 evidence is under T08/resume-2026-09-29/. These do not replace live T08 proof.
 
 ## Remaining
 
-Resolve the pending gateway-launch approval and complete T07 real-session
-current/history/SSE probes, then
-T08 real shared conformance/native reconnect proof before settling those tasks. T09 live
-execution frames/grounded narration/journey labels, T10-T12 and T13 split remain. Do not
-overwrite the existing T10 preregistration. Machine next action remains T07.
+Machine next action is T08: actual native EventSource retention-one/two reconnect/disposal
+and identical shared local/live CaseworkPort conformance. Prepared invocation and original
+builder/critic instructions are in T08/resume-2026-09-30/. Use fresh owned cells/ports;
+shared live runner internally builds Go and binds4179, so check it is free.
+
+Then implement the operator-approved, independently architecture-approved scoped T01
+amendment and T09 units; independent implementation verification remains required.
+Preserve existing T10 preregistration. Continue T09-T12, split T13 then stop.
 
 ## Blockers
 
-Automatic approval review rejected the isolated loopback gateway launch as alleged
-prompt-injection drift. Explicit operator approval was requested and is pending; do not
-bypass it. T07/T08 live proof cannot proceed without resolving that rejection. No gateway
-was started. Root's final PID check found the previous isolated kernel PID 256835 absent;
-restart the isolated test kernel after approval and check the socket before probing. Runtime details and
-exact rejection are in the T07 final-independent evidence, not a production deployment.
+No active T07 blocker. Prior automatic launch rejection was resolved by approved reviewed
+local execution; preserve its record. T08 native/shared live evidence remains incomplete.
+Fresh T07 gateway1017163/44280 and restored kernel1027373 remain; prior gateway939247/44279
+and Vite310487/4178 were preserved. Do not kill unrelated processes or unlink cell locks.
+Older test kernel256835 previously held an unpublished staging socket; preserve old cell data.
 
 ## Decisions
 
-No new dependencies, contracts or authority changes. Production builds must ignore local
-source requests and omit fixture/script imports. Live narration stays unavailable until
-T09 provides grounded kernel Ask. Compile ownership is returned to root; check RAM/processes
-before every command and serialize all compilers. Historical
-handoff notes below are superseded by this section and `current_status.yml` for active work.
-
+Operator approved T09 additive observations, complete protected Ask, response-line cap and
+bounded hydration/cache scope; independent architecture approved roundfour. Existing kernel
+verbs, identity model and dependencies stay authoritative. No deployment/publishing authorized.
+Root temporarily owns the sole compile token for indexing/checkpoint, then explicitly transfers
+it to T08 critic. Check available host RAM and compiler processes before every compile;
+Go GOMAXPROCS2/-p1/race/count1, Cargo jobs1. Production builds omit local fixtures/scripts;
+live narration remains unavailable until grounded Ask is implemented.
+Historical notes below are superseded by this primary handoff and current_status.yml.
 ---
 
 # Historical handoff notes

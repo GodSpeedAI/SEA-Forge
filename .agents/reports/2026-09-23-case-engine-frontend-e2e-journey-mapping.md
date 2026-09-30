@@ -16,6 +16,16 @@
 
 This report was checked against the working tree by five independent verifiers, and the facts that affect the plan were then spot-checked by hand. **The body below has material errors.** Where this section and the body disagree, this section is correct. The wiring plan is [`.agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml`](../plans/2026-09-23-casework-live-wiring-production.plan.yaml).
 
+### 0.0 T09 contract review (2026-09-30; operator and independent architecture approval)
+
+The T09 redesign trigger applies to live execution observations without a measured percentage
+and to full grounded Thoth answer disclosures. Existing `execution_trace` objects already
+represent run children; that part is an implementation gap. A scoped additive contract proposal
+passed independent architecture review at [t09-contract-extension-proposal.md](casework-live-wiring/t09-contract-extension-proposal.md).
+The operator approved the surfaced amendment; implementation verification remains pending, and no
+proposed public interface is implemented. See `redesign_reviews.T09-contract`
+in the decision log. T07/T08 verification continues independently of this decision.
+
 ### 0.1 Blocking gaps the report missed
 
 | ID | Gap | Evidence |

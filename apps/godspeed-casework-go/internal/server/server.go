@@ -225,13 +225,14 @@ func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, worldResponse{Snapshot: snap})
 }
 
-// handleIntent accepts one consequential intent; refusals are typed outcomes (HTTP 200).
+// handleIntent accepts one consequential intent; dispatcher refusals are typed outcomes (HTTP
+// 200), while request and identity-verification failures retain their typed HTTP statuses.
 // Middleware has already enforced session + CSRF + rate limit before this runs. The intent's
 // client-asserted actor is OVERWRITTEN with the session's kernel standing: identity is never
-// trusted from the client (T07) - a forged payload actor is ignored, and the kernel still
-// verifies the delegation against its own allowlist. The correlation id becomes the intent id
-// (the SFWP request_id the kernel correlates on), joining the gateway's request log to the
-// kernel's durable request record.
+// trusted from the client (T07). The current session perspective is verified against the kernel
+// before the dispatcher can read its idempotency cache or perform an action; the kernel still
+// authorizes the action itself. The correlation id becomes the intent id (the SFWP request_id the
+// kernel correlates on), joining the gateway's request log to the kernel's durable request record.
 func (s *Server) handleIntent(w http.ResponseWriter, r *http.Request) {
 	if !requireJSON(w, r) {
 		return
@@ -243,6 +244,9 @@ func (s *Server) handleIntent(w http.ResponseWriter, r *http.Request) {
 	in.Actor = intentActorFromSession(r)
 	if rw, ok := w.(correlationSetter); ok && in.IntentID != "" {
 		rw.setCorrelation(in.IntentID)
+	}
+	if !s.verifySessionPerspective(w, r, sessionIdentityOf(r).Claim()) {
+		return
 	}
 	writeJSON(w, http.StatusOK, s.intents.Handle(r.Context(), in))
 }

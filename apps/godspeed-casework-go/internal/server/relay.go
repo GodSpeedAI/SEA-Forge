@@ -8,9 +8,8 @@
 //   - rebuilds that case's CognitiveWorldSnapshot at the frame's cursor and appends it to the
 //     revision store (bounded retention; the store broadcasts to SSE subscribers).
 //
-// Rebuild failure is never allowed to stall the relay: the cursor still advances (stale guards
-// stay correct) and the revision is skipped (the store documents that history is best-effort; the
-// live read path always refetches).
+// Rebuild failure is never allowed to stall the relay: the observed cursor still advances (stale
+// guards stay correct), while mutation waiters advance only after a revision is retained.
 package server
 
 import (
@@ -55,22 +54,24 @@ type Relay struct {
 	store  *projection.Store
 	opts   RelayOptions
 
-	mu      sync.Mutex
-	caseCur map[string]string
-	waiters map[string]map[int]chan struct{}
-	waitSeq int
-	head    string
+	mu        sync.Mutex
+	caseCur   map[string]string // newest observed kernel cursor; used by stale-intent checks
+	published map[string]string // newest cursor successfully appended to the revision store
+	waiters   map[string]map[int]chan struct{}
+	waitSeq   int
+	head      string
 }
 
 // NewRelay builds a relay over the feed, rebuilding via source into store.
 func NewRelay(feed EventFeed, source WorldSource, store *projection.Store, opts RelayOptions) *Relay {
 	return &Relay{
-		feed:    feed,
-		source:  source,
-		store:   store,
-		opts:    opts,
-		caseCur: map[string]string{},
-		waiters: map[string]map[int]chan struct{}{},
+		feed:      feed,
+		source:    source,
+		store:     store,
+		opts:      opts,
+		caseCur:   map[string]string{},
+		published: map[string]string{},
+		waiters:   map[string]map[int]chan struct{}{},
 	}
 }
 
@@ -105,7 +106,6 @@ func (r *Relay) accept(ctx context.Context, ev KernelEvent) {
 	if ev.CaseID != "" && ev.Cursor != "" {
 		if cur, ok := r.caseCur[ev.CaseID]; !ok || ev.Cursor > cur {
 			r.caseCur[ev.CaseID] = ev.Cursor
-			r.notifyCase(ev.CaseID)
 		}
 	}
 	r.mu.Unlock()
@@ -143,9 +143,21 @@ func (r *Relay) accept(ctx context.Context, ev KernelEvent) {
 		Summary:  ev.Kind,
 		Snapshot: snap,
 		Facts:    facts,
-	}); err != nil && r.opts.Logger != nil {
-		r.opts.Logger.Printf("relay: append at %s refused: %v", ev.Cursor, err)
+	}); err != nil {
+		if r.opts.Logger != nil {
+			r.opts.Logger.Printf("relay: append at %s refused: %v", ev.Cursor, err)
+		}
+		return
 	}
+	// Store.Append has made the cursor queryable before mutation waiters can observe it. Keep
+	// publication case-scoped and monotonic; observed cursors above remain independent so a failed
+	// capture or append still invalidates stale intents.
+	r.mu.Lock()
+	if cur, ok := r.published[ev.CaseID]; !ok || ev.Cursor > cur {
+		r.published[ev.CaseID] = ev.Cursor
+		r.notifyCase(ev.CaseID)
+	}
+	r.mu.Unlock()
 }
 
 // Head is the newest kernel cursor the relay has observed overall ("" before any frame).
@@ -163,13 +175,14 @@ func (r *Relay) CursorForCase(caseID string) (string, bool) {
 	return cursor, ok
 }
 
-// WaitForCaseAdvance implements intents.CursorSource: returns the case's cursor once it is set
-// and strictly past `before` (an empty `before` waits for the first frame at all), or the newest
-// value when ctx ends first.
+// WaitForCaseAdvance implements intents.CursorSource: returns the newest successfully retained
+// case cursor once it is set and strictly past `before` (an empty `before` waits for the first
+// retained frame), or the newest successfully retained value when ctx/feed ends first. Observed
+// cursors remain available separately through CursorForCase for stale-intent checks.
 func (r *Relay) WaitForCaseAdvance(ctx context.Context, caseID, before string) string {
 	for {
 		r.mu.Lock()
-		cursor, ok := r.caseCur[caseID]
+		cursor, ok := r.published[caseID]
 		if ok && (before == "" || cursor > before) {
 			r.mu.Unlock()
 			return cursor
@@ -185,22 +198,22 @@ func (r *Relay) WaitForCaseAdvance(ctx context.Context, caseID, before string) s
 
 		select {
 		case <-ch:
-			continue // notifyCase removed us; loop to re-read
+			continue // notifyCase removed us; loop to re-read retained publication
 		case <-ctx.Done():
 			r.mu.Lock()
 			if ws := r.waiters[caseID]; ws != nil {
 				delete(ws, id)
 			}
+			cursor := r.published[caseID]
 			r.mu.Unlock()
-			cursor, _ := r.CursorForCase(caseID)
 			return cursor
 		case <-r.feed.Done():
 			r.mu.Lock()
 			if ws := r.waiters[caseID]; ws != nil {
 				delete(ws, id)
 			}
+			cursor := r.published[caseID]
 			r.mu.Unlock()
-			cursor, _ := r.CursorForCase(caseID)
 			return cursor
 		}
 	}

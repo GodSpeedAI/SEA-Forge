@@ -13,7 +13,8 @@ metadata:
   updated_by: >-
     resumed orchestrator: recovery changes externally committed as 8741ff4;
     fresh Luna critics approved scoped T07/T08 repairs and local gates;
-    real live confirmation blocked; no new task settlement claimed.
+    T07 independently approved and settled after cursor publication and cached-intent
+    authorization repairs; T08 live native/shared conformance is next.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -21,20 +22,20 @@ metadata:
       is the historical narrative; the machine state is THIS file.
 
 execution:
-  last_settled_task: T06
-  settled_tasks: [T00, T01, T02, T03, T04, T05, T06]
-  in_flight_task: T07
+  last_settled_task: T07
+  settled_tasks: [T00, T01, T02, T03, T04, T05, T06, T07]
+  in_flight_task: T08
   ready_tasks: []
   confirmation_debt: >-
-    T07 (eef7459) and T08 (ce538bf) are implemented and gate-green but NOT independently
+    T07 independently settled 2026-09-30. T08 (ce538bf) remains implemented but NOT independently
     confirmed: the subagent platform failed six times ("Captcha instance timed out"), so the
     orchestrator verified T07 inline and implemented T08 inline. Both MUST receive an independent
-    critic pass (T07: gates + runtime teeth incl. CSRF/actor-overwrite/session probes; T08: gates
+    critic pass (T07 completed; T08: gates
     + live conformance re-run) before their claim states may advance past
     builder/orchestrator-verified. Independent confirmations outstanding: T04 units B+C are
-    confirmed; T07, T08, T09, T10 (once built) are not. T09 is implemented at 3e2404f
+    confirmed; T07 is now confirmed; T08, T09, T10 (once built) are not. T09 is implemented at 3e2404f
     with untracked historical local gate/ladder evidence, but has live wiring omissions.
-  blocked_tasks: [T08, T09, T10, T11, T12, T13]
+  blocked_tasks: [T09, T10, T11, T12, T13]
   t02_state: >-
     SETTLED 2026-09-24 (session 3): independent critic APPROVED (T02/confirmation.md) — all prereg
     refusals reproduced as fresh-cell runtime attacks with hash-proven no-writes, positive
@@ -44,12 +45,25 @@ execution:
     OBSERVED_DEBT entry (pre-existing partial case dir on mid-handler failure, T11).
   plan_blocked: false
   plan_blocker: null
-  external_blockers:
-    - >-
-      Automatic approval review rejected the rebuilt gateway's isolated loopback launch as
-      alleged prompt-injection drift. Explicit user approval requested; no answer received.
-      Do not bypass the rejection. T07 real-session history/SSE and T08 live proof remain pending.
+  external_blockers: []
   task_detail:
+    T07:
+      units: >-
+        SETTLED 2026-09-30. Independent Luna critic approved current source: immutable
+        session/history/SSE projection, retained cursor publication before waiter release,
+        and current session perspective verification before intent replay/dispatch.
+        Independent red reproduced four missing intent refusals; focused/global Go race,
+        vet and fresh build pass. Real cached receipt revoked403, restored byte-identical200,
+        unchanged trajectory; production dev auth refused exit2 on free port44281.
+        Inherited unchanged Rust/UI global gates remain green, with exact evidence references
+        and limitations recorded. Native browser cookie/reconnect proof belongs to T08.
+      confirmation: .agents/evidence/casework-live-wiring/T07/resume-2026-09-30/authorization-green/independent-verification-record.md
+      confirmation_note: >-
+        APPROVE full T07, independent critic t07_live_confirmation. Root verified source
+        hashes and byte-identical evidence copies. reference-errata.md corrects inherited
+        UI evidence path. Missing earlier cursor stdout and retrieval-scope deviation are
+        disclosed; fresh authorization logs and real-handler replay proof are retained.
+      settle_when: satisfied — independent confirmation and durable evidence exist.
     T04:
       units: >-
         SETTLED 2026-09-24 (session 2). A: DONE, confirmed (1b73724). B: DONE,
@@ -85,71 +99,34 @@ operator_decisions:
   D-2: "APPROVED 2026-09-23. A gateway principal acts on_behalf_of allowlisted, gateway-authenticated end users. Both principals are ledgered. Needs an ADR."
   D-3: "APPROVED 2026-09-23. An explicit case.advance/item.execute verb plus an opt-in server supervisor, both calling CaseRunner in-process."
   dependencies: "APPROVED: a Go OIDC library and golang.org/x/crypto/argon2. REJECTED: Playwright; use agent-browser. Anything else is ask-first."
+  T09-contract: >-
+    APPROVED 2026-09-30: operator replied "i approve" after proposed T09 additive contract,
+    client response cap, bounded hydration and UI cache behavior were explained. Scope includes
+    execution observations without invented progress and the protected disclosure-complete Ask
+    endpoint. Independent proposal architecture review approved round four; implementation
+    verification remains required after T07/T08 settlement. Existing
+    kernel verbs/identity model/dependency set stay authoritative; no deployment authorization.
   git: >-
     The implementing agent may create a local branch and make local commits, following the
     agent_protocol.git rules below. Make frequent commits at meaningful milestones. It may never push, fetch, pull, rebase, reset, merge or clean.
 
 next_action:
-  task: T07
+  task: T08
   action: >-
-    Complete T07 independent verification/fix loop, then settle T07 before advancing T08.
-    Takeover recovered T07 eef7459, T08 ce538bf, T09 3e2404f; all three remain pending
-    independent confirmation. T07 origins/log escaping are fixed and independently reviewed;
-    recovery-round2 critic REJECT found default-perspective SSE/history reads. Fresh builder
-    implements session-read-builder-spec.md using immutable captured facts and verified actors.
-    Recovery fixes are committed as 8741ff4. Final T07 session-read facts and T08 actual artifact
-    ownership via run.get, trajectory count/kind repairs, native retry and resync handling,
-    stale case identity checks, and shared conformance await fresh independent verification.
-    Fresh T07 vet/focused race pass after independent review of the fresh test setup repair.
-    Global race first failed only Argon2 tampering test's ineffective Base64 character mutation.
-    Fresh decoded-byte tampering repair independently APPROVED: targeted race count=50,
-    final full Go race and vet pass. Fresh four-crate Rust gate passes 594/0 with four ignored.
-    T07 scoped test repairs approved at final-independent/confirmation.md; full T07 unapproved.
-    T07 approved repairs/evidence committed locally as 5e07c62 (full confirmation pending).
-    Final UI/bundle/local ladder gates are complete; sole compile ownership is returned to root.
-    T08 fresh endpoint/retry and type-gate builders finished source-only; independent critic
-    reviews their original instructions plus final implementation before fresh UI gates.
-    No production authority checks may be weakened. Gateway binary is
-    rebuilt, but its isolated loopback launch was rejected by auto-review as alleged injection
-    drift; explicit user approval is pending. T08 F13 full trajectory shape repair is ready from
-    fresh trajectory_shape_builder, then fresh trajectory_endpoints_retry_builder added strict
-    nonempty endpoint consistency and fixed native retry test setup. ui_type_gate_builder fixed
-    four additional typed call/test double errors. Round5 focused Bun 31 pass/1 native timer test
-    fail and typecheck red were preserved. Final focused Bun passes 43/0 with 144 assertions,
-    and typecheck passes. Earlier full Bun failed 254/1 with EPERM in normal/nested sandbox
-    execution. Development-mode diagnostic builds emitted fixture data; critic round7 REJECT
-    preserved. Fresh production_import_guard_builder
-    moved local imports behind a direct DEV guard and keeps scripted narration dev/local only;
-    live narration stays unavailable until T09 grounded Ask. Fresh sse_loopback_test_builder
-    limited the existing temporary 503 listener explicitly to 127.0.0.1. Final fresh gates and
-    local browser ladder runs against stable repaired source. Round8 full Bun passed once
-    255/0 with 1268 assertions under approved local execution. Exact standalone loopback503
-    listener fails only inside network sandbox and succeeds via approved local execution;
-    canonical gate must use the same approved direct command context, not a nested sandbox.
-    Root found inherited NODE_ENV=development; installed Vite config derives DEV from it,
-    so prior vite build outputs were compiled as development. Fresh package.json-only builder
-    plans to pin canonical build script NODE_ENV=production after independent controlled
-    build confirmation. Controlled NODE_ENV=production/local override Vite build passes and
-    all emitted assets contain none of the adapter/Northstar/script markers: causal diagnosis
-    confirmed. Local ladder J0-J9 and RECOVERY passed, 11 journeys/78 steps. Round8 bounded
-    source repairs approved; full T08 unconfirmed. Browser ladder finished without source
-    changes or stopping the pre-existing listener. Fresh builder implemented package.json-only
-    production build pin. Independent canonical UI gate passed 255/0 with 1268 assertions;
-    canonical/default/local/invalid builds under inherited development NODE_ENV passed and
-    all emitted assets omit fixture/script markers while retaining the HTTP adapter.
-    Round9 scoped independent report records final approval; full T08 stays unconfirmed.
-    No task settlement yet.
-    Real shared conformance and native live resync/reconnect
-    proof remain unrun; T07/T08 settlement is withheld.
-    T09 inventory found
-    execution_progress/command frames have no live source and CJ10-CJ12 unavailable labels
-    are misassigned. Scripted narration is now confined to development/local mode; live agent
-    is intentionally null until T09 supplies grounded kernel Ask narration. Use existing ArtifactPayload,
-    run.get trace/evidence projections and stream contracts where sufficient; follow redesign
-    stop rules if contract changes become necessary. T10 prereg ALREADY EXISTS (2026-09-26),
-    before ladder implementation. Then T08, T09, T10, T11, T12; T13 split + STOP.
-    User requires Luna/Terra subagents (Terra unavailable here; use gpt-6-luna) and ONE compile
-    owner across all agents/languages, with available RAM checked before each compile command.
+    T07 settled with independent full confirmation in authorization-green. Root temporarily
+    owns the sole compile token for indexing and checkpoint; then explicitly transfer it to
+    t08_final_static. Run prepared native live-tag browser test and identical shared local/live
+    CaseworkPort conformance against fresh owned cells. Check host RAM/compiler processes
+    before every build/test; Go GOMAXPROCS=2/-p=1/count1/race, no concurrent compilers.
+    Native harness source coverage approved but not yet runtime-verified. No fake EventSource,
+    cursor/progress or mutations; preserve foreign Vite4178 and prior test gateways/cells.
+    Live conformance internally builds Go and binds4179: verify port free and isolate TMPDIR.
+    On rejection assign fresh bounded builder then independent critic until evidence supports
+    approval. Run applicable inherited global gates, record all exact exits/logs/teeth, update
+    both status files and commit before advancing. T09 proposal architecture/operator approval
+    satisfied; implement scoped T01 amendment only after T08 settles. Prepared units under
+    T09/resume-2026-09-30/prepared-implementation-units.md. Existing T10 prereg preserved;
+    continue T09-T12, split T13 and STOP. Only Luna/Terra agents; Terra unavailable here.
 
 agent_protocol:
   read_order:
@@ -209,6 +186,22 @@ baseline_warnings:
 
 handoff:
   session: 4
+  latest_resume: >-
+    2026-09-30: operator approved T09 additive contract/client cap/hydration/cache amendment;
+    independent proposal architecture review is approved. Fresh fourth proposal repair removes the
+    unsupported cumulative 256 MiB wire-byte claim (run.list and inspect retry were omitted).
+    T07 cursor publication repair independently approved after repeat50/full Go gates and
+    immediate real accepted-cursor reads. Full T07 REJECT persists for revoked cached POST
+    intent replay; a fresh builder added intent_authorization_test.go only. Independent critic
+    t07_live_confirmation owns the sole compile token for green verification. Independent red
+    reproduced revoked/missing-verifier/unavailable/unmapped POSTs returning 200. Builder added
+    the server session-perspective guard; independent green/live refusal/restoration is pending.
+    T07 now independently APPROVED and settled; logs/record copied byte-identically and
+    reviewed source hashes match. Real restored receipt identical, no trajectory mutation;
+    production dev auth refuses exit2. Root owns the token for indexing/checkpoint, then T08.
+    T08 native harness source coverage is approved; actual native/live shared conformance
+    remains pending. Preserve unrelated Jolli and behavioral-interaction-
+    proof worktree files; neither belongs to this checkpoint.
   state_summary: >-
     Resumed 2026-09-29 after operator-requested usage-limit wrap. Prior final status write was
     blocked by approval review usage exhaustion. Recovery source/evidence now committed
@@ -220,7 +213,7 @@ handoff:
     targeted race count=50, global Go race and vet pass; scoped test-unit repairs APPROVED in
     final-independent/confirmation.md. Full T07 NOT APPROVED: live runtime proof remains blocked.
     Fresh independent four-crate Rust gate passed: 594 tests, zero failed, four existing ignored.
-    Final UI/bundle/local ladder gates completed; root now owns compile token. RAM checks
+    Final UI/bundle/local ladder gates completed; t07_live_confirmation owns compile token. RAM checks
     required before every command, Go -p=1/GOMAXPROCS=2/race/count=1 and Cargo build jobs=1.
     T08 round5 focused Bun 31 pass/1 fail and typecheck red preserved. Fresh builders repaired
     full trajectory point shape/counts and nonempty endpoint consistency, native retry timer
@@ -238,7 +231,8 @@ handoff:
     completion. All 11 local journeys/78 steps now pass and the fresh builder implemented
     the package.json-only production build pin; independent canonical UI gate and default/
     local/invalid build variants passed with fixture/script assets absent. Round9 report is
-    final scoped approval; real T07/T08 runtime proof remains pending operator approval.
+    final scoped approval; real T07/T08 runtime proof remains pending. Operator now approved
+    the explained isolated local gateway launch; fresh critic resubmits actual launch review.
     Full Bun passed 255/0 via approved local
     execution; standalone listener diagnostic proves sandbox EPERM versus approved loopback
     503 success. Rerun canonical gate in that approved direct command context after script pin.
@@ -246,10 +240,14 @@ handoff:
     committed locally as 5e07c62. Root recorded production import builder's original/result note
     after its evidence write was blocked by the read-only .agents mount; no gate claim fabricated.
     T07 rebuilt gateway /tmp/casework-resume-gateway; kernel binary target/debug/sea-forge-server.
-    Previous temporary kernel PID 256835 is absent at the final root PID check; restart the
-    isolated kernel after approval and verify /tmp/t07-final.uUPtaO/cell/server.sock. No gateway
-    was launched: auto-review rejected the isolated loopback start as alleged injection drift.
-    User approval requested and pending; do not bypass. Need T07 real operator/R-SO current,
+    Earlier sandbox PID check could not see host PID256835. Fresh approved host inspection
+    confirms it alive holding the old cell lock and exposing only server.sock.binding.
+    Preserve old process/data; investigate or initialize a fresh isolated cell without
+    unlinking locks or using an unpublished staging socket. Fresh isolated kernel PID757180
+    serves cell-independent/server.sock; fresh gateway now serves127.0.0.1:44179 after actual
+    reviewed launch. Preserve prior auto-review rejection and startup config failures.
+    Operator approved the explained isolated loopback launch; inspect actual command and
+    resubmit review, never bypass rejection. Need T07 real operator/R-SO current,
     history and SSE old-state/actions/overrides/cross-case/revocation proof, then T08 real shared
     conformance and actual native EventSource single-retained-revision resync/reconnect proof.
     Go captured facts and run.get artifact ownership are source-complete; invocation ID remains
@@ -277,6 +275,7 @@ handoff:
     - "committed this session (T04C): SupervisorConfig + supervisor.rs + AdvanceCaller/AdvanceScope::Supervisor + per-case key locks + sfwp_supervisor tests + T04C gates/teeth + T04/confirmation.md; T04 SETTLED"
   decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
   warnings:
+    - "T09 contract redesign trigger recorded under decision-log redesign_reviews.T09-contract and report Section0.0; operator and independent architecture approved. Implement after T08 settles; independently verify implementation. Existing execution_trace child objects need no kind change."
     - "Critic t04-critic returned procedural REJECT (C uncommitted at review; no T04/confirmation.md; its live cargo re-runs hit a 30s env timeout) with ZERO code findings; grounds closed in T04/confirmation.md, which stands as the settlement record. Report via team mailbox msg_00002+msg_00003."
     - "Two subagent usage-limit windows on 2026-09-24 killed in-flight agents; check spawn health before relying on delegation (see agent_protocol.delegation caveat)."
     - "C-1 resolution is an executor decision under an unanswered protocol stop, NOT operator approval; operator may still override the casework-live-* recipe naming cheaply."
