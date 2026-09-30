@@ -1,0 +1,176 @@
+# Behavioral IR: CJ08 Monitor, Intervene, and Recover
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ08"
+  slug: "monitor_intervene_and_recover"
+  title: "Monitor, Intervene, and Recover"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - commitment
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+  - cancel
+
+entry:
+  states:
+    - work_running_concurrently
+    - event_emitted
+    - scoped_cancellation_needed
+    - case_parked
+    - bound_exhausted
+    - restart_or_upgrade_survived
+  actor_roles:
+    - Operator
+    - CellAdministrator
+    - CaseOwner
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - case_and_run_identities
+      - ordered_event_log_cursor
+      - intervention_scope_descriptor
+    context_scope: "Active delegations, live stream cursors, concurrent capacity allocation, restart checkpoints"
+
+  IS2_preflight:
+    checks:
+      - event_stream_cursor_valid
+      - target_run_exists_and_active_for_cancellation
+      - operator_holds_control_authority_for_target_scope
+      - restart_snapshots_verifiable
+    readiness_classification:
+      expected: "ready | cursor_stale | target_already_terminal"
+      failure_action: "catch_up_from_cursor_before_intervention"
+
+  IS3_authority_resolution:
+    required_role: "Operator"
+    alternate_role: "CellAdministrator"
+    grant_scope: "scoped_control_intervention_and_recovery"
+    separation_of_duty: "Scoped intervention must not mutate unaffected sibling runs or rewrite history"
+    approval:
+      status: "implemented"
+      note: "Control plane checks operator token against cell policy"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "monitor.intervene"
+      invoked_capabilities:
+        - "delegation_listing"
+        - "events.subscribe"
+        - "events.get_range"
+        - "concurrency_and_capacity_projection"
+        - "scoped_cancellation"
+        - "case.resume"
+        - "restart_reconciliation"
+        - "adlc_reactivation"
+        - "failure_diagnosis"
+        - "lifecycle_snapshot_preservation"
+        - "maintenance_debt_inspection"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-server / events"
+    bounds:
+      target_scope: "run_level_or_stage_level"
+      mutation_style: "append_control_event"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "work_running_or_interrupted"
+      to: "intervention_settled"
+      alternative_states:
+        - "run_cancelled"
+        - "run_completed"
+        - "run_failed"
+        - "run_interrupted"
+        - "run_orphaned"
+        - "run_unsettled"
+        - "case_resumed_from_parked"
+    artifacts:
+      - "ordered_event_batch"
+      - "scoped_cancellation_record"
+      - "preserved_launch_snapshot"
+      - "restart_recovery_reconciliation_record"
+      - "typed_failure_diagnostic_record"
+      - "maintenance_debt_item"
+    mutation_rule: "Events strictly appended; cursors updated; uncancelled sibling runs proceed without disruption"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "event_log_range_receipt"
+        evidence_class: "observed"
+      - item: "cancellation_acknowledgement_record"
+        evidence_class: "observed"
+      - item: "restart_reconciliation_evidence"
+        evidence_class: "observed"
+    integrity_verification:
+      cursor_monotonicity_verified: true
+      sibling_isolation_verified: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "The operator sees the authoritative operational standing and either completes a scoped intervention or reaches an explicit resume, retry, replan, repair, endpoint, environment, escalation, or terminal decision."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "intervention_committed"
+        - "cancellation_settled"
+        - "recovery_path_selected"
+        - "interruption_settled"
+    settlement_vs_termination: "Closing an alert or stopping a process is not settlement; the resulting operational standing must be acknowledged."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "continue_active_monitoring"
+        action: "subscribe_events_stream"
+        condition: "outcome == intervention_committed && runs_active"
+      - id: "resume_parked_case"
+        action: "invoke_case_resume"
+        condition: "state == case_parked"
+      - id: "settle_interruption_or_failure"
+        target_journey: "CJ09"
+        condition: "outcome == cancellation_settled || outcome == interruption_settled"
+      - id: "retry_run_as_successor"
+        action: "spawn_successor_attempt"
+        condition: "outcome == recovery_path_selected"
+    blocked_affordances:
+      - id: "cancel_already_settled_run"
+        action: "cancel_run"
+        reason: "policy_prohibited"
+        explanation: "Cannot cancel a run that has already settled or completed"
+
+recovery_paths:
+  - condition: "event_stream_gap"
+    remedy: "Catch up from last known cursor; replay missed events"
+  - condition: "unsettled_run_after_restart"
+    remedy: "Reconcile launch snapshots; re-query executor status; settle or mark interrupted"
+  - condition: "unexpected_worker_failure"
+    remedy: "Localize failure to offending run; preserve sibling work; emit typed failure diagnostic"
+
+unresolved_bindings:
+  - component: "actionable_notifications_surface"
+    status: "unresolved_in_source"
+    impact: "Notification data model complete in server; unified notification tray in Workbench partial"
+  - component: "consolidated_maintenance_debt_queue"
+    status: "unresolved"
+    impact: "Queue inspection available via CLI; complete visual queue preview-only"
