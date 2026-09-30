@@ -1,0 +1,24 @@
+COMMAND: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOCACHE=/home/sprime01/.cache/go-build go test -p=1 -parallel=1 -race -run ^TestStoreRetentionOneKeepsLatestAtAndEvictsPrevious$ -count=1 ./internal/projection
+--- FAIL: TestStoreRetentionOneKeepsLatestAtAndEvictsPrevious (0.00s)
+panic: runtime error: index out of range [1] with length 1 [recovered, repanicked]
+
+goroutine 5 [running]:
+testing.tRunner.func1.2({0x818bf8, 0xc000020168})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x419
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x65f
+panic({0x818bf8?, 0xc000020168?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection.(*Store).At(_, {_, _})
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/projection/store.go:119 +0x414
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection.assertRetainedCursor(0xc000152248, 0xc0001189c0, {0x653449, 0x5})
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/projection/store_retention_test.go:73 +0xa5
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection.TestStoreRetentionOneKeepsLatestAtAndEvictsPrevious(0xc000152248)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/projection/store_retention_test.go:22 +0x6e7
+testing.tRunner(0xc000152248, 0x825678)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0x21d
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0xb13
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.021s
+FAIL
+EXIT_CODE=1

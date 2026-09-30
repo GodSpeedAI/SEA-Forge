@@ -161,12 +161,21 @@ func (s *Store) Append(rev Revision) error {
 	}
 	s.revisions = append(s.revisions, cloneRevision(rev))
 	s.byCursor[rev.Cursor] = len(s.revisions) - 1
+	evicted := false
 	for len(s.revisions) > s.max {
 		// Bounded retention: drop the oldest revision and its index entry. A client holding the
 		// evicted cursor gets the documented 404 / resync_required, never a silently rewritten
 		// history.
 		delete(s.byCursor, s.revisions[0].Cursor)
 		s.revisions = s.revisions[1:]
+		evicted = true
+	}
+	if evicted {
+		// Trimming shifts every survivor's slice index. Repair the cursor lookup once after all
+		// evictions so At continues to resolve each retained revision to its own snapshot.
+		for i, retained := range s.revisions {
+			s.byCursor[retained.Cursor] = i
+		}
 	}
 	for id, ch := range s.subs {
 		select {
