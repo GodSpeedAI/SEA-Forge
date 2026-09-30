@@ -252,6 +252,20 @@ describe('store.reduce', () => {
     })
   })
 
+  describe('connection state', () => {
+    it('represents reconnecting and prolonged interruption without changing world history', () => {
+      let next = state
+      next = reduce(next, { type: 'connectionState', connection: 'reconnecting' })
+      expect(next.connection).toBe('reconnecting')
+      next = reduce(next, { type: 'connectionState', connection: 'interrupted' })
+      expect(next.connection).toBe('interrupted')
+      expect(next.history).toBe(state.history)
+      next = reduce(next, { type: 'connectionState', connection: 'live' })
+      expect(next.connection).toBe('live')
+      expect(next.history).toBe(state.history)
+    })
+  })
+
   describe('mutation safety', () => {
     it('never mutates history snapshots', () => {
       const before = JSON.stringify(history.snapshots)

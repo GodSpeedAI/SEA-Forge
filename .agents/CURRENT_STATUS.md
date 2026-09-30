@@ -1,6 +1,20 @@
 # Current Status
 
-Updated: 2026-09-23
+Updated: 2026-09-29
+
+> **2026-09-29 takeover in progress:** recovered T07 (`eef7459`), T08 (`ce538bf`), and
+> T09 (`3e2404f`) implementations; independent confirmation remains outstanding for all three.
+> T00-T06 retain their operative independent evidence. Fresh T07 Go vet/race gates and the
+> four-crate Rust gate passed (594 tests, four existing ignored). T07/T08 critics rejected;
+> fresh builders are addressing origins, log escaping, production selection, artifacts,
+> stale refresh, interruption and retained trajectory. Independent re-review is pending.
+> A daemon restart interrupted round-2 work. State was checked before resuming; a recovered
+> critic is probing cached/SSE reads that retain the relay's default actor perspective.
+> T09 inventory found missing live execution frames and
+> grounded narration, plus incorrect unavailable journey labels. No new task is settled.
+> Compile work is serialized across all agents after a RAM check. Machine state and next move:
+> `.agents/current_status.yml`; fresh evidence: `T07/resume-2026-09-29/` and
+> `T08/resume-2026-09-29/` under the active evidence root. Preserve unrelated working changes.
 
 > **2026-09-23 COGNITIVE UI FUNCTIONAL-COMPLETION PHASE (contract adapter, not Go):**
 > The UI in `apps/godspeed-cognitive-ui` now consumes the interface-contract port

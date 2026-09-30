@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
 )
@@ -40,9 +41,8 @@ type EventFeed interface {
 
 // RelayOptions tune the relay.
 type RelayOptions struct {
-	// DefaultActor is the perspective relay-built revisions are rendered for. It is the gateway's
-	// own honest default (configured in live-serve.json); authenticated per-user perspectives are
-	// T07's sessions, and a client that needs its own view refetches /api/world with its cursor.
+	// DefaultActor is the relay's retained display perspective. When the source exposes captured
+	// facts, authenticated reads re-render those facts for their own verified session actor.
 	DefaultActor ports.ActorClaim
 	// Logger receives relay diagnostics. Nil discards them.
 	Logger *log.Logger
@@ -113,7 +113,21 @@ func (r *Relay) accept(ctx context.Context, ev KernelEvent) {
 	if ev.CaseID == "" {
 		return // a frame with no case cannot be projected
 	}
-	snap, err := r.source.Snapshot(ctx, ev.CaseID, r.opts.DefaultActor, ev.Cursor)
+	var snap contract.CognitiveWorldSnapshot
+	var facts *projection.CaseFacts
+	var err error
+	if source, ok := r.source.(interface {
+		Facts(context.Context, string, ports.ActorClaim, string) (projection.CaseFacts, error)
+	}); ok {
+		captured, captureErr := source.Facts(ctx, ev.CaseID, r.opts.DefaultActor, ev.Cursor)
+		err = captureErr
+		if err == nil {
+			facts = &captured
+			snap = projection.Build(captured)
+		}
+	} else {
+		snap, err = r.source.Snapshot(ctx, ev.CaseID, r.opts.DefaultActor, ev.Cursor)
+	}
 	if err != nil {
 		// The kernel's frame is truth regardless: cursors advanced above, the revision store
 		// simply has a gap here. Log honestly and keep serving.
@@ -128,6 +142,7 @@ func (r *Relay) accept(ctx context.Context, ev KernelEvent) {
 		CaseID:   ev.CaseID,
 		Summary:  ev.Kind,
 		Snapshot: snap,
+		Facts:    facts,
 	}); err != nil && r.opts.Logger != nil {
 		r.opts.Logger.Printf("relay: append at %s refused: %v", ev.Cursor, err)
 	}

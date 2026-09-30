@@ -14,12 +14,11 @@
 // the refusal — deciding again is a human act).
 //
 // Honest limits (documented, not hidden):
-// - queryTemporalTrajectory is not served by this deployment yet (history is
-//   reachable through getSnapshotAt with cursors observed on the event
-//   stream); the call throws a typed error instead of fabricating points.
-// - resolveArtifact goes through the OPEN_ARTIFACT intent (the kernel's
-//   content-addressed artifact.get); the ref it accepts is therefore an
-//   artifact digest.
+// - queryTemporalTrajectory reads only the gateway's bounded retained
+//   revisions; unavailable cold or evicted history is returned as a typed error.
+// - resolveArtifact uses the authenticated GET /api/artifacts/{digest} route;
+//   the gateway verifies the session perspective and reads only through the
+//   kernel's content-addressed artifact.get operation.
 
 import type {
   ActorRole,
@@ -66,6 +65,51 @@ const csrfCookie = (): string => {
   if (typeof document === 'undefined') return ''
   const match = document.cookie.match(/(?:^|;\s*)casework_csrf=([^;]+)/)
   return match ? decodeURIComponent(match[1]!) : ''
+}
+
+const ARTIFACT_CONTENT_TYPES = new Set<ArtifactPayload['content_type']>([
+  'text/markdown',
+  'application/json',
+  'text/x-diff',
+  'text/plain',
+])
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isArtifactPayload(value: unknown): value is ArtifactPayload {
+  if (!isRecord(value) || !isRecord(value.provenance)) return false
+  const p = value.provenance
+  return (
+    typeof value.evidence_id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.digest === 'string' &&
+    typeof value.content === 'string' &&
+    ARTIFACT_CONTENT_TYPES.has(value.content_type as ArtifactPayload['content_type']) &&
+    typeof p.case_id === 'string' &&
+    typeof p.plan_item_id === 'string' &&
+    typeof p.invocation_id === 'string' &&
+    typeof p.run_id === 'string' &&
+    (p.question_id === undefined || typeof p.question_id === 'string') &&
+    (p.claim_id === undefined || typeof p.claim_id === 'string') &&
+    (p.commit_sha === undefined || typeof p.commit_sha === 'string') &&
+    (p.pr_number === undefined || typeof p.pr_number === 'number')
+  )
+}
+
+function isTemporalTrajectoryResponse(value: unknown, caseId: string): value is TemporalTrajectoryResponse {
+  if (!isRecord(value) || value.case_id !== caseId) return false
+  if (typeof value.base_cursor !== 'string' || value.base_cursor.length === 0) return false
+  if (typeof value.head_cursor !== 'string' || value.head_cursor.length === 0) return false
+  return Array.isArray(value.points) && value.points.every((point) =>
+    isRecord(point) && typeof point.cursor === 'string' && point.cursor.length > 0,
+  )
+}
+
+function sha256Hex(digest: string): string | null {
+  const hex = digest.startsWith('sha256:') ? digest.slice('sha256:'.length) : digest
+  return /^[0-9a-f]{64}$/.test(hex) ? hex : null
 }
 
 export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateSourcePort {
@@ -202,51 +246,31 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
   // --- artifacts --------------------------------------------------------------------
 
   async resolveArtifact(digest: string): Promise<ArtifactPayload> {
-    // Artifacts are content-addressed in the kernel; the served surface is the
-    // OPEN_ARTIFACT intent (artifact.get). The response's resulting payload is
-    // re-hashed by the gateway; the adapter surfaces the payload verbatim.
-    const identity = await this.requireSession()
-    const response = await this.dispatchIntent({
-      intent_id: `art-${crypto.randomUUID()}`,
-      kind: 'CONSEQUENTIAL_CASE',
-      action_name: 'OPEN_ARTIFACT',
-      target_object_id: digest,
-      case_id: '',
-      client_cursor: '',
-      actor: { actor_id: identity.actor_id, role: identity.role as ActorRole },
-      parameters: { digest },
-    } as unknown as InteractionIntent)
-    if (!response.success) {
-      const refusal = response.refusal
-      throw new HttpRefusalError(refusal?.refusal_kind ?? 'UNAVAILABLE', refusal?.message ?? 'artifact refused')
+    const expected = sha256Hex(digest)
+    if (!expected) throw new HttpRefusalError('INVALID', 'artifact digest must be a SHA-256 hex digest')
+    await this.requireSession()
+    const res = await this.fetchJSON(`/api/artifacts/${encodeURIComponent(digest)}`)
+    if (!res.ok) throw await this.refusalFrom(res)
+    if (!isArtifactPayload(res.body)) {
+      throw new HttpRefusalError('UNAVAILABLE', 'the gateway returned a malformed artifact payload')
     }
-    const payload = response.resulting_object as unknown as
-      | { content_base64?: string; media_type?: string; name?: string }
-      | undefined
-    if (!payload?.content_base64) {
-      throw new HttpRefusalError('UNAVAILABLE', 'the kernel returned no artifact content for this digest')
+    if (sha256Hex(res.body.digest) !== expected) {
+      throw new HttpRefusalError('INTEGRITY_MISMATCH', 'the gateway returned a different artifact digest')
     }
-    const content = atob(payload.content_base64)
-    return {
-      evidence_id: digest,
-      name: payload.name ?? digest,
-      digest,
-      content_type: (payload.media_type ?? 'application/octet-stream') as ArtifactPayload['content_type'],
-      content,
-      provenance: { case_id: '', plan_item_id: '', invocation_id: '', run_id: '' },
-    }
+    return res.body
   }
 
   // --- temporal ------------------------------------------------------------------
 
-  async queryTemporalTrajectory(_caseId: string): Promise<TemporalTrajectoryResponse> {
-    // Honest limit: this deployment does not serve a trajectory route yet.
-    // History navigation happens through cursors observed on the event stream
-    // (getSnapshotAt). Throwing typed beats fabricating points.
-    throw new HttpRefusalError(
-      'UNAVAILABLE',
-      'Temporal trajectory is not served by this deployment yet; history is reachable through revision cursors.',
-    )
+  async queryTemporalTrajectory(caseId: string): Promise<TemporalTrajectoryResponse> {
+    await this.requireSession()
+    const res = await this.fetchJSON(`/api/trajectory?case_id=${encodeURIComponent(caseId)}`)
+    if (res.status === 401) throw new HttpRefusalError('UNAUTHORIZED_ROLE', 'Your session has ended. Sign in again.')
+    if (!res.ok) throw await this.refusalFrom(res)
+    if (!isTemporalTrajectoryResponse(res.body, caseId)) {
+      throw new HttpRefusalError('INVALID', 'the gateway returned a malformed or foreign case trajectory')
+    }
+    return res.body
   }
 
   // --- event stream -------------------------------------------------------------
@@ -263,21 +287,74 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
       // session cookie explicitly). Parse SSE lines off the response body.
       return this.subscribeEventsFetch(caseId, sinceCursor, onEvent, onError)
     }
-    const url = new URL(`${this.base}/api/events`, this.base)
-    if (sinceCursor) url.searchParams.set('last', sinceCursor)
-    const es = new EventSource(url.toString(), { withCredentials: this.credentials === 'include' })
-    const route = (ev: MessageEvent) => {
-      const event = this.parseStreamEvent(ev, caseId)
-      if (event) onEvent(event)
+    let closed = false
+    let lastCursor = sinceCursor
+    let backoff = this.reconnectBaseMs
+    let source: EventSource | undefined
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    const maxBackoff = Math.max(this.reconnectBaseMs, this.reconnectMaxMs)
+
+    const scheduleReconnect = (error: Error) => {
+      if (closed) return
+      onError(error)
+      if (retryTimer !== undefined) return
+      const delay = backoff
+      backoff = Math.min(backoff * 2, maxBackoff)
+      retryTimer = setTimeout(() => {
+        retryTimer = undefined
+        connect()
+      }, delay)
     }
-    for (const kind of ['snapshot', 'execution_progress', 'settlement_recorded', 'resync_required']) {
-      es.addEventListener(kind, route as EventListener)
+
+    const connect = () => {
+      if (closed) return
+      const url = new URL(`${this.base}/api/events`, this.base)
+      if (lastCursor) url.searchParams.set('last', lastCursor)
+      let current: EventSource
+      try {
+        current = new EventSource(url.toString(), { withCredentials: this.credentials === 'include' })
+      } catch (err) {
+        scheduleReconnect(err instanceof Error ? err : new Error(String(err)))
+        return
+      }
+      source = current
+      const route = (ev: MessageEvent) => {
+        if (closed || source !== current) return
+        const event = this.parseStreamEvent(ev, caseId)
+        if (!event) return
+        const cursor = event.cursor
+        // The gateway cursor is monotonic. Ignore a replayed frame, including the
+        // last frame at a reconnect boundary, before delivering it twice.
+        if (cursor && lastCursor && cursor <= lastCursor) return
+        if (event.event_type === 'resync_required') {
+          // A control frame can carry the oldest retained cursor. The snapshot
+          // for that same cursor still has to be delivered as authoritative state.
+          onEvent(event)
+        } else {
+          lastCursor = cursor
+          backoff = this.reconnectBaseMs
+          onEvent(event)
+        }
+      }
+      for (const kind of ['snapshot', 'execution_progress', 'settlement_recorded', 'resync_required']) {
+        current.addEventListener(kind, route as EventListener)
+      }
+      current.onerror = () => {
+        if (closed || source !== current) return
+        current.close() // disable EventSource's unbounded native retry loop
+        source = undefined
+        scheduleReconnect(new Error(`event stream interrupted (reconnecting; backoff cap ${this.reconnectMaxMs}ms)`))
+      }
     }
-    es.onerror = () => {
-      // EventSource retries on its own; the error callback carries connection state.
-      onError(new Error(`event stream interrupted (reconnecting; backoff cap ${this.reconnectMaxMs}ms)`))
+
+    connect()
+    return () => {
+      closed = true
+      if (retryTimer !== undefined) clearTimeout(retryTimer)
+      retryTimer = undefined
+      source?.close()
+      source = undefined
     }
-    return () => es.close()
   }
 
   /** Fetch-streaming subscribe: parse SSE frames off a ReadableStream, reconnect with backoff. */
@@ -291,7 +368,8 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
     let lastCursor = sinceCursor
     const controller = new AbortController()
     const run = async () => {
-      let backoff = this.reconnectBaseMs ?? 500
+      let backoff = this.reconnectBaseMs
+      const maxBackoff = Math.max(this.reconnectBaseMs, this.reconnectMaxMs)
       while (!closed) {
         try {
           const url = new URL(`${this.base}/api/events`, this.base)
@@ -318,9 +396,16 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
               else if (line.startsWith('data: ')) frame.data = (frame.data ?? '') + line.slice(6)
               else if (line === '' && (frame.event || frame.data)) {
                 const ev = new MessageEvent(frame.event ?? 'message', { data: frame.data, lastEventId: frame.id })
-                if (frame.id) lastCursor = frame.id
                 const event = this.parseStreamEvent(ev, caseId)
-                if (event) onEvent(event)
+                if (event && (!lastCursor || event.cursor > lastCursor)) {
+                  if (event.event_type === 'resync_required') {
+                    onEvent(event)
+                  } else {
+                    lastCursor = event.cursor
+                    backoff = this.reconnectBaseMs
+                    onEvent(event)
+                  }
+                }
                 frame = {}
               }
             }
@@ -331,7 +416,7 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
           if (closed) return
           onError(err instanceof Error ? err : new Error(String(err)))
           await new Promise((r) => setTimeout(r, backoff))
-          backoff = Math.min(backoff * 2, this.reconnectMaxMs ?? 10_000)
+          backoff = Math.min(backoff * 2, maxBackoff)
         }
       }
     }
@@ -407,25 +492,40 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
   }
 
   private async refusalFrom(res: { status: number; json: () => Promise<unknown> }): Promise<Error> {
-    const body = (await res.json().catch(() => ({}))) as { error?: string; error_class?: string }
-    return new HttpRefusalError(body.error_class ?? 'UNAVAILABLE', body.error ?? `request failed (${res.status})`)
+    const body = await res.json().catch(() => ({}))
+    const record = isRecord(body) ? body : {}
+    const detail = isRecord(record.error) ? record.error : {}
+    const kind = typeof record.error_class === 'string'
+      ? record.error_class
+      : typeof detail.kind === 'string'
+        ? detail.kind
+        : 'UNAVAILABLE'
+    const message = typeof detail.note === 'string'
+      ? detail.note
+      : typeof record.error === 'string'
+        ? record.error
+        : `request failed (${res.status})`
+    return new HttpRefusalError(kind, message)
   }
 
   private parseStreamEvent(ev: MessageEvent, caseId: string): StreamEvent | null {
-    let data: Record<string, unknown>
+    let data: unknown
     try {
-      data = JSON.parse(ev.data as string) as Record<string, unknown>
+      data = JSON.parse(ev.data as string)
     } catch {
       return null
     }
-    const payload = data.payload as Record<string, unknown> | undefined
-    const snapCase = (payload?.case_id as string | undefined) ?? caseId
-    if (snapCase && caseId && snapCase !== caseId) return null
+    if (!isRecord(data) || !isRecord(data.payload)) return null
+    const eventType = typeof data.event_type === 'string' ? data.event_type : ev.type
+    const cursor = typeof data.cursor === 'string' ? data.cursor : ev.lastEventId
+    if (typeof eventType !== 'string' || typeof cursor !== 'string' || cursor.length === 0) return null
+    const payload = data.payload
+    if (payload.case_id !== undefined && (typeof payload.case_id !== 'string' || payload.case_id !== caseId)) return null
     return {
-      event_type: (data.event_type as string) ?? ev.type,
-      cursor: (data.cursor as string) ?? ev.lastEventId,
+      event_type: eventType as StreamEvent['event_type'],
+      cursor,
       timestamp: (data.timestamp as string) ?? new Date().toISOString(),
-      payload: data.payload,
+      payload,
     } as StreamEvent
   }
 

@@ -72,7 +72,7 @@ func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
 		PolicyRef:           "authority/active-policy.json",
 		ExecutionTimeoutSec: 60,
 	})
-	api := server.New(source, dispatcher, source, store, relay, server.Options{
+	api := server.NewWithArtifacts(source, dispatcher, source, store, relay, authority, server.Options{
 		Perspective: ports.ActorClaim{ActorID: "operator_local", Role: "operator"},
 		Auth:        TestAuthOptions(t),
 		Ready:       authority,

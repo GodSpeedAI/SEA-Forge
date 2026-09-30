@@ -1,0 +1,6 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server [github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.test]
+internal/server/trajectory_test.go:6:2: "net/http/httptest" imported and not used
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server [build failed]
+signal: interrupt
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	33.674s
+FAIL

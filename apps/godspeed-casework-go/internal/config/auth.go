@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
@@ -257,7 +258,49 @@ func validateServe(doc Document) []*apperr.Error {
 		problems = append(problems, apperr.New(apperr.KindConfig, "", "serve",
 			"serve.rate_limit values must be positive"))
 	}
+	seenOrigins := make(map[string]bool, len(serve.TrustedOrigins))
+	for _, origin := range serve.TrustedOrigins {
+		if err := validateTrustedOrigin(origin, serve.Production); err != nil {
+			problems = append(problems, apperr.New(apperr.KindConfig, "", "serve",
+				fmt.Sprintf("serve.trusted_origins contains invalid origin %q: %v", origin, err)))
+			continue
+		}
+		if seenOrigins[origin] {
+			problems = append(problems, apperr.New(apperr.KindConfig, "", "serve",
+				fmt.Sprintf("serve.trusted_origins contains duplicate origin %q", origin)))
+		}
+		seenOrigins[origin] = true
+	}
 	return problems
+}
+
+// validateTrustedOrigin accepts one scheme-and-authority Origin. A non-loopback HTTP origin is
+// permitted only for local development; production origins must use HTTPS.
+func validateTrustedOrigin(origin string, production bool) error {
+	if origin == "" || strings.TrimSpace(origin) != origin || strings.ContainsAny(origin, "\\\r\n\t ") {
+		return fmt.Errorf("must be a non-empty origin without whitespace")
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return fmt.Errorf("must be a valid absolute URL")
+	}
+	if u.Opaque != "" || u.User != nil || u.Host == "" || u.Hostname() == "" || u.Path != "" || u.RawPath != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
+		return fmt.Errorf("must contain only a scheme and host, without userinfo, path, query, or fragment")
+	}
+	if strings.ContainsAny(u.Host, "%\\*") || u.Scheme != strings.ToLower(u.Scheme) || u.Host != strings.ToLower(u.Host) {
+		return fmt.Errorf("must use a plain canonical scheme and host")
+	}
+	// Parse validates port syntax as part of the URL authority.
+	_ = u.Port()
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("scheme must be http or https")
+	}
+	host := strings.ToLower(u.Hostname())
+	loopback := host == "localhost" || host == "127.0.0.1" || host == "::1"
+	if u.Scheme == "http" && (production || !loopback) {
+		return fmt.Errorf("HTTP is allowed only for loopback origins in development; production requires HTTPS")
+	}
+	return nil
 }
 
 // resolveAuthSecrets resolves the auth section's indirections into the caller-held secret list.

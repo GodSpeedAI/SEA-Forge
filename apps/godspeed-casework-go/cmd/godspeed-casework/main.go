@@ -254,11 +254,12 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 	defer stopSweeps()
 	go sweepSessions(sweepCtx, authOpts.Sessions, time.Minute)
 
-	api := server.New(source, dispatcher, source, store, relay, server.Options{
-		Perspective: ports.ActorClaim{ActorID: serve.PerspectiveActorID, Role: serve.PerspectiveRole},
-		Auth:        authOpts,
-		StaticRoot:  serve.StaticRoot,
-		Ready:       authority,
+	api := server.NewWithArtifacts(source, dispatcher, source, store, relay, authority, server.Options{
+		TrustedOrigins: serve.TrustedOrigins,
+		Perspective:    ports.ActorClaim{ActorID: serve.PerspectiveActorID, Role: serve.PerspectiveRole},
+		Auth:           authOpts,
+		StaticRoot:     serve.StaticRoot,
+		Ready:          authority,
 		RateLimit: server.RateLimitOptions{
 			PerMinute: serve.RateLimitOrDefaults().IntentsPerMinute,
 			Burst:     serve.RateLimitOrDefaults().Burst,

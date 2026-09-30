@@ -3187,3 +3187,22 @@
 [2026-09-24T01:05:48.317Z] INFO  [StopHook] Hook input — session_id=166e81df-ae53-4a2f-94ef-261256657430, transcript_path=/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/166e81df-ae53-4a2f-94ef-261256657430.jsonl
 [2026-09-24T01:05:48.334Z] INFO  [StopHook] Session saved successfully
 [2026-09-24T01:05:48.706Z] INFO  [PlanDiscovery] Plan discovery: upserted 0 slug(s) + 1 external path(s) into plans.json
+[2026-09-24T15:34:00.471Z] INFO  [StorageFactory] [trace=02a1149ecf11784e720c9721a0e1a42b] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-24T15:34:00.576Z] INFO  [McpServer] [trace=02a1149ecf11784e720c9721a0e1a42b] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-24T15:34:02.810Z] INFO  [StorageFactory] [trace=12b61b295141f0582aeea5b6f7b8451b] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-24T15:34:02.857Z] INFO  [McpServer] [trace=12b61b295141f0582aeea5b6f7b8451b] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-24T21:07:56.376Z] INFO  [StorageFactory] [trace=47f585c9ca389a560a6f3d1e56ac661a] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-24T21:07:56.403Z] INFO  [McpServer] [trace=47f585c9ca389a560a6f3d1e56ac661a] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-24T21:08:58.316Z] INFO  [StatsWriter] pruned 11 projected events older than 2026-09-10
+[2026-09-24T21:08:58.350Z] INFO  [Installer] Checking Jolli Memory status
+[2026-09-24T21:08:59.301Z] INFO  [Installer] Status: enabled=true, claude=true, git=true, geminiHook=true, worktreeHooks=true, sessions=7, summaries=10, codex=true/true, gemini=true/true, enabledWorktrees=3, opencode=true/true, cursor=false/undefined, copilot=false/undefined, copilotChat=false, cline=true/true
+[2026-09-29T20:29:09.968Z] INFO  [StorageFactory] [trace=e56dfd2f2c1e1c522ed1a264ba33daa6] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-29T20:29:10.023Z] INFO  [McpServer] [trace=e56dfd2f2c1e1c522ed1a264ba33daa6] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-29T20:59:17.681Z] INFO  [StorageFactory] [trace=6dfb5dcfc2fc9e2bb87fd0f30dcfaddc] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-29T20:59:17.730Z] INFO  [McpServer] [trace=6dfb5dcfc2fc9e2bb87fd0f30dcfaddc] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-29T21:29:22.286Z] INFO  [StorageFactory] [trace=5913788e44b54509122c7fa603e44a0c] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-29T21:29:22.313Z] INFO  [McpServer] [trace=5913788e44b54509122c7fa603e44a0c] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-29T21:32:53.560Z] INFO  [StorageFactory] [trace=44283d8c4ce82ef078d88ac08eb87581] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-29T21:32:53.584Z] INFO  [McpServer] [trace=44283d8c4ce82ef078d88ac08eb87581] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)
+[2026-09-29T22:02:58.837Z] INFO  [StorageFactory] [trace=059d38e9a667b6be24c740208de36dad] StorageFactory.create: route=uncutover, projectPath=/home/sprime01/projects/sea-rs
+[2026-09-29T22:02:58.864Z] INFO  [McpServer] [trace=059d38e9a667b6be24c740208de36dad] MCP server connected over stdio (cwd=/home/sprime01/projects/sea-rs)

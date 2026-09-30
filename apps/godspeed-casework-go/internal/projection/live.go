@@ -89,6 +89,8 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
 	}
 	if s.now != nil {
 		facts.Now = s.now()
+	} else {
+		facts.Now = time.Now()
 	}
 	return facts, nil
 }

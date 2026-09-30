@@ -9,15 +9,20 @@ export interface ExecutionPillProps {
   state: 'running' | 'executed' | 'settled' | 'rejected';
   /** True while the event stream is interrupted: the pill shows Reconnecting, not progress. */
   reconnecting?: boolean;
+  connection?: 'live' | 'reconnecting' | 'interrupted';
   onOpen(): void;
 }
 
 export function ExecutionPill(p: ExecutionPillProps): JSX.Element {
   // While reconnecting, the last snapshot standing is shown without a percentage: nothing is
   // known about the run beyond what the last revision said, and no progress may be fabricated.
-  const percent = p.progress === null || p.reconnecting ? null : Math.round(p.progress * 100);
-  const statusLabel = p.reconnecting
-    ? `${p.label} · reconnecting`
+  const connection = p.connection ?? (p.reconnecting ? 'reconnecting' : 'live')
+  const degraded = connection !== 'live'
+  const percent = p.progress === null || degraded ? null : Math.round(p.progress * 100);
+  const statusLabel = connection === 'interrupted'
+    ? `${p.label} · interrupted; last update may be stale`
+    : connection === 'reconnecting'
+      ? `${p.label} · reconnecting`
     : p.state === 'running'
       ? `${p.label} · running${percent !== null ? ` ${percent}%` : ''}`
       : p.state === 'executed'
@@ -28,9 +33,9 @@ export function ExecutionPill(p: ExecutionPillProps): JSX.Element {
 
   return (
     <div
-      className={`execution-pill ${p.visible ? 'visible' : ''} ${p.reconnecting ? 'reconnecting' : ''}`}
+      className={`execution-pill ${p.visible ? 'visible' : ''} ${degraded ? 'reconnecting' : ''}`}
       data-testid="execution-pill"
-      data-state={p.reconnecting ? 'reconnecting' : p.state}
+      data-state={degraded ? connection : p.state}
       role="status"
       aria-label={p.label}
     >

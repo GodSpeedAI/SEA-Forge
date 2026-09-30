@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
@@ -34,8 +35,9 @@ type WorldSource interface {
 	NewestCaseID(ctx context.Context) (string, error)
 }
 
-// PerspectiveVerifier optionally verifies an explicit ?actor=&role= perspective against the
-// kernel's identity rules before serving it.
+// PerspectiveVerifier verifies a session actor against the kernel's identity and delegation rules
+// before serving session-bound world, stream, trajectory, or artifact data. Actor and role query
+// overrides are rejected rather than treated as identities.
 type PerspectiveVerifier interface {
 	VerifyPerspective(ctx context.Context, actor ports.ActorClaim) error
 }
@@ -54,6 +56,7 @@ type IntentDispatcher interface {
 // RevisionHistory is the relay's served history (projection.Store).
 type RevisionHistory interface {
 	At(cursor string) (projection.Revision, error)
+	Trajectory(caseID string) []projection.Revision
 	Oldest() string
 	Head() string
 	Live() (projection.Revision, bool)
@@ -71,6 +74,7 @@ type Server struct {
 	world          WorldSource
 	intents        IntentDispatcher
 	tpl            TemplateSource
+	artifacts      ArtifactGetter
 	store          RevisionHistory
 	relay          RelayCursors
 	opts           Options
@@ -79,10 +83,16 @@ type Server struct {
 
 // New builds the live server. Every dependency is injected.
 func New(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, store RevisionHistory, relay RelayCursors, opts Options) *Server {
+	return NewWithArtifacts(world, dispatcher, tpl, store, relay, nil, opts)
+}
+
+// NewWithArtifacts builds the live server with its governed artifact reader.
+func NewWithArtifacts(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, store RevisionHistory, relay RelayCursors, artifacts ArtifactGetter, opts Options) *Server {
 	return &Server{
 		world:          world,
 		intents:        dispatcher,
 		tpl:            tpl,
+		artifacts:      artifacts,
 		store:          store,
 		relay:          relay,
 		opts:           opts,
@@ -96,6 +106,7 @@ func New(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, sto
 //	auth entry:  GET|POST /api/auth/login, GET /api/auth/callback, POST /api/auth/logout,
 //	             GET /api/session (always answers; unauthenticated = authenticated:false)
 //	protected:   GET /api/world, /api/events, /api/templates  -> session required (401 otherwise)
+//	             GET /api/artifacts/{digest} -> session and kernel delegation verification
 //	             POST /api/intents, /api/templates/preflight -> session + CSRF (401/403 otherwise)
 //	             POST /api/intents is additionally rate limited per session and per IP (429)
 //	static:      everything else serves the configured UI root with cache headers + CSP, or a
@@ -122,6 +133,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/world", s.requireSession(s.handleWorld))
 	mux.HandleFunc("GET /api/events", s.requireSession(s.handleEvents))
 	mux.HandleFunc("GET /api/templates", s.requireSession(s.handleTemplates))
+	mux.HandleFunc("GET /api/artifacts/{digest}", s.requireSession(s.handleArtifactGet))
+	mux.HandleFunc("GET /api/trajectory", s.requireSession(s.handleTrajectory))
 	// State-changing POSTs: session + CSRF; intents are rate limited (before the handler, so a
 	// refused request never reaches the dispatcher).
 	mux.HandleFunc("POST /api/intents", s.requireSession(s.requireCSRF(s.rateLimitIntent(s.handleIntent))))
@@ -137,7 +150,7 @@ func (s *Server) Handler() http.Handler {
 	}
 
 	var h http.Handler = http.Handler(mux)
-	h = withLocalCORS(h)
+	h = withOriginCORS(h, s.opts.TrustedOrigins)
 	h = withSecurityHeaders(h)
 	h = s.withCorrelation(h)
 	return h
@@ -158,6 +171,15 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 // asks for someone else's standing gets a typed 400, never a snapshot.
 func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if hasIdentityOverride(r) {
+		writeTypedError(w, http.StatusBadRequest, "invalid",
+			"identity is session-bound: the ?actor=&role= override was removed in T07; log in as the user you need (the kernel verifies the delegation)")
+		return
+	}
+	actor := sessionIdentityOf(r).Claim()
+	if !s.verifySessionPerspective(w, r, actor) {
+		return
+	}
 	if raw := r.URL.Query().Get("cursor"); raw != "" {
 		rev, err := s.store.At(raw)
 		if err != nil {
@@ -165,16 +187,20 @@ func (s *Server) handleWorld(w http.ResponseWriter, r *http.Request) {
 				"unknown or evicted kernel cursor "+raw+"; refetch the live world")
 			return
 		}
-		writeJSON(w, http.StatusOK, worldResponse{Snapshot: rev.Snapshot})
+		if requestedCases, supplied := r.URL.Query()["case_id"]; supplied {
+			if len(requestedCases) != 1 || requestedCases[0] != rev.CaseID {
+				writeTypedError(w, http.StatusBadRequest, "invalid", "the requested cursor belongs to a different case")
+				return
+			}
+		}
+		snap, ok := renderRevision(rev, actor)
+		if !ok {
+			writeTypedError(w, http.StatusServiceUnavailable, "unavailable", "retained authority facts are unavailable for this session perspective")
+			return
+		}
+		writeJSON(w, http.StatusOK, worldResponse{Snapshot: snap})
 		return
 	}
-
-	if r.URL.Query().Get("actor") != "" || r.URL.Query().Get("role") != "" {
-		writeTypedError(w, http.StatusBadRequest, "invalid",
-			"identity is session-bound: the ?actor=&role= override was removed in T07; log in as the user you need (the kernel verifies the delegation)")
-		return
-	}
-	actor := sessionIdentityOf(r).Claim()
 	caseID := r.URL.Query().Get("case_id")
 	if caseID == "" {
 		newest, err := s.world.NewestCaseID(ctx)
@@ -256,6 +282,14 @@ func (s *Server) handlePreflight(w http.ResponseWriter, r *http.Request) {
 // command-level frames on the kernel bus (decision-log D-3-followups), so execution progress
 // reaches clients through the snapshot revisions themselves.
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
+	if hasIdentityOverride(r) {
+		writeTypedError(w, http.StatusBadRequest, "invalid", "identity is session-bound: actor and role query overrides are not accepted")
+		return
+	}
+	actor := sessionIdentityOf(r).Claim()
+	if !s.verifySessionPerspective(w, r, actor) {
+		return
+	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeTypedError(w, http.StatusInternalServerError, "internal", "streaming is not supported by this connection")
@@ -314,15 +348,58 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 				// Evicted for falling behind: the client reconnects with Last-Event-ID and replays.
 				return
 			}
+			snap, renderable := renderRevision(rev, actor)
+			if !renderable {
+				// A legacy source without captured facts can only stream the exact perspective it
+				// originally rendered. Ending the stream is fail-closed and forces an authenticated
+				// current read instead of leaking another actor's offers.
+				return
+			}
 			writeSSE(w, rev.Cursor, "snapshot", contract.StreamEvent{
 				EventType: "snapshot",
 				Cursor:    rev.Cursor,
 				Timestamp: rev.At.UTC().Format(time.RFC3339),
-				Payload:   rev.Snapshot,
+				Payload:   snap,
 			})
 			flusher.Flush()
 		}
 	}
+}
+
+func hasIdentityOverride(r *http.Request) bool {
+	query := r.URL.Query()
+	_, actor := query["actor"]
+	_, role := query["role"]
+	return actor || role
+}
+
+func (s *Server) verifySessionPerspective(w http.ResponseWriter, r *http.Request, actor ports.ActorClaim) bool {
+	verifier, ok := s.world.(PerspectiveVerifier)
+	if !ok {
+		writeTypedError(w, http.StatusServiceUnavailable, "unavailable", "kernel identity verification is not configured")
+		return false
+	}
+	if err := verifier.VerifyPerspective(r.Context(), actor); err != nil {
+		if apperr.KindOf(err) == apperr.KindAuthorityDenied {
+			writeTypedError(w, http.StatusForbidden, "authority_denied", "the kernel refused this session perspective")
+		} else {
+			writeTypedError(w, http.StatusBadGateway, "unavailable", "the kernel could not verify the session perspective")
+		}
+		return false
+	}
+	return true
+}
+
+func renderRevision(rev projection.Revision, actor ports.ActorClaim) (contract.CognitiveWorldSnapshot, bool) {
+	if rev.Facts != nil {
+		facts := projection.CloneFacts(rev.Facts)
+		facts.Actor = actor
+		return projection.Build(*facts), true
+	}
+	if rev.Snapshot.Perspective.ActorID != actor.ActorID || rev.Snapshot.Perspective.Role != actor.Role {
+		return contract.CognitiveWorldSnapshot{}, false
+	}
+	return rev.Snapshot, true
 }
 
 // wire response shapes

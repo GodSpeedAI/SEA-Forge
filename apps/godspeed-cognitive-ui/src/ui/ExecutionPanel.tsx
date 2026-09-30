@@ -7,6 +7,7 @@ export interface ExecutionPanelProps {
   /** 0..1 when the stream reported progress; null when only snapshot standing is known. */
   progress: number | null;
   state: 'running' | 'executed' | 'settled' | 'rejected';
+  connection?: 'live' | 'reconnecting' | 'interrupted';
   log: string[];
   evidence: { ref: string; title: string }[];
   settlement?: { decision: string; summary: string; at: string };
@@ -21,6 +22,7 @@ function getPhaseIndex(phase: string): number {
 
 export function ExecutionPanel(p: ExecutionPanelProps): JSX.Element {
   const currentPhaseIdx = getPhaseIndex(p.phase);
+  const progress = p.connection && p.connection !== 'live' ? null : p.progress
 
   return (
     <div className="execution-panel" data-testid="execution-panel">
@@ -44,11 +46,14 @@ export function ExecutionPanel(p: ExecutionPanelProps): JSX.Element {
         })}
       </div>
 
+      {p.connection === 'reconnecting' && <div role="status">Reconnecting to live updates. Showing the last received standing.</div>}
+      {p.connection === 'interrupted' && <div role="alert">Live updates are interrupted. The displayed standing may be stale.</div>}
+
       <div className="exec-progress-container">
         <div className="exec-progress-bar">
-          <div className="exec-progress-fill" style={{ width: p.progress === null ? '100%' : `${p.progress * 100}%`, opacity: p.progress === null ? 0.25 : 1 }} />
+          <div className="exec-progress-fill" style={{ width: progress === null ? '100%' : `${progress * 100}%`, opacity: progress === null ? 0.25 : 1 }} />
         </div>
-        <span className="exec-progress-percent">{p.progress === null ? '—' : `${Math.round(p.progress * 100)}%`}</span>
+        <span className="exec-progress-percent">{progress === null ? '—' : `${Math.round(progress * 100)}%`}</span>
       </div>
 
       <div className="exec-log-section">

@@ -5,3 +5,4 @@ ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	4
 UNIT_EXIT=0
 LIVE_EXIT=1
 FMT_EXIT=0
+# note: LIVE_EXIT=1 is rg's no-match exit (zero FAIL lines found) — the live sweep was green

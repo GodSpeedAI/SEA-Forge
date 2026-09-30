@@ -78,6 +78,9 @@ type ServeSection struct {
 	// Production is the production posture (T07): cookies must carry Secure, the dev auth surface
 	// is refused, and the listener is expected to sit behind a TLS-terminating trusted proxy.
 	Production bool `json:"production,omitempty"`
+	// TrustedOrigins is the exact browser Origin allowlist for credentialed cross-origin requests.
+	// Empty preserves the built-in loopback-only development allowlist.
+	TrustedOrigins []string `json:"trusted_origins,omitempty"`
 	// StaticRoot is the path of the built UI (apps/godspeed-cognitive-ui/dist) the gateway serves
 	// with cache headers + CSP + SPA fallback. Empty disables static serving (the UI is then
 	// served by a separate host, e.g. a CDN or the vite dev server).

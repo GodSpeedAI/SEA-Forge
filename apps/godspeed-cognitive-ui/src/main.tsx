@@ -27,11 +27,10 @@ import './ui/theme.css'
 const params = new URLSearchParams(location.search)
 const list = (k: string) => params.getAll(k).flatMap((v) => v.split(',')).filter(Boolean)
 
-// Vite replaces this at build time; `import.meta.env.DEV` is true for dev servers and false for
-// production builds. A production build CANNOT select the local source (the plan's guardrail:
-// fixtures stay only as test doubles).
-const requestedSource = import.meta.env.VITE_CASEWORK_SOURCE ?? (import.meta.env.DEV ? 'local' : 'live')
-const source = requestedSource === 'live' || requestedSource === 'local' ? requestedSource : 'local'
+// Vite replaces `import.meta.env.DEV` at build time. Production builds always select the live
+// source regardless of VITE_CASEWORK_SOURCE; dev builds retain the local default and override.
+const requestedSource = import.meta.env.VITE_CASEWORK_SOURCE ?? 'local'
+const source = import.meta.env.DEV ? (requestedSource === 'live' ? 'live' : 'local') : 'live'
 
 let portPromise: Promise<CaseworkPort>
 /** The case a local session boots into (resolved with the local adapter; empty on the live path). */

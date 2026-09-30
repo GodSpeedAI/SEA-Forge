@@ -217,11 +217,20 @@ TLS-terminating reverse proxy:
   cookies and refuses the dev auth surface. Do NOT expose the raw listener beyond the proxy.
 * Keep the proxy and gateway on the same host or a trusted network; the socket to the kernel is a
   Unix socket and carries no auth of its own beyond SO_PEERCRED.
-* Same-origin serving is the intended browser topology: either proxy `/api/*` and the static
-  assets from ONE origin, or use `serve.static_root` and serve everything from the gateway. The
-  loopback-only CORS default is unchanged and cross-origin credential-bearing requests are not
-  enabled; if you proxy, preserve the `Origin`-independent behaviour of the API (no cookie-based
-  routing between tenants).
+* Same-origin serving remains the simplest browser topology: either proxy `/api/*` and the static
+  assets from ONE origin, or use `serve.static_root` and serve everything from the gateway. List
+  the browser UI origin in `serve.trusted_origins` for production browser deployments, including
+  when UI and API share an origin; for example, `"trusted_origins":
+  ["https://casework.example.test"]`. Entries must be origins only (scheme and host, with an
+  optional port); wildcards, userinfo, paths, queries, and fragments are refused. Production
+  accepts HTTPS origins only. With no entries, the existing loopback-only development allowlist
+  remains in effect. Configured origins receive credentialed CORS, but every state-changing POST
+  still requires an authenticated session and its synchronizer CSRF token; an unlisted supplied
+  Origin is refused before the handler runs.
+* The session and CSRF cookies retain `SameSite=Strict`. A separately hosted UI on another
+  subdomain of the same site can use the session cookie; a cross-site UI may have its cookies
+  withheld by the browser even when CORS is configured, so use same-origin or same-site hosting
+  for browser session flows. CORS does not override the cookie's SameSite policy.
 * Pass `Connection`/hop-by-hop headers as your proxy defaults dictate; set a generous read
   timeout for `/api/events` (the SSE stream holds connections open with 15 s heartbeats).
 * Rate limiting per IP uses the proxy's address (see above); per-session limits are unaffected.

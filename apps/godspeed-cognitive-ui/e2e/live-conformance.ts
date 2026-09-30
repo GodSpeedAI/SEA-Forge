@@ -8,7 +8,7 @@
 // Run: CASEWORK_LIVE=1 bun run e2e/live-conformance.ts
 // Skipped (exit 0, logged) without CASEWORK_LIVE=1 so plain `bun test` stays hermetic.
 
-import { mkdtempSync, writeFileSync, mkdirSync, copyFileSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, mkdirSync, copyFileSync, readFileSync, readdirSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -185,54 +185,76 @@ try {
   check('task_prepare offers EXECUTE_ITEM (session identity, not client-asserted)', !!byId.task_prepare?.actions?.some((a) => a.intent === 'EXECUTE_ITEM'))
   check('task_publish offers no EXECUTE while its sentry waits', !byId.task_publish?.actions?.some((a) => a.intent === 'EXECUTE_ITEM'))
 
-  // 7. SSE: subscribe, then execute, and expect a revision whose id advances.
-  const revisions: { id: string; payload: { case_id?: string } }[] = []
-  const unsubscribe = adapter.subscribeEvents(caseId, snap.cursor, (event) => {
-    if (event.event_type === 'snapshot') revisions.push({ id: event.cursor, payload: event.payload as { case_id?: string } })
-  }, (err) => console.log('SSE onError:', err.message))
-  const cursorBefore = snap.cursor
-  const execute = await adapter.dispatchIntent({
-    intent_id: `t08-exec-${Date.now()}`,
-    kind: 'CONSEQUENTIAL_CASE',
-    action_name: 'EXECUTE_ITEM',
-    target_object_id: 'task_prepare',
-    case_id: caseId,
-    client_cursor: cursorBefore,
-    actor: { actor_id: 'ignored', role: 'ignored' as never },
-    parameters: { item_id: 'task_prepare' },
-  } as never)
-  check('EXECUTE_ITEM accepted', execute.success === true, JSON.stringify(execute.refusal ?? {}))
-  await waitFor('an SSE revision after the mutation', () => revisions.length > 0, 20_000)
-  check(
-    'the SSE revision carries a kernel cursor newer than the subscribe point',
-    revisions.every((r) => r.id > cursorBefore),
-    revisions.map((r) => r.id).join(','),
-  )
-
-  // 8. Durable truth: the case ledger carries item_activated for the executed item.
+  // Run the exact same CaseworkPort assertions as localAdapter.test.ts, against this
+  // authenticated HTTP adapter and the fresh kernel/gateway cell.
   const eventsFile = join(cell, 'cases', caseId, 'case-events.jsonl')
+  const approvalsFile = join(cell, 'approvals.jsonl')
+  let artifactRef = ''
+  const runsRoot = join(cell, 'cases', caseId, 'runs')
+  const findArtifactDigest = async (): Promise<string> => {
+    await waitFor('the executed run to record an artifact digest', () => {
+      if (!existsSync(runsRoot)) return false
+      for (const entry of readdirSync(runsRoot, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue
+        const evidenceFile = join(runsRoot, entry.name, 'evidence.jsonl')
+        if (!existsSync(evidenceFile)) continue
+        for (const line of readFileSync(evidenceFile, 'utf8').split(/\r?\n/)) {
+          if (!line.trim()) continue
+          try {
+            const record = JSON.parse(line) as { sha256?: unknown }
+            if (typeof record.sha256 === 'string' && /^[0-9a-f]{64}$/.test(record.sha256)) {
+              artifactRef = `sha256:${record.sha256}`
+              return true
+            }
+          } catch {
+            // Ignore non-JSON journal lines; only a recorded digest is an artifact locator.
+          }
+        }
+      }
+      return false
+    }, 30_000)
+    return artifactRef
+  }
+  const { runCaseworkPortConformance } = await import('../src/adapters/conformance/caseworkPortConformance')
+  await runCaseworkPortConformance({
+    port: adapter,
+    caseId,
+    actor: { actor_id: 'operator_local', role: 'operator' as never },
+    template: {
+      ref: 'e2e-sentry-chain@0.1.0',
+      params: { dataset_name: 't08-live', dataset_label: 'live conformance', max_rows: 3, out_dir: 'work' },
+    },
+    artifact: {
+      refAfterDispatch: findArtifactDigest,
+      expectedProvenance: { case_id: caseId, plan_item_id: 'task_prepare' },
+      digestMatchesContent: true,
+    },
+    initialHistoryMinimum: 1,
+    resume: 'replay-retained',
+    resumeWaitMs: 60,
+    waitForMs: 30_000,
+    acceptedIntent: (cursor) => ({
+      intent_id: `t08-conformance-exec-${Date.now()}`,
+      kind: 'CONSEQUENTIAL_CASE',
+      action_name: 'EXECUTE_ITEM',
+      target_object_id: 'task_prepare',
+      case_id: caseId,
+      client_cursor: cursor,
+      actor: { actor_id: 'ignored', role: 'ignored' as never },
+      parameters: { item_id: 'task_prepare' },
+    } as never),
+    captureConsequentialState: async () => JSON.stringify([eventsFile, approvalsFile].map((path) => ({
+      path,
+      exists: existsSync(path),
+      bytes: existsSync(path) ? readFileSync(path).toString('base64') : null,
+    }))),
+    stateBoundaryDescription: 'case-events.jsonl and approvals.jsonl byte-for-byte contents',
+  })
+  check('the shared CaseworkPort suite passes against the real HTTP adapter', true)
+
+  // Durable truth: the shared suite's accepted EXECUTE_ITEM produced a kernel ledger event.
   await waitFor('durable item_activated', () => readFileSync(eventsFile, 'utf8').includes('"item_activated"'))
   check('the kernel ledger recorded item_activated', true)
-
-  // 9. TEETH: a stale intent is refused with its typed kind and never retried.
-  const stale = await adapter.dispatchIntent({
-    intent_id: `t08-stale-${Date.now()}`,
-    kind: 'CONSEQUENTIAL_CASE',
-    action_name: 'EXECUTE_ITEM',
-    target_object_id: 'task_publish',
-    case_id: caseId,
-    client_cursor: cursorBefore,
-    actor: { actor_id: 'ignored', role: 'ignored' as never },
-    parameters: { item_id: 'task_publish' },
-  } as never)
-  check(
-    'a stale intent surfaces STALE_PROJECTION verbatim (no silent retry)',
-    stale.success === false && stale.refusal?.refusal_kind === 'STALE_PROJECTION',
-    JSON.stringify(stale.refusal ?? {}),
-  )
-  const eventsAfter = readFileSync(eventsFile, 'utf8')
-  check('the refused intent left no new kernel events', !eventsAfter.slice(eventsAfter.lastIndexOf('"item_activated"')).includes('item_enabled') || true)
-  unsubscribe()
 
   // 10. The second user's session is distinct (T07 two-user surface).
   const second = new HttpCaseworkAdapter({ base: `http://${addr}` })

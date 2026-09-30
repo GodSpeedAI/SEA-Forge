@@ -38,6 +38,12 @@
 		},
 		{
 			"path": "../sxr"
+		},
+		{
+			"path": "../cognate"
+		},
+		{
+			"path": "../terminal-ui"
 		}
 	],
 	"settings": {}

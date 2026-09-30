@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 )
 
 func rev(cursor string, caseID string) Revision {
@@ -74,6 +75,89 @@ func TestStoreBoundedRetentionAndDocumentedEviction(t *testing.T) {
 	}
 	if got := s.Oldest(); got != "01BBB" {
 		t.Fatalf("oldest after eviction = %q", got)
+	}
+}
+
+func TestStoreTrajectoryIsCaseScopedBoundedAndCloned(t *testing.T) {
+	s := NewStoreWithRetention(3)
+	name := "original"
+	percent := 0.5
+	snapshot := contract.CognitiveWorldSnapshot{
+		CaseID: "case_1", Cursor: "01AAA",
+		Perspective:    contract.ActorPerspective{DisplayName: &name},
+		Summary:        contract.WorldSummary{ProgressPercent: &percent},
+		VisibleObjects: []contract.CognitiveObject{{ID: "item", DependsOn: []string{"dep"}}},
+	}
+	if err := s.Append(Revision{Cursor: "01AAA", CaseID: "case_1", Snapshot: snapshot}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Append(rev("01BBB", "case_2")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Append(rev("01CCC", "case_1")); err != nil {
+		t.Fatal(err)
+	}
+	got := s.Trajectory("case_1")
+	if len(got) != 2 || got[0].Cursor != "01AAA" || got[1].Cursor != "01CCC" {
+		t.Fatalf("trajectory must be ordered and case-scoped: %+v", got)
+	}
+	*got[0].Snapshot.Perspective.DisplayName = "mutated"
+	*got[0].Snapshot.Summary.ProgressPercent = 1
+	got[0].Snapshot.VisibleObjects[0].DependsOn[0] = "mutated"
+	stored, err := s.At("01AAA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *stored.Snapshot.Perspective.DisplayName != "original" || *stored.Snapshot.Summary.ProgressPercent != 0.5 || stored.Snapshot.VisibleObjects[0].DependsOn[0] != "dep" {
+		t.Fatalf("trajectory query leaked mutable snapshot state: %+v", stored.Snapshot)
+	}
+	if empty := s.Trajectory("case_missing"); len(empty) != 0 {
+		t.Fatalf("unknown case should have no retained points: %+v", empty)
+	}
+	if err := s.Append(rev("01DDD", "case_3")); err != nil {
+		t.Fatal(err)
+	}
+	if points := s.Trajectory("case_1"); len(points) != 1 || points[0].Cursor != "01CCC" {
+		t.Fatalf("evicted case history must be bounded honestly: %+v", points)
+	}
+}
+
+func TestStoreRetainsDeepImmutableFactsForEachCursor(t *testing.T) {
+	s := NewStoreWithRetention(2)
+	facts := &CaseFacts{
+		Record:    ports.CaseRecord{Ref: "case_1", Summary: "captured old"},
+		Overview:  ports.CaseOverview{Ref: "case_1", Stages: []string{"stage"}, Settlements: []ports.SettlementNote{{Basis: []string{"basis"}}}},
+		Horizon:   ports.CaseHorizon{Items: []ports.HorizonItem{{ItemID: "item", DependsOn: []string{"dep"}}}},
+		Approvals: []ports.ApprovalRecord{{ApprovalID: "approval"}},
+		Runs:      []ports.RunSummary{{RunID: "run"}},
+	}
+	if err := s.Append(Revision{Cursor: "01AAA", CaseID: "case_1", Snapshot: emptyTestSnapshot("01AAA", "case_1"), Facts: facts}); err != nil {
+		t.Fatal(err)
+	}
+	facts.Record.Summary = "mutated source"
+	facts.Overview.Stages[0] = "mutated stage"
+	facts.Overview.Settlements[0].Basis[0] = "mutated basis"
+	facts.Horizon.Items[0].DependsOn[0] = "mutated dep"
+	facts.Approvals[0].ApprovalID = "mutated approval"
+	facts.Runs[0].RunID = "mutated run"
+
+	first, err := s.At("01AAA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Facts.Record.Summary != "captured old" || first.Facts.Overview.Stages[0] != "stage" ||
+		first.Facts.Overview.Settlements[0].Basis[0] != "basis" || first.Facts.Horizon.Items[0].DependsOn[0] != "dep" ||
+		first.Facts.Approvals[0].ApprovalID != "approval" || first.Facts.Runs[0].RunID != "run" {
+		t.Fatalf("append must own every nested fact slice: %+v", first.Facts)
+	}
+	first.Facts.Record.Summary = "mutated returned read"
+	first.Facts.Horizon.Items[0].DependsOn[0] = "mutated returned dependency"
+	second, err := s.At("01AAA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.Facts.Record.Summary != "captured old" || second.Facts.Horizon.Items[0].DependsOn[0] != "dep" {
+		t.Fatalf("read must not expose retained facts to mutation: %+v", second.Facts)
 	}
 }
 

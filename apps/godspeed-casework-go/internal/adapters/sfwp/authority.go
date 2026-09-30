@@ -618,9 +618,24 @@ func (a *Authority) GetArtifact(ctx context.Context, digest string) (ports.Artif
 	if err != nil {
 		return ports.ArtifactContent{}, err
 	}
+
+	runResp, err := a.client.Do(ctx, NewRunGet(view.RunID))
+	if err != nil {
+		return ports.ArtifactContent{}, artifactOwnershipError(err)
+	}
+	var run RunArtifactProvenanceView
+	if err := runResp.Into(&run); err != nil {
+		return ports.ArtifactContent{}, artifactOwnershipError(err)
+	}
+	caseID, planItemID, err := artifactProvenanceOf(view, run)
+	if err != nil {
+		return ports.ArtifactContent{}, err
+	}
 	return ports.ArtifactContent{
 		Digest:     view.Digest,
 		RunID:      view.RunID,
+		CaseID:     caseID,
+		PlanItemID: planItemID,
 		EvidenceID: view.EvidenceID,
 		URI:        view.URI,
 		Size:       int64(view.SizeBytes),

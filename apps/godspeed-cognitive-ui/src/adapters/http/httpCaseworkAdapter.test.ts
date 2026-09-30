@@ -131,6 +131,112 @@ describe('HttpCaseworkAdapter', () => {
     }
   })
 
+  test('resolveArtifact returns the canonical authenticated payload with Unicode intact', async () => {
+    const digest = 'sha256:' + 'a'.repeat(64)
+    const payload = {
+      evidence_id: 'evi-17',
+      name: 'résumé.md',
+      digest,
+      content_type: 'text/markdown',
+      content: '# Résumé ☃\n',
+      provenance: { case_id: '', plan_item_id: '', invocation_id: '', run_id: 'run-17' },
+    }
+    const fetchMock = mockFetch((url, init) => {
+      if (url.endsWith('/api/session')) return jsonResponse(200, SESSION)
+      if (url.endsWith(`/api/artifacts/${encodeURIComponent(digest)}`)) {
+        expect(init?.credentials).toBe('include')
+        return jsonResponse(200, payload)
+      }
+      return jsonResponse(404, {})
+    })
+    const original = globalThis.fetch
+    globalThis.fetch = fetchMock as typeof fetch
+    try {
+      const adapter = new HttpCaseworkAdapter({ base: 'http://gw.test' })
+      expect(await adapter.resolveArtifact(digest)).toEqual(payload)
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('resolveArtifact preserves an empty artifact body', async () => {
+    const digest = 'sha256:' + 'b'.repeat(64)
+    const payload = {
+      evidence_id: 'evi-empty',
+      name: 'empty.txt',
+      digest,
+      content_type: 'text/plain',
+      content: '',
+      provenance: { case_id: '', plan_item_id: '', invocation_id: '', run_id: 'run-empty' },
+    }
+    const fetchMock = mockFetch((url) =>
+      url.endsWith('/api/session') ? jsonResponse(200, SESSION) : jsonResponse(200, payload),
+    )
+    const original = globalThis.fetch
+    globalThis.fetch = fetchMock as typeof fetch
+    try {
+      const adapter = new HttpCaseworkAdapter({ base: 'http://gw.test' })
+      expect((await adapter.resolveArtifact(digest)).content).toBe('')
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('resolveArtifact surfaces typed not-found errors from the gateway', async () => {
+    const digest = 'sha256:' + 'c'.repeat(64)
+    const fetchMock = mockFetch((url) =>
+      url.endsWith('/api/session')
+        ? jsonResponse(200, SESSION)
+        : jsonResponse(404, { error: { kind: 'not_found', note: 'the requested artifact was not found' } }),
+    )
+    const original = globalThis.fetch
+    globalThis.fetch = fetchMock as typeof fetch
+    try {
+      const adapter = new HttpCaseworkAdapter({ base: 'http://gw.test' })
+      let caught: unknown
+      try {
+        await adapter.resolveArtifact(digest)
+      } catch (err) {
+        caught = err
+      }
+      expect(caught).toBeInstanceOf(HttpRefusalError)
+      expect((caught as HttpRefusalError).refusalKind).toBe('not_found')
+      expect((fetchMock as unknown as { requests: { url: string }[] }).requests.filter((r) => r.url.includes('/api/artifacts/')).length).toBe(1)
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('resolveArtifact rejects a response whose digest differs from the requested digest', async () => {
+    const digest = 'sha256:' + 'd'.repeat(64)
+    const payload = {
+      evidence_id: 'evi-other',
+      name: 'other.txt',
+      digest: 'sha256:' + 'e'.repeat(64),
+      content_type: 'text/plain',
+      content: 'other bytes',
+      provenance: { case_id: '', plan_item_id: '', invocation_id: '', run_id: 'run-other' },
+    }
+    const fetchMock = mockFetch((url) =>
+      url.endsWith('/api/session') ? jsonResponse(200, SESSION) : jsonResponse(200, payload),
+    )
+    const original = globalThis.fetch
+    globalThis.fetch = fetchMock as typeof fetch
+    try {
+      const adapter = new HttpCaseworkAdapter({ base: 'http://gw.test' })
+      let caught: unknown
+      try {
+        await adapter.resolveArtifact(digest)
+      } catch (err) {
+        caught = err
+      }
+      expect(caught).toBeInstanceOf(HttpRefusalError)
+      expect((caught as HttpRefusalError).refusalKind).toBe('INTEGRITY_MISMATCH')
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
   test('unauthenticated reads surface a sign-in refusal, not a leak', async () => {
     const fetchMock = mockFetch(() => jsonResponse(401, { error: 'authentication required' }))
     const original = globalThis.fetch
@@ -190,14 +296,34 @@ describe('HttpCaseworkAdapter', () => {
     }
   })
 
-  test('queryTemporalTrajectory is honestly unsupported', async () => {
-    const adapter = new HttpCaseworkAdapter({ base: 'http://gw.test' })
-    let message = ''
+  test('queryTemporalTrajectory calls the authenticated endpoint and preserves a typed not-found refusal', async () => {
+    const fetchMock = mockFetch((url, init) => {
+      if (url.endsWith('/api/session')) return jsonResponse(200, SESSION)
+      if (url.endsWith('/api/trajectory?case_id=case_1')) {
+        expect(init?.credentials).toBe('include')
+        return jsonResponse(404, { error: { kind: 'not_found', note: 'no retained trajectory is available' } })
+      }
+      return jsonResponse(500, {})
+    })
+    const original = globalThis.fetch
+    globalThis.fetch = fetchMock as typeof fetch
     try {
-      await adapter.queryTemporalTrajectory('case_1')
-    } catch (err) {
-      message = (err as Error).message
+      const adapter = new HttpCaseworkAdapter({ base: 'http://gw.test' })
+      let caught: unknown
+      try {
+        await adapter.queryTemporalTrajectory('case_1')
+      } catch (err) {
+        caught = err
+      }
+      expect(caught).toBeInstanceOf(HttpRefusalError)
+      expect((caught as HttpRefusalError).refusalKind).toBe('not_found')
+      expect((caught as Error).message).toContain('no retained trajectory is available')
+      expect((fetchMock as unknown as { requests: { url: string }[] }).requests.map((request) => request.url)).toEqual([
+        'http://gw.test/api/session',
+        'http://gw.test/api/trajectory?case_id=case_1',
+      ])
+    } finally {
+      globalThis.fetch = original
     }
-    expect(message).toContain('not served by this deployment')
   })
 })

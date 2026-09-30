@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 )
 
 // ErrUnknownCursor is returned by At for a cursor that is evicted or was never stored. The HTTP
@@ -45,12 +46,15 @@ type Revision struct {
 	CaseID   string                          `json:"case_id"`
 	Summary  string                          `json:"summary"` // the kernel frame kind that produced it
 	Snapshot contract.CognitiveWorldSnapshot `json:"snapshot"`
+	// Facts are the immutable authority view captured for this cursor. They are kept out of
+	// the wire representation and allow a verified session to render the same historical
+	// state in its own role perspective without refetching current authority state.
+	Facts *CaseFacts `json:"-"`
 }
 
 // Store holds the world's revision history. All methods are safe for concurrent use. Stored
-// revisions are IMMUTABLE once appended: the relay builds a fresh snapshot per revision and never
-// mutates it afterwards, so handing out struct copies that share the snapshot's slices is safe.
-// Callers must treat a received Revision as read-only.
+// revisions are IMMUTABLE once appended: the relay builds a fresh snapshot per revision, and the
+// store deep-copies snapshots on append and when returning revisions to callers.
 type Store struct {
 	mu        sync.Mutex
 	max       int
@@ -113,6 +117,26 @@ func (s *Store) At(cursor string) (Revision, error) {
 		return Revision{}, ErrUnknownCursor
 	}
 	return cloneRevision(s.revisions[idx]), nil
+}
+
+// Trajectory returns the retained revisions for one case in kernel-cursor order. The result is
+// bounded by the store's global retention limit and owns a deep copy of every snapshot, so a
+// caller cannot mutate retained history through returned slices or pointers. An empty result
+// means the process has no retained revisions for that case; this can mean an unknown case, a
+// cold store before relay replay, or that the case's revisions were evicted.
+func (s *Store) Trajectory(caseID string) []Revision {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if caseID == "" || len(s.revisions) == 0 {
+		return []Revision{}
+	}
+	out := make([]Revision, 0, len(s.revisions))
+	for _, rev := range s.revisions {
+		if rev.CaseID == caseID {
+			out = append(out, cloneRevision(rev))
+		}
+	}
+	return out
 }
 
 // Len reports the number of stored revisions (operational honesty and tests).
@@ -201,6 +225,104 @@ func (s *Store) SubscriberCount() int {
 }
 
 func cloneRevision(rev Revision) Revision {
-	// Revisions are immutable once stored (see the Store contract); the struct copy is enough.
+	rev.Snapshot = cloneSnapshot(rev.Snapshot)
+	rev.Facts = cloneFacts(rev.Facts)
 	return rev
+}
+
+// CloneFacts returns an owned deep copy of the input authority view.
+func CloneFacts(in *CaseFacts) *CaseFacts {
+	return cloneFacts(in)
+}
+
+func cloneFacts(in *CaseFacts) *CaseFacts {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	out.Overview.Stages = append([]string(nil), in.Overview.Stages...)
+	out.Overview.RunIDs = append([]ports.RunRef(nil), in.Overview.RunIDs...)
+	if in.Overview.Settlements != nil {
+		out.Overview.Settlements = make([]ports.SettlementNote, len(in.Overview.Settlements))
+		for i, item := range in.Overview.Settlements {
+			out.Overview.Settlements[i] = item
+			out.Overview.Settlements[i].Basis = append([]string(nil), item.Basis...)
+		}
+	}
+	if in.Horizon.Items != nil {
+		out.Horizon.Items = make([]ports.HorizonItem, len(in.Horizon.Items))
+		for i, item := range in.Horizon.Items {
+			out.Horizon.Items[i] = item
+			out.Horizon.Items[i].DependsOn = append([]string(nil), item.DependsOn...)
+			out.Horizon.Items[i].RunIDs = append([]ports.RunRef(nil), item.RunIDs...)
+		}
+	}
+	out.Approvals = append([]ports.ApprovalRecord(nil), in.Approvals...)
+	out.Runs = append([]ports.RunSummary(nil), in.Runs...)
+	return &out
+}
+
+func cloneSnapshot(in contract.CognitiveWorldSnapshot) contract.CognitiveWorldSnapshot {
+	out := in
+	out.Perspective.DisplayName = cloneString(in.Perspective.DisplayName)
+	out.Summary.ProgressPercent = cloneFloat(in.Summary.ProgressPercent)
+	if in.VisibleObjects != nil {
+		out.VisibleObjects = make([]contract.CognitiveObject, len(in.VisibleObjects))
+		for i, obj := range in.VisibleObjects {
+			cloned := obj
+			cloned.Explanation = cloneString(obj.Explanation)
+			cloned.ParentID = cloneString(obj.ParentID)
+			if obj.DependsOn != nil {
+				cloned.DependsOn = append([]string{}, obj.DependsOn...)
+			}
+			if obj.SpatialLayout != nil {
+				layout := *obj.SpatialLayout
+				layout.Radius = cloneFloat(obj.SpatialLayout.Radius)
+				cloned.SpatialLayout = &layout
+			}
+			cloned.Actions = cloneActions(obj.Actions)
+			out.VisibleObjects[i] = cloned
+		}
+	}
+	out.AvailableActions = cloneActions(in.AvailableActions)
+	if in.AttentionFocus.SalienceRank != nil {
+		out.AttentionFocus.SalienceRank = append([]string{}, in.AttentionFocus.SalienceRank...)
+	}
+	out.AttentionFocus.Narration = cloneString(in.AttentionFocus.Narration)
+	return out
+}
+
+func cloneActions(in []contract.ActionDescriptor) []contract.ActionDescriptor {
+	if in == nil {
+		return nil
+	}
+	out := make([]contract.ActionDescriptor, len(in))
+	for i, action := range in {
+		out[i] = action
+		if action.Variant != nil {
+			value := *action.Variant
+			out[i].Variant = &value
+		}
+		if action.RequiresJustification != nil {
+			value := *action.RequiresJustification
+			out[i].RequiresJustification = &value
+		}
+	}
+	return out
+}
+
+func cloneString(in *string) *string {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	return &out
+}
+
+func cloneFloat(in *float64) *float64 {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	return &out
 }

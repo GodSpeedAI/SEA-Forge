@@ -1,0 +1,133 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling ring v0.17.14
+   Compiling rustls v0.23.45
+   Compiling rustls-webpki v0.103.15
+   Compiling tokio-rustls v0.26.4
+   Compiling hyper-rustls v0.27.9
+   Compiling reqwest v0.12.28
+   Compiling sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `test` profile [unoptimized] target(s) in 2m 28s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_case_runner-0b5a88539722c49c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/case_ops.rs (target/debug/deps/case_ops-cc6b09b3357c2721)
+
+running 5 tests
+test an_uninvolved_actor_resolves_the_approval_and_mints_the_authority_decision ... ok
+test propose_item_refuses_a_cycle_and_leaves_the_plan_untouched ... ok
+test reopen_reactivates_a_closed_case_and_records_the_event ... ok
+test reopen_refuses_a_case_that_is_not_closed ... ok
+test the_proposer_cannot_resolve_its_own_items_approval ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/conformance_m5.rs (target/debug/deps/conformance_m5-be9aed85b383bbbe)
+
+running 6 tests
+test accepted_stage_settles_and_completes_case ... 
+thread '<unnamed>' (869) panicked at /home/sprime01/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wait-timeout-0.2.1/src/unix.rs:233:17:
+bad error on write fd: Operation not permitted (os error 1)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread '<unnamed>' (869) panicked at library/core/src/panicking.rs:230:5:
+panic in a function that cannot unwind
+stack backtrace:
+   0:     0x55832a80b1a2 - <std::sys::backtrace::BacktraceLock::print::DisplayBacktrace as core::fmt::Display>::fmt::h718e2d17a1928e63
+   1:     0x55832a81d21f - core::fmt::write::h1d2246b072ea91eb
+   2:     0x55832a7d6e83 - std::io::Write::write_fmt::haf55272405c09d9b
+   3:     0x55832a7e3d32 - std::sys::backtrace::BacktraceLock::print::h61c3bd81a9458a03
+   4:     0x55832a7e913f - std::panicking::default_hook::{{closure}}::haf1ffb5d1e33a97f
+   5:     0x55832a7e8f99 - std::panicking::default_hook::hc32245deb6eaa988
+   6:     0x558329e90dee - test::test_main_with_exit_callback::{{closure}}::hada1495969e1e199
+   7:     0x55832a7e974f - std::panicking::panic_with_hook::h43adc00fd0e494cb
+   8:     0x55832a7e9576 - std::panicking::panic_handler::{{closure}}::h44391079756da3e7
+   9:     0x55832a7e3e69 - std::sys::backtrace::__rust_end_short_backtrace::h934e1568393e5b8f
+  10:     0x55832a7ca2bd - __rustc[d9b87f19e823c0ef]::rust_begin_unwind
+  11:     0x55832a82723d - core::panicking::panic_nounwind_fmt::h12c54097655c17db
+  12:     0x55832a827182 - core::panicking::panic_nounwind::hf9ccb380dea47efe
+  13:     0x55832a827397 - core::panicking::panic_cannot_unwind::h2cbcfb1212a61c82
+  14:     0x558329f0c062 - wait_timeout::imp::sigchld_handler::hd435a42bdbc96bea
+  15:     0x72bac8e45cb0 - <unknown>
+  16:     0x72bac8eac802 - <unknown>
+  17:     0x72bac8ea039c - <unknown>
+  18:     0x72bac8f27c0e - __poll
+  19:     0x558329f0c90e - wait_timeout::imp::State::wait_timeout::hb69fb2f4582c98be
+  20:     0x558329f0bfa8 - wait_timeout::imp::wait_timeout::hfd21f1073b0ead32
+  21:     0x558329f1270c - <std::process::Child as wait_timeout::ChildExt>::wait_timeout::h591457daae9011c6
+  22:     0x558329eedc0f - sea_forge_sandbox::jail::run_jailed::hd94308d00ae3e234
+  23:     0x558329eefd50 - sea_forge_sandbox::jail::execute_linux::{{closure}}::hee2d8a452f3a200e
+  24:     0x558329ef2066 - std::sys::backtrace::__rust_begin_short_backtrace::h15602d9c473e7f65
+  25:     0x558329efbdef - std::thread::Builder::spawn_unchecked_::{{closure}}::{{closure}}::h42e083c5a8e9019d
+  26:     0x558329eeb494 - <core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once::h01984e610b952ca7
+  27:     0x558329efc464 - std::panicking::catch_unwind::do_call::h474effeb136ba66a
+  28:     0x558329f0be7b - __rust_try
+  29:     0x558329efba81 - std::thread::Builder::spawn_unchecked_::{{closure}}::he09f1c63bd1b6f9b
+  30:     0x558329efd057 - core::ops::function::FnOnce::call_once{{vtable.shim}}::he9dea898cbf14c43
+  31:     0x55832a7defaf - std::sys::thread::unix::Thread::new::thread_start::h4637f1bfded3ea68
+  32:     0x72bac8ea3dfa - <unknown>
+  33:     0x72bac8f375cc - <unknown>
+  34:                0x0 - <unknown>
+thread caused non-unwinding panic. aborting.
+error: test failed, to rerun pass `-p sea-forge-case-runner --test conformance_m5`
+
+Caused by:
+  process didn't exit successfully: `/home/sprime01/projects/sea-rs/target/debug/deps/conformance_m5-be9aed85b383bbbe` (signal: 6, SIGABRT: process abort signal)

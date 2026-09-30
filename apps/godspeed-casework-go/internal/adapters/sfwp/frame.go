@@ -287,6 +287,13 @@ func NewCaseList() *Request { return newRequest("case_list") }
 // directory no case claims are reported by the authority rather than dropped.
 func NewRunList() *Request { return newRequest("run_list") }
 
+// NewRunGet resolves one run's committed records, including its case, plan item, trace, and evidence.
+func NewRunGet(runID string) *Request {
+	r := newRequest("run_get")
+	r.body["run_id"] = runID
+	return r
+}
+
 // NewCaseGetOverview projects one case's committed records.
 func NewCaseGetOverview(caseID string) *Request {
 	r := newRequest("case_get_overview")
@@ -656,6 +663,30 @@ type RunSummaryView struct {
 type RunListView struct {
 	Runs       []RunSummaryView `json:"runs"`
 	Unreadable []string         `json:"unreadable"`
+}
+
+// RunArtifactProvenanceView is the narrow run.get projection needed to bind an artifact to its
+// committed owner and to the trace event that captured it.
+type RunArtifactProvenanceView struct {
+	RunID      string                    `json:"run_id"`
+	CaseID     *string                   `json:"case_id"`
+	PlanItemID *string                   `json:"plan_item_id"`
+	Evidence   []RunArtifactEvidenceView `json:"evidence"`
+	Trace      []RunArtifactTraceView    `json:"trace"`
+}
+
+type RunArtifactEvidenceView struct {
+	EvidenceID    string  `json:"evidence_id"`
+	Kind          string  `json:"kind"`
+	URI           string  `json:"uri"`
+	SHA256        *string `json:"sha256"`
+	SourceEventID string  `json:"source_event_id"`
+}
+
+type RunArtifactTraceView struct {
+	EventID    string  `json:"event_id"`
+	Kind       string  `json:"kind"`
+	PlanItemID *string `json:"plan_item_id"`
 }
 
 // RunSettlementView mirrors one settlement row of case.get_overview.

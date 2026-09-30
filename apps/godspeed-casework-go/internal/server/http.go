@@ -1,7 +1,7 @@
 // Shared HTTP plumbing for both server surfaces of this package: the live server (server.go,
 // production) and the fixture server (fixture_server.go, build tag casework_fixture for tests and
 // the dev/demo stack). Helpers here are wire-neutral: strict JSON decoding, typed transport
-// errors, local-only CORS, and the SSE framing.
+// errors, trusted-origin CORS, and the SSE framing.
 package server
 
 import (
@@ -22,12 +22,14 @@ const maxBodyBytes = 1 << 20 // 1 MiB
 
 // Options tunes server behaviour; the zero value is the production default.
 type Options struct {
+	// TrustedOrigins is the exact browser Origin allowlist used by CORS and POST Origin checks.
+	// Empty preserves the built-in loopback-only development default.
+	TrustedOrigins []string
 	// Heartbeat is the SSE comment interval. Default 15s.
 	Heartbeat time.Duration
-	// Perspective is the RELAY's revision perspective (the configured serve perspective). Authenticated
-	// /api/world requests render their own session's perspective; SSE revisions stay at this one
-	// (documented: role-filtered enforcement happens at intent time, and clients refetch
-	// /api/world for their own view).
+	// Perspective is the configured perspective attached to relay revisions. Authenticated reads
+	// re-render retained captured facts for the verified session actor; a legacy revision without
+	// captured facts is served only when its stored snapshot already matches that actor.
 	Perspective ports.ActorClaim
 	// Auth wires the session/authentication layer (T07). Zero value fails closed: every
 	// protected endpoint 401s.
@@ -54,23 +56,54 @@ func (o Options) heartbeat() time.Duration {
 
 var localOriginPattern = regexp.MustCompile(`^http://(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$`)
 
-// withLocalCORS keeps the boundary's loopback-only browser access. The CSRF header joins the
-// allowed set (T07); credentials-bearing cross-origin requests are NOT enabled on purpose: the
-// UI consumes the gateway same-origin (vite proxy or gateway-served dist), so cookies never need
-// to cross origins.
+// withLocalCORS preserves the built-in loopback-only browser origin policy used by the fixture
+// surface. Live servers may supply an explicit trusted-origin allowlist through withOriginCORS.
 func withLocalCORS(next http.Handler) http.Handler {
+	return withOriginCORS(next, nil)
+}
+
+// originAllowed matches an exact configured Origin. An empty configured list keeps the
+// historical loopback-only development default.
+func originAllowed(origin string, trusted []string) bool {
+	if origin == "" {
+		return false
+	}
+	if len(trusted) == 0 {
+		return localOriginPattern.MatchString(origin)
+	}
+	for _, allowed := range trusted {
+		if origin == allowed {
+			return true
+		}
+	}
+	return false
+}
+
+// withOriginCORS configures exact credentialed browser origins. It also checks Origin on every
+// POST before the route handler, so disallowed cross-origin state changes fail before session,
+// CSRF, or kernel work. Allowed origins still require the route's existing session and CSRF
+// guards. Preflight remains an empty response and never reaches a projection handler.
+func withOriginCORS(next http.Handler, trusted []string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		if origin != "" && localOriginPattern.MatchString(origin) {
+		allowed := len(r.Header.Values("Origin")) == 1 && originAllowed(origin, trusted)
+		if origin != "" && allowed {
 			h := w.Header()
 			h.Set("Access-Control-Allow-Origin", origin)
 			h.Set("Vary", "Origin")
+			if len(trusted) > 0 {
+				h.Set("Access-Control-Allow-Credentials", "true")
+			}
 			h.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			h.Set("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token")
 			h.Set("Access-Control-Max-Age", "600")
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method == http.MethodPost && (len(r.Header.Values("Origin")) > 1 || origin != "" && !allowed) {
+			writeTypedError(w, http.StatusForbidden, "csrf_refused", "request Origin is not in the trusted origin allowlist")
 			return
 		}
 		next.ServeHTTP(w, r)

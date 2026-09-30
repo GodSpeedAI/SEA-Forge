@@ -535,6 +535,7 @@ export function App(p: AppProps) {
               phase={exec.phase}
               progress={exec.progress}
               state={exec.state}
+              connection={state.connection}
               log={exec.log}
               evidence={execEvidence}
               settlement={
@@ -603,11 +604,11 @@ export function App(p: AppProps) {
         />
       )}
       <ExecutionPill
-        visible={!!exec && state.mode === 'world' && !judgment}
-        label={execTarget?.title ?? 'Execution'}
+        visible={(!!exec || state.connection !== 'live') && state.mode === 'world' && !judgment}
+        label={execTarget?.title ?? 'Live updates'}
         progress={exec?.progress ?? null}
         state={exec?.state ?? 'running'}
-        reconnecting={state.connection === 'reconnecting'}
+        connection={state.connection}
         onOpen={() => store.dispatch({ type: 'setMode', mode: 'execution-inspect' })}
       />
       {exp && expDescriptor && <DockHost key="dock" state={state} store={store} artifacts={artifacts} descriptor={expDescriptor} pinned={exp.pinned} source={exp.source} />}

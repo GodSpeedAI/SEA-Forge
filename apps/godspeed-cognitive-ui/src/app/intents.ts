@@ -1,6 +1,7 @@
 import { nowRevision, type Store } from '../model/store'
 import type { Actor, Id, IntentRecord, ObjectAction } from '../model/types'
 import type { CaseworkPort, InteractionIntent } from '../ports/contract'
+import { compareCursor, projectSnapshot } from '../ports/project'
 
 // The one path consequential work takes out of the UI, for humans and agents alike (VAR-007).
 // It builds a contract InteractionIntent from what the backend offered (the object's
@@ -32,7 +33,7 @@ export const uuid = () =>
     ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => ((Math.random() * 16) | 0).toString(16))
 
-export function createIntentPath(store: Store, port: Pick<CaseworkPort, 'dispatchIntent'>): IntentPath {
+export function createIntentPath(store: Store, port: Pick<CaseworkPort, 'dispatchIntent' | 'getSnapshot'>): IntentPath {
   return {
     async submit(actor, object, action, opts = {}) {
       const s = store.getState()
@@ -73,18 +74,55 @@ export function createIntentPath(store: Store, port: Pick<CaseworkPort, 'dispatc
       try {
         const r = await port.dispatchIntent(intent)
         const refusal = r.success ? undefined : r.refusal
+        let note = r.success ? 'Accepted by authority' : refusal?.message ?? r.error_message
+        const code = refusal?.refusal_kind ?? r.error_code
+        if (!r.success && code === 'STALE_PROJECTION') {
+          try {
+            // Refresh standing once after the refusal. The intent itself is never replayed.
+            const fresh = await port.getSnapshot(caseId, actor.id, actor.role)
+            if (fresh.case_id !== caseId) {
+              throw new Error(`snapshot refresh returned case ${String(fresh.case_id)} for requested case ${caseId}`)
+            }
+            const latest = store.getState().history
+            // The user may have switched cases while the one refresh was in flight. Keep the
+            // refusal, but never merge the old case's snapshot into the newly selected history.
+            if (latest.caseId === caseId) {
+              const projected = projectSnapshot(fresh, { withCore: true })
+              const revisions = latest.revisions.filter((revision) => revision.id !== fresh.cursor).map((revision) => ({ ...revision }))
+              revisions.push({ id: fresh.cursor, at: fresh.timestamp, label: '', summary: fresh.summary.phase })
+              revisions.sort((a, b) => compareCursor(a.id, b.id))
+              revisions.forEach((revision, index) => {
+                revisions[index] = {
+                  ...revision,
+                  label: index === revisions.length - 1 ? 'Now' : revision.id === fresh.cursor ? new Date(fresh.timestamp).toLocaleDateString() : revision.label === 'Now' ? new Date(revision.at).toLocaleDateString() : revision.label,
+                }
+              })
+              store.dispatch({
+                type: 'loadHistory',
+                history: {
+                  ...latest,
+                  revisions,
+                  snapshots: { ...latest.snapshots, [fresh.cursor]: projected },
+                },
+              })
+            }
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error)
+            note = `${note ?? 'The projection was stale.'} Current projection refresh failed: ${detail}`
+          }
+        }
         store.dispatch({
           type: 'intentSettled',
           id: record.id,
           state: r.success ? 'accepted' : 'refused',
-          note: r.success ? 'Accepted by authority' : refusal?.message ?? r.error_message,
-          code: refusal?.refusal_kind ?? r.error_code,
+          note,
+          code,
         })
         return {
           ...record,
           state: r.success ? 'accepted' : 'refused',
-          note: refusal?.message ?? r.error_message,
-          code: refusal?.refusal_kind ?? r.error_code,
+          note,
+          code,
         }
       } catch (e) {
         const note = e instanceof Error ? e.message : String(e)

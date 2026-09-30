@@ -355,6 +355,8 @@ type AdvanceReport struct {
 type ArtifactContent struct {
 	Digest     string
 	RunID      string
+	CaseID     string
+	PlanItemID string
 	EvidenceID string
 	URI        string
 	Size       int64

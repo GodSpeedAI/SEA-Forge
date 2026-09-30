@@ -330,6 +330,14 @@ describe('journey: execute + execution pill + sentry', () => {
     expect(recon).toContain('reconnecting')
     expect(recon).not.toContain('%')
 
+    const interrupted = render(
+      <ExecutionPill visible label="Live updates" progress={0.35} state="running" connection="interrupted" onOpen={() => {}} />,
+    )
+    expect(interrupted).toContain('data-state="interrupted"')
+    expect(interrupted).toContain('interrupted')
+    expect(interrupted).toContain('may be stale')
+    expect(interrupted).not.toContain('%')
+
     // Snapshot standing alone (no stream progress) never shows a fabricated percentage.
     const standing = render(
       <ExecutionPill visible label="Plan rollout" progress={null} state="running" reconnecting={false} onOpen={() => {}} />,

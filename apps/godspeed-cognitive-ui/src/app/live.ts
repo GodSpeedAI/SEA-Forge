@@ -1,7 +1,12 @@
 import type { Store } from '../model/store'
 import type { ExecutionState } from '../model/types'
 import type { CaseworkPort, ExecutionProgressPayload, OperationalSettlement, XSnapshot } from '../ports/contract'
-import { projectHistory } from '../ports/project'
+import { compareCursor, projectHistory } from '../ports/project'
+
+export interface LiveConnectionOptions {
+  /** Bounded grace period before an outage is shown as interrupted. */
+  interruptedAfterMs?: number
+}
 
 // Keeps the UI's world in step with the port's event stream. Snapshots append history (never
 // rewrite it). Execution progress is projected for the execution pill and panel. Whether work
@@ -14,10 +19,27 @@ export function connectLive(
   caseId: string,
   raw: XSnapshot[],
   summaries: Record<string, string>,
+  options: LiveConnectionOptions = {},
 ): () => void {
   const snaps = [...raw]
   const logs = new Map<string, { phase: string; progress: number; log: string[] }>()
-  const project = () => store.dispatch({ type: 'loadHistory', history: projectHistory(snaps, summaries, store.getState().history.provenance, { withCore: true }) })
+  const project = () => {
+    const current = store.getState().history
+    const incoming = projectHistory(snaps, summaries, current.provenance, { withCore: true })
+    const revisions = new Map(current.revisions.map((revision) => [revision.id, revision]))
+    for (const revision of incoming.revisions) revisions.set(revision.id, revision)
+    const ordered = [...revisions.values()].sort((a, b) => compareCursor(a.id, b.id))
+    ordered.forEach((revision, index) => {
+      ordered[index] = {
+        ...revision,
+        label: index === ordered.length - 1 ? 'Now' : revision.label === 'Now' ? new Date(revision.at).toLocaleDateString() : revision.label,
+      }
+    })
+    store.dispatch({
+      type: 'loadHistory',
+      history: { ...incoming, revisions: ordered, snapshots: { ...current.snapshots, ...incoming.snapshots } },
+    })
+  }
 
   const refreshExecutions = () => {
     const s = store.getState()
@@ -47,12 +69,38 @@ export function connectLive(
     }
   }
 
-  return port.subscribeEvents(
+  const interruptedAfterMs = options.interruptedAfterMs ?? 15_000
+  let outageTimer: ReturnType<typeof setTimeout> | undefined
+  let disposed = false
+  const markRecovering = () => {
+    if (disposed) return
+    if (store.getState().connection === 'live') store.dispatch({ type: 'connectionState', connection: 'reconnecting' })
+    if (outageTimer === undefined) {
+      outageTimer = setTimeout(() => {
+        outageTimer = undefined
+        if (!disposed && store.getState().connection === 'reconnecting') {
+          store.dispatch({ type: 'connectionState', connection: 'interrupted' })
+        }
+      }, interruptedAfterMs)
+    }
+  }
+  const markRecovered = () => {
+    if (outageTimer !== undefined) clearTimeout(outageTimer)
+    outageTimer = undefined
+    if (!disposed && store.getState().connection !== 'live') store.dispatch({ type: 'connectionState', connection: 'live' })
+  }
+  const unsubscribe = port.subscribeEvents(
     caseId,
     raw.at(-1)?.cursor,
     (e) => {
-      // Any delivered event is proof the stream is alive again (resume from the cursor).
-      if (store.getState().connection !== 'live') store.dispatch({ type: 'connectionState', connection: 'live' })
+      // Only source-backed state frames prove recovery. Heartbeats and diagnostic/control
+      // frames cannot make an interrupted connection look live again.
+      if (e.event_type === 'snapshot' || e.event_type === 'patch' || e.event_type === 'execution_progress' || e.event_type === 'settlement_recorded' || e.event_type === 'lease_expired') markRecovered()
+      else if (e.event_type === 'interrupted') {
+        if (outageTimer !== undefined) clearTimeout(outageTimer)
+        outageTimer = undefined
+        if (!disposed && store.getState().connection !== 'interrupted') store.dispatch({ type: 'connectionState', connection: 'interrupted' })
+      } else if (e.event_type === 'error' || e.event_type === 'resync_required') markRecovering()
       if (e.event_type === 'snapshot' || e.event_type === 'patch') {
         const snap = e.payload as XSnapshot
         if (!snaps.some((x) => x.cursor === snap.cursor)) {
@@ -78,10 +126,15 @@ export function connectLive(
       }
     },
     (err) => {
-      // Connection interrupted: the UI shows Reconnecting and keeps the last snapshot standing.
-      // No progress is fabricated while offline; the subscription resumes from its cursor.
-      store.dispatch({ type: 'connectionState', connection: 'reconnecting' })
+      // Keep the last snapshot standing and report a bounded reconnect grace period.
+      markRecovering()
       console.warn('[event stream]', err)
     },
   )
+  return () => {
+    disposed = true
+    if (outageTimer !== undefined) clearTimeout(outageTimer)
+    outageTimer = undefined
+    unsubscribe()
+  }
 }

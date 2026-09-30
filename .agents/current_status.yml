@@ -9,12 +9,10 @@ metadata:
   brief_note: Read Section 0 (Verification Errata, decisions, runner change) FIRST. Where the body disagrees with Section 0, Section 0 is correct (but see correction C-1 in the decision log for one §0 fact that was wrong).
   spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
   initialized: true
-  last_updated: '2026-09-24'
+  last_updated: '2026-09-29'
   updated_by: >-
-    casework-live-wiring executor session 2 (T04 SETTLED: units A+B+C verified;
-    independent critic t04-critic ran, procedural REJECT reconciled with zero code
-    findings; confirmation at evidence/casework-live-wiring/T04/confirmation.md;
-    unit C committed; T02 now in flight)
+    takeover orchestrator: committed T07/T08/T09 recovered; Luna independent critics
+    active for T07/T08, T09 inventory complete; no new task settlement claimed.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -33,8 +31,9 @@ execution:
     critic pass (T07: gates + runtime teeth incl. CSRF/actor-overwrite/session probes; T08: gates
     + live conformance re-run) before their claim states may advance past
     builder/orchestrator-verified. Independent confirmations outstanding: T04 units B+C are
-    confirmed; T07, T08, T09, T10 (once built) are not.
-  blocked_tasks: [T05, T06, T07, T08, T09, T10, T11, T12, T13]
+    confirmed; T07, T08, T09, T10 (once built) are not. T09 is implemented at 3e2404f
+    with untracked historical local gate/ladder evidence, but has live wiring omissions.
+  blocked_tasks: [T08, T09, T10, T11, T12, T13]
   t02_state: >-
     SETTLED 2026-09-24 (session 3): independent critic APPROVED (T02/confirmation.md) — all prereg
     refusals reproduced as fresh-cell runtime attacks with hash-proven no-writes, positive
@@ -88,19 +87,23 @@ operator_decisions:
 next_action:
   task: T07
   action: >-
-    T06 SETTLED 2026-09-25 after a full fix loop: round-1 critic REJECT (F1-F6) -> fixes b5fd2c3
-    (incl. kernel F7 locator reconciliation) -> round-2 critic APPROVE (T06/confirmation.md: all
-    findings closed by its own observation, incl. driving the L5 approval journey end-to-end and
-    the F7 recovery branch live; gates green; -p 1 live posture judged sound). T07 IN FLIGHT
-    (gateway production posture: auth, sessions, static serving, config — plan T07; prereg NOT
-    required by the plan but confirmation=independent). WIRE FACTS for T07: sessions map the
-    authenticated user to the T02 kernel actor (allowlist binding); /api/world's ?actor=&role=
-    query parameters are the pre-auth dev surface and T07 replaces them with the session
-    identity (perspective comes from GET /api/session; the query params must stop being trusted
-    for authenticated use); CSRF for POSTs; static UI serving with SPA fallback + CSP; dev-only
-    static-token mode refused in production config; rate limits; /api/readyz includes kernel
-    readiness.get; correlation_id flows to SFWP request_id. Then T08 (T01+T06+T07), T09
-    (T03+T06+T08), T10 (T08+T09; WRITE THE PREREG FIRST), T11, T12. T13: split + STOP.
+    Complete T07 independent verification/fix loop, then settle T07 before advancing T08.
+    Takeover recovered T07 eef7459, T08 ce538bf, T09 3e2404f; all three remain pending
+    independent confirmation. T07 origins/log escaping are fixed and independently reviewed;
+    recovery-round2 critic REJECT found default-perspective SSE/history reads. Fresh builder
+    implements session-read-builder-spec.md using immutable captured facts and verified actors.
+    T08 source selector/artifact/trajectory/stale/interruption repairs landed; round2 REJECT
+    requires trajectory count/event fixes, capped browser EventSource retry, corrected judgment
+    test setup and obsolete trajectory test replacement. Shared suite local gate passed 13 tests;
+    real-kernel shared conformance remains unrun, artifact provenance is incomplete.
+    T09 inventory found
+    execution_progress/command frames have no live source, live composer uses the scripted
+    local agent, and CJ10-CJ12 unavailable labels are misassigned. Use existing ArtifactPayload,
+    run.get trace/evidence projections and stream contracts where sufficient; follow redesign
+    stop rules if contract changes become necessary. T10 prereg ALREADY EXISTS (2026-09-26),
+    before ladder implementation. Then T08, T09, T10, T11, T12; T13 split + STOP.
+    User requires Luna/Terra subagents (Terra unavailable here; use gpt-6-luna) and ONE compile
+    owner across all agents/languages, with available RAM checked before each compile command.
 
 agent_protocol:
   read_order:
@@ -159,13 +162,41 @@ baseline_warnings:
   - "Global gates (plan verification.global_gates): cargo four-crate test; cd apps/godspeed-casework-go && go vet ./... && go test -race ./...; cd apps/godspeed-cognitive-ui && bun run typecheck && bun test; bun e2e/run.ts (baseline floor above); just casework-e2e-live (exists from T10 only). Go gates need -count=1 for golden-file tests."
 
 handoff:
-  session: 2
+  session: 4
   state_summary: >-
-    T00, T01, T03, T04 settled (T04: units A+B+C verified; independent critic
-    t04-critic ran, procedural REJECT reconciled with zero code findings;
-    confirmation.md written). Unit C committed here. T02 in flight (prereg
-    written 2026-09-23, ADR-first). Branch casework/live-wiring; no processes
-    left running (verify with `pgrep -af sea-forge-server` if in doubt).
+    Takeover 2026-09-29: T00-T06 settled per operative independent confirmations; T07/T08/T09
+    committed but not independently confirmed. T07 fresh Go vet, focused race and global race
+    gates passed under serialized -p=1/GOMAXPROCS=2. Independent T07/T08 round-1 critics
+    rejected with concrete findings. Fresh builders fixed T07 trusted origins/log escaping;
+    T08 production selector, artifacts, stale refresh/interruption and retained trajectory
+    fixes are in progress and await independent re-review. Shared port conformance remains
+    outstanding. T09 inventory found missing execution frames/grounded narration and wrong
+    CJ10-CJ12 labels. No new task is settled. New evidence lives under resume-2026-09-29/.
+    Branch casework/live-wiring. Preserve pre-existing modified T08/gates/go-gates.log,
+    .jolli/jollimemory/debug.log, godspeedai-stack.code-workspace and untracked T09 evidence.
+    Daemon restart interrupted round-2 critic and two source-only builders; recovered tree and
+    logs before resuming. No surviving compile process observed; available RAM ~2.4GiB.
+    Go source is stable, including captured-facts session reads, trajectory fixes and actual
+    artifact case/item ownership through run.get; invocation ID stays honestly unknown.
+    Exclusive compile token now t07_recovery_critic for fresh Go/Rust gates, gateway build and
+    real-cell session/history/SSE probes. Fresh T08 focused Bun fixes passed 35 tests/116
+    assertions (round2-fixes/bun-focused.log), including shared local suite. Round3 static
+    REJECT found malformed stale case identity, onopen retry reset and same-ID resync snapshot
+    suppression; fresh TS-only t08_stream_and_identity_builder active. Live shared conformance
+    remains unrun; no Go mutations or concurrent compiler permitted during critic gates.
+    T08 trajectory unused test import was fixed by a fresh
+    builder after independent vet failure; preserve failure and incomplete round-2 logs.
+    T07 recovery-round2 REJECT: all fresh Go gates/live security teeth passed, but SSE/history
+    return relay-default perspective; fresh builder assigned bounded captured-facts repair.
+    T08 recovery critic REJECT: rejected work counted complete, missing consequential lifecycle
+    kinds, and uncapped native EventSource retries were repaired; independent re-verification
+    pending, with the additional round3 defects above. Initial failures remain immutable.
+    No new task settled. Root Rust gate passed under approved
+    local test execution: 594 passed, zero failed, four pre-existing ignored. Preserve both
+    the outer-sandbox wait-timeout failure and passing rerun logs in T07/global-gates evidence.
+    Reusable gateway binary /tmp/casework-resume-gateway built by T07 critic; kernel binary exists
+    at target/debug/sea-forge-server. Socket binding in sandbox blocked T08's first runtime
+    attempt; retry isolated local integration via exec_command approval, never weaken isolation.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
     - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."

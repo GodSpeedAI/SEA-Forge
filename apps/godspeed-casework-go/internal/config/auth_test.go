@@ -113,6 +113,51 @@ func TestValidateStaticTokenOnlyInDevAndOnlyAsIndirection(t *testing.T) {
 	assertFatal(t, doc, "auth.static_token must be an indirection")
 }
 
+func TestValidateTrustedOriginsExactAndSecure(t *testing.T) {
+	t.Run("production HTTPS allowlist accepted", func(t *testing.T) {
+		doc := baseDoc()
+		doc.Serve.Production = true
+		doc.Serve.TrustedOrigins = []string{"https://app.example.test", "https://localhost:4179"}
+		assertNoProblems(t, doc)
+	})
+	t.Run("loopback HTTP dev origin accepted", func(t *testing.T) {
+		doc := baseDoc()
+		doc.Serve.TrustedOrigins = []string{"http://localhost:4179", "http://127.0.0.1"}
+		assertNoProblems(t, doc)
+	})
+	tests := []struct {
+		name       string
+		origin     string
+		production bool
+	}{
+		{name: "wildcard", origin: "*"},
+		{name: "wildcard host", origin: "https://*.example.test"},
+		{name: "userinfo", origin: "https://user@app.example.test"},
+		{name: "path", origin: "https://app.example.test/ui"},
+		{name: "query", origin: "https://app.example.test?x=1"},
+		{name: "fragment", origin: "https://app.example.test#ui"},
+		{name: "non-loopback HTTP dev", origin: "http://app.example.test"},
+		{name: "HTTP production loopback", origin: "http://localhost:4179", production: true},
+		{name: "unsupported scheme", origin: "ftp://app.example.test"},
+		{name: "whitespace", origin: "https://app.example.test\nforged"},
+		{name: "malformed port", origin: "https://app.example.test:port"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			doc := baseDoc()
+			doc.Serve.Production = tc.production
+			doc.Serve.TrustedOrigins = []string{tc.origin}
+			assertFatal(t, doc, "serve.trusted_origins contains invalid origin")
+		})
+	}
+}
+
+func TestValidateTrustedOriginsRefusesDuplicates(t *testing.T) {
+	doc := baseDoc()
+	doc.Serve.TrustedOrigins = []string{"https://app.example.test", "https://app.example.test"}
+	assertFatal(t, doc, "serve.trusted_origins contains duplicate origin")
+}
+
 func TestValidateLocalModeUserRequirements(t *testing.T) {
 	doc := baseDoc()
 	doc.Auth.Users[0].PasswordHash = ""

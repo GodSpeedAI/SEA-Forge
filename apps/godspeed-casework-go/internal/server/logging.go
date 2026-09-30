@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -83,7 +84,8 @@ func (s *Server) withCorrelation(next http.Handler) http.Handler {
 	})
 }
 
-// logLine emits one logfmt request line.
+// logLine emits one logfmt request line. All string values use Go quoting, which is compatible
+// with logfmt's quoted-value form and escapes quotes, backslashes, newlines, and control bytes.
 func logLine(l *log.Logger, correlation string, r *http.Request, status int, took time.Duration) {
 	ri := identityFrom(r)
 	actor := "-"
@@ -96,6 +98,6 @@ func logLine(l *log.Logger, correlation string, r *http.Request, status int, too
 		}
 	}
 	l.Printf("ts=%s correlation_id=%s method=%s path=%s status=%d duration_ms=%.1f remote=%s auth=%s actor=%s",
-		time.Now().UTC().Format(time.RFC3339), correlation, r.Method, r.URL.Path, status,
-		float64(took.Microseconds())/1000.0, remoteIP(r), session, actor)
+		time.Now().UTC().Format(time.RFC3339), strconv.Quote(correlation), strconv.Quote(r.Method), strconv.Quote(r.URL.Path), status,
+		float64(took.Microseconds())/1000.0, strconv.Quote(remoteIP(r)), strconv.Quote(session), strconv.Quote(actor))
 }

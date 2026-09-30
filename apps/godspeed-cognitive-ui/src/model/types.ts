@@ -468,8 +468,8 @@ export interface UiState {
   design: DesignState | null
   /** Narration/agent adapter availability. Direct UI never depends on it. */
   agent: 'available' | 'unavailable'
-  /** Event-stream connection: 'reconnecting' while the adapter reports an interruption. */
-  connection: 'live' | 'reconnecting'
+  /** Event-stream state; interrupted means the last source standing may be stale. */
+  connection: 'live' | 'reconnecting' | 'interrupted'
   /** Monotonic counter; bump to ask the camera to fly to the current layout's camera. */
   cameraRequest: number
   /** When set with a cameraRequest, fly here instead of the layout camera (artifact collapse). */
@@ -515,7 +515,7 @@ export type Action =
   | { type: 'proposalSubmitted'; caseId: string }
   | { type: 'proposalError'; error: string; code?: string }
   | { type: 'closeProposals' }
-  | { type: 'connectionState'; connection: 'live' | 'reconnecting' }
+  | { type: 'connectionState'; connection: 'live' | 'reconnecting' | 'interrupted' }
   | { type: 'intentSent'; record: IntentRecord; judgment?: boolean }
   | { type: 'closeJudgment' }
   | { type: 'intentSettled'; id: string; state: 'accepted' | 'refused'; note?: string; code?: string }
