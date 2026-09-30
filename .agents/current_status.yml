@@ -9,10 +9,10 @@ metadata:
   brief_note: Read Section 0 (Verification Errata, decisions, runner change) FIRST. Where the body disagrees with Section 0, Section 0 is correct (but see correction C-1 in the decision log for one §0 fact that was wrong).
   spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
   initialized: true
-  last_updated: '2026-09-29'
+  last_updated: '2026-09-30'
   updated_by: >-
-    takeover orchestrator: committed T07/T08/T09 recovered; Luna independent critics
-    active for T07/T08, T09 inventory complete; no new task settlement claimed.
+    resumed orchestrator: recovery changes externally committed as 8741ff4;
+    fresh Luna T07/T08 independent critics active; no new task settlement claimed.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -43,7 +43,11 @@ execution:
     OBSERVED_DEBT entry (pre-existing partial case dir on mid-handler failure, T11).
   plan_blocked: false
   plan_blocker: null
-  external_blockers: []
+  external_blockers:
+    - >-
+      Automatic approval review rejected the rebuilt gateway's isolated loopback launch as
+      alleged prompt-injection drift. Explicit user approval requested; no answer received.
+      Do not bypass the rejection. T07 real-session history/SSE and T08 live proof remain pending.
   task_detail:
     T04:
       units: >-
@@ -92,10 +96,28 @@ next_action:
     independent confirmation. T07 origins/log escaping are fixed and independently reviewed;
     recovery-round2 critic REJECT found default-perspective SSE/history reads. Fresh builder
     implements session-read-builder-spec.md using immutable captured facts and verified actors.
-    T08 source selector/artifact/trajectory/stale/interruption repairs landed; round2 REJECT
-    requires trajectory count/event fixes, capped browser EventSource retry, corrected judgment
-    test setup and obsolete trajectory test replacement. Shared suite local gate passed 13 tests;
-    real-kernel shared conformance remains unrun, artifact provenance is incomplete.
+    Recovery fixes are committed as 8741ff4. Final T07 session-read facts and T08 actual artifact
+    ownership via run.get, trajectory count/kind repairs, native retry and resync handling,
+    stale case identity checks, and shared conformance await fresh independent verification.
+    Fresh T07 vet/focused race pass after independent review of the fresh test setup repair.
+    Global race first failed only Argon2 tampering test's ineffective Base64 character mutation.
+    Fresh decoded-byte tampering repair independently APPROVED: targeted race count=50,
+    final full Go race and vet pass. Fresh four-crate Rust gate passes 594/0 with four ignored.
+    T07 scoped test repairs approved at final-independent/confirmation.md; full T07 unapproved.
+    t08_final_static now exclusively owns the compile token for final UI gates and local ladder.
+    T08 fresh endpoint/retry and type-gate builders finished source-only; independent critic
+    reviews their original instructions plus final implementation before fresh UI gates.
+    No production authority checks may be weakened. Gateway binary is
+    rebuilt, but its isolated loopback launch was rejected by auto-review as alleged injection
+    drift; explicit user approval is pending. T08 F13 full trajectory shape repair is ready from
+    fresh trajectory_shape_builder, then fresh trajectory_endpoints_retry_builder added strict
+    nonempty endpoint consistency and fixed native retry test setup. ui_type_gate_builder fixed
+    four additional typed call/test double errors. Round5 focused Bun 31 pass/1 native timer test
+    fail and typecheck red were preserved. Final focused Bun passes 43/0 with 144 assertions,
+    and typecheck passes; full Bun hit a sandbox listen EPERM in an existing loopback tooth,
+    so critic retries via approved local test execution. Production builds/local ladder pending.
+    Real shared conformance and native live resync/reconnect
+    proof remain unrun; T07/T08 settlement is withheld.
     T09 inventory found
     execution_progress/command frames have no live source, live composer uses the scripted
     local agent, and CJ10-CJ12 unavailable labels are misassigned. Use existing ArtifactPayload,
@@ -164,39 +186,36 @@ baseline_warnings:
 handoff:
   session: 4
   state_summary: >-
-    Takeover 2026-09-29: T00-T06 settled per operative independent confirmations; T07/T08/T09
-    committed but not independently confirmed. T07 fresh Go vet, focused race and global race
-    gates passed under serialized -p=1/GOMAXPROCS=2. Independent T07/T08 round-1 critics
-    rejected with concrete findings. Fresh builders fixed T07 trusted origins/log escaping;
-    T08 production selector, artifacts, stale refresh/interruption and retained trajectory
-    fixes are in progress and await independent re-review. Shared port conformance remains
-    outstanding. T09 inventory found missing execution frames/grounded narration and wrong
-    CJ10-CJ12 labels. No new task is settled. New evidence lives under resume-2026-09-29/.
-    Branch casework/live-wiring. Preserve pre-existing modified T08/gates/go-gates.log,
-    .jolli/jollimemory/debug.log, godspeedai-stack.code-workspace and untracked T09 evidence.
-    Daemon restart interrupted round-2 critic and two source-only builders; recovered tree and
-    logs before resuming. No surviving compile process observed; available RAM ~2.4GiB.
-    Go source is stable, including captured-facts session reads, trajectory fixes and actual
-    artifact case/item ownership through run.get; invocation ID stays honestly unknown.
-    Exclusive compile token now t07_recovery_critic for fresh Go/Rust gates, gateway build and
-    real-cell session/history/SSE probes. Fresh T08 focused Bun fixes passed 35 tests/116
-    assertions (round2-fixes/bun-focused.log), including shared local suite. Round3 static
-    REJECT found malformed stale case identity, onopen retry reset and same-ID resync snapshot
-    suppression; fresh TS-only t08_stream_and_identity_builder active. Live shared conformance
-    remains unrun; no Go mutations or concurrent compiler permitted during critic gates.
-    T08 trajectory unused test import was fixed by a fresh
-    builder after independent vet failure; preserve failure and incomplete round-2 logs.
-    T07 recovery-round2 REJECT: all fresh Go gates/live security teeth passed, but SSE/history
-    return relay-default perspective; fresh builder assigned bounded captured-facts repair.
-    T08 recovery critic REJECT: rejected work counted complete, missing consequential lifecycle
-    kinds, and uncapped native EventSource retries were repaired; independent re-verification
-    pending, with the additional round3 defects above. Initial failures remain immutable.
-    No new task settled. Root Rust gate passed under approved
-    local test execution: 594 passed, zero failed, four pre-existing ignored. Preserve both
-    the outer-sandbox wait-timeout failure and passing rerun logs in T07/global-gates evidence.
-    Reusable gateway binary /tmp/casework-resume-gateway built by T07 critic; kernel binary exists
-    at target/debug/sea-forge-server. Socket binding in sandbox blocked T08's first runtime
-    attempt; retry isolated local integration via exec_command approval, never weaken isolation.
+    Resumed 2026-09-29 after operator-requested usage-limit wrap. Prior final status write was
+    blocked by approval review usage exhaustion. Recovery source/evidence now committed
+    externally as 8741ff4 on casework/live-wiring; only Jolli debug log was dirty at resumption.
+    T00-T06 settled; T07/T08/T09 still await independent confirmation. No new task settled.
+    Fresh independent Luna critics reviewed recovery code. T07 fixture defects repaired by
+    fresh session_test_setup_builder (relative URLs, HTTP assertions, matching legacy resync
+    actor). Argon2 test now guarantees actual decoded digest mutation. Fresh independent final
+    targeted race count=50, global Go race and vet pass; scoped test-unit repairs APPROVED in
+    final-independent/confirmation.md. Full T07 NOT APPROVED: live runtime proof remains blocked.
+    Fresh independent four-crate Rust gate passed: 594 tests, zero failed, four existing ignored.
+    t08_final_static owns sole compile token for final UI gates/local browser ladder; RAM checks
+    required before every command, Go -p=1/GOMAXPROCS=2/race/count=1 and Cargo build jobs=1.
+    T08 round5 focused Bun 31 pass/1 fail and typecheck red preserved. Fresh builders repaired
+    full trajectory point shape/counts and nonempty endpoint consistency, native retry timer
+    setup and type-safe fixture calls. Round6 critic found wrong native instance counts and
+    missing Bun fetch.preconnect; fresh native_test_count_builder repaired that test file.
+    Other six TS files have static approval; independent final UI runtime gates are running.
+    T07 rebuilt gateway /tmp/casework-resume-gateway; kernel binary target/debug/sea-forge-server.
+    Temporary kernel PID 256835 runs against /tmp/t07-final.uUPtaO/cell/server.sock. No gateway
+    was launched: auto-review rejected the isolated loopback start as alleged injection drift.
+    User approval requested and pending; do not bypass. Need T07 real operator/R-SO current,
+    history and SSE old-state/actions/overrides/cross-case/revocation proof, then T08 real shared
+    conformance and actual native EventSource single-retained-revision resync/reconnect proof.
+    Go captured facts and run.get artifact ownership are source-complete; invocation ID remains
+    honestly unknown. Prior mock proofs alone cannot settle live requirements.
+    All new evidence under T07/T08 resume-2026-09-29; preserve immutable failures/rejections.
+    Preserve unrelated Jolli log; prior other dirty paths were included by external 8741ff4.
+    T09 still needs live command/execution frames, grounded ask narration, correct CJ10-CJ12
+    labels and independent gates. T10 prereg already exists before implementation; T10-T12
+    unbuilt. T13 must be split then stop. No staging/push/fetch/reset/clean performed this resume.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
     - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."

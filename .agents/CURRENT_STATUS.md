@@ -1,6 +1,42 @@
 # Current Status
 
-Updated: 2026-09-29
+Updated: 2026-09-30
+
+> **2026-09-29 resumed after usage-limit wrap:** recovery source and evidence were externally
+> committed as `8741ff4`; only the Jolli debug log was dirty at resumption. The final wrap status
+> write was blocked by automatic approval review usage exhaustion. T06 remains last settled.
+> Fresh independent Luna critics now review T07/T08. `t07_final_independent` exclusively owns
+> compile/test/build work after RAM checks; `t08_final_static` has no compile token.
+> Final session-read/provenance and TS stale identity/retry/resync changes await verification.
+> Continue from T07 real-session current/history/SSE proof, then T08 gates and the shared
+> live conformance suite; prior passing logs do not approve these final source changes.
+
+> **Latest resume findings:** T07 fresh vet passed, but focused/global Go race found four test
+> setup failures (absolute URLs doubled by the GET helper; mismatched legacy resync actor).
+> A fresh builder repairs the test fixtures while preserving negative authority assertions.
+> The rebuilt gateway's loopback launch was rejected by automatic approval review as alleged
+> injection drift; explicit approval is pending. T08's F13 trajectory validator repair awaits
+> independent Bun gates, now exclusively owned by `t08_final_static`. Live shared conformance
+> and actual native EventSource resync/reconnect proof remain required. No task advanced.
+
+> **Verification progress:** independent post-repair T07 focused race and vet pass. Global Go
+> race found a probabilistic ineffective mutation in the existing Argon2 hash test; one
+> characterization retry passed. A fresh builder now changes decoded digest bytes reliably.
+> T07 critic holds the compile token for Rust then final Go gates. Fresh T08 builders repaired
+> trajectory endpoints, native retry timer setup and four remaining type errors; final source
+> awaits independent gates. Initial failures and rejections are retained as evidence.
+
+> **T07 final source gates:** fresh independent targeted Argon2 race test passed 50 runs;
+> full Go race, vet and four-crate Rust gates pass. The critic approved the bounded fixture
+> and Argon2 test repairs, while withholding full T07 approval for missing live runtime proof.
+> `T07/resume-2026-09-29/final-independent/confirmation.md` is the operative scoped review.
+> Compile token transferred to `t08_final_static` for final UI gates and the local ladder.
+
+> **2026-09-30 UI gate progress:** final focused Bun passes 43 tests/144 assertions and
+> typecheck passes. Full Bun encountered sandbox EPERM for an existing temporary loopback
+> listener; critic reruns through approved local execution. Live gateway approval is pending.
+> Immutable T07 critic report contains two intentional Markdown hard breaks flagged by
+> `git diff --cached --check`; source whitespace checks pass. No evidence record was rewritten.
 
 > **2026-09-29 takeover in progress:** recovered T07 (`eef7459`), T08 (`ce538bf`), and
 > T09 (`3e2404f`) implementations; independent confirmation remains outstanding for all three.

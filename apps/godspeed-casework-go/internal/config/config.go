@@ -69,10 +69,10 @@ type ServeSection struct {
 	GatewayRole    string `json:"gateway_role,omitempty"`
 	PolicyRef      string `json:"policy_ref,omitempty"`
 	// Perspective* is who relay-built revision snapshots speak for. Unset means the gateway
-	// principal itself (the honest default: the gateway's own kernel view). Authenticated
-	// sessions (T07) give /api/world its own per-user perspective; the relay's revision stream
-	// keeps this configured perspective (documented: SSE snapshots render the gateway's view,
-	// role-filtered action enforcement happens at intent time).
+	// principal itself (the gateway's own kernel view). Captured facts retained with each
+	// revision let authenticated current, historical and SSE reads render the verified
+	// session perspective. Legacy revisions without facts are served only to the exact
+	// matching perspective; intent authority remains enforced by the kernel.
 	PerspectiveActorID string `json:"perspective_actor_id,omitempty"`
 	PerspectiveRole    string `json:"perspective_role,omitempty"`
 	// Production is the production posture (T07): cookies must carry Secure, the dev auth surface

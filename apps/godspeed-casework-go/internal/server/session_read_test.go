@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -79,9 +80,14 @@ func TestSessionHistoricalAndSSEViewsUseRetainedFacts(t *testing.T) {
 	op := h.login(t, "operator", "ignored-in-dev")
 	rso := h.login(t, "rso", "ignored-in-dev")
 
-	resp, err := rso.get(h.ts.URL + "/api/world?case_id=case_1&cursor=01AAA")
+	resp, err := rso.get("/api/world?case_id=case_1&cursor=01AAA")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		t.Fatalf("historical session read: status %d body %s", resp.StatusCode, raw)
 	}
 	var historical worldResponse
 	if err := json.NewDecoder(resp.Body).Decode(&historical); err != nil {
@@ -95,9 +101,14 @@ func TestSessionHistoricalAndSSEViewsUseRetainedFacts(t *testing.T) {
 		t.Fatalf("historical read must identify its session actor: %+v", historical.Snapshot.Perspective)
 	}
 
-	resp, err = op.get(h.ts.URL + "/api/world?cursor=01BBB")
+	resp, err = op.get("/api/world?cursor=01BBB")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		t.Fatalf("operator historical read: status %d body %s", resp.StatusCode, raw)
 	}
 	var current worldResponse
 	if err := json.NewDecoder(resp.Body).Decode(&current); err != nil {
@@ -108,11 +119,15 @@ func TestSessionHistoricalAndSSEViewsUseRetainedFacts(t *testing.T) {
 		t.Fatalf("operator historical read should retain operator offers: %+v", current.Snapshot)
 	}
 
-	stream, err := rso.get(h.ts.URL + "/api/events?last=01AAA")
+	stream, err := rso.get("/api/events?last=01AAA")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer stream.Body.Close()
+	if stream.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(stream.Body)
+		t.Fatalf("R-SO event stream: status %d body %s", stream.StatusCode, raw)
+	}
 	events := streamLiveSSE(t, stream.Body)
 	nextLiveEvent(t, events, "hello")
 	frameEvent := nextLiveEvent(t, events, "role-specific replay")
@@ -142,7 +157,7 @@ func TestSessionReadRefusalsPrecedeCachedLookupAndFailClosed(t *testing.T) {
 		"/api/world?cursor=01AAA&role=operator",
 		"/api/world?case_id=case_other&cursor=01AAA",
 	} {
-		resp, err := op.get(h.ts.URL + path)
+		resp, err := op.get(path)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -155,7 +170,7 @@ func TestSessionReadRefusalsPrecedeCachedLookupAndFailClosed(t *testing.T) {
 		return apperr.New(apperr.KindAuthorityDenied, "", "identity", "revoked delegation")
 	}
 	for _, path := range []string{"/api/world?cursor=01AAA", "/api/events"} {
-		resp, err := op.get(h.ts.URL + path)
+		resp, err := op.get(path)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -173,7 +188,7 @@ func TestLegacyRevisionCannotCrossSessionPerspective(t *testing.T) {
 		t.Fatal(err)
 	}
 	rso := h.login(t, "rso", "ignored-in-dev")
-	resp, err := rso.get(h.ts.URL + "/api/world?cursor=01AAA")
+	resp, err := rso.get("/api/world?cursor=01AAA")
 	if err != nil {
 		t.Fatal(err)
 	}

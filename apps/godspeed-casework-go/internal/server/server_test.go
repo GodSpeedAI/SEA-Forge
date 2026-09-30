@@ -652,7 +652,7 @@ func TestSSEResyncRequiredWhenLastPredatesRetention(t *testing.T) {
 	feed := newFakeFeed()
 	world := &fakeWorld{snaps: map[string]contract.CognitiveWorldSnapshot{}, newestID: "case_1"}
 	store := projection.NewStoreWithRetention(2)
-	relay := NewRelay(feed, world, store, RelayOptions{DefaultActor: ports.ActorClaim{ActorID: "op", Role: "operator"}})
+	relay := NewRelay(feed, world, store, RelayOptions{DefaultActor: ports.ActorClaim{ActorID: "operator_local", Role: "operator"}})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go relay.Run(ctx)

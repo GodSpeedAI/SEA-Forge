@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"strings"
@@ -33,14 +34,29 @@ func TestHashSaltsAreFresh(t *testing.T) {
 }
 
 func TestVerifyRejectsTamperedHash(t *testing.T) {
-	h, _ := HashPassword("hunter2")
-	// Flip the final digest byte.
-	if strings.HasSuffix(h, "A") {
-		h = h[:len(h)-1] + "B"
-	} else {
-		h = h[:len(h)-1] + "A"
+	h, err := HashPassword("hunter2")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := VerifyPassword(h, "hunter2"); !errors.Is(err, ErrInvalidCredentials) {
+	params, salt, digest, err := parsePHC(h)
+	if err != nil {
+		t.Fatalf("generated password hash must parse: %v", err)
+	}
+	if err := VerifyPassword(h, "hunter2"); err != nil {
+		t.Fatalf("the original password hash must verify before tampering: %v", err)
+	}
+
+	tamperedDigest := append([]byte(nil), digest...)
+	tamperedDigest[0] ^= 1
+	tamperedHash := encodePHC(salt, tamperedDigest, params.m, params.t, params.p)
+	_, _, decodedTamperedDigest, err := parsePHC(tamperedHash)
+	if err != nil {
+		t.Fatalf("re-encoded tampered hash must parse: %v", err)
+	}
+	if bytes.Equal(digest, decodedTamperedDigest) {
+		t.Fatal("tampered hash must encode a different decoded digest")
+	}
+	if err := VerifyPassword(tamperedHash, "hunter2"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("a tampered digest must not verify, got %v", err)
 	}
 }
