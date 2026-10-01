@@ -1,0 +1,70 @@
+--- FAIL: TestAskRequiresSessionThenCSRFBeforeCallingPort (0.06s)
+    ask_test.go:138: POST /api/ask status=405, want 401: Method Not Allowed
+--- FAIL: TestAskUsesVerifiedSessionActorAndPreservesQuestionValues (0.02s)
+    ask_test.go:163: POST /api/ask status=405, want 200: Method Not Allowed
+--- FAIL: TestAskAcceptsEveryApprovedKindAndDefaultsOnlyOmittedPurpose (0.01s)
+    ask_test.go:192: POST /api/ask status=405, want 200: Method Not Allowed
+--- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort (0.07s)
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/unknown_field (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/array_root (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/boolean_root (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/null_kind (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/null_purpose (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/wrong_kind_type (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/second_object (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/garbage_after_object (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/malformed_json (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/unknown_kind (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/purpose_over_500_UTF-8_bytes (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/multibyte_purpose_over_500_bytes (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/unknown_actor_id (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/unknown_role (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/string_root (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/number_root (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/null_subject (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/blank_case (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/null_root (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/null_case (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/wrong_subject_type (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/wrong_purpose_type (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/wrong_case_type (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+    --- FAIL: TestAskRejectsUnknownMalformedNullAndTrailingJSONWithoutCallingPort/blank_subject (0.00s)
+        ask_test.go:248: POST /api/ask status=405, want 400: Method Not Allowed
+--- FAIL: TestAskPreservesAllDispositionsAndDisclosureFields (0.01s)
+    ask_test.go:267: POST /api/ask status=405, want 200: Method Not Allowed
+--- FAIL: TestAskEnforcesUTF8PurposeAnd8192ByteRawBodyBoundaries (0.02s)
+    ask_test.go:292: POST /api/ask status=405, want 200: Method Not Allowed
+--- FAIL: TestAskPerspectiveMustBeVerifiedBeforeDispatch (0.02s)
+    ask_test.go:325: POST /api/ask status=405, want 403: Method Not Allowed
+--- FAIL: TestAskLimiterUsesRealIPAndIsSeparateFromSessionAndIntentBuckets (0.01s)
+    ask_test.go:338: POST /api/ask status=405, want 200: Method Not Allowed
+--- FAIL: TestAskSessionLimiterRefillsAndIntentLimiterRemainsUsable (0.01s)
+    ask_test.go:375: POST /api/ask status=405, want 200: Method Not Allowed
+--- FAIL: TestAskTrailingWhitespaceIsAllowedWithinRawLimit (0.01s)
+    ask_test.go:410: POST /api/ask status=405, want 200: Method Not Allowed
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.380s
+FAIL

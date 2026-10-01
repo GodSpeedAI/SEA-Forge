@@ -71,14 +71,16 @@ type RelayCursors interface {
 
 // Server wires the injected live stack into the HTTP surface.
 type Server struct {
-	world          WorldSource
-	intents        IntentDispatcher
-	tpl            TemplateSource
-	artifacts      ArtifactGetter
-	store          RevisionHistory
-	relay          RelayCursors
-	opts           Options
-	intentsLimiter *RateLimiter
+	world             WorldSource
+	intents           IntentDispatcher
+	tpl               TemplateSource
+	artifacts         ArtifactGetter
+	store             RevisionHistory
+	relay             RelayCursors
+	opts              Options
+	intentsLimiter    *RateLimiter
+	askSessionLimiter *RateLimiter
+	askIPLimiter      *RateLimiter
 }
 
 // New builds the live server. Every dependency is injected.
@@ -89,14 +91,16 @@ func New(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, sto
 // NewWithArtifacts builds the live server with its governed artifact reader.
 func NewWithArtifacts(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, store RevisionHistory, relay RelayCursors, artifacts ArtifactGetter, opts Options) *Server {
 	return &Server{
-		world:          world,
-		intents:        dispatcher,
-		tpl:            tpl,
-		artifacts:      artifacts,
-		store:          store,
-		relay:          relay,
-		opts:           opts,
-		intentsLimiter: NewRateLimiter(opts.RateLimit.PerMinute, opts.RateLimit.Burst, 0, nil),
+		world:             world,
+		intents:           dispatcher,
+		tpl:               tpl,
+		artifacts:         artifacts,
+		store:             store,
+		relay:             relay,
+		opts:              opts,
+		intentsLimiter:    NewRateLimiter(opts.RateLimit.PerMinute, opts.RateLimit.Burst, 0, nil),
+		askSessionLimiter: NewRateLimiter(6, 2, 0, nil),
+		askIPLimiter:      NewRateLimiter(20, 4, 0, nil),
 	}
 }
 
@@ -135,9 +139,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/templates", s.requireSession(s.handleTemplates))
 	mux.HandleFunc("GET /api/artifacts/{digest}", s.requireSession(s.handleArtifactGet))
 	mux.HandleFunc("GET /api/trajectory", s.requireSession(s.handleTrajectory))
-	// State-changing POSTs: session + CSRF; intents are rate limited (before the handler, so a
-	// refused request never reaches the dispatcher).
+	// State-changing POSTs: session + CSRF; expensive or durable operations also use their own
+	// limiter before any kernel-facing handler.
 	mux.HandleFunc("POST /api/intents", s.requireSession(s.requireCSRF(s.rateLimitIntent(s.handleIntent))))
+	mux.HandleFunc("POST /api/ask", s.requireSession(s.requireCSRF(s.rateLimitAsk(s.handleAsk))))
 	mux.HandleFunc("POST /api/templates/preflight", s.requireSession(s.requireCSRF(s.handlePreflight)))
 	// Unknown /api paths are typed 404s, never the SPA fallback. (Method-scoped so the GET
 	// catch-all below does not conflict; a POST to an unknown /api path is the mux's 405.)

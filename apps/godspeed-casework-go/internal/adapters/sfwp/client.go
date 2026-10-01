@@ -257,8 +257,9 @@ func readBoundedLine(br *bufio.Reader, limit int, operation string) ([]byte, err
 	}
 }
 
-// transportErr classifies a socket-level failure. The outcome of any request that crossed the wire
-// before it is UNKNOWN - only the authority's correlation store can settle it.
+// transportErr classifies a socket-level failure. A sent correlated mutation has an unknown
+// outcome that only the authority's correlation store can settle; an ambiguous Ask failure is
+// instead returned unavailable without status recovery or resend.
 func transportErr(stage string, err error) *apperr.Error {
 	return apperr.Wrap(apperr.KindUnavailable, "", stage,
 		"the connection to the governed authority failed", err)
@@ -360,12 +361,15 @@ func (c *Client) signalFree() {
 // returned as an error carrying the refusal (its class reachable via errors.As).
 //
 // Failure discipline (mirroring the reference bridge):
-//   - An inspect (non-mutation) request that hits a transport failure is retried exactly once on a
-//     fresh connection; a second failure surfaces as typed unavailable.
+//   - An inspect request that hits a transport failure is retried exactly once on a fresh
+//     connection; a second failure surfaces as typed unavailable.
 //   - A correlated mutation is NEVER re-sent. On a transport failure the client reconnects within
 //     the recovery budget and resolves the outcome through request.get_status; what it returns is
 //     the authority's own recorded terminal outcome (including its interrupted-failure record
 //     after a server restart), or a typed "outcome unresolved" error it could not settle.
+//   - Ask is protected and record-writing but has no request ID: an ambiguous transport failure is
+//     typed unavailable with no resend or status recovery. An explicit pre-admission server_busy
+//     refusal is separate and receives its bounded retry.
 //   - An error response from the authority is returned as a decoded Refusal wrapped in the
 //     application's error kinds; unknown-verb parse failures from an older server are typed
 //     unavailable and are never retried.
@@ -412,8 +416,8 @@ func (c *Client) roundTrip(ctx context.Context, req *Request, line []byte) (*Res
 			// the authority's correlation store rather than re-sending.
 			return c.recoverOutcome(context.WithoutCancel(ctx), req)
 		}
-		if !req.IsMutation() && ctx.Err() == nil {
-			// Inspect verbs have no side effect: one reconnect-retry is safe.
+		if req.IsTransportRetrySafe() && ctx.Err() == nil {
+			// Read-only verbs have no side effect: one reconnect-retry is safe.
 			if cn2, err2 := c.acquire(ctx); err2 == nil {
 				respLine2, err3 := cn2.call(ctx, line, timeout)
 				if err3 != nil {
@@ -426,8 +430,7 @@ func (c *Client) roundTrip(ctx context.Context, req *Request, line []byte) (*Res
 		}
 		if typed != nil && typed.Kind == apperr.KindUnavailable && errors.Is(err, context.DeadlineExceeded) {
 			return nil, apperr.New(apperr.KindUnavailable, "", req.verb,
-				"deadline exceeded while the request was in flight; "+
-					"for a correlated mutation recover the outcome by its request_id")
+				"deadline exceeded while the request was in flight; its outcome may be unknown")
 		}
 		return nil, err
 	}

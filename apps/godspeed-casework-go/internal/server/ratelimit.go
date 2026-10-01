@@ -141,6 +141,30 @@ func (s *Server) rateLimitIntent(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// rateLimitAsk uses independent session and peer-IP budgets because Ask commits disclosure
+// records and has no request correlation key. Authentication and CSRF guards wrap this handler.
+func (s *Server) rateLimitAsk(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ri := identityFrom(r)
+		sessionKey := "anonymous"
+		if ri != nil && ri.Session != nil {
+			sessionKey = ri.Session.ID
+		}
+		if ri != nil && ri.Source == "bearer" {
+			sessionKey = "bearer:" + ri.Identity.Username
+		}
+		if !s.askSessionLimiter.Allow(sessionKey) {
+			s.writeRateLimited(w, "too many Ask requests for this session; retry after the refill window")
+			return
+		}
+		if !s.askIPLimiter.Allow("ip:" + remoteIP(r)) {
+			s.writeRateLimited(w, "too many Ask requests from this address; retry after the refill window")
+			return
+		}
+		next(w, r)
+	}
+}
+
 func (s *Server) writeRateLimited(w http.ResponseWriter, note string) {
 	w.Header().Set("Retry-After", "1")
 	writeTypedError(w, http.StatusTooManyRequests, "rate_limited", note)

@@ -78,7 +78,9 @@ func AssembleStackWithRetention(t *testing.T, cell *livetest.Cell, retention int
 		PolicyRef:           "authority/active-policy.json",
 		ExecutionTimeoutSec: 60,
 	})
+	ask := sfwp.NewAskAdapter(client, ports.ActorClaim{ActorID: "gateway", Role: "service"})
 	api := server.NewWithArtifacts(source, dispatcher, source, store, relay, authority, server.Options{
+		Ask:         ask,
 		Perspective: ports.ActorClaim{ActorID: "operator_local", Role: "operator"},
 		Auth:        TestAuthOptions(t),
 		Ready:       authority,
