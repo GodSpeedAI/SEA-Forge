@@ -1,0 +1,4 @@
+server_log=/tmp/t09u4capture/TestLiveRunScope3078527605/001/server.log
+cell_root_bytes=48
+socket_path=/tmp/t09u4capture/TestLiveRunScope3078527605/001/server.sock
+socket_path_bytes=60

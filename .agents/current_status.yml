@@ -14,6 +14,8 @@ metadata:
     resumed orchestrator: T00-T08 independently settled, T08 checkpoint af362f5.
     T09 canonical bounded unit independently approved and checkpointed b608771;
     cap and mirror bounded units approved and locally checkpointed b4092bd.
+    Protected Ask runtime independently approved and checkpointed0b55022;
+    run-child fixture approved with compiling expectedRED, scoped tests/declarations frozen.
     All workers are Luna, and compiler ownership remains serialized with host RAM checks.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
@@ -73,10 +75,60 @@ execution:
         runtime only. Root matched15source hashes and13new exact raw copies/full hashes;
         report SHA728a560e3c6a9ced11184dcb2f46695a5f1b3aee1c72909c60c7d9e89d8cde5f.
         Graft refresh PASS674cards/7349nodes/13995edges; context-check PASS. Ask checkpoint
-        next; full T09 remains pending.
-        Run-observation source preparation complete, runtime implementation still pending.
+        0b55022 complete. Run-child fixture builder owns only new projection/run_children_test.go;
+        fixture frozen SHA68511dc5618c9609e27ae501794265d8fd4d5b18d62466e2465dd51b3507269d;
+        primary mirror critic REJECTS missing exact-ID multiplicity proof; immutable rejection
+        run-children-fixture-independent-reject.md SHAd549a42f502dd0468ca23b8428654df57ef8d43c863e928d89a1d8ec36bc5979.
+        Fresh t09_run_children_fixture_builder repaired only matrix multiplicity; frozen
+        SHA4ddb2445a7ff6726c3b6fd93832ac4122b53da4d26e5b54180f9a1cafb802741.
+        Primary mirror critic source/expected assertionRED APPROVE; token released. Root
+        matched fixture/reviewhashes and4exact log/exit copies, archivedpreflighthashes only
+        (no originalpreflightfiles). Runtime phaseA declarations/scopedtests released under
+        run-children-runtime-test-phases.md; now frozen5files and purefixture unchanged.
+        Primary mirror critic source REJECT: no predial proof and scopedfake discards requested
+        CaseRef. Immutable phaseA rejection SHAc7590c52ff30ce8fdc829c55fac3755fceff5755a93d95e18e954401101d910d.
+        Fresh t09_run_children_fixture_builder repairs only2scopedtests with synchronous Dial
+        counter and exactcase assertion; root authorized same2newfixture whitespace-only
+        formatting before rereview. Final scoped_runsSHA0013b05f69def466e8434182642b4543e68c5b4ad7fd1a3f3f14608337fcc2b5;
+        scoped_liveSHA361fc0328217bf78d4ac3d7c92dad6f8641e931225e3c78cd58685a7bb4a7800.
+        Other3PhaseAfiles/purefixture unchanged. Independent phaseA source/compiling assertion
+        RED approved; root matched6sourceidentities and6exact rawcopies/fullhashes.
+        Token released. Critic overwrote2initialincorrectarchivecopies; actual/tmpunchanged,
+        currentcopiesexact. Sandbox incorrectcopy recoveredexact6cff61f to newlabelledpath;
+        hostincorrectcopy and deletedrecoverytranscription remainunrecovered, disclosederrata.
+        PhaseB runtime frozen after innerGREEN race04; independent semanticREJECT8404a0f:
+        false unknown-case fixture/lateunavailable lookup and blanketRefusalnormalization.
+        Fresh semantic Phase1 TWOtests frozen57bfc686/a9e0deb0; all production unchanged.
+        Root matched2testidentities, original2snapshots and rejected6filediffb0a6b08b.
+        Evidence-only builder archived13innerattempt/preflight/exit files; root bytechecked
+        all13 originals/fullhashes. Manifest93d8a275 records wrongcwd, failures and invalidGREEN.
+        Independent regressionRED APPROVED2d234225; both focusedracecommands compiled and
+        exposed missing-case extra reads/wrong kind and3flattenedrefusalclasses. Root matched
+        6exactrawpairs+10sourcehashes. Fresh Phase2 source frozenlive0f17e374/authoritya9c49702;
+        only2authorizedfiles changed, tests frozen. FocusedGREEN PASS but independent
+        Phase2 REJECTf35d91ce: new livefixture internalprojection->livestack->projection
+        importcycle prevents testbody/kernelproof. Root matched6rawpairs/11sourcehashes.
+        Fresh Luna livefixture frozenffc979ee; externalpackage/helperqualification only.
+        Root exactinverse restores8e485original and helperbodyexact renamed. Firstsnapshot
+        failed2c982 retained; NEWcorrectedsnapshot exact8e485, captureerratumrecordsdiagnosticarg.
+        Primary mirror critic reports repeatfocusedrace/twoactualcasekernelproof/canonical
+        justcasework-go-check/fullmodulerace ALLPASS; post-PASSrelaycleanupwarning preserved.
+        Final boundedunit4 APPROVED8b1432ff with clarifications87e90d10. Root matched
+        11sourcehashes/17exactrawpairs; Graft refreshed679cards/7398nodes/14142edges.
+        Token ROOT. ContextcheckPASS, explicitlocalcheckpoint next. FullT09pendingunits5-8.
+        Whole-focus assertion corrected before any verdict; current checks preserve parent rank
+        while allowing actual child IDs. Full T09 remains pending.
+        Run-observation authority/trace/session source facts recorded separately; kernel
+        Inspect invariance does not approve session sharing. Unit6 read-only fixture anchors/
+        cache/history/view requirements recorded; no UI implementation/test write release.
+        Unit5 cancellation source facts: manualctxcancel does not interrupt in-flight socket
+        read, Client.Close onlyidlepool; cancel/drain design mustresolve beforepollerclaims.
+        Root cancellation testfirstproposal held; independent sourcecritique found missing
+        manualAsk/mutationcoverage and fakeEOFproof caveat. NEWsupplement requires both
+        and exactcallbackretirement/peeridentity; repeatcritique before anyGo write release.
+        Run-observation runtime implementation still pending.
       confirmation: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/canonical-final-independent-confirmation.md
-      confirmation_note: Bounded canonical unit only; no full T09 approval or settlement.
+      confirmation_note: Bounded units1-4 independently approved; no full T09 approval or settlement.
       settle_when: All remaining T09 units, required global gates and independent runtime confirmation pass.
     T08:
       units: >-
@@ -161,40 +213,29 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
-    Canonical bounded unit b608771 and cap/mirror bounded units b4092bd are independently
-    approved local checkpoints. T00-T08 remain settled; full T09 is in flight.
-    Ask fixture unit independently approved after fresh scalar-root repair. Root matched
-    four source hashes and both expected-RED logs/exits to original captures. Server RED
-    reaches absent route405; transport RED exposes duplicate Ask on EOF/overflow.
-    Runtime builder t09_run_children_fixture_builder implements ORIGINAL
-    ask-runtime-implementation-assignment.md plus ask-runtime-root-integration-supplement.md
-    and ask-live-ledger-projection-clarification.md under T09/resume-2026-09-30.
-    Existing Ask fixtures are frozen. New adapter/live proof tests and narrow live-stack
-    injection are authorized. Builder froze all source/tests without compiling.
-    Independent runtime review REJECTED compile collision askBody with frozen helper; no tests ran.
-    Source review additionally found invalid raw UTF8 normalized by JSON and stale correlation docs.
-    Primary rejection capture complete; root matched13source+3artifacthashes and exact originals.
-    PhaseA fixture independently approved; actual RED reaches200 for all three malformed-byte
-    inputs. Root matched all three raw log/exit/preflight originals. PhaseB UTF8 guard and final
-    correlation-label correction froze; all three fixture files unchanged. Primary mirror critic
-    completed GREEN/live kernel ledger/Go gates and released the compiler token. Portable live
-    fixture TestLiveAskLedger passed twice under original TMPDIR with an observed84byte socket.
-    Fresh just casework-go-check and full-module race/count1/parallel1 passed. Final archive/review
-    patch initially rejected by automatic approval review usage limit; identical native patch
-    retry succeeded. Final independent bounded Ask APPROVE is durable; root matched15source
-    hashes and13exact raw copies/full hashes. Graft refreshed674cards/7349nodes/13995edges,
-    context-check passes. Make explicit Ask checkpoint. Foreign Bun PID2055592 is server.ts,
-    no compiler children; leave it untouched. Actual host available2499MiB at index preflight.
-    Sandbox failure copy contains appended narrative: preserve it, archive exact original
-    separately; root verified log/exit byte identity. Append-only errata records the limitation.
-    Actual host RAM/process preflight precedes every compile; serialize Go/Bun/Cargo.
-    Only Luna/Terra workers, Terra unavailable; fresh builder after any rejection.
-    Run-child test-first assignment prepared; Ask broader Go commands finished, but hold Go
-    writes until Ask checkpoint. Then scoped run lists/real children,
-    bounded authorized hydration/pollers/SSE,
-    separate bounded UI caches, grounded Ask narration and remaining T09 journeys.
-    Preserve T10 preregistration. Continue through T12, split T13 then STOP for review.
-    No new dependency, identity boundary, kernel verb, deployment or outward write is authorized.
+    T00-T08 settled. T09 units1-3 independently approved/checkpointed b608771/b4092bd/
+    0b55022. Unit4 scopedlists/realrunchildren now independently APPROVED8b1432ff with
+    appendonly clarifications87e90d10; root matched11sourcehashes/17exactrawpairs,
+    correctedfixtureinverse8e485/helperequivalence, freshGraft679cards/7398nodes/14142edges.
+    Full T09 remains INFLIGHT units5-8/globalgates. ROOT token; no othercompile/writes.
+    Finish explicitpath unit4localcheckpoint after rootfinaldiff/contextcheck.
+    Then release fresh Luna run_scope_live_fixture_repair for ONLY new client_cancellation_test.go
+    under observation-cancellation-test-first-assignment.md plus critique-supplement.
+    Independent sourcecritique approves fixtureproposal ONLY. Bind5srequestdeadline/<1s
+    manualcancel completion for run_get/Ask/correlatedmutation, actualDo-return-beforecancel
+    on confirmedresponse tests, realrequestID/exactpeeridentity/EOF/callbackretirement.
+    Builder NOcompiler/sourceedits; independent t09_ask_fixture_independent_critic receives
+    ORIGINAL instructions+actualfrozenfixture and sole token for intended compilingRED.
+    Fresh sourcebuilder after any rejection. Preserve Ask/mutation uncertainty/recovery.
+    Nativeapplypatch writes; exact rawoutputs/exits/preflights newimmutablepaths/fullhashes.
+    Actual HOST RAM/process check before every compile, onlyONE Go/Bun/Cargo compiler;
+    Go256MiB/GOGC50/GOMAXPROCS2/p1/race/count1/parallel1, Cargo jobs1.
+    Only Luna/Terra workers; Terra unavailable. No newdeps/identity/kernelverbs/publishing.
+    After cancellationprerequisite, complete safe traceport/cohort budgets/authorizedpollers/
+    no-IDcase-scopedSSE, unit6 boundedUIcache ANDapp/model/view, groundedAsk and journeys.
+    Root mustresolve remaining sharing/fanout/revocation/count/byte/terminal lifecycle design
+    using recorded sourcefacts and independent critique. No unsafe sharing or drainclaim.
+    Preserve T10prereg; continueT10-T12, splitT13 then STOPforoperatorreview.
 agent_protocol:
   read_order:
     - .agents/current_status.yml (this file)
@@ -263,10 +304,21 @@ handoff:
     approval review usage limit, then same native retry succeeded. Ask independently approved;
     root matched15source identities and13new exact raw copies. Graft refreshed successfully;
     foreign Bun is server.ts with no compiler children, not a compile blocker.
-    Run-child fixture writes held until Ask checkpoint.
+    Ask checkpoint0b55022 complete; run-child fixture writes released to bounded builder,
+    fixture frozen68511dc; no compiler token. Independent source review/expectedRED must
+    precede runtime implementation. Whole-focus equality corrected before any critic verdict.
   state_summary: >-
     Root orchestrates builder/independentcritic loops; only Luna/Terra allowed, Terra unavailable.
-    No compiler token is currently held; PhaseB Go verification completed. Check actualhost RAM/processes
+    ROOT holds token after independent unit4 APPROVAL8b1432ff/clarifications87e90d10;
+    root matched6rawpairs/10sourcehashes, earlier13innerpairs and originalsnapshots/diff.
+    Fresh Phase2 changes ONLY live.go0f17e374/authoritya9c49702; focusedGREEN passed.
+    FreshLuna package/helperrepair sourceonly; rootexactinverseoriginal8e485/helpermatch.
+    Firstbadcapture2c982 retained, correctnew8e485snapshot and erratumdiscloseactualdifference.
+    Fourindependentgates and supplemental livePASS; root matched11sourcehashes/17rawpairs.
+    GraftbuildPASS679cards/7398nodes/14142edges. Unit4localcheckpoint next, then new
+    cancellationfixture only after approved sourcecritique/originalsupplemented assignment.
+    No othercompiler/sourcewriter; fullT09pendingunits5-8/globalsettlement.
+    Check actualhost RAM/processes
     before each Go/Bun/Cargo build/test, no parallel compiler, Go256MiB/p1/GOMAXPROCS2 and Cargojobs1.
     Preserve all historical failures/evidence and unrelated Jolli/otherchanges; explicitpathstage only.
     Currentnative snapshot comparisons preserve FULL immutable SSEvsAt and current cursor/stablefacts

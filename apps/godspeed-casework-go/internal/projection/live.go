@@ -41,6 +41,9 @@ func NewLiveSource(auth ports.CaseAuthorityPort, gateway ports.ActorClaim) *Live
 // Facts fetches one case's views. The case record comes from case.list (the list is the only
 // surface carrying the operator-facing summary); its views are addressed by case id.
 func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.ActorClaim, cursor string) (CaseFacts, error) {
+	if strings.TrimSpace(caseID) == "" {
+		return CaseFacts{}, apperr.New(apperr.KindInvalid, "", "world", "case id must not be blank")
+	}
 	cases, err := s.auth.ListCases(ctx)
 	if err != nil {
 		return CaseFacts{}, err
@@ -48,8 +51,10 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
 	var record *ports.CaseRecord
 	for i := range cases {
 		if string(cases[i].Ref) == caseID {
+			if record != nil {
+				return CaseFacts{}, unavailableCapturedRuns("the authority repeated the requested case record")
+			}
 			record = &cases[i]
-			break
 		}
 	}
 	if record == nil {
@@ -68,24 +73,63 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
 	if err != nil {
 		return CaseFacts{}, err
 	}
-	runs, err := s.auth.RunsList(ctx)
+	runList, err := s.auth.RunsListForCase(ctx, ports.CaseRef(caseID))
 	if err != nil {
 		return CaseFacts{}, err
 	}
-	caseRuns := make([]ports.RunSummary, 0, len(runs))
-	for _, r := range runs {
-		if r.CaseID == caseID {
-			caseRuns = append(caseRuns, r)
+	if string(record.Ref) != caseID || string(overview.Ref) != caseID || string(horizon.Ref) != caseID {
+		return CaseFacts{}, unavailableCapturedRuns("the authority returned a case view for a different case")
+	}
+	horizonItems := make(map[string]struct{}, len(horizon.Items))
+	for _, item := range horizon.Items {
+		if strings.TrimSpace(item.ItemID) == "" {
+			return CaseFacts{}, unavailableCapturedRuns("the authority returned a blank horizon item id")
+		}
+		if _, exists := horizonItems[item.ItemID]; exists {
+			return CaseFacts{}, unavailableCapturedRuns("the authority repeated a horizon item id")
+		}
+		horizonItems[item.ItemID] = struct{}{}
+	}
+	seenRuns := make(map[string]struct{}, len(runList.Runs)+len(runList.UnreadableIDs))
+	for _, run := range runList.Runs {
+		if strings.TrimSpace(run.RunID) == "" {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a blank run id")
+		}
+		if _, exists := seenRuns[run.RunID]; exists {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority repeated a run id")
+		}
+		seenRuns[run.RunID] = struct{}{}
+		if run.CaseID != caseID {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a run owned by another case")
+		}
+		if strings.TrimSpace(run.PlanItemID) == "" {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a run without its plan item id")
+		}
+		if _, exists := horizonItems[run.PlanItemID]; !exists {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a run without an actual horizon parent")
+		}
+		if !validCapturedExecution(run.Execution) || !validCapturedSettlement(run.Settlement) || run.EvidenceCount < 0 {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a malformed run summary")
 		}
 	}
+	for _, id := range runList.UnreadableIDs {
+		if strings.TrimSpace(id) == "" {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a blank unreadable run id")
+		}
+		if _, exists := seenRuns[id]; exists {
+			return CaseFacts{}, unavailableCapturedRuns("the scoped authority repeated or overlapped a run id")
+		}
+		seenRuns[id] = struct{}{}
+	}
 	facts := CaseFacts{
-		Record:    *record,
-		Overview:  overview,
-		Horizon:   horizon,
-		Approvals: approvals,
-		Runs:      caseRuns,
-		Actor:     actor,
-		Cursor:    cursor,
+		Record:           *record,
+		Overview:         overview,
+		Horizon:          horizon,
+		Approvals:        approvals,
+		Runs:             runList.Runs,
+		UnreadableRunIDs: runList.UnreadableIDs,
+		Actor:            actor,
+		Cursor:           cursor,
 	}
 	if s.now != nil {
 		facts.Now = s.now()
@@ -93,6 +137,28 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
 		facts.Now = time.Now()
 	}
 	return facts, nil
+}
+
+func unavailableCapturedRuns(message string) error {
+	return apperr.New(apperr.KindUnavailable, "", "world", message)
+}
+
+func validCapturedExecution(value string) bool {
+	switch value {
+	case "pending", "enabled", "active", "completed", "failed", "terminated":
+		return true
+	default:
+		return false
+	}
+}
+
+func validCapturedSettlement(value string) bool {
+	switch value {
+	case "unsettled", "accepted", "rejected", "escalated":
+		return true
+	default:
+		return false
+	}
 }
 
 // Snapshot fetches and builds one case's snapshot for the given perspective.

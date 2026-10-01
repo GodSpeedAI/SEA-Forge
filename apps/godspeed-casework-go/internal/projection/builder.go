@@ -39,6 +39,8 @@ type CaseFacts struct {
 	Horizon   ports.CaseHorizon  // from case.get_horizon (per-item standing, depends_on)
 	Approvals []ports.ApprovalRecord
 	Runs      []ports.RunSummary
+	// UnreadableRunIDs are run IDs the scoped authority query reported but could not read.
+	UnreadableRunIDs []string
 	// Actor is the perspective the snapshot is rendered for (actor_id + kernel role spelling).
 	Actor ports.ActorClaim
 	// Cursor is the kernel event cursor this snapshot exists at ("" when unknown).
@@ -91,6 +93,8 @@ func Build(facts CaseFacts) contract.CognitiveWorldSnapshot {
 	for _, item := range facts.Horizon.Items {
 		objects = append(objects, itemBuilder(item, byID, approvalsByItem, role, offer))
 	}
+	focus := attentionFor(objects, string(facts.Overview.Ref))
+	objects = append(objects, runChildren(facts, objects)...)
 
 	snapshot := contract.CognitiveWorldSnapshot{
 		WorldID:          "world-" + string(facts.Overview.Ref),
@@ -101,7 +105,7 @@ func Build(facts CaseFacts) contract.CognitiveWorldSnapshot {
 		Summary:          summaryFor(facts),
 		VisibleObjects:   objects,
 		AvailableActions: []contract.ActionDescriptor{},
-		AttentionFocus:   attentionFor(objects, string(facts.Overview.Ref)),
+		AttentionFocus:   focus,
 	}
 
 	// available_actions: the role-filtered union of every per-object action, plus the case-level
@@ -122,6 +126,53 @@ func Build(facts CaseFacts) contract.CognitiveWorldSnapshot {
 		}
 	}
 	return snapshot
+}
+
+func runChildren(facts CaseFacts, parentObjects []contract.CognitiveObject) []contract.CognitiveObject {
+	caseID := string(facts.Overview.Ref)
+	parentByID := make(map[string]ports.HorizonItem, len(facts.Horizon.Items))
+	parentCounts := make(map[string]int, len(facts.Horizon.Items))
+	for _, item := range facts.Horizon.Items {
+		parentCounts[item.ItemID]++
+		parentByID[item.ItemID] = item
+	}
+	objectCounts := make(map[string]int, len(parentObjects))
+	for _, object := range parentObjects {
+		objectCounts[object.ID]++
+	}
+	runCounts := make(map[string]int, len(facts.Runs))
+	for _, run := range facts.Runs {
+		runCounts[run.RunID]++
+	}
+	children := make([]contract.CognitiveObject, 0, len(facts.Runs))
+	for _, run := range facts.Runs {
+		if strings.TrimSpace(run.RunID) == "" || runCounts[run.RunID] != 1 || objectCounts[run.RunID] != 0 ||
+			run.CaseID != caseID || strings.TrimSpace(run.PlanItemID) == "" || parentCounts[run.PlanItemID] != 1 {
+			continue
+		}
+		parent, ok := parentByID[run.PlanItemID]
+		if !ok || !validCapturedExecution(run.Execution) || !validCapturedSettlement(run.Settlement) || run.EvidenceCount < 0 {
+			continue
+		}
+		standing := parent
+		standing.Execution = run.Execution
+		standing.Settlement = run.Settlement
+		status, badge := cognitiveStatus(standing)
+		parentID := run.PlanItemID
+		explanation := "Execution: " + run.Execution + "; settlement: " + run.Settlement + "."
+		children = append(children, contract.CognitiveObject{
+			ID:          run.RunID,
+			Kind:        "execution_trace",
+			Name:        run.RunID,
+			Status:      status,
+			Badge:       badge,
+			Explanation: &explanation,
+			Salience:    salienceFor(standing, false),
+			ParentID:    &parentID,
+			Actions:     []contract.ActionDescriptor{},
+		})
+	}
+	return children
 }
 
 // itemBuilder renders one horizon item as a cognitive object: status, badge, plain-language

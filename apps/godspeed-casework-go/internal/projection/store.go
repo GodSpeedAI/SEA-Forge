@@ -268,6 +268,7 @@ func cloneFacts(in *CaseFacts) *CaseFacts {
 	}
 	out.Approvals = append([]ports.ApprovalRecord(nil), in.Approvals...)
 	out.Runs = append([]ports.RunSummary(nil), in.Runs...)
+	out.UnreadableRunIDs = append([]string(nil), in.UnreadableRunIDs...)
 	return &out
 }
 

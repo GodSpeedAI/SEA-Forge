@@ -1,0 +1,8 @@
+--- FAIL: TestLiveSourceRejectsUnknownRequestedCaseBeforeDownstreamReads (0.00s)
+    --- FAIL: TestLiveSourceRejectsUnknownRequestedCaseBeforeDownstreamReads/empty_case_list (0.00s)
+        scoped_live_test.go:144: authority calls list/overview/horizon/approvals/scoped/legacy = 1/1/1/1/1/0, want 1/0/0/0/0/0
+    --- FAIL: TestLiveSourceRejectsUnknownRequestedCaseBeforeDownstreamReads/foreign_case_listed_first (0.00s)
+        scoped_live_test.go:141: unknown requested case error = unavailable: the authority case list did not contain the requested case (world), want typed invalid/not-found
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.011s
+FAIL

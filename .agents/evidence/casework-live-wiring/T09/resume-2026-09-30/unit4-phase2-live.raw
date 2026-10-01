@@ -1,0 +1,6 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection
+package github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection
+	imports github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack from scoped_runs_live_test.go
+	imports github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection from stack.go: import cycle not allowed in test
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection [setup failed]
+FAIL

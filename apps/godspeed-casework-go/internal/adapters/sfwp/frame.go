@@ -295,6 +295,16 @@ func NewCaseList() *Request { return newRequest("case_list") }
 // directory no case claims are reported by the authority rather than dropped.
 func NewRunList() *Request { return newRequest("run_list") }
 
+// NewRunListForCase lists the governed run records (episodes) captured for one case.
+func NewRunListForCase(caseID string) (*Request, error) {
+	if strings.TrimSpace(caseID) == "" {
+		return nil, apperr.New(apperr.KindInvalid, "", "run_list", "case id must not be blank")
+	}
+	r := newRequest("run_list")
+	r.body["case_id"] = caseID
+	return r, nil
+}
+
 // NewRunGet resolves one run's committed records, including its case, plan item, trace, and evidence.
 func NewRunGet(runID string) *Request {
 	r := newRequest("run_get")
