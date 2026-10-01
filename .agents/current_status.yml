@@ -9,11 +9,11 @@ metadata:
   brief_note: Read Section 0 (Verification Errata, decisions, runner change) FIRST. Where the body disagrees with Section 0, Section 0 is correct (but see correction C-1 in the decision log for one §0 fact that was wrong).
   spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
   initialized: true
-  last_updated: '2026-09-30'
+  last_updated: '2026-10-01'
   updated_by: >-
     resumed orchestrator: T00-T08 independently settled, T08 checkpoint af362f5.
-    T09 repaired test-first fixtures approved with exact expected RED evidence;
-    canonical and response-cap implementations frozen for independent review.
+    T09 canonical bounded unit independently approved and checkpointed b608771;
+    cap scoped approval exists, mirrors need fresh test repair after source rejection.
     All workers are Luna, and compiler ownership remains serialized with host RAM checks.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
@@ -42,6 +42,19 @@ execution:
   plan_blocker: null
   external_blockers: []
   task_detail:
+    T09:
+      units: >-
+        IN FLIGHT. Canonical authored contract/spec/schema/test/golden unit independently
+        APPROVED and locally checkpointed b608771. Fresh Bun11/0/963 and explicit strict tsc0;
+        root verified source/log identity. Cap focused8/full SFWP race independently pass.
+        Mirror repair independently APPROVED after two immutable rejections and fresh builders.
+        All pre-Ask Go gates PASS; UI263/0/1427 plus production build PASS. Root verified16
+        manifest hashes and36 raw /tmp copies. ROOT compiler token after critic release.
+        Ask fixtures/declarations in progress, Go-only and no compilation; not yet approved.
+        Run-observation source preparation complete, runtime implementation still pending.
+      confirmation: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/canonical-final-independent-confirmation.md
+      confirmation_note: Bounded canonical unit only; no full T09 approval or settlement.
+      settle_when: All remaining T09 units, required global gates and independent runtime confirmation pass.
     T08:
       units: >-
         SETTLED 2026-09-30. Independent Luna critic approved production HTTP-only builds,
@@ -125,6 +138,68 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
+    Ask test-first builder froze exactly ports/ask.go, Options.Ask declaration in http.go,
+    server/ask_test.go and sfwp/ask_transport_test.go; no behavior/compile. Independent Ask
+    fixture critic reviews original assignment plus frozen source, no compiler token yet.
+    Cap source/test hashes still match scoped approval. Graft refresh exit0 recorded
+    669cards/7302nodes/13855edges. Checkpoint only approved cap/mirrors/fixture formatting
+    and evidence/status, excluding new Ask declarations/tests and all unrelated paths.
+    Mirror bounded-unit independent APPROVE is durable in mirror-repair-independent-green.md,
+    SHAda616c32fd5201d3facbf08c9acab433e6fca971a5779d0af3b4dbc32482d00b. Root checked16
+    manifest entries and36 exact raw/tmp copies, no mismatches. ROOT solecompiler after release.
+    Prepare explicit-path cap/mirror local checkpoint excluding all new Ask files and unrelated
+    Jolli/trusted-daemon changes. Ask builder continues fixtures/declarations without compiling;
+    separate Ask fixture critic read-only prepared, waits freeze/token to run expected RED.
+    ALL requested mirror gates now PASS: canonical11/0/963 +strict tsc, focusedGo race,
+    host just Go/fullmodule race, UItypecheck, wire15/0/512, host justUI263/0/1427 including
+    production build. Critic assembles final durable review/log identities; approval pending
+    that record. Foreign Bun process exited before focusedUI; preserved and not interfered.
+    Ask builder has started minimal ports/ask.go and Options.Ask declaration; tests inprogress,
+    no implementation or compiler. Go passes explicitly referpreAsk graph; mirror4files/goldens stable.
+    ALL mirror Go commands completed PASS: focused contract race/count1, host just Go check,
+    fullmodule race/count1. Ask test-first builder explicitly released four Go fixture/
+    declaration paths ONLY; no runtime behavior/no compile. Mirror critic retains GLOBAL
+    compiler token for remaining UI tests; UItypecheck PASS0. Actual-host scan found unrelated
+    bun test tests/architecture/ PID1167718, so critic waits without touching foreign process.
+    Repeat host RAM/process scan before nextcommand. Go evidence appliespreAsk sourcegraph;
+    later Ask/global verification must rerun against its new source.
+    Host-escalated just casework-go-check now PASS actualexit0 (format/vet/allpackages).
+    Full Go module race/count1 running under sole mirror critic with Go256MiB/p1/
+    GOMAXPROCS2/GOGC50/GOLDEN_UPDATE0; fresh host preflight2.7GiB and no other compiler.
+    Ask writes still held until explicit completion of every Go command; UI gates follow.
+    Independent canonical reruns PASS11/0/963 and strict tsc exit0; focused Go contract
+    race/count1 now PASS after fixture formatting. Broader just Go attempts encountered
+    Just runtime-dir and sandbox socket restrictions, preserved as failed environment
+    attempts. Critic retries under host escalation with writable task temp/runtime paths,
+    actual HOST preflights and GOLDEN_UPDATE disabled. No broader Go approval yet; Ask held.
+    Three Ask answer fixture whitespace repair frozen; builder parsed JSON equals b608771
+    for every fixture, with no values/keys/types/order changes. Mirror independent critic
+    now owns sole compiler for independent semantic comparison, canonical reruns and all
+    original Go/UI gates. Require actual HOST escalated RAM/PID scan before every command
+    and captured actual command exit status (not tee pipeline status). Ask files remain held.
+    Second mirror rejection evidence saved with exact155-line Go output and host preflight;
+    root compared raw Go log to original /tmp bytes. Fresh fixture builder explicitly STARTED
+    the three Ask answer formatting-only correction under a separate approved T09 fixture
+    integration scope; original mirror four-file ownership/prohibition remains unchanged.
+    Mirror fresh source repair independently passes source review, but focused Go race/count1
+    FAILS only three Ask answer fixture nonempty-array formatting vs established exact-byte
+    canonical Go encoding. Critic records mirror-second-independent-gate-reject.md and exact
+    raw /tmp log before fresh t09_run_observation_test_prep formats ONLY three answer goldens.
+    No JSON values/types/keys/field order/assertions change; native patches only, no compile.
+    Start after critic records old fixture hashes. ROOT compiler token; Ask writes held.
+    After freeze critic reruns canonical Bun/strict tsc plus full original mirror Go/UI gates.
+    Fresh mirror test-only repair froze: Go reflect pins all eight added DTO field types;
+    UI complete structural pins plus exact hydration-budget keys and a negative extra-key
+    probe. Independent mirror critic now owns sole compiler for re-review and focused/global
+    Go/UI gates; no Ask files yet. Earlier activity descriptions below are historical.
+    Mirror independent source review REJECTED two test omissions before compilation:
+    full Go added-field type pins missing and UI hydration budget accepts extra keys.
+    Critic releases compiler token toROOT and records mirror-first-independent-source-reject.md.
+    Fresh t09_subscription_writer_repair prepares ONLY golden_test.go/wireContract.test.ts
+    repairs, preserving all assertions. Start edits after rejected frozen-source hashes saved.
+    Ask writes remain held until repaired mirror broader Go gates pass.
+    Canonical bounded-unit local checkpoint b608771 completed; full T09 remains in flight.
+    Graft refresh passed666cards/7266nodes/13739edges before checkpoint; context-check passes.
     Mirror builder froze all four Go/UI files; independent t09_mirror_independent_critic
     now owns sole compiler token for final source review and serialized Go/UI gates.
     Ask files remain absent/held. Canonical local checkpoint staged with exact source/evidence
@@ -308,7 +383,7 @@ handoff:
     and append-only post-Store Go evidence correction verified; T08 SETTLED. T09 is active.
   state_summary: >-
     Root orchestrates builder/independentcritic loops; only Luna/Terra allowed, Terra unavailable.
-    Mirror independent critic owns sole compiler token after four-file freeze; check actualhost RAM/processes
+    ROOT owns compiler token after final independent mirror approval/release; check actualhost RAM/processes
     before each Go/Bun/Cargo build/test, no parallel compiler, Go256MiB/p1/GOMAXPROCS2 and Cargojobs1.
     Preserve all historical failures/evidence and unrelated Jolli/otherchanges; explicitpathstage only.
     Currentnative snapshot comparisons preserve FULL immutable SSEvsAt and current cursor/stablefacts

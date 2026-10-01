@@ -14,6 +14,7 @@ package sfwp
 import (
 	"bufio"
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -124,8 +125,12 @@ func (c *Client) subscriberPass(ctx context.Context, sub *Subscription) (dropped
 		if err := nc.SetReadDeadline(time.Now().Add(c.cfg.SubscribeIdle)); err != nil {
 			return false, apperr.Wrap(apperr.KindInternal, "", "subscribe", "cannot set read deadline", err)
 		}
-		raw, rerr := br.ReadBytes('\n')
+		raw, rerr := readBoundedLine(br, c.cfg.MaxResponseLineBytes, "subscribe")
 		if rerr != nil {
+			var typed *apperr.Error
+			if errors.As(rerr, &typed) {
+				return false, typed
+			}
 			return false, transportErr("subscribe read", rerr)
 		}
 		event, isEvent, derr := DecodeEvent(raw)

@@ -155,12 +155,131 @@ type TemplatePreflightResult struct {
 	Digest      *string        `json:"digest,omitempty"`
 }
 
-// StreamEvent is the SSE envelope; Cursor is the kernel cursor and doubles as Last-Event-ID.
+// StreamEvent is the generic SSE envelope for existing event payloads. Cursor is the real case
+// cursor; revision events may use it for Last-Event-ID.
 type StreamEvent struct {
 	EventType string `json:"event_type"`
 	Cursor    string `json:"cursor"`
 	Timestamp string `json:"timestamp"`
 	Payload   any    `json:"payload"`
+}
+
+// RunTraceObservationEvent is the named informational side-channel event. Cursor is the latest
+// real case cursor; the event does not create a trace cursor or advance case history.
+type RunTraceObservationEvent struct {
+	EventType string              `json:"event_type"`
+	Cursor    string              `json:"cursor"`
+	Timestamp string              `json:"timestamp"`
+	Payload   RunTraceObservation `json:"payload"`
+}
+
+const RunTraceObservationEventType = "execution_observation"
+
+type RunTraceFrameKind string
+
+type RunTraceCommandExecutionStatus string
+
+type RunExecutionStanding string
+
+type RunSettlementStanding string
+
+type RunTraceRunObservationState string
+
+type RunTraceListState string
+
+type RunTraceObservationState string
+
+// RunTraceFrame is the safe allowlist projection of one real trace row. Command metadata is
+// present only when it was recorded on an actual command_finished row.
+type RunTraceFrame struct {
+	EventID         string                          `json:"event_id"`
+	Kind            RunTraceFrameKind               `json:"kind"`
+	Timestamp       string                          `json:"timestamp"`
+	ExecutionStatus *RunTraceCommandExecutionStatus `json:"execution_status,omitempty"`
+	ExitCode        *int64                          `json:"exit_code,omitempty"`
+}
+
+// RunTraceRunObservation is one successfully owned run, distinct from invocation outcomes.
+type RunTraceRunObservation struct {
+	RunID              string                      `json:"run_id"`
+	ObservedAt         string                      `json:"observed_at"`
+	PlanItemID         string                      `json:"plan_item_id"`
+	Execution          RunExecutionStanding        `json:"execution"`
+	Settlement         RunSettlementStanding       `json:"settlement"`
+	ObservationState   RunTraceRunObservationState `json:"observation_state"`
+	Frames             []RunTraceFrame             `json:"frames"`
+	TotalFrameCount    int                         `json:"total_frame_count"`
+	RetainedFrameCount int                         `json:"retained_frame_count"`
+	OmittedFrameCount  int                         `json:"omitted_frame_count"`
+	Truncated          bool                        `json:"truncated"`
+}
+
+type RunTraceHydrationReadBudget struct {
+	Limit          int  `json:"limit"`
+	ReadsAttempted int  `json:"reads_attempted"`
+	Exhausted      bool `json:"exhausted"`
+}
+
+// RunTraceObservation is one bounded hydration cohort. Counts remain nil until run.list
+// completed and decoded, preserving absent versus present zero values on unavailable reads.
+type RunTraceObservation struct {
+	CaseID              string                      `json:"case_id"`
+	ObservedAt          string                      `json:"observed_at"`
+	RunListState        RunTraceListState           `json:"run_list_state"`
+	ObservationState    RunTraceObservationState    `json:"observation_state"`
+	ListedRunCount      *int                        `json:"listed_run_count,omitempty"`
+	SelectedRunCount    *int                        `json:"selected_run_count,omitempty"`
+	ValidatedRunCount   *int                        `json:"validated_run_count,omitempty"`
+	UnreadableRunCount  *int                        `json:"unreadable_run_count,omitempty"`
+	UnavailableRunCount *int                        `json:"unavailable_run_count,omitempty"`
+	OmittedRunCount     *int                        `json:"omitted_run_count,omitempty"`
+	HydrationReadBudget RunTraceHydrationReadBudget `json:"hydration_read_budget"`
+	Runs                []RunTraceRunObservation    `json:"runs"`
+}
+
+type ThothQuestionKind string
+
+type ThothClaimClass string
+
+type ThothClaimStatus string
+
+type ThothDisposition string
+
+type ThothFreshness string
+
+// ThothAskRequest is the authenticated route input; identity comes from the verified session.
+type ThothAskRequest struct {
+	Kind    ThothQuestionKind `json:"kind"`
+	Subject string            `json:"subject"`
+	Purpose *string           `json:"purpose,omitempty"`
+	Case    *string           `json:"case,omitempty"`
+}
+
+type ThothClaimView struct {
+	ClaimID             string           `json:"claim_id"`
+	ClaimClass          ThothClaimClass  `json:"claim_class"`
+	Subject             string           `json:"subject"`
+	Status              ThothClaimStatus `json:"status"`
+	Statement           string           `json:"statement"`
+	SnapshotRef         string           `json:"snapshot_ref"`
+	EvidenceRefs        []string         `json:"evidence_refs"`
+	SettlementRefs      []string         `json:"settlement_refs"`
+	CapabilityRecordRef *string          `json:"capability_record_ref,omitempty"`
+}
+
+// ThothAnswerView preserves the complete governed disclosure, including denied/partial metadata.
+type ThothAnswerView struct {
+	AnswerID            string            `json:"answer_id"`
+	QuestionID          string            `json:"question_id"`
+	Disposition         ThothDisposition  `json:"disposition"`
+	Claims              []ThothClaimView  `json:"claims"`
+	OmittedClaimClasses []ThothClaimClass `json:"omitted_claim_classes"`
+	SnapshotRef         string            `json:"snapshot_ref"`
+	Freshness           ThothFreshness    `json:"freshness"`
+	Assurance           string            `json:"assurance"`
+	Limitations         []string          `json:"limitations"`
+	AuthorityNotice     string            `json:"authority_notice"`
+	AnsweredAt          string            `json:"answered_at"`
 }
 
 // ExecutionProgressPayload is the payload of an execution_progress event.
@@ -288,7 +407,72 @@ var AllStreamEventKinds = []string{
 	"interrupted",
 	"error",
 	"heartbeat",
+	RunTraceObservationEventType,
 }
+
+var AllRunTraceFrameKinds = []string{
+	"run_started",
+	"item_activated",
+	"command_started",
+	"command_finished",
+	"item_completed",
+	"item_failed",
+	"item_terminated",
+	"human_task_completed",
+	"run_halted",
+	"run_finished",
+}
+
+var AllRunTraceCommandExecutionStatuses = []string{
+	"completed",
+	"spawn_failed",
+	"timed_out",
+	"sandbox_violation",
+	"suspected_sandbox_violation",
+}
+
+var AllRunExecutionStandings = []string{"pending", "enabled", "active", "completed", "failed", "terminated"}
+
+var AllRunSettlementStandings = []string{"unsettled", "accepted", "rejected", "escalated"}
+
+var AllRunTraceRunObservationStates = []string{"validated", "unavailable"}
+
+var AllRunTraceListStates = []string{"complete", "unavailable"}
+
+var AllRunTraceObservationStates = []string{"complete", "no_runs", "capacity_limited", "unavailable"}
+
+var AllThothQuestionKinds = []string{
+	"ask_capability",
+	"ask_operation_requirements",
+	"ask_authority_requirements",
+	"ask_projection_support",
+	"ask_environment_status",
+	"ask_failure_explanation",
+	"ask_evidence_for_claim",
+	"ask_available_affordances",
+	"ask_why_denied",
+}
+
+var AllThothClaimClasses = []string{
+	"identity",
+	"architecture",
+	"declared_capability",
+	"installed_capability",
+	"demonstrated_capability",
+	"authority_requirements",
+	"environment_status",
+	"failure_condition",
+	"security_implementation",
+	"customer_private",
+	"credential_bearing",
+	"policy_thresholds",
+}
+
+var AllThothClaimStatuses = []string{"unknown", "unsupported", "declared", "installed", "available", "validated", "demonstrated"}
+
+var AllThothDispositions = []string{"answered", "partial", "denied"}
+
+var AllThothFreshnessValues = []string{"current", "stale"}
 
 // PayloadCarryingKinds lists the intent kinds whose parameters carry a typed payload
 // (mirrors PayloadCarryingIntentName in types.ts).

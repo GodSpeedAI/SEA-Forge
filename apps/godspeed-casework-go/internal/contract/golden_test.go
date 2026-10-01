@@ -3,8 +3,12 @@ package contract
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -84,6 +88,10 @@ var requiredFixtures = []string{
 	"templates-entry-options.json",
 	"template-preflight-pass.json",
 	"template-preflight-fail.json",
+	"ask-request.json",
+	"ask-answer-answered.json",
+	"ask-answer-partial.json",
+	"ask-answer-denied.json",
 	"sse-events.jsonl",
 }
 
@@ -114,6 +122,16 @@ func TestGoldenRoundTrip(t *testing.T) {
 			roundTrip(t, path, &[]TemplateEntryOption{})
 		case strings.HasPrefix(name, "template-preflight-") && strings.HasSuffix(name, ".json"):
 			roundTrip(t, path, &TemplatePreflightResult{})
+		case name == "ask-request.json":
+			var request ThothAskRequest
+			if roundTrip(t, path, &request) {
+				checkThothAskRequest(t, name, &request)
+			}
+		case strings.HasPrefix(name, "ask-answer-") && strings.HasSuffix(name, ".json"):
+			var answer ThothAnswerView
+			if roundTrip(t, path, &answer) {
+				checkThothAnswer(t, name, &answer)
+			}
 		case name == "sse-events.jsonl":
 			roundTripLines(t, path)
 		default:
@@ -124,6 +142,386 @@ func TestGoldenRoundTrip(t *testing.T) {
 		if !seen[req] {
 			t.Errorf("required golden fixture missing: %s", req)
 		}
+	}
+}
+
+func checkThothAskRequest(t *testing.T, name string, req *ThothAskRequest) {
+	t.Helper()
+	if !contains(AllThothQuestionKinds, string(req.Kind)) {
+		t.Errorf("%s: kind %q is not a canonical Thoth question kind", name, req.Kind)
+	}
+	if strings.TrimSpace(req.Subject) == "" {
+		t.Errorf("%s: subject is empty", name)
+	}
+}
+
+func checkThothAnswer(t *testing.T, name string, answer *ThothAnswerView) {
+	t.Helper()
+	if !contains(AllThothDispositions, string(answer.Disposition)) {
+		t.Errorf("%s: disposition %q is not canonical", name, answer.Disposition)
+	}
+	if !contains(AllThothFreshnessValues, string(answer.Freshness)) {
+		t.Errorf("%s: freshness %q is not canonical", name, answer.Freshness)
+	}
+	if answer.AnswerID == "" || answer.QuestionID == "" || answer.SnapshotRef == "" || answer.AnsweredAt == "" {
+		t.Errorf("%s: answer is missing identity, snapshot, or answered_at", name)
+	}
+	if answer.Assurance == "" || answer.AuthorityNotice == "" {
+		t.Errorf("%s: assurance and authority_notice remain required strings", name)
+	}
+	if answer.Claims == nil || answer.OmittedClaimClasses == nil || answer.Limitations == nil {
+		t.Errorf("%s: claims, omitted_claim_classes, and limitations must be arrays", name)
+	}
+	for _, class := range answer.OmittedClaimClasses {
+		if !contains(AllThothClaimClasses, string(class)) {
+			t.Errorf("%s: omitted claim class %q is not canonical", name, class)
+		}
+	}
+	for i, claim := range answer.Claims {
+		if claim.ClaimID == "" || claim.Subject == "" || claim.Statement == "" || claim.SnapshotRef == "" {
+			t.Errorf("%s: claim %d is missing required disclosure fields", name, i)
+		}
+		if !contains(AllThothClaimClasses, string(claim.ClaimClass)) {
+			t.Errorf("%s: claim %d class %q is not canonical", name, i, claim.ClaimClass)
+		}
+		if !contains(AllThothClaimStatuses, string(claim.Status)) {
+			t.Errorf("%s: claim %d status %q is not canonical", name, i, claim.Status)
+		}
+		if claim.EvidenceRefs == nil || claim.SettlementRefs == nil {
+			t.Errorf("%s: claim %d evidence_refs and settlement_refs must be arrays", name, i)
+		}
+	}
+}
+
+func checkRunTraceObservationEvent(t *testing.T, path string, line int, ev *RunTraceObservationEvent) {
+	t.Helper()
+	if ev.EventType != RunTraceObservationEventType {
+		t.Errorf("%s line %d: event_type %q, want %q", path, line, ev.EventType, RunTraceObservationEventType)
+	}
+	if ev.Cursor == "" || ev.Timestamp == "" {
+		t.Errorf("%s line %d: observation event is missing its informational case cursor or timestamp", path, line)
+	}
+	obs := ev.Payload
+	if obs.CaseID == "" || obs.ObservedAt == "" {
+		t.Errorf("%s line %d: observation payload is missing case_id or observed_at", path, line)
+	}
+	if !contains(AllRunTraceListStates, string(obs.RunListState)) || !contains(AllRunTraceObservationStates, string(obs.ObservationState)) {
+		t.Errorf("%s line %d: unrecognized run-list or cohort observation state", path, line)
+	}
+	if obs.HydrationReadBudget.Limit != 8 || obs.HydrationReadBudget.ReadsAttempted < 0 || obs.HydrationReadBudget.ReadsAttempted > 8 {
+		t.Errorf("%s line %d: invalid hydration read budget %+v", path, line, obs.HydrationReadBudget)
+	}
+	if len(obs.Runs) > 8 {
+		t.Errorf("%s line %d: cohort carries %d runs, maximum is 8", path, line, len(obs.Runs))
+	}
+	if obs.Runs == nil {
+		t.Errorf("%s line %d: runs must be an array", path, line)
+	}
+	counts := []*int{obs.ListedRunCount, obs.SelectedRunCount, obs.ValidatedRunCount, obs.UnreadableRunCount, obs.UnavailableRunCount, obs.OmittedRunCount}
+	if obs.RunListState == "unavailable" {
+		for _, count := range counts {
+			if count != nil {
+				t.Errorf("%s line %d: unavailable run.list must leave every optional count absent", path, line)
+				break
+			}
+		}
+		if len(obs.Runs) != 0 || obs.ObservationState != "unavailable" {
+			t.Errorf("%s line %d: failed run.list must not report a hydrated cohort", path, line)
+		}
+	} else {
+		for _, count := range counts {
+			if count == nil {
+				t.Errorf("%s line %d: completed run.list must report every cohort count (including zero)", path, line)
+				break
+			}
+		}
+	}
+	for i, run := range obs.Runs {
+		ctx := fmt.Sprintf("%s line %d run %d", path, line, i)
+		if run.RunID == "" || run.ObservedAt == "" || run.PlanItemID == "" {
+			t.Errorf("%s: missing run identity/parent metadata", ctx)
+		}
+		if !contains(AllRunExecutionStandings, string(run.Execution)) || !contains(AllRunSettlementStandings, string(run.Settlement)) {
+			t.Errorf("%s: execution and settlement standings must use their separate vocabularies", ctx)
+		}
+		if !contains(AllRunTraceRunObservationStates, string(run.ObservationState)) {
+			t.Errorf("%s: unrecognized nested observation state %q", ctx, run.ObservationState)
+		}
+		if run.TotalFrameCount < 0 || run.RetainedFrameCount != len(run.Frames) || run.OmittedFrameCount < 0 || run.TotalFrameCount != run.RetainedFrameCount+run.OmittedFrameCount || run.Truncated != (run.OmittedFrameCount > 0) {
+			t.Errorf("%s: frame counts/truncated flag do not describe the retained frames", ctx)
+		}
+		if run.Frames == nil {
+			t.Errorf("%s: frames must be an array", ctx)
+		}
+		if len(run.Frames) > 1024 {
+			t.Errorf("%s: carries %d frames, maximum is 1024", ctx, len(run.Frames))
+		}
+		for j, frame := range run.Frames {
+			if frame.EventID == "" || frame.Timestamp == "" || !contains(AllRunTraceFrameKinds, string(frame.Kind)) {
+				t.Errorf("%s frame %d: missing identity/time or unrecognized safe kind", ctx, j)
+			}
+			if frame.ExecutionStatus != nil && !contains(AllRunTraceCommandExecutionStatuses, string(*frame.ExecutionStatus)) {
+				t.Errorf("%s frame %d: unrecognized command execution status %q", ctx, j, *frame.ExecutionStatus)
+			}
+			if frame.Kind != "command_finished" && (frame.ExecutionStatus != nil || frame.ExitCode != nil) {
+				t.Errorf("%s frame %d: command metadata is allowed only on command_finished", ctx, j)
+			}
+		}
+	}
+}
+
+func TestCanonicalMirrorFieldSets(t *testing.T) {
+	assertFields := func(name string, typ reflect.Type, want, optional []string) {
+		t.Helper()
+		var got, gotOptional []string
+		for i := 0; i < typ.NumField(); i++ {
+			parts := strings.Split(typ.Field(i).Tag.Get("json"), ",")
+			got = append(got, parts[0])
+			if len(parts) > 1 && contains(parts[1:], "omitempty") {
+				gotOptional = append(gotOptional, parts[0])
+			}
+		}
+		sort.Strings(got)
+		sort.Strings(gotOptional)
+		sort.Strings(want)
+		sort.Strings(optional)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s JSON fields = %v, want exactly %v", name, got, want)
+		}
+		if !reflect.DeepEqual(gotOptional, optional) {
+			t.Errorf("%s optional JSON fields = %v, want exactly %v", name, gotOptional, optional)
+		}
+	}
+	assertFields("ThothAskRequest", reflect.TypeOf(ThothAskRequest{}), []string{"kind", "subject", "purpose", "case"}, []string{"purpose", "case"})
+	assertFields("ThothClaimView", reflect.TypeOf(ThothClaimView{}), []string{"claim_id", "claim_class", "subject", "status", "statement", "snapshot_ref", "evidence_refs", "settlement_refs", "capability_record_ref"}, []string{"capability_record_ref"})
+	assertFields("ThothAnswerView", reflect.TypeOf(ThothAnswerView{}), []string{"answer_id", "question_id", "disposition", "claims", "omitted_claim_classes", "snapshot_ref", "freshness", "assurance", "limitations", "authority_notice", "answered_at"}, nil)
+	assertFields("RunTraceObservationEvent", reflect.TypeOf(RunTraceObservationEvent{}), []string{"event_type", "cursor", "timestamp", "payload"}, nil)
+	assertFields("RunTraceFrame", reflect.TypeOf(RunTraceFrame{}), []string{"event_id", "kind", "timestamp", "execution_status", "exit_code"}, []string{"execution_status", "exit_code"})
+	assertFields("RunTraceRunObservation", reflect.TypeOf(RunTraceRunObservation{}), []string{"run_id", "observed_at", "plan_item_id", "execution", "settlement", "observation_state", "frames", "total_frame_count", "retained_frame_count", "omitted_frame_count", "truncated"}, nil)
+	assertFields("RunTraceHydrationReadBudget", reflect.TypeOf(RunTraceHydrationReadBudget{}), []string{"limit", "reads_attempted", "exhausted"}, nil)
+	assertFields("RunTraceObservation", reflect.TypeOf(RunTraceObservation{}), []string{"case_id", "observed_at", "run_list_state", "observation_state", "listed_run_count", "selected_run_count", "validated_run_count", "unreadable_run_count", "unavailable_run_count", "omitted_run_count", "hydration_read_budget", "runs"}, []string{"listed_run_count", "selected_run_count", "validated_run_count", "unreadable_run_count", "unavailable_run_count", "omitted_run_count"})
+}
+
+func TestCanonicalMirrorFieldTypes(t *testing.T) {
+	type fieldTypePin struct {
+		name string
+		typ  reflect.Type
+	}
+	assertTypes := func(name string, typ reflect.Type, fields []fieldTypePin) {
+		t.Helper()
+		for _, field := range fields {
+			got, ok := typ.FieldByName(field.name)
+			if !ok {
+				t.Errorf("%s is missing Go field %s", name, field.name)
+				continue
+			}
+			if got.Type != field.typ {
+				t.Errorf("%s.%s Go type = %v, want %v", name, field.name, got.Type, field.typ)
+			}
+		}
+	}
+
+	stringType := reflect.TypeOf("")
+	stringSliceType := reflect.TypeOf([]string{})
+	intType := reflect.TypeOf(0)
+	int64PointerType := reflect.TypeOf((*int64)(nil))
+	stringPointerType := reflect.TypeOf((*string)(nil))
+	intPointerType := reflect.TypeOf((*int)(nil))
+
+	assertTypes("ThothAskRequest", reflect.TypeOf(ThothAskRequest{}), []fieldTypePin{
+		{"Kind", reflect.TypeOf(ThothQuestionKind(""))}, {"Subject", stringType},
+		{"Purpose", stringPointerType}, {"Case", stringPointerType},
+	})
+	assertTypes("ThothClaimView", reflect.TypeOf(ThothClaimView{}), []fieldTypePin{
+		{"ClaimID", stringType}, {"ClaimClass", reflect.TypeOf(ThothClaimClass(""))},
+		{"Subject", stringType}, {"Status", reflect.TypeOf(ThothClaimStatus(""))},
+		{"Statement", stringType}, {"SnapshotRef", stringType},
+		{"EvidenceRefs", stringSliceType}, {"SettlementRefs", stringSliceType},
+		{"CapabilityRecordRef", stringPointerType},
+	})
+	assertTypes("ThothAnswerView", reflect.TypeOf(ThothAnswerView{}), []fieldTypePin{
+		{"AnswerID", stringType}, {"QuestionID", stringType},
+		{"Disposition", reflect.TypeOf(ThothDisposition(""))},
+		{"Claims", reflect.TypeOf([]ThothClaimView{})},
+		{"OmittedClaimClasses", reflect.TypeOf([]ThothClaimClass{})},
+		{"SnapshotRef", stringType}, {"Freshness", reflect.TypeOf(ThothFreshness(""))},
+		{"Assurance", stringType}, {"Limitations", stringSliceType},
+		{"AuthorityNotice", stringType}, {"AnsweredAt", stringType},
+	})
+	assertTypes("RunTraceObservationEvent", reflect.TypeOf(RunTraceObservationEvent{}), []fieldTypePin{
+		{"EventType", stringType}, {"Cursor", stringType}, {"Timestamp", stringType},
+		{"Payload", reflect.TypeOf(RunTraceObservation{})},
+	})
+	assertTypes("RunTraceObservation", reflect.TypeOf(RunTraceObservation{}), []fieldTypePin{
+		{"CaseID", stringType}, {"ObservedAt", stringType},
+		{"RunListState", reflect.TypeOf(RunTraceListState(""))},
+		{"ObservationState", reflect.TypeOf(RunTraceObservationState(""))},
+		{"ListedRunCount", intPointerType}, {"SelectedRunCount", intPointerType},
+		{"ValidatedRunCount", intPointerType}, {"UnreadableRunCount", intPointerType},
+		{"UnavailableRunCount", intPointerType}, {"OmittedRunCount", intPointerType},
+		{"HydrationReadBudget", reflect.TypeOf(RunTraceHydrationReadBudget{})},
+		{"Runs", reflect.TypeOf([]RunTraceRunObservation{})},
+	})
+	assertTypes("RunTraceRunObservation", reflect.TypeOf(RunTraceRunObservation{}), []fieldTypePin{
+		{"RunID", stringType}, {"ObservedAt", stringType}, {"PlanItemID", stringType},
+		{"Execution", reflect.TypeOf(RunExecutionStanding(""))},
+		{"Settlement", reflect.TypeOf(RunSettlementStanding(""))},
+		{"ObservationState", reflect.TypeOf(RunTraceRunObservationState(""))},
+		{"Frames", reflect.TypeOf([]RunTraceFrame{})},
+		{"TotalFrameCount", intType}, {"RetainedFrameCount", intType},
+		{"OmittedFrameCount", intType}, {"Truncated", reflect.TypeOf(false)},
+	})
+	assertTypes("RunTraceHydrationReadBudget", reflect.TypeOf(RunTraceHydrationReadBudget{}), []fieldTypePin{
+		{"Limit", intType}, {"ReadsAttempted", intType}, {"Exhausted", reflect.TypeOf(false)},
+	})
+	assertTypes("RunTraceFrame", reflect.TypeOf(RunTraceFrame{}), []fieldTypePin{
+		{"EventID", stringType}, {"Kind", reflect.TypeOf(RunTraceFrameKind(""))},
+		{"Timestamp", stringType},
+		{"ExecutionStatus", reflect.TypeOf((*RunTraceCommandExecutionStatus)(nil))},
+		{"ExitCode", int64PointerType},
+	})
+}
+
+func TestCanonicalMirrorVocabularies(t *testing.T) {
+	assertVocabulary := func(name string, got, want []string) {
+		t.Helper()
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s = %v, want canonical vocabulary %v", name, got, want)
+		}
+		seen := map[string]bool{}
+		for _, value := range got {
+			if seen[value] {
+				t.Errorf("%s contains duplicate %q", name, value)
+			}
+			seen[value] = true
+		}
+	}
+	assertVocabulary("AllStreamEventKinds", AllStreamEventKinds, []string{"snapshot", "patch", "execution_progress", "settlement_recorded", "lease_expired", "resync_required", "interrupted", "error", "heartbeat", "execution_observation"})
+	assertVocabulary("AllRunTraceFrameKinds", AllRunTraceFrameKinds, []string{"run_started", "item_activated", "command_started", "command_finished", "item_completed", "item_failed", "item_terminated", "human_task_completed", "run_halted", "run_finished"})
+	assertVocabulary("AllRunTraceCommandExecutionStatuses", AllRunTraceCommandExecutionStatuses, []string{"completed", "spawn_failed", "timed_out", "sandbox_violation", "suspected_sandbox_violation"})
+	assertVocabulary("AllRunExecutionStandings", AllRunExecutionStandings, []string{"pending", "enabled", "active", "completed", "failed", "terminated"})
+	assertVocabulary("AllRunSettlementStandings", AllRunSettlementStandings, []string{"unsettled", "accepted", "rejected", "escalated"})
+	assertVocabulary("AllRunTraceRunObservationStates", AllRunTraceRunObservationStates, []string{"validated", "unavailable"})
+	assertVocabulary("AllRunTraceListStates", AllRunTraceListStates, []string{"complete", "unavailable"})
+	assertVocabulary("AllRunTraceObservationStates", AllRunTraceObservationStates, []string{"complete", "no_runs", "capacity_limited", "unavailable"})
+	assertVocabulary("AllThothQuestionKinds", AllThothQuestionKinds, []string{"ask_capability", "ask_operation_requirements", "ask_authority_requirements", "ask_projection_support", "ask_environment_status", "ask_failure_explanation", "ask_evidence_for_claim", "ask_available_affordances", "ask_why_denied"})
+	assertVocabulary("AllThothClaimClasses", AllThothClaimClasses, []string{"identity", "architecture", "declared_capability", "installed_capability", "demonstrated_capability", "authority_requirements", "environment_status", "failure_condition", "security_implementation", "customer_private", "credential_bearing", "policy_thresholds"})
+	assertVocabulary("AllThothClaimStatuses", AllThothClaimStatuses, []string{"unknown", "unsupported", "declared", "installed", "available", "validated", "demonstrated"})
+	assertVocabulary("AllThothDispositions", AllThothDispositions, []string{"answered", "partial", "denied"})
+	assertVocabulary("AllThothFreshnessValues", AllThothFreshnessValues, []string{"current", "stale"})
+}
+
+func TestRunTraceObservationCountOmission(t *testing.T) {
+	observationType := reflect.TypeOf(RunTraceObservation{})
+	for _, field := range []string{"ListedRunCount", "SelectedRunCount", "ValidatedRunCount", "UnreadableRunCount", "UnavailableRunCount", "OmittedRunCount"} {
+		fieldType, ok := observationType.FieldByName(field)
+		if !ok || fieldType.Type.Kind() != reflect.Pointer || fieldType.Type.Elem().Kind() != reflect.Int {
+			t.Errorf("%s must be *int to preserve absent versus present zero", field)
+		}
+	}
+	var observation RunTraceObservation
+	raw, err := json.Marshal(observation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var absent map[string]any
+	if err := json.Unmarshal(raw, &absent); err != nil {
+		t.Fatal(err)
+	}
+	countFields := []string{"listed_run_count", "selected_run_count", "validated_run_count", "unreadable_run_count", "unavailable_run_count", "omitted_run_count"}
+	for _, field := range countFields {
+		if _, exists := absent[field]; exists {
+			t.Errorf("nil %s must remain absent", field)
+		}
+	}
+	zero := 0
+	observation.ListedRunCount = &zero
+	observation.SelectedRunCount = &zero
+	observation.ValidatedRunCount = &zero
+	observation.UnreadableRunCount = &zero
+	observation.UnavailableRunCount = &zero
+	observation.OmittedRunCount = &zero
+	raw, err = json.Marshal(observation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var present map[string]any
+	if err := json.Unmarshal(raw, &present); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range countFields {
+		if value, exists := present[field]; !exists || value != float64(0) {
+			t.Errorf("present zero %s must serialize as zero; got %#v", field, value)
+		}
+	}
+}
+
+func TestThothAskRequestOptionalPresence(t *testing.T) {
+	request := ThothAskRequest{Kind: "ask_capability", Subject: "shell"}
+	raw, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var absent map[string]any
+	if err := json.Unmarshal(raw, &absent); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"purpose", "case"} {
+		if _, exists := absent[field]; exists {
+			t.Errorf("omitted request %s must remain absent", field)
+		}
+	}
+	empty := ""
+	request.Purpose = &empty
+	request.Case = &empty
+	raw, err = json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var present map[string]any
+	if err := json.Unmarshal(raw, &present); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"purpose", "case"} {
+		if value, exists := present[field]; !exists || value != "" {
+			t.Errorf("present empty %s must remain distinguishable from omission", field)
+		}
+	}
+}
+
+func TestRunTraceFrameCommandMetadataPresence(t *testing.T) {
+	frame := RunTraceFrame{EventID: "evt-1", Kind: "command_finished", Timestamp: "2026-09-30T00:00:00Z"}
+	raw, err := json.Marshal(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var absent map[string]any
+	if err := json.Unmarshal(raw, &absent); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := absent["execution_status"]; exists {
+		t.Error("execution_status must remain absent when not recorded")
+	}
+	if _, exists := absent["exit_code"]; exists {
+		t.Error("exit_code must remain absent when not recorded")
+	}
+	status := RunTraceCommandExecutionStatus("completed")
+	exitCode := int64(0)
+	frame.ExecutionStatus = &status
+	frame.ExitCode = &exitCode
+	raw, err = json.Marshal(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var present map[string]any
+	if err := json.Unmarshal(raw, &present); err != nil {
+		t.Fatal(err)
+	}
+	if value, exists := present["execution_status"]; !exists || value != "completed" {
+		t.Errorf("recorded execution_status must be serialized exactly; got %#v", value)
+	}
+	if value, exists := present["exit_code"]; !exists || value != float64(0) {
+		t.Errorf("recorded zero exit_code must not collapse to absence; got %#v", value)
 	}
 }
 
@@ -158,8 +556,9 @@ func roundTrip(t *testing.T, path string, v any) bool {
 	return true
 }
 
-// roundTripLines does the per-line equivalent for the SSE jsonl fixture. Under GOLDEN_UPDATE it
-// rewrites the file in canonical line encoding instead of comparing.
+// roundTripLines does the per-line equivalent for the SSE jsonl fixture. Observation events are
+// decoded into their complete typed shape, then object key order is normalized for comparison.
+// Under GOLDEN_UPDATE it rewrites the file in canonical line encoding instead of comparing.
 func roundTripLines(t *testing.T, path string) {
 	t.Helper()
 	raw, err := os.ReadFile(path)
@@ -171,6 +570,39 @@ func roundTripLines(t *testing.T, path string) {
 	for i, line := range lines {
 		if strings.TrimSpace(line) == "" {
 			t.Fatalf("%s: blank line at %d", path, i+1)
+		}
+		var header struct {
+			EventType string `json:"event_type"`
+		}
+		if err := json.Unmarshal([]byte(line), &header); err != nil {
+			t.Errorf("%s line %d: read event type: %v", path, i+1, err)
+			continue
+		}
+		if header.EventType == RunTraceObservationEventType {
+			var ev RunTraceObservationEvent
+			dec := json.NewDecoder(strings.NewReader(line))
+			dec.DisallowUnknownFields()
+			if err := dec.Decode(&ev); err != nil {
+				t.Errorf("%s line %d: observation does not match its typed event: %v", path, i+1, err)
+				continue
+			}
+			var trailing any
+			if err := dec.Decode(&trailing); err != io.EOF {
+				t.Errorf("%s line %d: observation line has trailing JSON", path, i+1)
+				continue
+			}
+			canonical, err := canonicalCompact(&ev)
+			if err != nil {
+				t.Errorf("%s line %d: re-marshal typed observation: %v", path, i+1, err)
+				continue
+			}
+			if goldenUpdate() {
+				canonicalLines = append(canonicalLines, canonical)
+			} else if !sameCanonicalJSON([]byte(line), []byte(canonical)) {
+				t.Errorf("%s line %d: typed observation differs from the fixture after JSON object-key normalization", path, i+1)
+			}
+			checkRunTraceObservationEvent(t, path, i+1, &ev)
+			continue
 		}
 		var ev StreamEvent
 		if err := json.Unmarshal([]byte(line), &ev); err != nil {
@@ -193,6 +625,27 @@ func roundTripLines(t *testing.T, path string) {
 	if goldenUpdate() && len(canonicalLines) == len(lines) {
 		rewriteIfChanged(t, path, []byte(strings.Join(canonicalLines, "\n")+"\n"))
 	}
+}
+
+// sameCanonicalJSON ignores object-key order while retaining array order and scalar values. The
+// shared JSONL fixture is authored in canonical interface order; Go's map encoder sorts object
+// keys, so raw byte order is not a contract field.
+func sameCanonicalJSON(left, right []byte) bool {
+	canonical := func(raw []byte) ([]byte, error) {
+		var value any
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.UseNumber()
+		if err := dec.Decode(&value); err != nil {
+			return nil, err
+		}
+		return json.Marshal(value)
+	}
+	a, err := canonical(left)
+	if err != nil {
+		return false
+	}
+	b, err := canonical(right)
+	return err == nil && bytes.Equal(a, b)
 }
 
 // checkStreamEventPayload validates the typed payload of each SSE line against the struct that
@@ -257,6 +710,12 @@ func checkStreamEventPayload(t *testing.T, path string, line int, ev *StreamEven
 		decode(&p)
 		if p.ErrorCode == "" || p.Message == "" {
 			t.Errorf("%s line %d: error payload missing error_code or message", path, line)
+		}
+	case RunTraceObservationEventType:
+		var p RunTraceObservation
+		decode(&p)
+		if p.CaseID == "" || p.ObservedAt == "" {
+			t.Errorf("%s line %d: execution_observation payload missing case_id or observed_at", path, line)
 		}
 	case "heartbeat":
 		var h map[string]any

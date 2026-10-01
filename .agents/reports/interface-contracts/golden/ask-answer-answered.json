@@ -10,8 +10,12 @@
       "status": "demonstrated",
       "statement": "SEA Forge has demonstrated Rust implementation capability.",
       "snapshot_ref": "snapshot-self-model-t09",
-      "evidence_refs": ["evi-t09-build"],
-      "settlement_refs": ["set-t09-build"],
+      "evidence_refs": [
+        "evi-t09-build"
+      ],
+      "settlement_refs": [
+        "set-t09-build"
+      ],
       "capability_record_ref": "cap-domain-rust"
     }
   ],

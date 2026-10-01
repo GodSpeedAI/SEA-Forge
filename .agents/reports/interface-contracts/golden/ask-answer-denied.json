@@ -3,11 +3,16 @@
   "question_id": "thq-t09-denied",
   "disposition": "denied",
   "claims": [],
-  "omitted_claim_classes": ["credential_bearing", "customer_private"],
+  "omitted_claim_classes": [
+    "credential_bearing",
+    "customer_private"
+  ],
   "snapshot_ref": "snapshot-self-model-t09",
   "freshness": "current",
   "assurance": "local_tamper_evident",
-  "limitations": ["No claim class is permitted for this actor."],
+  "limitations": [
+    "No claim class is permitted for this actor."
+  ],
   "authority_notice": "This answer confers no execution authority.",
   "answered_at": "2026-09-23T10:17:07Z"
 }

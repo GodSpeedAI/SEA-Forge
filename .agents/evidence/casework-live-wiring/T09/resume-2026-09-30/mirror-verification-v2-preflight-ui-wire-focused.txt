@@ -1,0 +1,6 @@
+2026-10-01T04:29:05Z
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.1Gi       573Mi       483Mi       2.7Gi       2.6Gi
+Swap:           12Gi       5.3Gi       6.7Gi
+    PID    PPID   RSS COMMAND         COMMAND
+1167718 1167698 111244 bun            bun test tests/architecture/

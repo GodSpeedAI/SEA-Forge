@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-09-30
+Updated: 2026-10-01
 
 ## Objective
 
@@ -9,20 +9,21 @@ then split T13 and stop for operator review. Follow `current_status.yml`.
 
 ## Worktree State
 
-Branch `casework/live-wiring`; HEAD T08 settlement checkpoint `af362f5`; Store checkpoint
-`48783dc`; T07 checkpoint `aed3494`. T08 source/evidence/status committed locally.
+Branch `casework/live-wiring`; HEAD canonical T09 unit checkpoint `b608771`; T08 checkpoint
+`af362f5`; Store checkpoint `48783dc`; T07 checkpoint `aed3494`.
 Preserve unrelated Jolli debug log and trusted-daemon target plan/spec plus other working changes;
 stage explicit task paths only.
-T09 read-only source preparation is uncommitted and belongs to the upcoming T09 work.
+Remaining T09 source preparation, cap and Go/UI mirrors are uncommitted.
 
 ## Changed Files
 
 T08 native Go/TS live harness, retention-configurable test stack, owned shared runner,
 shared replay assertion and focused local regressions. Store production repair and red/green
 evidence already committed. New independent T08 source/gate/proof records and immutable failures.
-T09 uncommitted: canonical Ask/observation types, two schemas, specs, tests/goldens; SFWP
-client/subscriber cap plus focused tests and independent RED/GREEN/review evidence. Go/UI
-contract mirrors are being built. All original assignments and rejections remain durable.
+T09 canonical Ask/observation types, schemas, specs, tests/goldens and independent evidence
+are committed at b608771. Uncommitted SFWP client/subscriber cap plus focused tests and
+independent RED/GREEN/review evidence; Go/UI mirror implementation frozen with fresh test
+repair pending source rejection. All original assignments and rejections remain durable.
 
 ## Completed
 
@@ -32,6 +33,10 @@ T00-T08 settled. Full independent T08 approval:
 entries, both record hashes and byte-identical copied fresh Go logs. Earlier outage debt closed.
 
 ## Verification
+
+T09 bounded mirror unit independently APPROVED in mirror-repair-independent-green.md;
+root verified16 source/log manifest hashes and36 exact raw/tmp copies. All pre-Ask Go gates
+pass; UI263/0/1427 plus production build pass. ROOT compiler token after critic release.
 
 T09 canonical bounded unit independently APPROVED in canonical-final-independent-confirmation.md:
 fresh Bun11/0/963 assertions and standalone strict TypeScript exit0. Root matched four source
@@ -50,16 +55,26 @@ All raw logs, failures and evidence corrections are immutable under T08/resume-2
 
 ## Remaining
 
-Latest evening resume: both interrupted Luna builders resumed successfully. Canonical bounded
-unit is independently approved; ROOT owns sole compiler token after explicit release.
-Four-file mirror builder resumes existing partial implementation without compiling. Ask builder
-owns test fixtures and minimal ports/Options declarations per ask-test-first-assignment.md,
-with all writes held until mirror broader Go gates finish (no Ask files added).
-Mirror builder froze all four files; independent critic owns the sole compiler token for
-source review and serialized Go/UI gates. Run-observation read-only preparation is complete.
-Canonical local checkpoint uses exact source/evidence paths; original RED stdout retains two
-trailing-space excerpt lines byte-identically, with source whitespace checked separately.
-Earlier activity descriptions below are historical. Full T09 remains unapproved.
+Current step: independent mirror critic owns the sole compiler token. Four mirror files,
+fresh two-test drift-check repair and three whitespace-only Ask answer fixture repairs are
+frozen. Canonical Bun11/0/963, strict TypeScript, focused Go contract race/count1 and
+host-escalated just casework-go-check and full module race/count1 pass. UI typecheck passes.
+Critic completed UI wire15/0/512 and host justUI263/0/1427 including production build,
+independently APPROVED mirror unit and released compiler token toROOT. Unrelated Bun process1167718
+exited before UI tests; it was preserved. Earlier runtime-directory/socket sandbox
+failures are retained separately. All gates use actual HOST preflights, owned writable temp
+paths, real exit statuses and GOLDEN_UPDATE disabled. Preserve immutable raw failures.
+
+All critic Go commands finished; Ask test builder is explicitly released to write only assigned
+fixtures and minimal ports/Options declarations per ask-test-first-assignment.md, without compiling.
+Ask fixtures/declarations froze exactly four assigned Go files with no behavior/compile.
+Independent Ask fixture critic begins source review, awaiting explicit compiler transfer.
+Go evidence refers to the pre-Ask source graph; later Ask/global gates must rerun.
+Original mirror assignment prohibits authored golden edits; the three
+fixture whitespace repairs are a separate root-authorized integration correction, with parsed
+JSON unchanged from b608771. Both canonical and mirror verification must cover that correction.
+Run-observation read-only preparation is complete; runtime integration decisions are recorded.
+Full T09 remains unapproved. Earlier activity descriptions below are historical.
 
 T08 checkpoint complete; Graft refresh and context-check pass. Implement approved
 T09 units in `T09/resume-2026-09-30/prepared-implementation-units.md`; exact source inventory
@@ -113,7 +128,7 @@ Continue T09-T12, preserve existing T10 preregistration, split T13 then stop.
 No operator approval blocker. T09 approval persists; do not reask.
 Recovery found no surviving agents. Independent fixture approval is durable in
 `fixture-independent-review.md`; cap implementation is independently approved, with Ask
-recovery errata. Mirror independent critic currently owns the sole compile token.
+recovery errata. ROOT owns sole compile token after final mirror approval/release.
 Canonical strict typecheck previously failed on14 helper errors; fresh repair independently
 passes. Four-file Go/UI mirrors and Ask fixtures are in progress. Builders may edit only assigned disjoint files and may
 not compile. Canonical strict typecheck and restored broader Go/UI gates remain required.

@@ -25,9 +25,28 @@ import type {
   IntentRefusalKind,
   InteractionActionName,
   PayloadCarryingIntentName,
+  RunExecutionStanding,
+  RunSettlementStanding,
+  RunTraceCommandExecutionStatus,
+  RunTraceFrame,
+  RunTraceFrameKind,
+  RunTraceHydrationReadBudget,
+  RunTraceObservation,
+  RunTraceObservationEvent,
+  RunTraceRunObservation,
   StreamEventType,
+  ThothAnswerView,
+  ThothAskRequest,
+  ThothClaimClass,
+  ThothClaimStatus,
+  ThothClaimView,
+  ThothDisposition,
+  ThothFreshness,
+  ThothQuestionKind,
   WorldSummary,
 } from '../../../../.agents/reports/interface-contracts/typescript/types'
+import type { NarrationBeat } from './contract'
+import type * as PortContract from './contract'
 
 import worldSnapshotJson from '../../../../.agents/reports/interface-contracts/golden/world-snapshot.json'
 import intentProposeCase from '../../../../.agents/reports/interface-contracts/golden/intent-propose-case.json'
@@ -43,6 +62,10 @@ import intentTerminateCase from '../../../../.agents/reports/interface-contracts
 import templatesEntryOptions from '../../../../.agents/reports/interface-contracts/golden/templates-entry-options.json'
 import templatePreflightPass from '../../../../.agents/reports/interface-contracts/golden/template-preflight-pass.json'
 import templatePreflightFail from '../../../../.agents/reports/interface-contracts/golden/template-preflight-fail.json'
+import thothAskRequest from '../../../../.agents/reports/interface-contracts/golden/ask-request.json'
+import thothAnswerAnswered from '../../../../.agents/reports/interface-contracts/golden/ask-answer-answered.json'
+import thothAnswerPartial from '../../../../.agents/reports/interface-contracts/golden/ask-answer-partial.json'
+import thothAnswerDenied from '../../../../.agents/reports/interface-contracts/golden/ask-answer-denied.json'
 
 const GOLDEN_DIR = join(import.meta.dir, '..', '..', '..', '..', '.agents', 'reports', 'interface-contracts', 'golden')
 
@@ -143,10 +166,63 @@ const STREAM_EVENT_KINDS = [
   'interrupted',
   'error',
   'heartbeat',
+  'execution_observation',
 ] as const
+
+const THOTH_QUESTION_KINDS = [
+  'ask_capability',
+  'ask_operation_requirements',
+  'ask_authority_requirements',
+  'ask_projection_support',
+  'ask_environment_status',
+  'ask_failure_explanation',
+  'ask_evidence_for_claim',
+  'ask_available_affordances',
+  'ask_why_denied',
+] as const
+
+const THOTH_CLAIM_CLASSES = [
+  'identity',
+  'architecture',
+  'declared_capability',
+  'installed_capability',
+  'demonstrated_capability',
+  'authority_requirements',
+  'environment_status',
+  'failure_condition',
+  'security_implementation',
+  'customer_private',
+  'credential_bearing',
+  'policy_thresholds',
+] as const
+
+const THOTH_CLAIM_STATUSES = ['unknown', 'unsupported', 'declared', 'installed', 'available', 'validated', 'demonstrated'] as const
+const THOTH_DISPOSITIONS = ['answered', 'partial', 'denied'] as const
+const THOTH_FRESHNESS = ['current', 'stale'] as const
+
+const RUN_TRACE_FRAME_KINDS = [
+  'run_started',
+  'item_activated',
+  'command_started',
+  'command_finished',
+  'item_completed',
+  'item_failed',
+  'item_terminated',
+  'human_task_completed',
+  'run_halted',
+  'run_finished',
+] as const
+
+const RUN_TRACE_COMMAND_STATUSES = ['completed', 'spawn_failed', 'timed_out', 'sandbox_violation', 'suspected_sandbox_violation'] as const
+const RUN_EXECUTION_STANDINGS = ['pending', 'enabled', 'active', 'completed', 'failed', 'terminated'] as const
+const RUN_SETTLEMENT_STANDINGS = ['unsettled', 'accepted', 'rejected', 'escalated'] as const
+const RUN_OBSERVATION_STATES = ['complete', 'no_runs', 'capacity_limited', 'unavailable'] as const
+const RUN_LIST_STATES = ['complete', 'unavailable'] as const
+const RUN_TRACE_RUN_STATES = ['validated', 'unavailable'] as const
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
 type Expect<T extends true> = T
+type OptionalKeys<T> = { [K in keyof T]-?: {} extends Pick<T, K> ? K : never }[keyof T]
 
 /**
  * Compile-time pins (run by `bun run typecheck`): every hardcoded list above must equal the
@@ -168,12 +244,171 @@ export type WireContractPins = [
   Expect<Equal<Exclude<ConsequentialIntentName, ActionIntentKind>, never>>,
 ]
 
+/** Exact type/property pins for the T09 canonical Go/UI mirror additions. */
+type CanonicalMirrorFieldTypes = [
+  {
+    kind: ThothQuestionKind
+    subject: string
+    purpose?: string
+    case?: string
+  },
+  {
+    claim_id: string
+    claim_class: ThothClaimClass
+    subject: string
+    status: ThothClaimStatus
+    statement: string
+    snapshot_ref: string
+    evidence_refs: string[]
+    settlement_refs: string[]
+    capability_record_ref?: string
+  },
+  {
+    answer_id: string
+    question_id: string
+    disposition: ThothDisposition
+    claims: ThothClaimView[]
+    omitted_claim_classes: ThothClaimClass[]
+    snapshot_ref: string
+    freshness: ThothFreshness
+    assurance: string
+    limitations: string[]
+    authority_notice: string
+    answered_at: string
+  },
+  {
+    event_type: 'execution_observation'
+    cursor: string
+    timestamp: string
+    payload: RunTraceObservation
+  },
+  {
+    case_id: string
+    observed_at: string
+    run_list_state: 'complete' | 'unavailable'
+    observation_state: 'complete' | 'no_runs' | 'capacity_limited' | 'unavailable'
+    listed_run_count?: number
+    selected_run_count?: number
+    validated_run_count?: number
+    unreadable_run_count?: number
+    unavailable_run_count?: number
+    omitted_run_count?: number
+    hydration_read_budget: RunTraceHydrationReadBudget
+    runs: RunTraceRunObservation[]
+  },
+  {
+    run_id: string
+    observed_at: string
+    plan_item_id: string
+    execution: RunExecutionStanding
+    settlement: RunSettlementStanding
+    observation_state: 'validated' | 'unavailable'
+    frames: RunTraceFrame[]
+    total_frame_count: number
+    retained_frame_count: number
+    omitted_frame_count: number
+    truncated: boolean
+  },
+  { limit: 8; reads_attempted: number; exhausted: boolean },
+  {
+    event_id: string
+    kind: RunTraceFrameKind
+    timestamp: string
+    execution_status?: RunTraceCommandExecutionStatus
+    exit_code?: number
+  },
+]
+
+export type CanonicalMirrorPins = [
+  Expect<Equal<(typeof THOTH_QUESTION_KINDS)[number], ThothQuestionKind>>,
+  Expect<Equal<(typeof THOTH_CLAIM_CLASSES)[number], ThothClaimClass>>,
+  Expect<Equal<(typeof THOTH_CLAIM_STATUSES)[number], ThothClaimStatus>>,
+  Expect<Equal<(typeof THOTH_DISPOSITIONS)[number], ThothDisposition>>,
+  Expect<Equal<(typeof THOTH_FRESHNESS)[number], ThothFreshness>>,
+  Expect<Equal<(typeof RUN_TRACE_FRAME_KINDS)[number], RunTraceFrameKind>>,
+  Expect<Equal<(typeof RUN_TRACE_COMMAND_STATUSES)[number], RunTraceCommandExecutionStatus>>,
+  Expect<Equal<(typeof RUN_EXECUTION_STANDINGS)[number], RunExecutionStanding>>,
+  Expect<Equal<(typeof RUN_SETTLEMENT_STANDINGS)[number], RunSettlementStanding>>,
+  Expect<Equal<(typeof RUN_OBSERVATION_STATES)[number], RunTraceObservation['observation_state']>>,
+  Expect<Equal<(typeof RUN_LIST_STATES)[number], RunTraceObservation['run_list_state']>>,
+  Expect<Equal<(typeof RUN_TRACE_RUN_STATES)[number], RunTraceRunObservation['observation_state']>>,
+  Expect<Equal<RunTraceHydrationReadBudget['limit'], 8>>,
+  Expect<Equal<RunTraceObservationEvent['event_type'], 'execution_observation'>>,
+  Expect<Equal<keyof RunTraceObservationEvent, 'event_type' | 'cursor' | 'timestamp' | 'payload'>>,
+  Expect<Equal<ThothAskRequest['kind'], ThothQuestionKind>>,
+  Expect<Equal<Pick<ThothAskRequest, 'purpose' | 'case'>, { purpose?: string; case?: string }>>,
+  Expect<Equal<ThothClaimView['claim_class'], ThothClaimClass>>,
+  Expect<Equal<ThothClaimView['status'], ThothClaimStatus>>,
+  Expect<Equal<Pick<ThothClaimView, 'capability_record_ref'>, { capability_record_ref?: string }>>,
+  Expect<Equal<ThothAnswerView['disposition'], ThothDisposition>>,
+  Expect<Equal<ThothAnswerView['freshness'], ThothFreshness>>,
+  Expect<Equal<RunTraceFrame['kind'], RunTraceFrameKind>>,
+  Expect<Equal<RunTraceFrame['execution_status'], RunTraceCommandExecutionStatus | undefined>>,
+  Expect<Equal<RunTraceFrame['exit_code'], number | undefined>>,
+  Expect<Equal<RunTraceRunObservation['execution'], RunExecutionStanding>>,
+  Expect<Equal<RunTraceRunObservation['settlement'], RunSettlementStanding>>,
+  Expect<Equal<RunTraceRunObservation['observation_state'], 'validated' | 'unavailable'>>,
+  Expect<Equal<RunTraceHydrationReadBudget['reads_attempted'], number>>,
+  Expect<Equal<RunTraceHydrationReadBudget['exhausted'], boolean>>,
+  Expect<Equal<RunTraceObservation['run_list_state'], 'complete' | 'unavailable'>>,
+  Expect<Equal<RunTraceObservation['observation_state'], 'complete' | 'no_runs' | 'capacity_limited' | 'unavailable'>>,
+  Expect<Equal<Pick<RunTraceObservation, 'listed_run_count' | 'selected_run_count' | 'validated_run_count' | 'unreadable_run_count' | 'unavailable_run_count' | 'omitted_run_count'>, { listed_run_count?: number; selected_run_count?: number; validated_run_count?: number; unreadable_run_count?: number; unavailable_run_count?: number; omitted_run_count?: number }>>,
+  Expect<Equal<RunTraceObservationEvent['payload'], RunTraceObservation>>,
+  Expect<Equal<keyof ThothAskRequest, 'kind' | 'subject' | 'purpose' | 'case'>>,
+  Expect<Equal<OptionalKeys<ThothAskRequest>, 'purpose' | 'case'>>,
+  Expect<Equal<keyof ThothClaimView, 'claim_id' | 'claim_class' | 'subject' | 'status' | 'statement' | 'snapshot_ref' | 'evidence_refs' | 'settlement_refs' | 'capability_record_ref'>>,
+  Expect<Equal<OptionalKeys<ThothClaimView>, 'capability_record_ref'>>,
+  Expect<Equal<keyof ThothAnswerView, 'answer_id' | 'question_id' | 'disposition' | 'claims' | 'omitted_claim_classes' | 'snapshot_ref' | 'freshness' | 'assurance' | 'limitations' | 'authority_notice' | 'answered_at'>>,
+  Expect<Equal<OptionalKeys<ThothAnswerView>, never>>,
+  Expect<Equal<keyof RunTraceFrame, 'event_id' | 'kind' | 'timestamp' | 'execution_status' | 'exit_code'>>,
+  Expect<Equal<OptionalKeys<RunTraceFrame>, 'execution_status' | 'exit_code'>>,
+  Expect<Equal<keyof RunTraceRunObservation, 'run_id' | 'observed_at' | 'plan_item_id' | 'execution' | 'settlement' | 'observation_state' | 'frames' | 'total_frame_count' | 'retained_frame_count' | 'omitted_frame_count' | 'truncated'>>,
+  Expect<Equal<OptionalKeys<RunTraceRunObservation>, never>>,
+  Expect<Equal<keyof RunTraceHydrationReadBudget, 'limit' | 'reads_attempted' | 'exhausted'>>,
+  Expect<Equal<OptionalKeys<RunTraceHydrationReadBudget>, never>>,
+  Expect<Equal<keyof RunTraceObservation, 'case_id' | 'observed_at' | 'run_list_state' | 'observation_state' | 'listed_run_count' | 'selected_run_count' | 'validated_run_count' | 'unreadable_run_count' | 'unavailable_run_count' | 'omitted_run_count' | 'hydration_read_budget' | 'runs'>>,
+  Expect<Equal<OptionalKeys<RunTraceObservation>, 'listed_run_count' | 'selected_run_count' | 'validated_run_count' | 'unreadable_run_count' | 'unavailable_run_count' | 'omitted_run_count'>>,
+  Expect<Equal<NonNullable<NarrationBeat['grounded_answer']>, ThothAnswerView>>,
+  Expect<Equal<[
+    ThothAskRequest,
+    ThothClaimView,
+    ThothAnswerView,
+    RunTraceObservationEvent,
+    RunTraceObservation,
+    RunTraceRunObservation,
+    RunTraceHydrationReadBudget,
+    RunTraceFrame,
+  ], CanonicalMirrorFieldTypes>>,
+]
+
+export type PortMirrorPins = [
+  Expect<Equal<PortContract.RunExecutionStanding, RunExecutionStanding>>,
+  Expect<Equal<PortContract.RunSettlementStanding, RunSettlementStanding>>,
+  Expect<Equal<PortContract.RunTraceCommandExecutionStatus, RunTraceCommandExecutionStatus>>,
+  Expect<Equal<PortContract.RunTraceFrame, RunTraceFrame>>,
+  Expect<Equal<PortContract.RunTraceFrameKind, RunTraceFrameKind>>,
+  Expect<Equal<PortContract.RunTraceHydrationReadBudget, RunTraceHydrationReadBudget>>,
+  Expect<Equal<PortContract.RunTraceObservation, RunTraceObservation>>,
+  Expect<Equal<PortContract.RunTraceObservationEvent, RunTraceObservationEvent>>,
+  Expect<Equal<PortContract.RunTraceRunObservation, RunTraceRunObservation>>,
+  Expect<Equal<PortContract.ThothAnswerView, ThothAnswerView>>,
+  Expect<Equal<PortContract.ThothAskRequest, ThothAskRequest>>,
+  Expect<Equal<PortContract.ThothClaimClass, ThothClaimClass>>,
+  Expect<Equal<PortContract.ThothClaimStatus, ThothClaimStatus>>,
+  Expect<Equal<PortContract.ThothClaimView, ThothClaimView>>,
+  Expect<Equal<PortContract.ThothDisposition, ThothDisposition>>,
+  Expect<Equal<PortContract.ThothFreshness, ThothFreshness>>,
+  Expect<Equal<PortContract.ThothQuestionKind, ThothQuestionKind>>,
+]
+
 // ---------------------------------------------------------------------------
 // Small runtime guards shared by the golden validators
 
 const isStr = (v: unknown): v is string => typeof v === 'string'
 const isNum = (v: unknown): v is number => typeof v === 'number'
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean'
+const isSafeIntegerNumber = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v)
+const isNonnegativeSafeInteger = (v: unknown): v is number => isSafeIntegerNumber(v) && v >= 0
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr)
@@ -191,6 +426,147 @@ const isConsequentialIntent = oneOf(CONSEQUENTIAL_INTENT_KINDS)
 const isPayloadCarrying = oneOf(PAYLOAD_CARRYING_KINDS)
 const isRefusalKind = oneOf(REFUSAL_KINDS)
 const isStreamEventKind = oneOf(STREAM_EVENT_KINDS)
+const isThothQuestionKind = oneOf(THOTH_QUESTION_KINDS)
+const isThothClaimClass = oneOf(THOTH_CLAIM_CLASSES)
+const isThothClaimStatus = oneOf(THOTH_CLAIM_STATUSES)
+const isThothDisposition = oneOf(THOTH_DISPOSITIONS)
+const isThothFreshness = oneOf(THOTH_FRESHNESS)
+const isRunTraceFrameKind = oneOf(RUN_TRACE_FRAME_KINDS)
+const isRunTraceCommandStatus = oneOf(RUN_TRACE_COMMAND_STATUSES)
+const isRunExecutionStanding = oneOf(RUN_EXECUTION_STANDINGS)
+const isRunSettlementStanding = oneOf(RUN_SETTLEMENT_STANDINGS)
+const isRunObservationState = oneOf(RUN_OBSERVATION_STATES)
+const isRunListState = oneOf(RUN_LIST_STATES)
+const isRunTraceRunState = oneOf(RUN_TRACE_RUN_STATES)
+
+function hasOnlyKeys(v: Record<string, unknown>, required: readonly string[], optional: readonly string[] = []): boolean {
+  const keys = Object.keys(v)
+  return required.every((key) => key in v) && keys.every((key) => [...required, ...optional].includes(key))
+}
+
+function checkThothAskRequest(v: unknown, ctx: string): void {
+  expect(isObj(v), `${ctx}: object`).toBe(true)
+  if (!isObj(v)) return
+  expect(hasOnlyKeys(v, ['kind', 'subject'], ['purpose', 'case']), `${ctx}: actor-free request fields`).toBe(true)
+  expect(isThothQuestionKind(v.kind), `${ctx}.kind`).toBe(true)
+  expect(isStr(v.subject) && v.subject.trim().length > 0, `${ctx}.subject`).toBe(true)
+  if (v.purpose !== undefined) expect(isStr(v.purpose), `${ctx}.purpose`).toBe(true)
+  if (v.case !== undefined) expect(isStr(v.case), `${ctx}.case`).toBe(true)
+}
+
+function checkThothAnswer(v: unknown, ctx: string): void {
+  expect(isObj(v), `${ctx}: object`).toBe(true)
+  if (!isObj(v)) return
+  expect(
+    hasOnlyKeys(v, ['answer_id', 'question_id', 'disposition', 'claims', 'omitted_claim_classes', 'snapshot_ref', 'freshness', 'assurance', 'limitations', 'authority_notice', 'answered_at']),
+    `${ctx}: complete answer fields`,
+  ).toBe(true)
+  expect(isStr(v.answer_id) && isStr(v.question_id) && isStr(v.snapshot_ref) && isStr(v.answered_at), `${ctx}: identity and references`).toBe(true)
+  expect(isThothDisposition(v.disposition), `${ctx}.disposition`).toBe(true)
+  expect(isThothFreshness(v.freshness), `${ctx}.freshness`).toBe(true)
+  expect(isStr(v.assurance) && isStr(v.authority_notice), `${ctx}: assurance and authority_notice are strings`).toBe(true)
+  expect(Array.isArray(v.claims), `${ctx}.claims`).toBe(true)
+  if (Array.isArray(v.claims)) {
+    v.claims.forEach((claim, i) => {
+      const claimCtx = `${ctx}.claims[${i}]`
+      expect(isObj(claim), `${claimCtx}: object`).toBe(true)
+      if (!isObj(claim)) return
+      expect(
+        hasOnlyKeys(claim, ['claim_id', 'claim_class', 'subject', 'status', 'statement', 'snapshot_ref', 'evidence_refs', 'settlement_refs'], ['capability_record_ref']),
+        `${claimCtx}: complete claim fields`,
+      ).toBe(true)
+      expect(isStr(claim.claim_id) && isStr(claim.subject) && isStr(claim.statement) && isStr(claim.snapshot_ref), `${claimCtx}: disclosure strings`).toBe(true)
+      expect(isThothClaimClass(claim.claim_class), `${claimCtx}.claim_class`).toBe(true)
+      expect(isThothClaimStatus(claim.status), `${claimCtx}.status`).toBe(true)
+      expect(isStrArray(claim.evidence_refs) && isStrArray(claim.settlement_refs), `${claimCtx}: references`).toBe(true)
+      if (claim.capability_record_ref !== undefined) expect(isStr(claim.capability_record_ref), `${claimCtx}.capability_record_ref`).toBe(true)
+    })
+  }
+  expect(Array.isArray(v.omitted_claim_classes) && v.omitted_claim_classes.every(isThothClaimClass), `${ctx}.omitted_claim_classes`).toBe(true)
+  expect(isStrArray(v.limitations), `${ctx}.limitations`).toBe(true)
+}
+
+function checkRunTraceObservation(v: unknown, ctx: string): void {
+  expect(isObj(v), `${ctx}: event object`).toBe(true)
+  if (!isObj(v)) return
+  expect(hasOnlyKeys(v, ['event_type', 'cursor', 'timestamp', 'payload']), `${ctx}: named event envelope`).toBe(true)
+  expect(v.event_type, `${ctx}.event_type`).toBe('execution_observation')
+  expect(isStr(v.cursor) && CURSOR_RE.test(v.cursor), `${ctx}.cursor is an informational real cursor`).toBe(true)
+  expect(isStr(v.timestamp), `${ctx}.timestamp`).toBe(true)
+  expect(isObj(v.payload), `${ctx}.payload`).toBe(true)
+  if (!isObj(v.payload)) return
+  const p = v.payload
+  const countKeys = ['listed_run_count', 'selected_run_count', 'validated_run_count', 'unreadable_run_count', 'unavailable_run_count', 'omitted_run_count']
+  expect(
+    hasOnlyKeys(p, ['case_id', 'observed_at', 'run_list_state', 'observation_state', 'hydration_read_budget', 'runs'], countKeys),
+    `${ctx}.payload: cohort fields`,
+  ).toBe(true)
+  expect(isStr(p.case_id) && isStr(p.observed_at), `${ctx}.payload identity`).toBe(true)
+  expect(isRunListState(p.run_list_state), `${ctx}.payload.run_list_state`).toBe(true)
+  expect(isRunObservationState(p.observation_state), `${ctx}.payload.observation_state`).toBe(true)
+  for (const key of countKeys) {
+    if (p[key] !== undefined) expect(isNonnegativeSafeInteger(p[key]), `${ctx}.payload.${key}`).toBe(true)
+  }
+  if (p.run_list_state === 'unavailable') {
+    expect(countKeys.every((key) => p[key] === undefined), `${ctx}: unavailable list counts are absent`).toBe(true)
+    expect(p.observation_state, `${ctx}: unavailable list observation state`).toBe('unavailable')
+  } else {
+    expect(countKeys.every((key) => p[key] !== undefined), `${ctx}: complete list reports counts including zero`).toBe(true)
+  }
+  expect(isObj(p.hydration_read_budget), `${ctx}.payload.hydration_read_budget`).toBe(true)
+  if (isObj(p.hydration_read_budget)) {
+    expect(
+      hasOnlyKeys(p.hydration_read_budget, ['limit', 'reads_attempted', 'exhausted']),
+      `${ctx}.payload.hydration_read_budget: exact fields`,
+    ).toBe(true)
+    expect(p.hydration_read_budget.limit, `${ctx}.payload.hydration_read_budget.limit`).toBe(8)
+    const readsAttempted = p.hydration_read_budget.reads_attempted
+    expect(isNonnegativeSafeInteger(readsAttempted) && readsAttempted <= 8, `${ctx}.payload.hydration_read_budget.reads_attempted`).toBe(true)
+    expect(isBool(p.hydration_read_budget.exhausted), `${ctx}.payload.hydration_read_budget.exhausted`).toBe(true)
+  }
+  expect(Array.isArray(p.runs) && p.runs.length <= 8, `${ctx}.payload.runs (maximum eight)`).toBe(true)
+  if (!Array.isArray(p.runs)) return
+  p.runs.forEach((run: unknown, i) => {
+    const runCtx = `${ctx}.payload.runs[${i}]`
+    expect(isObj(run), `${runCtx}: object`).toBe(true)
+    if (!isObj(run)) return
+    expect(
+      hasOnlyKeys(run, ['run_id', 'observed_at', 'plan_item_id', 'execution', 'settlement', 'observation_state', 'frames', 'total_frame_count', 'retained_frame_count', 'omitted_frame_count', 'truncated']),
+      `${runCtx}: nested run fields`,
+    ).toBe(true)
+    expect(isStr(run.run_id) && isStr(run.observed_at) && isStr(run.plan_item_id), `${runCtx}: run and parent identity`).toBe(true)
+    expect(isRunExecutionStanding(run.execution), `${runCtx}.execution`).toBe(true)
+    expect(isRunSettlementStanding(run.settlement), `${runCtx}.settlement`).toBe(true)
+    expect(isRunTraceRunState(run.observation_state), `${runCtx}.observation_state`).toBe(true)
+    expect(Array.isArray(run.frames), `${runCtx}.frames`).toBe(true)
+    if (!Array.isArray(run.frames)) return
+    expect(run.frames.length <= 1024, `${runCtx}.frames (maximum 1024)`).toBe(true)
+    const totalFrameCount = run.total_frame_count
+    const retainedFrameCount = run.retained_frame_count
+    const omittedFrameCount = run.omitted_frame_count
+    const validFrameCounts = isNonnegativeSafeInteger(totalFrameCount) && isNonnegativeSafeInteger(retainedFrameCount) && isNonnegativeSafeInteger(omittedFrameCount)
+    expect(validFrameCounts, `${runCtx}: frame counts are nonnegative integers`).toBe(true)
+    if (validFrameCounts) {
+      expect(totalFrameCount === retainedFrameCount + omittedFrameCount, `${runCtx}: frame count equation`).toBe(true)
+      expect(retainedFrameCount === run.frames.length, `${runCtx}: retained count matches frames`).toBe(true)
+      expect(isBool(run.truncated) && run.truncated === (omittedFrameCount > 0), `${runCtx}: truncation matches omitted count`).toBe(true)
+    }
+    run.frames.forEach((frame: unknown, j) => {
+      const frameCtx = `${runCtx}.frames[${j}]`
+      expect(isObj(frame), `${frameCtx}: object`).toBe(true)
+      if (!isObj(frame)) return
+      expect(hasOnlyKeys(frame, ['event_id', 'kind', 'timestamp'], ['execution_status', 'exit_code']), `${frameCtx}: safe frame fields`).toBe(true)
+      expect(isStr(frame.event_id) && isStr(frame.timestamp), `${frameCtx}: event identity and time`).toBe(true)
+      expect(isRunTraceFrameKind(frame.kind), `${frameCtx}.kind`).toBe(true)
+      if (frame.execution_status !== undefined) expect(isRunTraceCommandStatus(frame.execution_status), `${frameCtx}.execution_status`).toBe(true)
+      if (frame.exit_code !== undefined) expect(isNum(frame.exit_code), `${frameCtx}.exit_code`).toBe(true)
+      if (frame.kind !== 'command_finished') {
+        expect(frame.execution_status, `${frameCtx}: status only on command_finished`).toBeUndefined()
+        expect(frame.exit_code, `${frameCtx}: exit code only on command_finished`).toBeUndefined()
+      }
+    })
+  })
+}
 
 function checkActionDescriptor(v: unknown, ctx: string): void {
   expect(isObj(v), `${ctx}: object`).toBe(true)
@@ -342,12 +718,103 @@ describe('canonical wire contract: exhaustive kind lists', () => {
       PAYLOAD_CARRYING_KINDS,
       REFUSAL_KINDS,
       STREAM_EVENT_KINDS,
+      THOTH_QUESTION_KINDS,
+      THOTH_CLAIM_CLASSES,
+      THOTH_CLAIM_STATUSES,
+      THOTH_DISPOSITIONS,
+      THOTH_FRESHNESS,
+      RUN_TRACE_FRAME_KINDS,
+      RUN_TRACE_COMMAND_STATUSES,
+      RUN_EXECUTION_STANDINGS,
+      RUN_SETTLEMENT_STANDINGS,
+      RUN_OBSERVATION_STATES,
+      RUN_LIST_STATES,
+      RUN_TRACE_RUN_STATES,
     ]
     for (const list of lists) expect(new Set(list).size, [...list].join(',')).toBe(list.length)
   })
 
   test('the compile-time pins are active (WireContractPins resolves to all-true)', () => {
     const pins: WireContractPins = [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]
+    expect(pins.every((p) => p === true)).toBe(true)
+  })
+
+  test('the T09 mirror pins cover canonical fields, optionality, and finite vocabularies', () => {
+    const pins: CanonicalMirrorPins = [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]
+    expect(pins.every((p) => p === true)).toBe(true)
+  })
+
+  test('the UI port re-exports the canonical mirror DTOs without widening them', () => {
+    const pins: PortMirrorPins = [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
       true,
       true,
       true,
@@ -452,6 +919,29 @@ describe('golden template and preflight fixtures', () => {
   })
 })
 
+describe('golden Thoth Ask fixtures', () => {
+  test('ask-request.json is an actor-free request with the exact finite question kind', () => {
+    checkThothAskRequest(thothAskRequest, 'ask-request.json')
+  })
+
+  test('answered, partial, and denied fixtures preserve complete disclosure fields', () => {
+    const answers: Record<string, unknown> = {
+      answered: thothAnswerAnswered,
+      partial: thothAnswerPartial,
+      denied: thothAnswerDenied,
+    }
+    expect(Object.keys(answers).sort()).toEqual([...THOTH_DISPOSITIONS].sort())
+    for (const [disposition, answer] of Object.entries(answers)) {
+      checkThothAnswer(answer, `ask-answer-${disposition}.json`)
+      expect(isObj(answer) && answer.disposition, `fixture ${disposition} keeps its governed disposition`).toBe(disposition)
+    }
+    const answeredClaim = (thothAnswerAnswered as { claims: Array<Record<string, unknown>> }).claims[0]
+    const partialClaim = (thothAnswerPartial as { claims: Array<Record<string, unknown>> }).claims[0]
+    expect(isStr(answeredClaim.capability_record_ref), 'answered fixture preserves capability_record_ref').toBe(true)
+    expect(partialClaim.capability_record_ref, 'optional capability_record_ref stays absent when not returned').toBeUndefined()
+  })
+})
+
 describe('golden SSE event fixtures', () => {
   test('sse-events.jsonl carries exactly one well-formed line per stream event kind', () => {
     const raw = readFileSync(join(GOLDEN_DIR, 'sse-events.jsonl'), 'utf8')
@@ -464,8 +954,25 @@ describe('golden SSE event fixtures', () => {
       expect(isStr(ev.cursor) && CURSOR_RE.test(ev.cursor as string), `line ${i + 1} cursor`).toBe(true)
       expect(isStr(ev.timestamp), `line ${i + 1} timestamp`).toBe(true)
       expect(isObj(ev.payload), `line ${i + 1} payload`).toBe(true)
+      if (ev.event_type === 'execution_observation') checkRunTraceObservation(ev, `sse-events.jsonl line ${i + 1}`)
       seen.push(ev.event_type as string)
     })
     expect([...new Set(seen)].sort()).toEqual([...STREAM_EVENT_KINDS].sort())
+  })
+
+  test('rejects unknown hydration read budget fields', () => {
+    const lines = readFileSync(join(GOLDEN_DIR, 'sse-events.jsonl'), 'utf8').trimEnd().split('\n')
+    const event = lines
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .find((candidate) => candidate.event_type === 'execution_observation')
+    expect(event).toBeDefined()
+    if (!event) return
+
+    const withUnknownBudgetField = structuredClone(event)
+    if (!isObj(withUnknownBudgetField.payload) || !isObj(withUnknownBudgetField.payload.hydration_read_budget)) {
+      throw new TypeError('execution observation golden must contain an object hydration budget')
+    }
+    withUnknownBudgetField.payload.hydration_read_budget.extra = true
+    expect(() => checkRunTraceObservation(withUnknownBudgetField, 'unknown hydration budget field')).toThrow()
   })
 })
