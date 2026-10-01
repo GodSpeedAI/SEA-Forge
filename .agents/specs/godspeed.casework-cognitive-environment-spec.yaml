@@ -4,9 +4,9 @@ metadata:
   id: godspeed.casework-cognitive-environment
   title: GodSpeed Casework System Front End and Cognitive Environment
   status: authoritative
-  version: "0.2.4"
+  version: "0.2.5"
   created: "2026-09-18"
-  revised: "2026-09-22"
+  revised: "2026-09-30"
   purpose: >-
     Define the replacement Go operational front end and React cognitive environment
     for governed SEA Forge casework, with explicit authority, migration, and proof
@@ -57,6 +57,53 @@ authority:
       actionId shapes, and checks TypeScript/schema action-name parity. It does not
       perform full draft-2020-12 JSON Schema semantic validation; that limitation
       remains explicit and does not block the structural package conformance gate.
+  t09_additive_contract_amendment:
+    status: approved_contract_scope_runtime_pending
+    ask_route:
+      method: POST
+      path: /api/ask
+      authentication: require_session_then_csrf_then_ask_specific_rate_limit
+      identity: verified_effective_session_actor_only
+      request_fields: [kind, subject, purpose_optional, case_optional]
+      kinds: [ask_capability, ask_operation_requirements, ask_authority_requirements, ask_projection_support, ask_environment_status, ask_failure_explanation, ask_evidence_for_claim, ask_available_affordances, ask_why_denied]
+      raw_body_limit_bytes: 8192
+      purpose_limit_utf8_bytes: 500
+      default_purpose: planning
+      rate_limits:
+        per_session_per_minute: 6
+        per_session_burst: 2
+        per_ip_per_minute: 20
+        per_ip_burst: 4
+      response: complete_existing_ThothAnswerView
+      disclosure: >-
+        Preserve claim references, omitted claim classes, freshness, assurance,
+        limitations, authority notice, and timestamps. A governed denied or partial
+        answer is a successful answer body and confers no execution authority.
+    run_trace_observation:
+      event_type: execution_observation
+      event_boundary: informational_side_channel_not_case_revision
+      cursor: latest_real_case_cursor_informational
+      sse_id: forbidden
+      historical_snapshot_mutation: forbidden
+      frame_kinds: [run_started, item_activated, command_started, command_finished, item_completed, item_failed, item_terminated, human_task_completed, run_halted, run_finished]
+      max_response_line_bytes: 33554432
+      max_selected_runs_per_cohort: 8
+      max_initial_run_get_reads_per_cohort: 8
+      max_initial_projected_envelope_bytes: 1048576
+      max_pollers_per_process: 16
+      max_concurrent_run_get_reads: 2
+      minimum_poll_interval_seconds: 1
+      max_retained_frames_per_run: 1024
+      ui_cache:
+        max_run_keys: 32
+        max_frame_identities: 4096
+        max_frame_identities_per_run: 1024
+      bound_exclusions:
+        - aggregate_transport_bytes
+        - upstream_run_directory_enumeration
+        - aggregate_kernel_journal_reads
+        - total_bytes_across_retry_or_stream_lifetime
+      implementation_status: pending
   current_substrate:
     sea_forge: crates/sea-forge-server and its typed SFWP Unix-socket NDJSON boundary
     current_gui: workbench/apps/desktop React renderer plus Rust Tauri host

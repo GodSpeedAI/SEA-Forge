@@ -1,0 +1,25 @@
+{
+  "answer_id": "tha-t09-answered",
+  "question_id": "thq-t09-answered",
+  "disposition": "answered",
+  "claims": [
+    {
+      "claim_id": "claim-t09-domain-rust",
+      "claim_class": "demonstrated_capability",
+      "subject": "domain-rust",
+      "status": "demonstrated",
+      "statement": "SEA Forge has demonstrated Rust implementation capability.",
+      "snapshot_ref": "snapshot-self-model-t09",
+      "evidence_refs": ["evi-t09-build"],
+      "settlement_refs": ["set-t09-build"],
+      "capability_record_ref": "cap-domain-rust"
+    }
+  ],
+  "omitted_claim_classes": [],
+  "snapshot_ref": "snapshot-self-model-t09",
+  "freshness": "current",
+  "assurance": "local_tamper_evident",
+  "limitations": [],
+  "authority_notice": "This answer confers no execution authority.",
+  "answered_at": "2026-09-23T10:17:05Z"
+}

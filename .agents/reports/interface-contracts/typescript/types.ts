@@ -302,6 +302,76 @@ export interface ExecutionObservation {
   };
 }
 
+/** Safe allowlist projection of one real run trace row. Raw row payloads and actors never cross this boundary. */
+export type RunTraceFrameKind =
+  | 'run_started'
+  | 'item_activated'
+  | 'command_started'
+  | 'command_finished'
+  | 'item_completed'
+  | 'item_failed'
+  | 'item_terminated'
+  | 'human_task_completed'
+  | 'run_halted'
+  | 'run_finished';
+
+export type RunTraceCommandExecutionStatus =
+  | 'completed'
+  | 'spawn_failed'
+  | 'timed_out'
+  | 'sandbox_violation'
+  | 'suspected_sandbox_violation';
+
+export interface RunTraceFrame {
+  event_id: string;
+  kind: RunTraceFrameKind;
+  timestamp: string;
+  /** Present only when recorded on an actual command_finished trace row. */
+  execution_status?: RunTraceCommandExecutionStatus;
+  /** Kernel i64 represented as a JavaScript number; callers must check Number.isSafeInteger for exactness. */
+  exit_code?: number;
+}
+
+export type RunExecutionStanding = 'pending' | 'enabled' | 'active' | 'completed' | 'failed' | 'terminated';
+export type RunSettlementStanding = 'unsettled' | 'accepted' | 'rejected' | 'escalated';
+
+/** One successfully owned run, distinct from the invocation ExecutionObservation above. */
+export interface RunTraceRunObservation {
+  run_id: string;
+  observed_at: string;
+  plan_item_id: string;
+  execution: RunExecutionStanding;
+  settlement: RunSettlementStanding;
+  observation_state: 'validated' | 'unavailable';
+  frames: RunTraceFrame[];
+  total_frame_count: number;
+  retained_frame_count: number;
+  omitted_frame_count: number;
+  truncated: boolean;
+}
+
+export interface RunTraceHydrationReadBudget {
+  limit: 8;
+  reads_attempted: number;
+  exhausted: boolean;
+}
+
+/** One bounded hydration cohort. Counts are absent unless run.list completed and decoded. */
+export interface RunTraceObservation {
+  case_id: string;
+  observed_at: string;
+  run_list_state: 'complete' | 'unavailable';
+  observation_state: 'complete' | 'no_runs' | 'capacity_limited' | 'unavailable';
+  listed_run_count?: number;
+  selected_run_count?: number;
+  validated_run_count?: number;
+  unreadable_run_count?: number;
+  unavailable_run_count?: number;
+  omitted_run_count?: number;
+  hydration_read_budget: RunTraceHydrationReadBudget;
+  runs: RunTraceRunObservation[];
+}
+
 export interface OperationalSettlement {
   settlement_id: string;
   case_id: string;
@@ -362,13 +432,19 @@ export type StreamEventType =
   | 'resync_required'
   | 'interrupted'
   | 'error'
-  | 'heartbeat';
+  | 'heartbeat'
+  | 'execution_observation';
 
 export interface StreamEvent<T = unknown> {
   event_type: StreamEventType;
   cursor: string;
   timestamp: string;
   payload: T;
+}
+
+/** Informational live side channel; cursor is the latest real case cursor, not a trace cursor. */
+export interface RunTraceObservationEvent extends StreamEvent<RunTraceObservation> {
+  event_type: 'execution_observation';
 }
 
 export interface ExecutionProgressPayload {
@@ -395,6 +471,75 @@ export interface InterruptedPayload {
   reason: string;
   /** Last cursor the client can resume from with Last-Event-ID / ?last=. */
   last_cursor?: string;
+}
+
+export type ThothQuestionKind =
+  | 'ask_capability'
+  | 'ask_operation_requirements'
+  | 'ask_authority_requirements'
+  | 'ask_projection_support'
+  | 'ask_environment_status'
+  | 'ask_failure_explanation'
+  | 'ask_evidence_for_claim'
+  | 'ask_available_affordances'
+  | 'ask_why_denied';
+
+export type ThothClaimClass =
+  | 'identity'
+  | 'architecture'
+  | 'declared_capability'
+  | 'installed_capability'
+  | 'demonstrated_capability'
+  | 'authority_requirements'
+  | 'environment_status'
+  | 'failure_condition'
+  | 'security_implementation'
+  | 'customer_private'
+  | 'credential_bearing'
+  | 'policy_thresholds';
+
+export type ThothClaimStatus = 'unknown' | 'unsupported' | 'declared' | 'installed' | 'available' | 'validated' | 'demonstrated';
+export type ThothDisposition = 'answered' | 'partial' | 'denied';
+export type ThothFreshness = 'current' | 'stale';
+
+/** Authenticated route input: identity is supplied by the server session, never by the browser. */
+export interface ThothAskRequest {
+  kind: ThothQuestionKind;
+  subject: string;
+  purpose?: string;
+  case?: string;
+}
+
+export interface ThothClaimView {
+  claim_id: string;
+  claim_class: ThothClaimClass;
+  subject: string;
+  status: ThothClaimStatus;
+  statement: string;
+  snapshot_ref: string;
+  evidence_refs: string[];
+  settlement_refs: string[];
+  capability_record_ref?: string;
+}
+
+/** Complete existing SFWP answer disclosure view, including governed denial metadata. */
+export interface ThothAnswerView {
+  answer_id: string;
+  question_id: string;
+  disposition: ThothDisposition;
+  claims: ThothClaimView[];
+  omitted_claim_classes: ThothClaimClass[];
+  snapshot_ref: string;
+  freshness: ThothFreshness;
+  assurance: string;
+  limitations: string[];
+  authority_notice: string;
+  answered_at: string;
+}
+
+/** Optional complete Thoth disclosure attached to a narration result. */
+export interface ThothNarrationResultMetadata {
+  grounded_answer?: ThothAnswerView;
 }
 
 // ---------------------------------------------------------------------------

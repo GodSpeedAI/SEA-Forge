@@ -224,6 +224,18 @@ sequenceDiagram
     end
 ```
 
+### 6.3 Informational Run Trace Observations
+
+`execution_observation` is a typed, informational side channel keyed by real `(run_id, event_id)` identities. Its payload contains a bounded hydration cohort and allowlisted trace metadata only; it MUST NOT include raw trace payloads, command arguments, environment, stdout/stderr, actor identities, or artifact content. Run execution standing and settlement standing remain separate. A command's exit status or code MUST NOT be presented as accepted settlement.
+
+The event cursor copies the latest real case cursor known to the gateway. It MUST NOT create a logical case cursor for a trace row, advance the client's case cursor, or carry an SSE `id:` field. `Last-Event-ID` and `?last=` continue to resume case revisions. The client routes this event before ordinary cursor comparison and leaves its revision cursor unchanged. Captured historical snapshots remain immutable: history shows the run standing captured at that cursor and MUST NOT overlay current observations.
+
+Each SSE connection starts a hydration cohort: one case-scoped `run.list`, up to eight selected case-owned runs, and at most eight initial `run.get` reads. A successful list reports exact counts; a failed or undecodable list reports `unavailable` without counts. Exact run and case ownership is required before projecting a run. At most 16 authority-scoped `(case_id, run_id)` pollers exist per process, with at most two concurrent reads and no more than one poll per second per run. Each run retains at most 1,024 safe frames. The projected initial cohort is capped at 1 MiB. The UI subscription cache is bounded to 32 run keys, 4,096 total frame identities, and 1,024 identities per run; it uses terminal-key LRU and oldest-identity eviction, and does not evict an active run merely to admit another active run.
+
+Candidate order is active first, then pending/enabled, then terminal; within each group use newest finished/started time and run ID as deterministic tie-breakers. Only the first eight candidates are selected. `omitted_run_count` counts listed case-owned candidates not attached due to cohort or poller capacity; unreadable and unavailable `run.get` candidates have separate counts. Read failure dominates capacity-limited state while retaining both exact counts. A complete empty list is `no_runs` only when no run records were unreadable. Existing shared pollers may supply their bounded current buffer; all hydration and poll reads share the two-read concurrency ceiling. Initial per-run frames report exact total, retained, omitted, and truncation values. Poll updates contain only newly observed frame IDs. On UI cache capacity, retain case revisions, drop unseen frames from an unadmittable active run, and issue a typed local capacity notice directing the operator to resubscribe or switch away and back for a fresh bounded cache. Dedupe is guaranteed only while an identity remains cached; replay after eviction may be delivered again.
+
+The SFWP client response-line ceiling is 32 MiB per line, enforced incrementally before JSON decoding. Inspect calls retain their existing one fresh-connection retry. These limits do not bound aggregate transport bytes, upstream run-directory enumeration, kernel journal reads, retries as a total, or the lifetime of an open event stream. In particular, `run.list` still enumerates all run directories internally. These are approved target contract values; runtime enforcement remains pending until its implementation and independent verification are complete.
+
 ---
 
 ## 7. Progressive Cognitive Artifacts
@@ -276,6 +288,8 @@ export interface NarrationBeat {
   readonly thoughtText: string;
   readonly evidenceCitations: readonly string[]; // Cites exact artifact/evidence refs
   readonly directives?: readonly NarrationDirective[];
+  /** Optional complete governed Thoth disclosure; it is never itself an authority grant. */
+  readonly grounded_answer?: ThothAnswerView;
 }
 
 export interface AgentNarrationStream {
@@ -287,3 +301,9 @@ export interface AgentNarrationStream {
 
 ### Invariant:
 An agent narration directive can only invoke actions from the UI's declared action vocabulary. It cannot mutate underlying case data directly or execute non-governed side effects.
+
+### 8.1 Grounded Thoth Ask
+
+The authenticated `POST /api/ask` body is exactly `{ kind, subject, purpose?, case? }`; it carries no actor or role. `kind` is one of the nine kernel `QuestionKind` wire values. The route requires a session and CSRF protection, then applies Ask-specific per-session and per-IP limits (defaults: 6/minute with burst 2 per session; 20/minute with burst 4 per IP). It accepts at most 8 KiB of raw body before strict decoding, rejects unknown fields and trailing JSON values, and enforces `purpose` at no more than 500 UTF-8 bytes. JSON Schema character limits do not substitute for that byte check. Omitted purpose retains the kernel default `planning`; an empty purpose is valid. The authenticated effective session actor supplies identity; a browser cannot nominate actor identity.
+
+The route returns the complete `ThothAnswerView`, including claims, exact evidence/settlement/capability references, omitted claim classes, freshness, assurance, limitations, authority notice, and timestamps. Assurance and authority notice remain strings. `denied` and `partial` are governed answer bodies, not transport errors. An answer confers no execution authority. Narration may derive `thoughtText` only from returned template-generated claim statements; empty/denied answers use fixed disposition copy. Citations map only to returned evidence, settlement, and capability-record references. The client MUST NOT invent claims, citations, directives, or general conversational answers; unsupported requests remain honest unsupported answers from the finite typed query surface.

@@ -11,10 +11,10 @@ metadata:
   initialized: true
   last_updated: '2026-09-30'
   updated_by: >-
-    resumed orchestrator: recovery changes externally committed as 8741ff4;
-    fresh Luna critics approved scoped T07/T08 repairs and local gates;
-    T07 independently approved and settled after cursor publication and cached-intent
-    authorization repairs; T08 live native/shared conformance is next.
+    resumed orchestrator: T00-T08 independently settled, T08 checkpoint af362f5.
+    T09 repaired test-first fixtures approved with exact expected RED evidence;
+    canonical and response-cap implementations frozen for independent review.
+    All workers are Luna, and compiler ownership remains serialized with host RAM checks.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -125,12 +125,100 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
+    Mirror builder froze all four Go/UI files; independent t09_mirror_independent_critic
+    now owns sole compiler token for final source review and serialized Go/UI gates.
+    Ask files remain absent/held. Canonical local checkpoint staged with exact source/evidence
+    paths only; original RED stdout contains two trailing-space source excerpt lines,
+    retained byte-identically rather than rewriting immutable runtime evidence.
+    Current orchestration: mirror independent critic performs read-only preparation until
+    builder freezes. ROOT retains sole compiler token. Ask fixtures/declarations are
+    explicitly held (no files added) until mirror broader Go gates finish; read-only
+    run-observation test preparation is delegated separately. Original assignments in
+    mirror-implementation-assignment.md and ask-test-first-assignment.md stay authoritative.
+    Latest result: canonical bounded unit independently APPROVED in
+    canonical-final-independent-confirmation.md. Fresh Bun11/0/963 and standalone strict
+    tsc exit0; root matched four source hashes, both log hashes and byte-identical /tmp copies.
+    Critic released compiler token toROOT. Mirror builder continues without compilation;
+    Ask test-first builder owns fixtures plus only ports.AskPort/DTO and Options.Ask declarations
+    per ask-test-first-assignment.md. No route or transport behavior implementation yet.
+    Latest resume 2026-09-30 evening: interrupted Luna builders resumed successfully after
+    usage-limit failures. Canonical helper typing repair is frozen; independent
+    t09_canonical_implementation_critic owns the sole compiler token for fresh Bun and
+    strict standalone tsc checks. Mirror builder resumes four existing partial files,
+    no compilation. Earlier token/activity descriptions below are historical.
+    Context-service indexing of private plan/spec documents was rejected by auto-review;
+    local read-only investigation continues without exporting their contents.
     T00-T08 settled. T08 independent-final-confirmation.md plus its append-only Go-gates
     errata approve full requirements. Root verified 13 manifest entries, both record hashes
     and byte-identical copied fresh Go logs. Native race passes35.679s, canonical UI passes
     258tests/1271assertions, shared local/live and all production variants pass. Historical
-    failures remain immutable. Complete the explicit T08 local checkpoint/context-check and
-    Graft refresh before T09 code; Store repair is already checkpoint48783dc.
+    failures remain immutable. Explicit T08 local checkpoint af362f5 is complete.
+    Graft refresh/context-check pass (665cards/7214nodes/13616edges); Store checkpoint48783dc.
+    Original disjoint builders froze canonical and SFWP cap tests. Neither compiled.
+    Independent fixture review REJECTED both before expected RED;
+    fresh t09_contract_fixture_repair fixes inventory/nested-schema/optional-count tests,
+    t09_cap_config_fixture_repair adds configured-limit tests and authorized Config declaration
+    seam only. MaxResponseLineBytes int, zero default32MiB, positive≤ceiling, invalid negative/
+    above-ceiling KindConfig before dial. No enforcement implemented before expected RED.
+    Test-fixture rejection record preserves explicit scope exception. Both repairs frozen;
+    cap fixture was source-approved, all8 expectedRED tests ranrace/count1 exit1. Expected
+    config/lowercap/overflow/retry/recovery failures confirmed; exactlimit/truncatedEOF pass.
+    Original oversizedevent test falsely passes baseline via100ms idle timeout; fresh
+    t08_type_builder repairs ONLY that fixture. Canonical fixture inventory/count/schema
+    fixes approved, but command execution_status wrongly used run-standing enum. Fresh
+    t09_cap_config_fixture_repair repairs ONLYcanonical tests to actual5 corestatuses.
+    second-fixture-independent-reject.md and exact cap-first-independent-red.log retained.
+    Canonical fixture source review APPROVED and fresh captured BunRED8pass/3expectedfail
+    in canonical-independent-red.log. Root verified byte equality with original/tmp log,
+    SHA5c88117f0a943edc5c426501133689ea29232dc37b02584501360672176df34c.
+    Canonical implementation authorized to fresh Luna t09_canonical_contract_builder ONLY
+    authored types/SSE/Ask schemas/Spec04/governing spec; no test/golden/Go/UI edits or compile.
+    Cap repaired fixture independently source-approved and hostRED reaches all8 cases,
+    incl actual validoversizedeventdelivery; log cap-repaired-independent-red.log SHA6561396751
+    e2bcb8d9ed138099ee208481c2864b1646587159c435a149c50332. Sandboxsocket-restricted partial
+    attempt retained separately, not counted as full proof. Cap implementation authorized to
+    t09_subscription_writer_repair ONLY client.go/subscribe.go/sharedprivatehelper; no tests/Ask/compile.
+    Original implementation assignments recorded in canonical-implementation-assignment.md
+    and cap-implementation-assignment.md; neither unit settled or independently GREEN yet.
+    Canonical first implementation source-REJECTED: Ask schema root lacks request/answer linkage;
+    expressible observation constraints missing (truncated iff omitted>0, failed-list emptyruns,
+    no_runs zero reads, complete positive listedcount). Fresh t09_canonical_schema_repair owns
+    only two schemas plus focused test pins, no compile. Fresh repair frozen and canonical
+    critic source-approved repair, and cap critic released token. Cap unit independently
+    APPROVED in cap-implementation-independent-review.md; focused8 race and fullSFWP package
+    race pass. justcasework-go-check format/vet/SFWP pass, overall and fullmodule race exit1
+    ONLY pending contractmirrors. Race completed; mirror builder explicitly authorized four
+    Go/UI port/golden/typeparity files. No compile by builder. Canonical implementation critic
+    NOW owns sole compiler for focusedBunGREEN and explicit canonical TypeScript pin check.
+    Ask schema wording now explicitly documents durablewrites/nonresend/noauthority.
+    Canonical Bun GREEN11pass/0fail/952assertions captured canonical-final-green.log,
+    SHA98b7517f41be28b0ffb569972ab082f6090cb546bd728d8e3a350a951f964bed.
+    Explicit strict canonicalfile TypeScript check REJECTED14 TS2769 helper matcher errors
+    (initial15 report corrected by exact log count),
+    not missing type infrastructure. Fresh t09_subscription_writer_repair (not originalTS
+    author) repairs ONLY conformance test helper typing, preserving runtime/Equal/OptionalKeys
+    assertions; no compile. Critic explicitly released token toROOT; next rerun
+    Bun and strict explicit tsc on frozenrepair. No canonical unit approval yet.
+    Cap scoped approval has independently verified append-only cap-implementation-ask-recovery-
+    errata.md: Ask has no request_id/status recovery; uncertainEOF/timeout/overflow sentonce,
+    no automaticresend. Explicit pre-admission server_busy retry remains separately safe.
+    Arithmetic field sums cannot be expressed
+    in standard draft2020-12; later runtime validation/tests remain responsible, no new dependency.
+    Detached ThothNarrationResultMetadata is disclosed scope limitation; actual UI NarrationBeat
+    grounded_answer linkage belongs to later narration unit. Distinct illustrative SSE golden
+    cursors do not prove fabrication; runtime no-id/no-cursor-advance proof remains mandatory.
+    Recovery found no surviving agents.
+    Independent fixture approval is durable in fixture-independent-review.md. Cap implementation
+    frozen in client.go/subscribe.go; root transferred sole compiler token back to t09_fixture_critic
+    for independent original-spec review, focused GREEN and broader Go gates. No builder compiles.
+    First fresh subscription repair rejected: writer must permit cap+1 detection byte;
+    fresh t09_subscription_writer_repair fixed the fixture and now builds only the cap reader,
+    without compiling.
+    Earlier canonical stdout capture rejected by automatic approval review; fresh original
+    command capture resolves runtime log gap. Canonical type pins lie
+    outside UI tsconfig, so critic must explicitly run existing TypeScript CLI against them.
+    recovery-fixture-review.md records these earlier limits. Both fixture reviews and runtime
+    RED completed; independently review both frozen implementations and run focused GREEN next.
     Implement operator-approved scoped T01 amendment and prepared T09 units in
     T09/resume-2026-09-30/prepared-implementation-units.md; source inventory and root naming/
     read-state choices are in contract-source-preparation.md. Approval persists: do not reask.
@@ -149,7 +237,7 @@ next_action:
     independent critic original spec plus result/direct evidence/material deviations. No
     evidence means no approval; fresh builder after rejection. Root retains architecture
     and integration. Update both statuses after every unit/task; preserve unrelated changes.
-    ROOT owns sole compile token until explicitly transferred. Check actual host RAM and
+    ROOT owns sole compile token after canonical critic explicit release. Check actual host RAM and
     compiler processes before EACH build/test; serialize Go/Bun/Cargo. Go256MiB/GOGC50/
     GOMAXPROCS2/p1/race/count1, Cargo jobs1. Read-only and disjoint edits may run in parallel.
     No new dependencies, Rust verbs, generated Workbench schema or identity changes.
@@ -220,7 +308,7 @@ handoff:
     and append-only post-Store Go evidence correction verified; T08 SETTLED. T09 is active.
   state_summary: >-
     Root orchestrates builder/independentcritic loops; only Luna/Terra allowed, Terra unavailable.
-    Root now owns compile token after explicit critic release; check actualhost RAM/processes
+    Mirror independent critic owns sole compiler token after four-file freeze; check actualhost RAM/processes
     before each Go/Bun/Cargo build/test, no parallel compiler, Go256MiB/p1/GOMAXPROCS2 and Cargojobs1.
     Preserve all historical failures/evidence and unrelated Jolli/otherchanges; explicitpathstage only.
     Currentnative snapshot comparisons preserve FULL immutable SSEvsAt and current cursor/stablefacts
