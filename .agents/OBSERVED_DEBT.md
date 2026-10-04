@@ -1112,10 +1112,3 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   coordinator suite has its own recorded idempotency flake entry above.
 - Next move: stabilize when the fixture stack next changes (T13 at the earliest); live gates are
   unaffected (-p 1, default build).
-
-## Open: `just lint` fails in sea-forge-server sfwp_supervisor tests (inherited)
-- Observed: 2026-10-04
-- Evidence: `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` -> needless_update at `crates/sea-forge-server/tests/sfwp_supervisor.rs:54`, needless_borrows_for_generic_args at :451, :455 (present at base dc82736; file not touched by migration branch)
-- Impact: workspace `just check` cannot pass, so the full lint gate is red for every branch off `casework/live-wiring`.
-- Next move: remove the redundant struct update and borrows in that test file on the casework branch (owner of T09 work).
-- Scope: unrelated to the DomainForge convergence; migration branch avoids drive-by edits.
