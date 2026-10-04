@@ -19,7 +19,7 @@
       "export PATH=\"$HOME/.cargo/bin:$PATH\""
     ],
     "scripts": {
-      "install-domainforge": "cargo install domainforge-core --version 0.18.2 --features cli --locked --force"
+      "install-domainforge": "cargo install domainforge-core --version 0.19.0 --features cli --locked --force"
     }
   }
 }
