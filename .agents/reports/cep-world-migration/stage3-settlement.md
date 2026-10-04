@@ -1,7 +1,7 @@
 # Stage 3 — canonical CEP-0008 contract and initial profiles: settlement record (2026-10-04)
 
 ## Where the contract lives
-Repo `GodSpeedAI/canonical-evaluation-protocol` (local `cep`), branch `profiles/godspeed-v1` (36b5ca6), stacked on `slice-0a-cep-semantic-envelope`, which is not yet on `main` (OQ-0006). No consumer owns the contract; no new repository was needed because `cep` already held the canonical full-profile schema.
+Repo `GodSpeedAI/canonical-evaluation-protocol` (local `cep`), branch `profiles/godspeed-v1` (36b5ca6), stacked on `slice-0a-cep-semantic-envelope`, which is not yet on `main` (cep OQ-0010, first recorded as OQ-0006 in error). No consumer owns the contract; no new repository was needed because `cep` already held the canonical full-profile schema.
 
 ## What exists
 - Base: `schemas/cep-semantic-envelope.schema.json` (normative full profile). Not duplicated.
