@@ -370,3 +370,4 @@ cep_world_migration:
   stages:
     stage_0: {status: settled, date: '2026-10-04', scope: docs-only recon and boundary matrix}
     stage_1: {status: settled-with-exception, date: '2026-10-04', exception: legacy SEA branch migration/domainforge-0.18.2 committed (f0af88c) but unpushed, record: .agents/reports/cep-world-migration/stage1-settlement.md}
+    stage_2: {status: settled-at-domainforge, date: '2026-10-04', repo: DomainForge, branch: feat/world-ref, commit: a3a4157, blocker: DomainForge merge and release (expected 0.19.0) then consumer bump, record: .agents/reports/cep-world-migration/stage2-settlement.md}

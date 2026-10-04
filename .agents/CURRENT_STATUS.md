@@ -10,6 +10,7 @@ below is inherited and unchanged. Ledger: `.agents/reports/cep-world-migration/s
 Stage 0 (recon, migration map): settled 2026-10-04, docs-only. Next: Stage 1 (DomainForge 0.18.2
 convergence) spec and plan written (`specs/cep-world-ref-migration.spec.md`, `plans/2026-10-04-stage1-domainforge-convergence.md`).
 Stage 1 sea-rs unit: `domainforge-core` 0.16.0 -> =0.18.2, `EXPECTED_DOMAINFORGE_VERSION` and devbox pin updated; dependent crate tests and `just test` pass.
+Stage 2 (DomainForge `feat/world-ref` a3a4157): see `.agents/reports/cep-world-migration/stage2-settlement.md`; blocked on DomainForge merge+release before consumers can use it.
 Stage 1 record: `.agents/reports/cep-world-migration/stage1-settlement.md`. Legacy SEA branch unpushed (pre-push hook blocked by baseline generation drift).
 
 ## Objective
