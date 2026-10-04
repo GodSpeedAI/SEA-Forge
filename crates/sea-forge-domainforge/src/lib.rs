@@ -20,6 +20,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
+pub mod world;
+pub use world::{WorldBindingError, WorldRegistry};
+
 /// A source file in a `SeaSourceSet`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SourceFile {
@@ -64,6 +67,10 @@ pub struct DomainModelRef {
     #[serde(default)]
     pub class_refs: Vec<String>,
     pub validation_evidence_refs: Vec<String>,
+    /// Canonical `world:<name>@sha256:<digest>`; set by `WorldRegistry::bind`.
+    /// Absent on records created before world binding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub world_ref: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -360,6 +367,7 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
             "validation:error_count={}",
             validation.error_count
         )],
+        world_ref: None,
     };
 
     Ok(DomainModel { graph, model_ref })
