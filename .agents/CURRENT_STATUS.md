@@ -8,7 +8,9 @@ This branch is a separate workstream off `casework/live-wiring` @ dc82736: the
 CEP-0008 / `world_ref` migration (Stages 0-12). It does not advance T09; the T09 narrative
 below is inherited and unchanged. Ledger: `.agents/reports/cep-world-migration/stage0-migration-map.md`.
 Stage 0 (recon, migration map): settled 2026-10-04, docs-only. Next: Stage 1 (DomainForge 0.18.2
-convergence) needs a governing spec and plan under `.agents/specs` / `.agents/plans` first.
+convergence) spec and plan written (`specs/cep-world-ref-migration.spec.md`, `plans/2026-10-04-stage1-domainforge-convergence.md`).
+Stage 1 sea-rs unit: `domainforge-core` 0.16.0 -> =0.18.2, `EXPECTED_DOMAINFORGE_VERSION` and devbox pin updated; dependent crate tests and `just test` pass.
+Stage 1 remaining: domainforge-lsp, sxr/gauntlet CLI version checks, legacy SEA, cognate lockfile verify.
 
 ## Objective
 

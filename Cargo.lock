@@ -513,9 +513,9 @@ dependencies = [
 
 [[package]]
 name = "domainforge-core"
-version = "0.16.0"
+version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61c879956c7ccd364e2d3092d7deb182f89dec20ce211c1159d2051e3e7c52dd"
+checksum = "eb030cb29e5cba4d04d6e8afd29e29c0295256cfc88d14c50498c243bc4cc793"
 dependencies = [
  "anyhow",
  "base64",
@@ -2468,7 +2468,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

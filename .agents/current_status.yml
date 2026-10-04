@@ -369,4 +369,4 @@ cep_world_migration:
   ledger_path: .agents/reports/cep-world-migration/stage0-migration-map.md
   stages:
     stage_0: {status: settled, date: '2026-10-04', scope: docs-only recon and boundary matrix}
-    stage_1: {status: pending, blocker: governing spec and plan not yet written}
+    stage_1: {status: active, done: [sea-rs sea-forge-domainforge 0.18.2], remaining: [domainforge-lsp, sxr-cli-check, gauntlet-cli-check, SEA-legacy, cognate-verify]}
