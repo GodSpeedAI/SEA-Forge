@@ -10,7 +10,7 @@ Target verified: crates.io `domainforge-core` 0.18.2; DomainForge repo commit 50
 | gauntlet | captured envelopes + sxr CLI | 0.16.0 capture marked historical; new real 0.18.2 capture; 1026 tests pass; tsc clean | 78ddd2a (migration/domainforge-0.18.2) | pushed |
 | cognate | npm, already 0.18.2; bun.lock pins 0.18.2 | 29 DomainForge-facing tests pass; no change | none needed | n/a |
 | domainforge-vsc-extension | grammar only | no DomainForge version dependency | none needed | n/a |
-| SEA (legacy) | npm `domainforge-cli@1.0.9` | see finding 1 | f0af88c (migration/domainforge-0.18.2) | NOT pushed |
+| SEA (legacy) | npm `domainforge-cli@1.0.9` | see finding 1 | 2e59f6f (migration/domainforge-0.18.2; also 6abe4b0 recipe + manifest fix) | pushed through the repo's pre-push hook, no bypass |
 | SWE_SEED, godspeed_agent, Context_Kernel | type-gated identity / none | no DomainForge dependency to converge | none | n/a |
 
 ## Findings
@@ -23,3 +23,9 @@ Target verified: crates.io `domainforge-core` 0.18.2; DomainForge repo commit 50
 
 ## Gate
 Met for every active consumer except legacy SEA, whose dependency is replaced on an unpushed branch. Historical 0.15.0/0.16.0 references remain only in evidence bundles, plan/spec observed-fact notes, and a deny.toml comment.
+
+## Update 2026-10-04 (gap patch, operator-cleared)
+- SEA: the pre-push failures were (a) a worktree-name artifact (generated docs embed the directory name; moved the worktree to `_wt/SEA`), (b) one genuinely drifted manifest (regenerated with the repo's `--fix`), and (c) `just domainforge-pin` still read the removed `domainforge-cli` (repointed). Determinism check passes twice (idempotent). Pushed without `SKIP_PREPUSH`.
+- sea-rs: `just check` is green (clippy fixes in three server test files, behavior-preserving; 14 inspected gitleaks false positives fingerprinted in `.gitleaksignore`), `just test` 0 failures.
+- Gauntlet: `bun run lint` exits 0 (cb2d8fc), 1026 tests, tsc clean.
+- cep: psycopg declared, `basedpyright src` 0 errors, ruff clean on src and tests (d831025). Remaining debt recorded in cep `.agents/DEBT.md` (DEBT-0010).
