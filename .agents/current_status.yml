@@ -361,3 +361,12 @@ handoff:
     - .agents/evidence/casework-live-wiring/T04C/ (TDD baseline + post-impl pass + fresh 2026-09-24 session-2 re-runs: 3-crate, mutations, supervisor, config units, fmt, no-async-kernel)
     - .agents/evidence/casework-live-wiring/T04/confirmation.md (settlement record: gates, teeth, diff review, critic reconciliation)
     - .agents/evidence/casework-live-wiring/prereg/T02.yaml
+
+cep_world_migration:
+  branch: migration/cep-world-ref
+  base: casework/live-wiring@dc82736
+  note: Separate workstream; does not change the T09 state above.
+  ledger_path: .agents/reports/cep-world-migration/stage0-migration-map.md
+  stages:
+    stage_0: {status: settled, date: '2026-10-04', scope: docs-only recon and boundary matrix}
+    stage_1: {status: pending, blocker: governing spec and plan not yet written}
