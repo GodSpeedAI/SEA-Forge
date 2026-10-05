@@ -70,3 +70,36 @@ Requirements:
 - R5 SEA-Forge `authority_settle` evaluates the committed evidence for an operation against criteria declared in cell config and bound into the allow decision at decision time (`settlement-criteria:<sha256>` in `policy_refs`); if the configured criteria changed since, it refuses (no moving goalposts). Policy must allow the caller the `settlement_declaration` surface. Outcomes: `settled` (enough supporting evidence at or above the minimum reliability and none contradicting), `rejected` (any contradicting evidence), `unsettled` (otherwise, including trace-only). It returns a `settlement_packet` and commits it; `settled` and `rejected` are final for the operation, `unsettled` can be re-evaluated when the evidence set changes.
 - R6 Conformance: the three packets validate under cep's own validator.
 - Out of scope: SWE_SEED transport of the settlement packet (Stage 9), Gauntlet as a verifier (Stage 9), modifying RealityTrace.
+
+## Stage 9 — Remaining boundaries (Context Kernel, GodSpeed Agent, SWE_SEED, Gauntlet)
+
+Boundary classes come from `stage0-migration-map.md` rows 8-11. These repos exchange the legacy
+`sea.agent.event.v1` family (identity = `domain_model_hash`). Stage 9 adds `world_ref` to that family
+without a new transport and without replacing the legacy field.
+
+### Common contract
+- S9-C1 `world_ref` syntax is the cep schema pattern `^world:[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*@sha256:[0-9a-f]{64}$`, name <= 64 chars. Each repo carries one small parser and the same valid/invalid vectors.
+- S9-C2 Producers of consequential payloads pin `world_ref`. `domain_model_hash` stays as legacy identity and is never substituted for, or derived into, a `world_ref`.
+- S9-C3 Consumers on consequential paths fail closed on a missing or malformed `world_ref`, and on inequality with the `world_ref` of the originating request. They check syntax and equality only. They never claim digest verification: SEA-Forge recomputes digests (Stage 4) and DomainForge owns identity.
+- S9-C4 No collapse: partial context is not complete context; agent-local settlement is not SEA-Forge settlement; proof/orchestration grants no authority.
+
+### Context Kernel (boundary 8, MUST)
+- R-CK1 `ContextRequired` ingress requires a valid `world_ref`; otherwise InvalidArguments, no retrieval.
+- R-CK2 `ContextPacketCreated` echoes `world_ref` byte-for-byte.
+- R-CK3 Packet carries `retrieval_completeness` in {`complete`,`partial`,`none`} and `omissions[]` (machine-readable reasons). `complete` means every unit matching the query in the corpus was returned in full; hitting `max_results` with further matches, or truncating citation content, is `partial`; zero citations is `none`. Completeness is relative to query and corpus, never to reality.
+
+### GodSpeed Agent (boundary 9, MUST)
+- R-GA1 The agent resolves its pinned `world_ref` from configuration (`GSA_WORLD_REF`); no value -> consequential emitters raise `WorldRefRequired`; nothing is invented.
+- R-GA2 Every emitted event payload carries `world_ref`; `SettlementRecorded` additionally carries `settlement_scope: "agent_local"`.
+- R-GA3 `handle_evidence_recorded` rejects evidence whose `world_ref` is absent/malformed/different from the pinned one.
+
+### SWE_SEED (boundary 11, MUST where it carries identity/settlement)
+- R-SS1 OperationalSettlement adjudication requires a valid `world_ref` equal to the originating work request's. Mismatch/missing is refused; the first settlement still stands.
+- R-SS2 Context packets consumed carry `world_ref` equal to the request's; absent `retrieval_completeness` or a value other than `complete` is not sufficient for a required-context contract (surfaced, not coerced).
+- R-SS3 `ContextRequired` and other SWE_SEED-emitted payloads pin `world_ref`.
+
+### Gauntlet (boundary 10, MAY / confirm)
+- R-GN1 Confirm in tests that a carried `world_ref` is displayed as source-typed data and never becomes a Gauntlet settlement/verdict; no behavioural change unless the confirmation fails.
+
+### Out of scope
+Transport changes, legacy `sea.agent.event.v1` schema revision, digest verification in these repos, merging branches.
