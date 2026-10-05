@@ -116,6 +116,11 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: workbench/package.json
+
       - name: Setup pinned toolchain
         run: devbox run -- just setup
 
@@ -150,6 +155,11 @@ jobs:
         uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
         with:
           enable-cache: true
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: workbench/package.json
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
