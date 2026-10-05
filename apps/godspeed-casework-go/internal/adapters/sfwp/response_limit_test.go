@@ -247,8 +247,9 @@ func TestResponseLineLimitTruncatedEOFIsUnavailable(t *testing.T) {
 }
 
 func TestInspectOverLimitResponseRetriesOnceOnFreshConnection(t *testing.T) {
+	const responseLineLimit = 1024
 	var caseLists atomic.Int32
-	oversized := strings.Repeat("x", approvedResponseLineLimit+1)
+	oversized := strings.Repeat("x", responseLineLimit+1)
 	fs := newFakeServer(t, func(line string) (string, bool) {
 		var request struct {
 			Verb string `json:"verb"`
@@ -264,7 +265,9 @@ func TestInspectOverLimitResponseRetriesOnceOnFreshConnection(t *testing.T) {
 		}
 		return `{"cases":[],"unreadable":[]}`, false
 	})
-	client, err := New(testConfig(fs.socket))
+	config := testConfig(fs.socket)
+	config.MaxResponseLineBytes = responseLineLimit
+	client, err := New(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,8 +285,9 @@ func TestInspectOverLimitResponseRetriesOnceOnFreshConnection(t *testing.T) {
 }
 
 func TestOverLimitMutationAndRecoveryResponsesNeverResendMutation(t *testing.T) {
+	const responseLineLimit = 1024
 	var commits, statuses atomic.Int32
-	oversized := strings.Repeat("x", approvedResponseLineLimit+1)
+	oversized := strings.Repeat("x", responseLineLimit+1)
 	fs := newFakeServer(t, func(line string) (string, bool) {
 		var request struct {
 			Verb string `json:"verb"`
@@ -304,7 +308,9 @@ func TestOverLimitMutationAndRecoveryResponsesNeverResendMutation(t *testing.T) 
 			return `{"error":"unexpected verb"}`, false
 		}
 	})
-	client, err := New(testConfig(fs.socket))
+	config := testConfig(fs.socket)
+	config.MaxResponseLineBytes = responseLineLimit
+	client, err := New(config)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,6 +9,47 @@ then split T13 and stop for operator review. Follow `current_status.yml`.
 
 ## Worktree State
 
+ROOT prepares the accepted Go Unit5A checkpoint with explicit paths only;
+the pending safe-port stub/fixtures and Rust `rfind` repair are excluded.
+Graft refresh passed: 682 cards, 7,424 nodes, 14,223 edges. Eleven remaining
+staged identities are preserved separately. The normal hook owns the compiler
+slot until joined; other workers remain source-only.
+
+Current state: root accepts Unit5A under `cancellation-root-acceptance-oct05.md`:
+all four independent gates pass, 16 captures and three sources match, commands
+are serialized. The filtered process-capture limitation is recorded explicitly;
+no full foreign-process absence claim is made. Safe trace Phase1 is released
+for exactly three NEW Go files, source-only. Rust's focused Clippy rejected
+`next_back` with `filter_next`; a fresh builder prepares equivalent `rfind`.
+ROOT owns the returned compiler token. No successful push or full T09 claim.
+
+Latest: normal push of `bf88ab8` stopped on two Clippy idioms in
+`sfwp_delegated_identity.rs`; session 9357 is joined (exit 1), with three exact
+root captures archived. A fresh builder repairs those two expressions only,
+without compiling. The final independent Go critic now owns the sole compiler
+slot for all required cancellation/repaired-fixture gates. Source review of
+`dfb98f494` is ready; no approval, trace release or successful push is claimed.
+
+ROOT reserves the sole compiler slot for normal push CI of `bf88ab8` to the
+verified new resume branch, confirmed still unused. Other workers may review
+source, but Go execution waits until this push command is joined. Push result
+pending; no hook bypass is authorized.
+
+Current state: ROOT holds the compiler token; no compiler command is running.
+Both original/current response-cap diagnostics reproduced deadline failures;
+root matched all eight captures. Fresh fixture builder changes only the two
+retry/recovery tests to a configured 1024-byte cap, keeping all deadlines,
+assertions and full default-boundary fixtures. Independent review and all fresh
+Go gates remain required. CW-05 tracks this failure; trace source work is held.
+
+Latest checkpoint: `bf88ab8` commits the independently reviewed Rust predicate
+through normal pre-commit context/format/workspace check (exit 0). All 17 prior
+staged identities are unchanged; root byte-matched its three checkpoint captures.
+The independent overlay source review is ready. The diagnostic worker
+`cancellation_retirement_oct05_critic` now owns the sole compiler slot for two
+sequential baseline/current response-cap comparisons, without tracked source edits.
+Cancellation remains NOT APPROVED; trace work is held and no push has succeeded.
+
 Current compiler owner: ROOT, preparing the explicit-path Rust checkpoint.
 Focused Clippy and the existing template test passed, independently approved;
 root matched their four raw/exit captures and source `5806fc58`. The reviewer

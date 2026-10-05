@@ -1,0 +1,9 @@
+--- FAIL: TestInspectOverLimitResponseRetriesOnceOnFreshConnection (4.20s)
+    response_limit_test.go:274: inspect should succeed after exactly one safe retry: unavailable: deadline exceeded while the request was in flight; its outcome may be unknown (case_list)
+--- FAIL: TestOverLimitMutationAndRecoveryResponsesNeverResendMutation (2.42s)
+    response_limit_test.go:320: correlation recovery did not return the recorded mutation outcome: unavailable: deadline exceeded while the request was in flight; its outcome may be unknown (case_commit)
+--- FAIL: TestInspectOverLimitResponseRetriesOnceOnFreshConnection (3.25s)
+    response_limit_test.go:274: inspect should succeed after exactly one safe retry: unavailable: deadline exceeded while the request was in flight; its outcome may be unknown (case_list)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	14.948s
+FAIL

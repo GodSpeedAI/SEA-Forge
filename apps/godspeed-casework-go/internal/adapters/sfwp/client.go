@@ -188,12 +188,31 @@ func (cn *conn) close() {
 // call writes one request line and reads exactly one response line, bounded by the deadline the
 // context implies. A call that fails at any point leaves the connection dead: the pairing contract
 // is positional, so a partially consumed connection must never be reused.
-func (cn *conn) call(ctx context.Context, line []byte, timeout time.Duration) ([]byte, error) {
+func (cn *conn) call(ctx context.Context, line []byte, timeout time.Duration) (response []byte, callErr error) {
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
 	if cn.dead {
 		return nil, apperr.New(apperr.KindUnavailable, "", "call", "connection is dead")
 	}
+	callbackDone := make(chan struct{})
+	stopCallback := context.AfterFunc(ctx, func() {
+		_ = cn.nc.Close()
+		close(callbackDone)
+	})
+	callbackInterrupted := false
+	defer func() {
+		if !stopCallback() {
+			<-callbackDone
+			callbackInterrupted = true
+			// The callback only touches the socket. The owner marks it dead while still
+			// holding cn.mu, before the caller can return it to the pool.
+			cn.dead = true
+		}
+		if callErr != nil && callbackInterrupted && ctx.Err() != nil {
+			callErr = apperr.Wrap(apperr.KindUnavailable, "", "call",
+				"request was interrupted by its context", ctx.Err())
+		}
+	}()
 	deadline := time.Now().Add(timeout)
 	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
 		deadline = d

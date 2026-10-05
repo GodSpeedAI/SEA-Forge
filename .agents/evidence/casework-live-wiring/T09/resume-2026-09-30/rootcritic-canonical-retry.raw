@@ -1,0 +1,16 @@
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/cmd/godspeed-casework	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	(cached)
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	(cached)
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	31.194s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	(cached)
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	(cached)
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	(cached)
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	(cached)
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	(cached)
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	(cached)
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	11.523s
+casework-go-check: format, vet and tests green

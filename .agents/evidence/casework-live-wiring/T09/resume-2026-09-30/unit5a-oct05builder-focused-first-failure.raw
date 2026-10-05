@@ -1,0 +1,14 @@
+--- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry (0.00s)
+    --- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry/run_get (0.00s)
+        client_cancellation_test.go:231: canceled in-flight request error = unavailable: the connection to the governed authority failed (read): io: read/write on closed pipe, want unavailable wrapping context.Canceled
+    --- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry/ask (0.00s)
+        client_cancellation_test.go:231: canceled in-flight request error = unavailable: the connection to the governed authority failed (read): io: read/write on closed pipe, want unavailable wrapping context.Canceled
+    --- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry/correlated_mutation (0.00s)
+        client_cancellation_test.go:231: canceled in-flight request error = unavailable: the connection to the governed authority failed (read): io: read/write on closed pipe, want unavailable wrapping context.Canceled
+--- FAIL: TestCancelingOnePoolRequestLeavesConcurrentRequestUsable (0.00s)
+    client_cancellation_test.go:295: canceled in-flight request error = unavailable: the connection to the governed authority failed (read): io: read/write on closed pipe, want unavailable wrapping context.Canceled
+--- FAIL: TestCanceledPartialRunGetConnectionIsNotReused (0.00s)
+    client_cancellation_test.go:341: canceled in-flight request error = unavailable: the connection to the governed authority failed (read): io: read/write on closed pipe, want unavailable wrapping context.Canceled
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.030s
+FAIL

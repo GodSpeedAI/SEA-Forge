@@ -1,0 +1,13 @@
+Preflight before focused cancellation race command
+Command: date -u; free -h; ps -eo pid,comm,rss,%mem --sort=-rss | awk NR<=16; Go limits
+Mon Oct  5 16:55:35 UTC 2026
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       4.8Gi       232Mi        96Mi       3.0Gi       3.0Gi
+Swap:           12Gi       9.4Gi       2.6Gi
+    PID COMMAND           RSS %MEM
+      1 codex           18928  0.2
+      6 ps               4048  0.0
+      2 bash             3488  0.0
+      3 bash             2236  0.0
+      7 awk                 8  0.0
+GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0

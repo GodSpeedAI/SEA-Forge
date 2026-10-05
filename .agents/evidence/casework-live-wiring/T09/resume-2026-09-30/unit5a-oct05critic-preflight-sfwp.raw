@@ -1,0 +1,13 @@
+Preflight before full SFWP package race command
+Command: date -u; free -h; ps -eo pid,comm,rss,%mem --sort=-rss | awk NR<=16; Go limits
+Mon Oct  5 16:56:19 UTC 2026
+               total        used      free    shared  buff/cache   available
+Mem:           7.8Gi       4.8Gi     247Mi       98Mi       3.0Gi        3.0Gi
+Swap:           12Gi       9.4Gi       2.6Gi
+    PID COMMAND           RSS %MEM
+      1 codex           18932  0.2
+      7 awk              4220  0.0
+      6 ps               4036  0.0
+      2 bash             3440  0.0
+      3 bash             2264  0.0
+GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0
