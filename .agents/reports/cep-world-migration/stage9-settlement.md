@@ -9,7 +9,7 @@ Date: 2026-10-05. Spec: `specs/cep-world-ref-migration.spec.md` (Stage 9, with a
 | Context_Kernel | `migration/cep-world-ref` (new, from `harden`) | 30e8ce1 | `ContextRequired` requires a well-formed `world_ref`; the packet echoes it and states `retrieval_completeness` (`complete`/`partial`/`none`) with `omissions`. Hitting `max_results` with a further match, or truncating a citation, is `partial`. |
 | godspeed_agent | `migration/cep-world-ref` (new, from `audit-corrections/neatcode-2026-07-29`) | baf6005 | `DesiredDirection`/`WorkRequested` require `world_ref`; consequential loop events refuse to emit without a pinned world; `SettlementRecorded` is labelled `agent_local`; inbound evidence is checked against the deployment pin. |
 | SWE_SEED | `migration/cep-world-ref` (worktree `~/projects/SWE_SEED-cep`, from `deploy-prep`) | a1a3c3d | `world_ref` required at E1, sent at E2, checked on the E3 packet, carried by E4, bound at E6 adjudication, carried by E7. `ContextRequest.require_complete` refuses partial context. |
-| sea-rs | `migration/cep-world-ref` | see git | SEA-Forge's legacy E4→E5A→E5B→E6 library chain pins the world at intake, keeps it on the ledger record, and emits it on the E6 settlement. `GovernedWorkIntent::verify_world` hooks the registry check. |
+| sea-rs | `migration/cep-world-ref` | 05b723b | SEA-Forge's legacy E4→E5A→E5B→E6 library chain pins the world at intake, keeps it on the ledger record, and emits it on the E6 settlement. `GovernedWorkIntent::verify_world` hooks the registry check. |
 | gauntlet | `migration/domainforge-0.18.2` | 752cea6 | Confirmation tests only. |
 | cognate | `cognate/harness` | 6118ac2 | Stage 8 status revision 36 and evidence file (carried over from Stage 8). Cognate is otherwise unchanged. |
 
