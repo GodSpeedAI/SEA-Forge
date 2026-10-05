@@ -1,0 +1,61 @@
+utc=2026-10-05T23:24:07Z
+608a687e53ba365fc743ae6c8d2ded7a1c006e8c6b0f5f209109d055f6e5ad05  .gitleaks.toml
+8.30.1
+MemTotal:        8132712 kB
+MemFree:          318988 kB
+MemAvailable:    3126388 kB
+Buffers:          816004 kB
+Cached:          1557816 kB
+SwapCached:        62612 kB
+Active:          4629076 kB
+Inactive:        1460948 kB
+Active(anon):    2795796 kB
+Inactive(anon):  1025500 kB
+Active(file):    1833280 kB
+Inactive(file):   435448 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:      12582912 kB
+SwapFree:        3920084 kB
+Dirty:              2140 kB
+Writeback:             0 kB
+AnonPages:       3654696 kB
+Mapped:           344444 kB
+Shmem:            104928 kB
+KReclaimable:     805080 kB
+Slab:            1057112 kB
+SReclaimable:     805080 kB
+SUnreclaim:       252032 kB
+KernelStack:       22408 kB
+PageTables:       199336 kB
+SecPageTables:         0 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    16649268 kB
+Committed_AS:   20699500 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:      148440 kB
+VmallocChunk:          0 kB
+Percpu:             4000 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:      8192 kB
+FilePmdMapped:         0 kB
+Unaccepted:            0 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+DirectMap4k:       58368 kB
+DirectMap2M:     4134912 kB
+DirectMap1G:    13631488 kB
+    PID COMMAND           RSS
+      1 codex           18900
+      2 bash             3504
+     13 ps               4044

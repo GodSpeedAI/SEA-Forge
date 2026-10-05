@@ -1,0 +1,713 @@
+schema: agent.current_status
+schema_version: '1.0'
+
+metadata:
+  plan_id: casework-live-wiring-production
+  plan_version: 0.2.1
+  plan_path: .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml
+  brief_path: .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md
+  brief_note: Read Section 0 (Verification Errata, decisions, runner change) FIRST. Where the body disagrees with Section 0, Section 0 is correct (but see correction C-1 in the decision log for one §0 fact that was wrong).
+  spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+  initialized: true
+  last_updated: '2026-10-05'
+  updated_by: >-
+    LATEST authfixture5bbc19a4 frozen freshrepair, source rereview only; declaration
+    f8f0df88 stub unchanged. Trace adapter production sourcebuilder. Tracecritic
+    exclusive security608a repeated controls/history; no compiler authorized.
+    LATEST trace e839 Phase1 independentAPPROVE behavioralRED, root3copiesexact;
+    production run_trace.go releasedONLY to Luna gitleaksbuilder. Tracecritic fresh
+    authfixture source repair; compiler idle. Security608a still pending repeatedgates;
+    cursor publicrevision held. FullGo/T09 notapproved.
+    LATEST history91676 joined0 under pre-anchor c018, scope still REJECT. Config608a687e
+    sixanchors root-verified pending repeatedmatrix/history. Trace critic solecompiler
+    for e839 intendedRED then fresh AUTH fixture source repair: unusedclock/unboundedwait/
+    gofmt REJECT; cursorcritic remains independent. No production/fullGo approval.
+    LATEST history scan91676 RUNNING with pre-anchor config c018; do not compile
+    until actual finalexit. Native ps is namespace-limited, not host-wideabsence;
+    explicit sole-heavy ownership/actual exits prove serialization, RAM checked.
+    LATEST security controls REJECT unanchored prefix/suffix suppression; fresh builder
+    anchors only six T00 wholepaths after auth fixture freeze. Auth prerequisite proposal
+    independently APPROVED, source fixtures/declarations underway. Cursor V2 REJECTED
+    cold history/capture acknowledgement/empty resync; public changes remain held.
+    LATEST fixture e8393465 frozen; root reverse two zero-want blocks matches fc9.
+    Independent trace critic security-heavy slot then source rereview/RED transfer.
+    Cursor V2 root proposal held under independent critique; session lifecycle recon only.
+    LATEST escalated trace tests ran expected stub failures but fixture REJECT:
+    metadata AND presence loops expected nonzero error snapshots. Fresh different
+    builder repairs both; production held. Trace critic owns security scanner slot
+    after joined compiler while next RED waits; nil semantic slice root erratum recorded.
+    LATEST fc9bbb74 fixture compiled but default sandbox denied Unix setsockopt before
+    assertions. Trace critic solecompiler for separate reviewed escalation attempt;
+    no behaviorRED yet. targetRules config c0185761 frozen pending independent controls.
+    LATEST traceRED attempts joined1: cache then voidClose compile error, no tests ran.
+    ROOT idle compiler; fresh Luna fixture and targetRules security builders source-only.
+    Cursor proposal independently REJECTED ordering/version/scope; public changes held.
+    New operator hook edits preserved. T09 pending, no publication/fullCI claim.
+    LATEST daemonrecovery HEAD8c6495d sourcesverified noorphancompiler;
+    trace_red_recovery_critic solecompiler conditionalSOURCEready for assertionRED.
+    Gitleaks14 exactoldidentifierlines matchapprovedsibling rootverified; freshbuilder
+    addsONLYexacthistoricalcommit toexistingANDallowlist, independentgatesneeded.
+    Cursorproposal holds publiccontracts for independent/operatorreview.
+    LATEST Tracee8859aa2 frozen after sourceREJECT85554606 shapes; independentreview
+    queued after sourcecursorrecon, REDunrun. CW07 realULID/numericschema mismatch
+    sourceobserved independenttracepending; no contract/UIchangesreleased.
+    ROOT idlecompiler, read-onlysecurityrecon; no successfulpublication.
+    LATEST normalpush95780 joined1 Gitleaks14 redacted findings after denyPASS;
+    no publication. ROOT idlecompiler; read-onlysecurityrecon no configchanges.
+    Tracefixturec3946843 frozen latestrepair awaitsindependentsource/RED.
+    LATEST supervisorcheckpoint8c6495d normalhook PASS/joined0, eleven stagedpreserved,
+    threecapturedcopies exact. ROOT solecompiler reserved normalpushCI newresumebranch.
+    Tracefixture freshREJECTd8b5e43c blankexpected+unknownsettlement; differentbuilder
+    repairs onlyfixture source-only. No GoRED/productionTrace/push/fullT09claim.
+    LATEST supervisor75404483 independentAPPROVE78f51525 all3gates PASS;
+    rootninecopies/source/serialtimings verified. ROOT token normalcheckpoint/push.
+    Tracea3c13aba source-only rereview includes newrootblankexpected contradiction.
+    LATEST Tracefixture repaira3c13aba frozen source-only; port/stub unchanged,
+    independent original-envelope rereview thenRED required. SupervisorfocusedClippy
+    andfull4tests PASS; workspaceClippy7598 solecompiler serializedcritic running.
+    LATEST supervisor75404483 frozen exactthreechanges, independent serializedcritic
+    exclusivecompiler conditionalSOURCEready for focusedClippy/fullsupervisortests/
+    workspaceClippy. Rootdiffreview matches. Runlistcap staleclaim corrected newartifact.
+    LATEST c210629 normalRustcheckpoint PASS/joined0, eleven stagedidentities unchanged,
+    three rootcaptures exact. ROOT idle compiler token; supervisorbuilder source-only,
+    Tracefixture freshrepair underway. No successfulpush/fullT09claim.
+    LATEST TracePhase1 sourceREJECT d61cfe21 plus supplementdb7afd9f; fresh different
+    Luna clippy_template repairs onlyfixture source-only, no RED/runtimeclaimed.
+    ROOT normalRustcheckpoint93257 stillrunning, exclusive compiler token.
+    LATEST Rust1401e0b0 independently scoped-approved, two focused gates pass;
+    root verified allnine exactcaptures. WorkspaceClippy101 on three supervisor
+    test idioms; CW02 updated. ROOT reserves compiler token for normal Rust checkpoint.
+    LATEST: accepted Unit5A committed 8f81580 through normal pre-commit exit0;
+    eleven foreign staged identities preserved and three root captures byte-matched.
+    clippy_template_oct05_critic owns sole compiler token for frozen Rust rfind
+    focused gates and full-workspace Clippy diagnostic. Safe trace Phase1 three-file
+    fixture/stub is frozen under independent source review only, assertion RED unrun.
+    No successful push or current whole-worktree Go/T09 completion is claimed.
+    This latest state supersedes historical ownership statements below.
+    resumed orchestrator: T00-T08 independently settled, T08 checkpoint af362f5.
+    T09 canonical bounded unit independently approved and checkpointed b608771;
+    cap and mirror bounded units approved and locally checkpointed b4092bd.
+    Protected Ask runtime independently approved and checkpointed0b55022;
+    unit4 scopedlists/realrunchildren independently approved/checkpointed dc82736.
+    Unit5 cancellation fixture independently source-approved with expected RED on 2026-10-05;
+    runtime client e0d3c12c passes manual cancellation cases but race EOF fixture fails.
+    Fresh independent source critic investigates; ROOT owns compiler token. Full T09 pending.
+    All workers are Luna, and compiler ownership remains serialized with host RAM checks.
+  previous_status:
+    archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
+    note: >-
+      The godspeed-bounded-judgment plan's status was archived unchanged. .agents/CURRENT_STATUS.md
+      is the historical narrative; the machine state is THIS file.
+
+execution:
+  last_settled_task: T08
+  settled_tasks: [T00, T01, T02, T03, T04, T05, T06, T07, T08]
+  in_flight_task: T09
+  ready_tasks: []
+  confirmation_debt: >-
+    T07 and T08 independently confirmed and settled 2026-09-30; earlier platform-outage
+    confirmation debt is closed. T09 historical implementation at3e2404f has live wiring
+    omissions and awaits completion plus independent confirmation; T10-T12 await implementation.
+  blocked_tasks: [T10, T11, T12, T13]
+  t02_state: >-
+    SETTLED 2026-09-24 (session 3): independent critic APPROVED (T02/confirmation.md) — all prereg
+    refusals reproduced as fresh-cell runtime attacks with hash-proven no-writes, positive
+    dual-principal flows verified, wire additivity confirmed, all gates re-run green. Critic
+    findings handled: F-7 ADR revocation-timing overclaim corrected in the ADR (true boundary is
+    commit_plan/restart); F-8 OPEN_QUESTIONS entry added (ActorRole::Gateway variant); F-9
+    OBSERVED_DEBT entry (pre-existing partial case dir on mid-handler failure, T11).
+  plan_blocked: false
+  plan_blocker: null
+  external_blockers: []
+  task_detail:
+    T09:
+      units: >-
+        IN FLIGHT. Canonical authored contract/spec/schema/test/golden unit independently
+        APPROVED and locally checkpointed b608771. Fresh Bun11/0/963 and explicit strict tsc0;
+        root verified source/log identity. Cap focused8/full SFWP race independently pass.
+        Mirror repair independently APPROVED after two immutable rejections and fresh builders.
+        All pre-Ask Go gates PASS; UI263/0/1427 plus production build PASS. Root verified16
+        manifest hashes and36 raw /tmp copies. ROOT compiler token after critic release.
+        Cap/mirror checkpoint b4092bd complete. Ask fixture source review REJECTED missing
+        numeric/boolean roots; fresh t09_ask_scalar_fixture_repair adds only those cases.
+        Fresh repair frozen SHA90612d084a10fce6ec4871faae563790c7de5267d2ef60369bc1fc23bd538cbe.
+        Ask fixture independent APPROVE: server RED reaches absent route405; transportRED
+        EOF/overflow each resend twice. Root matched4source+2loghashes. ROOT owns compiler token.
+        Ask runtime builder froze source/new adapter/live tests without compiling. Existing fixture
+        test hashes unchanged. Root verified exact sandbox original log/exit copies after archive repair.
+        Runtime first verification REJECTED: production askBody collides with frozen test helper,
+        so no tests ran. Secondary source review found raw UTF8 normalization and stale correlation
+        comments. Root verified13source+3artifacthashes and exact original failure copies;
+        Fresh t09_ask_fixture_independent_critic froze PhaseA; primary mirror critic owns token
+        prepares repair in two phases (compile rename/comments/new raw-byte test, observed RED,
+        then raw UTF8 guard). Focused raw UTF8 expectedRED approved; root verified exact three
+        log/exit/preflight originals. PhaseB guard/documentation repair frozen, all three tests
+        unchanged. Renamed live fixture TestLiveAskLedger SHA b97556553bf65a1105e0bfaaccb57e0f421b004141c3a73f782a3cebb0c5478a
+        changes only the identifier. Independent live proof passes twice under original TMPDIR;
+        observed socket path84bytes under95byte kernel limit. Fresh canonical Go and full-module
+        race/count1/parallel1 gates pass; compiler token released. Final evidence archive/review
+        write initially rejected by automatic approval review usage limit; same native patch
+        retry succeeded. ask-runtime-independent-final-confirmation.md APPROVES bounded Ask
+        runtime only. Root matched15source hashes and13new exact raw copies/full hashes;
+        report SHA728a560e3c6a9ced11184dcb2f46695a5f1b3aee1c72909c60c7d9e89d8cde5f.
+        Graft refresh PASS674cards/7349nodes/13995edges; context-check PASS. Ask checkpoint
+        0b55022 complete. Run-child fixture builder owns only new projection/run_children_test.go;
+        fixture frozen SHA68511dc5618c9609e27ae501794265d8fd4d5b18d62466e2465dd51b3507269d;
+        primary mirror critic REJECTS missing exact-ID multiplicity proof; immutable rejection
+        run-children-fixture-independent-reject.md SHAd549a42f502dd0468ca23b8428654df57ef8d43c863e928d89a1d8ec36bc5979.
+        Fresh t09_run_children_fixture_builder repaired only matrix multiplicity; frozen
+        SHA4ddb2445a7ff6726c3b6fd93832ac4122b53da4d26e5b54180f9a1cafb802741.
+        Primary mirror critic source/expected assertionRED APPROVE; token released. Root
+        matched fixture/reviewhashes and4exact log/exit copies, archivedpreflighthashes only
+        (no originalpreflightfiles). Runtime phaseA declarations/scopedtests released under
+        run-children-runtime-test-phases.md; now frozen5files and purefixture unchanged.
+        Primary mirror critic source REJECT: no predial proof and scopedfake discards requested
+        CaseRef. Immutable phaseA rejection SHAc7590c52ff30ce8fdc829c55fac3755fceff5755a93d95e18e954401101d910d.
+        Fresh t09_run_children_fixture_builder repairs only2scopedtests with synchronous Dial
+        counter and exactcase assertion; root authorized same2newfixture whitespace-only
+        formatting before rereview. Final scoped_runsSHA0013b05f69def466e8434182642b4543e68c5b4ad7fd1a3f3f14608337fcc2b5;
+        scoped_liveSHA361fc0328217bf78d4ac3d7c92dad6f8641e931225e3c78cd58685a7bb4a7800.
+        Other3PhaseAfiles/purefixture unchanged. Independent phaseA source/compiling assertion
+        RED approved; root matched6sourceidentities and6exact rawcopies/fullhashes.
+        Token released. Critic overwrote2initialincorrectarchivecopies; actual/tmpunchanged,
+        currentcopiesexact. Sandbox incorrectcopy recoveredexact6cff61f to newlabelledpath;
+        hostincorrectcopy and deletedrecoverytranscription remainunrecovered, disclosederrata.
+        PhaseB runtime frozen after innerGREEN race04; independent semanticREJECT8404a0f:
+        false unknown-case fixture/lateunavailable lookup and blanketRefusalnormalization.
+        Fresh semantic Phase1 TWOtests frozen57bfc686/a9e0deb0; all production unchanged.
+        Root matched2testidentities, original2snapshots and rejected6filediffb0a6b08b.
+        Evidence-only builder archived13innerattempt/preflight/exit files; root bytechecked
+        all13 originals/fullhashes. Manifest93d8a275 records wrongcwd, failures and invalidGREEN.
+        Independent regressionRED APPROVED2d234225; both focusedracecommands compiled and
+        exposed missing-case extra reads/wrong kind and3flattenedrefusalclasses. Root matched
+        6exactrawpairs+10sourcehashes. Fresh Phase2 source frozenlive0f17e374/authoritya9c49702;
+        only2authorizedfiles changed, tests frozen. FocusedGREEN PASS but independent
+        Phase2 REJECTf35d91ce: new livefixture internalprojection->livestack->projection
+        importcycle prevents testbody/kernelproof. Root matched6rawpairs/11sourcehashes.
+        Fresh Luna livefixture frozenffc979ee; externalpackage/helperqualification only.
+        Root exactinverse restores8e485original and helperbodyexact renamed. Firstsnapshot
+        failed2c982 retained; NEWcorrectedsnapshot exact8e485, captureerratumrecordsdiagnosticarg.
+        Primary mirror critic reports repeatfocusedrace/twoactualcasekernelproof/canonical
+        justcasework-go-check/fullmodulerace ALLPASS; post-PASSrelaycleanupwarning preserved.
+        Final boundedunit4 APPROVED8b1432ff with clarifications87e90d10. Root matched
+        11sourcehashes/17exactrawpairs; Graft refreshed679cards/7398nodes/14142edges.
+        Token ROOT. ContextcheckPASS, unit4checkpoint dc82736 complete. FullT09pendingunits5-8.
+        Whole-focus assertion corrected before any verdict; current checks preserve parent rank
+        while allowing actual child IDs. Full T09 remains pending.
+        Run-observation authority/trace/session source facts recorded separately; kernel
+        Inspect invariance does not approve session sharing. Unit6 read-only fixture anchors/
+        cache/history/view requirements recorded; no UI implementation/test write release.
+        Unit5 cancellation source facts: manualctxcancel does not interrupt in-flight socket
+        read, Client.Close onlyidlepool; cancel/drain design mustresolve beforepollerclaims.
+        Root cancellation testfirstproposal held; independent sourcecritique found missing
+        manualAsk/mutationcoverage and fakeEOFproof caveat. NEWsupplement requires both
+        and exactcallbackretirement/peeridentity; repeatcritique before anyGo write release.
+        Run-observation runtime implementation still pending.
+      confirmation: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/canonical-final-independent-confirmation.md
+      confirmation_note: Bounded units1-4 independently approved; no full T09 approval or settlement.
+      settle_when: All remaining T09 units, required global gates and independent runtime confirmation pass.
+    T08:
+      units: >-
+        SETTLED 2026-09-30. Independent Luna critic approved production HTTP-only builds,
+        same shared local/live suite, typed stale refusal, immutable history and actual native
+        EventSource retention-one/two resync/retry/disposal. Stronger complete stored snapshot
+        comparison passes; fresh current projection requires exact cursor and stable fields,
+        with its actual render timestamp validated separately. Native race PASS35.679s;
+        canonical UI PASS258/0/1271assertions; all three canonical production variants pass.
+        Post-Store canonical Go/vet and full race freshly rerun and pass. Unchanged Rust and
+        local ladder evidence reused with explicit limits. All material harness differences,
+        failed runs and evidence corrections recorded; source/log hashes independently checked.
+      confirmation: .agents/evidence/casework-live-wiring/T08/resume-2026-09-30/independent-final-confirmation.md
+      confirmation_note: >-
+        APPROVE with append-only independent-final-confirmation-go-gates-errata.md, which
+        supplies correct fresh post-Store Go gates and source identity. Root verified all
+        13 main manifest entries, both record hashes and exact copied Go log bytes.
+      settle_when: satisfied — independent confirmation, corrected gate evidence and durable logs exist.
+    T07:
+      units: >-
+        SETTLED 2026-09-30. Independent Luna critic approved current source: immutable
+        session/history/SSE projection, retained cursor publication before waiter release,
+        and current session perspective verification before intent replay/dispatch.
+        Independent red reproduced four missing intent refusals; focused/global Go race,
+        vet and fresh build pass. Real cached receipt revoked403, restored byte-identical200,
+        unchanged trajectory; production dev auth refused exit2 on free port44281.
+        Inherited unchanged Rust/UI global gates remain green, with exact evidence references
+        and limitations recorded. Native browser cookie/reconnect proof belongs to T08.
+      confirmation: .agents/evidence/casework-live-wiring/T07/resume-2026-09-30/authorization-green/independent-verification-record.md
+      confirmation_note: >-
+        APPROVE full T07, independent critic t07_live_confirmation. Root verified source
+        hashes and byte-identical evidence copies. reference-errata.md corrects inherited
+        UI evidence path. Missing earlier cursor stdout and retrieval-scope deviation are
+        disclosed; fresh authorization logs and real-handler replay proof are retained.
+      settle_when: satisfied — independent confirmation and durable evidence exist.
+    T04:
+      units: >-
+        SETTLED 2026-09-24 (session 2). A: DONE, confirmed (1b73724). B: DONE,
+        committed 9c153b2, orchestrator re-verified + critic reviewed (no
+        findings). C: DONE — opt-in supervisor (SupervisorConfig fail-closed
+        default off, slot+run-pool bounded concurrency, same case_ops/advance
+        path, sandbox-class selection), committed this session; gates green
+        (3-crate 57 ok/0 fail, mutations 10/10, supervisor 4/4, config 15,
+        fmt + no-async-kernel EXIT 0); teeth pass incl. TDD baseline.
+      confirmation: .agents/evidence/casework-live-wiring/T04/confirmation-independent.md
+      confirmation_note: >-
+        OPERATIVE verdict (session-3 independent critic, 2026-09-24): APPROVE for units B+C —
+        gates EXIT=0 first attempt, teeth re-run, fresh-cell runtime attack passed, zero code
+        defects. Unit A retains its own confirmation (T04A/confirmation.md). The builder-written
+        T04/confirmation.md is a superseded historical artifact (session-2 self-reconciled a
+        critic REJECT; see decision log S2-1). Downstream flags in decision log D-2-impl-notes:
+        command frames not on the event bus (SEAM-5: T06/T09 need a bridge or run-trace read);
+        legacy submit/commit path has no per-append frames; artifact_get bound 1 MiB.
+      settle_when: satisfied — independent confirmation exists.
+    T02:
+      prereg: .agents/evidence/casework-live-wiring/prereg/T02.yaml # written 2026-09-23, BEFORE implementation; read it first
+      note: >-
+        D-2 gateway principal. Write the ADR first
+        (.agents/reports/casework-live-wiring/adr-identity-delegation.md: threat model, revocation,
+        audit fields, amends identity.rs:14-27). server.yaml gateway section default NONE
+        (fail-closed). Thread the effective actor through EVERY protected verb (the T04B verbs
+        included). Both principals ledgered; SoD compares end users; identity.get reports the
+        effective actor. Gates: cargo test -p sea-forge-server identity; cargo test -p
+        sea-forge-server --test '*delegat*'. Teeth per prereg.
+
+operator_decisions:
+  D-1: "APPROVED 2026-09-23. The spec-04 CognitiveWorldSnapshot (interface-contracts/typescript/types.ts) is the single UI<->gateway contract."
+  D-2: "APPROVED 2026-09-23. A gateway principal acts on_behalf_of allowlisted, gateway-authenticated end users. Both principals are ledgered. Needs an ADR."
+  D-3: "APPROVED 2026-09-23. An explicit case.advance/item.execute verb plus an opt-in server supervisor, both calling CaseRunner in-process."
+  dependencies: "APPROVED: a Go OIDC library and golang.org/x/crypto/argon2. REJECTED: Playwright; use agent-browser. Anything else is ask-first."
+  T09-contract: >-
+    APPROVED 2026-09-30: operator replied "i approve" after proposed T09 additive contract,
+    client response cap, bounded hydration and UI cache behavior were explained. Scope includes
+    execution observations without invented progress and the protected disclosure-complete Ask
+    endpoint. Independent proposal architecture review approved round four; implementation
+    verification remains required after T07/T08 settlement. Existing
+    kernel verbs/identity model/dependency set stay authoritative; no deployment authorization.
+  git: >-
+    Updated operator authorization 2026-10-05: commit and push often at meaningful verified
+    changes; fix commit/push problems. Preserve operator changes and staged files. Explicit
+    task paths only. Fetch, pull, rebase, reset, merge, clean and force operations remain forbidden.
+
+next_action:
+  task: T09
+  action: >-
+    LATEST join608a security repeatedmatrix/history and verify exactevidence; then
+    normalexplicit securitycheckpoint/push under rootcompiler token. Authfixture5bbc
+    source approval then focusedRED transfer; trace production independentfocused
+    gates/fullmodule waits for auth production. Publiccursor held.
+    LATEST freezeproduction trace then DIFFERENT critic source/focusedgates;
+    fresh authfixture repair/rereview/RED then productioncompletion before fullGo gates.
+    Repeat608a security controls/history under soleheavy token, checkpoint/push normally
+    after proof. Resolve cursor normative bootstrap/history/capturegap decisions.
+    LATEST join e839 traceRED and verifycopies before port release; fresh authfixture
+    repair then independent source/RED. Repeat608a security controls/history after
+    compiler joins. Auth stub prevents whole-module GREEN until production completion.
+    LATEST join/archive security negative controls; after heavy token returns independently
+    run e839 trace assertionRED. Verify fresh six-path anchoring then ALL controls/history.
+    Source-review auth prerequisite fixtures; resolve cursor V2 rejection before approval.
+    LATEST security controls/history scan first; review e839 fixture against original
+    envelope then separately grant compiler for intendedRED. CursorV2 independent
+    architectural critique and session lifecycle bounded recon remain source-only.
+    LATEST verify fresh two-loop zero-error snapshot fixture repair; then independent
+    assertionRED after security verifier returns heavy slot. Archive all prior failures,
+    source-review full original envelope; production has empty-slice erratum.
+    LATEST join trace critic separate local-socket permission-reviewed RED attempt;
+    environment failure is not assertionRED. Verify exact copies and any review errata.
+    LATEST independently review fresh voidClose fixture repair then grant trace critic
+    sole compiler for actual assertionRED using writable /tmp GOCACHE and host preflight.
+    Independently verify targetRules correction with synthetic rule/path/commit controls
+    and history scan after compiler returns. Root resolves cursor ordering proposal
+    before independent review/operator approval. Preserve new hook changes and eleven
+    staged identities; no checkpoint/push until required proof and token return.
+    LATEST join trace_red_recovery_critic RED after source readiness; verifyexactcaptures.
+    Independently review siblingcommit Gitleaksrepair/fullscan/negativecontrols;
+    cursorproposal SOURCEreview then operatorapproval before publiccontractchanges.
+    LATEST independentTracee8859aa2 source review then explicitREDtransfer;
+    finish security14findings/cursorformat source recon and rootscoped decisions.
+    ROOTidlecompiler; no cursor/schema/UIproduction writes released.
+    LATEST diagnose Gitleaks14 safely with exactredactedreport/sourceprovenance,
+    no secrets/bypass/allowlistchanges until evidence-basedrootdecision. Continue
+    independentTracefixturec3946843 source review; compilerROOTidle, REDheld.
+    LATEST normalpush8c6495d verifiednewbranch; ROOT owns compilerCI untiljoined.
+    Tracefixture freshrepair then independentreview, GoRED held untiltransfer.
+    LATEST checkpoint verifiedsupervisor explicitpaths normalhooks then normalpush
+    verifiednewresumebranch; ROOT solecompiler. Tracefixture rereview source-only.
+    LATEST join supervisorworkspaceClippy7598; verifyallcaptures then checkpoint/push.
+    Independent rereview Tracefixturea3c13aba; no GoRED until explicitcompilertransfer.
+    LATEST join serializedcritic supervisor gates, verifycaptures/source/deviations;
+    root normalcheckpoint/push only after tokenreturn. Tracefixturebuilder source-only.
+    LATEST supervisor threeidiom freshbuilder then independent source/gates;
+    Tracefixture freshrepair then independent source/intendedRED. ROOT idle sole token.
+    LATEST join rootRustcheckpoint93257; re-review freshTracefixture repair against
+    ALL rejectionfindings before any intended assertionRED/production release.
+    LATEST checkpoint approvedRust1401e0b0 explicitpaths normalhook, ROOT solecompiler.
+    Fresh supervisor builder must address three workspace diagnostic Clippy findings;
+    independently verify then rerun normalpush. Trace sourcecritique compiler-held.
+    LATEST resume from HEAD8f81580: GoUnit5A checkpoint completed with normal hook exit0.
+    Rust critic clippy_template_oct05_critic owns sole compiler token for rfind focused
+    Clippy/test then workspace diagnostic; join all commands before any other compilation.
+    Independent safeTracePhase1 source critique runs without compiler; repair any findings
+    with a different builder, then prove intended assertion RED before production adapter.
+    Preserve eleven other staged identities. Retry normal push after Rust prerequisite
+    approval/checkpoint; current new trace stub is unverified and excluded from checkpoints.
+    This latest action supersedes historical pending-commit/ownership instructions below.
+    CHECKPOINT root owns sole compiler token for accepted Go Unit5A explicit-path commit
+    through normal hook; Graft refreshPASS682cards/7424nodes/14223edges. Preserve11
+    remaining stagedidentities; pending Goportstub/fixtures and Rust rfind NOT in checkpoint.
+    LATEST Unit5A cancellation prerequisite ACCEPTED by root: corrected independent
+    approval d9f04ec1 plus mappingerratum c0ad5484/processcapturedeviation; root verified
+    final16 exactcopies, three sources, all8zeroexits and serializedtimings. SafeTrace
+    Phase1 Go-only threefile source builder released, NO compiler. Rustfocusedgate failed
+    filter_next on next_back; fresh Rustbuilder replaces with equivalent rfind only.
+    ROOT sole compiler owner pending scoped Gocheckpoint. No successfulpush/T09settlement.
+    CURRENT sole compiler owner cancellation_serialized_oct05_fresh_critic for final
+    cancellation+repairedfixtures gates: focused count3, fullsfwp, canonical, fullmodule,
+    strictly sequential. Source-ready dfb98f494 preserves alltimeouts/assertions/defaultcap.
+    Rootpush9357 joined exit1 on TWO additional delegatedidentity Clippy idioms; exact
+    three captures preserved. Fresh Rustbuilder source-only in disjoint test file.
+    HEADbf88ab8; no push succeeded, no trace source release until scoped Go approval.
+    PUSH CI compiler owner ROOT for verified bf88ab8 to unused remote resume branch;
+    normal hooks/CARGO_BUILD_JOBS1/host preflight, no other compiles. Fixturebuilder
+    source-only; independent source review may proceed, all Go execution waits token.
+    LATEST root owns compiler token; bounded fresh builder clippy_template_oct05_critic
+    changes ONLY two response_limit_test.go fixtures under original rootassignment,
+    no compilation. Baseline/current count3 diagnostic bothfailed deadlines; root matched
+    all8 exact captures. Smaller approved1024cap isolates retry/recovery behavior while
+    preserving defaults/timeouts/assertions/full32MiBboundary. Fresh independent source
+    review then all required Go gates mandatory; cancellation and trace remain held.
+    CURRENT sole compiler owner cancellation_retirement_oct05_critic for exactly TWO
+    bounded baseline-overlay/current response-cap race-count3 diagnostic commands, with
+    adjacent host preflights and joined sessions. Overlay independently source-ready
+    e3bd851a, changes only client.go baseline. Rust checkpoint bf88ab8 normalhooksPASS;
+    root matchedthree exact checkpointcaptures and17 prior stagedidentities preserved.
+    Diagnostic does not approve cancellation; trace sources remain held. No push yet.
+    NOW root owns sole compiler token after Rustcritic joined scoped Clippy and existing
+    template test PASS, independent approval recorded; root matchedfour raw/exit copies
+    and5806fc58 source. Finish preflight archive review, explicit-path Rust checkpoint
+    through normal hooks, then transfer token for baseline/current Go response-cap diagnostic.
+    Cancellation remains NOT APPROVED; no trace source release. No push has succeeded.
+    LATEST compiler owner clippy_template_oct05_critic for scoped Clippy and existing Rust
+    test, jobs1/host preflights. Fresh Go verifier returned token after all joined sessions;
+    root independently matched all12 fresh raw/preflight/exit copies and both frozen sources.
+    Response-cap diagnostic baseline overlay preparation runs source-only, compiler held.
+    CURRENT fresh serialized cancellation verification NOT APPROVED: focused cancellation
+    and canonical Go passed; fresh full SFWP and module race failed response-limit
+    inspect/recovery deadline tests. No source defect inferred yet. Fresh verifier completes
+    immutable evidence audit before returning compiler token. Read-only Luna response-cap
+    recon investigates original two-second fixtures versus current callback. No trace release.
+    LIVE audit correction: prior cancellation-gate approval WITHHELD by root after proof
+    canonical retry began16:58:05 while first command ended16:58:55 (50s overlap).
+    Fresh documentation builder records procedural/evidence findings without source edits.
+    Fresh independent cancellation_serialized_oct05_fresh_critic owns SOLE compiler token,
+    source review then ALL4 required gates strictly serialized with joined sessions and exact
+    native raw copies. Do not release trace sources until fresh evidence-approved result.
+    Initial report's missingpreflight2 claim differs from existing /tmp raw; fresh doc audit checks
+    what it actually contains. All bad handcopied records remain immutable with corrections.
+    Rust one-expression source repair independently ready, its compile/test waits token.
+    UI recon completed source-only; safe trace test-first root assignment prepared HOLD.
+    2026-10-05 resume: operator changed and staged unrelated files; preserve existing index.
+    HEAD remains dc82736. Previous workers are gone. Fresh Luna cancellation_fixture_oct05_critic
+    independently source-approved c4f1bd73 and ran race package expected RED (five manual
+    cancellation timeouts), review650abb1a; root byte-compared all4 raw/exit archives.
+    Fresh Luna cancellation_runtime_oct05_builder owns client.go and SOLE compiler token.
+    Fresh Luna safe trace proposal v2 frozen4a53f3e3; independent proposal critic pending.
+    Independent trace v2 REJECT: duplicate checking against unknown kinds exceeds scope;
+    read-then-metadata is non-atomic, so byte/row consistency guards are unjustified.
+    Fresh Luna safe_trace_proposal_oct05_fresh_v3 owns new v3 document ONLY; root restored
+    selected-only duplicates, returned-zero count without source-empty claims and original
+    optional metadata boundary. No trace source release before cancellation approval.
+    Git recon proved9 CRLF hooks plus staged executable bits; fresh hooks_lf_oct05_builder
+    completed normalization only; independent hooks_lf_oct05_critic reviews equivalence/syntax.
+    Runtime builder corrected first failed error classification; final focused race now fails
+    only retirement helper EOF (io.ErrClosedPipe), sourcee0d3c12c. Six raw/exit files archived,
+    original first preflight not saved and gap disclosed. Root suspects deadline setup returns
+    before actual socket READ; fresh independent critic checks stdlib and fixture, no compilation.
+    Hooks independently APPROVEDc9b3609b normalization/syntax; ROOT owns compiler token for
+    canonical gates, no other compiler allowed. Hookcheckpoint33266ec committed successfully;
+    actual normal precommit context/fmt/workspace-check PASS, foreign17stagedpaths exactunchanged.
+    Initial push autoreview rejected unverifiedorigin; root safelyverified github.com/GodSpeedAI/SEA-Forge,
+    no embedded credentials, newbranch absent, Entire unavailable. Reviewedretry approved;
+    Normalprepush first rejected missing handoff delta; rootupdatedcontext gatePASS and retried.
+    Retry2 CI stopped at existing clippy::unnecessary_map_or in case_templates_live.rs273;
+    NO push succeeded. FreshLuna changesONLY equivalentOptionpredicate to is_none_or,
+    RusttestSHA5806fc58; independent clippy_template_oct05_critic reviews sourceONLY.
+    Cancellation independent critic nowowns SOLE compiler token for focused/fullSFWP/canonical/
+    fullGo gates on be8ad34b/e0d3c12c. No other compiler. Elevenrootrawcaptures archivedexact;
+    allfailedcommits/pushgates retained; noforce/bypass. DEBT.md CW-02 records lintgate finding.
+    Independent critic confirmed race helper SetReadDeadline returns before READ after remote close.
+    Fresh fixturebuilder changed ONLY secondraceRead to actualbufferedRead using alreadyarmeddeadline;
+    fixturebe8ad34b/client e0d3c12c. Critic checks source ONLY while push CI owns token.
+    Tracev3 e2806491 independently ACCEPTED sourceproposal84b9f657, no trace source release yet.
+    No production cancellation/poller/T09 approval yet. All failedruns retained; first preflightgap disclosed.
+    Existing remote-tracking branch diverges6ahead/3behind; preserve
+    remote history by pushing verified milestones to a new resume branch, never force or merge.
+    Operator now authorizes meaningful commits/pushes and Luna implementation when Terra unavailable,
+    with heightened independent scrutiny across components/files. Record new debt in .agents/DEBT.md.
+    Terra unavailable in native launcher; Orca bridge probe fails WSL socket binding. No fallback
+    provider or credential changes. The historical details below are prior evidence, not live workers.
+    T00-T08 settled. T09 units1-3 independently approved/checkpointed b608771/b4092bd/
+    0b55022. Unit4 scopedlists/realrunchildren now independently APPROVED8b1432ff with
+    appendonly clarifications87e90d10; root matched11sourcehashes/17exactrawpairs,
+    correctedfixtureinverse8e485/helperequivalence, freshGraft679cards/7398nodes/14142edges.
+    Full T09 remains INFLIGHT units5-8/globalgates. ROOT token; no othercompile/writes.
+    Unit4 localcheckpoint dc82736 complete; explicit117taskpaths, foreignchangespreserved.
+    Daemonrestart interrupted priorbuilder; liveagentsgone. HEADdc82736 verifiedunchanged;
+    Partial528line fixturea555054f resumed; freshbuilder freezes533line17130f1f,
+    formatting clean, onlyfixturechanged and NOcompiler/test run claimed.
+    Independent Luna cancellation_fixture_independent_critic receives ORIGINALassignment
+    under observation-cancellation-test-first-assignment.md plus critique-supplement.
+    Independent sourcecritique approves fixtureproposal ONLY. Bind5srequestdeadline/<1s
+    manualcancel completion for run_get/Ask/correlatedmutation, actualDo-return-beforecancel
+    on confirmedresponse tests, realrequestID/exactpeeridentity/EOF/callbackretirement.
+    Independent source review REJECT5f6ab82f4cd24c8c3e83d231d19876a41183b7fa0c64a6ac8b9c9bda9d305943:
+    nextPeer precedes Do, second-peer gate lacks cleanup release, race mislabels Write error
+    as READ EOF. Fresh Luna repairs ONLY these defects; frozen fixture
+    d75ca5c8bbb46bb1f774cfe384f4c1d80ba76f024020d5388304d611d8e618d3, format clean.
+    Independent round2 REJECT5a77c223 source-only: race predicates reject legitimate
+    valid-response/retirement and completed-write/canceled-call interleavings. No compiler ran;
+    Fresh Luna cancellation_race_fixture_repair completed race test only,
+    including owned raceStart cleanup release/join; frozen c4f1bd73, other tests unchanged.
+    Independent critic conditionally owns SOLE token: source review then assertion RED.
+    Exact original d75ca5c8 second snapshot retained. Repeat source review then assertion RED.
+    Frozen17130 exact snapshot retained. Repeat independent source review then intended
+    compiling assertion RED; production client.go remains unchanged before accepted RED.
+    Fresh sourcebuilder after any rejection. Preserve Ask/mutation uncertainty/recovery.
+    Nativeapplypatch writes; exact rawoutputs/exits/preflights newimmutablepaths/fullhashes.
+    Actual HOST RAM/process check before every compile, onlyONE Go/Bun/Cargo compiler;
+    Go256MiB/GOGC50/GOMAXPROCS2/p1/race/count1/parallel1, Cargo jobs1.
+    Only Luna/Terra workers; Terra unavailable. No newdeps/identity/kernelverbs/publishing.
+    After cancellationprerequisite, complete safe traceport/cohort budgets/authorizedpollers/
+    no-IDcase-scopedSSE, unit6 boundedUIcache ANDapp/model/view, groundedAsk and journeys.
+    Root mustresolve remaining sharing/fanout/revocation/count/byte/terminal lifecycle design
+    using recorded sourcefacts and independent critique. No unsafe sharing or drainclaim.
+    New observation-safe-trace-port-root-proposal.md is source-only pending independent
+    Luna safe_trace_port_proposal_critic; no trace fixture or production writes released.
+    Preserve T10prereg; continueT10-T12, splitT13 then STOPforoperatorreview.
+agent_protocol:
+  read_order:
+    - .agents/current_status.yml (this file)
+    - .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml (whole file; the operating_contract and guardrails are binding)
+    - .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md Section 0 only (read the body only when a task's hot_context points there)
+    - .agents/reports/casework-live-wiring/decision-log.yaml (corrections C-1, baseline B-1, incident E-1)
+    - repository AGENTS.md / CLAUDE.md files at each boundary you touch
+  loop: >-
+    Repeat until T12 is settled. (1) Pick the next ready task: the lowest-numbered task whose
+    depends_on are all settled (execution.task_detail carries per-task notes). (2) Write the
+    preregistration when the task requires one. (3) Implement the task's steps. (4) Run the task
+    gate and every global gate that existed before the task; the recorded baseline floor applies
+    (see warnings: ladder J1 red, Go coordinator flake). Save logs under
+    .agents/evidence/casework-live-wiring/<Txx>/. (5) Run the task's teeth attacks and record the
+    results. (6) confirmation=independent tasks need a separate subagent critic that did not build
+    the task; it re-runs gates and teeth and writes confirmation.md. (7) Update this file:
+    settled_tasks, ready_tasks, next_action and the handoff block. (8) Commit (see git). Then
+    continue without waiting for the operator. T13 is a post-production increment: before starting
+    it, split it into tasks in the plan and stop for operator review.
+  delegation: >-
+    OPERATOR STANDING INSTRUCTION (2026-09-23 session 1): aggressively delegate implementation and
+    independent verification. For each meaningful unit: a builder subagent with a bounded,
+    self-contained spec; then an independent critic subagent given the builder's ORIGINAL
+    instructions plus the resulting implementation. The critic must verify correctness and
+    completeness, identify defects/omissions, explain every material deviation, and approve ONLY
+    with evidence (code, diffs, tests, commands, runtime behavior). No evidence -> no approval. On
+    rejection: fresh builder addresses findings, repeat until evidence-backed approval. The
+    orchestrator retains semantics, architecture, decomposition, integration, final decisions.
+    Sessions 1 pattern that worked: run builders in background in parallel only when file sets are
+    disjoint; commit each confirmed unit with explicit-path staging; critics re-run everything
+    themselves. CAVEAT: subagent usage limits killed agents twice on 2026-09-24 — if a spawn
+    fails with a usage-limit error, either wait for the reset time in the error or continue
+    inline for non-settlement work, but NEVER mark a task settled on self-verification alone when
+    its proof level or confirmation requires independence.
+  git:
+    branch: "casework/live-wiring (created 2026-09-23 from 44ffadd). Push authorized 2026-10-05; never fetch/pull/rebase/reset/merge/clean or force push."
+    commits: "One or more commits per settled task (interim per-unit commits allowed with explicit pending-confirmation labeling, as 9c153b2 does). Stage only files this plan's tasks changed, by explicit path. Never `git add -A` or `git add .`."
+    preserve: "The 109-entry dirty baseline was committed by the operator side as 44ffadd before session 1; the tree has been clean since. Do not revert or rewrite any of this branch's commits."
+  context_hygiene: >-
+    This file must always be enough for a fresh agent to resume after /clear or compaction. Update
+    handoff after every task. `just context-check` must pass before any commit that changes
+    project files (it requires a CURRENT_STATUS.md touch whenever project files change — append a
+    dated note there and re-run it).
+  stop_and_ask_when:
+    - "A task's redesign_trigger fires, or the plan's correction_protocol applies (a report Section 0 fact proves wrong). Record in decision log + report Section 0 + handoff.warnings, surface to the operator, and only continue unilaterally under the operator's standing best-judgment instruction if the stop goes unanswered (precedent: correction C-1, option A)."
+    - "A new dependency is needed that is not pre-approved above."
+    - "A change to the security or identity model goes beyond the D-2 ADR scope."
+    - "Any unauthorized destructive or outward-facing action (publish, deleting user data, touching the gauntlet or sxr repos). Meaningful branch pushes are authorized 2026-10-05."
+    - "A global gate that was green at the recorded baseline floor turns red and cannot be fixed within the task's scope."
+
+baseline_warnings:
+  - "SUPERSEDED by B-1 (decision log): the archived pre-existing cargo reds did NOT reproduce; cargo four-crate gate was GREEN at baseline 44ffadd."
+  - "B-1 (binding): local e2e ladder (bun e2e/run.ts) is deterministically RED at baseline — J1 'Focus substrate' fails at step 'focus again: identity and state survive'; J2+ dependency-blocked; stale 11/11 evidence was committed in 44ffadd. Recorded in OBSERVED_DEBT; T09 owns restoring it. Treat as the floor, not a fresh regression; rerun only when UI runtime code changes."
+  - "Pre-existing Go flake (OBSERVED_DEBT): internal/coordinator TestIdempotencyReplayAndConflict fails ~1/5 in isolation; if go test -race ./... goes red on that suite alone, rerun in isolation before calling a regression."
+  - "Global gates (plan verification.global_gates): cargo four-crate test; cd apps/godspeed-casework-go && go vet ./... && go test -race ./...; cd apps/godspeed-cognitive-ui && bun run typecheck && bun test; bun e2e/run.ts (baseline floor above); just casework-e2e-live (exists from T10 only). Go gates need -count=1 for golden-file tests."
+
+handoff:
+  session: 4
+  latest_resume: >-
+    2026-10-01: T00-T08 settled, T08 checkpoint af362f5. T09 canonical unit b608771 and
+    cap/mirror units b4092bd independently approved. Ask fixtures approved with actual expected
+    RED and capture errata. Ask runtime builder completes source/tests; independent critic
+    first runtime check rejected compile collision and two source gaps. Fresh repair passed
+    focused server/adapter race, live kernel proof, canonical Go and full-module race. Portable
+    live test rename passed twice. Final archive/review native patch initially rejected by automatic
+    approval review usage limit, then same native retry succeeded. Ask independently approved;
+    root matched15source identities and13new exact raw copies. Graft refreshed successfully;
+    foreign Bun is server.ts with no compiler children, not a compile blocker.
+    Ask checkpoint0b55022 complete; run-child fixture writes released to bounded builder,
+    fixture frozen68511dc; no compiler token. Independent source review/expectedRED must
+    precede runtime implementation. Whole-focus equality corrected before any critic verdict.
+  state_summary: >-
+    LATEST security verifier soleheavy slot; auth5bbc sourcecritic, traceproduction
+    builder source-only. Current stub/trace prototype pending; no fullGo or T09 claim.
+    LATEST tracePhase1 accepted, productionadapter sourcebuilder; fresh authfixture
+    repair source-only, compiler idle. Securityscope publiccursor stillpending.
+    LATEST e839 traceRED solecompiler; anchoredsecurity608a frozen, old historyexit0
+    notscopeapproval. Authfixture sourceREJECT no tests ran, freshrepair queued.
+    LATEST security path-scope REJECT, six-path fresh repair queued. Auth fixture builder
+    source-only; trace e839 RED awaiting slot, cursor V2 held. No publication/fullCI.
+    LATEST e839 fixture two-loop repair root-verified, runtime confirmation pending.
+    Luna security verifier exclusive heavy slot; root/compiler idle, proposal holds.
+    LATEST trace compiler joined1 assertionRED observed but fixture REJECT two loops.
+    Independent security controls now released sequentially; no competing compiler.
+    LATEST trace critic solecompiler, sandbox Unix fixture denied, new deliberate
+    permission-reviewed attempt pending. Production remains held; security controls held.
+    LATEST trace compileREJECT, compiler idle. Two fresh Luna source builders repair
+    fixture voidClose and ignored Gitleaks rules selector respectively; independent
+    trace critic will verify. Cursor proposal REJECT held; operator hook changes preserved.
+    LATEST freshLuna tracecritic solecompiler, gitleaksbuilder SOURCE-only,
+    cursorproposal criticSOURCE-only. Daemonrecovery verifiedfiles/processes;
+    no publication/productionTrace/publiccursorchanges/fullT09claim.
+    LATEST Tracee8859aa2 source-only pendingreview/RED; CW07cursorformat mismatch
+    pendingindependenttrace; securityrecon read-only ROOTidlecompiler no publication.
+    LATEST push95780 joined1 Gitleaks14; no publication, ROOTidlecompiler,
+    securityrecon read-only. Tracec3946843 frozen pending sourceapproval/RED.
+    LATEST HEAD8c6495d checkpointPASS0; ROOT reservedpush compiler token;
+    TracefixtureREJECTd8b5e43c freshrepair source-only. No successfulpush/fullT09.
+    LATEST supervisor3gates PASS/rootninecopiesverified; ROOT tokencheckpoint/push.
+    Tracefixtureblankexpected contradiction blocks RED; no push/fullT09claim.
+    LATEST supervisor2gates PASS/gate3running7598 solecompiler; Tracefixturea3c13aba
+    sourceonly awaiting independentreview/RED. No successfulpush/fullT09claim.
+    LATEST serializedcritic solecompiler supervisor3gates; Tracefixture sourcebuilder,
+    no TraceRED/push/fullT09claim. Reconcapcorrection append-only preserved.
+    LATEST c210629 checkpointPASS0; rootthreecaptures exact/elevenstaged preserved.
+    ROOT idlecompiler, supervisor andTracefixture sourcebuilders only. Pushpending.
+    LATEST Tracefixture REJECT sourceproof/matrixgaps; fresh repairfixtureonly underway,
+    independentreview thenRED required. RootRusthook93257 solecompiler stillrunning.
+    LATEST Rustfocusedapproved/allninecaptures exact, workspaceClippy101 supervisor
+    threeidioms. ROOT token for scopedRustcommit; no push/TraceRED/fullT09approval.
+    LATEST HEAD8f81580 acceptedGoUnit5A committed normalhook exit0; eleven staged preserved.
+    Rustcritic owns solecompiler for focused+workspaceClippy diagnostics; TracePhase1 frozen
+    threefiles sourcecritic only, REDunrun. No successfulpush/fullT09claim; historical below.
+    CHECKPOINT rootcompiler normalGoUnit5Acommit pending; source3/evidence lineage only.
+    Graftrefresh passed682cards/7424nodes/14223edges. SourcePort builder Go-only;
+    Rustrfind sourcecritic pending compiler. No successfulpush orfullT09claim.
+    LATEST root acceptedUnit5A, safeTracePhase1 threeNEWGo files released source-only.
+    Rootsolecompiler; Rustfreshbuilder rfind sourceonly after independentClippy101,
+    originalnext_back proposal insufficient forlint though selectionsemantics correct.
+    Sourceportscope explicitly Go, noRust despite builder's mistaken interpretation.
+    CURRENT final Go critic SOLEcompiler; Rustdelegatedidentity builder source-only.
+    Normalpush bf88ab8 stopped on iterator-last/single-element-loop Clippy diagnostics;
+    root joined session9357, archived3exactcaptures. Responsecap fixture source-approved
+    dfb98f494; original cancellation source e0 andbe8 unchanged. No successfulpush.
+    PUSH CI root sole compiler owner, normal push bf88ab8 pending. Remote resume branch
+    still unused by ls-remote; no existing branch rewrite. Fixture repair source-only.
+    LATEST root compiler owner; no command running. Fresh Go fixture builder source-only,
+    bounded two-test 1024cap repair; baseline/current deadlines reproduced independently
+    of callback. CW-05 recorded. HEADbf88ab8; no push, no trace source release.
+    CURRENT compiler owner cancellation_retirement_oct05_critic bounded response-cap
+    diagnosis only; no source edits. HEADbf88ab8 scoped Rustfix normalprecommitPASS,
+    foreign17indexidentities preserved. Root archivedthree exact commitcaptures. New
+    overlaysource review READY; fresh Go runtime approval still NOT APPROVED.
+    NOW root compiler ownership for scoped Rust checkpoint normal hook. Equivalent predicate
+    independently approved after targeted Clippy and existing template test passed; four
+    captures source5806fc58 root-verified. Preflight archive supplement finishing source-only.
+    CW-04 records existing stream revocation gap. Go diagnostic prepared but not executed.
+    LATEST sole compiler owner clippy_template_oct05_critic, targeted Rust gates only.
+    Fresh Go NOT APPROVED report adcdc58b and separate audit supplement preserve failed
+    race gates; root matched12 exact captures and source identities. Baseline overlay
+    diagnostic preparation has no compiler permission. No push or trace source release.
+    Fresh serialized four-gate cancellation review is NOT APPROVED: focused/canonical pass,
+    full SFWP/module race fail response-limit deadline coverage. Source remains e0d3c12c/
+    be8ad34b, no retries or assertion changes. Compiler token stays with fresh verifier until
+    evidence audit finishes. Root delegates read-only timeout diagnosis; Rust gates wait.
+    CURRENT compiler owner cancellation_serialized_oct05_fresh_critic. Root withholds earlier
+    Go cancellation approval because canonical invocations overlapped; fresh fourgate rerun
+    required, no source change inferred. Evidencebuilder records exactmismatches/historical
+    deviation. HEAD33266ec; pushfailedClippy, equivalentRustfixture repair sourceapprovedonly.
+    Root's11exacthook command/preflight/exitcopies preserved. Operator17stagedpaths preserved.
+    Nativeapplypatch artifacts only; no newdeps/rebase/merge/force. Later notes are historical.
+    LIVE 2026-10-05: HEAD33266ec hookfix withnormalprecommitPASS; pushnotyetcompleted,
+    normalprepushCI exposes existingRustClippypredicate. Source-only freshbuilder repair
+    underindependentreview. Cancellationcritic SOLEcompiler onfixturebe8ad34b/cliente0d3c12c;
+    sourcevalid but executiongatespending. Tracev3 sourceproposalaccepted84b9f657, trace
+    fixturesheld until cancellationapproved. Luna UIcache recon read-only. Preserve17foreign
+    stagedidentities verifiedaftercommit, rootdebtupdates in shareduncommittedDEBT.md.
+    NativeGitmutations need hostescalation because .git is read-only in sandbox.
+    Operatorpushauthorization verifiedgithub.com/GodSpeedAI/SEA-Forge; resume remote branch
+    willpreserve existingdivergedbranch. Below is superseded historical state.
+    2026-10-05 live state: fresh runtime builder owns sole compiler token after accepted
+    cancellation assertion RED; source remained8cdfc52a until release. Unit5 implementation
+    not approved. Separate safe-trace proposal critic and hook LF-only builder own disjoint
+    documents/hooks, no compilation. Operator staged files preserved; explicit commits/pushes
+    authorized, Luna fallback authorized with stronger integration review. Historical worker
+    ownership below is superseded by this live state. DEBT.md CW-01 records trace limitation.
+    Root orchestrates builder/independentcritic loops; only Luna/Terra allowed, Terra unavailable.
+    ROOT holds token after independent unit4 APPROVAL8b1432ff/clarifications87e90d10;
+    root matched6rawpairs/10sourcehashes, earlier13innerpairs and originalsnapshots/diff.
+    Fresh Phase2 changes ONLY live.go0f17e374/authoritya9c49702; focusedGREEN passed.
+    FreshLuna package/helperrepair sourceonly; rootexactinverseoriginal8e485/helpermatch.
+    Firstbadcapture2c982 retained, correctnew8e485snapshot and erratumdiscloseactualdifference.
+    Fourindependentgates and supplemental livePASS; root matched11sourcehashes/17rawpairs.
+    GraftbuildPASS679cards/7398nodes/14142edges. Unit4checkpoint dc82736 complete; new
+    cancellationfixture Phase1 tests-only resumed after daemonrestart by freshLuna
+    cancellation_fixture_resume_builder; frozen533line17130f1f/formatclean/no testsclaimed.
+    Independent cancellation_fixture_independent_critic REJECT5f6ab82f source-only;
+    no tests/compiler ran then token returned unused to ROOT. Fresh Luna
+    cancellation_fixture_fresh_repair completed ONLY three test harness repairs;
+    frozen d75ca5c8; production unchanged8cdfc52a. Round2 independent REJECT5a77c223
+    identified overly strict race predicates. Fresh Luna repaired ONLY race fixture,
+    frozen c4f1bd73; independent critic owns conditional sole token for source review/RED.
+    Runtime root assignment prepared but HOLD production until accepted assertion RED.
+    original17130 snapshot immutable. Independent rereview/compiling assertion RED required.
+    No othercompiler/sourcewriter; fullT09pendingunits5-8/globalsettlement.
+    Check actualhost RAM/processes
+    before each Go/Bun/Cargo build/test, no parallel compiler, Go256MiB/p1/GOMAXPROCS2 and Cargojobs1.
+    Preserve all historical failures/evidence and unrelated Jolli/otherchanges; explicitpathstage only.
+    Currentnative snapshot comparisons preserve FULL immutable SSEvsAt and current cursor/stablefacts
+    with separatelyvalidatedfresh timestamp. Currentread render timestamp is time.Now by source;
+    actual prior failedfield unproven. Realprivateproxy abort/native retry, boundeddriver andownedcleanup
+    remain required. Sharedsuite now accepts orderedretainedprefix andrequires exactacceptedreceipt.
+    Exact finalUI/native/shared/productionlogs copiedunder T08/resume-2026-09-30.
+    T09 approved additive contract/Ask/clientlinecap/hydration/cache scope; no need to reask.
+    Read-only exactsource preparation and rootDTO naming/readstate choices in T09/resume-2026-09-30/
+    contract-source-preparation.md. Current Ask runtime assignments and scope supplements are
+    in the same directory; run-children-test-first-assignment.md is prepared but Go writes held.
+    T10 preregistration remains intact.
+    Continue T09-T12; splitT13 thenSTOPforreview. No publishing/deployment/externalwrite authorization.
+  established_conventions:
+    - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
+    - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."
+    - "Evidence per task under .agents/evidence/casework-live-wiring/<Txx>/ with gates/, teeth/, confirmation.md."
+    - "Decision log .agents/reports/casework-live-wiring/decision-log.yaml holds D-1/2/3, C-1, B-1, E-1; append new corrections/baselines/incidents there."
+    - "justfile live recipes (T00): casework-cell-init (seeds identity/templates/policy per T03), casework-server-up/down, casework-live-go-up/down, casework-stack-down; fixture recipes casework-go-up/ui-up/demo-up are the PRIOR plan's and must stay untouched."
+    - "Workbench contracts: any server schema change requires `just workbench-contracts-generate` + commit + green `just workbench-contracts-gate` (the gate fails on untracked generated files by design — commit first, then it passes; see T04B evidence)."
+  changed_files:
+    - "committed 8ad72ac: justfile live recipes; configs/live-serve.json; decision log; plan v0.2.1; report §0.2 correction; target symlink deletion (E-1); T00 evidence"
+    - "committed 23e90b8: types.ts additive extension; interface-contracts/golden/; Go internal/contract; UI wireContract pins; contracts/ kebab dialect deleted; ADR adr-wire-contract.md; T01 evidence"
+    - "committed 1b73724: case_ops library; CLI thin callers; approval.decide in-process; run_cli deleted; T04A evidence"
+    - "committed b271a99: fixtures/cells/e2e (templates+policy); casework-cell-init seed; tests/case_templates_live.rs; T03 evidence"
+    - "committed 9c153b2: 7 SFWP verbs + identity classification + case_mutations event publishing + advance.rs + CLI task move + regenerated workbench contracts + sfwp_case_mutations tests + T04B evidence + T02 prereg"
+    - "committed this session (T04C): SupervisorConfig + supervisor.rs + AdvanceCaller/AdvanceScope::Supervisor + per-case key locks + sfwp_supervisor tests + T04C gates/teeth + T04/confirmation.md; T04 SETTLED"
+  decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
+  warnings:
+    - "T09 contract redesign trigger recorded under decision-log redesign_reviews.T09-contract and report Section0.0; operator and independent architecture approved. Implement after T08 settles; independently verify implementation. Existing execution_trace child objects need no kind change."
+    - "Critic t04-critic returned procedural REJECT (C uncommitted at review; no T04/confirmation.md; its live cargo re-runs hit a 30s env timeout) with ZERO code findings; grounds closed in T04/confirmation.md, which stands as the settlement record. Report via team mailbox msg_00002+msg_00003."
+    - "Two subagent usage-limit windows on 2026-09-24 killed in-flight agents; check spawn health before relying on delegation (see agent_protocol.delegation caveat)."
+    - "C-1 resolution is an executor decision under an unanswered protocol stop, NOT operator approval; operator may still override the casework-live-* recipe naming cheaply."
+  evidence:
+    - .agents/evidence/casework-live-wiring/T00/ (baseline-summary.md, confirmation.md, gate-teeth/, c1-git-evidence.txt, baseline/)
+    - .agents/evidence/casework-live-wiring/T01/ (confirmation.md, gates/, teeth/)
+    - .agents/evidence/casework-live-wiring/T03/ (confirmation.md, gates/, teeth-cyclic-template.log)
+    - .agents/evidence/casework-live-wiring/T04A/ (confirmation.md, gates/, teeth/)
+    - .agents/evidence/casework-live-wiring/T04B/ (builder gates + orchestrator re-runs incl. true-exit gate1, contracts gate pre/post commit, teeth transcripts)
+    - .agents/evidence/casework-live-wiring/T04C/ (TDD baseline + post-impl pass + fresh 2026-09-24 session-2 re-runs: 3-crate, mutations, supervisor, config units, fmt, no-async-kernel)
+    - .agents/evidence/casework-live-wiring/T04/confirmation.md (settlement record: gates, teeth, diff review, critic reconciliation)
+    - .agents/evidence/casework-live-wiring/prereg/T02.yaml
+
