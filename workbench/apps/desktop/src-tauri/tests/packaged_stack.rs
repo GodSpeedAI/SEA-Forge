@@ -268,6 +268,8 @@ async fn records_survive_the_kernel_being_stopped_and_started_again() {
         json!({
             "verb": "submit",
             "actor": {"actor_id": "operator_a", "role": "operator"},
+            // A durable mutation is refused without a request_id (durable_locator_required).
+            "request_id": "restart-proof-submit-1",
             "plan": plan, "policy": policy,
             "entity": "operator_a", "process": "restart-proof", "timeout": 60,
         }),

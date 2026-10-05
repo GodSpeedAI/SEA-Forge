@@ -123,6 +123,7 @@ fn apply_landlock(
     Ok(())
 }
 
+#[derive(Debug)]
 pub struct JailSandbox;
 
 /// Interactive child spawned after Landlock restriction. The caller owns the
