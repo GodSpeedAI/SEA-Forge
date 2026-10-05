@@ -27,6 +27,9 @@ use sea_forge_server::governed_settlement_return::{
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+const WORLD: &str =
+    "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
 fn sha256_hex(input: &[u8]) -> String {
     format!("{:x}", Sha256::digest(input))
 }
@@ -166,6 +169,7 @@ fn admit(
         &local_model_sha256(),
         governed_parent,
         None,
+        WORLD,
     )
     .expect("Allow decision must emit");
     registry
@@ -554,6 +558,7 @@ fn t06_non_completed_statuses_never_settle_accepted_regardless_of_effects() {
             authority_decision_id: "dec_x".into(),
             execution_status: "sandbox_violation".into(),
             observed_effects: json!([]),
+            world_ref: WORLD.into(),
         },
         &declared_criteria(),
     )
@@ -589,6 +594,7 @@ fn t06_empty_or_blank_declared_criteria_are_refused() {
         authority_decision_id: "dec_x".into(),
         execution_status: "completed".into(),
         observed_effects: json!([{"effect": "health check green"}]),
+        world_ref: WORLD.into(),
     };
     for criteria in [Vec::new(), vec!["   ".to_string()]] {
         let err = evaluate_operational_settlement(&settled, &criteria).unwrap_err();
@@ -761,12 +767,14 @@ fn t06_emitted_envelope_matches_the_canonical_wire_family() {
             work_request_id,
             authority_decision_id,
             execution_status,
+            world_ref,
             ..
         } => sea_forge_server::governed_execution_boundary::ObservationOutcome::Settled {
             invocation_id: invocation_id.clone(),
             work_request_id: work_request_id.clone(),
             authority_decision_id: authority_decision_id.clone(),
             execution_status: execution_status.clone(),
+            world_ref: world_ref.clone(),
             observed_effects: json!([{"effect": "health check green"}, {"effect": "zero-downtime observed"}, {"effect": "root installed"}]),
         },
         _ => unreachable!(),
@@ -1077,12 +1085,12 @@ fn t06_wrong_producer_stamps_are_refused_at_wire_validation() {
 
 #[test]
 fn t06_writes_golden_fixture_for_swe_seed_adjudication() {
-    let seed_root = std::env::var("SWE_SEED_ROOT").unwrap_or_else(|_| {
-        format!(
-            "{}/projects/SWE_SEED",
-            std::env::var("HOME").unwrap_or_default()
-        )
-    });
+    // Writes into ANOTHER checkout, so it only runs when asked to. Without
+    // SWE_SEED_ROOT it never touches a sibling repo.
+    let Ok(seed_root) = std::env::var("SWE_SEED_ROOT") else {
+        eprintln!("SKIP: set SWE_SEED_ROOT to regenerate the SWE_SEED golden fixture");
+        return;
+    };
     let fixture = std::path::Path::new(&seed_root)
         .join("crates/swe-seed-core/tests/fixtures/t06_operational_settlement.json");
     if !std::path::Path::new(&seed_root)
@@ -1136,6 +1144,7 @@ fn t06_writes_golden_fixture_for_swe_seed_adjudication() {
     let body = json!({
         "domain_model_sha256": local_model_sha256(),
         "originating_work_request_id": work_request_id,
+        "originating_world_ref": WORLD,
         "expected_chain": [e5a_event, e5b_event],
         "settlement": returned.envelope,
     });

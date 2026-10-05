@@ -1,0 +1,23 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/ports/wireContract.test.ts:
+(pass) canonical wire contract: exhaustive kind lists > the hardcoded lists have no duplicates [0.16ms]
+(pass) canonical wire contract: exhaustive kind lists > the compile-time pins are active (WireContractPins resolves to all-true) [0.06ms]
+(pass) canonical wire contract: exhaustive kind lists > the T09 mirror pins cover canonical fields, optionality, and finite vocabularies [0.04ms]
+(pass) canonical wire contract: exhaustive kind lists > the UI port re-exports the canonical mirror DTOs without widening them [0.01ms]
+(pass) golden world snapshot > world-snapshot.json matches the canonical CognitiveWorldSnapshot shape [0.67ms]
+(pass) golden world snapshot > union-free golden fields typecheck directly against the canonical types [0.02ms]
+(pass) golden intent fixtures > every consequential intent kind has exactly one well-formed golden fixture [1.33ms]
+(pass) golden intent fixtures > every refusal kind is exercised at least once across the goldens [0.12ms]
+(pass) golden template and preflight fixtures > templates-entry-options.json matches the canonical template shapes [0.10ms]
+(pass) golden template and preflight fixtures > template-preflight-pass.json passes with a digest and no reasons [0.03ms]
+(pass) golden template and preflight fixtures > template-preflight-fail.json fails with reasons and no digest [0.02ms]
+(pass) golden Thoth Ask fixtures > ask-request.json is an actor-free request with the exact finite question kind [0.14ms]
+(pass) golden Thoth Ask fixtures > answered, partial, and denied fixtures preserve complete disclosure fields [0.28ms]
+(pass) golden SSE event fixtures > sse-events.jsonl carries exactly one well-formed line per stream event kind [1.57ms]
+(pass) golden SSE event fixtures > rejects unknown hydration read budget fields [1.38ms]
+
+ 15 pass
+ 0 fail
+ 512 expect() calls
+Ran 15 tests across 1 file. [22.00ms]

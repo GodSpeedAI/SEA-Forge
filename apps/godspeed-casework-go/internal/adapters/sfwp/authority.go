@@ -6,6 +6,8 @@ package sfwp
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
@@ -247,6 +249,140 @@ func (a *Authority) RunsList(ctx context.Context) ([]ports.RunSummary, error) {
 		out = append(out, run)
 	}
 	return out, nil
+}
+
+// RunsListForCase reads only the run records owned by ref. The adapter validates the full
+// authority frame before returning any rows so malformed ownership cannot cross the port.
+func (a *Authority) RunsListForCase(ctx context.Context, ref ports.CaseRef) (ports.RunListResult, error) {
+	req, err := NewRunListForCase(string(ref))
+	if err != nil {
+		return ports.RunListResult{}, err
+	}
+	resp, err := a.client.Do(ctx, req)
+	if err != nil {
+		var refusal *Refusal
+		if errors.As(err, &refusal) {
+			return ports.RunListResult{}, normalizeScopedRunListRefusal(err)
+		}
+		return ports.RunListResult{}, err
+	}
+	var view RunListView
+	if err := resp.Into(&view); err != nil {
+		if resp.Err != nil {
+			return ports.RunListResult{}, normalizeScopedRunListRefusal(resp.Err.appErr("run_list"))
+		}
+		return ports.RunListResult{}, apperr.Wrap(apperr.KindUnavailable, "", "run_list", "the authority returned a malformed run list", err)
+	}
+	if view.Runs == nil || view.Unreadable == nil {
+		return ports.RunListResult{}, unavailableRunList("the authority omitted a required run list array")
+	}
+
+	result := ports.RunListResult{
+		Runs:          make([]ports.RunSummary, 0, len(view.Runs)),
+		UnreadableIDs: make([]string, 0, len(view.Unreadable)),
+	}
+	seen := make(map[string]struct{}, len(view.Runs)+len(view.Unreadable))
+	for _, row := range view.Runs {
+		run, err := scopedRunSummary(row, string(ref))
+		if err != nil {
+			return ports.RunListResult{}, err
+		}
+		if _, exists := seen[run.RunID]; exists {
+			return ports.RunListResult{}, unavailableRunList("the authority repeated a run id")
+		}
+		seen[run.RunID] = struct{}{}
+		result.Runs = append(result.Runs, run)
+	}
+	for _, id := range view.Unreadable {
+		if strings.TrimSpace(id) == "" {
+			return ports.RunListResult{}, unavailableRunList("the authority reported a blank unreadable run id")
+		}
+		if _, exists := seen[id]; exists {
+			return ports.RunListResult{}, unavailableRunList("the authority repeated or overlapped a run id")
+		}
+		seen[id] = struct{}{}
+		result.UnreadableIDs = append(result.UnreadableIDs, id)
+	}
+	return result, nil
+}
+
+func normalizeScopedRunListRefusal(err error) error {
+	var refusal *Refusal
+	if errors.As(err, &refusal) && refusal.RefusalClass() == "unavailable" {
+		return apperr.Wrap(apperr.KindUnavailable, "", "run_list", "the authority refused the scoped run list", err)
+	}
+	return err
+}
+
+func scopedRunSummary(row RunSummaryView, caseID string) (ports.RunSummary, error) {
+	if strings.TrimSpace(row.RunID) == "" {
+		return ports.RunSummary{}, unavailableRunList("the authority reported a blank run id")
+	}
+	if row.CaseID == nil || strings.TrimSpace(*row.CaseID) == "" || *row.CaseID != caseID {
+		return ports.RunSummary{}, unavailableRunList("the authority reported a missing or foreign run case id")
+	}
+	if row.PlanItemID == nil || strings.TrimSpace(*row.PlanItemID) == "" {
+		return ports.RunSummary{}, unavailableRunList("the authority reported a missing run plan item id")
+	}
+	if !validRunExecution(row.Execution) || !validRunSettlement(row.Settlement) {
+		return ports.RunSummary{}, unavailableRunList("the authority reported an unknown run standing")
+	}
+	if row.EvidenceCount < 0 {
+		return ports.RunSummary{}, unavailableRunList("the authority reported a negative run evidence count")
+	}
+	run := ports.RunSummary{
+		RunID:         row.RunID,
+		CaseID:        *row.CaseID,
+		PlanItemID:    *row.PlanItemID,
+		Execution:     row.Execution,
+		Settlement:    row.Settlement,
+		EvidenceCount: row.EvidenceCount,
+	}
+	if row.StartedAt != nil {
+		started, err := parseScopedRunTime(*row.StartedAt, "started_at")
+		if err != nil {
+			return ports.RunSummary{}, err
+		}
+		run.StartedAt, run.HasStarted = started, true
+	}
+	if row.FinishedAt != nil {
+		finished, err := parseScopedRunTime(*row.FinishedAt, "finished_at")
+		if err != nil {
+			return ports.RunSummary{}, err
+		}
+		run.FinishedAt, run.HasFinished = finished, true
+	}
+	return run, nil
+}
+
+func parseScopedRunTime(value, field string) (time.Time, error) {
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return time.Time{}, apperr.Wrap(apperr.KindUnavailable, "", "run_list", "the authority reported a malformed run "+field, err)
+	}
+	return parsed, nil
+}
+
+func unavailableRunList(message string) error {
+	return apperr.New(apperr.KindUnavailable, "", "run_list", message)
+}
+
+func validRunExecution(value string) bool {
+	switch value {
+	case "pending", "enabled", "active", "completed", "failed", "terminated":
+		return true
+	default:
+		return false
+	}
+}
+
+func validRunSettlement(value string) bool {
+	switch value {
+	case "unsettled", "accepted", "rejected", "escalated":
+		return true
+	default:
+		return false
+	}
 }
 
 // PendingApprovals implements ports.CaseAuthorityPort. An empty ref lists every case's approvals.

@@ -40,6 +40,7 @@ const REQUEST_ADMISSION_WAIT_QUEUE_CAPACITY: usize = 8;
 
 pub mod agent_probe;
 pub mod case_dispatch;
+mod cep_authority;
 pub mod config;
 pub mod delegation;
 pub mod delegation_audit;
@@ -51,6 +52,7 @@ pub mod sfwp;
 mod supervisor;
 pub mod swe_seed_reconciliation;
 mod transcript_seal;
+mod world_pin;
 
 pub use config::{resolve_cell_root, resolve_socket_override, ServerConfig};
 
@@ -669,6 +671,37 @@ pub enum Request {
         request_id: Option<String>,
         #[serde(default)]
         preconditions: Option<sfwp::precondition::Precondition>,
+    },
+    /// CEP `authority_request` envelope from Cognate (migration Stage 6).
+    /// The reply carries a CEP `authority_decision` envelope. `request_id`
+    /// is the caller's operation id: replays return the recorded decision.
+    AuthorityRequest {
+        envelope: serde_json::Value,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Resolve a Cognate escalation (migration Stage 7). `resolution` is `approved` or `rejected`;
+    /// policy decides whether the verified actor may. `request_id` makes the resolution replayable.
+    AuthorityApproval {
+        approval_id: String,
+        resolution: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Every Cognate escalation that can be approved and where it stands. Read-only.
+    AuthorityApprovals,
+    /// Submit a RealityTrace-derived CEP `evidence_packet` for an operation SEA-Forge allowed (Stage 8).
+    /// Records evidence; settles nothing.
+    AuthorityEvidence {
+        envelope: serde_json::Value,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Settle an operation from the evidence committed for it, against the criteria bound at decision time.
+    AuthoritySettle {
+        operation_id: String,
+        #[serde(default)]
+        request_id: Option<String>,
     },
     AgentList,
     AgentProbe {
@@ -1432,6 +1465,10 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::Approve { request_id, .. }
         | Request::Reject { request_id, .. }
         | Request::AgentProbe { request_id, .. }
+        | Request::AuthorityRequest { request_id, .. }
+        | Request::AuthorityApproval { request_id, .. }
+        | Request::AuthorityEvidence { request_id, .. }
+        | Request::AuthoritySettle { request_id, .. }
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
         | Request::CaseCommit { request_id, .. }
@@ -1462,6 +1499,10 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::Approve { .. }
             | Request::Reject { .. }
             | Request::AgentProbe { .. }
+            | Request::AuthorityRequest { .. }
+            | Request::AuthorityApproval { .. }
+            | Request::AuthorityEvidence { .. }
+            | Request::AuthoritySettle { .. }
             | Request::Delegate { .. }
             | Request::CancelDelegation { .. }
             | Request::CaseCommit { .. }
@@ -2161,6 +2202,164 @@ pub async fn handle_request_as(
                 actor_id,
             )
             .await
+        }
+        Request::AuthorityRequest {
+            envelope,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.request");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::respond(&config, &root, &envelope, &caller)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "authority evaluation task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                // Never the local-default operator: an authority decision is only issued to a verified peer.
+                None => serde_json::json!({
+                    "error": "authority_request requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "authority.request", &response);
+            response
+        }
+        Request::AuthorityApproval {
+            approval_id,
+            resolution,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.approval");
+            let response = match (verified, resolution.as_str()) {
+                (Some(actor), "approved" | "rejected") => {
+                    let resolver = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    let approve = resolution == "approved";
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::resolve(&config, &root, &approval_id, approve, &resolver)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "approval task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                (None, _) => serde_json::json!({
+                    "error": "authority_approval requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+                _ => serde_json::json!({
+                    "error": "resolution must be approved or rejected",
+                    "error_class": "cep_request_invalid",
+                    "no_side_effect": true,
+                }),
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "authority.approval",
+                &response,
+            );
+            response
+        }
+        Request::AuthorityEvidence {
+            envelope,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.evidence");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::submit_evidence(&config, &root, &envelope, &caller)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "evidence task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_evidence requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "authority.evidence",
+                &response,
+            );
+            response
+        }
+        Request::AuthoritySettle {
+            operation_id,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.settle");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::settle(&config, &root, &operation_id, &caller)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "settlement task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_settle requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "authority.settle", &response);
+            response
+        }
+        Request::AuthorityApprovals => {
+            let config = state.config();
+            let root = state.root.clone();
+            tokio::task::spawn_blocking(move || cep_authority::list(&config, &root))
+                .await
+                .unwrap_or_else(|_| {
+                    serde_json::json!({
+                        "error": "approval listing task failed",
+                        "error_class": "cep_authority_internal",
+                    })
+                })
         }
         Request::AgentList => agent_probe::list(&state.config().agent),
         Request::AgentProbe {

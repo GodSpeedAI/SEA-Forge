@@ -21,6 +21,9 @@ use sea_forge_server::governed_execution_boundary::{InvocationLedger, Observatio
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+const WORLD: &str =
+    "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
 fn sha256_hex(input: &[u8]) -> String {
     format!("{:x}", Sha256::digest(input))
 }
@@ -128,6 +131,7 @@ fn admit(
         &local_model_sha256(),
         governed_parent,
         None,
+        WORLD,
     )
     .expect("Allow decision must emit");
     let generation = registry
@@ -202,6 +206,8 @@ fn e5b_valid_observation_settles_against_the_exact_authorized_invocation() {
             authority_decision_id: decision.decision_id,
             execution_status: "completed".into(),
             observed_effects: json!([]),
+            // The world comes from the LEDGER record of the invocation.
+            world_ref: WORLD.into(),
         }
     );
     assert!(outcome.settled());
@@ -525,6 +531,7 @@ fn t05_wrong_producer_on_observations_is_rejected_both_directions() {
         &local_model_sha256(),
         "abcd4321-2222-4333-8444-555555555555",
         None,
+        WORLD,
     )
     .unwrap();
     assert!(matches!(
@@ -673,6 +680,7 @@ fn t05_admission_requires_causality_full_payload_and_is_idempotent() {
         &local_model_sha256(),
         "abcd8765-2222-4333-8444-555555555555",
         None,
+        WORLD,
     )
     .unwrap();
 
@@ -772,6 +780,7 @@ fn t05_real_t04_governed_work_request_feeds_invocation_causality() {
         local,
         governed_request_event_id,
         None,
+        WORLD,
     )
     .expect("real T04 cycle feeds a canonical invocation");
     assert!(invocation.envelope["provenance"]["chain"]

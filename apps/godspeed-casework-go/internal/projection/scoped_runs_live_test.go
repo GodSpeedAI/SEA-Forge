@@ -1,0 +1,147 @@
+//go:build live
+
+package projection_test
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
+)
+
+func TestLiveRunScope(t *testing.T) {
+	root := livetest.RepoRoot(t)
+	serverBinary := filepath.Join(root, "target", "debug", "sea-forge-server")
+	if info, err := os.Stat(serverBinary); err != nil || !info.Mode().IsRegular() || info.Mode()&0o111 == 0 {
+		t.Fatalf("existing executable sea-forge-server is required; checked %s: %v", serverBinary, err)
+	}
+
+	cell := livestack.NewCell(t)
+	stack := livestack.AssembleStack(t, cell)
+	caseIDs := []string{
+		stack.CommitSentryChain(t, stack.Client.NewRequestID("case_commit")),
+		stack.CommitSentryChain(t, stack.Client.NewRequestID("case_commit")),
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	runIDs := make([]string, len(caseIDs))
+	for i, caseID := range caseIDs {
+		report, err := stack.Authority.ExecuteItem(ctx, ports.CaseRef(caseID), "task_prepare", ports.GovernedOptions{
+			Governance: livetest.DelegatedPortsGovernance("operator_local", "operator"),
+			Policy:     "authority/active-policy.json",
+			RequestID:  stack.Client.NewRequestID("item_execute"),
+			TimeoutSec: 60,
+		})
+		if err != nil {
+			t.Fatalf("item.execute for case %s: %v", caseID, err)
+		}
+		if len(report.Episodes) != 1 || report.Episodes[0].ItemID != "task_prepare" || report.Episodes[0].RunID == "" {
+			t.Fatalf("item.execute did not report the actual task_prepare episode for %s: %+v", caseID, report)
+		}
+		runIDs[i] = report.Episodes[0].RunID
+		t.Logf("case %s task_prepare run %s settlement report %q", caseID, runIDs[i], report.Episodes[0].Settlement)
+	}
+
+	for i, caseID := range caseIDs {
+		own, err := stack.Authority.RunsListForCase(ctx, ports.CaseRef(caseID))
+		if err != nil {
+			t.Fatalf("run.list for owning case %s: %v", caseID, err)
+		}
+		otherIndex := 1 - i
+		foreign, err := stack.Authority.RunsListForCase(ctx, ports.CaseRef(caseIDs[otherIndex]))
+		if err != nil {
+			t.Fatalf("run.list for other case %s: %v", caseIDs[otherIndex], err)
+		}
+		var actual ports.RunSummary
+		matches := 0
+		for _, run := range own.Runs {
+			if run.RunID == runIDs[i] {
+				actual = run
+				matches++
+			}
+		}
+		if matches != 1 {
+			t.Fatalf("own scoped list contains run %s %d times, want once: %+v", runIDs[i], matches, own.Runs)
+		}
+		if actual.CaseID != caseID || actual.PlanItemID != "task_prepare" {
+			t.Fatalf("scoped summary for run %s has case/item %q/%q, want %q/task_prepare", actual.RunID, actual.CaseID, actual.PlanItemID, caseID)
+		}
+		for _, run := range foreign.Runs {
+			if run.RunID == runIDs[i] {
+				t.Fatalf("run %s from %s appeared in foreign case %s list", run.RunID, caseID, caseIDs[otherIndex])
+			}
+		}
+
+		facts, err := stack.Source.Facts(ctx, caseID, ports.ActorClaim{ActorID: "operator_local", Role: "operator"}, "")
+		if err != nil {
+			t.Fatalf("live facts for %s: %v", caseID, err)
+		}
+		var captured ports.RunSummary
+		capturedMatches := 0
+		for _, run := range facts.Runs {
+			if run.RunID == runIDs[i] {
+				captured = run
+				capturedMatches++
+			}
+		}
+		if capturedMatches != 1 || captured != actual {
+			t.Fatalf("captured scoped summary for %s = %+v (matches %d), want actual list summary %+v", runIDs[i], captured, capturedMatches, actual)
+		}
+		snapshot := projection.Build(facts)
+		childMatches := 0
+		for _, object := range snapshot.VisibleObjects {
+			if object.Kind != "execution_trace" {
+				continue
+			}
+			if object.ID == runIDs[otherIndex] {
+				t.Fatalf("foreign run %s appeared as a child in case %s", object.ID, caseID)
+			}
+			if object.ID != runIDs[i] {
+				continue
+			}
+			childMatches++
+			if object.ParentID == nil || *object.ParentID != "task_prepare" {
+				t.Errorf("run child parent = %v, want actual task_prepare", object.ParentID)
+			}
+			if len(object.Actions) != 0 {
+				t.Errorf("execution trace child must not offer actions: %+v", object.Actions)
+			}
+			standing := object.Badge
+			if object.Explanation != nil {
+				standing += " " + *object.Explanation
+			}
+			if !hasScopedLabelledStanding(standing, "execution", actual.Execution) || !hasScopedLabelledStanding(standing, "settlement", actual.Settlement) {
+				t.Errorf("run child does not expose actual separate standings %q/%q: %q", actual.Execution, actual.Settlement, standing)
+			}
+		}
+		if childMatches != 1 {
+			t.Fatalf("Build emitted the actual run child %s %d times, want once", runIDs[i], childMatches)
+		}
+	}
+}
+
+func hasScopedLabelledStanding(text, label, value string) bool {
+	lower := strings.ToLower(text)
+	label = strings.ToLower(label)
+	value = strings.ToLower(value)
+	for offset := 0; offset < len(lower); {
+		i := strings.Index(lower[offset:], label)
+		if i < 0 {
+			return false
+		}
+		i += offset + len(label)
+		rest := strings.TrimLeft(lower[i:], " :=\t")
+		if strings.HasPrefix(rest, value) {
+			return true
+		}
+		offset = i
+	}
+	return false
+}

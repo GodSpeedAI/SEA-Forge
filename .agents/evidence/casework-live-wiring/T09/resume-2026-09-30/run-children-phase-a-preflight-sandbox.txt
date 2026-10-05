@@ -1,0 +1,7 @@
+HOST RAM
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.3Gi       146Mi       626Mi       3.2Gi       2.5Gi
+Swap:           12Gi       7.6Gi       4.4Gi
+COMPILER PROCESS SCAN (PID COMM ARGS; compiler commands only)
+KNOWN FOREIGN BUN SERVER (excluded: server.ts, not a compiler)
+2109808 bun             bun /home/sprime01/projects/cognate/validation/reconstructions/deepseek-harness/cognate/src/server.ts

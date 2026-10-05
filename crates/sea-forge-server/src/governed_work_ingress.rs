@@ -100,6 +100,9 @@ pub enum GovernedIngressError {
         expected_parent: String,
         recorded: Vec<String>,
     },
+    /// The request names no world or a malformed one, or its context packet
+    /// names a different world (CEP-0008 `world_ref`).
+    World { reason: String },
 }
 
 impl std::fmt::Display for GovernedIngressError {
@@ -154,6 +157,7 @@ impl std::fmt::Display for GovernedIngressError {
                 f,
                 "request does not cite its context packet as causal parent: expected {expected_parent}, recorded {recorded:?}"
             ),
+            Self::World { reason } => write!(f, "semantic world rejected: {reason}"),
         }
     }
 }
@@ -173,6 +177,26 @@ pub struct GovernedWorkIntent {
     /// value alongside (never merged into) the settlement criteria.
     pub proof_contract: Value,
     pub settlement_criteria: Vec<String>,
+    /// The semantic world the request is pinned to. SEA-Forge carries it
+    /// through every later edge of the cycle; it checks syntax and equality
+    /// here and verifies the digest on the CEP authority path.
+    pub world_ref: String,
+    /// What Context Kernel stated about the packet (`complete`, `partial`,
+    /// `none`), or `None` when it stated nothing. Surfaced, never coerced.
+    pub context_completeness: Option<String>,
+}
+
+impl GovernedWorkIntent {
+    /// Verify the request's world against SEA-Forge's registry. Ingress only
+    /// checks that `world_ref` is well formed and shared by the context
+    /// packet; this is the step that makes SEA-Forge recompute and know the
+    /// world rather than trust the sender. An unknown world fails closed.
+    pub fn verify_world(
+        &self,
+        worlds: &sea_forge_domainforge::WorldRegistry,
+    ) -> Result<(), sea_forge_domainforge::WorldBindingError> {
+        worlds.require(&self.world_ref).map(|_| ())
+    }
 }
 
 fn is_sha256_hex(s: &str) -> bool {
@@ -405,6 +429,11 @@ pub fn accept_governed_work_request(
     let settlement_criteria = settlement_criteria.unwrap_or_default();
     let proof_value = proof_contract.unwrap_or(Value::Null);
 
+    // 4b. Semantic world (CEP-0008): required, well formed, and shared by the
+    //     context packet. An alias or label is not a world identity.
+    let world_ref = crate::world_pin::from_payload(payload)
+        .map_err(|reason| GovernedIngressError::World { reason })?;
+
     // 5. Context binding: genuinely CK-produced, same work request, matching
     //    ref, real identity, recorded causality.
     check_producer(context_packet, "ContextPacketCreated", "context_kernel")?;
@@ -420,6 +449,16 @@ pub fn accept_governed_work_request(
             got: packet_wr.to_string(),
         });
     }
+    crate::world_pin::require_same(
+        &world_ref,
+        context_packet
+            .get("payload")
+            .and_then(|p| p.get("world_ref"))
+            .and_then(Value::as_str),
+    )
+    .map_err(|reason| GovernedIngressError::World {
+        reason: format!("context packet: {reason}"),
+    })?;
     let packet_id = context_packet
         .get("payload")
         .and_then(|p| p.get("context_packet_id"))
@@ -463,5 +502,11 @@ pub fn accept_governed_work_request(
         context_packet_ref,
         proof_contract: proof_value,
         settlement_criteria,
+        world_ref,
+        context_completeness: context_packet
+            .get("payload")
+            .and_then(|p| p.get("retrieval_completeness"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
     })
 }

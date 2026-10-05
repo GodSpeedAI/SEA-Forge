@@ -22,6 +22,8 @@ const maxBodyBytes = 1 << 20 // 1 MiB
 
 // Options tunes server behaviour; the zero value is the production default.
 type Options struct {
+	// Ask is the optional governed self-disclosure service used by POST /api/ask.
+	Ask ports.AskPort
 	// TrustedOrigins is the exact browser Origin allowlist used by CORS and POST Origin checks.
 	// Empty preserves the built-in loopback-only development default.
 	TrustedOrigins []string

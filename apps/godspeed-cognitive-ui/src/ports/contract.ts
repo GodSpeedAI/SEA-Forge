@@ -18,7 +18,24 @@ import type {
   IntentResponse,
   InteractionIntent,
   OperationalSettlement,
+  RunExecutionStanding,
+  RunSettlementStanding,
+  RunTraceCommandExecutionStatus,
+  RunTraceFrame,
+  RunTraceFrameKind,
+  RunTraceHydrationReadBudget,
+  RunTraceObservation,
+  RunTraceObservationEvent,
+  RunTraceRunObservation,
   StreamEvent,
+  ThothAnswerView,
+  ThothAskRequest,
+  ThothClaimClass,
+  ThothClaimStatus,
+  ThothClaimView,
+  ThothDisposition,
+  ThothFreshness,
+  ThothQuestionKind,
   TemporalTrajectoryResponse,
 } from '../../../../.agents/reports/interface-contracts/typescript/types'
 
@@ -32,7 +49,24 @@ export type {
   IntentResponse,
   InteractionIntent,
   OperationalSettlement,
+  RunExecutionStanding,
+  RunSettlementStanding,
+  RunTraceCommandExecutionStatus,
+  RunTraceFrame,
+  RunTraceFrameKind,
+  RunTraceHydrationReadBudget,
+  RunTraceObservation,
+  RunTraceObservationEvent,
+  RunTraceRunObservation,
   StreamEvent,
+  ThothAnswerView,
+  ThothAskRequest,
+  ThothClaimClass,
+  ThothClaimStatus,
+  ThothClaimView,
+  ThothDisposition,
+  ThothFreshness,
+  ThothQuestionKind,
   TemporalTrajectoryResponse,
 }
 export type {
@@ -101,6 +135,8 @@ export interface NarrationBeat {
   readonly thoughtText: string
   readonly evidenceCitations: readonly string[]
   readonly directives?: readonly NarrationDirective[]
+  /** Complete grounded Thoth disclosure, when the narration came from Ask. */
+  readonly grounded_answer?: ThothAnswerView
 }
 
 /** Spec 04 §8. */

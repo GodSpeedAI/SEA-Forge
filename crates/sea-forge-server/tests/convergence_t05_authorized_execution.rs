@@ -28,6 +28,9 @@ use sea_forge_server::governed_execution_boundary::{
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
+const WORLD: &str =
+    "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
 fn sha256_hex(input: &[u8]) -> String {
     format!("{:x}", Sha256::digest(input))
 }
@@ -142,6 +145,7 @@ fn emit(
         &local_model_sha256(),
         "11111111-2222-4333-8444-555555555555",
         None,
+        WORLD,
     )
 }
 
@@ -356,7 +360,8 @@ fn t05_emission_refuses_placeholder_and_drifted_model_identity() {
             &fallback,
             &fallback,
             "11111111-2222-4333-8444-555555555555",
-            None
+            None,
+            WORLD,
         ),
         Err(BoundaryError::PlaceholderIdentity { .. })
     ));
@@ -369,7 +374,8 @@ fn t05_emission_refuses_placeholder_and_drifted_model_identity() {
             &"0".repeat(64),
             &"0".repeat(64),
             "11111111-2222-4333-8444-555555555555",
-            None
+            None,
+            WORLD,
         ),
         Err(BoundaryError::PlaceholderIdentity { .. })
     ));
@@ -382,7 +388,8 @@ fn t05_emission_refuses_placeholder_and_drifted_model_identity() {
             "deadbeef",
             "deadbeef",
             "11111111-2222-4333-8444-555555555555",
-            None
+            None,
+            WORLD,
         ),
         Err(BoundaryError::PlaceholderIdentity { .. })
     ));
@@ -396,7 +403,8 @@ fn t05_emission_refuses_placeholder_and_drifted_model_identity() {
             &other,
             &local_model_sha256(),
             "11111111-2222-4333-8444-555555555555",
-            None
+            None,
+            WORLD,
         ),
         Err(BoundaryError::DomainDrift { .. })
     ));
@@ -414,7 +422,8 @@ fn t05_emission_requires_meaningful_correlation_and_causality() {
             &local_model_sha256(),
             &local_model_sha256(),
             "11111111-2222-4333-8444-555555555555",
-            None
+            None,
+            WORLD,
         ),
         Err(BoundaryError::OpaqueWorkRequest)
     ));
@@ -425,7 +434,8 @@ fn t05_emission_requires_meaningful_correlation_and_causality() {
             &local_model_sha256(),
             &local_model_sha256(),
             "unknown",
-            None
+            None,
+            WORLD,
         ),
         Err(BoundaryError::PlaceholderField { .. })
     ));

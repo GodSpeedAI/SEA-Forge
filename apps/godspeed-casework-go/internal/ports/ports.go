@@ -288,6 +288,13 @@ type RunSummary struct {
 	EvidenceCount int
 }
 
+// RunListResult is the scoped authority view of readable runs and run IDs the authority could
+// not read. Unreadable IDs are factual reports, not inferred ownership.
+type RunListResult struct {
+	Runs          []RunSummary
+	UnreadableIDs []string
+}
+
 // ApprovalRecord is one decision awaiting a resolver.
 type ApprovalRecord struct {
 	ApprovalID  string
@@ -444,6 +451,7 @@ type CaseAuthorityPort interface {
 	CaseHorizon(ctx context.Context, ref CaseRef) (CaseHorizon, error)
 	PendingApprovals(ctx context.Context, ref CaseRef) ([]ApprovalRecord, error)
 	RunsList(ctx context.Context) ([]RunSummary, error)
+	RunsListForCase(ctx context.Context, ref CaseRef) (RunListResult, error)
 	EntryOptions(ctx context.Context) ([]TemplateOption, error)
 	PreflightCase(ctx context.Context, draft CaseDraft) (PreflightReport, error)
 	GetArtifact(ctx context.Context, digest string) (ArtifactContent, error)

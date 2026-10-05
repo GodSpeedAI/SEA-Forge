@@ -270,7 +270,7 @@ async fn preflight_passes_with_items_and_a_template_digest() {
         response
             .get("errors")
             .and_then(|e| e.as_array())
-            .map_or(true, |e| e.is_empty()),
+            .is_none_or(|e| e.is_empty()),
         "unexpected preflight errors: {response}"
     );
     assert_eq!(

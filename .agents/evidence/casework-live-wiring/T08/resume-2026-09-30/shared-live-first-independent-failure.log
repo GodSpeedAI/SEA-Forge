@@ -1,0 +1,49 @@
+{"timestamp":"2026-09-30T21:25:26.283383Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t08-live-independent-20260930/t08-live-run-fk6AmA/cell","socket":"/tmp/t08-live-independent-20260930/t08-live-run-fk6AmA/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-09-30T21:25:26.286238Z","level":"INFO","message":"server listening on /tmp/t08-live-independent-20260930/t08-live-run-fk6AmA/cell/server.sock"}
+godspeed-casework: configuration loaded (version 1, cell_root "/tmp/t08-live-independent-20260930/t08-live-run-fk6AmA/cell", evidence_root "", 1 capability/ies, 0 resolved secret(s))
+  ready     authority      kind=authority required=false adapter=sfwp
+godspeed-casework: ready=[authority] degraded=[] blocking=[]
+godspeed-casework: preflight clear (no required capability blocking)
+godspeed-casework: serving LIVE cognitive projection on http://127.0.0.1:4179 (provenance go:live:sfwp; kernel socket /tmp/t08-live-independent-20260930/t08-live-run-fk6AmA/cell/server.sock; auth mode dev; no static UI)
+ts=2026-09-30T21:25:26Z correlation_id="daeaac2d74802ae564f2f5ef2fe6102f" method="GET" path="/api/healthz" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="1e9e266302e3bb7cc7fcb1ac3f832f85" method="GET" path="/api/world" status=401 duration_ms=0.0 remote="127.0.0.1" auth="-" actor="-"
+PASS unauthenticated world is 401 — status 401
+ts=2026-09-30T21:25:26Z correlation_id="4a4d9bcbed8763143d7a0737a8523bf5" method="GET" path="/api/session" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="8acc2a6d2df5fe76260c48e44aff8edf" method="POST" path="/api/auth/login" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="36663c2ad4836d7a8131af74863bb08e" method="GET" path="/api/session" status=200 duration_ms=0.0 remote="127.0.0.1" auth="-" actor="-"
+PASS login resolves the session identity — {"user":"operator_local","actor_id":"operator_local","role":"operator","roles":[],"kind":"human"}
+ts=2026-09-30T21:25:26Z correlation_id="7df2e1ae229535ec21b059347d7f7a0a" method="GET" path="/api/templates" status=200 duration_ms=2.9 remote="127.0.0.1" auth="-" actor="-"
+PASS templates list serves the E2E templates — e2e-sentry-chain@0.1.0, e2e-signoff-gate@0.1.0
+ts=2026-09-30T21:25:26Z correlation_id="946eb18998fb13f86f44a0901b8249b7" method="POST" path="/api/templates/preflight" status=200 duration_ms=3.1 remote="127.0.0.1" auth="-" actor="-"
+PASS preflight passes with a digest — {"template_ref":"e2e-sentry-chain@0.1.0","params":{"dataset_label":"live conformance","dataset_name":"t08-live","max_row
+ts=2026-09-30T21:25:26Z correlation_id="t08-propose-1790803526871" method="POST" path="/api/intents" status=200 duration_ms=16.9 remote="127.0.0.1" auth="-" actor="-"
+PASS PROPOSE_CASE accepted — {}
+PASS PROPOSE_CASE names the new case — case_20260930T212526Z_39489a
+ts=2026-09-30T21:25:26Z correlation_id="cc4f8e8ce587dbe2216f3a47167e22e4" method="GET" path="/api/world" status=200 duration_ms=2.7 remote="127.0.0.1" auth="-" actor="-"
+PASS snapshot carries the sentry chain — task_prepare, task_publish, ms_chain_accepted
+PASS task_prepare offers EXECUTE_ITEM (session identity, not client-asserted)
+PASS task_publish offers no EXECUTE while its sentry waits
+ts=2026-09-30T21:25:26Z correlation_id="3badeddafd0c6b1b2970f88c0264414a" method="GET" path="/api/world" status=200 duration_ms=2.2 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="8070ba8ad140c570f0196daa4ece84fb" method="GET" path="/api/trajectory" status=200 duration_ms=0.4 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="379a822cd3e0af814522be3e55b2f799" method="GET" path="/api/world" status=200 duration_ms=0.7 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="a0e075ccff8fb993dcd1ab67381da30e" method="GET" path="/api/templates" status=200 duration_ms=1.0 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="c57820701eebfe98bc4f0947b2a21683" method="POST" path="/api/templates/preflight" status=200 duration_ms=1.0 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="t08-conformance-exec-1790803526908" method="POST" path="/api/intents" status=200 duration_ms=31.3 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="bf505acd3499ecdbf5f277d10ee723a0" method="GET" path="/api/events" status=200 duration_ms=35.0 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="52e2c5677815579e4bb5b5265b56a6e7" method="GET" path="/api/trajectory" status=200 duration_ms=1.5 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:25:26Z correlation_id="a82276dabfd11a4186000d1b7e8dcf65" method="GET" path="/api/events" status=200 duration_ms=25.2 remote="127.0.0.1" auth="-" actor="-"
+FATAL 27 |   captureConsequentialState: () => Promise<string>
+28 |   stateBoundaryDescription: string
+29 | }
+30 | 
+31 | function assertConforms(condition: unknown, behavior: string, detail = ''): asserts condition {
+32 |   if (!condition) throw new Error(`CaseworkPort conformance failed: ${behavior}${detail ? ` — ${detail}` : ''}`)
+                                 ^
+error: CaseworkPort conformance failed: resumed stream replays the accepted mutation cursor — got 01M3T3AH846066KYV4X73TFCT9, expected at least 01M3T3AH8PKM99Y651GMBZZ37E
+      at assertConforms (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/conformance/caseworkPortConformance.ts:32:29)
+      at runCaseworkPortConformance (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/conformance/caseworkPortConformance.ts:125:7)
+
+godspeed-casework: terminated received - shutting down
+live conformance evidence retained at /tmp/t08-live-independent-20260930/t08-live-run-fk6AmA/cell
+live conformance: 1 failure(s)
+exit=1

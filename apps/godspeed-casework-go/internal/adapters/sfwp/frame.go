@@ -83,15 +83,23 @@ func (r *Request) RequestID() string {
 	return id
 }
 
-// IsMutation reports whether this verb is protected (side-effecting) on the server: only those are
-// correlated, deduplicated, and recoverable through request.get_status.
+// IsMutation reports whether this verb participates in request-ID correlation, deduplication, and
+// request.get_status recovery. Ask is protected and record-writing but deliberately uncorrelated.
 func (r *Request) IsMutation() bool {
 	_, ok := mutationVerbs[r.verb]
 	return ok
 }
 
-// mutationVerbs is the server's protected set for the verbs this client speaks (the server's
-// `requires_durable_locator` match in crates/sea-forge-server/src/lib.rs).
+// IsTransportRetrySafe reports whether an ambiguous transport failure may repeat this request.
+// Ask writes a durable disclosure question but has no request_id, so it is neither safe to resend
+// nor recoverable through request.get_status. An explicit server_busy refusal remains retryable
+// in Client.Do because it proves the request was not admitted.
+func (r *Request) IsTransportRetrySafe() bool {
+	return !r.IsMutation() && r.verb != "ask"
+}
+
+// mutationVerbs is the correlation-tracked durable-locator set for the verbs this client speaks
+// (the server's `requires_durable_locator` match in crates/sea-forge-server/src/lib.rs).
 var mutationVerbs = map[string]bool{
 	"submit":              true,
 	"approve":             true,
@@ -286,6 +294,16 @@ func NewCaseList() *Request { return newRequest("case_list") }
 // NewRunList lists the governed run records (episodes) the cell holds, newest first. Runs whose
 // directory no case claims are reported by the authority rather than dropped.
 func NewRunList() *Request { return newRequest("run_list") }
+
+// NewRunListForCase lists the governed run records (episodes) captured for one case.
+func NewRunListForCase(caseID string) (*Request, error) {
+	if strings.TrimSpace(caseID) == "" {
+		return nil, apperr.New(apperr.KindInvalid, "", "run_list", "case id must not be blank")
+	}
+	r := newRequest("run_list")
+	r.body["case_id"] = caseID
+	return r, nil
+}
 
 // NewRunGet resolves one run's committed records, including its case, plan item, trace, and evidence.
 func NewRunGet(runID string) *Request {

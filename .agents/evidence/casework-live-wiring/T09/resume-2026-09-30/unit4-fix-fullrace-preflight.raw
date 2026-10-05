@@ -1,0 +1,6 @@
+2026-10-01T20:53:57Z
+TMPDIR=/tmp/t09u4
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.5Gi       305Mi       753Mi       2.9Gi       2.3Gi
+Swap:           12Gi       6.9Gi       5.1Gi
+2109808 bun             bun /home/sprime01/projects/cognate/validation/reconstructions/deepseek-harness/cognate/src/server.ts

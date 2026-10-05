@@ -1,0 +1,57 @@
+CHECK: actual-host UTC time
+2026-09-30 21:21:21 UTC
+CHECK: memory
+               total        used        free      shared  buff/cache   available
+Mem:      8327892992  6113988608   213368832     3170304  2222120960  2213904384
+Swap:    12884901888  8014479360  4870422528
+CHECK: Go/Bun/Node/Vite/browser process names (no command lines)
+    566     552  1000 node               02:15:18
+    730     566  1000 node               02:15:16
+    837     566  1000 node               02:15:13
+    848     566  1000 node               02:15:09
+   1960    1788  1000 node               02:14:58
+   2038     837  1000 node               02:14:57
+   2630    2615  1000 node               02:14:52
+   4048    3778  1000 node               02:14:07
+   4051    3778  1000 node               02:14:07
+   4062    3778  1000 node               02:14:07
+   4069    3778  1000 node               02:14:07
+   4399    4080  1000 node               02:13:58
+   5175    3778  1000 node               02:13:42
+   5177    3778  1000 node               02:13:42
+   5178    3778  1000 node               02:13:42
+   5185    3778  1000 node               02:13:42
+   5735    5187  1000 node               02:13:33
+   9037    8348  1000 node               02:12:16
+   9042    8348  1000 node               02:12:16
+   9048    8348  1000 node               02:12:16
+  13814     469  1000 bun                02:10:13
+  13914     469  1000 node               02:10:11
+  13916   13914  1000 node               02:10:11
+  13987   13916  1000 node               02:10:08
+  14034   13987  1000 node               02:10:08
+  77159    3778  1000 node               01:43:51
+  78379    3778  1000 node               01:43:24
+  78380    3778  1000 node               01:43:24
+  78382    3778  1000 node               01:43:24
+  78757   78386  1000 node               01:43:15
+ 149550    3778  1000 node               01:19:19
+ 167447    3778  1000 node               01:13:13
+ 167451    3778  1000 node               01:13:13
+ 167454    3778  1000 node               01:13:12
+ 167577    3778  1000 node               01:13:10
+ 167581    3778  1000 node               01:13:10
+ 167592    3778  1000 node               01:13:10
+ 168448  167574  1000 node               01:12:56
+ 168449  167448  1000 node               01:12:56
+ 177220     837  1000 node               01:10:50
+ 260364    3778  1000 node                  49:10
+ 361255  359243  1000 node                  21:39
+ 361315  361255  1000 node                  21:38
+ 362772  359243  1000 node                  21:20
+ 362786  362772  1000 node                  21:19
+CHECK: existing UI app/cache
+/home/sprime01/.local/bin/bun
+GOCACHE-existing-writable
+e525701974f7541ed099cb1d9d77414eee2f2fbe0710b2135d0e191b21a8bf19  /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.test.ts
+85e118edc991d175e422069c93a5f1baecdd3b2cb5427bf8695fdb2155abf295  /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/conformance/caseworkPortConformance.ts

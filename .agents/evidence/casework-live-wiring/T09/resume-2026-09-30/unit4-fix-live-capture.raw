@@ -1,0 +1,7 @@
+=== RUN   TestLiveRunScope
+    scoped_runs_live_test.go:49: case case_20261001T210135Z_a894cc task_prepare run run_20261001T210135Z_955d0e settlement report "accepted"
+    scoped_runs_live_test.go:49: case case_20261001T210135Z_5b66dc task_prepare run run_20261001T210135Z_16dd9c settlement report "accepted"
+--- PASS: TestLiveRunScope (0.08s)
+PASS
+livetest-relay: relay: rebuild of case_20261001T210135Z_5b66dc at 01M3WMBJF6MNETH7D8J4X8TJET failed: unavailable: the connection to the governed authority failed (read): EOF
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.209s

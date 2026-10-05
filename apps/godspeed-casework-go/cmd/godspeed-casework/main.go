@@ -248,6 +248,7 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 		PolicyRef:           serve.PolicyRef,
 		ExecutionTimeoutSec: 60,
 	})
+	ask := sfwp.NewAskAdapter(client, ports.ActorClaim{ActorID: serve.GatewayActorID, Role: serve.GatewayRole})
 
 	// Session sweeps keep the bounded store clean without depending on request traffic.
 	sweepCtx, stopSweeps := context.WithCancel(ctx)
@@ -255,6 +256,7 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 	go sweepSessions(sweepCtx, authOpts.Sessions, time.Minute)
 
 	api := server.NewWithArtifacts(source, dispatcher, source, store, relay, authority, server.Options{
+		Ask:            ask,
 		TrustedOrigins: serve.TrustedOrigins,
 		Perspective:    ports.ActorClaim{ActorID: serve.PerspectiveActorID, Role: serve.PerspectiveRole},
 		Auth:           authOpts,

@@ -20,6 +20,10 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
+pub mod world;
+pub use domainforge_core::application::world::WorldRef;
+pub use world::{WorldBindingError, WorldRegistry};
+
 /// A source file in a `SeaSourceSet`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SourceFile {
@@ -64,6 +68,10 @@ pub struct DomainModelRef {
     #[serde(default)]
     pub class_refs: Vec<String>,
     pub validation_evidence_refs: Vec<String>,
+    /// Canonical `world:<name>@sha256:<digest>`; set by `WorldRegistry::bind`.
+    /// Absent on records created before world binding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub world_ref: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -108,7 +116,7 @@ pub const MAX_AST_NODES: usize = 10_000;
 pub const MAX_NESTING_DEPTH: usize = 256;
 
 /// The pinned DomainForge version this adapter expects.
-pub const EXPECTED_DOMAINFORGE_VERSION: &str = "0.16.0";
+pub const EXPECTED_DOMAINFORGE_VERSION: &str = "0.19.0";
 
 fn sha256_hex(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
@@ -360,6 +368,7 @@ pub fn load_validate(source_set: &SeaSourceSet) -> Result<DomainModel, ForgeErro
             "validation:error_count={}",
             validation.error_count
         )],
+        world_ref: None,
     };
 
     Ok(DomainModel { graph, model_ref })

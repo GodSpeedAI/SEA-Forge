@@ -29,10 +29,15 @@ import (
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
 )
 
+const defaultMaxResponseLineBytes = 32 << 20
+
 // Config configures the client. Zero values take the defaults noted per field.
 type Config struct {
 	// SocketPath is the authority's Unix socket (loopback transport).
 	SocketPath string
+	// MaxResponseLineBytes is the per-response-line cap (including LF): zero selects 32 MiB;
+	// positive values through 32 MiB lower it.
+	MaxResponseLineBytes int
 	// MaxConns bounds the connection pool. Default 4. One request is in flight per connection.
 	MaxConns int
 	// RequestTimeout bounds one request when the caller's context carries no deadline. The
@@ -64,6 +69,13 @@ type Config struct {
 }
 
 func (c *Config) fill() error {
+	if c.MaxResponseLineBytes < 0 || c.MaxResponseLineBytes > defaultMaxResponseLineBytes {
+		return apperr.New(apperr.KindConfig, "", "config",
+			"MaxResponseLineBytes must be zero or between 1 and 32 MiB")
+	}
+	if c.MaxResponseLineBytes == 0 {
+		c.MaxResponseLineBytes = defaultMaxResponseLineBytes
+	}
 	if c.SocketPath == "" {
 		return apperr.New(apperr.KindConfig, "", "config", "the live authority adapter requires a socket path")
 	}
@@ -159,10 +171,11 @@ func (c *Client) Close() {
 
 // conn is one Unix-socket connection carrying at most one in-flight request at a time.
 type conn struct {
-	nc   net.Conn
-	br   *bufio.Reader
-	mu   sync.Mutex
-	dead bool
+	nc                   net.Conn
+	br                   *bufio.Reader
+	maxResponseLineBytes int
+	mu                   sync.Mutex
+	dead                 bool
 	// idleAt is when the connection was released back to the pool; zero for a fresh dial.
 	idleAt time.Time
 }
@@ -201,9 +214,13 @@ func (cn *conn) call(ctx context.Context, line []byte, timeout time.Duration) ([
 		cn.close()
 		return nil, apperr.Wrap(apperr.KindInternal, "", "call", "cannot set read deadline", err)
 	}
-	resp, err := cn.br.ReadBytes('\n')
+	resp, err := readBoundedLine(cn.br, cn.maxResponseLineBytes, "call")
 	if err != nil {
 		cn.close()
+		var typed *apperr.Error
+		if errors.As(err, &typed) {
+			return nil, typed
+		}
 		if errors.Is(err, os.ErrDeadlineExceeded) {
 			return nil, apperr.Wrap(apperr.KindUnavailable, "", "call",
 				"deadline exceeded while the request was in flight", context.DeadlineExceeded)
@@ -213,8 +230,36 @@ func (cn *conn) call(ctx context.Context, line []byte, timeout time.Duration) ([
 	return resp, nil
 }
 
-// transportErr classifies a socket-level failure. The outcome of any request that crossed the wire
-// before it is UNKNOWN - only the authority's correlation store can settle it.
+// readBoundedLine accumulates at most limit bytes, including LF. ReadSlice keeps
+// coalesced following frames in the same bufio.Reader; its bounded internal buffer
+// may read ahead by at most one chunk beyond the logical cap before overflow is
+// reported. Callers close the connection on overflow, so that partial pairing is
+// never reused.
+func readBoundedLine(br *bufio.Reader, limit int, operation string) ([]byte, error) {
+	if limit <= 0 {
+		limit = defaultMaxResponseLineBytes
+	}
+	line := make([]byte, 0, min(limit, 4096))
+	for {
+		part, err := br.ReadSlice('\n')
+		if len(part) > limit-len(line) {
+			return nil, apperr.New(apperr.KindUnavailable, "", operation,
+				"response line exceeded the configured byte limit")
+		}
+		line = append(line, part...)
+		if err == nil {
+			return line, nil
+		}
+		if errors.Is(err, bufio.ErrBufferFull) {
+			continue
+		}
+		return nil, err
+	}
+}
+
+// transportErr classifies a socket-level failure. A sent correlated mutation has an unknown
+// outcome that only the authority's correlation store can settle; an ambiguous Ask failure is
+// instead returned unavailable without status recovery or resend.
 func transportErr(stage string, err error) *apperr.Error {
 	return apperr.Wrap(apperr.KindUnavailable, "", stage,
 		"the connection to the governed authority failed", err)
@@ -228,7 +273,7 @@ func (c *Client) dial(ctx context.Context) (*conn, error) {
 		return nil, apperr.Wrap(apperr.KindUnavailable, "", "connect",
 			"cannot reach the governed authority at "+c.cfg.SocketPath, err)
 	}
-	return &conn{nc: nc, br: bufio.NewReader(nc)}, nil
+	return &conn{nc: nc, br: bufio.NewReader(nc), maxResponseLineBytes: c.cfg.MaxResponseLineBytes}, nil
 }
 
 // acquire checks out a connection: an idle one if available (retiring any that idled past the
@@ -316,12 +361,15 @@ func (c *Client) signalFree() {
 // returned as an error carrying the refusal (its class reachable via errors.As).
 //
 // Failure discipline (mirroring the reference bridge):
-//   - An inspect (non-mutation) request that hits a transport failure is retried exactly once on a
-//     fresh connection; a second failure surfaces as typed unavailable.
+//   - An inspect request that hits a transport failure is retried exactly once on a fresh
+//     connection; a second failure surfaces as typed unavailable.
 //   - A correlated mutation is NEVER re-sent. On a transport failure the client reconnects within
 //     the recovery budget and resolves the outcome through request.get_status; what it returns is
 //     the authority's own recorded terminal outcome (including its interrupted-failure record
 //     after a server restart), or a typed "outcome unresolved" error it could not settle.
+//   - Ask is protected and record-writing but has no request ID: an ambiguous transport failure is
+//     typed unavailable with no resend or status recovery. An explicit pre-admission server_busy
+//     refusal is separate and receives its bounded retry.
 //   - An error response from the authority is returned as a decoded Refusal wrapped in the
 //     application's error kinds; unknown-verb parse failures from an older server are typed
 //     unavailable and are never retried.
@@ -368,8 +416,8 @@ func (c *Client) roundTrip(ctx context.Context, req *Request, line []byte) (*Res
 			// the authority's correlation store rather than re-sending.
 			return c.recoverOutcome(context.WithoutCancel(ctx), req)
 		}
-		if !req.IsMutation() && ctx.Err() == nil {
-			// Inspect verbs have no side effect: one reconnect-retry is safe.
+		if req.IsTransportRetrySafe() && ctx.Err() == nil {
+			// Read-only verbs have no side effect: one reconnect-retry is safe.
 			if cn2, err2 := c.acquire(ctx); err2 == nil {
 				respLine2, err3 := cn2.call(ctx, line, timeout)
 				if err3 != nil {
@@ -382,8 +430,7 @@ func (c *Client) roundTrip(ctx context.Context, req *Request, line []byte) (*Res
 		}
 		if typed != nil && typed.Kind == apperr.KindUnavailable && errors.Is(err, context.DeadlineExceeded) {
 			return nil, apperr.New(apperr.KindUnavailable, "", req.verb,
-				"deadline exceeded while the request was in flight; "+
-					"for a correlated mutation recover the outcome by its request_id")
+				"deadline exceeded while the request was in flight; its outcome may be unknown")
 		}
 		return nil, err
 	}

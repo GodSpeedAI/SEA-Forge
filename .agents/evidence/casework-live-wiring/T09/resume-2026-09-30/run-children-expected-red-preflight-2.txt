@@ -1,0 +1,7 @@
+HOST RAM
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.3Gi       269Mi       637Mi       3.1Gi       2.5Gi
+Swap:           12Gi       7.5Gi       4.5Gi
+COMPILER PROCESS SCAN (PID COMM ARGS)
+2105793 bash            /bin/bash -c printf '%s\n' 'HOST RAM' && free -h && printf '%s\n' 'COMPILER PROCESS SCAN (PID COMM ARGS)' && ps -eo pid=,comm=,args= | awk 'tolower($0) ~ /(go test|\/go-build|compile|link|cargo|rustc|bun test|tsc)/ {print}'
+2105796 awk             awk tolower($0) ~ /(go test|\/go-build|compile|link|cargo|rustc|bun test|tsc)/ {print}
