@@ -17,6 +17,13 @@ use tokio::net::{unix::OwnedReadHalf, unix::OwnedWriteHalf, UnixStream};
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 const POLICY: &str = "version: \"0.1\"\nrules:\n  - name: allow-actions\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_action\n  - name: gate-capabilities\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_capability\n    requires_approval: true\n";
 
+/// Same meaning as `SRC`, different bytes (a comment-only edit): a new world, the same semantic closure.
+const EDITED: &str = "// reviewed\n@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
+/// A different model.
+const CHANGED: &str =
+    "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\nentity \"Pump\" { key id: uuid }\n";
+const TRANSITION_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: moves\n    verdict: allow\n    actor_role: service\n    operation_kind: world_transition\n  - name: approvers\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
+
 fn world_ref() -> String {
     world_ref_of(SRC)
 }
@@ -68,6 +75,11 @@ async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) 
     let root = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(root.path().join("worlds")).unwrap();
     std::fs::write(root.path().join("worlds/demo.sea"), SRC).unwrap();
+    // Same logical file name in other directories: a world's identity includes its logical URIs.
+    for (dir, src) in [("worlds-edited", EDITED), ("worlds-changed", CHANGED)] {
+        std::fs::create_dir_all(root.path().join(dir)).unwrap();
+        std::fs::write(root.path().join(dir).join("demo.sea"), src).unwrap();
+    }
     std::fs::write(root.path().join("sea-forge-policy.yaml"), policy).unwrap();
     let socket = std::env::temp_dir().join(format!(
         "sf-cep-{}-{}.sock",
@@ -97,12 +109,26 @@ async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) 
         cep_authority: CepAuthorityConfig {
             enabled,
             policy: "sea-forge-policy.yaml".into(),
-            worlds: vec![CepWorldConfig {
-                name: "demo".into(),
-                base: "worlds".into(),
-                entry: "demo.sea".into(),
-                files: vec!["demo.sea".into()],
-            }],
+            worlds: vec![
+                CepWorldConfig {
+                    name: "demo".into(),
+                    base: "worlds".into(),
+                    entry: "demo.sea".into(),
+                    files: vec!["demo.sea".into()],
+                },
+                CepWorldConfig {
+                    name: "demo".into(),
+                    base: "worlds-edited".into(),
+                    entry: "demo.sea".into(),
+                    files: vec!["demo.sea".into()],
+                },
+                CepWorldConfig {
+                    name: "demo".into(),
+                    base: "worlds-changed".into(),
+                    entry: "demo.sea".into(),
+                    files: vec!["demo.sea".into()],
+                },
+            ],
             approval_ttl_hours: 24,
             settlement: Default::default(),
         },
@@ -485,4 +511,97 @@ async fn evidence_then_settlement_over_the_socket_and_completion_alone_settles_n
         ))
         .await;
     assert_eq!(rejected["status"], "rejected", "{rejected}");
+}
+
+fn transition(source: &str, target: &str, op: &str, kind: &str) -> Value {
+    let mut r = request(source, op, "world_transition", "transition");
+    r["extensions"]["godspeed.authority_request"]["resource_id"] = json!(target);
+    r["extensions"]["godspeed.world_transition"] = json!({
+        "target_world_ref": target, "transition_kind": kind,
+        "reason": "adopt the reviewed model", "compatibility": "compatible"
+    });
+    r
+}
+
+#[tokio::test]
+async fn stage10_a_world_transition_is_decided_approved_and_listed_over_the_socket() {
+    let (_root, socket) = boot_with(true, TRANSITION_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let (base, edited, changed) = (world_ref(), world_ref_of(EDITED), world_ref_of(CHANGED));
+
+    // Nothing has moved yet.
+    let none = c.call(json!({"verb": "authority_transitions"})).await;
+    assert_eq!(none["transitions"], json!([]), "{none}");
+
+    // A meaning-preserving move follows policy.
+    let moved = c
+        .call(verb(
+            transition(&base, &edited, "op-t1", "source_edit_only"),
+            "op-t1",
+        ))
+        .await;
+    assert_eq!(decision(&moved), "allow", "{moved}");
+
+    // A move across a semantic change is floored to an escalation although policy says allow.
+    let esc = c
+        .call(verb(
+            transition(&base, &changed, "op-t2", "semantic_change"),
+            "op-t2",
+        ))
+        .await;
+    assert_eq!(decision(&esc), "escalate", "{esc}");
+    let approval = esc["envelope"]["extensions"]["godspeed.authority_decision"]["approval_id"]
+        .as_str()
+        .expect("approval id")
+        .to_string();
+    assert_eq!(
+        c.call(json!({"verb": "authority_transitions"})).await["transitions"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1,
+        "an escalation is not a move"
+    );
+
+    // The requester cannot approve; an operator can; the revalidated request is allowed.
+    let denied = c
+        .call(as_actor(
+            json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-self"}),
+            "cognate-service",
+            "service",
+        ))
+        .await;
+    assert!(denied["error_class"].is_string(), "{denied}");
+    let resolved = c
+        .call(as_actor(
+            json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-ok"}),
+            "op-alice",
+            "operator",
+        ))
+        .await;
+    assert_eq!(resolved["state"], "approved", "{resolved}");
+    let mut again = transition(&base, &changed, "op-t2b", "semantic_change");
+    again["extensions"]["godspeed.authority_request"]["approval_id"] = json!(approval);
+    again["lineage_refs"] = json!(["env-authority_request-op-t2"]);
+    let allowed = c.call(verb(again, "op-t2b")).await;
+    assert_eq!(decision(&allowed), "allow", "{allowed}");
+
+    let listed = c.call(json!({"verb": "authority_transitions"})).await;
+    let all = listed["transitions"].as_array().unwrap();
+    assert_eq!(all.len(), 2, "{listed}");
+    assert_eq!(all[0]["record"]["semantic_closure_equal"], true);
+    assert_eq!(all[0]["approval_id"], Value::Null);
+    assert_eq!(all[1]["record"]["semantic_closure_equal"], false);
+    assert_eq!(all[1]["approval_id"], json!(approval));
+    assert_eq!(all[1]["record"]["target_world_ref"], json!(changed));
+
+    // A world SEA-Forge never registered fails closed with a stable class.
+    let unknown = format!("world:demo@sha256:{}", "e".repeat(64));
+    let r = c
+        .call(verb(
+            transition(&base, &unknown, "op-t3", "migration"),
+            "op-t3",
+        ))
+        .await;
+    assert_eq!(r["error_class"], "cep_transition_refused", "{r}");
 }

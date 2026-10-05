@@ -169,6 +169,16 @@ pub fn list(config: &ServerConfig, root: &Path) -> Value {
     })
 }
 
+/// Every allowed world transition (`authority_transitions` verb; read-only). Derived from the ledger.
+pub fn transitions(config: &ServerConfig, root: &Path) -> Value {
+    with_service(config, root, |service| match service.transitions() {
+        Ok(all) => {
+            json!({"ok": true, "transitions": all.iter().map(|t| t.to_json()).collect::<Vec<_>>()})
+        }
+        Err(e) => refusal(e.class(), e),
+    })
+}
+
 pub fn respond(config: &ServerConfig, root: &Path, envelope: &Value, caller: &Actor) -> Value {
     with_service(config, root, |service| {
         match service.decide(envelope, caller) {
