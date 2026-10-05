@@ -52,6 +52,7 @@ pub mod sfwp;
 mod supervisor;
 pub mod swe_seed_reconciliation;
 mod transcript_seal;
+mod world_pin;
 
 pub use config::{resolve_cell_root, resolve_socket_override, ServerConfig};
 

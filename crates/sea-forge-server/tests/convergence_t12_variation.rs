@@ -33,6 +33,9 @@ use sea_forge_server::governed_work_ingress::accept_governed_work_request;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+const WORLD: &str =
+    "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
 fn sha256_hex(b: &[u8]) -> String {
     format!("{:x}", Sha256::digest(b))
 }
@@ -210,7 +213,7 @@ rules:
 
 fn e3_packet(wr: &str, domain: &str) -> Value {
     let payload = json!({
-        "namespace":"agentic_capability_loop","domain_model_hash": domain,"work_request_id": wr,"context_requirement_id": format!("cr-{}", wr),"context_packet_id": format!("ctx-{}", wr),"citations":[{"source":"runbook://deploy/blue-green","sha256": sha256_hex(b"runbook")}],
+        "namespace":"agentic_capability_loop","domain_model_hash": domain,"world_ref": WORLD,"work_request_id": wr,"context_requirement_id": format!("cr-{}", wr),"context_packet_id": format!("ctx-{}", wr),"citations":[{"source":"runbook://deploy/blue-green","sha256": sha256_hex(b"runbook")}],
     });
     json!({"schema_version":"v1","event_id": format!("e3-{}", wr),"source_agent":"context-kernel","event_type":"ContextPacketCreated","occurred_at":"2026-08-26T12:00:00+00:00","idempotency_key": sha256_hex(b"ctx"),"payload": payload,"provenance":{"origin":"context-kernel","chain":[format!("domain_model_hash:{domain}")]}})
 }
@@ -221,6 +224,7 @@ fn e4_request(wr: &str, domain: &str) -> (Value, Value) {
     let payload = json!({
         "namespace": "agentic_capability_loop",
         "domain_model_hash": domain,
+        "world_ref": WORLD,
         "work_request_id": wr,
         "affordance_id": "aff-t12-canonical-001",
         "actor": {"actor_id": "agent-operator", "role": "R-AA"},
@@ -263,6 +267,7 @@ fn t12_success_via_real_gates() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .expect("Allow must emit");
     ledger
@@ -311,7 +316,7 @@ fn t12_authority_denied_produces_no_invocation_and_no_side_effect() {
     let decision = deny_decision(&h);
     assert_ne!(format!("{:?}", decision.verdict), "Allow");
     let res = sea_forge_server::governed_execution_boundary::emit_authorized_invocation(
-        &decision, WR_DENY, &domain, &domain, "e4-deny", None,
+        &decision, WR_DENY, &domain, &domain, "e4-deny", None, WORLD,
     );
     assert!(res.is_err(), "deny must not emit AuthorizedInvocation");
     let mut ledger = InvocationLedger::default();
@@ -335,6 +340,7 @@ fn t12_authority_escalated_produces_no_invocation() {
         &domain,
         "e4-escalate",
         None,
+        WORLD,
     );
     assert!(res.is_err(), "escalate must not emit AuthorizedInvocation");
 }
@@ -355,6 +361,7 @@ fn t12_execution_failure_settlement_rejected_but_observable() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -406,6 +413,7 @@ fn t12_execution_timeout_settlement_rejected() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -451,6 +459,7 @@ fn t12_operational_settlement_failure_after_exit_zero() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -491,6 +500,7 @@ fn t12_interruption_after_execution_before_settlement_preserves_provenance() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -552,6 +562,7 @@ fn t12_duplicate_observation_is_idempotent() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -586,6 +597,7 @@ fn t12_late_observation_cannot_settle_after_supersession() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -600,6 +612,7 @@ fn t12_late_observation_cannot_settle_after_supersession() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -633,6 +646,7 @@ fn t12_wrong_domain_identity_fails_closed_at_ingress_and_execution() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     );
     let err = res.unwrap_err();
     let err_msg = format!("{:?}", err);
@@ -702,6 +716,7 @@ fn t12_missing_evidence_artifact_rejected_or_rejected_settlement() {
         &domain,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger

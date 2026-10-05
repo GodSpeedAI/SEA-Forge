@@ -118,6 +118,9 @@ pub enum SettlementReturnError {
         expected: Vec<String>,
         recorded: Vec<String>,
     },
+    /// The settlement names no world or a malformed one (CEP-0008
+    /// `world_ref`).
+    World { reason: String },
 }
 
 impl std::fmt::Display for SettlementReturnError {
@@ -191,6 +194,7 @@ impl std::fmt::Display for SettlementReturnError {
                 f,
                 "operational settlement does not cite its actual invocation chain: expected {expected:?}, recorded {recorded:?}"
             ),
+            Self::World { reason } => write!(f, "semantic world rejected: {reason}"),
         }
     }
 }
@@ -220,6 +224,7 @@ impl From<crate::governed_execution_boundary::BoundaryError> for SettlementRetur
             BoundaryError::OpaquePayload { missing } => Self::OpaquePayload { missing },
             BoundaryError::InvalidExecutionStatus { got } => Self::InvalidExecutionStatus { got },
             BoundaryError::InvalidOptionalField { field } => Self::InvalidOptionalField { field },
+            BoundaryError::World { reason } => Self::World { reason },
             BoundaryError::CausalityMissing {
                 expected_parent,
                 recorded,
@@ -441,6 +446,12 @@ pub fn validate_operational_settlement_wire(
         return Err(SettlementReturnError::OpaquePayload { missing });
     }
 
+    // CEP-0008: the settlement must name a well-formed world. It is not one
+    // of the frozen REQUIRED_FIELDS; it is checked here so the producer and
+    // the consumer's mirror battery agree.
+    crate::world_pin::from_payload(payload)
+        .map_err(|reason| SettlementReturnError::World { reason })?;
+
     let work_request_id = payload
         .get("work_request_id")
         .and_then(Value::as_str)
@@ -610,25 +621,31 @@ pub fn emit_operational_settlement(
 ) -> Result<OperationalSettlementReturn, SettlementReturnError> {
     let evaluation = evaluate_operational_settlement(settled, declared_criteria)?;
 
-    let (invocation_id, work_request_id, authority_decision_id, execution_status, observed_effects) =
-        match settled {
-            ObservationOutcome::Settled {
-                invocation_id,
-                work_request_id,
-                authority_decision_id,
-                execution_status,
-                observed_effects,
-            } => (
-                invocation_id.clone(),
-                work_request_id.clone(),
-                authority_decision_id.clone(),
-                execution_status.clone(),
-                observed_effects.clone(),
-            ),
-            ObservationOutcome::DuplicateDelivery => {
-                return Err(SettlementReturnError::NothingSettled)
-            }
-        };
+    let (
+        invocation_id,
+        work_request_id,
+        authority_decision_id,
+        execution_status,
+        observed_effects,
+        world_ref,
+    ) = match settled {
+        ObservationOutcome::Settled {
+            invocation_id,
+            work_request_id,
+            authority_decision_id,
+            execution_status,
+            observed_effects,
+            world_ref,
+        } => (
+            invocation_id.clone(),
+            work_request_id.clone(),
+            authority_decision_id.clone(),
+            execution_status.clone(),
+            observed_effects.clone(),
+            world_ref.clone(),
+        ),
+        ObservationOutcome::DuplicateDelivery => return Err(SettlementReturnError::NothingSettled),
+    };
 
     for (field, value) in [
         ("invocation_id", invocation_id.as_str()),
@@ -646,6 +663,9 @@ pub fn emit_operational_settlement(
         check_identity_string(field, value)
             .map_err(|field| SettlementReturnError::PlaceholderField { field })?;
     }
+
+    crate::world_pin::verify(&world_ref)
+        .map_err(|reason| SettlementReturnError::World { reason })?;
 
     verify_model_identity(declared_model_sha256)
         .map_err(|got| SettlementReturnError::PlaceholderIdentity { got })?;
@@ -685,6 +705,7 @@ pub fn emit_operational_settlement(
         Value::String(declared_model_sha256.to_string()),
     );
     payload.insert("namespace".into(), Value::String(NAMESPACE.into()));
+    payload.insert("world_ref".into(), Value::String(world_ref.clone()));
     payload.insert(
         "work_request_id".into(),
         Value::String(work_request_id.clone()),

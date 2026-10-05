@@ -21,6 +21,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 pub mod world;
+pub use domainforge_core::application::world::WorldRef;
 pub use world::{WorldBindingError, WorldRegistry};
 
 /// A source file in a `SeaSourceSet`.

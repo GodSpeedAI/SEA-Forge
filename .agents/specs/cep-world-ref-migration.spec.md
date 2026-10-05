@@ -103,3 +103,11 @@ without a new transport and without replacing the legacy field.
 
 ### Out of scope
 Transport changes, legacy `sea.agent.event.v1` schema revision, digest verification in these repos, merging branches.
+
+### Stage 9 — as built (differences from the text above)
+- Boundaries 8-11 all ride the legacy `sea.agent.event.v1` family; no new transport and no new CEP profile. cep has no `context_bundle` profile, so Context Kernel packets are a task-context payload extension, not a conformant CEP `context_bundle` envelope.
+- GodSpeed-Agent: consequential events (`ExecutionEvidenceIngested`, `SettlementRecorded`, `CapabilityUpdated`, `TwinUpdated`) refuse to emit without a world; diagnostics (`RepetitionPlanned`, `CoherenceBreakDetected`, `LearningProposalCreated`) emit with `world_ref: null`, because a missing world is itself a coherence break and must stay reportable. `DesiredDirection` and `WorkRequested` require `world_ref` as a keyword argument.
+- GodSpeed-Agent evidence ingest: a declared world must equal the deployment pin; evidence with no `world_ref` stays provisional and is recorded `world_binding: "unbound"`, because RealityTrace's legacy E8 emitter sends none and modifying RealityTrace is out of scope.
+- SWE_SEED: the world is carried and checked across E1, E2/E3, E4, E6 and E7, not only at E6. `OperationalSettlementAdjudicator::adjudicate` gained an `originating_world_ref` argument; `ContextRequest`/`ExpectedContext` gained `world_ref` and `require_complete`.
+- SEA-Forge (library chain in `sea-forge-server`): the world is pinned at E4 intake, stored on the authorized invocation, and read back from the LEDGER record at settlement; an execution observation may claim a world but cannot move the cycle into another one. `GovernedWorkIntent::verify_world(&WorldRegistry)` is the hook for the real digest check. `emit_authorized_invocation` gained a `world_ref` argument.
+- Gauntlet: confirmation only (tests), per R-GN1.
