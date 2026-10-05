@@ -1,12 +1,12 @@
 name: CI
 
-# Required gate for every pull request into main, every push to main, and
+# Required gate for every pull request (whatever its base: stacked branches
+# such as casework/* are where most work lands first), every push to main, and
 # manual runs. Path filters are intentionally NOT used: a path filter can
 # leave a required check permanently pending, which would silently block or
 # silently pass a PR. Every PR runs the full sweep.
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
