@@ -38,6 +38,9 @@ was about to read, so SEA-Forge failed on a parse error). Caught by requiring th
   shallow PR checkout; replaced by a path-and-rule allowlist for the same inspected false positives.
 - **RealityTrace test race:** two helpers wrote to a child's stdin and panicked on a broken pipe when the child
   rejected its arguments early.
+- The workbench's own `Cargo.lock` still pinned `domainforge-core` 0.16.0 while the crates it links require
+  `=0.19.0`; regenerated (it only surfaced when CI built the workbench on this base). Two further lint errors that
+  only the workbench and macOS jobs reach (needless borrows in `bridge.rs`; an import unused off Linux) are fixed.
 - SEA-Forge CI lacked `bun` and the Tauri system libraries for its workbench jobs (never exercised on a stacked base).
 
 ## Verification (on the branch heads below)
