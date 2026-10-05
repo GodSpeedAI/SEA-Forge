@@ -812,6 +812,8 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::AgentProbe { .. }
         | Request::AuthorityRequest { .. }
         | Request::AuthorityApproval { .. }
+        | Request::AuthorityEvidence { .. }
+        | Request::AuthoritySettle { .. }
         | Request::CaseCommit { .. }
         | Request::ApprovalDecide { .. }
         | Request::CaseAddItem { .. }

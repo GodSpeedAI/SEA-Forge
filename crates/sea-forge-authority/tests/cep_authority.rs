@@ -110,6 +110,7 @@ impl Fixture {
             worlds: &self.worlds,
             root: self.root.path(),
             approval_ttl: chrono::Duration::hours(24),
+            criteria: Default::default(),
         }
     }
     fn ledger_dir_exists(&self) -> bool {

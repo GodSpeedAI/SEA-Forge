@@ -104,6 +104,7 @@ async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) 
                 files: vec!["demo.sea".into()],
             }],
             approval_ttl_hours: 24,
+            settlement: Default::default(),
         },
         ..ServerConfig::default()
     };
@@ -375,4 +376,113 @@ async fn resolution_needs_a_verified_actor_and_a_valid_resolution() {
         ))
         .await;
     assert_eq!(bad["error_class"], "cep_request_invalid", "{bad}");
+}
+
+const EVIDENCE_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: a\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_action\n  - name: e\n    verdict: allow\n    actor_role: service\n    operation_kind: evidence_mutation\n  - name: s\n    verdict: allow\n    actor_role: service\n    operation_kind: settlement_declaration\n";
+
+fn evidence_packet(world: &str, op: &str, direction: &str) -> Value {
+    json!({
+        "envelope_id": format!("env-evidence_packet-{op}"),
+        "cep_version": "1.0.0", "envelope_version": "1.0", "envelope_kind": "evidence_packet",
+        "created_at": "2026-10-04T12:05:00Z", "created_by": "cognate-realitytrace-adapter",
+        "scope": {"evaluation_context": "godspeed-evidence_packet", "world_ref": world},
+        "boundary_record": {"scope": "s", "included_sections": ["evidence"], "excluded_sections": [],
+            "known_omissions": ["only RealityTrace evidence"], "unknowns": [], "redactions": [],
+            "compression_notes": [], "out_of_scope_entities": [], "classification": "internal", "limitations": []},
+        "completeness_status": "partial", "omission_status": "marked",
+        "provenance_refs": ["prov-e"], "validation_status": "valid",
+        "lineage_refs": [format!("env-execution_trace-{op}")],
+        "provenance": [{"provenance_id": "prov-e", "source_system_refs": ["realitytrace"],
+            "producer_refs": ["cognate-realitytrace-adapter"], "production_method": "evidence_packaging", "created_at": "2026-10-04T12:05:00Z"}],
+        "questions": [{"question_id": "q-1", "question_form": "Did the operation reach the declared state?"}],
+        "evidence": [{"evidence_id": format!("ev-{op}"), "evidence_type": "test_result", "question_ref": "q-1",
+            "target_entity_ref": "concept:runtime_execution", "direction": direction, "reliability": "high"}],
+        "extensions": {
+            "cep.profile": {"profile_id": "godspeed.evidence_packet", "profile_version": "1.0.0"},
+            "godspeed.evidence_packet": {"operation_id": op,
+                "authority_decision_ref": format!("env-authority_decision-{op}"),
+                "execution_trace_ref": format!("env-execution_trace-{op}")}
+        }
+    })
+}
+
+#[tokio::test]
+async fn evidence_then_settlement_over_the_socket_and_completion_alone_settles_nothing() {
+    let (_root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+
+    // Execution without evidence: allowed, but there is nothing to settle.
+    let allowed = c
+        .call(verb(
+            request(&world, "op-s1", "action", "run.start"),
+            "op-s1",
+        ))
+        .await;
+    assert_eq!(decision(&allowed), "allow", "{allowed}");
+    let none = c
+        .call(
+            json!({"verb": "authority_settle", "operation_id": "op-s1", "request_id": "settle-0",
+                     "actor": {"actor_id": "cognate-service", "role": "service"}}),
+        )
+        .await;
+    assert_eq!(none["error_class"], "cep_evidence_refused", "{none}");
+
+    // An actor is required for both new verbs.
+    let anon = c
+        .call(json!({"verb": "authority_evidence", "envelope": evidence_packet(&world, "op-s1", "supports"), "request_id": "ev-anon"}))
+        .await;
+    assert_eq!(anon["error_class"], "identity_required", "{anon}");
+
+    // Evidence for an operation nobody allowed is refused.
+    let ghost = c
+        .call(as_actor(
+            json!({"verb": "authority_evidence", "envelope": evidence_packet(&world, "op-ghost", "supports"), "request_id": "ev-ghost"}),
+            "cognate-service",
+            "service",
+        ))
+        .await;
+    assert_eq!(ghost["error_class"], "cep_evidence_refused", "{ghost}");
+
+    let ev = as_actor(
+        json!({"verb": "authority_evidence", "envelope": evidence_packet(&world, "op-s1", "supports"), "request_id": "ev-1"}),
+        "cognate-service",
+        "service",
+    );
+    let acked = c.call(ev.clone()).await;
+    assert_eq!(acked["ok"], true, "{acked}");
+    // The same request id replays rather than recording twice.
+    assert_eq!(c.call(ev).await, acked);
+
+    let settle = as_actor(
+        json!({"verb": "authority_settle", "operation_id": "op-s1", "request_id": "settle-1"}),
+        "cognate-service",
+        "service",
+    );
+    let settled = c.call(settle.clone()).await;
+    assert_eq!(settled["status"], "settled", "{settled}");
+    assert_eq!(settled["final"], true);
+    assert_eq!(settled["envelope"]["envelope_kind"], "settlement_packet");
+    assert_eq!(c.call(settle).await, settled);
+
+    // Contradicting evidence rejects.
+    c.call(verb(
+        request(&world, "op-s2", "action", "run.start"),
+        "op-s2",
+    ))
+    .await;
+    let bad = as_actor(
+        json!({"verb": "authority_evidence", "envelope": evidence_packet(&world, "op-s2", "contradicts"), "request_id": "ev-2"}),
+        "cognate-service",
+        "service",
+    );
+    assert_eq!(c.call(bad).await["ok"], true);
+    let rejected = c
+        .call(as_actor(
+            json!({"verb": "authority_settle", "operation_id": "op-s2", "request_id": "settle-2"}),
+            "cognate-service",
+            "service",
+        ))
+        .await;
+    assert_eq!(rejected["status"], "rejected", "{rejected}");
 }

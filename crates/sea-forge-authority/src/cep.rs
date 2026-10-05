@@ -28,6 +28,58 @@ pub const DECISION_PROFILE: &str = "godspeed.authority_decision";
 pub const PROFILE_VERSION: &str = "1.0.0";
 pub const MAX_ENVELOPE_BYTES: usize = 64 * 1024;
 pub const LEDGER_ID: &str = "cognate-authority";
+/// Evidence and settlement packets may carry many items; still bounded.
+pub const MAX_PACKET_BYTES: usize = 256 * 1024;
+
+/// Settlement criteria, declared in cell configuration and bound into every allow decision when it is made,
+/// so settlement cannot later be judged against different criteria than the ones in force at decision time.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct SettlementCriteria {
+    /// Supporting evidence items needed (at or above `min_reliability`) for a question to settle.
+    pub min_supporting: u32,
+    /// `low` < `medium` < `high`.
+    pub min_reliability: String,
+}
+
+impl Default for SettlementCriteria {
+    fn default() -> Self {
+        Self {
+            min_supporting: 1,
+            min_reliability: "medium".into(),
+        }
+    }
+}
+
+fn reliability_rank(value: &str) -> Option<u8> {
+    match value {
+        "low" => Some(1),
+        "medium" => Some(2),
+        "high" => Some(3),
+        _ => None,
+    }
+}
+
+impl SettlementCriteria {
+    pub fn sha256(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let bytes = serde_json::to_vec(&json!({
+            "min_supporting": self.min_supporting,
+            "min_reliability": self.min_reliability,
+        }))
+        .unwrap_or_default();
+        format!("sha256:{:x}", Sha256::digest(bytes))
+    }
+    /// Valid criteria: at least one supporting item and a known reliability level.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.min_supporting == 0 {
+            return Err("min_supporting must be at least 1".into());
+        }
+        if reliability_rank(&self.min_reliability).is_none() {
+            return Err("min_reliability must be low, medium or high".into());
+        }
+        Ok(())
+    }
+}
 
 const FIELD_MAX: usize = 256;
 
@@ -41,6 +93,8 @@ pub enum CepAuthorityError {
     World(String),
     /// An approval that does not exist, is not approved, expired, was used, or names another operation.
     Approval(String),
+    /// Evidence or settlement refused: broken chain, wrong world, no allow decision, criteria changed, policy.
+    Evidence(String),
     Internal(String),
 }
 
@@ -59,6 +113,7 @@ impl fmt::Display for CepAuthorityError {
             ),
             Self::World(m) => write!(f, "world refused: {m}"),
             Self::Approval(m) => write!(f, "approval refused: {m}"),
+            Self::Evidence(m) => write!(f, "evidence or settlement refused: {m}"),
             Self::Internal(m) => write!(f, "{m}"),
         }
     }
@@ -81,6 +136,7 @@ impl CepAuthorityError {
             }
             Self::World(_) => "cep_world_refused",
             Self::Approval(_) => "cep_approval_refused",
+            Self::Evidence(_) => "cep_evidence_refused",
             Self::Internal(_) => "cep_authority_internal",
         }
     }
@@ -226,6 +282,7 @@ pub struct CepAuthorityService<'a> {
     pub root: &'a Path,
     /// How long an escalation stays approvable.
     pub approval_ttl: Duration,
+    pub criteria: SettlementCriteria,
 }
 
 /// Where an escalation stands, derived from the append-only ledger and nothing else.
@@ -414,6 +471,15 @@ impl CepAuthorityService<'_> {
             .collect())
     }
 
+    /// An allow carries the settlement criteria in force now; settlement is later judged against exactly these.
+    fn bind_criteria(&self, decision: &mut AuthorityDecision) {
+        if decision.verdict == Verdict::Allow {
+            decision
+                .policy_refs
+                .push(format!("settlement-criteria:{}", self.criteria.sha256()));
+        }
+    }
+
     fn evaluate(
         &self,
         request: &ParsedRequest,
@@ -514,6 +580,7 @@ impl CepAuthorityService<'_> {
                 decision.required_next_steps.clear();
                 decision.approval_request_id = None;
                 decision.policy_refs.push(format!("approval:{approval_id}"));
+                self.bind_criteria(&mut decision);
                 let committed = ledger
                     .commit_typed_new(
                         "authority_decision",
@@ -535,6 +602,7 @@ impl CepAuthorityService<'_> {
             }
         }
 
+        self.bind_criteria(&mut decision);
         if approvable(&decision) {
             let approval_id = approval_id_for(&request.operation_id);
             note.approval_id = Some(approval_id);
@@ -645,6 +713,550 @@ impl CepAuthorityService<'_> {
             "ledger_entry": committed.entry_ulid(),
         }))
     }
+}
+
+/// What an accepted evidence packet came to.
+#[derive(Debug)]
+pub struct EvidenceAck {
+    pub operation_id: String,
+    pub envelope_id: String,
+    pub items: usize,
+    pub committed: CommittedRecordRef,
+}
+
+/// A settlement, with the packet that expresses it.
+#[derive(Debug)]
+pub struct SettlementOutcome {
+    pub status: &'static str,
+    pub final_status: bool,
+    pub envelope: Value,
+    pub committed: CommittedRecordRef,
+    /// True when this call returned an earlier final settlement rather than making a new one.
+    pub replayed: bool,
+}
+
+const SETTLE_SUFFIX_FINAL: &str = "cep-settle-final:";
+
+fn id_text(value: &Value, pointer: &str, what: &'static str) -> Result<String, CepAuthorityError> {
+    let s = value
+        .pointer(pointer)
+        .and_then(Value::as_str)
+        .ok_or(CepAuthorityError::Malformed(what))?;
+    if s.is_empty() || s.len() > FIELD_MAX || s.chars().any(char::is_control) {
+        return Err(CepAuthorityError::Malformed(what));
+    }
+    Ok(s.to_string())
+}
+
+/// An item of a packet's `evidence` array, reduced to what settlement reads.
+#[derive(Debug, Clone)]
+struct EvidenceItem {
+    raw: Value,
+    id: String,
+    question: String,
+    direction: String,
+    reliability: String,
+}
+
+fn parse_items(packet: &Value) -> Result<Vec<EvidenceItem>, CepAuthorityError> {
+    let items = packet
+        .get("evidence")
+        .and_then(Value::as_array)
+        .filter(|a| !a.is_empty())
+        .ok_or(CepAuthorityError::Malformed(
+            "evidence must be a non-empty array",
+        ))?;
+    items
+        .iter()
+        .map(|raw| {
+            let direction = raw
+                .get("direction")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            if !matches!(direction, "supports" | "contradicts" | "unknown") {
+                return Err(CepAuthorityError::Malformed(
+                    "evidence direction must be supports, contradicts or unknown",
+                ));
+            }
+            Ok(EvidenceItem {
+                raw: raw.clone(),
+                id: id_text(raw, "/evidence_id", "evidence_id")?,
+                question: id_text(raw, "/question_ref", "evidence question_ref")?,
+                direction: direction.to_string(),
+                reliability: raw
+                    .get("reliability")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+            })
+        })
+        .collect()
+}
+
+/// A committed ALLOW decision for `operation_id`: the only thing evidence may hang from.
+struct AllowedOperation {
+    world_ref: String,
+    requester: String,
+    criteria_sha256: Option<String>,
+    decision_envelope_id: String,
+}
+
+fn allowed_operation(entries: &[LedgerEntry], operation_id: &str) -> Option<AllowedOperation> {
+    entries.iter().find_map(|entry| {
+        let key = entry.idempotency_key.as_deref()?;
+        if entry.record_kind != "authority_decision"
+            || !(key.starts_with("cep:") || key.starts_with("cep-approval-use:"))
+            || !entry.subject_refs.iter().any(|s| s == operation_id)
+        {
+            return None;
+        }
+        let decision: AuthorityDecision = serde_json::from_value(entry.payload.clone()).ok()?;
+        if decision.verdict != Verdict::Allow {
+            return None;
+        }
+        let action = serde_json::to_value(&decision.action_request.action).ok()?;
+        Some(AllowedOperation {
+            world_ref: text_at(&action, "/parameters/world_ref"),
+            requester: text_at(&entry.payload, "/action_request/actor/actor_id"),
+            criteria_sha256: decision
+                .policy_refs
+                .iter()
+                .find_map(|r| r.strip_prefix("settlement-criteria:"))
+                .map(str::to_string),
+            decision_envelope_id: format!("env-authority_decision-{operation_id}"),
+        })
+    })
+}
+
+impl CepAuthorityService<'_> {
+    /// Evaluate a governed surface (`evidence_mutation`, `settlement_declaration`) for `caller`. A refusal is
+    /// committed (it is governance-relevant) and returned as an error.
+    fn gate(
+        &self,
+        ledger: &LedgerStream,
+        surface: &str,
+        operation_id: &str,
+        caller: &Actor,
+    ) -> Result<(), CepAuthorityError> {
+        let action = AuthorityAction::Reserved {
+            resource_type: surface.to_string(),
+            resource_id: operation_id.to_string(),
+            parameters: json!({ "operation_id": operation_id, "surface": surface }),
+        };
+        let binding = self
+            .bundle
+            .resolve_identity(&caller.actor_id, caller.role.clone());
+        let decision = self.engine.evaluate(AuthorityEvaluation {
+            actor: caller,
+            binding,
+            run_id: operation_id,
+            case_id: "cognate",
+            plan_item_id: operation_id,
+            sequence: 1,
+            action: &action,
+            workspace_root: self.root,
+            evidence_refs: vec![format!("operation:{operation_id}")],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            environment: None,
+        })?;
+        // Every attempt is its own governance event: a re-evaluated decision is never byte-identical, so it
+        // is committed plainly rather than under an idempotency key.
+        ledger.commit_typed(
+            "authority_decision",
+            vec!["cognate".into(), operation_id.to_string()],
+            &decision,
+            vec![],
+        )?;
+        if decision.verdict != Verdict::Allow {
+            return Err(CepAuthorityError::Evidence(format!(
+                "{} may not use {surface} for {operation_id}: {}",
+                caller.actor_id, decision.reason
+            )));
+        }
+        Ok(())
+    }
+
+    /// Accept a RealityTrace-derived `evidence_packet` for an operation SEA-Forge allowed. Evidence is recorded;
+    /// it settles nothing.
+    pub fn submit_evidence(
+        &self,
+        packet: &Value,
+        caller: &Actor,
+    ) -> Result<EvidenceAck, CepAuthorityError> {
+        let size = serde_json::to_vec(packet)
+            .map(|v| v.len())
+            .unwrap_or(usize::MAX);
+        if size > MAX_PACKET_BYTES {
+            return Err(CepAuthorityError::Oversize(size));
+        }
+        let kind = id_text(packet, "/envelope_kind", "envelope_kind")?;
+        if kind != "evidence_packet" {
+            return Err(CepAuthorityError::WrongKind(kind));
+        }
+        let profile = format!(
+            "{}@{}",
+            id_text(
+                packet,
+                "/extensions/cep.profile/profile_id",
+                "extensions.cep.profile.profile_id"
+            )?,
+            id_text(
+                packet,
+                "/extensions/cep.profile/profile_version",
+                "extensions.cep.profile.profile_version"
+            )?
+        );
+        if profile != format!("godspeed.evidence_packet@{PROFILE_VERSION}") {
+            return Err(CepAuthorityError::WrongProfile(profile));
+        }
+        let world_ref = id_text(packet, "/scope/world_ref", "scope.world_ref")?;
+        let (world, _) = self
+            .worlds
+            .require(&world_ref)
+            .map_err(|e| CepAuthorityError::World(e.to_string()))?;
+        let envelope_id = id_text(packet, "/envelope_id", "envelope_id")?;
+        let ns = "/extensions/godspeed.evidence_packet";
+        let operation_id = id_text(packet, &format!("{ns}/operation_id"), "operation_id")?;
+        let decision_ref = id_text(
+            packet,
+            &format!("{ns}/authority_decision_ref"),
+            "authority_decision_ref",
+        )?;
+        let trace_ref = id_text(
+            packet,
+            &format!("{ns}/execution_trace_ref"),
+            "execution_trace_ref",
+        )?;
+        let lineage: Vec<&str> = packet
+            .get("lineage_refs")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        if !lineage.contains(&trace_ref.as_str()) {
+            return Err(CepAuthorityError::Evidence(
+                "lineage does not include the execution trace".into(),
+            ));
+        }
+        if packet
+            .get("questions")
+            .and_then(Value::as_array)
+            .is_none_or(|q| q.is_empty())
+        {
+            return Err(CepAuthorityError::Malformed(
+                "questions must be a non-empty array",
+            ));
+        }
+        let items = parse_items(packet)?;
+
+        let ledger = self.ledger()?;
+        let entries = ledger.read_entries()?;
+        let allowed = allowed_operation(&entries, &operation_id).ok_or_else(|| {
+            CepAuthorityError::Evidence(format!("{operation_id} has no committed allow decision"))
+        })?;
+        if allowed.decision_envelope_id != decision_ref {
+            return Err(CepAuthorityError::Evidence(
+                "authority_decision_ref does not name this operation's decision".into(),
+            ));
+        }
+        if allowed.world_ref != world.to_string() {
+            return Err(CepAuthorityError::Evidence(
+                "evidence is for a different world than the decision".into(),
+            ));
+        }
+        self.gate(&ledger, "evidence_mutation", &operation_id, caller)?;
+        let committed = ledger.commit_typed_once(
+            "evidence_packet",
+            format!("cep-evidence:{envelope_id}"),
+            vec!["cognate".into(), operation_id.clone()],
+            packet,
+            vec![],
+        )?;
+        Ok(EvidenceAck {
+            operation_id,
+            envelope_id,
+            items: items.len(),
+            committed,
+        })
+    }
+
+    /// Settle an operation from the evidence committed for it, against the criteria bound into its allow
+    /// decision. `settled` and `rejected` are final; `unsettled` can be re-evaluated when evidence changes.
+    pub fn settle(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+    ) -> Result<SettlementOutcome, CepAuthorityError> {
+        let ledger = self.ledger()?;
+        let entries = ledger.read_entries()?;
+        let allowed = allowed_operation(&entries, operation_id).ok_or_else(|| {
+            CepAuthorityError::Evidence(format!("{operation_id} has no committed allow decision"))
+        })?;
+        let bound = allowed.criteria_sha256.clone().ok_or_else(|| {
+            CepAuthorityError::Evidence("the allow decision carries no settlement criteria".into())
+        })?;
+        if bound != self.criteria.sha256() {
+            return Err(CepAuthorityError::Evidence(
+                "settlement criteria changed since this operation was allowed; refusing to judge it against different criteria".into(),
+            ));
+        }
+        // A final settlement is not made twice.
+        if let Some(done) = entries.iter().find(|e| {
+            e.idempotency_key.as_deref()
+                == Some(format!("{SETTLE_SUFFIX_FINAL}{operation_id}").as_str())
+        }) {
+            let status = settlement_status_of(&done.payload);
+            return Ok(SettlementOutcome {
+                status,
+                final_status: true,
+                envelope: done.payload.clone(),
+                committed: committed_ref(done),
+                replayed: true,
+            });
+        }
+        let packets: Vec<&LedgerEntry> = entries
+            .iter()
+            .filter(|e| {
+                e.record_kind == "evidence_packet"
+                    && e.subject_refs.iter().any(|s| s == operation_id)
+            })
+            .collect();
+        if packets.is_empty() {
+            return Err(CepAuthorityError::Evidence(format!(
+                "no evidence has been submitted for {operation_id}; an execution alone cannot be settled"
+            )));
+        }
+        self.gate(&ledger, "settlement_declaration", operation_id, caller)?;
+
+        let mut items: Vec<EvidenceItem> = Vec::new();
+        let mut questions: Vec<Value> = Vec::new();
+        let mut lineage: Vec<String> = Vec::new();
+        for entry in &packets {
+            for item in parse_items(&entry.payload)? {
+                if !items.iter().any(|i| i.id == item.id) {
+                    items.push(item);
+                }
+            }
+            for q in entry
+                .payload
+                .get("questions")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+            {
+                let id = q
+                    .get("question_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                if !questions
+                    .iter()
+                    .any(|e| e.get("question_id").and_then(Value::as_str) == Some(id))
+                {
+                    questions.push(q.clone());
+                }
+            }
+            lineage.push(text_at(&entry.payload, "/envelope_id"));
+        }
+
+        let min_rank = reliability_rank(&self.criteria.min_reliability).unwrap_or(2);
+        let mut settlements = Vec::new();
+        let mut any_rejected = false;
+        let mut all_settled = true;
+        let mut asked: Vec<String> = items.iter().map(|i| i.question.clone()).collect();
+        asked.sort();
+        asked.dedup();
+        let mut set_hash = sha_short(
+            &items
+                .iter()
+                .map(|i| i.id.as_str())
+                .collect::<Vec<_>>()
+                .join("|"),
+        );
+        for question in &asked {
+            let of: Vec<&EvidenceItem> = items.iter().filter(|i| &i.question == question).collect();
+            let contradicting: Vec<&&EvidenceItem> =
+                of.iter().filter(|i| i.direction == "contradicts").collect();
+            let supporting = of
+                .iter()
+                .filter(|i| {
+                    i.direction == "supports"
+                        && reliability_rank(&i.reliability).is_some_and(|r| r >= min_rank)
+                })
+                .count() as u32;
+            let (status, missing): (&str, Vec<String>) = if !contradicting.is_empty() {
+                any_rejected = true;
+                all_settled = false;
+                ("rejected", vec![])
+            } else if supporting >= self.criteria.min_supporting {
+                ("settled", vec![])
+            } else {
+                all_settled = false;
+                (
+                    "unsettled",
+                    vec![format!(
+                        "{} supporting evidence item(s) at reliability {} or better; {} required",
+                        supporting, self.criteria.min_reliability, self.criteria.min_supporting
+                    )],
+                )
+            };
+            let mut settlement = json!({
+                "settlement_id": format!("set-{operation_id}-{set_hash}-{}", sha_short(question)),
+                "settlement_status": status,
+                "transformation_ref": format!("tr-{operation_id}"),
+                "question_ref": question,
+                "evidence_refs": of.iter().map(|i| i.id.clone()).collect::<Vec<_>>(),
+                "threshold_basis": format!(
+                    "min_supporting={}; min_reliability={}; criteria={}",
+                    self.criteria.min_supporting, self.criteria.min_reliability, bound
+                ),
+            });
+            if !missing.is_empty() {
+                settlement["missing_evidence"] = json!(missing);
+            }
+            if !contradicting.is_empty() {
+                settlement["unresolved_contradictions"] = json!(contradicting
+                    .iter()
+                    .map(|i| i.id.clone())
+                    .collect::<Vec<_>>());
+            }
+            settlements.push(settlement);
+        }
+        let status: &'static str = if any_rejected {
+            "rejected"
+        } else if all_settled {
+            "settled"
+        } else {
+            "unsettled"
+        };
+        let final_status = status != "unsettled";
+        let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let world_ref = text_at(&packets[0].payload, "/scope/world_ref");
+        set_hash.truncate(12);
+        let envelope = json!({
+            "envelope_id": format!("env-settlement_packet-{operation_id}-{set_hash}"),
+            "cep_version": "1.0.0",
+            "envelope_version": "1.0",
+            "envelope_kind": "settlement_packet",
+            "created_at": now,
+            "created_by": "sea-forge-authority",
+            "scope": {"evaluation_context": "godspeed-settlement_packet", "world_ref": world_ref},
+            "boundary_record": {
+                "scope": "settlement of one Cognate operation from submitted evidence",
+                "included_sections": ["evidence", "questions", "settlements"],
+                "excluded_sections": [],
+                "known_omissions": ["evidence not submitted to SEA-Forge is not considered"],
+                "unknowns": [],
+                "redactions": [],
+                "compression_notes": [],
+                "out_of_scope_entities": [],
+                "classification": "internal",
+                "limitations": [],
+            },
+            "completeness_status": "partial",
+            "omission_status": "marked",
+            "provenance_refs": [format!("prov-settle-{operation_id}-{set_hash}")],
+            "validation_status": "valid",
+            "lineage_refs": lineage,
+            "provenance": [{
+                "provenance_id": format!("prov-settle-{operation_id}-{set_hash}"),
+                "source_system_refs": ["sea-forge"],
+                "producer_refs": ["sea-forge-authority"],
+                "production_method": "settlement_evaluation",
+                "created_at": now,
+            }],
+            "questions": questions,
+            "evidence": items.iter().map(|i| i.raw.clone()).collect::<Vec<_>>(),
+            "settlements": settlements,
+            "extensions": {
+                "cep.profile": {"profile_id": "godspeed.settlement_packet", "profile_version": PROFILE_VERSION},
+                "godspeed.settlement_packet": {
+                    "operation_id": operation_id,
+                    "authority_decision_ref": allowed.decision_envelope_id,
+                    "criteria_sha256": bound,
+                    "overall_status": status,
+                    "final": final_status,
+                    "declared_by": caller.actor_id,
+                },
+            },
+        });
+        let subjects = vec!["cognate".to_string(), operation_id.to_string()];
+        let committed = if final_status {
+            match ledger.commit_typed_new(
+                "settlement_packet",
+                format!("{SETTLE_SUFFIX_FINAL}{operation_id}"),
+                subjects,
+                &envelope,
+                vec![],
+            ) {
+                Ok(c) => c,
+                Err(_) => {
+                    // Another settlement became final first: return that one.
+                    let entries = ledger.read_entries()?;
+                    let done = entries
+                        .iter()
+                        .find(|e| {
+                            e.idempotency_key.as_deref()
+                                == Some(format!("{SETTLE_SUFFIX_FINAL}{operation_id}").as_str())
+                        })
+                        .ok_or_else(|| {
+                            CepAuthorityError::Internal("final settlement vanished".into())
+                        })?;
+                    return Ok(SettlementOutcome {
+                        status: settlement_status_of(&done.payload),
+                        final_status: true,
+                        envelope: done.payload.clone(),
+                        committed: committed_ref(done),
+                        replayed: true,
+                    });
+                }
+            }
+        } else {
+            // The same evidence set gives the same unsettled answer: return the recorded one.
+            let key = format!("cep-settle:{operation_id}:{set_hash}");
+            if let Some(done) = entries
+                .iter()
+                .find(|e| e.idempotency_key.as_deref() == Some(key.as_str()))
+            {
+                return Ok(SettlementOutcome {
+                    status,
+                    final_status: false,
+                    envelope: done.payload.clone(),
+                    committed: committed_ref(done),
+                    replayed: true,
+                });
+            }
+            ledger.commit_typed_once("settlement_packet", key, subjects, &envelope, vec![])?
+        };
+        Ok(SettlementOutcome {
+            status,
+            final_status,
+            envelope,
+            committed,
+            replayed: false,
+        })
+    }
+}
+
+fn sha_short(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    format!("{:x}", Sha256::digest(text.as_bytes()))[..16].to_string()
+}
+
+fn settlement_status_of(envelope: &Value) -> &'static str {
+    match envelope
+        .pointer("/extensions/godspeed.settlement_packet/overall_status")
+        .and_then(Value::as_str)
+    {
+        Some("settled") => "settled",
+        Some("rejected") => "rejected",
+        _ => "unsettled",
+    }
+}
+
+fn committed_ref(entry: &LedgerEntry) -> CommittedRecordRef {
+    entry.committed_ref()
 }
 
 /// What the decision envelope must say about an approval.

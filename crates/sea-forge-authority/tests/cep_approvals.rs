@@ -64,6 +64,7 @@ fn with<T>(
         worlds: &cell.worlds,
         root: cell.root.path(),
         approval_ttl: ttl,
+        criteria: Default::default(),
     };
     f(&service)
 }

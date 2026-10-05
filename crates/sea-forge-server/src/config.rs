@@ -122,6 +122,9 @@ pub struct CepAuthorityConfig {
     pub policy: String,
     #[serde(default)]
     pub worlds: Vec<CepWorldConfig>,
+    /// Settlement criteria, bound into every allow decision when it is made.
+    #[serde(default)]
+    pub settlement: CepSettlementConfig,
     /// How long an escalation stays approvable, in hours. 1..=720.
     #[serde(default = "default_cep_approval_ttl_hours")]
     pub approval_ttl_hours: u64,
@@ -129,6 +132,35 @@ pub struct CepAuthorityConfig {
 
 fn default_cep_approval_ttl_hours() -> u64 {
     24
+}
+
+/// Criteria for settling a Cognate operation from evidence (migration Stage 8).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CepSettlementConfig {
+    /// Supporting evidence items needed per question. At least 1.
+    #[serde(default = "default_min_supporting")]
+    pub min_supporting: u32,
+    /// `low`, `medium` or `high`: the minimum reliability that counts.
+    #[serde(default = "default_min_reliability")]
+    pub min_reliability: String,
+}
+
+fn default_min_supporting() -> u32 {
+    1
+}
+
+fn default_min_reliability() -> String {
+    "medium".into()
+}
+
+impl Default for CepSettlementConfig {
+    fn default() -> Self {
+        Self {
+            min_supporting: default_min_supporting(),
+            min_reliability: default_min_reliability(),
+        }
+    }
 }
 
 fn default_cep_policy() -> String {
@@ -142,6 +174,7 @@ impl Default for CepAuthorityConfig {
             policy: default_cep_policy(),
             worlds: Vec::new(),
             approval_ttl_hours: default_cep_approval_ttl_hours(),
+            settlement: CepSettlementConfig::default(),
         }
     }
 }

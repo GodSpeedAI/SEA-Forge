@@ -689,6 +689,19 @@ pub enum Request {
     },
     /// Every Cognate escalation that can be approved and where it stands. Read-only.
     AuthorityApprovals,
+    /// Submit a RealityTrace-derived CEP `evidence_packet` for an operation SEA-Forge allowed (Stage 8).
+    /// Records evidence; settles nothing.
+    AuthorityEvidence {
+        envelope: serde_json::Value,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Settle an operation from the evidence committed for it, against the criteria bound at decision time.
+    AuthoritySettle {
+        operation_id: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
     AgentList,
     AgentProbe {
         endpoint: String,
@@ -1453,6 +1466,8 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::AgentProbe { request_id, .. }
         | Request::AuthorityRequest { request_id, .. }
         | Request::AuthorityApproval { request_id, .. }
+        | Request::AuthorityEvidence { request_id, .. }
+        | Request::AuthoritySettle { request_id, .. }
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
         | Request::CaseCommit { request_id, .. }
@@ -1485,6 +1500,8 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::AgentProbe { .. }
             | Request::AuthorityRequest { .. }
             | Request::AuthorityApproval { .. }
+            | Request::AuthorityEvidence { .. }
+            | Request::AuthoritySettle { .. }
             | Request::Delegate { .. }
             | Request::CancelDelegation { .. }
             | Request::CaseCommit { .. }
@@ -2260,6 +2277,75 @@ pub async fn handle_request_as(
                 "authority.approval",
                 &response,
             );
+            response
+        }
+        Request::AuthorityEvidence {
+            envelope,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.evidence");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::submit_evidence(&config, &root, &envelope, &caller)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "evidence task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_evidence requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "authority.evidence",
+                &response,
+            );
+            response
+        }
+        Request::AuthoritySettle {
+            operation_id,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.settle");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::settle(&config, &root, &operation_id, &caller)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "settlement task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_settle requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "authority.settle", &response);
             response
         }
         Request::AuthorityApprovals => {

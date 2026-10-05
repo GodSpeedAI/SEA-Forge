@@ -91,6 +91,13 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
     Ok(registry)
 }
 
+fn criteria(config: &ServerConfig) -> sea_forge_authority::cep::SettlementCriteria {
+    sea_forge_authority::cep::SettlementCriteria {
+        min_supporting: config.cep_authority.settlement.min_supporting,
+        min_reliability: config.cep_authority.settlement.min_reliability.clone(),
+    }
+}
+
 fn ttl(config: &ServerConfig) -> chrono::Duration {
     chrono::Duration::hours(config.cep_authority.approval_ttl_hours.clamp(1, 720) as i64)
 }
@@ -131,6 +138,7 @@ fn with_service(
         worlds: worlds.as_ref(),
         root,
         approval_ttl: ttl(config),
+        criteria: criteria(config),
     };
     f(&service)
 }
@@ -169,6 +177,44 @@ pub fn respond(config: &ServerConfig, root: &Path, envelope: &Value, caller: &Ac
                 "envelope": out.envelope,
                 "decision_id": out.decision.decision_id,
                 "ledger_entry": out.committed.entry_ulid(),
+            }),
+            Err(e) => refusal(e.class(), e),
+        }
+    })
+}
+
+/// Accept a RealityTrace-derived `evidence_packet` for an allowed operation (`authority_evidence` verb).
+pub fn submit_evidence(
+    config: &ServerConfig,
+    root: &Path,
+    packet: &Value,
+    caller: &Actor,
+) -> Value {
+    with_service(config, root, |service| {
+        match service.submit_evidence(packet, caller) {
+            Ok(ack) => json!({
+                "ok": true,
+                "operation_id": ack.operation_id,
+                "envelope_id": ack.envelope_id,
+                "items": ack.items,
+                "ledger_entry": ack.committed.entry_ulid(),
+            }),
+            Err(e) => refusal(e.class(), e),
+        }
+    })
+}
+
+/// Settle an operation from its committed evidence (`authority_settle` verb).
+pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &Actor) -> Value {
+    with_service(config, root, |service| {
+        match service.settle(operation_id, caller) {
+            Ok(done) => json!({
+                "ok": true,
+                "status": done.status,
+                "final": done.final_status,
+                "replayed": done.replayed,
+                "envelope": done.envelope,
+                "ledger_entry": done.committed.entry_ulid(),
             }),
             Err(e) => refusal(e.class(), e),
         }
