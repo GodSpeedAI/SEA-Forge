@@ -36,7 +36,7 @@ Merged earlier (stages 0–10): cep #1 #2, DomainForge #132 #133 #134, Context-K
 
 | Repo | PR (base) | Branch @ SHA | Checks |
 |---|---|---|---|
-| SEA-Forge | #9 (`casework/live-wiring`) | `migration/cep-legacy-chain-verified` @ the PR head | see the PR |
+| SEA-Forge | #9 (`casework/live-wiring`) | `migration/cep-legacy-chain-verified` @ the PR head | lint, test, package pass; workbench and macOS fail on unrelated base issues (M-53) |
 | RealityTrace | #5 (`main`) | `migration/cep-world-evidence` @ 0461b50 | pass; last commit is test-only |
 | GodSpeed-Agent | #2 (`audit-corrections/neatcode-2026-07-29`) | `migration/cep-world-required-evidence` @ 4bfed12 | none (base has no CI); 1132/0 local |
 | GodSpeed-Agent | #3 (same base) | `ci/pytest` @ 47e3c37 | pass |
