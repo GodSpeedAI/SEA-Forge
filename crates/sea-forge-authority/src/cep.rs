@@ -796,7 +796,6 @@ fn parse_items(packet: &Value) -> Result<Vec<EvidenceItem>, CepAuthorityError> {
 /// A committed ALLOW decision for `operation_id`: the only thing evidence may hang from.
 struct AllowedOperation {
     world_ref: String,
-    requester: String,
     criteria_sha256: Option<String>,
     decision_envelope_id: String,
 }
@@ -817,7 +816,6 @@ fn allowed_operation(entries: &[LedgerEntry], operation_id: &str) -> Option<Allo
         let action = serde_json::to_value(&decision.action_request.action).ok()?;
         Some(AllowedOperation {
             world_ref: text_at(&action, "/parameters/world_ref"),
-            requester: text_at(&entry.payload, "/action_request/actor/actor_id"),
             criteria_sha256: decision
                 .policy_refs
                 .iter()
