@@ -51,3 +51,22 @@ requirements the code and tests answer are explicit. Process deviation noted in 
 - R5 Cognate: an escalated capability call inside a run records the escalation once, then waits on a durable `governance-approval` continuation (expiring with the approval window). Any resume only triggers revalidation; the authority alone decides. A rejected, expired or used approval closes the wait and fails the run. The provider never runs before an allow.
 - R6 `Runtime.pollApprovals()` (optionally timed) resumes approved waits and cancels closed ones, idempotently.
 - Out of scope: escalated actions (startRun etc.) wait nowhere and are refused with the approval id; surfacing Cognate approvals in the SEA-Forge workbench approval inbox (separate ledger stream, not the case approvals journal).
+
+## Stage 8 — execution -> RealityTrace -> evidence -> settlement
+
+Written before implementation. Roles are fixed by the migration brief and are the point of the stage:
+Cognate operates, RealityTrace observes, SEA-Forge settles. Execution is not evidence; evidence is not settlement.
+
+Findings from recon (observed with the released RealityTrace 0.3.0):
+- `sxr` writes its own closed CEP envelopes (`observation.recorded`, `evidence.created` as `evidence_packet`, `settlement.registered` as `settlement_packet`); `scope` is limited to repo/checkout/run keys (no `world_ref`), lineage is empty, kinds are fixed by record. Changing that needs a RealityTrace release, so this stage does not modify it (debt).
+- An invocation observation yields evidence with `direction: unknown`, so sxr's own settlement is `unsettled`. Completion alone cannot settle; supporting evidence needs a verifier.
+- sxr's settlement is RealityTrace's threshold judgment about its question. SEA-Forge's settlement is the governed acceptance of the operation. They are different facts and are never conflated.
+
+Requirements:
+- R1 Cognate emits a GodSpeed `execution_trace` envelope per governed capability invocation: `scope.world_ref`, `lineage_refs` to the authority decision envelope, `godspeed.execution_trace {operation_id, authority_decision_ref, correlation_id}`, the outcome as completion only. The authority reference reaches the trace through the recorded decision metadata, not by lookup at emission time.
+- R2 The trace is delivered to RealityTrace as the observation content (hash-addressed by sxr); Cognate's correlation ids keep riding in `extensions.cognate`.
+- R3 Cognate packages RealityTrace's recorded evidence and question into a GodSpeed `evidence_packet` (lineage to the trace envelope, same world, provenance naming the sxr ledger positions, items exactly as sxr recorded them: direction and reliability are never upgraded).
+- R4 SEA-Forge `authority_evidence` accepts an evidence packet only if: profile and kind are right; the world is registered and equals the authority decision's world; `authority_decision_ref` names a committed ALLOW decision for the same operation; items are well-formed. It commits the packet append-only (idempotent by envelope id). It never settles.
+- R5 SEA-Forge `authority_settle` evaluates the committed evidence for an operation against criteria declared in cell config and bound into the allow decision at decision time (`settlement-criteria:<sha256>` in `policy_refs`); if the configured criteria changed since, it refuses (no moving goalposts). Policy must allow the caller the `settlement_declaration` surface. Outcomes: `settled` (enough supporting evidence at or above the minimum reliability and none contradicting), `rejected` (any contradicting evidence), `unsettled` (otherwise, including trace-only). It returns a `settlement_packet` and commits it; `settled` and `rejected` are final for the operation, `unsettled` can be re-evaluated when the evidence set changes.
+- R6 Conformance: the three packets validate under cep's own validator.
+- Out of scope: SWE_SEED transport of the settlement packet (Stage 9), Gauntlet as a verifier (Stage 9), modifying RealityTrace.
