@@ -178,7 +178,7 @@ fn a_meaning_preserving_move_follows_policy_and_is_recorded() {
     assert_eq!(rec["target_world_ref"], c.edited);
     assert_eq!(rec["semantic_closure_equal"], true);
     assert_eq!(rec["compatibility"], "compatible");
-    assert_eq!(rec["authority_decision_ref"], facts[0].decision_id);
+    assert_eq!(rec["authority_decision_ref"], facts[0].ledger_entry);
     assert_eq!(facts[0].approval_id, None);
 }
 
@@ -463,4 +463,114 @@ fn the_record_validates_against_cep_when_the_checkout_is_present() {
     let out = child.wait_with_output().unwrap();
     let errs: Value = serde_json::from_slice(&out.stdout).expect("validator prints a JSON list");
     assert_eq!(errs, json!([]), "cep rejected the record: {errs}");
+}
+
+// --- M-46: a lineage stays in one world unless an allowed transition licenses the crossing ----------------
+
+/// A request pinned to `world` that carries the earlier work `lineage` forward. `transition_ref` names the
+/// allowed transition that licenses the crossing, if any.
+fn carry(
+    c: &Cell,
+    op: &str,
+    world: &str,
+    target: &str,
+    lineage: &[&str],
+    transition_ref: Option<&str>,
+) -> Result<CepDecision, CepAuthorityError> {
+    let mut req = request(
+        world,
+        op,
+        claim(target, "source_edit_only"),
+        target,
+        None,
+        lineage,
+    );
+    if let Some(t) = transition_ref {
+        req["extensions"]["godspeed.authority_request"]["transition_ref"] = json!(t);
+    }
+    with(c, OPEN, |s| s.decide(&req, &service()))
+}
+
+#[test]
+fn work_cannot_reach_across_worlds_without_a_transition() {
+    let c = cell();
+    // Earlier work decided in `base`.
+    mv(&c, OPEN, "m46-a", &c.base, &c.edited, "source_edit_only").unwrap();
+    // A request in `edited` that carries that work forward, citing no transition: refused.
+    let err = carry(
+        &c,
+        "m46-b",
+        &c.edited,
+        &c.base,
+        &["env-authority_request-m46-a"],
+        None,
+    )
+    .unwrap_err();
+    assert!(matches!(err, CepAuthorityError::Transition(_)), "{err}");
+    assert_eq!(err.class(), "cep_transition_refused");
+}
+
+#[test]
+fn an_allowed_transition_licenses_exactly_the_crossing_it_records() {
+    let c = cell();
+    let first = mv(&c, OPEN, "m46-c", &c.base, &c.edited, "source_edit_only").unwrap();
+    let licence = first.committed.entry_ulid().to_string();
+    let lineage = ["env-authority_request-m46-c"];
+
+    // The recorded base -> edited transition covers a lineage from base into edited.
+    let ok = carry(&c, "m46-d", &c.edited, &c.base, &lineage, Some(&licence)).unwrap();
+    assert_eq!(decision(&ok), "allow");
+
+    // A made-up reference licenses nothing.
+    let err = carry(
+        &c,
+        "m46-e",
+        &c.edited,
+        &c.base,
+        &lineage,
+        Some("01NOTATRANSITION"),
+    )
+    .unwrap_err();
+    assert!(matches!(err, CepAuthorityError::Transition(_)), "{err}");
+
+    // A real transition into a different world does not cover a crossing into this one.
+    let elsewhere = mv(&c, OPEN, "m46-f", &c.edited, &c.base, "source_edit_only").unwrap();
+    let err = carry(
+        &c,
+        "m46-g",
+        &c.edited,
+        &c.base,
+        &lineage,
+        Some(elsewhere.committed.entry_ulid()),
+    )
+    .unwrap_err();
+    assert!(matches!(err, CepAuthorityError::Transition(_)), "{err}");
+}
+
+#[test]
+fn a_lineage_inside_one_world_needs_no_transition_and_unknown_ids_are_not_judged() {
+    let c = cell();
+    mv(&c, OPEN, "m46-h", &c.base, &c.edited, "source_edit_only").unwrap();
+    // Same world as the cited work (it was decided in base): fine.
+    let same = carry(
+        &c,
+        "m46-i",
+        &c.base,
+        &c.edited,
+        &["env-authority_request-m46-h"],
+        None,
+    )
+    .unwrap();
+    assert_eq!(decision(&same), "allow");
+    // An id this ledger never decided is not judged here.
+    let unknown = carry(
+        &c,
+        "m46-j",
+        &c.base,
+        &c.edited,
+        &["env-from-elsewhere"],
+        None,
+    )
+    .unwrap();
+    assert_eq!(decision(&unknown), "allow");
 }

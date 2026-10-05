@@ -164,3 +164,15 @@ fail), a denied request (no invocation, no settlement), and E8 evidence from ano
 Not covered here, by design: E5B execution is simulated (real execution under a decision is Cognate's
 `just sea-forge-live`); an unreachable SEA-Forge is a Cognate fail-closed test; a mid-flight world transition is
 the CEP path (Stage 10), because the legacy chain refuses any second world (debt M-46).
+
+### Lineage across worlds (M-46)
+
+Operator accepted: an approved transition is the only way a request may cite a lineage from another world, enforced in
+SEA-Forge, and in-flight work stays pinned to its world and is never re-pinned.
+
+`check_lineage_worlds` runs before evaluation. For each cited envelope id this authority decided, the world it was
+decided in is read from the ledger. If any differs from the request's world, the request must carry
+`extensions["godspeed.authority_request"].transition_ref`, the **ledger entry** (a unique ULID; `decision_id` is only
+unique within one operation) of an allowed transition whose source is that world and whose target is the request's
+world. A missing, unknown, or non-covering reference is `cep_transition_refused`. Ids this ledger never decided are not
+judged. The transition record's `authority_decision_ref` now carries the ledger entry for the same reason.
