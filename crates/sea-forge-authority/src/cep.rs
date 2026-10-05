@@ -179,6 +179,9 @@ pub struct ParsedRequest {
     /// Set when this request revalidates an escalation that has since been approved.
     pub approval_ref: Option<String>,
     pub lineage_refs: Vec<String>,
+    /// The ledger entry of the allowed world transition that licenses a lineage reaching across worlds. It is the
+    /// entry (a unique ULID), not the `decision_id`, which is only unique within one operation.
+    pub transition_ref: Option<String>,
     /// Set for `OperationKind::WorldTransition`: the facts SEA-Forge recomputed, not the sender's claims.
     pub transition: Option<VerifiedTransition>,
 }
@@ -480,6 +483,12 @@ pub fn parse_request(
                     .collect()
             })
             .unwrap_or_default(),
+        transition_ref: match envelope.pointer(&format!("{ns}/transition_ref")) {
+            None | Some(Value::Null) => None,
+            Some(_) => {
+                Some(text(envelope, &format!("{ns}/transition_ref"), "transition_ref")?.to_string())
+            }
+        },
         transition,
     })
 }
@@ -728,7 +737,8 @@ impl CepAuthorityService<'_> {
             let Some(mut record) = action.pointer("/parameters/transition").cloned() else {
                 continue;
             };
-            record["authority_decision_ref"] = json!(decision.decision_id);
+            // The ledger entry, not `decision_id`: that is only unique within one operation ("auth_01" recurs).
+            record["authority_decision_ref"] = json!(entry.entry_ulid);
             out.push(TransitionFact {
                 operation_id: text_at(&action, "/parameters/operation_id"),
                 decision_id: decision.decision_id.clone(),
@@ -743,6 +753,66 @@ impl CepAuthorityService<'_> {
             });
         }
         Ok(out)
+    }
+
+    /// A lineage stays in one world. If a request cites an envelope this authority decided in another world, the
+    /// only thing that licenses that is an allowed transition from that world to this one, cited as
+    /// `transition_ref`. Work already decided stays pinned to its world and is never re-pinned; a request in the
+    /// new world carries it forward explicitly. Cited ids this ledger never decided are not judged here.
+    fn check_lineage_worlds(&self, request: &ParsedRequest) -> Result<(), CepAuthorityError> {
+        if request.lineage_refs.is_empty() {
+            return Ok(());
+        }
+        let entries = self.ledger()?.read_entries()?;
+        let mut crossed: Vec<String> = Vec::new();
+        for entry in &entries {
+            let Ok(decision) = serde_json::from_value::<AuthorityDecision>(entry.payload.clone())
+            else {
+                continue;
+            };
+            let cited = decision.audit_record.evidence_refs.iter().any(|r| {
+                r.strip_prefix("cep:")
+                    .is_some_and(|id| request.lineage_refs.iter().any(|l| l == id))
+            });
+            if !cited {
+                continue;
+            }
+            let Ok(action) = serde_json::to_value(&decision.action_request.action) else {
+                continue;
+            };
+            let world = text_at(&action, "/parameters/world_ref");
+            if !world.is_empty() && world != request.world_ref && !crossed.contains(&world) {
+                crossed.push(world);
+            }
+        }
+        if crossed.is_empty() {
+            return Ok(());
+        }
+        let Some(transition_ref) = &request.transition_ref else {
+            return Err(CepAuthorityError::Transition(format!(
+                "lineage reaches into {}; moving work between worlds needs an allowed world transition cited as transition_ref",
+                crossed.join(", ")
+            )));
+        };
+        let transitions = self.transitions()?;
+        let licensed = transitions
+            .iter()
+            .find(|t| &t.ledger_entry == transition_ref)
+            .ok_or_else(|| {
+                CepAuthorityError::Transition(format!(
+                    "{transition_ref} is not an allowed world transition"
+                ))
+            })?;
+        let target = text_at(&licensed.record, "/target_world_ref");
+        let source = text_at(&licensed.record, "/source_world_ref");
+        if target != request.world_ref || crossed.iter().any(|w| *w != source) {
+            return Err(CepAuthorityError::Transition(format!(
+                "{transition_ref} moves {source} to {target}, which does not cover a lineage from {} into {}",
+                crossed.join(", "),
+                request.world_ref
+            )));
+        }
+        Ok(())
     }
 
     /// Every escalation that can be approved, with its current standing.
@@ -822,6 +892,7 @@ impl CepAuthorityService<'_> {
         caller: &Actor,
     ) -> Result<CepDecision, CepAuthorityError> {
         let request = parse_request(envelope, self.worlds)?;
+        self.check_lineage_worlds(&request)?;
         let mut decision = self.evaluate(&request, caller)?;
         let ledger = self.ledger()?;
         let mut note = ApprovalNote::default();
