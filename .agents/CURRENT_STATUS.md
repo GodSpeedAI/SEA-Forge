@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-10-01
+Updated: 2026-10-05
 
 ## Objective
 
@@ -9,14 +9,48 @@ then split T13 and stop for operator review. Follow `current_status.yml`.
 
 ## Worktree State
 
-Branch `casework/live-wiring`; HEAD Ask T09 checkpoint `0b55022`; cap/mirror checkpoint `b4092bd`; canonical checkpoint
+2026-10-05 resume: operator has staged changes, including hooks, the debt ledger,
+Jolli state and trusted-daemon documents. Preserve the existing index and worktree;
+commit only explicit task paths. Operator authorizes meaningful commits and pushes,
+and Luna implementation when Terra is unavailable, with stronger independent review
+for work across components. Previous workers are gone; fresh cancellation critic
+owns the conditional sole compiler token for source review then expected RED.
+Safe trace v2 document repair runs separately without compilation or source writes.
+No cancellation runtime or full T09 approval is claimed.
+
+Cancellation fixture independent source approval and intended race RED are now
+recorded in `cancellation-fixture-independent-review-oct05.md` (650abb1a).
+Root matched all four raw/exit archives to original captures. A fresh builder owns
+only client.go and the sole compiler token. Safe trace v2 proposal (4a53f3e3)
+is under independent review. A separate builder normalizes nine CRLF hooks to LF;
+operator-staged executable bits stay intact. Cached remote history diverges;
+push verified changes to a new resume branch without rewriting the existing branch.
+
+Trace v2 independently rejected unknown-kind duplicate poisoning and non-atomic
+byte/row consistency guards. Fresh v3 document repair restores selected-only
+uniqueness and returned-row count semantics, with source ambiguity explicit.
+Hook LF repair is under independent review; no hook gate bypass is authorized.
+Cancellation builder's first focused run failed error-chain assertions; the final
+classification repair is being rerun against the frozen tests. No production
+approval yet. Debt entries M-18 and CW-01 track these limitations and follow-up.
+
+Hook LF normalization independently approved in `hooks-lf-independent-review-oct05.md`
+(c9b3609b): exact transformed bytes, all executable modes and nine syntax checks.
+Root holds compiler token for the canonical commit gate. Cancellation runtime
+e0d3c12c passes the five original manual-cancel cases but race EOF still fails;
+a fresh independent critic checks whether the test returns a deadline-setup
+error before actual READ. No production approval. The builder retained two failed
+test runs; the first preflight was not saved and that evidence gap is disclosed.
+
+Branch `casework/live-wiring`; HEAD scoped-run T09 checkpoint `dc82736`; Ask checkpoint
+`0b55022`; cap/mirror checkpoint `b4092bd`; canonical checkpoint
 `b608771`; T08 checkpoint
 `af362f5`; Store checkpoint `48783dc`; T07 checkpoint `aed3494`.
 Preserve unrelated Jolli debug log and trusted-daemon target plan/spec plus other working changes;
 stage explicit task paths only.
-Approved cap, Go/UI mirrors and protected Ask runtime/evidence are checkpointed. Unit4
-run-child fixture, scoped-test declarations/new tests and evidence remain uncommitted;
-runtime implementation is held for independent scoped expected-RED verification.
+Approved cap, Go/UI mirrors, protected Ask and unit4 scoped run children are checkpointed.
+The new unit5 cancellation fixture and its source-only rejection remain uncommitted;
+production cancellation repair is held for accepted independent assertion RED.
 
 ## Changed Files
 
@@ -70,7 +104,35 @@ Cancellation test-first proposal remains HOLD after independent source critique:
 manual Ask/mutation cases and genuine peer-EOF/connection-reuse evidence are added in a new
 supplement. Repeat critique before fixture release; unit4 confirmation/checkpoint first.
 
-Current step: bounded unit4 independently APPROVED8b1432ff plus clarifications87e90d10.
+Current step: independent cancellation fixture source review REJECTED, record SHA
+5f6ab82f4cd24c8c3e83d231d19876a41183b7fa0c64a6ac8b9c9bda9d305943. No tests/compiler ran.
+Fresh Luna cancellation_fixture_fresh_repair repaired ONLY the fixture's pre-call peer wait,
+unreleased cleanup gate and write-error/READ-EOF confusion; frozen d75ca5c8, format clean.
+Original533-line17130f1f snapshot retained exactly; production client.go unchanged8cdfc52a.
+Round2 critic rejected overly strict response/cancel race predicates before compilation;
+record SHA5a77c223c502b4181ba75cf93818deaab7ed7e6dfa8defa94313afad22829766.
+Fresh Luna cancellation_race_fixture_repair completed ONLY race assertions and gate/worker
+cleanup, frozen c4f1bd73; strict completed-Do-beforecancel reuse and other cases unchanged.
+Second d75ca5c8 snapshot retained exactly. Independent critic owns conditional sole token
+for source review then assertion RED. Production root assignment prepared but HOLD until RED.
+T09 units5-8 remain pending.
+
+Parallel preparation: root safe trace port proposal is recorded in
+observation-safe-trace-port-root-proposal.md. Independent Luna source critique is pending;
+no trace fixture or production writes released, and no additional compiler owner.
+
+Previous step after daemonrestart: HEADdc82736/worktree verified; allprior workers gone.
+Partial528line new cancellationfixturea555054f exists/unformatted. FreshLuna
+cancellation_fixture_resume_builder finishes ONLY that fixture under same originalscope;
+NOcompiler/sourcewrites beyondfixture. ROOT token. Freeze then freshindependentcritic
+source/compilingassertionRED before productionfix; no previous test result inferred.
+
+Previous step: unit4 independently approved/checkpointed dc82736; new cancellationfixture
+Phase1 tests-only released to freshLuna run_scope_live_fixture_repair under ORIGINAL
+assignment+critique supplement+root-next-unit-clarifications. ROOT token; builderNOcompile.
+Independent t09_ask_fixture_independent_critic source/intendedcompilingRED before sourcefix.
+
+Previous step: bounded unit4 independently APPROVED8b1432ff plus clarifications87e90d10.
 Root matched11sourcehashes/17exactrawpairs, exactfixtureinverse/helperequivalence; Graft
 buildPASS679cards/7398nodes/14142edges. ROOT token. Explicit localcheckpoint next, then
 cancellationfixture proposal (independently sourceapproved with supplement/timeout/peer
