@@ -122,6 +122,13 @@ pub struct CepAuthorityConfig {
     pub policy: String,
     #[serde(default)]
     pub worlds: Vec<CepWorldConfig>,
+    /// How long an escalation stays approvable, in hours. 1..=720.
+    #[serde(default = "default_cep_approval_ttl_hours")]
+    pub approval_ttl_hours: u64,
+}
+
+fn default_cep_approval_ttl_hours() -> u64 {
+    24
 }
 
 fn default_cep_policy() -> String {
@@ -134,6 +141,7 @@ impl Default for CepAuthorityConfig {
             enabled: false,
             policy: default_cep_policy(),
             worlds: Vec::new(),
+            approval_ttl_hours: default_cep_approval_ttl_hours(),
         }
     }
 }

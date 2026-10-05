@@ -12,13 +12,13 @@
 //! identity gate. The envelope's subject is recorded, never trusted for role.
 
 use crate::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
-use chrono::Utc;
+use chrono::{DateTime, Duration, Utc};
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::{
     Actor, AuthorityAction, AuthorityDecision, NormalizedDisposition, Verdict,
 };
 use sea_forge_domainforge::WorldRegistry;
-use sea_forge_ledger::{CommittedRecordRef, LedgerStream};
+use sea_forge_ledger::{CommittedRecordRef, LedgerEntry, LedgerStream};
 use serde_json::{json, Value};
 use std::fmt;
 use std::path::Path;
@@ -39,6 +39,8 @@ pub enum CepAuthorityError {
     WrongKind(String),
     WrongProfile(String),
     World(String),
+    /// An approval that does not exist, is not approved, expired, was used, or names another operation.
+    Approval(String),
     Internal(String),
 }
 
@@ -56,6 +58,7 @@ impl fmt::Display for CepAuthorityError {
                 "expected profile {REQUEST_PROFILE}@{PROFILE_VERSION}, got {p}"
             ),
             Self::World(m) => write!(f, "world refused: {m}"),
+            Self::Approval(m) => write!(f, "approval refused: {m}"),
             Self::Internal(m) => write!(f, "{m}"),
         }
     }
@@ -77,6 +80,7 @@ impl CepAuthorityError {
                 "cep_request_invalid"
             }
             Self::World(_) => "cep_world_refused",
+            Self::Approval(_) => "cep_approval_refused",
             Self::Internal(_) => "cep_authority_internal",
         }
     }
@@ -108,6 +112,9 @@ pub struct ParsedRequest {
     pub kind: OperationKind,
     pub operation_name: String,
     pub resource_id: String,
+    /// Set when this request revalidates an escalation that has since been approved.
+    pub approval_ref: Option<String>,
+    pub lineage_refs: Vec<String>,
 }
 
 fn text<'a>(
@@ -186,6 +193,22 @@ pub fn parse_request(
         operation_name: text(envelope, &format!("{ns}/operation_name"), "operation_name")?
             .to_string(),
         resource_id: text(envelope, &format!("{ns}/resource_id"), "resource_id")?.to_string(),
+        approval_ref: match envelope.pointer(&format!("{ns}/approval_id")) {
+            None | Some(Value::Null) => None,
+            Some(_) => {
+                Some(text(envelope, &format!("{ns}/approval_id"), "approval_id")?.to_string())
+            }
+        },
+        lineage_refs: envelope
+            .get("lineage_refs")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default(),
     })
 }
 
@@ -201,17 +224,201 @@ pub struct CepAuthorityService<'a> {
     pub bundle: &'a AuthorityPolicyBundle,
     pub worlds: &'a WorldRegistry,
     pub root: &'a Path,
+    /// How long an escalation stays approvable.
+    pub approval_ttl: Duration,
+}
+
+/// Where an escalation stands, derived from the append-only ledger and nothing else.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApprovalState {
+    Pending,
+    Approved,
+    Rejected,
+    Expired,
+    Used,
+}
+
+impl ApprovalState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Approved => "approved",
+            Self::Rejected => "rejected",
+            Self::Expired => "expired",
+            Self::Used => "used",
+        }
+    }
+}
+
+/// One escalation and what has happened to it since.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApprovalStanding {
+    pub approval_id: String,
+    pub state: ApprovalState,
+    pub requester: String,
+    pub world_ref: String,
+    pub kind: String,
+    pub operation_name: String,
+    pub resource_id: String,
+    pub subject_actor_ref: String,
+    pub original_request_envelope_id: String,
+    pub escalation_entry: String,
+    pub expires_at: DateTime<Utc>,
+    pub resolved_by: Option<String>,
+}
+
+impl ApprovalStanding {
+    pub fn to_json(&self) -> Value {
+        json!({
+            "approval_id": self.approval_id,
+            "state": self.state.as_str(),
+            "requester": self.requester,
+            "world_ref": self.world_ref,
+            "operation_kind": self.kind,
+            "operation_name": self.operation_name,
+            "resource_id": self.resource_id,
+            "subject_actor_ref": self.subject_actor_ref,
+            "request_ref": self.original_request_envelope_id,
+            "expires_at": self.expires_at.to_rfc3339(),
+            "resolved_by": self.resolved_by,
+        })
+    }
+}
+
+fn approval_id_for(operation_id: &str) -> String {
+    format!("apr-{operation_id}")
+}
+
+fn escalation_key(operation_id: &str) -> String {
+    format!("cep:{operation_id}")
+}
+
+fn resolve_key(approval_id: &str) -> String {
+    format!("cep-approval-resolve:{approval_id}")
+}
+
+fn use_key(approval_id: &str) -> String {
+    format!("cep-approval-use:{approval_id}")
+}
+
+/// Only a policy-driven escalation (a rule that requires approval) can be satisfied by one. Escalations
+/// caused by unresolved identity, an active opaque constraint, or an unavailable engine cannot.
+fn approvable(decision: &AuthorityDecision) -> bool {
+    decision.verdict == Verdict::Escalate
+        && decision.reason_codes.iter().any(|c| c == "policy_escalate")
+        && decision
+            .reason_codes
+            .iter()
+            .all(|c| matches!(c.as_str(), "policy_escalate" | "candidate_resolution"))
+}
+
+fn text_at(value: &Value, pointer: &str) -> String {
+    value
+        .pointer(pointer)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn find_entry<'e>(entries: &'e [LedgerEntry], key: &str) -> Option<&'e LedgerEntry> {
+    entries
+        .iter()
+        .find(|e| e.idempotency_key.as_deref() == Some(key))
 }
 
 impl CepAuthorityService<'_> {
-    /// Decide one request as the verified `caller`. The decision is committed
-    /// before it is returned.
-    pub fn decide(
+    fn ledger(&self) -> Result<LedgerStream, CepAuthorityError> {
+        Ok(LedgerStream::open(
+            self.root,
+            LEDGER_ID,
+            "sea-forge-cep-authority",
+        )?)
+    }
+
+    /// The standing of one approval, from the ledger. `None` if no such approvable escalation exists.
+    fn standing_in(
         &self,
-        envelope: &Value,
+        entries: &[LedgerEntry],
+        approval_id: &str,
+        now: DateTime<Utc>,
+    ) -> Option<ApprovalStanding> {
+        let operation_id = approval_id.strip_prefix("apr-")?;
+        let entry = find_entry(entries, &escalation_key(operation_id))?;
+        let decision: AuthorityDecision = serde_json::from_value(entry.payload.clone()).ok()?;
+        if !approvable(&decision) {
+            return None;
+        }
+        let action = serde_json::to_value(&decision.action_request.action).ok()?;
+        let committed_at = DateTime::parse_from_rfc3339(&entry.committed_at)
+            .ok()?
+            .with_timezone(&Utc);
+        let expires_at = committed_at + self.approval_ttl;
+        let resolution = find_entry(entries, &resolve_key(approval_id));
+        let state = if find_entry(entries, &use_key(approval_id)).is_some() {
+            ApprovalState::Used
+        } else if let Some(resolved) = resolution {
+            match resolved
+                .payload
+                .pointer("/action_request/action/parameters/resolution")
+                .and_then(Value::as_str)
+            {
+                Some("approved") => ApprovalState::Approved,
+                _ => ApprovalState::Rejected,
+            }
+        } else {
+            ApprovalState::Pending
+        };
+        // An approval nobody acted on in time lapses; one that was granted stays granted until used or its
+        // own window closes, so an approval cannot outlive its window either.
+        let state = match state {
+            ApprovalState::Pending | ApprovalState::Approved if now >= expires_at => {
+                ApprovalState::Expired
+            }
+            other => other,
+        };
+        Some(ApprovalStanding {
+            approval_id: approval_id.to_string(),
+            state,
+            requester: text_at(&entry.payload, "/action_request/actor/actor_id"),
+            world_ref: text_at(&action, "/parameters/world_ref"),
+            kind: text_at(&action, "/resource_type"),
+            operation_name: text_at(&action, "/parameters/operation_name"),
+            resource_id: text_at(&action, "/resource_id"),
+            subject_actor_ref: text_at(&action, "/parameters/subject_actor_ref"),
+            original_request_envelope_id: decision
+                .audit_record
+                .evidence_refs
+                .iter()
+                .find_map(|r| r.strip_prefix("cep:"))
+                .unwrap_or_default()
+                .to_string(),
+            escalation_entry: entry.entry_ulid.clone(),
+            expires_at,
+            resolved_by: resolution.map(|r| text_at(&r.payload, "/action_request/actor/actor_id")),
+        })
+    }
+
+    /// Every escalation that can be approved, with its current standing.
+    pub fn list_approvals(&self) -> Result<Vec<ApprovalStanding>, CepAuthorityError> {
+        let entries = self.ledger()?.read_entries()?;
+        let now = Utc::now();
+        Ok(entries
+            .iter()
+            .filter_map(|e| {
+                e.idempotency_key
+                    .as_deref()?
+                    .strip_prefix("cep:")
+                    .map(approval_id_for)
+            })
+            .filter_map(|id| self.standing_in(&entries, &id, now))
+            .collect())
+    }
+
+    fn evaluate(
+        &self,
+        request: &ParsedRequest,
         caller: &Actor,
-    ) -> Result<CepDecision, CepAuthorityError> {
-        let request = parse_request(envelope, self.worlds)?;
+    ) -> Result<AuthorityDecision, CepAuthorityError> {
         let action = AuthorityAction::Reserved {
             resource_type: request.kind.resource_type().to_string(),
             resource_id: request.resource_id.clone(),
@@ -226,7 +433,7 @@ impl CepAuthorityService<'_> {
         let binding = self
             .bundle
             .resolve_identity(&caller.actor_id, caller.role.clone());
-        let decision = self.engine.evaluate(AuthorityEvaluation {
+        Ok(self.engine.evaluate(AuthorityEvaluation {
             actor: caller,
             binding,
             run_id: &request.correlation_id,
@@ -241,22 +448,214 @@ impl CepAuthorityService<'_> {
             env_keys: Default::default(),
             domainforge_candidate: None,
             environment: None,
-        })?;
-        let ledger = LedgerStream::open(self.root, LEDGER_ID, "sea-forge-cep-authority")?;
+        })?)
+    }
+
+    /// Decide one request as the verified `caller`. The decision is committed
+    /// before it is returned. A request that carries an `approval_id` revalidates
+    /// an earlier escalation: the approval must exist, be approved, unexpired,
+    /// unused and for exactly this operation, and policy is evaluated again now.
+    pub fn decide(
+        &self,
+        envelope: &Value,
+        caller: &Actor,
+    ) -> Result<CepDecision, CepAuthorityError> {
+        let request = parse_request(envelope, self.worlds)?;
+        let mut decision = self.evaluate(&request, caller)?;
+        let ledger = self.ledger()?;
+        let mut note = ApprovalNote::default();
+
+        if let Some(approval_id) = &request.approval_ref {
+            let entries = ledger.read_entries()?;
+            let standing = self
+                .standing_in(&entries, approval_id, Utc::now())
+                .ok_or_else(|| {
+                    CepAuthorityError::Approval(format!(
+                        "{approval_id} is not an approvable escalation"
+                    ))
+                })?;
+            if standing.state != ApprovalState::Approved {
+                return Err(CepAuthorityError::Approval(format!(
+                    "{approval_id} is {}, not approved",
+                    standing.state.as_str()
+                )));
+            }
+            let same = standing.world_ref == request.world_ref
+                && standing.kind == request.kind.resource_type()
+                && standing.operation_name == request.operation_name
+                && standing.resource_id == request.resource_id
+                && standing.subject_actor_ref == request.subject_actor_ref
+                && standing.requester == caller.actor_id;
+            if !same {
+                return Err(CepAuthorityError::Approval(format!(
+                    "{approval_id} was granted for a different operation, subject, world or requester"
+                )));
+            }
+            if !request
+                .lineage_refs
+                .contains(&standing.original_request_envelope_id)
+            {
+                return Err(CepAuthorityError::Approval(
+                    "request lineage does not include the escalated request".into(),
+                ));
+            }
+            note.approval_id = Some(approval_id.clone());
+            note.approved_by = standing.resolved_by.clone();
+            note.lineage
+                .push(standing.original_request_envelope_id.clone());
+            // An approval satisfies a policy-driven escalation. It never overrides a deny, and it adds
+            // nothing when policy now allows outright.
+            if approvable(&decision) {
+                decision.verdict = Verdict::Allow;
+                decision.outcome = Verdict::Allow;
+                decision.normalized_disposition = NormalizedDisposition::Allow;
+                decision.reason_codes = vec!["approved_escalation".into()];
+                decision.reason = "approved_escalation".into();
+                decision.required_next_steps.clear();
+                decision.approval_request_id = None;
+                decision.policy_refs.push(format!("approval:{approval_id}"));
+                let committed = ledger
+                    .commit_typed_new(
+                        "authority_decision",
+                        use_key(approval_id),
+                        vec!["cognate".into(), request.operation_id.clone()],
+                        &decision,
+                        vec![standing.escalation_entry.clone()],
+                    )
+                    .map_err(|_| {
+                        CepAuthorityError::Approval(format!("{approval_id} was already used"))
+                    })?;
+                note.consumed = true;
+                let out = decision_envelope(envelope, &request, &decision, &committed, &note)?;
+                return Ok(CepDecision {
+                    envelope: out,
+                    decision,
+                    committed,
+                });
+            }
+        }
+
+        if approvable(&decision) {
+            let approval_id = approval_id_for(&request.operation_id);
+            note.approval_id = Some(approval_id);
+            note.issued_expires_at = Some(
+                (Utc::now() + self.approval_ttl)
+                    .format("%Y-%m-%dT%H:%M:%SZ")
+                    .to_string(),
+            );
+        }
         let committed = ledger.commit_typed_once(
             "authority_decision",
-            format!("cep:{}", request.operation_id),
+            escalation_key(&request.operation_id),
             vec!["cognate".into(), request.operation_id.clone()],
             &decision,
             vec![],
         )?;
-        let envelope = decision_envelope(envelope, &request, &decision, &committed)?;
+        let out = decision_envelope(envelope, &request, &decision, &committed, &note)?;
         Ok(CepDecision {
-            envelope,
+            envelope: out,
             decision,
             committed,
         })
     }
+
+    /// Resolve an escalation as the verified `resolver`. The policy engine decides whether this actor may
+    /// resolve it (a rule for `approval_resolution`; the requester can never resolve their own request).
+    pub fn resolve_approval(
+        &self,
+        approval_id: &str,
+        approve: bool,
+        resolver: &Actor,
+    ) -> Result<Value, CepAuthorityError> {
+        let ledger = self.ledger()?;
+        let entries = ledger.read_entries()?;
+        let standing = self
+            .standing_in(&entries, approval_id, Utc::now())
+            .ok_or_else(|| {
+                CepAuthorityError::Approval(format!(
+                    "{approval_id} is not an approvable escalation"
+                ))
+            })?;
+        if standing.state != ApprovalState::Pending {
+            return Err(CepAuthorityError::Approval(format!(
+                "{approval_id} is {}, not pending",
+                standing.state.as_str()
+            )));
+        }
+        let resolution = if approve { "approved" } else { "rejected" };
+        let action = AuthorityAction::Reserved {
+            resource_type: "approval_resolution".into(),
+            resource_id: approval_id.to_string(),
+            parameters: json!({
+                "approval_id": approval_id,
+                "original_decision_id": standing.escalation_entry,
+                "requester_id": standing.requester,
+                "resolution": resolution,
+                "required_approver_roles": [],
+            }),
+        };
+        let binding = self
+            .bundle
+            .resolve_identity(&resolver.actor_id, resolver.role.clone());
+        let decision = self.engine.evaluate(AuthorityEvaluation {
+            actor: resolver,
+            binding,
+            run_id: approval_id,
+            case_id: "cognate",
+            plan_item_id: approval_id,
+            sequence: 1,
+            action: &action,
+            workspace_root: self.root,
+            evidence_refs: vec![format!("approval:{approval_id}")],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            environment: None,
+        })?;
+        if decision.verdict != Verdict::Allow {
+            // The attempt is governance-relevant: record the refusal, then refuse.
+            ledger.commit_typed(
+                "authority_decision",
+                vec!["cognate".into(), approval_id.to_string()],
+                &decision,
+                vec![standing.escalation_entry.clone()],
+            )?;
+            return Err(CepAuthorityError::Approval(format!(
+                "{} may not resolve {approval_id}: {}",
+                resolver.actor_id, decision.reason
+            )));
+        }
+        let committed = ledger
+            .commit_typed_new(
+                "authority_decision",
+                resolve_key(approval_id),
+                vec!["cognate".into(), approval_id.to_string()],
+                &decision,
+                vec![standing.escalation_entry.clone()],
+            )
+            .map_err(|_| {
+                CepAuthorityError::Approval(format!("{approval_id} was already resolved"))
+            })?;
+        Ok(json!({
+            "ok": true,
+            "approval_id": approval_id,
+            "state": resolution,
+            "resolved_by": resolver.actor_id,
+            "ledger_entry": committed.entry_ulid(),
+        }))
+    }
+}
+
+/// What the decision envelope must say about an approval.
+#[derive(Default)]
+struct ApprovalNote {
+    approval_id: Option<String>,
+    /// Escalation: when the approval window closes.
+    issued_expires_at: Option<String>,
+    approved_by: Option<String>,
+    consumed: bool,
+    lineage: Vec<String>,
 }
 
 /// The CEP disposition a committed decision expresses.
@@ -277,6 +676,7 @@ fn decision_envelope(
     request: &ParsedRequest,
     decision: &AuthorityDecision,
     committed: &CommittedRecordRef,
+    note: &ApprovalNote,
 ) -> Result<Value, CepAuthorityError> {
     let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
     let disposition = cep_disposition(decision);
@@ -290,6 +690,16 @@ fn decision_envelope(
         "policy_bundle_hash".into(),
         json!(decision.determinism.policy_bundle_hash),
     );
+    if let Some(approval_id) = &note.approval_id {
+        ext.insert("approval_id".into(), json!(approval_id));
+        if let Some(expires) = &note.issued_expires_at {
+            ext.insert("approval_expires_at".into(), json!(expires));
+        }
+        if note.consumed {
+            ext.insert("approval_used".into(), json!(true));
+            ext.insert("approved_by".into(), json!(note.approved_by));
+        }
+    }
     let basis: Vec<&String> = decision.policy_refs.iter().collect();
     let mut constraints: Vec<Value> = Vec::new();
     if matches!(disposition, "boundary" | "degraded") {
@@ -354,7 +764,7 @@ fn decision_envelope(
         "omission_status": "marked",
         "provenance_refs": [format!("prov-{}", request.operation_id)],
         "validation_status": "valid",
-        "lineage_refs": [request.envelope_id],
+        "lineage_refs": std::iter::once(request.envelope_id.clone()).chain(note.lineage.iter().cloned()).collect::<Vec<_>>(),
         "provenance": [{
             "provenance_id": format!("prov-{}", request.operation_id),
             "source_system_refs": ["sea-forge"],

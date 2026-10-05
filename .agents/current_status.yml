@@ -375,6 +375,7 @@ cep_world_migration:
     stage_4: {status: settled, date: '2026-10-04', scope: sea-forge-domainforge WorldRegistry + DomainModelRef.world_ref, tests: 'just test 1121 passed', record: .agents/reports/cep-world-migration/stage4-settlement.md}
     stage_5: {status: settled, date: '2026-10-04', repo: cognate, branch: cognate/harness, commit: dbc6b27, tests: 'runtime-bun 70/0, just verify 78/78', record: .agents/reports/cep-world-migration/stage5-settlement.md}
     stage_6: {status: settled, date: '2026-10-05', repos: [sea-rs migration/cep-world-ref, cognate a3ee8fd], tests: 'sea-rs 1141/0; cognate runtime-bun live 14/0', record: .agents/reports/cep-world-migration/stage6-settlement.md}
+    stage_7: {status: settled, date: '2026-10-05', repos: [sea-rs migration/cep-world-ref, cognate def311f], tests: 'sea-rs 1157/0; cognate live 17/0', note: 'spec and plan written after implementation', record: .agents/reports/cep-world-migration/stage7-settlement.md}
     release: {status: published-0.19.0, superseded_note: operator merged all PRs; blocked-on-merge, prs: [DomainForge#132, DomainForge#133, cep#1], note: operator cleared the release but the permission layer blocks unreviewed merges; merges and the release-please PR need operator action or an explicit allow rule}
     consumers_0_19_0: {status: settled, record: .agents/reports/cep-world-migration/release-0.19.0.md, note: all six consumers verified on the published 0.19.0, no stale pins}
     stage_4: {status: pending, blocker: none; next stage}

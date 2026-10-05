@@ -61,10 +61,14 @@ fn request(world: &str, op: &str, kind: &str, name: &str) -> Value {
 }
 
 async fn boot(enabled: bool) -> (tempfile::TempDir, PathBuf) {
+    boot_with(enabled, POLICY).await
+}
+
+async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) {
     let root = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(root.path().join("worlds")).unwrap();
     std::fs::write(root.path().join("worlds/demo.sea"), SRC).unwrap();
-    std::fs::write(root.path().join("sea-forge-policy.yaml"), POLICY).unwrap();
+    std::fs::write(root.path().join("sea-forge-policy.yaml"), policy).unwrap();
     let socket = std::env::temp_dir().join(format!(
         "sf-cep-{}-{}.sock",
         std::process::id(),
@@ -75,11 +79,20 @@ async fn boot(enabled: bool) -> (tempfile::TempDir, PathBuf) {
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         identity: IdentityBindings {
-            bindings: vec![IdentityBinding {
-                uid,
-                actor_id: "cognate-service".into(),
-                roles: vec![ActorRole::Service],
-            }],
+            bindings: vec![
+                IdentityBinding {
+                    uid,
+                    actor_id: "cognate-service".into(),
+                    roles: vec![ActorRole::Service],
+                },
+                // A second identity on the same uid: what a test can present is one uid, and what keeps
+                // the requester from approving their own request is the actor, not the uid.
+                IdentityBinding {
+                    uid,
+                    actor_id: "op-alice".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+            ],
         },
         cep_authority: CepAuthorityConfig {
             enabled,
@@ -90,6 +103,7 @@ async fn boot(enabled: bool) -> (tempfile::TempDir, PathBuf) {
                 entry: "demo.sea".into(),
                 files: vec!["demo.sea".into()],
             }],
+            approval_ttl_hours: 24,
         },
         ..ServerConfig::default()
     };
@@ -265,4 +279,100 @@ async fn editing_a_world_file_never_serves_a_stale_cached_world() {
         ))
         .await;
     assert_eq!(decision(&fresh), "allow", "{fresh}");
+}
+
+const GATED_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: gated\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_action\n    requires_approval: true\n  - name: approvers\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
+
+fn as_actor(mut verb: Value, actor_id: &str, role: &str) -> Value {
+    verb["actor"] = json!({"actor_id": actor_id, "role": role});
+    verb
+}
+
+#[tokio::test]
+async fn an_escalation_is_approved_by_someone_else_and_used_once_over_the_socket() {
+    let (_root, socket) = boot_with(true, GATED_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+
+    let escalated = c
+        .call(verb(
+            request(&world, "op-e1", "action", "run.start"),
+            "op-e1",
+        ))
+        .await;
+    assert_eq!(decision(&escalated), "escalate", "{escalated}");
+    let approval = escalated["envelope"]["extensions"]["godspeed.authority_decision"]
+        ["approval_id"]
+        .as_str()
+        .expect("approval id")
+        .to_string();
+
+    let listed = c.call(json!({"verb": "authority_approvals"})).await;
+    assert_eq!(listed["approvals"][0]["state"], "pending", "{listed}");
+    assert_eq!(listed["approvals"][0]["approval_id"], approval);
+
+    let revalidation = |op: &str| {
+        let mut r = request(&world, op, "action", "run.start");
+        r["extensions"]["godspeed.authority_request"]["approval_id"] = json!(approval);
+        r["lineage_refs"] = json!(["env-authority_request-op-e1"]);
+        verb(r, op)
+    };
+
+    // Not approved yet.
+    let early = c.call(revalidation("op-e2")).await;
+    assert_eq!(early["error_class"], "cep_approval_refused", "{early}");
+
+    // The requester's own service identity may not resolve it.
+    let self_approve = c
+        .call(as_actor(
+            json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-self"}),
+            "cognate-service",
+            "service",
+        ))
+        .await;
+    assert_eq!(
+        self_approve["error_class"], "cep_approval_refused",
+        "{self_approve}"
+    );
+
+    // A different, authorized identity can.
+    let resolve = as_actor(
+        json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-ok"}),
+        "op-alice",
+        "operator",
+    );
+    let resolved = c.call(resolve.clone()).await;
+    assert_eq!(resolved["ok"], true, "{resolved}");
+    assert_eq!(resolved["resolved_by"], "op-alice");
+    // The same resolution request id replays rather than resolving twice.
+    assert_eq!(c.call(resolve).await, resolved);
+
+    let allowed = c.call(revalidation("op-e3")).await;
+    assert_eq!(decision(&allowed), "allow", "{allowed}");
+    assert_eq!(
+        allowed["envelope"]["extensions"]["godspeed.authority_decision"]["approval_used"],
+        true
+    );
+
+    let again = c.call(revalidation("op-e4")).await;
+    assert_eq!(again["error_class"], "cep_approval_refused", "{again}");
+    assert!(again["error"].as_str().unwrap().contains("used"));
+}
+
+#[tokio::test]
+async fn resolution_needs_a_verified_actor_and_a_valid_resolution() {
+    let (_root, socket) = boot_with(true, GATED_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let no_actor = c
+        .call(json!({"verb": "authority_approval", "approval_id": "apr-x", "resolution": "approved", "request_id": "r1"}))
+        .await;
+    assert_eq!(no_actor["error_class"], "identity_required", "{no_actor}");
+    let bad = c
+        .call(as_actor(
+            json!({"verb": "authority_approval", "approval_id": "apr-x", "resolution": "maybe", "request_id": "r2"}),
+            "op-alice",
+            "operator",
+        ))
+        .await;
+    assert_eq!(bad["error_class"], "cep_request_invalid", "{bad}");
 }

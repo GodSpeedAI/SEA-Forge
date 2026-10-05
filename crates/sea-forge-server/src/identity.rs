@@ -811,6 +811,7 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::Ask { .. }
         | Request::AgentProbe { .. }
         | Request::AuthorityRequest { .. }
+        | Request::AuthorityApproval { .. }
         | Request::CaseCommit { .. }
         | Request::ApprovalDecide { .. }
         | Request::CaseAddItem { .. }
@@ -824,6 +825,7 @@ pub fn is_protected(request: &Request) -> bool {
         // learned about the actor block keeps working against all of these.
         Request::Status { .. }
         | Request::AgentList
+        | Request::AuthorityApprovals
         | Request::SystemHello { .. }
         | Request::SystemDescribe
         | Request::SystemGetSchema { .. }

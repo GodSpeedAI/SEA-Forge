@@ -679,6 +679,16 @@ pub enum Request {
         #[serde(default)]
         request_id: Option<String>,
     },
+    /// Resolve a Cognate escalation (migration Stage 7). `resolution` is `approved` or `rejected`;
+    /// policy decides whether the verified actor may. `request_id` makes the resolution replayable.
+    AuthorityApproval {
+        approval_id: String,
+        resolution: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Every Cognate escalation that can be approved and where it stands. Read-only.
+    AuthorityApprovals,
     AgentList,
     AgentProbe {
         endpoint: String,
@@ -1442,6 +1452,7 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::Reject { request_id, .. }
         | Request::AgentProbe { request_id, .. }
         | Request::AuthorityRequest { request_id, .. }
+        | Request::AuthorityApproval { request_id, .. }
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
         | Request::CaseCommit { request_id, .. }
@@ -1473,6 +1484,7 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::Reject { .. }
             | Request::AgentProbe { .. }
             | Request::AuthorityRequest { .. }
+            | Request::AuthorityApproval { .. }
             | Request::Delegate { .. }
             | Request::CancelDelegation { .. }
             | Request::CaseCommit { .. }
@@ -2205,6 +2217,62 @@ pub async fn handle_request_as(
             };
             record_outcome(state, request_id.as_deref(), "authority.request", &response);
             response
+        }
+        Request::AuthorityApproval {
+            approval_id,
+            resolution,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.approval");
+            let response = match (verified, resolution.as_str()) {
+                (Some(actor), "approved" | "rejected") => {
+                    let resolver = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    let approve = resolution == "approved";
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::resolve(&config, &root, &approval_id, approve, &resolver)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "approval task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                (None, _) => serde_json::json!({
+                    "error": "authority_approval requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+                _ => serde_json::json!({
+                    "error": "resolution must be approved or rejected",
+                    "error_class": "cep_request_invalid",
+                    "no_side_effect": true,
+                }),
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "authority.approval",
+                &response,
+            );
+            response
+        }
+        Request::AuthorityApprovals => {
+            let config = state.config();
+            let root = state.root.clone();
+            tokio::task::spawn_blocking(move || cep_authority::list(&config, &root))
+                .await
+                .unwrap_or_else(|_| {
+                    serde_json::json!({
+                        "error": "approval listing task failed",
+                        "error_class": "cep_authority_internal",
+                    })
+                })
         }
         Request::AgentList => agent_probe::list(&state.config().agent),
         Request::AgentProbe {

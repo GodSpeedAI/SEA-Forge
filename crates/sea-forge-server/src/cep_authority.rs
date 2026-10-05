@@ -91,7 +91,17 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
     Ok(registry)
 }
 
-pub fn respond(config: &ServerConfig, root: &Path, envelope: &Value, caller: &Actor) -> Value {
+fn ttl(config: &ServerConfig) -> chrono::Duration {
+    chrono::Duration::hours(config.cep_authority.approval_ttl_hours.clamp(1, 720) as i64)
+}
+
+/// Load policy and worlds and run `f` against a fresh service (a fresh engine per request, so an
+/// escalation's in-memory opaque constraint never leaks between requests).
+fn with_service(
+    config: &ServerConfig,
+    root: &Path,
+    f: impl FnOnce(&CepAuthorityService<'_>) -> Value,
+) -> Value {
     if !config.cep_authority.enabled {
         return refusal(
             "cep_authority_disabled",
@@ -118,16 +128,49 @@ pub fn respond(config: &ServerConfig, root: &Path, envelope: &Value, caller: &Ac
     let service = CepAuthorityService {
         engine: &engine,
         bundle: &bundle,
-        worlds: &worlds,
+        worlds: worlds.as_ref(),
         root,
+        approval_ttl: ttl(config),
     };
-    match service.decide(envelope, caller) {
-        Ok(out) => json!({
-            "ok": true,
-            "envelope": out.envelope,
-            "decision_id": out.decision.decision_id,
-            "ledger_entry": out.committed.entry_ulid(),
-        }),
+    f(&service)
+}
+
+/// Resolve an escalation as the verified `resolver` (`authority_approval` verb).
+pub fn resolve(
+    config: &ServerConfig,
+    root: &Path,
+    approval_id: &str,
+    approve: bool,
+    resolver: &Actor,
+) -> Value {
+    with_service(config, root, |service| {
+        match service.resolve_approval(approval_id, approve, resolver) {
+            Ok(done) => done,
+            Err(e) => refusal(e.class(), e),
+        }
+    })
+}
+
+/// Every approvable escalation and where it stands (`authority_approvals` verb; read-only).
+pub fn list(config: &ServerConfig, root: &Path) -> Value {
+    with_service(config, root, |service| match service.list_approvals() {
+        Ok(all) => {
+            json!({"ok": true, "approvals": all.iter().map(|a| a.to_json()).collect::<Vec<_>>()})
+        }
         Err(e) => refusal(e.class(), e),
-    }
+    })
+}
+
+pub fn respond(config: &ServerConfig, root: &Path, envelope: &Value, caller: &Actor) -> Value {
+    with_service(config, root, |service| {
+        match service.decide(envelope, caller) {
+            Ok(out) => json!({
+                "ok": true,
+                "envelope": out.envelope,
+                "decision_id": out.decision.decision_id,
+                "ledger_entry": out.committed.entry_ulid(),
+            }),
+            Err(e) => refusal(e.class(), e),
+        }
+    })
 }

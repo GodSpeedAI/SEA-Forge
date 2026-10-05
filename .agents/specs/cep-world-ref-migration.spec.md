@@ -38,3 +38,16 @@ Transport (operator-confirmed "go on" to the recommendation): SEA-Forge's existi
 - R4 Cognate: `SeaForgeAuthority implements GovernanceAuthority`: builds the request envelope, sends it, validates the response (kind, profile, lineage == request id, world_ref echo, operation_id echo, known decision, constraints present for constrained dispositions) and maps to Governor dispositions. Any transport or validation failure -> `unknown` (refused by the Governor).
 - R5 Constraint handling: Governor honors `boundary`/`degraded`/`constrained_allow` only when constraints are present AND an enforcer for each constraint is registered; otherwise refuses. Stage 6 ships the mechanism with no enforcers registered by default, so these still refuse.
 - Out of scope: escalation continuation (Stage 7), world loading beyond server config, per-subject policy (engine rules key on role + operation kind only; recorded as debt).
+
+## Stage 7 — Escalation and durable continuation
+
+Written after the implementation (the plan was held in the session, not in this file first); recorded here so the
+requirements the code and tests answer are explicit. Process deviation noted in the settlement.
+
+- R1 An `escalate` whose cause is a policy rule requiring approval issues an approval (`apr-<operation_id>`, expiring, default 24h); any other escalation (unresolved identity, active opaque constraint, unavailable engine) issues none and stays a plain refusal.
+- R2 Approval standing is derived only from the append-only `cognate-authority` ledger: the escalation entry (key `cep:<op>`), the resolution (key `cep-approval-resolve:<apr>`), the use (key `cep-approval-use:<apr>`). No second journal. Resolution and use are single-shot by ledger idempotency under the exclusive lock.
+- R3 Only an actor that policy allows (`approval_resolution` rule) and that is not the requester may resolve; the attempt, allowed or refused, is a committed decision.
+- R4 Revalidation: a request carrying `approval_id` must reference an approved, unexpired, unused approval for exactly the same world, operation kind, name, resource, subject and requester, with lineage to the escalated request. Policy is evaluated again now. An approval satisfies a policy escalation only: it never overrides a deny, and adds nothing when policy now allows outright (not consumed).
+- R5 Cognate: an escalated capability call inside a run records the escalation once, then waits on a durable `governance-approval` continuation (expiring with the approval window). Any resume only triggers revalidation; the authority alone decides. A rejected, expired or used approval closes the wait and fails the run. The provider never runs before an allow.
+- R6 `Runtime.pollApprovals()` (optionally timed) resumes approved waits and cancels closed ones, idempotently.
+- Out of scope: escalated actions (startRun etc.) wait nowhere and are refused with the approval id; surfacing Cognate approvals in the SEA-Forge workbench approval inbox (separate ledger stream, not the case approvals journal).
