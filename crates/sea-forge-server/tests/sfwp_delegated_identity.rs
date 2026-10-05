@@ -1159,8 +1159,7 @@ async fn user_b_may_approve_user_as_delegated_proposal_with_both_principals_ledg
 
     let resolution = entries
         .iter()
-        .filter(|entry| entry.record_kind == "approval_resolution")
-        .last()
+        .rfind(|entry| entry.record_kind == "approval_resolution")
         .expect("the approval resolution record");
 
     // (2) The dual-principal record: the delegation audit names the gateway
@@ -1203,7 +1202,8 @@ async fn user_b_may_approve_user_as_delegated_proposal_with_both_principals_ledg
             && !rendered.contains("\"resolved_by\":\"gateway\""),
         "the gateway must appear in no SoD field: {rendered}"
     );
-    for path in ["approvals.jsonl"] {
+    {
+        let path = "approvals.jsonl";
         let approvals = fs::read_to_string(root.path().join(path)).unwrap();
         assert!(
             !approvals.contains("\"resolved_by\":\"gateway\""),

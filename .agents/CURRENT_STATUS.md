@@ -9,6 +9,22 @@ then split T13 and stop for operator review. Follow `current_status.yml`.
 
 ## Worktree State
 
+Latest: Rust `rfind` repair `1401e0b0` is independently approved: focused
+Clippy and the delegated-identity test pass. Root matched all nine captures.
+Workspace Clippy remains red on three supervisor-test idioms, recorded in CW-02.
+The reviewer returned its token; ROOT reserves it for the explicit Rust checkpoint
+through normal hooks. Trace source review continues without compiling.
+
+Latest checkpoint: `8f81580` commits accepted Unit5A cancellation and bounded
+response-cap fixtures through the normal hook (exit 0). Eleven other staged
+identities remain unchanged. Three root checkpoint captures are archived exactly.
+`clippy_template_oct05_critic` owns the sole compiler slot for the frozen Rust
+`rfind` repair, focused gates, and a workspace Clippy diagnostic. The three new
+safe-trace Phase1 files are frozen and under independent source review only.
+Their assertion RED has not run; current whole-worktree Go success is unclaimed.
+No push has succeeded; T09 remains in flight. This paragraph supersedes the
+historical ownership and pending-checkpoint statements below.
+
 ROOT prepares the accepted Go Unit5A checkpoint with explicit paths only;
 the pending safe-port stub/fixtures and Rust `rfind` repair are excluded.
 Graft refresh passed: 682 cards, 7,424 nodes, 14,223 edges. Eleven remaining

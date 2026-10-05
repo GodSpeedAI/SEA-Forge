@@ -1,0 +1,281 @@
+cargo test -p "sea-forge-server" --locked "user_b_may_approve_user_as_delegated_proposal_with_both_principals_ledgered"
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling ring v0.17.14
+   Compiling rustls-webpki v0.103.15
+   Compiling rustls v0.23.45
+   Compiling libsqlite3-sys v0.30.1
+   Compiling tokio-rustls v0.26.4
+   Compiling rusqlite v0.32.1
+   Compiling hyper-rustls v0.27.9
+   Compiling reqwest v0.12.28
+   Compiling sea-forge-capability v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-capability)
+   Compiling sea-forge-thoth v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-thoth)
+   Compiling sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `test` profile [unoptimized] target(s) in 1m 52s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_server-335b5ae014bcc92d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 113 filtered out; finished in 0.00s
+
+     Running unittests src/bin/gen_sfwp_schema.rs (target/debug/deps/gen_sfwp_schema-1dc9981ab4515603)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/sea_forge_server-81b5c1023d9aa66f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/case_templates_live.rs (target/debug/deps/case_templates_live-d17b0a30e2b95237)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests/cli_arguments.rs (target/debug/deps/cli_arguments-7c7ef85c4065defb)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/conformance_approvals.rs (target/debug/deps/conformance_approvals-8643b74098f3c54d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests/conformance_assets.rs (target/debug/deps/conformance_assets-20e55d68b3c70acc)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+
+     Running tests/conformance_authority_nonbypass.rs (target/debug/deps/conformance_authority_nonbypass-0a8566edf8d4ee40)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running tests/conformance_case_authoring.rs (target/debug/deps/conformance_case_authoring-20a599cdf4aeda6c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests/conformance_case_episode.rs (target/debug/deps/conformance_case_episode-faef2d458c18329e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+     Running tests/conformance_case_views.rs (target/debug/deps/conformance_case_views-1aa6bf7bc33c045b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests/conformance_delegation_preview.rs (target/debug/deps/conformance_delegation_preview-e034bc2deb822fb0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+     Running tests/conformance_delegations.rs (target/debug/deps/conformance_delegations-6330b5bfdfe83199)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+
+     Running tests/conformance_dispatch_remediation.rs (target/debug/deps/conformance_dispatch_remediation-de56a08921f3b222)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/conformance_identity.rs (target/debug/deps/conformance_identity-3bc5bff6a397c021)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+     Running tests/conformance_lifecycle.rs (target/debug/deps/conformance_lifecycle-2c9ef9e526b588c6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+     Running tests/conformance_m11_ask.rs (target/debug/deps/conformance_m11_ask-0b971413a97b1a39)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/conformance_m12.rs (target/debug/deps/conformance_m12-68552733aa5a64e1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+     Running tests/conformance_m13.rs (target/debug/deps/conformance_m13-b82ad147b3de046e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+     Running tests/conformance_m16.rs (target/debug/deps/conformance_m16-c81298ccd021c54b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.00s
+
+     Running tests/conformance_role_propagation.rs (target/debug/deps/conformance_role_propagation-b387a90f31d7bcb6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/conformance_run_locator.rs (target/debug/deps/conformance_run_locator-49d2c740b9879f47)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/conformance_run_views.rs (target/debug/deps/conformance_run_views-e8153fb2eed097f8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+     Running tests/conformance_sfwp.rs (target/debug/deps/conformance_sfwp-659d71418e539fc7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 19 filtered out; finished in 0.00s
+
+     Running tests/conformance_topology.rs (target/debug/deps/conformance_topology-c28ffb0ac4ace7bb)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/conformance_transport_hardening.rs (target/debug/deps/conformance_transport_hardening-4c9a5322398ae532)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests/convergence_t04_governed_ingress.rs (target/debug/deps/convergence_t04_governed_ingress-88c28c8e91e507ce)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+
+     Running tests/convergence_t05_authorized_execution.rs (target/debug/deps/convergence_t05_authorized_execution-94fd4de45eb1c5e8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+     Running tests/convergence_t05_execution_observation.rs (target/debug/deps/convergence_t05_execution_observation-1e10fc258483ad3a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+     Running tests/convergence_t06_operational_settlement.rs (target/debug/deps/convergence_t06_operational_settlement-d54a2a4dbabde044)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+     Running tests/convergence_t11_whole_loop.rs (target/debug/deps/convergence_t11_whole_loop-fd81f2c4d075a8cc)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/convergence_t12_variation.rs (target/debug/deps/convergence_t12_variation-7206a0fff8ec2a36)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+     Running tests/sfwp_case_mutations.rs (target/debug/deps/sfwp_case_mutations-5c56dcb6ae2b970f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+     Running tests/sfwp_delegated_identity.rs (target/debug/deps/sfwp_delegated_identity-3ffd136f51e34914)
+
+running 1 test
+test user_b_may_approve_user_as_delegated_proposal_with_both_principals_ledgered ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.09s
+
+     Running tests/sfwp_supervisor.rs (target/debug/deps/sfwp_supervisor-a2d01d6dd8a5da40)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
