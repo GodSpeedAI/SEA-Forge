@@ -111,3 +111,19 @@ Transport changes, legacy `sea.agent.event.v1` schema revision, digest verificat
 - SWE_SEED: the world is carried and checked across E1, E2/E3, E4, E6 and E7, not only at E6. `OperationalSettlementAdjudicator::adjudicate` gained an `originating_world_ref` argument; `ContextRequest`/`ExpectedContext` gained `world_ref` and `require_complete`.
 - SEA-Forge (library chain in `sea-forge-server`): the world is pinned at E4 intake, stored on the authorized invocation, and read back from the LEDGER record at settlement; an execution observation may claim a world but cannot move the cycle into another one. `GovernedWorkIntent::verify_world(&WorldRegistry)` is the hook for the real digest check. `emit_authorized_invocation` gained a `world_ref` argument.
 - Gauntlet: confirmation only (tests), per R-GN1.
+
+## Stage 10 — World transitions
+
+Normative source: cep `spec/profiles/GODSPEED-PROFILES-v1.md` §5 and `schemas/profiles/godspeed/world-transition.v1.schema.json`. A `world_ref` is immutable, and any source edit yields a new one. Work pinned to the old world must move by an explicit, governed, recorded transition, never by retargeting an alias.
+
+### Requirements
+- T1 **Carrier.** A transition is requested as an `authority_request` with `operation_kind: world_transition`. `scope.world_ref` is the SOURCE world. The request carries `extensions/godspeed.world_transition` with the sender's claimed record (`target_world_ref`, `transition_kind`, `reason`, `compatibility`, and optionally `semantic_closure_equal`, `semantic_diff_ref`, `migration_ref`, `evidence_refs`). cep has not profiled the `semantic_diff` envelope that would carry the record on its own, so this stays an extension, not a new envelope kind.
+- T2 **Binding.** The approval-binding `resource_id` is the target `world_ref`, so an approval is for one source, one target and one requester. The operation name is `transition`.
+- T3 **SEA-Forge verifies, never trusts.** It requires source and target both in its registry and different; recomputes `semantic_closure_equal` from the two registered identities; and refuses a request whose claimed `semantic_closure_equal`, or whose `transition_kind`, contradicts the recomputed facts (`source_edit_only` and `compiler_upgrade` require equal closure; `semantic_change` requires unequal). It cannot compute compatibility (DomainForge has no world-level diff), so `compatibility` is recorded as the sender's claim, except that equal closure is recorded `compatible`.
+- T4 **Floor.** A transition whose closure is NOT equal can never be allowed without an approved escalation, whatever policy says: a policy allow is converted to an approvable escalation (`policy_escalate`). A policy deny stays a deny. Equal-closure transitions follow policy.
+- T5 **Record.** An allowed transition appends one ledger fact `cep-transition:<operation_id>` holding a record that validates against `world-transition.v1` (with `authority_decision_ref` set), plus the verified facts and the approval id when one was used. `transitions()` reads them back; the lineage of a pinned piece of work is source -> transition -> target.
+- T6 **No silent moves.** Existing rules already keep pending approvals in their world (an approval is bound to its `world_ref`); a transition does not carry them across. A new request in the target world is required.
+- T7 Fail closed: unknown world, same source and target, malformed target, contradicting claims, oversize, or alias targets all refuse before any ledger write.
+
+### Out of scope
+World-level semantic diff (DomainForge), persistence beyond the ledger, a new cep envelope kind, retargeting aliases, automatic re-validation of in-flight Cognate continuations (Cognate may request a transition; it never selects a world).
