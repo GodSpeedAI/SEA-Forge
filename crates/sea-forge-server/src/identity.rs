@@ -810,6 +810,7 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::CancelDelegation { .. }
         | Request::Ask { .. }
         | Request::AgentProbe { .. }
+        | Request::AuthorityRequest { .. }
         | Request::CaseCommit { .. }
         | Request::ApprovalDecide { .. }
         | Request::CaseAddItem { .. }

@@ -1,3 +1,5 @@
+pub mod cep;
+
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
 use sea_forge_domainforge::{
@@ -1230,6 +1232,8 @@ impl AuthorityPolicyBundle {
                     | "import_bundle"
                     | "export_bundle"
                     | "adopt_template"
+                    | "cognate_action"
+                    | "cognate_capability"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",
@@ -2953,6 +2957,8 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "attestation",
                 "review_artifact_rights",
                 "run_cancel",
+                "cognate_action",
+                "cognate_capability",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()

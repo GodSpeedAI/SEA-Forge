@@ -2108,6 +2108,7 @@ dependencies = [
  "sea-forge-authority",
  "sea-forge-case-runner",
  "sea-forge-core",
+ "sea-forge-domainforge",
  "sea-forge-evidence",
  "sea-forge-extension",
  "sea-forge-ledger",

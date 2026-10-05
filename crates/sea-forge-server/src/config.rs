@@ -96,6 +96,48 @@ impl Default for SupervisorConfig {
     }
 }
 
+/// One semantic world this cell can bind CEP authority requests to (migration
+/// Stage 6). `base` is a directory relative to the cell root; `entry` and
+/// `files` are paths relative to `base` and are the world's *logical* URIs,
+/// exactly as DomainForge's CLI derives them from an entry's directory. The
+/// `world_ref` is derived from the DomainForge identity, never configured.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CepWorldConfig {
+    pub name: String,
+    pub base: String,
+    pub entry: String,
+    pub files: Vec<String>,
+}
+
+/// The CEP authority loop (`authority_request` verb). Fail-closed off: absent
+/// means disabled, and a disabled cell refuses every request.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CepAuthorityConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    /// Authority policy bundle, relative to the cell root.
+    #[serde(default = "default_cep_policy")]
+    pub policy: String,
+    #[serde(default)]
+    pub worlds: Vec<CepWorldConfig>,
+}
+
+fn default_cep_policy() -> String {
+    "sea-forge-policy.yaml".into()
+}
+
+impl Default for CepAuthorityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            policy: default_cep_policy(),
+            worlds: Vec::new(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
@@ -136,6 +178,9 @@ pub struct ServerConfig {
     /// approval without restarting a cell that has work in flight.
     #[serde(default)]
     pub identity: crate::identity::IdentityBindings,
+    /// The CEP authority loop for Cognate (migration Stage 6). Off unless enabled.
+    #[serde(default)]
+    pub cep_authority: CepAuthorityConfig,
 }
 
 /// The socket file name inside a cell root. Every surface (server, CLI,
@@ -223,6 +268,8 @@ impl Default for ServerConfig {
             supervisor: SupervisorConfig::default(),
             // Absent by default: no gateway principal, no delegation.
             gateway: None,
+            // Disabled by default: no CEP authority loop until an operator opts in.
+            cep_authority: CepAuthorityConfig::default(),
         }
     }
 }

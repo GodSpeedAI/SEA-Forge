@@ -27,3 +27,14 @@ Requirements (crate `sea-forge-domainforge`, module `world`):
 - R5 `bind(model_ref, world_ref)` / `verify_model_ref` tie SEA-Forge's own `d_content_hash` + `semantic_closure_hash` to the registered world; mismatch fails closed.
 - R6 Ledger-neutral: no storage assumption; registry is a derived cache, world_ref values are plain strings suitable for append-only records.
 Out of scope: persistence of the registry (pg0 not started), transitions (Stage 10).
+
+## Stage 6 — Cognate <-> SEA-Forge CEP authority loop
+
+Transport (operator-confirmed "go on" to the recommendation): SEA-Forge's existing Unix-socket NDJSON server (ADR-003 additive verb `authority_request`). Cognate (Bun) connects with a unix socket client. Identity is the server's existing SO_PEERCRED gate; the verified caller is the evaluated actor, the envelope's subject is recorded, never trusted for role.
+
+- R1 SEA-Forge: `sea-forge-authority::cep` parses a CEP `authority_request` (profile `godspeed.authority_request`), requires its `scope.world_ref` to be registered in the Stage 4 `WorldRegistry`, evaluates it with the real `PolicyAuthorityEngine` as `AuthorityAction::Reserved { cognate_action | cognate_capability }`, commits the `AuthorityDecision` append-only (idempotent by operation_id), and returns a CEP `authority_decision` envelope with lineage to the request.
+- R2 Dispositions map without loss: allow, deny, escalate, boundary and degraded keep constraints, policy_basis and compensating controls; nothing becomes a boolean. Unknown action surface -> deny (engine default).
+- R3 Fail closed: malformed request, unknown/unregistered world, wrong kind/profile, oversize, cep authority disabled -> typed error, no allow.
+- R4 Cognate: `SeaForgeAuthority implements GovernanceAuthority`: builds the request envelope, sends it, validates the response (kind, profile, lineage == request id, world_ref echo, operation_id echo, known decision, constraints present for constrained dispositions) and maps to Governor dispositions. Any transport or validation failure -> `unknown` (refused by the Governor).
+- R5 Constraint handling: Governor honors `boundary`/`degraded`/`constrained_allow` only when constraints are present AND an enforcer for each constraint is registered; otherwise refuses. Stage 6 ships the mechanism with no enforcers registered by default, so these still refuse.
+- Out of scope: escalation continuation (Stage 7), world loading beyond server config, per-subject policy (engine rules key on role + operation kind only; recorded as debt).

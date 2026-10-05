@@ -40,6 +40,7 @@ const REQUEST_ADMISSION_WAIT_QUEUE_CAPACITY: usize = 8;
 
 pub mod agent_probe;
 pub mod case_dispatch;
+mod cep_authority;
 pub mod config;
 pub mod delegation;
 pub mod delegation_audit;
@@ -669,6 +670,14 @@ pub enum Request {
         request_id: Option<String>,
         #[serde(default)]
         preconditions: Option<sfwp::precondition::Precondition>,
+    },
+    /// CEP `authority_request` envelope from Cognate (migration Stage 6).
+    /// The reply carries a CEP `authority_decision` envelope. `request_id`
+    /// is the caller's operation id: replays return the recorded decision.
+    AuthorityRequest {
+        envelope: serde_json::Value,
+        #[serde(default)]
+        request_id: Option<String>,
     },
     AgentList,
     AgentProbe {
@@ -1432,6 +1441,7 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::Approve { request_id, .. }
         | Request::Reject { request_id, .. }
         | Request::AgentProbe { request_id, .. }
+        | Request::AuthorityRequest { request_id, .. }
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
         | Request::CaseCommit { request_id, .. }
@@ -1462,6 +1472,7 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::Approve { .. }
             | Request::Reject { .. }
             | Request::AgentProbe { .. }
+            | Request::AuthorityRequest { .. }
             | Request::Delegate { .. }
             | Request::CancelDelegation { .. }
             | Request::CaseCommit { .. }
@@ -2161,6 +2172,39 @@ pub async fn handle_request_as(
                 actor_id,
             )
             .await
+        }
+        Request::AuthorityRequest {
+            envelope,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.request");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::respond(&config, &root, &envelope, &caller)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "authority evaluation task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                // Never the local-default operator: an authority decision is only issued to a verified peer.
+                None => serde_json::json!({
+                    "error": "authority_request requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "authority.request", &response);
+            response
         }
         Request::AgentList => agent_probe::list(&state.config().agent),
         Request::AgentProbe {
