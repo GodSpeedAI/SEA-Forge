@@ -1239,6 +1239,7 @@ impl AuthorityPolicyBundle {
                     | "adopt_template"
                     | "cognate_action"
                     | "cognate_capability"
+                    | "world_transition"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",
@@ -2982,6 +2983,7 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "run_cancel",
                 "cognate_action",
                 "cognate_capability",
+                "world_transition",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()

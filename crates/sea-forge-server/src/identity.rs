@@ -828,6 +828,7 @@ pub fn is_protected(request: &Request) -> bool {
         Request::Status { .. }
         | Request::AgentList
         | Request::AuthorityApprovals
+        | Request::AuthorityTransitions
         | Request::SystemHello { .. }
         | Request::SystemDescribe
         | Request::SystemGetSchema { .. }

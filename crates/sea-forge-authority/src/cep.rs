@@ -95,6 +95,9 @@ pub enum CepAuthorityError {
     Approval(String),
     /// Evidence or settlement refused: broken chain, wrong world, no allow decision, criteria changed, policy.
     Evidence(String),
+    /// A world transition whose facts do not hold: unregistered or identical worlds, or claims that
+    /// contradict what SEA-Forge recomputes from the registered identities.
+    Transition(String),
     Internal(String),
 }
 
@@ -114,6 +117,7 @@ impl fmt::Display for CepAuthorityError {
             Self::World(m) => write!(f, "world refused: {m}"),
             Self::Approval(m) => write!(f, "approval refused: {m}"),
             Self::Evidence(m) => write!(f, "evidence or settlement refused: {m}"),
+            Self::Transition(m) => write!(f, "world transition refused: {m}"),
             Self::Internal(m) => write!(f, "{m}"),
         }
     }
@@ -137,6 +141,7 @@ impl CepAuthorityError {
             Self::World(_) => "cep_world_refused",
             Self::Approval(_) => "cep_approval_refused",
             Self::Evidence(_) => "cep_evidence_refused",
+            Self::Transition(_) => "cep_transition_refused",
             Self::Internal(_) => "cep_authority_internal",
         }
     }
@@ -146,6 +151,8 @@ impl CepAuthorityError {
 pub enum OperationKind {
     Action,
     Capability,
+    /// Moves work from one immutable semantic world to another (Stage 10).
+    WorldTransition,
 }
 
 impl OperationKind {
@@ -153,6 +160,7 @@ impl OperationKind {
         match self {
             Self::Action => "cognate_action",
             Self::Capability => "cognate_capability",
+            Self::WorldTransition => "world_transition",
         }
     }
 }
@@ -171,6 +179,194 @@ pub struct ParsedRequest {
     /// Set when this request revalidates an escalation that has since been approved.
     pub approval_ref: Option<String>,
     pub lineage_refs: Vec<String>,
+    /// Set for `OperationKind::WorldTransition`: the facts SEA-Forge recomputed, not the sender's claims.
+    pub transition: Option<VerifiedTransition>,
+}
+
+pub const TRANSITION_KINDS: [&str; 4] = [
+    "semantic_change",
+    "source_edit_only",
+    "compiler_upgrade",
+    "migration",
+];
+pub const COMPATIBILITIES: [&str; 4] = ["compatible", "backward_compatible", "breaking", "unknown"];
+const TRANSITION_NS: &str = "/extensions/godspeed.world_transition";
+
+/// A requested move between two registered worlds, with the facts SEA-Forge verified itself.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifiedTransition {
+    pub source_world_ref: String,
+    pub target_world_ref: String,
+    pub transition_kind: String,
+    pub reason: String,
+    /// Recorded as `compatible` when the closures are equal (provable). Otherwise the sender's claim, which
+    /// SEA-Forge cannot check (DomainForge has no world-level diff); `unknown` when none was given.
+    pub compatibility: String,
+    /// Recomputed from the two registered identities, never taken from the request.
+    pub semantic_closure_equal: bool,
+    pub semantic_diff_ref: Option<String>,
+    pub migration_ref: Option<String>,
+    pub evidence_refs: Vec<String>,
+}
+
+impl VerifiedTransition {
+    /// A move across a semantic change is never allowed without a human approval, whatever policy says.
+    pub fn needs_approval(&self) -> bool {
+        !self.semantic_closure_equal
+    }
+
+    /// The record, shaped exactly as cep's `world-transition.v1` (the schema forbids extra fields).
+    pub fn record(&self, authority_decision_ref: Option<&str>) -> Value {
+        let mut rec = json!({
+            "source_world_ref": self.source_world_ref,
+            "target_world_ref": self.target_world_ref,
+            "transition_kind": self.transition_kind,
+            "reason": self.reason,
+            "compatibility": self.compatibility,
+            "semantic_closure_equal": self.semantic_closure_equal,
+        });
+        if let Some(r) = &self.semantic_diff_ref {
+            rec["semantic_diff_ref"] = json!(r);
+        }
+        if let Some(r) = &self.migration_ref {
+            rec["migration_ref"] = json!(r);
+        }
+        if let Some(r) = authority_decision_ref {
+            rec["authority_decision_ref"] = json!(r);
+        }
+        if !self.evidence_refs.is_empty() {
+            rec["evidence_refs"] = json!(self.evidence_refs);
+        }
+        rec
+    }
+}
+
+fn optional_text(
+    envelope: &Value,
+    pointer: &str,
+    what: &'static str,
+) -> Result<Option<String>, CepAuthorityError> {
+    match envelope.pointer(pointer) {
+        None | Some(Value::Null) => Ok(None),
+        Some(_) => Ok(Some(text(envelope, pointer, what)?.to_string())),
+    }
+}
+
+/// Parse and verify the transition a `world_transition` request asks for. Every refusal happens before any
+/// ledger write.
+fn verify_transition(
+    envelope: &Value,
+    source_world_ref: &str,
+    worlds: &WorldRegistry,
+) -> Result<VerifiedTransition, CepAuthorityError> {
+    let target = text(
+        envelope,
+        &format!("{TRANSITION_NS}/target_world_ref"),
+        "world_transition.target_world_ref",
+    )?;
+    let (source_world, source_identity) = worlds
+        .require(source_world_ref)
+        .map_err(|e| CepAuthorityError::Transition(format!("source world: {e}")))?;
+    let (target_world, target_identity) = worlds
+        .require(target)
+        .map_err(|e| CepAuthorityError::Transition(format!("target world: {e}")))?;
+    if source_world.to_string() == target_world.to_string() {
+        return Err(CepAuthorityError::Transition(
+            "source and target are the same world; a transition must move somewhere".into(),
+        ));
+    }
+    let closure_equal =
+        source_identity.semantic_closure_hash == target_identity.semantic_closure_hash;
+    match envelope.pointer(&format!("{TRANSITION_NS}/semantic_closure_equal")) {
+        None | Some(Value::Null) => {}
+        Some(Value::Bool(claimed)) if *claimed == closure_equal => {}
+        Some(_) => {
+            return Err(CepAuthorityError::Transition(
+                "the claimed semantic_closure_equal contradicts the registered worlds".into(),
+            ))
+        }
+    }
+    let kind = text(
+        envelope,
+        &format!("{TRANSITION_NS}/transition_kind"),
+        "world_transition.transition_kind",
+    )?;
+    if !TRANSITION_KINDS.contains(&kind) {
+        return Err(CepAuthorityError::Malformed(
+            "world_transition.transition_kind is not a known kind",
+        ));
+    }
+    let misdeclared = match kind {
+        "source_edit_only" | "compiler_upgrade" => !closure_equal,
+        "semantic_change" => closure_equal,
+        _ => false,
+    };
+    if misdeclared {
+        return Err(CepAuthorityError::Transition(format!(
+            "transition_kind {kind} contradicts the registered worlds (semantic closure {})",
+            if closure_equal { "equal" } else { "differs" }
+        )));
+    }
+    let claimed = optional_text(
+        envelope,
+        &format!("{TRANSITION_NS}/compatibility"),
+        "world_transition.compatibility",
+    )?;
+    if let Some(c) = &claimed {
+        if !COMPATIBILITIES.contains(&c.as_str()) {
+            return Err(CepAuthorityError::Malformed(
+                "world_transition.compatibility is not a known value",
+            ));
+        }
+    }
+    let compatibility = if closure_equal {
+        "compatible".to_string()
+    } else {
+        claimed.unwrap_or_else(|| "unknown".into())
+    };
+    let evidence_refs = match envelope.pointer(&format!("{TRANSITION_NS}/evidence_refs")) {
+        None | Some(Value::Null) => Vec::new(),
+        Some(Value::Array(items)) if items.len() <= 32 => items
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .filter(|s| !s.is_empty() && s.len() <= FIELD_MAX)
+                    .map(str::to_string)
+                    .ok_or(CepAuthorityError::Malformed(
+                        "world_transition.evidence_refs must be short non-empty strings",
+                    ))
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Some(_) => {
+            return Err(CepAuthorityError::Malformed(
+                "world_transition.evidence_refs must be an array of at most 32",
+            ))
+        }
+    };
+    Ok(VerifiedTransition {
+        source_world_ref: source_world.to_string(),
+        target_world_ref: target_world.to_string(),
+        transition_kind: kind.to_string(),
+        reason: text(
+            envelope,
+            &format!("{TRANSITION_NS}/reason"),
+            "world_transition.reason",
+        )?
+        .to_string(),
+        compatibility,
+        semantic_closure_equal: closure_equal,
+        semantic_diff_ref: optional_text(
+            envelope,
+            &format!("{TRANSITION_NS}/semantic_diff_ref"),
+            "world_transition.semantic_diff_ref",
+        )?,
+        migration_ref: optional_text(
+            envelope,
+            &format!("{TRANSITION_NS}/migration_ref"),
+            "world_transition.migration_ref",
+        )?,
+        evidence_refs,
+    })
 }
 
 fn text<'a>(
@@ -227,11 +423,30 @@ pub fn parse_request(
     let operation_kind = match text(envelope, &format!("{ns}/operation_kind"), "operation_kind")? {
         "action" => OperationKind::Action,
         "capability" => OperationKind::Capability,
+        "world_transition" => OperationKind::WorldTransition,
         _ => {
             return Err(CepAuthorityError::Malformed(
-                "operation_kind must be action or capability",
+                "operation_kind must be action, capability or world_transition",
             ))
         }
+    };
+    let transition = if operation_kind == OperationKind::WorldTransition {
+        let t = verify_transition(envelope, &world.to_string(), worlds)?;
+        // An approval is bound to resource_id, so for a transition it must be the target world: an
+        // approval for one move can never be spent on another.
+        if text(envelope, &format!("{ns}/operation_name"), "operation_name")? != "transition" {
+            return Err(CepAuthorityError::Malformed(
+                "operation_name must be transition for a world_transition",
+            ));
+        }
+        if text(envelope, &format!("{ns}/resource_id"), "resource_id")? != t.target_world_ref {
+            return Err(CepAuthorityError::Malformed(
+                "resource_id must be the target world_ref for a world_transition",
+            ));
+        }
+        Some(t)
+    } else {
+        None
     };
     Ok(ParsedRequest {
         envelope_id: text(envelope, "/envelope_id", "envelope_id")?.to_string(),
@@ -265,6 +480,7 @@ pub fn parse_request(
                     .collect()
             })
             .unwrap_or_default(),
+        transition,
     })
 }
 
@@ -283,6 +499,31 @@ pub struct CepAuthorityService<'a> {
     /// How long an escalation stays approvable.
     pub approval_ttl: Duration,
     pub criteria: SettlementCriteria,
+}
+
+/// One allowed world transition. `record` validates against cep's `world-transition.v1`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TransitionFact {
+    pub operation_id: String,
+    pub decision_id: String,
+    pub requester: String,
+    /// Set when a human approval was spent on this move.
+    pub approval_id: Option<String>,
+    pub ledger_entry: String,
+    pub record: Value,
+}
+
+impl TransitionFact {
+    pub fn to_json(&self) -> Value {
+        json!({
+            "operation_id": self.operation_id,
+            "decision_id": self.decision_id,
+            "requester": self.requester,
+            "approval_id": self.approval_id,
+            "ledger_entry": self.ledger_entry,
+            "record": self.record,
+        })
+    }
 }
 
 /// Where an escalation stands, derived from the append-only ledger and nothing else.
@@ -455,6 +696,55 @@ impl CepAuthorityService<'_> {
         })
     }
 
+    /// Every world transition that was allowed, oldest first, read back from the ledger and nothing else.
+    /// A transition exists exactly when its allow decision does: there is no second fact to drift from it.
+    pub fn transitions(&self) -> Result<Vec<TransitionFact>, CepAuthorityError> {
+        let entries = self.ledger()?.read_entries()?;
+        let mut out = Vec::new();
+        for entry in &entries {
+            let Some(key) = entry.idempotency_key.as_deref() else {
+                continue;
+            };
+            if !(key.starts_with("cep:") || key.starts_with("cep-approval-use:")) {
+                continue;
+            }
+            let Ok(decision) = serde_json::from_value::<AuthorityDecision>(entry.payload.clone())
+            else {
+                continue;
+            };
+            if decision.verdict != Verdict::Allow
+                || decision.normalized_disposition != NormalizedDisposition::Allow
+            {
+                continue;
+            }
+            let Ok(Value::Object(action)) = serde_json::to_value(&decision.action_request.action)
+            else {
+                continue;
+            };
+            let action = Value::Object(action);
+            if text_at(&action, "/resource_type") != "world_transition" {
+                continue;
+            }
+            let Some(mut record) = action.pointer("/parameters/transition").cloned() else {
+                continue;
+            };
+            record["authority_decision_ref"] = json!(decision.decision_id);
+            out.push(TransitionFact {
+                operation_id: text_at(&action, "/parameters/operation_id"),
+                decision_id: decision.decision_id.clone(),
+                requester: text_at(&entry.payload, "/action_request/actor/actor_id"),
+                approval_id: decision
+                    .policy_refs
+                    .iter()
+                    .find_map(|r| r.strip_prefix("approval:"))
+                    .map(str::to_string),
+                ledger_entry: entry.entry_ulid.clone(),
+                record,
+            });
+        }
+        Ok(out)
+    }
+
     /// Every escalation that can be approved, with its current standing.
     pub fn list_approvals(&self) -> Result<Vec<ApprovalStanding>, CepAuthorityError> {
         let entries = self.ledger()?.read_entries()?;
@@ -485,16 +775,21 @@ impl CepAuthorityService<'_> {
         request: &ParsedRequest,
         caller: &Actor,
     ) -> Result<AuthorityDecision, CepAuthorityError> {
+        let mut parameters = json!({
+            "operation_name": request.operation_name,
+            "operation_id": request.operation_id,
+            "world_ref": request.world_ref,
+            "subject_actor_ref": request.subject_actor_ref,
+            "request_envelope_id": request.envelope_id,
+        });
+        if let Some(t) = &request.transition {
+            // The verified facts travel in the committed decision, so the ledger alone can answer what moved.
+            parameters["transition"] = t.record(None);
+        }
         let action = AuthorityAction::Reserved {
             resource_type: request.kind.resource_type().to_string(),
             resource_id: request.resource_id.clone(),
-            parameters: json!({
-                "operation_name": request.operation_name,
-                "operation_id": request.operation_id,
-                "world_ref": request.world_ref,
-                "subject_actor_ref": request.subject_actor_ref,
-                "request_envelope_id": request.envelope_id,
-            }),
+            parameters,
         };
         let binding = self
             .bundle
@@ -530,6 +825,28 @@ impl CepAuthorityService<'_> {
         let mut decision = self.evaluate(&request, caller)?;
         let ledger = self.ledger()?;
         let mut note = ApprovalNote::default();
+
+        // Floor: a move across a semantic change needs a human whatever policy says. A policy allow becomes an
+        // approvable escalation; a deny stays a deny.
+        let floor = request
+            .transition
+            .as_ref()
+            .is_some_and(VerifiedTransition::needs_approval);
+        let floor_allow = floor && decision.verdict == Verdict::Allow;
+        if floor_allow && request.approval_ref.is_none() {
+            decision.verdict = Verdict::Escalate;
+            decision.outcome = Verdict::Escalate;
+            decision.normalized_disposition = NormalizedDisposition::Escalate;
+            decision.reason_codes = vec!["policy_escalate".into()];
+            decision.reason = "world_transition_requires_approval".into();
+            decision.required_next_steps = vec!["approve_world_transition".into()];
+            decision.approval_request_id = Some(approval_id_for(&request.operation_id));
+            decision.boundary_constraints.clear();
+            decision.compensating_controls.clear();
+            decision
+                .policy_refs
+                .push("floor:semantic_closure_differs".into());
+        }
 
         if let Some(approval_id) = &request.approval_ref {
             let entries = ledger.read_entries()?;
@@ -571,7 +888,7 @@ impl CepAuthorityService<'_> {
                 .push(standing.original_request_envelope_id.clone());
             // An approval satisfies a policy-driven escalation. It never overrides a deny, and it adds
             // nothing when policy now allows outright.
-            if approvable(&decision) {
+            if approvable(&decision) || floor_allow {
                 decision.verdict = Verdict::Allow;
                 decision.outcome = Verdict::Allow;
                 decision.normalized_disposition = NormalizedDisposition::Allow;

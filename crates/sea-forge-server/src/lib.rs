@@ -690,6 +690,8 @@ pub enum Request {
     },
     /// Every Cognate escalation that can be approved and where it stands. Read-only.
     AuthorityApprovals,
+    /// Every allowed world transition, read back from the ledger. Read-only (Stage 10).
+    AuthorityTransitions,
     /// Submit a RealityTrace-derived CEP `evidence_packet` for an operation SEA-Forge allowed (Stage 8).
     /// Records evidence; settles nothing.
     AuthorityEvidence {
@@ -2357,6 +2359,18 @@ pub async fn handle_request_as(
                 .unwrap_or_else(|_| {
                     serde_json::json!({
                         "error": "approval listing task failed",
+                        "error_class": "cep_authority_internal",
+                    })
+                })
+        }
+        Request::AuthorityTransitions => {
+            let config = state.config();
+            let root = state.root.clone();
+            tokio::task::spawn_blocking(move || cep_authority::transitions(&config, &root))
+                .await
+                .unwrap_or_else(|_| {
+                    serde_json::json!({
+                        "error": "transition listing task failed",
                         "error_class": "cep_authority_internal",
                     })
                 })
