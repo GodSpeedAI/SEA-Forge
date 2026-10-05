@@ -1085,12 +1085,12 @@ fn t06_wrong_producer_stamps_are_refused_at_wire_validation() {
 
 #[test]
 fn t06_writes_golden_fixture_for_swe_seed_adjudication() {
-    let seed_root = std::env::var("SWE_SEED_ROOT").unwrap_or_else(|_| {
-        format!(
-            "{}/projects/SWE_SEED",
-            std::env::var("HOME").unwrap_or_default()
-        )
-    });
+    // Writes into ANOTHER checkout, so it only runs when asked to. Without
+    // SWE_SEED_ROOT it never touches a sibling repo.
+    let Ok(seed_root) = std::env::var("SWE_SEED_ROOT") else {
+        eprintln!("SKIP: set SWE_SEED_ROOT to regenerate the SWE_SEED golden fixture");
+        return;
+    };
     let fixture = std::path::Path::new(&seed_root)
         .join("crates/swe-seed-core/tests/fixtures/t06_operational_settlement.json");
     if !std::path::Path::new(&seed_root)
