@@ -51,7 +51,6 @@ fn enabled_supervisor(actor: &str) -> SupervisorConfig {
         poll_interval_secs: 1,
         max_concurrent_cases: 2,
         actor: actor.into(),
-        ..SupervisorConfig::default()
     }
 }
 
@@ -448,11 +447,11 @@ async fn supervisor_enabled_auto_advances_ready_sandboxed_task_without_a_client(
     );
 
     // Quiet when done: two more polls append nothing to a terminal case.
-    let settled = fs::read(&case_events_path(root.path(), &case_id)).unwrap();
+    let settled = fs::read(case_events_path(root.path(), &case_id)).unwrap();
     tokio::time::sleep(Duration::from_millis(2500)).await;
     assert_eq!(
         settled,
-        fs::read(&case_events_path(root.path(), &case_id)).unwrap(),
+        fs::read(case_events_path(root.path(), &case_id)).unwrap(),
         "a completed case must stay byte-identical across supervisor polls"
     );
 }

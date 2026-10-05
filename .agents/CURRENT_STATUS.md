@@ -9,6 +9,40 @@ then split T13 and stop for operator review. Follow `current_status.yml`.
 
 ## Worktree State
 
+Supervisor repair `75404483` independently approved (`78f51525`): focused
+Clippy, all four existing tests and workspace Clippy passed. Root matched all
+nine captures, source hash and serial timings. Reviewer returned the token;
+ROOT reserves it for normal supervisor checkpoint then normal push. Trace
+fixture `a3c13aba` remains source-only under re-review of contradictory blank
+expected-input tests; no intended RED or production trace release is claimed.
+
+Trace fixture repair is frozen `a3c13aba`; semantic port/stub hashes are unchanged.
+All rejection findings have builder repairs but independent re-review and actual
+assertion RED remain required. Supervisor focused Clippy and full four-test
+binary passed; workspace Clippy is running under the same exclusive reviewer.
+No other compiler command is authorized concurrently.
+
+Supervisor fix is frozen `75404483`, exactly the three lint cleanups; root
+reviewed the diff. Independent reviewer `cancellation_serialized_oct05_fresh_critic`
+now has the exclusive compiler token, conditional on source readiness, for
+focused Clippy, all four existing supervisor tests, then workspace Clippy.
+Other workers are source-only. Run-list recon's stale cap claim is retracted in
+a new immutable correction: the production Go cap is already implemented.
+
+Checkpoint `c210629` commits the independently approved delegated-identity repair
+through normal hooks, exit0. Root matched its three checkpoint captures and
+confirmed eleven other staged identities unchanged. All compiler sessions are
+joined; ROOT holds the idle token. Fresh supervisor-test builder is source-only;
+Trace fixture repair and subsequent independent review remain required.
+
+Safe-trace Phase1 source critique REJECTED fixture completeness/proof: invalid
+missing-identity JSON, missing empty-result assertions, missing payload replaced
+by `{}`, and malformed-row/presence/unknown-ID gaps. Immutable review `d61cfe21`
+and supplement `db7afd9f` are retained. Fresh Luna builder
+`clippy_template_oct05_critic` repairs only the fixture without compiling;
+`cancellation_serialized_oct05_fresh_critic` will independently re-review.
+ROOT still owns the normal Rust checkpoint hook session93257 until joined.
+
 Latest: Rust `rfind` repair `1401e0b0` is independently approved: focused
 Clippy and the delegated-identity test pass. Root matched all nine captures.
 Workspace Clippy remains red on three supervisor-test idioms, recorded in CW-02.
