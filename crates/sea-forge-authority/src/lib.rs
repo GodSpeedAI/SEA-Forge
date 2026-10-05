@@ -823,6 +823,11 @@ pub struct PolicyRule {
     pub approver_roles: Option<Vec<String>>,
     #[serde(default)]
     pub degraded_mode: Option<String>,
+    /// Restrict a `cognate_action` / `cognate_capability` rule to these end-user subjects
+    /// (the `subject_actor_ref` of the CEP request). Omitted from the serialized form when
+    /// absent so existing bundle hashes do not change.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subjects: Option<Vec<String>>,
 }
 
 impl AuthorityPolicyBundle {
@@ -1263,6 +1268,18 @@ impl AuthorityPolicyBundle {
                 return Err(schema(
                     "degraded rule requires explicit policy permission and controls".into(),
                 ));
+            }
+            if let Some(subjects) = &rule.subjects {
+                if !matches!(
+                    rule.operation_kind.as_str(),
+                    "cognate_action" | "cognate_capability"
+                ) || subjects.is_empty()
+                    || subjects.iter().any(|s| s.is_empty())
+                {
+                    return Err(schema(
+                        "subjects applies only to cognate_action / cognate_capability and must be non-empty".into(),
+                    ));
+                }
             }
             if rule.compensating_controls.iter().any(|control| {
                 !matches!(
@@ -2614,6 +2631,12 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                         matches_approval_resolution_parameters(parameters, actor)
                     }
                     "recall_memory" => matches_memory_scope(rule, parameters),
+                    "cognate_action" | "cognate_capability" => {
+                        rule.subjects.as_ref().is_none_or(|allowed| {
+                            parameter_str(parameters, "subject_actor_ref")
+                                .is_some_and(|subject| allowed.iter().any(|a| a == subject))
+                        })
+                    }
                     _ => true,
                 }
         }

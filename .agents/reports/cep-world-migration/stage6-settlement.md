@@ -16,9 +16,16 @@ Date: 2026-10-05. sea-rs branch `migration/cep-world-ref`; cognate `cognate/harn
 - World identity includes logical URIs; DomainForge's CLI derives them relative to the entry's directory. SEA-Forge's first world config used root-relative paths and minted a different world_ref. Config now models `base` + entry-relative files.
 - Policy loader and engine each keep a closed vocabulary of operation kinds; added `cognate_action`/`cognate_capability` to both (additive, unlisted kinds still deny).
 
-## Debt / limits
-- Production wiring is not enabled: harness profile still runs governance `off`; no enforcers registered, so boundary/degraded are refused in practice (first candidate: `timeout_secs`).
-- Evaluated actor is the verified service identity; per-end-user policy cannot be expressed by current rules.
-- World registry is rebuilt per request (no cache); acceptable now, measure before production.
-- Cognate gate CG-PRF-002 is flaky under `just verify` (~1 in 4, reproduced on the pre-change commit dbc6b27); not investigated.
-- Live loop tests are skipped without SEA_FORGE_SERVER_BIN; a skip is not a pass.
+## Debt closed after settlement (2026-10-05)
+- World registry cache: keyed by the worlds configuration plus every file's bytes, so an edited file can never reuse a stale registry (tested: the old world_ref is refused after an edit, the new one allowed). Bounded to 8 entries.
+- Per-end-user policy: optional `subjects` on `cognate_action` / `cognate_capability` rules, matched against the request's `subject_actor_ref`. Rejected on any other kind or when empty. Omitted from the serialized rule when absent, so existing bundle hashes are unchanged (tested).
+- Production wiring and enforcement on the Cognate side: `timeout_secs` enforcer, `governanceFromEnv` (explicit opt-in), `just sea-forge-live` that fails rather than skips; CG-PRF-002 flake fixed at its root cause (React scheduler outliving happy-dom). See cognate `.agents/evidence/2026-10-05-stage6-debt-closure.md`, commit a3ee8fd.
+- Proven live through the real server: a `subjects` rule gave one user a `boundary` with `timeout_secs: 1`; a slow provider was aborted with `deadline_exceeded` while another user's capability calls stayed gated.
+- sea-rs `just test`: 1,141 passed, 0 failed (+5). Adding `subjects` to the public `PolicyRule` struct broke one struct literal in `sea-forge-sandbox` tests; fixed. Any downstream code building `PolicyRule` literally must add `subjects: None`.
+
+## Still open
+- Only `timeout_secs` has an enforcer; the other boundary dimensions (workspace, artifacts_root, env_keys, sandbox_class, max_manager_iterations) are refused by Cognate until enforcers exist.
+- One unexplained single failure of Cognate gate AK-006 in one serial run (0 of 23 afterwards); cause unknown.
+- The full Cognate suite has environment-dependent failures (68-78 across runs) in AG-UI interop, E2E, J-* journeys and archived validation copies; none in code changed by this migration, but not investigated.
+- Live loop tests still skip without SEA_FORGE_SERVER_BIN unless run through `just sea-forge-live`.
+- Escalation is still refused (Stage 7).

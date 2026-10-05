@@ -310,6 +310,77 @@ fn the_envelope_subject_cannot_choose_the_evaluated_role() {
     );
 }
 
+#[test]
+fn a_subject_scoped_rule_allows_only_its_subjects() {
+    let f = fixture(&rule(
+        "alice-only",
+        "cognate_action",
+        "    subjects: [\"actor:alice\"]\n",
+    ));
+    let mut req = request(&f.world, "op-sub-1", "action", "run.start", "agent.echo");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "allow"
+    );
+    req["extensions"]["godspeed.authority_request"]["operation_id"] = json!("op-sub-2");
+    req["envelope_id"] = json!("env-authority_request-op-sub-2");
+    req["authority"][0]["subject_actor_ref"] = json!("actor:bob");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "deny"
+    );
+}
+
+#[test]
+fn a_subject_rule_can_precede_a_broader_one() {
+    let rules = format!(
+        "{}{}",
+        rule(
+            "alice-escalates",
+            "cognate_action",
+            "    subjects: [\"actor:alice\"]\n    requires_approval: true\n"
+        ),
+        rule("everyone-else", "cognate_action", "")
+    );
+    let f = fixture(&rules);
+    let mut req = request(&f.world, "op-pre-1", "action", "run.start", "agent.echo");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "escalate"
+    );
+    req["extensions"]["godspeed.authority_request"]["operation_id"] = json!("op-pre-2");
+    req["envelope_id"] = json!("env-authority_request-op-pre-2");
+    req["authority"][0]["subject_actor_ref"] = json!("actor:carol");
+    // A different resource: an escalation parks an opaque constraint on its own resource.
+    req["extensions"]["godspeed.authority_request"]["resource_id"] = json!("agent.other");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "allow"
+    );
+}
+
+#[test]
+fn subjects_is_rejected_where_it_has_no_meaning() {
+    for (kind, extra) in [
+        ("write_file", "    subjects: [\"actor:alice\"]\n"),
+        ("cognate_action", "    subjects: []\n"),
+        ("cognate_action", "    subjects: [\"\"]\n"),
+    ] {
+        let yaml = format!("version: \"0.1\"\nrules:\n{}", rule("r", kind, extra));
+        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&yaml).unwrap();
+        assert!(
+            PolicyAuthorityEngine::new(bundle).is_err(),
+            "{kind} {extra}"
+        );
+    }
+}
+
+#[test]
+fn rules_without_subjects_serialize_exactly_as_before() {
+    let b = bundle(&rule("r", "cognate_action", ""));
+    assert!(!serde_json::to_string(&b).unwrap().contains("subjects"));
+}
+
 // ---- profile conformance, validated by the CEP repository's own validator ----
 //
 // Gated on `CEP_REPO` (path to a canonical-evaluation-protocol checkout) like the

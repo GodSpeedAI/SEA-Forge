@@ -18,13 +18,17 @@ const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 const POLICY: &str = "version: \"0.1\"\nrules:\n  - name: allow-actions\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_action\n  - name: gate-capabilities\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_capability\n    requires_approval: true\n";
 
 fn world_ref() -> String {
+    world_ref_of(SRC)
+}
+
+fn world_ref_of(src: &str) -> String {
     let mut reg = WorldRegistry::new();
     let set = SeaSourceSet {
         entry_uri: "demo.sea".into(),
         files: vec![SourceFile {
             uri: "demo.sea".into(),
-            sha256: format!("{:x}", Sha256::digest(SRC.as_bytes())),
-            content: SRC.into(),
+            sha256: format!("{:x}", Sha256::digest(src.as_bytes())),
+            content: src.into(),
         }],
     };
     reg.register_source_set("demo", &set).unwrap().to_string()
@@ -227,4 +231,38 @@ async fn an_unregistered_world_is_refused() {
         .await;
     assert_eq!(response["error_class"], "cep_world_refused", "{response}");
     assert!(response.get("envelope").is_none());
+}
+
+#[tokio::test]
+async fn editing_a_world_file_never_serves_a_stale_cached_world() {
+    let (root, socket) = boot(true).await;
+    let mut c = Client::connect(&socket).await;
+    let old = world_ref();
+    let first = c
+        .call(verb(
+            request(&old, "op-before", "action", "run.start"),
+            "op-before",
+        ))
+        .await;
+    assert_eq!(decision(&first), "allow", "{first}");
+
+    let edited = format!("// edited\n{SRC}");
+    std::fs::write(root.path().join("worlds/demo.sea"), &edited).unwrap();
+
+    // The world the request names no longer exists in this cell...
+    let stale = c
+        .call(verb(
+            request(&old, "op-stale", "action", "run.start"),
+            "op-stale",
+        ))
+        .await;
+    assert_eq!(stale["error_class"], "cep_world_refused", "{stale}");
+    // ...and the edited file is a new, valid world.
+    let fresh = c
+        .call(verb(
+            request(&world_ref_of(&edited), "op-fresh", "action", "run.start"),
+            "op-fresh",
+        ))
+        .await;
+    assert_eq!(decision(&fresh), "allow", "{fresh}");
 }

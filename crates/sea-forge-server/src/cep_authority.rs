@@ -9,20 +9,37 @@ use sea_forge_core::types::Actor;
 use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry, MAX_AGGREGATE_BYTES};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex, OnceLock};
 
 fn refusal(class: &str, message: impl std::fmt::Display) -> Value {
     json!({"error": message.to_string(), "error_class": class, "no_side_effect": true})
 }
 
-fn load_worlds(config: &ServerConfig, root: &Path) -> Result<WorldRegistry, String> {
-    let mut registry = WorldRegistry::new();
+/// Most distinct world sets kept; a world is immutable by digest, so entries never go stale.
+const CACHE_LIMIT: usize = 8;
+
+type RegistryCache = Mutex<HashMap<String, Arc<WorldRegistry>>>;
+
+fn cache() -> &'static RegistryCache {
+    static CACHE: OnceLock<RegistryCache> = OnceLock::new();
+    CACHE.get_or_init(Default::default)
+}
+
+/// Build (or reuse) the registry for the configured worlds. The cache key covers the
+/// configuration *and* every file's bytes, so an edited file can never reuse a stale
+/// registry: changed content is a different key and mints a different `world_ref`.
+fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>, String> {
+    let mut key = Sha256::new();
+    key.update(serde_json::to_vec(&config.cep_authority.worlds).map_err(|e| e.to_string())?);
+    let mut sets = Vec::new();
     for world in &config.cep_authority.worlds {
-        let mut files = Vec::new();
-        let mut total = 0usize;
         sea_forge_core::path::validate_relative_path(&world.base).map_err(|e| e.to_string())?;
         sea_forge_core::path::validate_relative_path(&world.entry).map_err(|e| e.to_string())?;
         let base = root.join(&world.base);
+        let mut files = Vec::new();
+        let mut total = 0usize;
         for relative in &world.files {
             sea_forge_core::path::validate_relative_path(relative).map_err(|e| e.to_string())?;
             let content = std::fs::read_to_string(base.join(relative))
@@ -34,22 +51,43 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<WorldRegistry, Stri
                     world.name
                 ));
             }
+            key.update(Sha256::digest(content.as_bytes()));
             files.push(SourceFile {
                 uri: relative.clone(),
                 sha256: format!("{:x}", Sha256::digest(content.as_bytes())),
                 content,
             });
         }
+        sets.push((world.name.clone(), world.entry.clone(), files));
+    }
+    let key = format!("{:x}", key.finalize());
+    if let Some(hit) = cache()
+        .lock()
+        .map_err(|_| "world cache poisoned".to_string())?
+        .get(&key)
+    {
+        return Ok(Arc::clone(hit));
+    }
+    let mut registry = WorldRegistry::new();
+    for (name, entry, files) in sets {
         registry
             .register_source_set(
-                &world.name,
+                &name,
                 &SeaSourceSet {
-                    entry_uri: world.entry.clone(),
+                    entry_uri: entry,
                     files,
                 },
             )
-            .map_err(|e| format!("world {}: {e}", world.name))?;
+            .map_err(|e| format!("world {name}: {e}"))?;
     }
+    let registry = Arc::new(registry);
+    let mut guard = cache()
+        .lock()
+        .map_err(|_| "world cache poisoned".to_string())?;
+    if guard.len() >= CACHE_LIMIT {
+        guard.clear();
+    }
+    guard.insert(key, Arc::clone(&registry));
     Ok(registry)
 }
 
