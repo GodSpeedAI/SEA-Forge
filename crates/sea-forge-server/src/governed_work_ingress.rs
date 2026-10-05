@@ -297,6 +297,26 @@ fn check_producer(
     }
 }
 
+/// Accept one governed work submission AND verify its world against SEA-Forge's
+/// registry. This is the entry point to use: the sender's `world_ref` is
+/// recomputed and known here (an unknown or drifted world fails closed), rather
+/// than trusted on syntax and equality alone.
+pub fn accept_verified_governed_work_request(
+    request: &Value,
+    context_packet: &Value,
+    local_model_sha256: &str,
+    worlds: &sea_forge_domainforge::WorldRegistry,
+) -> Result<GovernedWorkIntent, GovernedIngressError> {
+    #[allow(deprecated)]
+    let intent = accept_governed_work_request(request, context_packet, local_model_sha256)?;
+    intent
+        .verify_world(worlds)
+        .map_err(|e| GovernedIngressError::World {
+            reason: e.to_string(),
+        })?;
+    Ok(intent)
+}
+
 /// Accept one governed work submission at the SEA-Forge boundary.
 ///
 /// `request` and `context_packet` are the decoded canonical envelopes (E4 and
@@ -304,6 +324,9 @@ fn check_producer(
 /// resolution of the canonical DomainForge model identity (same manifest
 /// resolution chain the producer used). Returns the parsed intent only after
 /// every gate above passes; any failure means NO governed request exists.
+#[deprecated(
+    note = "checks world_ref syntax and equality only; use accept_verified_governed_work_request, which verifies the world against a WorldRegistry"
+)]
 pub fn accept_governed_work_request(
     request: &Value,
     context_packet: &Value,

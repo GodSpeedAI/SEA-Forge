@@ -13,6 +13,10 @@
 //!   TEETH-2 context packet cross-wire    -> rejected
 //!   TEETH-3 different DomainForge model  -> rejected before governed execution
 
+// These suites exercise the wire contract with synthetic worlds; the verified
+// entry point is covered by `stage11_*` in convergence_t11_whole_loop.rs.
+#![allow(deprecated)]
+
 use serde_json::{json, Value};
 
 use sea_forge_server::governed_work_ingress::{accept_governed_work_request, GovernedIngressError};

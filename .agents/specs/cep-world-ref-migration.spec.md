@@ -127,3 +127,40 @@ Normative source: cep `spec/profiles/GODSPEED-PROFILES-v1.md` §5 and `schemas/p
 
 ### Out of scope
 World-level semantic diff (DomainForge), persistence beyond the ledger, a new cep envelope kind, retargeting aliases, automatic re-validation of in-flight Cognate continuations (Cognate may request a transition; it never selects a world).
+
+## Stage 11 — Hardening for production
+
+### Decision: the legacy E4–E6 chain is a contract library, not a door
+
+`governed_work_ingress`, `governed_execution_boundary` and `governed_settlement_return` implement the
+`sea.agent.event.v1` wire contract between SWE_SEED and SEA-Forge. Nothing in the server calls them, and none
+should: a second entry into SEA-Forge would give one decision two paths and break the single choke point. The
+CEP authority verbs (`authority_request`, `authority_approval`, `authority_evidence`, `authority_settle`,
+`authority_transitions`) are the only server door and the only place a decision is made.
+
+The library stays because it is the cross-repo conformance surface for the golden-fixture loop. To stop it being
+a way around digest verification:
+
+- `accept_verified_governed_work_request(.., &WorldRegistry)` is the entry point. It recomputes and knows the
+  world; an unknown or drifted world fails closed.
+- `accept_governed_work_request` (syntax and equality only) is `#[deprecated]` and kept for the synthetic-world
+  fixture suites, which `#![allow(deprecated)]` it explicitly.
+
+Closes DEBT M-37.
+
+### End-to-end world loop
+
+`scripts/e2e-world-loop.sh` (`just e2e-world-loop`) runs one work request through real production surfaces in five
+repos, each reading the previous hop's actual output from one exchange directory, all in the world the
+DomainForge CLI computes for the demo source:
+
+GodSpeed-Agent E1 -> Context Kernel E3 (and its CEP `context_bundle`) -> SWE_SEED E4 -> SEA-Forge verified intake,
+decision, E5A/E5B, E6 -> SWE_SEED E7 -> RealityTrace E8 -> GodSpeed-Agent, recorded `bound` to the same world.
+
+SEA-Forge must independently recompute the world DomainForge gave the driver. Refusals are the pass condition for:
+an E4 in another world than its context packet, a world SEA-Forge never registered (both must say so, not merely
+fail), a denied request (no invocation, no settlement), and E8 evidence from another world or with no world.
+
+Not covered here, by design: E5B execution is simulated (real execution under a decision is Cognate's
+`just sea-forge-live`); an unreachable SEA-Forge is a Cognate fail-closed test; a mid-flight world transition is
+the CEP path (Stage 10), because the legacy chain refuses any second world (debt M-46).

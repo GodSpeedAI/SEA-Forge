@@ -14,6 +14,10 @@
 //!           (`convergence_t06_operational_settlement.rs` there): consuming
 //!           OperationalSettlement cannot promote developmental state.
 
+// These suites exercise the wire contract with synthetic worlds; the verified
+// entry point is covered by `stage11_*` in convergence_t11_whole_loop.rs.
+#![allow(deprecated)]
+
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{
     Actor, ActorRole, ActorType, AuthorityAction, AuthorityDecision, BindingResolution,

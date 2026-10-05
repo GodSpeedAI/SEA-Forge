@@ -2,7 +2,10 @@ use crate::{
     ExecutionSandbox, NetworkPosture, RelPath, SandboxClass, SandboxError, SandboxHandle,
     SandboxSpec,
 };
-use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
+use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult};
+// Only the Linux jail classifies an execution outcome; macOS never reaches these uses.
+#[cfg(target_os = "linux")]
+use sea_forge_core::types::ExecutionStatus;
 
 /// Landlock ABI that first introduced network (TCP bind/connect) restriction.
 ///
@@ -120,6 +123,7 @@ fn apply_landlock(
     Ok(())
 }
 
+#[derive(Debug)]
 pub struct JailSandbox;
 
 /// Interactive child spawned after Landlock restriction. The caller owns the
