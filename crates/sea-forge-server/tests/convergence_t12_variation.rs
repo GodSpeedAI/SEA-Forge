@@ -19,6 +19,10 @@
 //! forged_parent_reference, missing_evidence_artifact, late_callback,
 //! out_of_order_event, stale_authority_grant.
 
+// These suites exercise the wire contract with synthetic worlds; the verified
+// entry point is covered by `stage11_*` in convergence_t11_whole_loop.rs.
+#![allow(deprecated)]
+
 use std::path::PathBuf;
 
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};

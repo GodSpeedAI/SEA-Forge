@@ -16,6 +16,10 @@
 //!   AFFORDANCE = aff-t11-canonical-001
 //!   Fixed UUIDv5 event ids for E4/E5A/E5B/E6 etc.
 
+// These suites exercise the wire contract with synthetic worlds; the verified
+// entry point is covered by `stage11_*` in convergence_t11_whole_loop.rs.
+#![allow(deprecated)]
+
 use std::path::PathBuf;
 
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
@@ -888,4 +892,49 @@ fn stage9_intent_world_is_verified_against_the_registry_not_trusted() {
         accept_governed_work_request(&e4_governed_request(), &e3_context_packet(), DOMAIN_HASH)
             .unwrap();
     assert!(intent.verify_world(&worlds).is_err());
+}
+
+#[test]
+fn stage11_verified_intake_recomputes_the_world_and_fails_closed_on_an_unknown_one() {
+    use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
+    use sea_forge_server::governed_work_ingress::{
+        accept_verified_governed_work_request, GovernedIngressError,
+    };
+    let src = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
+    let set = SeaSourceSet {
+        entry_uri: "demo.sea".into(),
+        files: vec![SourceFile {
+            uri: "demo.sea".into(),
+            sha256: sha256_hex(src.as_bytes()),
+            content: src.into(),
+        }],
+    };
+    let mut worlds = WorldRegistry::new();
+    let registered = worlds
+        .register_source_set("demo", &set)
+        .unwrap()
+        .to_string();
+
+    let mut e4 = e4_governed_request();
+    let mut e3 = e3_context_packet();
+    e4["payload"]["world_ref"] = json!(registered);
+    e3["payload"]["world_ref"] = json!(registered);
+    let intent = accept_verified_governed_work_request(&e4, &e3, DOMAIN_HASH, &worlds)
+        .expect("a registered world is accepted");
+    assert_eq!(intent.world_ref, registered);
+
+    // Well-formed and self-consistent, but never registered: refused.
+    let err = accept_verified_governed_work_request(
+        &e4_governed_request(),
+        &e3_context_packet(),
+        DOMAIN_HASH,
+        &worlds,
+    )
+    .unwrap_err();
+    assert!(matches!(err, GovernedIngressError::World { .. }), "{err}");
+
+    // An empty registry knows no world at all.
+    let err = accept_verified_governed_work_request(&e4, &e3, DOMAIN_HASH, &WorldRegistry::new())
+        .unwrap_err();
+    assert!(matches!(err, GovernedIngressError::World { .. }), "{err}");
 }
