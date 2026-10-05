@@ -147,3 +147,20 @@ a way around digest verification:
   fixture suites, which `#![allow(deprecated)]` it explicitly.
 
 Closes DEBT M-37.
+
+### End-to-end world loop
+
+`scripts/e2e-world-loop.sh` (`just e2e-world-loop`) runs one work request through real production surfaces in five
+repos, each reading the previous hop's actual output from one exchange directory, all in the world the
+DomainForge CLI computes for the demo source:
+
+GodSpeed-Agent E1 -> Context Kernel E3 (and its CEP `context_bundle`) -> SWE_SEED E4 -> SEA-Forge verified intake,
+decision, E5A/E5B, E6 -> SWE_SEED E7 -> RealityTrace E8 -> GodSpeed-Agent, recorded `bound` to the same world.
+
+SEA-Forge must independently recompute the world DomainForge gave the driver. Refusals are the pass condition for:
+an E4 in another world than its context packet, a world SEA-Forge never registered (both must say so, not merely
+fail), a denied request (no invocation, no settlement), and E8 evidence from another world or with no world.
+
+Not covered here, by design: E5B execution is simulated (real execution under a decision is Cognate's
+`just sea-forge-live`); an unreachable SEA-Forge is a Cognate fail-closed test; a mid-flight world transition is
+the CEP path (Stage 10), because the legacy chain refuses any second world (debt M-46).
