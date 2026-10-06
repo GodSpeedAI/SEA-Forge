@@ -1,0 +1,26 @@
+--- FAIL: TestOIDCDiscoveryAndFlowConstruction (0.07s)
+panic: httptest: failed to listen on a port: listen tcp6 [::1]:0: socket: operation not permitted [recovered, repanicked]
+
+goroutine 238 [running]:
+testing.tRunner.func1.2({0xf5d140, 0xc0001242a0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x419
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x65f
+panic({0xf5d140?, 0xc0001242a0?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+net/http/httptest.newLocalListener()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:226 +0x165
+net/http/httptest.NewUnstartedServer(...)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:284
+net/http/httptest.NewServer({0xfbb038, 0xc0014a2000})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:267 +0x2c
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth.newTestOIDCProvider(0xc0000b0d88)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/auth/oidc_test.go:89 +0x4bf
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth.TestOIDCDiscoveryAndFlowConstruction(0xc0000b0d88)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/auth/oidc_test.go:152 +0x3f
+testing.tRunner(0xc0000b0d88, 0xfbfa68)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0x21d
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0xb13
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	22.164s
+FAIL

@@ -15,8 +15,11 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 )
 
 // Session is one authenticated browser session.
@@ -28,6 +31,7 @@ type Session struct {
 	CreatedAt time.Time
 	LastSeen  time.Time
 	ExpiresAt time.Time // the FIXED absolute deadline (never extended; idle expiry rides on LastSeen)
+	revoked   chan struct{}
 }
 
 // Idle reports whether the session's sliding idle window has passed.
@@ -44,6 +48,14 @@ type SessionStore struct {
 
 	mu       sync.Mutex
 	sessions map[string]*Session
+}
+
+// CurrentSessionState is a detached view for observation work; it contains no bearer or CSRF
+// material and does not expose the mutable Session stored by SessionStore.
+type CurrentSessionState struct {
+	Claim      ports.ActorClaim
+	ValidUntil time.Time
+	Revoked    <-chan struct{}
 }
 
 // Session lifetimes: documented defaults overridable from config (auth.session_idle_minutes,
@@ -98,6 +110,7 @@ func (st *SessionStore) Start(identity Identity) *Session {
 		CreatedAt: now,
 		LastSeen:  now,
 		ExpiresAt: now.Add(st.absoluteTTL),
+		revoked:   make(chan struct{}),
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()
@@ -123,18 +136,43 @@ func (st *SessionStore) Resolve(id string) (*Session, bool) {
 	}
 	now := st.now()
 	if now.After(sess.ExpiresAt) || sess.Idle(now, st.idleTTL) {
-		delete(st.sessions, id)
+		st.removeLocked(id)
 		return nil, false
 	}
 	sess.LastSeen = now
 	return sess, true
 }
 
+// Current returns a detached observation state without extending the session's idle lifetime.
+func (st *SessionStore) Current(id string) (CurrentSessionState, bool) {
+	if strings.TrimSpace(id) == "" {
+		return CurrentSessionState{}, false
+	}
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	sess, ok := st.sessions[id]
+	if !ok {
+		return CurrentSessionState{}, false
+	}
+	now := st.now()
+	if now.After(sess.ExpiresAt) || sess.Idle(now, st.idleTTL) {
+		st.removeLocked(id)
+		return CurrentSessionState{}, false
+	}
+	validUntil := sess.LastSeen.Add(st.idleTTL)
+	if sess.ExpiresAt.Before(validUntil) {
+		validUntil = sess.ExpiresAt
+	}
+	return CurrentSessionState{
+		Claim: sess.Identity.Claim(), ValidUntil: validUntil, Revoked: sess.revoked,
+	}, true
+}
+
 // Destroy removes the session (logout).
 func (st *SessionStore) Destroy(id string) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	delete(st.sessions, id)
+	st.removeLocked(id)
 }
 
 // Len reports the number of live sessions (diagnostics).
@@ -153,8 +191,9 @@ func (st *SessionStore) Sweep() int {
 	swept := 0
 	for id, sess := range st.sessions {
 		if now.After(sess.ExpiresAt) || sess.Idle(now, st.idleTTL) {
-			delete(st.sessions, id)
-			swept++
+			if st.removeLocked(id) {
+				swept++
+			}
 		}
 	}
 	return swept
@@ -170,8 +209,20 @@ func (st *SessionStore) evictOldestLocked() {
 		}
 	}
 	if oldestID != "" {
-		delete(st.sessions, oldestID)
+		st.removeLocked(oldestID)
 	}
+}
+
+// removeLocked closes the session's stable revocation signal before removing it. The caller
+// must hold st.mu; deleting through this helper makes repeated removal harmless.
+func (st *SessionStore) removeLocked(id string) bool {
+	sess, ok := st.sessions[id]
+	if !ok {
+		return false
+	}
+	close(sess.revoked)
+	delete(st.sessions, id)
+	return true
 }
 
 // randomToken returns 256 bits of CSPRNG output as hex.

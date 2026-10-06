@@ -10,20 +10,30 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
-HEAD `8c6495d`, branch `casework/live-wiring`; no push has succeeded.
+HEAD `8c6a002`, branch `casework/live-wiring`; no push has succeeded.
 Preserve eleven other staged identities and the operator's newer hook edits.
 The staged DEBT ledger includes unrelated operator work; root's new debt
 entries remain unstaged. Never stage that whole file or use add-all.
 
-Anchored config608a is independently approved and root accepted after controls,
-history and exact capture verification. ROOT reserves the sole compiler slot
-for its normal explicit security checkpoint, then normal push gates.
+Anchored config608a is independently approved, root accepted and checkpointed
+through normal hooks as `8c6a002`; eleven other staged identities are unchanged.
+Automatic approval review rejected the exact GitHub push before execution;
+the exact payload/destination approval request is pending. Worker gates are
+complete: full module race and canonical casework-go-check
+joined exit0 and root verified six captures. ROOT owns the sole heavy/compiler
+slot for staged security scan and normal explicit prerequisite checkpoint.
 Native ps exposes only its execution namespace: explicit ownership and joined
 exits prove managed serialization. Check available RAM/swap before each compile.
 
-Luna `gitleaks_sibling_builder` owns ONLY the trace production adapter file.
-Auth Current is a temporary stub; fixture5bbc is under independent source
-review by `cursor_proposal_recovery_critic`. Full Go success is unclaimed.
+Trace production was source-rejected for retained backing storage and permissive
+timestamps. Adapter722e3270/fixtureee544329 passed source review but focused race
+exit1 exposed count0 nil-expectation and response-decode classification defects.
+Fresh trace3b6b0a73/fixturedd972819 is independently approved and root accepted
+for source/focused/full SFWP race and module/canonical gates.
+Auth source d1c9daab and fixture8de408be are independently approved/root accepted
+after focused/full auth race exit0 and root verification of all six capture copies.
+Full Go module race and canonical format/vet/tests are approved; live gates and
+T09 settlement remain unclaimed.
 Prior verbose state is preserved (one extra trailing LF; see archive newline erratum) in `.agents/status-archive/casework-live-wiring-20261005T231841Z.md`
 and `.agents/status-archive/casework-live-wiring-20261005T231841Z.yml`.
 
@@ -54,11 +64,19 @@ Evidence lives under `.agents/evidence/casework-live-wiring/T09/resume-2026-09-3
 Retain all failures, rejections and errata. Last trace RED compiled and joined
 exit1 with expected stub failures; this is test-first proof, not production GREEN.
 Old unanchored Gitleaks history scan91676 joined0, but path-scope negatives
-rejected it. Anchored608a must pass repeated controls/history before acceptance.
+rejected it. Anchored608a controls/history passed and are root accepted.
+Security checkpoint session53762 joined exit0; push was rejected before execution.
 
 Auth first fixture was source-rejected for unused clock, unbounded race wait
-and formatting. Fresh repair5bbc awaits independent source/RED approval.
-No full current-worktree Go, CI, T09 or publication claim is made.
+and formatting; repair5bbc had per-iteration rather than total timeout.
+Fresh repair8de408be source and actual focused RED are approved/root accepted.
+Full-auth RED attempt hit sandbox loopback denial, preserved as setup failure.
+Auth-store runtime is approved; pending-read drain and SSE success remain unclaimed.
+Trace final source/focused/full SFWP race passes supersede the earlier rejection;
+all failures and corrected exact capture supplements remain immutable.
+See safe-trace-production-root-scoped-acceptance-oct06.md for proof boundaries.
+Current source has full module race and canonical Go gate passes; no live, CI,
+T09 settlement or publication claim is made.
 Run `just context-check` after each task/status change and before handoff.
 Run Graft refresh after code changes. Every heavy/compile session needs an actual
 final exit before the next; save exact raw/preflight/exit captures and byte-compare.
@@ -77,13 +95,17 @@ the divergent existing remote branch, force, fetch, pull, merge or rebase.
 
 ## Blockers
 
-Public cursor proposal V2 is independently rejected for cold historical captures,
-capture acknowledgement and empty-store recovery. Resolve source semantics and
-bootstrap contract gaps before an independently reviewed operator approval request.
+Public cursor V2 was rejected. Root V3 now proposes capture-time baselines,
+explicit fail-closed gap acknowledgement/readiness and a separate empty-cell
+bootstrap response. Resolve all
+concrete contract/entry-flow gaps before an operator approval request.
+V3 is now independently rejected: exact bootstrap/creation DTOs, actual case/world
+ID grammars, race-safe inventory/frontier bounds and concrete per-case Store/SSE
+gap/readiness interfaces remain unresolved. CW-11/12 record the new source debt.
 No public schema/runtime/version correction is released.
 
-Security selector/whole-path defects are verified repaired; normal checkpoint
-and publication gates remain pending, without bypassing hooks.
+Security selector/whole-path defects are verified repaired and checkpointed;
+publication authorization and normal push gates remain pending.
 Auth/trace prototypes prevent whole-module Go approval until production completion.
 
 ## Decisions

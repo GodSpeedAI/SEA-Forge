@@ -1,0 +1,10 @@
+UTC 2026-10-05T19:08:15Z
+               total        used        free      shared  buff/cache   available
+Mem:      8327897088  5561094144   210829312   214016000  2971471872  2766802944
+Swap:    12884901888 11775684608  1109217280
+
+UNFILTERED PID COMM RSS (KiB)
+    PID COMMAND           RSS
+      1 codex           19140
+      2 bash             3520
+      5 ps               3996

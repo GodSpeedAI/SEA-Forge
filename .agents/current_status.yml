@@ -11,11 +11,19 @@ metadata:
   initialized: true
   last_updated: '2026-10-05'
   updated_by: >-
-    Luna orchestrator: T00-T08 settled, T09 partial at HEAD8c6495d. Trace e839
-    fixture/actual assertionRED accepted; adapter production source builder.
-    Auth declarations f8f0df88 + fixture5bbc under independent source review,
-    Current temporary stub. Gitleaks608a independently approved/root accepted;
-    ROOT reserves solecompiler for normal security checkpoint/push gates.
+    Luna orchestrator: T00-T08 settled, T09 partial at HEAD8c6a002. Trace e839
+    Trace previous failures preserved; final3b6b0a/dd972819 now approved.
+    authproduction d1c9daab/fixture8de408be source+focused/fullAUTHrace approved/root
+    accepted, six rootcopiesexact. Trace3b6b0a/dd972819 source/focused/fullsfwprace0
+    independently approved and root sixcaptures exact. Full module race and
+    canonical justcasework-go-check bothjoined0, root sixcaptures
+    exact. ROOT soleheavy/compiler stagedscan+normalexplicitprerequisitecheckpoint.
+    CursorV3 independently REJECTed; concrete ID/creation/bootstrap/frontier/Store-stream
+    interfaces unresolved. CW-11/12 recorded; C-2 report/decision/handoff recorded.
+    Gitleaks608a independently approved/root accepted and
+    checkpointed through normal hooks; session53762 joined0, eleven index identities
+    preserved. Exact GitHub push auto-review rejected before execution; exact payload
+    and destination approval requested. No root compiler/push session exists.
     Public cursor V2 rejected; contract/runtime/version edits held. Eleven staged
     identities and operator hooks preserved; no push succeeded. Prior verbose
     handoff archived at .agents/status-archive/casework-live-wiring-20261005T231841Z.yml.
@@ -216,11 +224,14 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
-    Normal explicit security checkpoint/push for accepted608a under ROOT solecompiler;
-    retain eleven other staged identities and exclude pending Go prototypes.
-    Auth5bbc original-envelope source review then focused actual assertionRED under
-    separately granted compiler token. Freeze trace production adapter then independent
-    source/focused verification; full Go gates require auth Current production first.
+    Security checkpoint8c6a002 complete, eleven staged identities preserved. Exact
+    GitHub push authorization pending after automatic approval review rejection.
+    AUTH8de408be focusedRED accepted/root sixcapturesexact; bounded session.go
+    production d1c9daab/fixture8de408be independent+rootaccepted focused/fullAUTHrace0,
+    six exact copies. Trace3b6b0a/dd972819 independently+rootaccepted focused/fullsfwp0,
+    six exact copiesincl correctedfullraw. Trace critic solecompiler FULLmodule race
+    and canonical justcasework-go-check bothjoined0/rootaccepted sixcapturesexact.
+    ROOT soleheavy/compiler for stagedscan/normalexplicitprerequisitecheckpoint.
     Resolve cursor grammar/order/cold-history/bootstrap/gap semantics via independent
     proposal review and operator approval before public changes. Preserve eleven other
     staged identities, operator hooks and immutable failures. T09 remains unconfirmed.
@@ -297,12 +308,17 @@ handoff:
     precede runtime implementation. Whole-focus equality corrected before any critic verdict.
   state_summary: >-
     T00-T08 settled. Unit5A cancellation accepted/checkpoint8f81580. Trace Phase1
-    e839 approved/root exact3captures; productionadapter source builder. Auth Current
-    stub f8f0df88/repaired5bbc tests pending source/RED, fullGo green unclaimed.
-    Anchored608a security accepted/root ten captures exact; ROOT checkpoint/push slot.
+    e839 approved/root exact3captures; trace production freshrepair source review.
+    Auth d1c9daab/8de408be fully approved boundedprerequisite, six rootcopiesexact.
+    Trace3b6b0a/dd972819 approved scopedfocus/fullsfwp, root sixcopiesexact;
+    fullmodule race/canonicalGo gate0 rootaccepted sixcapturesexact; ROOT heavy/compiler
+    for stagedscan/checkpoint. FullT09/live/CI unclaimed. CursorV3 rejected/held.
+    Anchored608a accepted,
+    checkpoint8c6a002 normal hooks exit0, push rejected before execution; exact approval
+    requested. Root has no compiler session. Eleven staged identities are unchanged.
     Native ps is namespace-limited; serialize by assigned ownership and actual
     joined exits with RAM/swap preflights. Cursor V2 rejected; public edits held.
-    HEAD8c6495d normalRust checkpoints accepted; eleven staged paths/operator hook
+    HEAD8c6a002 normalRust checkpoints accepted; eleven staged paths/operator hook
     edits preserved, publication pending. Older state is archived, not new evidence.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
@@ -320,6 +336,7 @@ handoff:
     - "committed this session (T04C): SupervisorConfig + supervisor.rs + AdvanceCaller/AdvanceScope::Supervisor + per-case key locks + sfwp_supervisor tests + T04C gates/teeth + T04/confirmation.md; T04 SETTLED"
   decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
   warnings:
+    - "C-2 correction: Section0 direct relay does not prove append order/restart history; exact ULID producer conflicts with cursor grammar/comparisons, and empty bootstrap is noncanonical. Decision log/report updated. Public correction held; V3 independent review pending, exact operator approval required before affected implementation. Approved auth/trace prerequisites proceed independently."
     - "T09 contract redesign trigger recorded under decision-log redesign_reviews.T09-contract and report Section0.0; operator and independent architecture approved. Implement after T08 settles; independently verify implementation. Existing execution_trace child objects need no kind change."
     - "Critic t04-critic returned procedural REJECT (C uncommitted at review; no T04/confirmation.md; its live cargo re-runs hit a 30s env timeout) with ZERO code findings; grounds closed in T04/confirmation.md, which stands as the settlement record. Report via team mailbox msg_00002+msg_00003."
     - "Two subagent usage-limit windows on 2026-09-24 killed in-flight agents; check spawn health before relying on delegation (see agent_protocol.delegation caveat)."

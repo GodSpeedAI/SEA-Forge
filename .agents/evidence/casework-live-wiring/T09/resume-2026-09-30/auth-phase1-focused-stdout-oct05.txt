@@ -1,0 +1,25 @@
+--- FAIL: TestSessionStoreCurrentIsDetachedAndDoesNotSlide (0.00s)
+    session_observation_test.go:81: Current must return the live session state
+--- FAIL: TestSessionStoreCurrentUsesStrictIdleAndAbsoluteBoundaries (0.00s)
+    --- FAIL: TestSessionStoreCurrentUsesStrictIdleAndAbsoluteBoundaries/idle (0.00s)
+        session_observation_test.go:113: Current must return the live session state
+    --- FAIL: TestSessionStoreCurrentUsesStrictIdleAndAbsoluteBoundaries/absolute (0.00s)
+        session_observation_test.go:113: Current must return the live session state
+--- FAIL: TestSessionStoreResolveSlidesIdleButNotAbsoluteDeadline (0.00s)
+    session_observation_test.go:132: Current must return the live session state
+--- FAIL: TestSessionStoreRemovalPathsCloseStableRevocationSignal (0.00s)
+    --- FAIL: TestSessionStoreRemovalPathsCloseStableRevocationSignal/destroy (0.00s)
+        session_observation_test.go:211: Current must return the live session state
+    --- FAIL: TestSessionStoreRemovalPathsCloseStableRevocationSignal/resolve_idle_expiry (0.00s)
+        session_observation_test.go:211: Current must return the live session state
+    --- FAIL: TestSessionStoreRemovalPathsCloseStableRevocationSignal/current_idle_expiry (0.00s)
+        session_observation_test.go:211: Current must return the live session state
+    --- FAIL: TestSessionStoreRemovalPathsCloseStableRevocationSignal/sweep_absolute_expiry (0.00s)
+        session_observation_test.go:211: Current must return the live session state
+--- FAIL: TestSessionStoreCapacityEvictionIsBoundedAndDoesNotRevokeOthers (0.00s)
+    session_observation_test.go:224: Current must return the live session state
+--- FAIL: TestSessionStoreCurrentRacingDestroyNeverMissesRevocation (0.00s)
+    session_observation_test.go:258: Current must return the live session state
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	0.894s
+FAIL
