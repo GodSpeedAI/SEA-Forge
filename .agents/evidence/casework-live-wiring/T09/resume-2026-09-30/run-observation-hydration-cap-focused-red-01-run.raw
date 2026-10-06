@@ -1,0 +1,46 @@
+=== RUN   TestBoundRunObservationHydrationPreservesEmptyAndShortPayloads
+    run_observation_hydration_cap_test.go:148: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+--- FAIL: TestBoundRunObservationHydrationPreservesEmptyAndShortPayloads (0.00s)
+=== RUN   TestBoundRunObservationHydrationExactCapAndCapPlusOne
+=== RUN   TestBoundRunObservationHydrationExactCapAndCapPlusOne/exact_cap_remains_unchanged
+    run_observation_hydration_cap_test.go:159: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+=== RUN   TestBoundRunObservationHydrationExactCapAndCapPlusOne/cap_plus_one_omits_the_explicitly_oldest_frame
+    run_observation_hydration_cap_test.go:174: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+--- FAIL: TestBoundRunObservationHydrationExactCapAndCapPlusOne (0.50s)
+    --- FAIL: TestBoundRunObservationHydrationExactCapAndCapPlusOne/exact_cap_remains_unchanged (0.24s)
+    --- FAIL: TestBoundRunObservationHydrationExactCapAndCapPlusOne/cap_plus_one_omits_the_explicitly_oldest_frame (0.26s)
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically/global_timestamp_order_preserves_unsorted_per-run_order
+    run_observation_hydration_cap_test.go:240: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_instants_with_differing_offsets_use_complete_run_ID_bytes
+    run_observation_hydration_cap_test.go:240: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_run_and_instant_use_complete_event_ID_bytes
+    run_observation_hydration_cap_test.go:240: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+--- FAIL: TestBoundRunObservationHydrationSelectsOldestDeterministically (0.13s)
+    --- FAIL: TestBoundRunObservationHydrationSelectsOldestDeterministically/global_timestamp_order_preserves_unsorted_per-run_order (0.04s)
+    --- FAIL: TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_instants_with_differing_offsets_use_complete_run_ID_bytes (0.02s)
+    --- FAIL: TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_run_and_instant_use_complete_event_ID_bytes (0.07s)
+=== RUN   TestBoundRunObservationHydrationOversizedFramesAcrossRuns
+    run_observation_hydration_cap_test.go:284: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+--- FAIL: TestBoundRunObservationHydrationOversizedFramesAcrossRuns (0.05s)
+=== RUN   TestBoundRunObservationHydrationPreservesRingOmissionsAndMetadata
+    run_observation_hydration_cap_test.go:339: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+--- FAIL: TestBoundRunObservationHydrationPreservesRingOmissionsAndMetadata (0.03s)
+=== RUN   TestBoundRunObservationHydrationDoesNotAliasCallerData
+    run_observation_hydration_cap_test.go:372: boundRunObservationHydration: unavailable: run observation hydration is unavailable (run_observation)
+--- FAIL: TestBoundRunObservationHydrationDoesNotAliasCallerData (0.00s)
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/metadata_alone_exceeds_cap
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_eight_runs
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_1024_frames_in_one_run
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/inconsistent_frame_counts
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/unparseable_timestamp
+--- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs (0.01s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/metadata_alone_exceeds_cap (0.00s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_eight_runs (0.00s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_1024_frames_in_one_run (0.01s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/inconsistent_frame_counts (0.00s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/unparseable_timestamp (0.00s)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	2.586s
+FAIL
