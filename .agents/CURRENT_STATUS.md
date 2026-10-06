@@ -10,7 +10,7 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
-HEAD `e8f66a4`, branch `casework/live-wiring`; normal approved push succeeded to
+HEAD `b554b1f`, branch `casework/live-wiring`; normal approved e8f66a4 push succeeded to
 GitHub branch `casework/live-wiring-resume-2026-10-05`.
 Preserve eleven other staged identities and the operator's newer hook edits.
 The staged DEBT ledger includes unrelated operator work; root's new debt
@@ -70,7 +70,26 @@ independent review. Manager revision2 DOCONLY assignment records root guard,
 exhaustion and development bearer interpretations; additional16cohortlease bound
 is PROPOSED for review/operator approval before public integration. No runtime
 policy release. Root checkpointing current diagnostic/evidence records through
-normal hooks; workers source only. T09 partial.
+normal hooks; workers source only. Diagnostic checkpoint b554b1f completed via
+normal-hook session3372 joined0, context and Rust dev check1m09s passed, eleven
+excluded index identities unchanged. Root released compiler. Cap production
+3dfa2993 is frozen, fixture0e3b1774 unchanged; full source read by root, independent
+source review pending. UI independent adjudication351ed1cf accepted resume-boundary
+correction but rejected an unsupported progress-cursor remedy; preserve existing
+progress tests and require a concrete ordered cursor design before implementation.
+CW17 updated; debt additions remain unstaged. b554b1f not yet pushed. Cap source
+reviewb7ff7b81 is ROOTaccepted, with explicit well-formed DTO caller precondition
+and no callsite approval. Physical critic SOLE compiler: focused72410 and full
+server29681 joined0; module/canonical gates pending fresh checks. Root runs no
+heavy work concurrently. UI ordered-cursor proposal DOCONLY fresh builder
+admission_wiring_recon; independent review before any source correction. Cap final
+four gates72410/29681/42743/54587 joined0; root twelve archive pairs and two hashes
+exact, final source/runtime verdicts accepted. Private helper prerequisite complete;
+well-formed DTO caller precondition explicit, no manager callsite accepted. Root
+SOLE heavy owner next for normal unit checkpoint and push. Graft86179 joined0:
+691cards/7601nodes/14667edges. Root verified recovered erroneous duration differs
+only as disclosed; reconstruction is not an original capture. CW18 records
+process debt, current12runtimecaptures remain exact. T09 partial.
 Documentation/design checkpoint `6c5e310` used normal hooks; commit session15811
 joined exit0. Fresh preflight had 2164 MiB available RAM and 2254 MiB free swap;
 Cargo jobs1 and exclusive root ownership were used. Eleven excluded index entries
