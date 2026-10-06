@@ -11,13 +11,21 @@ metadata:
   initialized: true
   last_updated: '2026-10-05'
   updated_by: >-
-    Luna orchestrator: T00-T08 settled, T09 partial at HEAD8c6a002. Trace e839
+    Luna orchestrator: T00-T08 settled, T09 partial at HEAD06a7a4a. Trace e839
     Trace previous failures preserved; final3b6b0a/dd972819 now approved.
     authproduction d1c9daab/fixture8de408be source+focused/fullAUTHrace approved/root
     accepted, six rootcopiesexact. Trace3b6b0a/dd972819 source/focused/fullsfwprace0
     independently approved and root sixcaptures exact. Full module race and
     canonical justcasework-go-check bothjoined0, root sixcaptures
-    exact. ROOT soleheavy/compiler stagedscan+normalexplicitprerequisitecheckpoint.
+    exact. Prerequisites checkpoint06a7a4a normalhooks31162 joined0, settled-index
+    gitleaks89596 joined0; eleven excluded index identities exact. Compiler/scanner
+    idle. Physicalreadadmission first reviewer hit provider usage limit before verdict;
+    fresh independent Luna source review REJECTed missing API/reuse/cleanup/coverage
+    and partial-cohort semantics. Different Luna documentation builder completed repair;
+    root adjudication plus no-spin clarification independently approved for fixtures
+    only. Bounded Luna builder owns new stub/tests and Config field; no compiler token.
+    Approved eight-read budget is logical; oneDo can4physicalsends, manager-only pacing
+    insufficient. No pacing fixtures or source released.
     CursorV3 independently REJECTed; concrete ID/creation/bootstrap/frontier/Store-stream
     interfaces unresolved. CW-11/12 recorded; C-2 report/decision/handoff recorded.
     Gitleaks608a independently approved/root accepted and
@@ -231,7 +239,23 @@ next_action:
     six exact copies. Trace3b6b0a/dd972819 independently+rootaccepted focused/fullsfwp0,
     six exact copiesincl correctedfullraw. Trace critic solecompiler FULLmodule race
     and canonical justcasework-go-check bothjoined0/rootaccepted sixcapturesexact.
-    ROOT soleheavy/compiler for stagedscan/normalexplicitprerequisitecheckpoint.
+    Prerequisite checkpoint06a7a4a normalhooks0 and settled-indexgitleaks0, eleven
+    indexidentities exact. No compiler/scanner active. Independent physicalrunGet
+    admission proposal review before fixtures; exact8headaccounting unresolved.
+    First reviewer hit provider usage limit without verdict; fresh independent Luna
+    reviewer REJECTed API/reuse/cleanup/coverage/partial-cohort gaps. Eight-read budget
+    confirmed logical from approved round-four amendment. Different Luna builder repaired
+    proposal documentation; root adjudicated admission-before-connection, matched-slot
+    reuse, cooldown and cleanup/accounting. Independent round-two initially rejected
+    waiting ambiguity; binding no-spin clarification then approved fixtures only.
+    Bounded Luna builder owns limiter stub/tests and Config field, no compiler token;
+    independent source review plus real assertion RED required before production.
+    Bootstrap/Store bounded source inventory completed with exact wrapper/entry-flow/
+    listener/write-deadline anchors. Frontier source recon confirms case files precede
+    global case.submitted, but case.list silently hides enumeration/read failures and
+    races direct JSON writes. CW-13 recorded; V4 completeness remains unresolved.
+    Root source-observed ignored case.submitted publication Result (CW-14); successful
+    commit alone cannot prove a real global case cursor or readiness.
     Resolve cursor grammar/order/cold-history/bootstrap/gap semantics via independent
     proposal review and operator approval before public changes. Preserve eleven other
     staged identities, operator hooks and immutable failures. T09 remains unconfirmed.
@@ -312,13 +336,21 @@ handoff:
     Auth d1c9daab/8de408be fully approved boundedprerequisite, six rootcopiesexact.
     Trace3b6b0a/dd972819 approved scopedfocus/fullsfwp, root sixcopiesexact;
     fullmodule race/canonicalGo gate0 rootaccepted sixcapturesexact; ROOT heavy/compiler
-    for stagedscan/checkpoint. FullT09/live/CI unclaimed. CursorV3 rejected/held.
+    checkpoint06a7a4a normalhooks0/stagedscan0, elevenindexexact, no activeheavywork.
+    Physicalreadadmission first reviewer hit provider usage limit without verdict;
+    fresh independent Luna reviewer REJECTed concrete interface/ordering/cohort gaps.
+    Different Luna documentation repair completed; root adjudication and independent
+    round-two supplement approves fixtures only after no-spin clarification. Bounded
+    Luna builder owns declarations/tests and Config field, no compiler token;
+    source review/assertion RED before production. Eight initial reads logical.
+    FullT09/live/CI
+    unclaimed. CursorV3 rejected/held, concreteV4 proposal needed.
     Anchored608a accepted,
     checkpoint8c6a002 normal hooks exit0, push rejected before execution; exact approval
     requested. Root has no compiler session. Eleven staged identities are unchanged.
     Native ps is namespace-limited; serialize by assigned ownership and actual
     joined exits with RAM/swap preflights. Cursor V2 rejected; public edits held.
-    HEAD8c6a002 normalRust checkpoints accepted; eleven staged paths/operator hook
+    HEAD06a7a4a normalRust checkpoints accepted; eleven staged paths/operator hook
     edits preserved, publication pending. Older state is archived, not new evidence.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
@@ -336,7 +368,7 @@ handoff:
     - "committed this session (T04C): SupervisorConfig + supervisor.rs + AdvanceCaller/AdvanceScope::Supervisor + per-case key locks + sfwp_supervisor tests + T04C gates/teeth + T04/confirmation.md; T04 SETTLED"
   decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
   warnings:
-    - "C-2 correction: Section0 direct relay does not prove append order/restart history; exact ULID producer conflicts with cursor grammar/comparisons, and empty bootstrap is noncanonical. Decision log/report updated. Public correction held; V3 independent review pending, exact operator approval required before affected implementation. Approved auth/trace prerequisites proceed independently."
+    - "C-2 correction: Section0 direct relay does not prove append order/restart history; exact ULID producer conflicts with cursor grammar/comparisons, and empty bootstrap is noncanonical. Decision log/report updated. Public correction held; V3 independently rejected, concrete reviewed V4 and exact operator approval required before affected implementation. Approved auth/trace prerequisites are checkpointed."
     - "T09 contract redesign trigger recorded under decision-log redesign_reviews.T09-contract and report Section0.0; operator and independent architecture approved. Implement after T08 settles; independently verify implementation. Existing execution_trace child objects need no kind change."
     - "Critic t04-critic returned procedural REJECT (C uncommitted at review; no T04/confirmation.md; its live cargo re-runs hit a 30s env timeout) with ZERO code findings; grounds closed in T04/confirmation.md, which stands as the settlement record. Report via team mailbox msg_00002+msg_00003."
     - "Two subagent usage-limit windows on 2026-09-24 killed in-flight agents; check spawn health before relying on delegation (see agent_protocol.delegation caveat)."

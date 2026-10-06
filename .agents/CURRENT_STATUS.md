@@ -10,7 +10,7 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
-HEAD `8c6a002`, branch `casework/live-wiring`; no push has succeeded.
+HEAD `06a7a4a`, branch `casework/live-wiring`; no push has succeeded.
 Preserve eleven other staged identities and the operator's newer hook edits.
 The staged DEBT ledger includes unrelated operator work; root's new debt
 entries remain unstaged. Never stage that whole file or use add-all.
@@ -20,8 +20,9 @@ through normal hooks as `8c6a002`; eleven other staged identities are unchanged.
 Automatic approval review rejected the exact GitHub push before execution;
 the exact payload/destination approval request is pending. Worker gates are
 complete: full module race and canonical casework-go-check
-joined exit0 and root verified six captures. ROOT owns the sole heavy/compiler
-slot for staged security scan and normal explicit prerequisite checkpoint.
+joined exit0 and root verified six captures. Primitives checkpointed06a7a4a
+through normal hooks, settled-index Gitleaks scan0, eleven other staged identities
+unchanged. All compiler/scanner sessions joined; no active heavy work.
 Native ps exposes only its execution namespace: explicit ownership and joined
 exits prove managed serialization. Check available RAM/swap before each compile.
 
@@ -39,8 +40,9 @@ and `.agents/status-archive/casework-live-wiring-20261005T231841Z.yml`.
 
 ## Changed Files
 
-Current task changes: Gitleaks config; auth session declarations/new tests;
-new safe trace semantic port/adapter/tests; status, debt and immutable evidence.
+Current task changes: checkpointed security/auth/trace prerequisites; new limiter
+stub and two fixture files plus its Config field (builder draft, unverified);
+status, debt and immutable source-review evidence.
 Preserve unrelated staged agent guidance, trusted-daemon plan/spec, earlier trace
 proposal records and Jolli files, plus newer operator hook changes.
 
@@ -54,9 +56,9 @@ were repaired and independently verified through normal checkpoint `8c6495d`.
 Safe-trace Phase1 fixture e839 and actual assertion RED are independently
 approved; root checked all three capture copies and source identity.
 See `safe-trace-phase1-root-acceptance-oct05.md` in the T09 resume evidence.
-Only production `adapters/sfwp/run_trace.go` is released under its assignment
-and empty-slice erratum. Session lifecycle prerequisite proposal is source-approved;
-runtime and full server cancellation/drain remain pending.
+Trace production and the session lifecycle store prerequisite are independently
+approved and root accepted, with focused/package and whole-module Go verification.
+Shared pollers and full server cancellation/drain remain pending.
 
 ## Verification
 
@@ -83,15 +85,39 @@ final exit before the next; save exact raw/preflight/exit captures and byte-comp
 
 ## Remaining
 
-Finish independently verified trace port and non-sliding session revocation
-primitive, then shared pollers, authenticated SSE observation lifecycle, UI
+Build shared pollers using the independently verified trace port and non-sliding
+session revocation primitive, then authenticated SSE observation lifecycle, UI
 sidecar/cache and remaining T09 journeys. Run all named task/global gates and
 independent teeth before settling T09. T10 live browser ladder, T11 operational
 hardening and T12 final independent acceptance remain. Split T13, then stop.
 
-After security acceptance, normal explicit-path checkpoint/push to the verified
-unused resume branch is authorized. Recheck branch availability; never overwrite
+Local explicit-path checkpoints remain authorized. The exact remote push remains
+pending after automatic approval review rejected it; general push authorization
+does not resolve that pending request. Recheck branch availability; never overwrite
 the divergent existing remote branch, force, fetch, pull, merge or rebase.
+Next: independently review physical run.get admission before poller fixtures.
+Root proposal uses two bounded cooldown records and admission at EVERY retry
+write boundary; exact eight-head accounting and timeout consequences need review.
+The first reviewer hit a provider usage limit before a verdict. Fresh independent
+Luna review rejected the proposal for missing concrete API, reuse/cleanup ordering,
+production coverage and partial-cohort behavior. Eight initial reads are logical
+calls, as the approved round-four amendment states; physical retries retain pacing.
+A different Luna builder completed a documentation-only proposal repair. Root
+adjudicated admission before connection acquisition, exact matched-slot reuse,
+two-record cooldown, cleanup ordering and logical-budget failure accounting.
+Independent round-two source review first rejected ambiguous busy-state waiting;
+the binding no-spin supplement then approved declarations/fixtures only. A bounded
+Luna builder now owns new limiter stub/tests and only the Config field in client.go.
+It has no compiler ownership. Independent source review and actual assertion RED
+remain required before production release.
+Cursor/bootstrap public correction V4 still needs a concrete reviewed proposal.
+Bootstrap/Store inventory confirms the existing snapshot wrapper, separate template
+preflight flow, global Store subscriptions and missing SSE write deadlines. Source
+recon confirms successful case materialization precedes global case.submitted, but
+case.list can silently report empty/omit records on filesystem errors and race
+direct JSON writes. CW-13 is recorded; V4 inventory completeness remains unresolved.
+Root also observed discarded case.submitted publication errors (CW-14): successful
+commit alone cannot establish a real global case cursor or first-case readiness.
 
 ## Blockers
 
@@ -106,7 +132,9 @@ No public schema/runtime/version correction is released.
 
 Security selector/whole-path defects are verified repaired and checkpointed;
 publication authorization and normal push gates remain pending.
-Auth/trace prototypes prevent whole-module Go approval until production completion.
+Auth/trace production prerequisites and whole-module Go checks are approved.
+Physical admission, poller/SSE/UI integration and public contract correction remain
+unfinished; prerequisite approval does not settle T09.
 
 ## Decisions
 
