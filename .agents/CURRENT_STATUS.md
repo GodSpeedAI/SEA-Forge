@@ -10,7 +10,7 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
-HEAD `6c5e310`, branch `casework/live-wiring`; no push has succeeded.
+HEAD `4862cac`, branch `casework/live-wiring`; no push has succeeded.
 Preserve eleven other staged identities and the operator's newer hook edits.
 The staged DEBT ledger includes unrelated operator work; root's new debt
 entries remain unstaged. Never stage that whole file or use add-all.
@@ -22,7 +22,8 @@ the exact payload/destination approval request is pending. Worker gates are
 complete: full module race and canonical casework-go-check
 joined exit0 and root verified six captures. Primitives checkpointed06a7a4a
 through normal hooks, settled-index Gitleaks scan0, eleven other staged identities
-unchanged. All compiler/scanner sessions joined; no active heavy work.
+unchanged. Physical-admission sessions are joined; the selector critic currently
+owns the sole compiler token for its four sequential gates.
 Documentation/design checkpoint `6c5e310` used normal hooks; commit session15811
 joined exit0. Fresh preflight had 2164 MiB available RAM and 2254 MiB free swap;
 Cargo jobs1 and exclusive root ownership were used. Eleven excluded index entries
@@ -46,9 +47,10 @@ and `.agents/status-archive/casework-live-wiring-20261005T231841Z.yml`.
 
 ## Changed Files
 
-Current task changes: checkpointed security/auth/trace prerequisites; new limiter
-stub and two fixture files plus its Config field (builder draft, unverified);
-status, debt and immutable source-review evidence.
+Current task changes: checkpointed security/auth/trace/physical-admission
+prerequisites; new private selector source and frozen fixtures undergoing runtime
+verification; status, unstaged debt and immutable evidence. Manager and public
+cursor corrections are held.
 Preserve unrelated staged agent guidance, trusted-daemon plan/spec, earlier trace
 proposal records and Jolli files, plus newer operator hook changes.
 
@@ -57,11 +59,54 @@ proposal records and Jolli files, plus newer operator hook changes.
 2026-10-06 bounded physical run_get admission is independently approved and ROOT
 accepted: fixed two slots/one-second cooldown, every physical retry guarded,
 write completion timing, callback/pool cleanup before permit release, and one
-shared owner for every production live client. Final source hashes and all sixteen
+shared owner for every production live client. Checkpoint4862cac used normal hooks,
+session2552 joined0, Cargo jobs1, fresh2297MiB available RAM/1885MiB free swap;
+root verified all three checkpoint captures exact and eleven excluded index entries
+unchanged. Final source hashes and all sixteen
 accepted preflight/raw/exit capture pairs are root-verified exact. Focused race,
 full SFWP race, full-module race and canonical Go gate joined0. Graft build71796
-joined0 with687cards/7561nodes/14543edges. Normal-hook checkpoint is next.
+joined0 with687cards/7561nodes/14543edges. Normal-hook checkpoint is complete.
 Logical cohort manager/auth drain/SSE/UI remain unimplemented and T09 partial.
+Private selector Phase1 used ONLY two new files (stub/fixtures). Fresh builders
+repaired incorrect literal recency, terminal coverage and empty-input assertions;
+final fixture1e2295a3 and then-stub1e5cdf40 were independently approved. A completed
+independent Luna critic is reused because the session thread cap prevents new
+threads. Frozen checkpoint4862cac passed full Go gates; selector acceptance still
+requires its own source and runtime verification.
+Final independent source review accepted, including both empty input shapes and
+full-ID byte-order correction (prior critic tie finding retracted as false positive).
+Focused selector actual RED session66279 joined exit1 on expected stub assertion
+failures; all four functions and three empty/short subtests ran with no setup,
+type, race or timeout error. Root byte-compared all three original captures exact.
+Compiler released. Phase2 SOURCE ONLY algorithm is assigned to Luna
+admission_wiring_recon under production-original-assignment-oct06, fixture1e2295a3
+frozen. Builder has frozen sourceb9de3dae; independent critic now reviews full
+implementation against both original assignments. Independent SOURCE approved and
+root accepted with two hashes exact. Critic owns the SOLE compiler for sequential
+focused GREEN/server race/module race/canonical Go gates. Fresh resource captures
+and actual joined exits remain required before accepting this private prerequisite.
+Focused GREEN session6095 joined0 with all assertions reached. Full-server default
+sandbox attempt was denied on a local httptest listener; failed captures preserved.
+Fresh local-only escalated server retry session38121 joined0. After a provider
+usage interruption, the critic recovered and joined the existing module session
+44990, reported exit0, without a duplicate compile. Canonical Go gate remains
+pending under the same sole compiler owner; root final capture verification and
+runtime acceptance was pending until final review. Canonical session1684 joined0;
+critic released the compiler. Root independently matched all fifteen Phase2
+capture pairs and both source identities, read full source/fixtures/verdict and
+accepted this private selector prerequisite. No source or fixture repair was needed.
+Next: Graft refresh and an explicit-path normal-hook selector checkpoint.
+Graft refresh session19375 joined0:689cards/7574nodes/14579edges. The selector
+checkpoint is prepared with37explicit paths; root owns the sole heavy token for
+normal hooks. All eleven excluded staged identities remain exact.
+Luna run_observation_selection_fixture_builder owns SOURCE ONLY two new
+src/build/rendererChunkContract files under renderer-chunks-original-assignment-oct06.md.
+Independent fixture review and actual RED must precede production helper/Vite wiring.
+These files are frozen c5d9e161/b14719a9; independent SOURCE ONLY critic
+auth_fixture_total_deadline_repair is assigned the original instructions. No UI
+test/build has been run. Private manager count/budget/parent/cap recon is read-only.
+CW-15/16 record unpinned conflicting old UI ladder verdicts and missing emitted
+bundle artifact assertions. They are debt, not proof of a current UI regression.
 
 T00-T08 independently settled. T09 contracts/cap/mirrors, protected Ask and
 scoped run children were independently verified and checkpointed. Unit5A
