@@ -1,0 +1,13 @@
+               total        used        free      shared  buff/cache   available
+Mem:            7942        5768         152          78        2300        2173
+Swap:          12288       10303        1984
+    PID    PPID STAT COMMAND
+      1       0 Ss   codex
+      2       1 S    bash
+      4       2 R    ps
+assigned Go cache present
+ad3d599224527beda603a320b1b86faa82b80c75480d914cd805fa1e4de3a857  apps/godspeed-casework-go/internal/adapters/sfwp/client.go
+af040128d0d0288a2495d63bdb959a14edbf4ca8d5a2d8e29954193bb4e5fc6f  apps/godspeed-casework-go/internal/adapters/sfwp/run_get_admission.go
+dcc92dd73a951d3053ad907d66bda6caaf03f39b22fa33029ac81598349ddeed  apps/godspeed-casework-go/cmd/godspeed-casework/main.go
+dae0406d503e16546b24c507b02db63489dd8b06cd381b34fd045326d1983d58  apps/godspeed-casework-go/internal/adapters/sfwp/run_get_admission_test.go
+becd4266dca4a28e7641f5eaab1dafe5dc932e04723895cf5e795e7671524103  apps/godspeed-casework-go/internal/adapters/sfwp/client_run_get_admission_test.go

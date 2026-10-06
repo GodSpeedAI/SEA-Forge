@@ -83,6 +83,7 @@ func main() {
 	// path, which validation has already reported as that capability's own
 	// problem, so the prober is then simply not registered and preflight
 	// carries the typed config fault.
+	runGetAdmission := sfwp.NewRunGetLimiter()
 	liveClients := map[string]*sfwp.Client{}
 	liveAuthorities := map[string]*sfwp.Authority{}
 	probers := map[string]ports.Health{}
@@ -90,7 +91,10 @@ func main() {
 		if c.Adapter != config.AdapterLive {
 			continue
 		}
-		client, err := sfwp.New(sfwp.Config{SocketPath: strings.TrimPrefix(c.Endpoint, "unix://")})
+		client, err := sfwp.New(sfwp.Config{
+			SocketPath:      strings.TrimPrefix(c.Endpoint, "unix://"),
+			RunGetAdmission: runGetAdmission,
+		})
 		if err != nil {
 			continue
 		}

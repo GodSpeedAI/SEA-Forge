@@ -1,0 +1,68 @@
+=== RUN   TestClientUsesAdmissionOnlyForPhysicalRunGetAttempts
+    client_run_get_admission_test.go:83: admission run IDs=[], want [run-a] (client hook currently absent)
+--- FAIL: TestClientUsesAdmissionOnlyForPhysicalRunGetAttempts (0.00s)
+=== RUN   TestClientAdmissionCountsAllFourRunGetRetryAttempts
+    client_run_get_admission_test.go:116: admission acquisitions=[], want four physical attempts; client hook currently absent
+--- FAIL: TestClientAdmissionCountsAllFourRunGetRetryAttempts (0.02s)
+=== RUN   TestClientDoesNotRouteAskOrMutationThroughRunGetAdmission
+--- PASS: TestClientDoesNotRouteAskOrMutationThroughRunGetAdmission (0.02s)
+=== RUN   TestMutationTransportFailureIsNotResentThroughAdmission
+--- PASS: TestMutationTransportFailureIsNotResentThroughAdmission (0.10s)
+=== RUN   TestClientAdmissionMarksPayloadAndLFWriteBoundary
+    client_run_get_admission_test.go:231: admission/write sequence=[payload-write lf-write], want [permit-start payload-write lf-write permit-finish permit-release] (client hook currently absent)
+--- FAIL: TestClientAdmissionMarksPayloadAndLFWriteBoundary (0.00s)
+=== RUN   TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure
+=== RUN   TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/partial_payload
+    client_run_get_admission_test.go:305: attempt completion accounting=[]; every started partial/LF attempt must finish before cleanup (hook currently absent)
+=== RUN   TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/LF_write_error
+    client_run_get_admission_test.go:305: attempt completion accounting=[]; every started partial/LF attempt must finish before cleanup (hook currently absent)
+--- FAIL: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure (0.00s)
+    --- FAIL: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/partial_payload (0.00s)
+    --- FAIL: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/LF_write_error (0.00s)
+=== RUN   TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish
+=== RUN   TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_payload
+    client_run_get_admission_test.go:399: blocked attempt did not finish exactly once after write return: [payload-write-blocked payload-write-returned] (client hook currently absent)
+=== RUN   TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_LF
+    client_run_get_admission_test.go:399: blocked attempt did not finish exactly once after write return: [payload-write lf-write-blocked lf-write-returned] (client hook currently absent)
+--- FAIL: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish (0.00s)
+    --- FAIL: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_payload (0.00s)
+    --- FAIL: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_LF (0.00s)
+=== RUN   TestClientAdmissionReleaseFollowsCancellationAndConnectionRetirement
+    client_run_get_admission_test.go:513: connection retirement/permit release order=[connection-close connection-close connection-close], want close before release (hook currently absent)
+--- FAIL: TestClientAdmissionReleaseFollowsCancellationAndConnectionRetirement (0.00s)
+=== RUN   TestRunGetLimiterContract
+=== RUN   TestRunGetLimiterContract/production_constructor_fixes_storage_and_cooldown
+=== RUN   TestRunGetLimiterContract/same_run_remains_excluded_while_a_permit_is_owned
+    run_get_admission_test.go:32: first same-run admission: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/matching_run_reuses_its_eligible_slot_without_falling_through
+    run_get_admission_test.go:49: eligible matching slot was not acquired: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/matching_cooling_slot_does_not_fall_through_to_another_eligible_slot
+    run_get_admission_test.go:63: matching run bypassed its cooling slot: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/unexpired_idle_and_busy_slots_are_not_evicted
+    run_get_admission_test.go:80: third run returned instead of waiting for eligible record: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/different_runs_have_at_most_two_simultaneous_owners
+    run_get_admission_test.go:95: first distinct run: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/queued_cancellation_returns_typed_unavailable
+=== RUN   TestRunGetLimiterContract/queued_deadline_returns_typed_unavailable
+    run_get_admission_test.go:127: queued acquisition returned before deadline wait: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/release_before_any_write_leaves_cooldown_clear
+    run_get_admission_test.go:138: prewrite admission: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/cooldown_begins_at_final_attempted_write_completion
+    run_get_admission_test.go:152: acquire run_get: unavailable: physical run_get admission is not implemented (run_get_admission)
+=== RUN   TestRunGetLimiterContract/busy_same-run_wait_ignores_expired_unrelated_deadlines_and_wakes_on_permit_release
+    run_get_admission_test.go:176: acquire run-a owner: unavailable: physical run_get admission is not implemented (run_get_admission)
+--- FAIL: TestRunGetLimiterContract (0.01s)
+    --- PASS: TestRunGetLimiterContract/production_constructor_fixes_storage_and_cooldown (0.00s)
+    --- FAIL: TestRunGetLimiterContract/same_run_remains_excluded_while_a_permit_is_owned (0.01s)
+    --- FAIL: TestRunGetLimiterContract/matching_run_reuses_its_eligible_slot_without_falling_through (0.00s)
+    --- FAIL: TestRunGetLimiterContract/matching_cooling_slot_does_not_fall_through_to_another_eligible_slot (0.00s)
+    --- FAIL: TestRunGetLimiterContract/unexpired_idle_and_busy_slots_are_not_evicted (0.00s)
+    --- FAIL: TestRunGetLimiterContract/different_runs_have_at_most_two_simultaneous_owners (0.00s)
+    --- PASS: TestRunGetLimiterContract/queued_cancellation_returns_typed_unavailable (0.00s)
+    --- FAIL: TestRunGetLimiterContract/queued_deadline_returns_typed_unavailable (0.00s)
+    --- FAIL: TestRunGetLimiterContract/release_before_any_write_leaves_cooldown_clear (0.00s)
+    --- FAIL: TestRunGetLimiterContract/cooldown_begins_at_final_attempted_write_completion (0.00s)
+    --- FAIL: TestRunGetLimiterContract/busy_same-run_wait_ignores_expired_unrelated_deadlines_and_wakes_on_permit_release (0.00s)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.191s
+FAIL

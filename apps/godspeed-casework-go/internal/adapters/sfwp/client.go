@@ -66,6 +66,9 @@ type Config struct {
 	Logger *log.Logger
 	// Dial replaces the Unix dialer (tests inject fakes here).
 	Dial func(ctx context.Context, socketPath string) (net.Conn, error)
+	// RunGetAdmission is the process-shared owner for physical run_get attempts.
+	// Nil is supported for legacy isolated clients.
+	RunGetAdmission RunGetAdmission
 }
 
 func (c *Config) fill() error {
@@ -189,6 +192,10 @@ func (cn *conn) close() {
 // context implies. A call that fails at any point leaves the connection dead: the pairing contract
 // is positional, so a partially consumed connection must never be reused.
 func (cn *conn) call(ctx context.Context, line []byte, timeout time.Duration) (response []byte, callErr error) {
+	return cn.callWithPermit(ctx, line, timeout, nil)
+}
+
+func (cn *conn) callWithPermit(ctx context.Context, line []byte, timeout time.Duration, permit RunGetPermit) (response []byte, callErr error) {
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
 	if cn.dead {
@@ -221,13 +228,28 @@ func (cn *conn) call(ctx context.Context, line []byte, timeout time.Duration) (r
 		cn.close()
 		return nil, apperr.Wrap(apperr.KindInternal, "", "call", "cannot set write deadline", err)
 	}
-	if _, err := cn.nc.Write(line); err != nil {
-		cn.close()
-		return nil, transportErr("write", err)
+	if permit != nil {
+		if err := ctx.Err(); err != nil {
+			return nil, apperr.Wrap(apperr.KindUnavailable, "", "call",
+				"request was interrupted before writing", err)
+		}
 	}
-	if _, err := io.WriteString(cn.nc, "\n"); err != nil {
+	writeErr := func() error {
+		if permit != nil {
+			permit.WriteAttemptStarted()
+			defer permit.WriteAttemptFinished()
+		}
+		if _, err := cn.nc.Write(line); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(cn.nc, "\n"); err != nil {
+			return err
+		}
+		return nil
+	}()
+	if writeErr != nil {
 		cn.close()
-		return nil, transportErr("write", err)
+		return nil, transportErr("write", writeErr)
 	}
 	if err := cn.nc.SetReadDeadline(deadline); err != nil {
 		cn.close()
@@ -421,15 +443,13 @@ func (c *Client) roundTrip(ctx context.Context, req *Request, line []byte) (*Res
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cn, err := c.acquire(ctx)
+	resp, phase, err := c.physicalAttempt(ctx, req, line, timeout)
 	if err != nil {
-		return nil, err
-	}
-	respLine, err := cn.call(ctx, line, timeout)
-	if err != nil {
+		if phase != roundTripCallFailure {
+			return nil, err
+		}
 		var typed *apperr.Error
 		errors.As(err, &typed)
-		c.discard(cn)
 		if req.IsMutation() && req.RequestID() != "" && ctx.Err() == nil {
 			// The request may have crossed the wire; its outcome is unknown. Resolve it through
 			// the authority's correlation store rather than re-sending.
@@ -437,14 +457,14 @@ func (c *Client) roundTrip(ctx context.Context, req *Request, line []byte) (*Res
 		}
 		if req.IsTransportRetrySafe() && ctx.Err() == nil {
 			// Read-only verbs have no side effect: one reconnect-retry is safe.
-			if cn2, err2 := c.acquire(ctx); err2 == nil {
-				respLine2, err3 := cn2.call(ctx, line, timeout)
-				if err3 != nil {
-					c.discard(cn2)
-					return nil, err3
-				}
-				c.release(cn2)
-				return DecodeResponse(respLine2)
+			resp2, phase2, err2 := c.physicalAttempt(ctx, req, line, timeout)
+			if err2 == nil {
+				return resp2, nil
+			}
+			// Preserve the original behavior: failure to acquire the retry connection
+			// leaves the first physical call's error as the result.
+			if phase2 != roundTripConnectionAcquireFailure {
+				return nil, err2
 			}
 		}
 		if typed != nil && typed.Kind == apperr.KindUnavailable && errors.Is(err, context.DeadlineExceeded) {
@@ -453,8 +473,61 @@ func (c *Client) roundTrip(ctx context.Context, req *Request, line []byte) (*Res
 		}
 		return nil, err
 	}
-	c.release(cn)
-	return DecodeResponse(respLine)
+	return resp, nil
+}
+
+type roundTripFailurePhase uint8
+
+const (
+	roundTripNoFailure roundTripFailurePhase = iota
+	roundTripAdmissionFailure
+	roundTripConnectionAcquireFailure
+	roundTripCallFailure
+	roundTripDecodeFailure
+)
+
+func (c *Client) physicalAttempt(ctx context.Context, req *Request, line []byte, timeout time.Duration) (*Response, roundTripFailurePhase, error) {
+	var permit RunGetPermit
+	if req.verb == "run_get" && c.cfg.RunGetAdmission != nil {
+		runID, _ := req.body["run_id"].(string)
+		var err error
+		permit, err = c.cfg.RunGetAdmission.AcquireRunGet(ctx, runID)
+		if err != nil {
+			return nil, roundTripAdmissionFailure, err
+		}
+	}
+	if permit != nil {
+		defer permit.Release()
+	}
+
+	var cn *conn
+	var discard bool
+	defer func() {
+		if cn == nil {
+			return
+		}
+		if discard {
+			c.discard(cn)
+		} else {
+			c.release(cn)
+		}
+	}()
+
+	var err error
+	cn, err = c.acquire(ctx)
+	if err != nil {
+		return nil, roundTripConnectionAcquireFailure, err
+	}
+	respLine, err := cn.callWithPermit(ctx, line, timeout, permit)
+	if err != nil {
+		discard = true
+		return nil, roundTripCallFailure, err
+	}
+	resp, err := DecodeResponse(respLine)
+	if err != nil {
+		return nil, roundTripDecodeFailure, err
+	}
+	return resp, roundTripNoFailure, nil
 }
 
 // recoverOutcome reconnects (bounded backoff) and resolves a correlated request's outcome through

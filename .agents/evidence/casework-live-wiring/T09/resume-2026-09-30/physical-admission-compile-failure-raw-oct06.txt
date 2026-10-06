@@ -1,0 +1,4 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp [github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp.test]
+internal/adapters/sfwp/run_get_admission_test.go:283:3: undefined: t
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp [build failed]
+FAIL

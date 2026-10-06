@@ -9,32 +9,18 @@ metadata:
   brief_note: Read Section 0 (Verification Errata, decisions, runner change) FIRST. Where the body disagrees with Section 0, Section 0 is correct (but see correction C-1 in the decision log for one §0 fact that was wrong).
   spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
   initialized: true
-  last_updated: '2026-10-05'
+  last_updated: '2026-10-06'
   updated_by: >-
-    Luna orchestrator: T00-T08 settled, T09 partial at HEAD06a7a4a. Trace e839
-    Trace previous failures preserved; final3b6b0a/dd972819 now approved.
-    authproduction d1c9daab/fixture8de408be source+focused/fullAUTHrace approved/root
-    accepted, six rootcopiesexact. Trace3b6b0a/dd972819 source/focused/fullsfwprace0
-    independently approved and root sixcaptures exact. Full module race and
-    canonical justcasework-go-check bothjoined0, root sixcaptures
-    exact. Prerequisites checkpoint06a7a4a normalhooks31162 joined0, settled-index
-    gitleaks89596 joined0; eleven excluded index identities exact. Compiler/scanner
-    idle. Physicalreadadmission first reviewer hit provider usage limit before verdict;
-    fresh independent Luna source review REJECTed missing API/reuse/cleanup/coverage
-    and partial-cohort semantics. Different Luna documentation builder completed repair;
-    root adjudication plus no-spin clarification independently approved for fixtures
-    only. Bounded Luna builder owns new stub/tests and Config field; no compiler token.
-    Approved eight-read budget is logical; oneDo can4physicalsends, manager-only pacing
-    insufficient. No pacing fixtures or source released.
-    CursorV3 independently REJECTed; concrete ID/creation/bootstrap/frontier/Store-stream
-    interfaces unresolved. CW-11/12 recorded; C-2 report/decision/handoff recorded.
-    Gitleaks608a independently approved/root accepted and
-    checkpointed through normal hooks; session53762 joined0, eleven index identities
-    preserved. Exact GitHub push auto-review rejected before execution; exact payload
-    and destination approval requested. No root compiler/push session exists.
-    Public cursor V2 rejected; contract/runtime/version edits held. Eleven staged
-    identities and operator hooks preserved; no push succeeded. Prior verbose
-    handoff archived at .agents/status-archive/casework-live-wiring-20261005T231841Z.yml.
+    Root orchestrator 2026-10-06: T00-T08 settled; T09 partial, HEAD6c5e310 pending
+    physical-admission checkpoint. Physical source/runtime independently approved
+    and ROOT accepted clientad3d5992/limiteraf040128/main dcc92dd7 with exactfixtures.
+    Four gates joined0: focused70862, fullSFWP14903, module38277, canonicalGo79397.
+    Root16acceptedcapturepairs byteexact and fivehashes exact; ninePASSgroups/noSpin/
+    pool-at-release reached. Initialmissingpreflight run NOTaccepted. Graft71796 joined0,
+    687cards/7561nodes/14543edges. Compiler/scannerfree; root owns nextnormalhookcheckpoint.
+    Eleven excluded staged identities/operator hooks preserved, DEBT additions unstaged.
+    Manager/authdrain/SSE/UI pending. CursorV3 rejected/V4 held; CW13/14 recorded.
+    Exact remote publication approval pending after automatic push rejection beforeexec.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -232,33 +218,18 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
-    Security checkpoint8c6a002 complete, eleven staged identities preserved. Exact
-    GitHub push authorization pending after automatic approval review rejection.
-    AUTH8de408be focusedRED accepted/root sixcapturesexact; bounded session.go
-    production d1c9daab/fixture8de408be independent+rootaccepted focused/fullAUTHrace0,
-    six exact copies. Trace3b6b0a/dd972819 independently+rootaccepted focused/fullsfwp0,
-    six exact copiesincl correctedfullraw. Trace critic solecompiler FULLmodule race
-    and canonical justcasework-go-check bothjoined0/rootaccepted sixcapturesexact.
-    Prerequisite checkpoint06a7a4a normalhooks0 and settled-indexgitleaks0, eleven
-    indexidentities exact. No compiler/scanner active. Independent physicalrunGet
-    admission proposal review before fixtures; exact8headaccounting unresolved.
-    First reviewer hit provider usage limit without verdict; fresh independent Luna
-    reviewer REJECTed API/reuse/cleanup/coverage/partial-cohort gaps. Eight-read budget
-    confirmed logical from approved round-four amendment. Different Luna builder repaired
-    proposal documentation; root adjudicated admission-before-connection, matched-slot
-    reuse, cooldown and cleanup/accounting. Independent round-two initially rejected
-    waiting ambiguity; binding no-spin clarification then approved fixtures only.
-    Bounded Luna builder owns limiter stub/tests and Config field, no compiler token;
-    independent source review plus real assertion RED required before production.
-    Bootstrap/Store bounded source inventory completed with exact wrapper/entry-flow/
-    listener/write-deadline anchors. Frontier source recon confirms case files precede
-    global case.submitted, but case.list silently hides enumeration/read failures and
-    races direct JSON writes. CW-13 recorded; V4 completeness remains unresolved.
-    Root source-observed ignored case.submitted publication Result (CW-14); successful
-    commit alone cannot prove a real global case cursor or readiness.
-    Resolve cursor grammar/order/cold-history/bootstrap/gap semantics via independent
-    proposal review and operator approval before public changes. Preserve eleven other
-    staged identities, operator hooks and immutable failures. T09 remains unconfirmed.
+    Checkpoint ROOTaccepted physical-admission unit through normal hooks and explicit
+    paths only. Finalfivehashes unchanged, source/runtime approvals and rootacceptance
+    recorded; focused/fullSFWP/module/canonicalGo alljoined0 with root16captures exact.
+    Graftbuild71796 joined0. Preserve11excludedindex identities/operator hooks and
+    neverstagewholeDEBT. Then source-reviewed managerproposal beforetestfixtures:
+    approved shared(case_id,run_id) keys/16pollers, perwatcher verifiedsession gates,
+    logical8readbudget, selection/counters/cachedbuffer classification and drain need
+    concrete specification. Manager sourceinventory f181c274 cites existingports/DTO/
+    authCurrent and unprotectedkernelreadmodels; no manager implementation released.
+    Publiccursor/bootstrapV4 stillrequiresconcrete reviewedproposal and exactoperator
+    approval beforepublic/kernel corrections. T09 remainsunsettled; T10-T12 await it,
+    splitT13 thenstop. Publicationexactapprovalpending; do notretryindirectly.
 agent_protocol:
   read_order:
     - .agents/current_status.yml (this file)
@@ -331,27 +302,17 @@ handoff:
     fixture frozen68511dc; no compiler token. Independent source review/expectedRED must
     precede runtime implementation. Whole-focus equality corrected before any critic verdict.
   state_summary: >-
-    T00-T08 settled. Unit5A cancellation accepted/checkpoint8f81580. Trace Phase1
-    e839 approved/root exact3captures; trace production freshrepair source review.
-    Auth d1c9daab/8de408be fully approved boundedprerequisite, six rootcopiesexact.
-    Trace3b6b0a/dd972819 approved scopedfocus/fullsfwp, root sixcopiesexact;
-    fullmodule race/canonicalGo gate0 rootaccepted sixcapturesexact; ROOT heavy/compiler
-    checkpoint06a7a4a normalhooks0/stagedscan0, elevenindexexact, no activeheavywork.
-    Physicalreadadmission first reviewer hit provider usage limit without verdict;
-    fresh independent Luna reviewer REJECTed concrete interface/ordering/cohort gaps.
-    Different Luna documentation repair completed; root adjudication and independent
-    round-two supplement approves fixtures only after no-spin clarification. Bounded
-    Luna builder owns declarations/tests and Config field, no compiler token;
-    source review/assertion RED before production. Eight initial reads logical.
-    FullT09/live/CI
-    unclaimed. CursorV3 rejected/held, concreteV4 proposal needed.
-    Anchored608a accepted,
-    checkpoint8c6a002 normal hooks exit0, push rejected before execution; exact approval
-    requested. Root has no compiler session. Eleven staged identities are unchanged.
-    Native ps is namespace-limited; serialize by assigned ownership and actual
-    joined exits with RAM/swap preflights. Cursor V2 rejected; public edits held.
-    HEAD06a7a4a normalRust checkpoints accepted; eleven staged paths/operator hook
-    edits preserved, publication pending. Older state is archived, not new evidence.
+    T00-T08 settled, T09 partial. HEAD6c5e310 pending nextphysicaladmission checkpoint.
+    ROOT accepted final physical unit: clientad3d5992/limiteraf040128/main dcc92dd7,
+    fixturesdae0406d/becd4266 exact. Independent source/runtimeapprove; root4gate
+    exits0, 16capturepairs byteexact, noSpin/pool assertions reached. Sessions70862,
+    14903,38277,79397 alljoined0. Initialmissingdurablepreflight run preserved/unaccepted.
+    Graft71796 joined0:687cards/7561nodes/14543edges. No activecompiler/scanner; root
+    owns nextnormalhookcommit, resourcepreflight required. Preserve11excludedstage
+    identities/operatorhookedits/immutablefailures; DEBT entries remainunstaged.
+    Manager/logicalbudget/sessiondrain/SSE/UI and T10-T12 remain; publicV3 rejected/V4
+    held. Pendingexactremotepushapproval afterautomaticrejectionbeforeexec. No T09/live/
+    CI/publicationcompletionclaim. T13split thenoperatorreview.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
     - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."
