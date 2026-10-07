@@ -1,0 +1,85 @@
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/blank_case
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_history
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_relay
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/empty_history
+--- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/blank_case (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_history (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/empty_history (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_relay (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/revision_case
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_case
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_cursor
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/facts_cursor
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nonblank_revision_cursor
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/record_reference
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/overview_reference
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/horizon_reference
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_compared_cursors
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/missing_facts
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nil_horizon_items
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_parent_ID
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/duplicate_parent_ID
+    run_observation_present_context_test.go:287: history queried for []; want exact requested case
+--- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/revision_case (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_case (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_cursor (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/facts_cursor (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nonblank_revision_cursor (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/record_reference (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/overview_reference (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/horizon_reference (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_compared_cursors (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/missing_facts (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nil_horizon_items (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_parent_ID (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/duplicate_parent_ID (0.00s)
+=== RUN   TestCheckRunObservationPresentContextUsesOnlyNewestRevisionWithoutFallback
+    run_observation_present_context_test.go:311: history queried for []; want exact requested case
+--- FAIL: TestCheckRunObservationPresentContextUsesOnlyNewestRevisionWithoutFallback (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/missing_observed_cursor
+    run_observation_present_context_test.go:345: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/blank_observed_cursor
+    run_observation_present_context_test.go:345: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/advanced_without_captured_revision
+    run_observation_present_context_test.go:345: history queried for []; want exact requested case
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/opaque_cursor_differs
+    run_observation_present_context_test.go:345: history queried for []; want exact requested case
+--- FAIL: TestCheckRunObservationPresentContextRejectsRelayCursorGaps (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/missing_observed_cursor (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/blank_observed_cursor (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/advanced_without_captured_revision (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/opaque_cursor_differs (0.00s)
+=== RUN   TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons
+=== RUN   TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/complete_empty_horizon
+    run_observation_present_context_test.go:375: complete matching context error = unavailable: present case context is not available (run_observation), want success
+=== RUN   TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/opaque_populated_parents
+    run_observation_present_context_test.go:375: complete matching context error = unavailable: present case context is not available (run_observation), want success
+--- FAIL: TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/complete_empty_horizon (0.00s)
+    --- FAIL: TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/opaque_populated_parents (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRechecksAdvancingHistoryAndDoesNotReuseOldParents
+    run_observation_present_context_test.go:416: initial context error = unavailable: present case context is not available (run_observation), want success
+--- FAIL: TestCheckRunObservationPresentContextRechecksAdvancingHistoryAndDoesNotReuseOldParents (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRejectsWrongCaseFromHistory
+    run_observation_present_context_test.go:455: history queried for []; want exact requested case
+--- FAIL: TestCheckRunObservationPresentContextRejectsWrongCaseFromHistory (0.00s)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.704s
+FAIL

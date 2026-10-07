@@ -10,7 +10,65 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
-HEAD `b554b1f`, branch `casework/live-wiring`; normal approved e8f66a4 push succeeded to
+Resume 2026-10-06: prior transient /tmp guard and UI originals are absent.
+Final twelve guard and three UI RED2 repository captures remain durable;
+their earlier cmp results are historical, not newly rerun. CW-24 records
+incomplete prior-attempt archival. Root owns all heavy gates. Fresh Luna
+critics review preserved hashes/evidence; manager revision6 is DOCONLY.
+
+Latest: private guard19bd9a57/fixture46caa4f5 is ROOTaccepted after independent
+final review8c9f8df3 and four final GREEN gates7811/49865/21717/97794, all joined0.
+Root verified twelve final capture pairs byte-exact. Next: Graft refresh and
+normal explicit checkpoint/push, with root as sole heavy owner. UI373a passed
+source review641686; second focused RED completed synchronously (Bun1) with
+2pass/4semanticfailures/24expects340ms and three root-exact captures. Different
+critic final verdict pending, no ordering code released. Manager5d727 rejected
+22772 for remaining cohort/ownership/error details; fresh document repair needed.
+Bootstrap3/recon cursor erratum await review. CW23 kernel trace-read completeness
+debt recorded unstaged; it is not a manager continuity or full-journal guarantee.
+
+Latest gate failure: guard canonical recipe exited1 before tests because gofmt
+would reformat fixturefffa0335. Compiler returned idle; no source was edited.
+Earlier focused43421, full server92459 and full module98629 passed; sandbox
+failures18912/84633 remain separate. A fresh builder must make only fixture
+formatting changes, followed by independent equivalence review and fresh gates.
+No guard unit acceptance or new commit. Manager revision5 is document only:
+proposed exact observed-ID ledger plus combined retention budget, with approval
+still required. Bootstrap2 is under review; a refusal on an ambiguous retry
+does not establish the original attempt never committed.
+
+Latest runtime: focused guard43421 joined GREEN; all seven top-level tests
+passed. Root verified a direct5953byte Go-output archive SHA73f5161b/cmp0;
+wrapper launch metadata was tool output only, not part of that original file.
+Full server18912 joined with local IPv6 httptest listener EPERM, a setup failure;
+the sole compiler owner is taking the authorized isolated loopback retry with
+fresh resources. UIc625 is root source-accepted but runtime RED remains held.
+Bootstrap revision2 and actual trace continuity are delegated document/recon
+work only. Failed evidence remains preserved; no runtime unit is complete yet.
+
+Latest: guard source19bd9a57 and fixturefffa0335 passed independent source
+review7c436aa6/addendumcdda087b and root review. Physical critic now owns the
+only compiler for four sequential GREEN gates with fresh preflight and joins.
+UI fixturec625cb81 passed independent source review1a3e91e5; actual RED waits
+for compiler return and root assignment. Manager revision4ece24b13 is rejected
+by6413e15b: frame continuity/loss bookkeeping and Next progress need repair.
+Root specifies one immutable captured version per Next attempt, preserving
+newer wake hints, rather than requiring every poller generation stay current.
+Actual Rust trace producer/read continuity is under read-only Luna recon.
+
+Latest resume: focused present-context RED session13235 joined, actual Goexit1;
+root accepted the semantic stub failure and verified all three capture pairs.
+The incorrect transposed run archive remains immutable. A new archive copied
+directly from the original bytes compares exact (b6dd85e7); native approval
+timed out once and its expressly allowed retry succeeded. Guard implementation
+is now assigned to Luna admission_wiring_recon, source only, fixtures frozen.
+Compiler is idle. UI repaired fixtured1b3421f has an apparent await in a nonasync
+callback: independent critic notified; no focused RED authorized. Fresh manager
+revision4 is document only. Five checkpoint/push archives compare exact; the
+root provenance correction distinguishes remote SHA4173574 from session10067.
+No new task settled; T09 remains partial and public manager/V4 wiring held.
+
+HEAD `4173574`, branch `casework/live-wiring`; normal approved e8f66a4 push succeeded to
 GitHub branch `casework/live-wiring-resume-2026-10-05`.
 Preserve eleven other staged identities and the operator's newer hook edits.
 The staged DEBT ledger includes unrelated operator work; root's new debt
@@ -89,7 +147,80 @@ well-formed DTO caller precondition explicit, no manager callsite accepted. Root
 SOLE heavy owner next for normal unit checkpoint and push. Graft86179 joined0:
 691cards/7601nodes/14667edges. Root verified recovered erroneous duration differs
 only as disclosed; reconstruction is not an original capture. CW18 records
-process debt, current12runtimecaptures remain exact. T09 partial.
+process debt, current12runtimecaptures remain exact. Cap checkpoint4173574
+completed normal-hook session78326 joined0, context/Rustdevcheck4.03s passed,
+committed source/test hashes match accepted identities, eleven excluded index
+identities unchanged. Root SOLE heavy owner pushes exact4173574 via normal hooks
+to the existing approved new branch. Luna critic resumed after usage reset,
+UI DOCONLY review active; no workers compile. T09 partial.
+
+Latest resume: normal push session37401 is still active. An authorized host
+process check shows its Gitleaks/history Git scan and no Rust compiler. Root
+retains sole heavy ownership; free swap reached 4 MiB with 2159 MiB available
+RAM, so no new heavy gate may start. UI revision2 proposal a46ece1d awaits
+independent review. Manager revision2 is a fresh DOCONLY builder task with a
+different independent critic preparing the originals. V4 source recon f3aed689
+is recorded in live-cursor-v4-boundary-recon-oct06.md; it supplies facts only.
+Public changes, manager integration and T09 settlement remain unapproved.
+Manager revision2 00a2fb58 is fully read by root and sent to a different critic.
+CW19 records that response/frame/envelope limits do not bound retained heap;
+the proposed extra cohort and retention-byte policies remain unapproved.
+Context-check session95521 joined exit0; eleven excluded index identities match.
+Independent UI revision2 review2d5f0eb rejects only the omitted-cursor input
+rule. Manager revision2 review7b27271f rejects failed-Prepare rollback and exact
+initial/delta/attach boundaries. A fresh Luna builder owns two DOCONLY revision3
+assignments; no implementation is released. V4 recon review861926e0 supports
+covered facts but requires Go intent-consumer and live/historical-path coverage.
+A separate bootstrap component proposal is active. Push37401 passed its scanner
+and is running normal Rust tests; publication is not yet confirmed.
+Root read UI revision3 ab63cc8 and found copied nonexistent source paths for
+conformance/types/spec. CW20 records this evidence debt; independent review
+must verify actual source and require corrected records before acceptance.
+The push is currently in a Rust test's generated-schema subprocess; root remains
+sole heavy owner and no new gates start concurrently.
+UI revision4 6d7baafd is fully read and under independent review. Root also
+read manager revision3 568ab32b and bootstrap component e02ab804; their independent
+reviews remain pending. The manager critic is checking a possible regression
+from the accepted hydration DTO/pruning helper. Factual recon revision2 8f62484d
+is read and under review. Private context-guard Phase1 alone is released under
+its original assignment: two new stub/fixture files, no algorithm or callers.
+Independent source approval and actual RED are required before production.
+Push37401 completed test output and is now in its normal final Rust build;
+root still owns the sole heavy token. No publication claim until joined exit0
+and exact remote verification.
+Push37401 now joined exit0. Normal CI reported all gates green: 125 suite
+summaries, 1110 passed, zero failed, four ignored; Gitleaks scanned 511 commits
+with no leaks. Exact4173574 publication is reported by Git; independent remote
+check10067 is pending. Eleven excluded staged identities remain exact. Heavy
+owner is now idle, with no new compile until fresh resources meet the margin
+(last free swap357MiB). Guard565ad7a6/test825ab0dc are frozen for source review.
+UI architecture6d7baafd is root accepted after893ddd2e; bounded ordering fixture
+and future-only conformance-argument work is assigned, production remains held.
+Manager6ae4b977, bootstrapf330603a and recon914a58eb are evidence-based rejects
+requiring fresh repairs; no complete manager/public/T09 approval follows.
+Remote-check10067 joined exit0 and confirms exact full4173574 SHA on the approved
+resume branch. Five actual checkpoint/push originals are being archived; no
+checkpoint-preflight original exists and none may be invented. Guard review
+d715a0b5 plus dbdb11ab rejects fixture oracles/masking; a different builder repairs
+ONLY the test, preserving stub565ad7a6. UI fixturec41a5f37/conformanceedf8ed69
+are frozen for a different source critic. UI4 citation erratum95ccd15e corrects
+offset proposal spans; root acceptance uses full content and actual source.
+CW21 records ambiguous proposal retry identity debt, unstaged. Heavy owner is
+idle; no actual RED without source approval, fresh margins and exclusive grant.
+Root fully read UI fixturec41a5f37 and identified a manual-timer await before
+driving the timer, exclusion of progress from the ordinary uniqueness assertion,
+and a settlement-equals-snapshot assertion contradicting the accepted contract.
+The separate critic is adjudicating these and timer/isolation assumptions;
+the fixture is not approved and no actual RED ran. Guard fresh fixture repair
+is pending. Free swap reached zero with1903MiB RAM available: heavy work is idle,
+and no compiler/gate starts until fresh margins recover and ownership is granted.
+Guard repaired fixturefffa0335/stub565ad7a6 are root-read/hash-exact and source
+approved by independent037d2d74. Physical critic owns the sole heavy slot for
+ONE focused actual RED, with an immediate fresh1200MiB RAM/512MiB swap floor
+and capped Go concurrency. Root is not compiling. No guard algorithm release
+until actual semantic failures and three captures are root verified. UI review
+022e8401 confirms the fixture defects; fresh Luna local_cursor_fixture_fresh_repair
+owns test-only repair with conformanceedf8ed69 frozen. T09 remains partial.
 Documentation/design checkpoint `6c5e310` used normal hooks; commit session15811
 joined exit0. Fresh preflight had 2164 MiB available RAM and 2254 MiB free swap;
 Cargo jobs1 and exclusive root ownership were used. Eleven excluded index entries

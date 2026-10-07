@@ -1,0 +1,464 @@
+package server
+
+import (
+	"reflect"
+	"testing"
+
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
+)
+
+type runObservationPresentContextHistoryFake struct {
+	revisions []projection.Revision
+	calls     []string
+}
+
+func (f *runObservationPresentContextHistoryFake) Trajectory(caseID string) []projection.Revision {
+	f.calls = append(f.calls, caseID)
+	return f.revisions
+}
+
+type runObservationPresentContextRelayFake struct {
+	cursors map[string]string
+	calls   []string
+}
+
+func (f *runObservationPresentContextRelayFake) CursorForCase(caseID string) (string, bool) {
+	f.calls = append(f.calls, caseID)
+	cursor, ok := f.cursors[caseID]
+	return cursor, ok
+}
+
+func runObservationPresentContextRevision(caseID, cursor string, parentIDs ...string) projection.Revision {
+	items := make([]ports.HorizonItem, len(parentIDs))
+	for i, id := range parentIDs {
+		items[i] = ports.HorizonItem{ItemID: id, Name: "Item " + id, Kind: "sandboxed_task"}
+	}
+	facts := &projection.CaseFacts{
+		Record:   ports.CaseRecord{Ref: ports.CaseRef(caseID), State: "active", Summary: "case"},
+		Overview: ports.CaseOverview{Ref: ports.CaseRef(caseID), State: "active", Stages: []string{"stage"}},
+		Horizon:  ports.CaseHorizon{Ref: ports.CaseRef(caseID), State: "active", Items: items},
+		Actor:    ports.ActorClaim{ActorID: "operator_local", Role: "operator"},
+		Cursor:   cursor,
+	}
+	return projection.Revision{
+		Cursor: cursor,
+		CaseID: caseID,
+		Snapshot: contract.CognitiveWorldSnapshot{
+			CaseID: caseID, Cursor: cursor,
+			VisibleObjects: []contract.CognitiveObject{},
+		},
+		Facts: facts,
+	}
+}
+
+func runObservationPresentContextCheck(
+	revisions []projection.Revision,
+	caseID, relayCursor string,
+	relayOK bool,
+) (runObservationPresentContextHistoryFake, runObservationPresentContextRelayFake) {
+	history := runObservationPresentContextHistoryFake{revisions: revisions}
+	relay := runObservationPresentContextRelayFake{cursors: map[string]string{}}
+	if relayOK {
+		relay.cursors[caseID] = relayCursor
+	}
+	return history, relay
+}
+
+func cloneRunObservationPresentContextRevisions(in []projection.Revision) []projection.Revision {
+	if in == nil {
+		return nil
+	}
+	out := make([]projection.Revision, len(in))
+	copy(out, in)
+	for i := range out {
+		if in[i].Snapshot.VisibleObjects != nil {
+			out[i].Snapshot.VisibleObjects = make([]contract.CognitiveObject, len(in[i].Snapshot.VisibleObjects))
+			copy(out[i].Snapshot.VisibleObjects, in[i].Snapshot.VisibleObjects)
+			for j := range out[i].Snapshot.VisibleObjects {
+				out[i].Snapshot.VisibleObjects[j].DependsOn = cloneRunObservationPresentContextStrings(in[i].Snapshot.VisibleObjects[j].DependsOn)
+				out[i].Snapshot.VisibleObjects[j].Actions = cloneRunObservationPresentContextActions(in[i].Snapshot.VisibleObjects[j].Actions)
+				if in[i].Snapshot.VisibleObjects[j].ParentID != nil {
+					parentID := *in[i].Snapshot.VisibleObjects[j].ParentID
+					out[i].Snapshot.VisibleObjects[j].ParentID = &parentID
+				}
+				if in[i].Snapshot.VisibleObjects[j].Explanation != nil {
+					explanation := *in[i].Snapshot.VisibleObjects[j].Explanation
+					out[i].Snapshot.VisibleObjects[j].Explanation = &explanation
+				}
+				if in[i].Snapshot.VisibleObjects[j].SpatialLayout != nil {
+					layout := *in[i].Snapshot.VisibleObjects[j].SpatialLayout
+					if layout.Radius != nil {
+						radius := *layout.Radius
+						layout.Radius = &radius
+					}
+					out[i].Snapshot.VisibleObjects[j].SpatialLayout = &layout
+				}
+			}
+		}
+		out[i].Snapshot.AvailableActions = cloneRunObservationPresentContextActions(in[i].Snapshot.AvailableActions)
+		out[i].Snapshot.AttentionFocus.SalienceRank = cloneRunObservationPresentContextStrings(in[i].Snapshot.AttentionFocus.SalienceRank)
+		if in[i].Snapshot.Perspective.DisplayName != nil {
+			displayName := *in[i].Snapshot.Perspective.DisplayName
+			out[i].Snapshot.Perspective.DisplayName = &displayName
+		}
+		if in[i].Snapshot.Summary.ProgressPercent != nil {
+			progress := *in[i].Snapshot.Summary.ProgressPercent
+			out[i].Snapshot.Summary.ProgressPercent = &progress
+		}
+		if in[i].Snapshot.AttentionFocus.Narration != nil {
+			narration := *in[i].Snapshot.AttentionFocus.Narration
+			out[i].Snapshot.AttentionFocus.Narration = &narration
+		}
+		if in[i].Facts != nil {
+			facts := *in[i].Facts
+			facts.Overview.Stages = cloneRunObservationPresentContextStrings(in[i].Facts.Overview.Stages)
+			facts.Overview.RunIDs = append([]ports.RunRef(nil), in[i].Facts.Overview.RunIDs...)
+			if in[i].Facts.Overview.RunIDs != nil {
+				facts.Overview.RunIDs = make([]ports.RunRef, len(in[i].Facts.Overview.RunIDs))
+				copy(facts.Overview.RunIDs, in[i].Facts.Overview.RunIDs)
+			}
+			if in[i].Facts.Overview.Settlements != nil {
+				facts.Overview.Settlements = make([]ports.SettlementNote, len(in[i].Facts.Overview.Settlements))
+				copy(facts.Overview.Settlements, in[i].Facts.Overview.Settlements)
+				for j := range facts.Overview.Settlements {
+					facts.Overview.Settlements[j].Basis = cloneRunObservationPresentContextStrings(in[i].Facts.Overview.Settlements[j].Basis)
+				}
+			}
+			if facts.Horizon.Items != nil {
+				facts.Horizon.Items = make([]ports.HorizonItem, len(in[i].Facts.Horizon.Items))
+				copy(facts.Horizon.Items, in[i].Facts.Horizon.Items)
+				for j := range facts.Horizon.Items {
+					facts.Horizon.Items[j].DependsOn = cloneRunObservationPresentContextStrings(in[i].Facts.Horizon.Items[j].DependsOn)
+					facts.Horizon.Items[j].RunIDs = append([]ports.RunRef(nil), in[i].Facts.Horizon.Items[j].RunIDs...)
+					if in[i].Facts.Horizon.Items[j].RunIDs != nil {
+						facts.Horizon.Items[j].RunIDs = make([]ports.RunRef, len(in[i].Facts.Horizon.Items[j].RunIDs))
+						copy(facts.Horizon.Items[j].RunIDs, in[i].Facts.Horizon.Items[j].RunIDs)
+					}
+				}
+			}
+			if facts.Approvals != nil {
+				facts.Approvals = append([]ports.ApprovalRecord{}, facts.Approvals...)
+			}
+			if facts.Runs != nil {
+				facts.Runs = append([]ports.RunSummary{}, facts.Runs...)
+			}
+			facts.UnreadableRunIDs = cloneRunObservationPresentContextStrings(in[i].Facts.UnreadableRunIDs)
+			out[i].Facts = &facts
+		}
+	}
+	return out
+}
+
+func cloneRunObservationPresentContextStrings(in []string) []string {
+	if in == nil {
+		return nil
+	}
+	out := make([]string, len(in))
+	copy(out, in)
+	return out
+}
+
+func cloneRunObservationPresentContextActions(in []contract.ActionDescriptor) []contract.ActionDescriptor {
+	if in == nil {
+		return nil
+	}
+	out := make([]contract.ActionDescriptor, len(in))
+	copy(out, in)
+	for i := range in {
+		if in[i].Variant != nil {
+			value := *in[i].Variant
+			out[i].Variant = &value
+		}
+		if in[i].RequiresJustification != nil {
+			value := *in[i].RequiresJustification
+			out[i].RequiresJustification = &value
+		}
+	}
+	return out
+}
+
+func assertRunObservationPresentContextInputsUnchanged(
+	t *testing.T,
+	history *runObservationPresentContextHistoryFake,
+	historyBefore []projection.Revision,
+	relay *runObservationPresentContextRelayFake,
+	relayBefore map[string]string,
+) {
+	t.Helper()
+	if history != nil && !reflect.DeepEqual(history.revisions, historyBefore) {
+		t.Fatalf("history input changed: got %+v, before %+v", history.revisions, historyBefore)
+	}
+	if relay != nil && !reflect.DeepEqual(relay.cursors, relayBefore) {
+		t.Fatalf("relay input changed: got %+v, before %+v", relay.cursors, relayBefore)
+	}
+}
+
+func assertRunObservationPresentContextUnavailable(t *testing.T, got runObservationPresentContext, err error) {
+	t.Helper()
+	if err == nil || apperr.KindOf(err) != apperr.KindUnavailable {
+		t.Fatalf("checkRunObservationPresentContext() error = %v, want typed unavailable", err)
+	}
+	if !reflect.DeepEqual(got, runObservationPresentContext{}) {
+		t.Fatalf("failed check returned partial context %+v, want zero value", got)
+	}
+}
+
+func TestCheckRunObservationPresentContextRejectsUnavailableInputs(t *testing.T) {
+	valid := runObservationPresentContextRevision("case_1", "opaque/cursor-A", "item_parent")
+	cases := []struct {
+		name    string
+		history runObservationPresentContextHistory
+		relay   runObservationPresentContextRelay
+		caseID  string
+	}{
+		{name: "blank case", history: &runObservationPresentContextHistoryFake{revisions: []projection.Revision{valid}}, relay: &runObservationPresentContextRelayFake{cursors: map[string]string{"case_1": valid.Cursor}}, caseID: " "},
+		{name: "nil history", relay: &runObservationPresentContextRelayFake{cursors: map[string]string{"case_1": valid.Cursor}}, caseID: "case_1"},
+		{name: "nil relay", history: &runObservationPresentContextHistoryFake{revisions: []projection.Revision{valid}}, caseID: "case_1"},
+		{name: "empty history", history: &runObservationPresentContextHistoryFake{}, relay: &runObservationPresentContextRelayFake{cursors: map[string]string{"case_1": valid.Cursor}}, caseID: "case_1"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var history *runObservationPresentContextHistoryFake
+			var historyBefore []projection.Revision
+			if fake, ok := tc.history.(*runObservationPresentContextHistoryFake); ok {
+				history = fake
+				fake.revisions = cloneRunObservationPresentContextRevisions(fake.revisions)
+				historyBefore = cloneRunObservationPresentContextRevisions(fake.revisions)
+			}
+			var relay *runObservationPresentContextRelayFake
+			var relayBefore map[string]string
+			if fake, ok := tc.relay.(*runObservationPresentContextRelayFake); ok {
+				relay = fake
+				relayBefore = make(map[string]string, len(fake.cursors))
+				for key, value := range fake.cursors {
+					relayBefore[key] = value
+				}
+			}
+			got, err := checkRunObservationPresentContext(tc.history, tc.relay, tc.caseID)
+			assertRunObservationPresentContextUnavailable(t, got, err)
+			assertRunObservationPresentContextInputsUnchanged(t, history, historyBefore, relay, relayBefore)
+		})
+	}
+}
+
+func TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect(t *testing.T) {
+	tests := []struct {
+		name             string
+		mutate           func(*projection.Revision)
+		blankRelayCursor bool
+	}{
+		{name: "revision case", mutate: func(r *projection.Revision) { r.CaseID = "case_other" }},
+		{name: "snapshot case", mutate: func(r *projection.Revision) { r.Snapshot.CaseID = "case_other" }},
+		{name: "snapshot cursor", mutate: func(r *projection.Revision) { r.Snapshot.Cursor = "opaque/other-snapshot" }},
+		{name: "facts cursor", mutate: func(r *projection.Revision) { r.Facts.Cursor = "opaque/other-facts" }},
+		{name: "nonblank revision cursor", mutate: func(r *projection.Revision) { r.Cursor = "opaque/other-revision" }},
+		{name: "record reference", mutate: func(r *projection.Revision) { r.Facts.Record.Ref = ports.CaseRef("case_other") }},
+		{name: "overview reference", mutate: func(r *projection.Revision) { r.Facts.Overview.Ref = ports.CaseRef("case_other") }},
+		{name: "horizon reference", mutate: func(r *projection.Revision) { r.Facts.Horizon.Ref = ports.CaseRef("case_other") }},
+		{name: "blank compared cursors", blankRelayCursor: true, mutate: func(r *projection.Revision) {
+			r.Cursor = ""
+			r.Snapshot.Cursor = ""
+			r.Facts.Cursor = ""
+		}},
+		{name: "missing facts", mutate: func(r *projection.Revision) { r.Facts = nil }},
+		{name: "nil horizon items", mutate: func(r *projection.Revision) { r.Facts.Horizon.Items = nil }},
+		{name: "blank parent ID", mutate: func(r *projection.Revision) { r.Facts.Horizon.Items[0].ItemID = " " }},
+		{name: "duplicate parent ID", mutate: func(r *projection.Revision) {
+			r.Facts.Horizon.Items = append(r.Facts.Horizon.Items, r.Facts.Horizon.Items[0])
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			revision := runObservationPresentContextRevision("case_1", "cursor/exact", "parent-full-id")
+			tc.mutate(&revision)
+			historyBefore := cloneRunObservationPresentContextRevisions([]projection.Revision{revision})
+			historyInput := cloneRunObservationPresentContextRevisions([]projection.Revision{revision})
+			relayCursor := "cursor/exact"
+			if tc.blankRelayCursor {
+				relayCursor = ""
+			}
+			history, relay := runObservationPresentContextCheck(historyInput, "case_1", relayCursor, true)
+			relayBefore := map[string]string{"case_1": relayCursor}
+			got, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+			assertRunObservationPresentContextUnavailable(t, got, err)
+			assertRunObservationPresentContextInputsUnchanged(t, &history, historyBefore, &relay, relayBefore)
+			if !reflect.DeepEqual(history.calls, []string{"case_1"}) {
+				t.Fatalf("history queried for %v; want exact requested case", history.calls)
+			}
+			for _, calledCase := range relay.calls {
+				if calledCase != "case_1" {
+					t.Fatalf("relay queried for %q; want exact requested case", calledCase)
+				}
+			}
+		})
+	}
+}
+
+func TestCheckRunObservationPresentContextUsesOnlyNewestRevisionWithoutFallback(t *testing.T) {
+	older := runObservationPresentContextRevision("case_1", "cursor/old", "old_parent")
+	newest := runObservationPresentContextRevision("case_1", "cursor/new", "new_parent")
+	newest.Facts.Horizon.Items = nil
+	inputs := cloneRunObservationPresentContextRevisions([]projection.Revision{older, newest})
+	before := cloneRunObservationPresentContextRevisions(inputs)
+	// If an incorrect implementation falls back to the older valid row, its cursor matches Relay.
+	history, relay := runObservationPresentContextCheck(inputs, "case_1", "cursor/old", true)
+	relayBefore := map[string]string{"case_1": "cursor/old"}
+	got, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+	assertRunObservationPresentContextUnavailable(t, got, err)
+	assertRunObservationPresentContextInputsUnchanged(t, &history, before, &relay, relayBefore)
+	if !reflect.DeepEqual(history.calls, []string{"case_1"}) {
+		t.Fatalf("history queried for %v; want exact requested case", history.calls)
+	}
+	for _, calledCase := range relay.calls {
+		if calledCase != "case_1" {
+			t.Fatalf("relay queried for %q; want exact requested case", calledCase)
+		}
+	}
+}
+
+func TestCheckRunObservationPresentContextRejectsRelayCursorGaps(t *testing.T) {
+	revision := runObservationPresentContextRevision("case_1", "cursor/exact-A", "parent")
+	tests := []struct {
+		name   string
+		cursor string
+		found  bool
+	}{
+		{name: "missing observed cursor"},
+		{name: "blank observed cursor", cursor: " ", found: true},
+		{name: "advanced without captured revision", cursor: "cursor/exact-B", found: true},
+		{name: "opaque cursor differs", cursor: "cursor/exact-A/extra", found: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			historyInput := cloneRunObservationPresentContextRevisions([]projection.Revision{revision})
+			historyBefore := cloneRunObservationPresentContextRevisions(historyInput)
+			history, relay := runObservationPresentContextCheck(historyInput, "case_1", tc.cursor, tc.found)
+			relayBefore := make(map[string]string, len(relay.cursors))
+			for key, value := range relay.cursors {
+				relayBefore[key] = value
+			}
+			got, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+			assertRunObservationPresentContextUnavailable(t, got, err)
+			assertRunObservationPresentContextInputsUnchanged(t, &history, historyBefore, &relay, relayBefore)
+			if !reflect.DeepEqual(history.calls, []string{"case_1"}) {
+				t.Fatalf("history queried for %v; want exact requested case", history.calls)
+			}
+			if !reflect.DeepEqual(relay.calls, []string{"case_1"}) {
+				t.Fatalf("relay queried for %v, want the exact requested case", relay.calls)
+			}
+		})
+	}
+}
+
+func TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons(t *testing.T) {
+	tests := []struct {
+		name    string
+		parents []string
+		nonNil  bool
+	}{
+		{name: "complete empty horizon", parents: []string{}, nonNil: true},
+		{name: "opaque populated parents", parents: []string{"item/full-suffix-A", "item/full-suffix-B"}, nonNil: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			revision := runObservationPresentContextRevision("case_1", "opaque/cursor:001", tc.parents...)
+			if tc.nonNil && revision.Facts.Horizon.Items == nil {
+				revision.Facts.Horizon.Items = []ports.HorizonItem{}
+			}
+			inputs := cloneRunObservationPresentContextRevisions([]projection.Revision{revision})
+			before := cloneRunObservationPresentContextRevisions(inputs)
+			history, relay := runObservationPresentContextCheck(inputs, "case_1", revision.Cursor, true)
+			relayBefore := map[string]string{"case_1": revision.Cursor}
+			first, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+			if err != nil {
+				t.Fatalf("complete matching context error = %v, want success", err)
+			}
+			want := runObservationPresentContext{caseID: "case_1", cursor: "opaque/cursor:001", parentIDs: map[string]struct{}{}}
+			for _, id := range tc.parents {
+				want.parentIDs[id] = struct{}{}
+			}
+			if !reflect.DeepEqual(first, want) {
+				t.Fatalf("context = %+v, want exact opaque IDs and cursor %+v", first, want)
+			}
+			assertRunObservationPresentContextInputsUnchanged(t, &history, before, &relay, relayBefore)
+
+			first.parentIDs["caller-added"] = struct{}{}
+			if len(inputs[0].Facts.Horizon.Items) != len(tc.parents) {
+				t.Fatalf("mutating returned parent set changed source items: %+v", inputs[0].Facts.Horizon.Items)
+			}
+			if len(tc.parents) > 0 {
+				inputs[0].Facts.Horizon.Items[0].ItemID = "source-mutated"
+				if _, exists := first.parentIDs[tc.parents[0]]; !exists {
+					t.Fatalf("mutating source item changed returned owned set: %+v", first.parentIDs)
+				}
+			}
+
+			second, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+			if err != nil {
+				t.Fatalf("repeated complete context error = %v, want success", err)
+			}
+			if _, exists := second.parentIDs["caller-added"]; exists {
+				t.Fatalf("repeated result inherited caller mutation: %+v", second.parentIDs)
+			}
+		})
+	}
+}
+
+func TestCheckRunObservationPresentContextRechecksAdvancingHistoryAndDoesNotReuseOldParents(t *testing.T) {
+	firstRevision := runObservationPresentContextRevision("case_1", "cursor/first", "parent-kept", "parent-removed")
+	historyInput := cloneRunObservationPresentContextRevisions([]projection.Revision{firstRevision})
+	historyBefore := cloneRunObservationPresentContextRevisions(historyInput)
+	history, relay := runObservationPresentContextCheck(historyInput, "case_1", firstRevision.Cursor, true)
+	relayBefore := map[string]string{"case_1": firstRevision.Cursor}
+	first, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+	if err != nil {
+		t.Fatalf("initial context error = %v, want success", err)
+	}
+	assertRunObservationPresentContextInputsUnchanged(t, &history, historyBefore, &relay, relayBefore)
+
+	// Relay observation can advance before a corresponding immutable revision is captured.
+	relay.cursors["case_1"] = "cursor/second"
+	relayBefore = map[string]string{"case_1": "cursor/second"}
+	historyBefore = cloneRunObservationPresentContextRevisions(history.revisions)
+	got, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+	assertRunObservationPresentContextUnavailable(t, got, err)
+	assertRunObservationPresentContextInputsUnchanged(t, &history, historyBefore, &relay, relayBefore)
+
+	// Once the latest retained facts catch up, only their current parent set is returned.
+	secondRevision := runObservationPresentContextRevision("case_1", "cursor/second", "parent-kept")
+	history.revisions = cloneRunObservationPresentContextRevisions([]projection.Revision{firstRevision, secondRevision})
+	historyBefore = cloneRunObservationPresentContextRevisions(history.revisions)
+	matched, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+	if err != nil {
+		t.Fatalf("updated matching context error = %v, want success", err)
+	}
+	assertRunObservationPresentContextInputsUnchanged(t, &history, historyBefore, &relay, relayBefore)
+	if _, exists := matched.parentIDs["parent-removed"]; exists {
+		t.Fatalf("old parent was retained after latest horizon removed it: %+v", matched.parentIDs)
+	}
+	if _, exists := first.parentIDs["parent-removed"]; !exists {
+		t.Fatalf("earlier captured result changed after history advanced: %+v", first.parentIDs)
+	}
+}
+
+func TestCheckRunObservationPresentContextRejectsWrongCaseFromHistory(t *testing.T) {
+	wrongCase := runObservationPresentContextRevision("case_other", "cursor/opaque", "parent")
+	historyInput := cloneRunObservationPresentContextRevisions([]projection.Revision{wrongCase})
+	historyBefore := cloneRunObservationPresentContextRevisions(historyInput)
+	history, relay := runObservationPresentContextCheck(historyInput, "case_1", wrongCase.Cursor, true)
+	relayBefore := map[string]string{"case_1": wrongCase.Cursor}
+	got, err := checkRunObservationPresentContext(&history, &relay, "case_1")
+	assertRunObservationPresentContextUnavailable(t, got, err)
+	assertRunObservationPresentContextInputsUnchanged(t, &history, historyBefore, &relay, relayBefore)
+	if !reflect.DeepEqual(history.calls, []string{"case_1"}) {
+		t.Fatalf("history queried for %v; want exact requested case", history.calls)
+	}
+	for _, calledCase := range relay.calls {
+		if calledCase != "case_1" {
+			t.Fatalf("relay queried for %q; want exact requested case", calledCase)
+		}
+	}
+}
