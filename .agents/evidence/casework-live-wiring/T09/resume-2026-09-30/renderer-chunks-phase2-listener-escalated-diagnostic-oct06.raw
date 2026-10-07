@@ -1,0 +1,22 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/ui/journeys.test.tsx:
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:399:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:399:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:399:23)
+
+[event stream] warn: connection interrupted
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/ui/journeys.test.tsx:383:18)
+
+(pass) journey: execute + execution pill + sentry > TOOTH: SSE drop flips the store to reconnecting via the live adapter error path, and an event resumes it [307.83ms]
+
+ 1 pass
+ 24 filtered out
+ 0 fail
+ 6 expect() calls
+Ran 1 test across 1 file. [408.00ms]

@@ -1,0 +1,22 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/ui/journeys.test.tsx:
+347 |   })
+348 | 
+349 |   test('TOOTH: SSE drop flips the store to reconnecting via the live adapter error path, and an event resumes it', async () => {
+350 |     // The live adapter's real error path: a gateway that accepts nothing (every stream request
+351 |     // fails fast), so the adapter reports the interruption and retries with backoff.
+352 |     const broken = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response('gateway broken', { status: 503 }) })
+                             ^
+EPERM: operation not permitted, listen
+ syscall: "listen",
+   errno: -1,
+    code: "EPERM"
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/ui/journeys.test.tsx:352:24)
+(fail) journey: execute + execution pill + sentry > TOOTH: SSE drop flips the store to reconnecting via the live adapter error path, and an event resumes it [17.84ms]
+
+ 0 pass
+ 24 filtered out
+ 1 fail
+Ran 1 test across 1 file. [117.00ms]

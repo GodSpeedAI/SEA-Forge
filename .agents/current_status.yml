@@ -11,22 +11,17 @@ metadata:
   initialized: true
   last_updated: '2026-10-07'
   updated_by: >-
-    Oct07 latest: T09 partial, published HEAD823 remains. Independent private
-    UI focused/typecheck/fullsuite299/0/1674/build/canonical PASS; fresh local
-    ladder attempt02 all11 PASS, actual JOIN77346 exit0. Three raw captures
-    archived byte-exact; result UTF8 wrappers compare exact, first readable
-    result copies added LF (provenance disclosed). Independent final verdict
-    c1a0e509 approved checkpoint with correction111abd25; root verified.
-    Server cleanup complete. Root sole compiler for normal UI checkpoint.
-    Go3manager/8helper observed stub RED, but independent cda4 rejects capture
-    provenance; direct-capture rerun required. Helper design0e425 requires new
-    marker/terminal/count fixture; fresh Luna builder SOURCEONLY owns new file.
-    Current UI19c/orderb2a8/
-    boundsa5ca/settlementef938/hostile31f. Managerfa1601 remains stub; fixtureaf2df
-    SOURCE approveda558. Retainedhelperd8df remains candidate stub; fixture34df
-    SOURCE approved6bbe after3123/d529 repairs. Fresh current Go RED queued
-    after UI returns compiler. Eleven foreign staged identities preserved;
-    debt unstaged/CW24/CW26, privatecaps ratified/publicdesign held.
+    Oct07: T09 remains partial; HEAD/published f549bf0. Renderer unit independently
+    approved: focused 13/0, typecheck, build and canonical 299/0/1674; root
+    verified 18 actual capture pairs and nine emitted renderer JS hashes.
+    Helper 2157583f is exact gofmt-only from 38ca; independent source/race PASS,
+    root verified all three actual captures. Manager fa/af remains unwired.
+    Package-local original reports survive and were copied to BASE with cmp0;
+    earlier missing-record claim corrected immutably. Graft refreshed: 702 cards,
+    7785 nodes, 15203 edges; actual preflight/output/exit archived cmp0.
+    Root owns sole compiler for normal renderer checkpoint and push. Eleven
+    foreign staged blobs preserved; debt stays unstaged. Combined manager image
+    proposal/root decisions await independent design review; public V4 held.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -231,29 +226,13 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
-    UI all11 local journeys JOINED0 and independent reviewc1a0e509 approves
-    bounded checkpoint, correction111abd25 exact assignment hash; root accepted
-    source/evidence/conformance. Root owns sole compiler for normal checkpoint.
-    Graft PASS701cards/7774nodes/15141edges; actual output/exit cmp0. Go RED
-    evidencecda4 rejected missing originals/comparisons; keep as observations.
-    Fresh policy fixture addresses design0e425 gaps, then direct-capture RED.
-    Current UI source19c/orderb2a8/boundsa5ca/settlementef938/hostile31f;
-    independent focused/typecheck/fullsuite retry299/0/1674/build/canonical PASS.
-    Root verifies hashes/captures/finaldiff, Graft, context-check; then meaningful
-    accepted-unit normal-hook commit/push to standing approved branch.
-    Managerfa1601 unwired, fixtureaf2df SOURCE approveda558: fresh current RED
-    after UI token returns. Retainedhelperd8df/test5365 candidate scaffold under
-    guard SOURCE review led to3123/d529 rejections; fresh repairs preserved
-    preimages and assertions. Final test34df SOURCE approved6bbe for focused
-    RED only; source d8df stays stub. Pure retained publisher precedes lifecycle;
-    no algorithms before independent source review and actual expected RED.
-    Give critics original complete instructions plus implementation, require
-    evidence and explicit deviations; reject/fresh-builder loop until supported.
-    Private caps/encoding ratified; no public V4/bootstrap/frontier/schema release.
-    Preserve eleven foreign staged identities, operator work and unstaged debt;
-    current /tmp loss disclosures CW24/CW26 remain. Update both status files
-    after each unit, archive actual captures before release. Continue through
-    T12; split T13 and stop for operator review.
+    Checkpoint and push the approved three-file renderer assertion unit with
+    normal hooks and explicit paths. Root verified its fresh gates/captures;
+    preserve all eleven unrelated staged blobs and unstaged debt. Helper215
+    source/race verification passed; manager remains unwired. Independently
+    review combined image proposal plus root decisions before a separate bounded
+    test-first fixture release and lifecycle implementation. Public V4 is held.
+
 agent_protocol:
   read_order:
     - .agents/current_status.yml (this file)
@@ -326,22 +305,17 @@ handoff:
     fixture frozen68511dc; no compiler token. Independent source review/expectedRED must
     precede runtime implementation. Whole-focus equality corrected before any critic verdict.
   state_summary: >-
-    Oct07 latest: T09 partial, published HEAD823 remains. Independent private
-    UI focused/typecheck/fullsuite299/0/1674/build/canonical PASS; fresh local
-    ladder attempt02 all11 PASS, actual JOIN77346 exit0. Three raw captures
-    archived byte-exact; result UTF8 wrappers compare exact, first readable
-    result copies added LF (provenance disclosed). Independent final verdict
-    c1a0e509 approved checkpoint with correction111abd25; root verified.
-    Server cleanup complete. Root sole compiler for normal UI checkpoint.
-    Go3manager/8helper observed stub RED, but independent cda4 rejects capture
-    provenance; direct-capture rerun required. Helper design0e425 requires new
-    marker/terminal/count fixture; fresh Luna builder SOURCEONLY owns new file.
-    Current UI19c/orderb2a8/
-    boundsa5ca/settlementef938/hostile31f. Managerfa1601 remains stub; fixtureaf2df
-    SOURCE approveda558. Retainedhelperd8df remains candidate stub; fixture34df
-    SOURCE approved6bbe after3123/d529 repairs. Fresh current Go RED queued
-    after UI returns compiler. Eleven foreign staged identities preserved;
-    debt unstaged/CW24/CW26, privatecaps ratified/publicdesign held.
+    Oct07: T09 remains partial; HEAD/published f549bf0. Renderer unit independently
+    approved: focused 13/0, typecheck, build and canonical 299/0/1674; root
+    verified 18 actual capture pairs and nine emitted renderer JS hashes.
+    Helper 2157583f is exact gofmt-only from 38ca; independent source/race PASS,
+    root verified all three actual captures. Manager fa/af remains unwired.
+    Package-local original reports survive and were copied to BASE with cmp0;
+    earlier missing-record claim corrected immutably. Graft refreshed: 702 cards,
+    7785 nodes, 15203 edges; actual preflight/output/exit archived cmp0.
+    Root owns sole compiler for normal renderer checkpoint and push. Eleven
+    foreign staged blobs preserved; debt stays unstaged. Combined manager image
+    proposal/root decisions await independent design review; public V4 held.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
     - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."
