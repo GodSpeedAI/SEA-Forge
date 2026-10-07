@@ -1,0 +1,8 @@
+captured_utc=2026-10-06T21:08:19Z
+MemAvailable_bytes=2985750528
+SwapFree_bytes=1803755520
+373a2b5db74fda2210f84ea2962783d115d5b8ef413f118c9b52977b7d6fdbd1  apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorOrder.test.ts
+d8b0feb02e489587672968c7450373f000ba02e3fd3d0d509888ca1e0f595f34  apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.ts
+edf8ed69fc9d4cf3c1ed2a136cc5f076ada72117497a92865cfdb19f3ef31c1c  apps/godspeed-cognitive-ui/src/adapters/conformance/caseworkPortConformance.ts
+Filesystem      1B-blocks       Used  Available Use% Mounted on
+tmpfs          4163948544 2970935296 1193013248  72% /tmp

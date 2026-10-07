@@ -108,9 +108,10 @@ export async function runCaseworkPortConformance(s: CaseworkPortConformanceScena
 
   const headCursorBeforeResume = (await port.queryTemporalTrajectory(s.caseId)).head_cursor
   const resumedEvents: StreamEvent[] = []
+  const resumeCursor = s.resume === 'future-only' ? headCursorBeforeResume : snapshot.cursor
   const unsubscribeResume = port.subscribeEvents(
     s.caseId,
-    snapshot.cursor,
+    resumeCursor,
     (event) => resumedEvents.push(event),
     (error) => errors.push(error),
   )

@@ -1,0 +1,6 @@
+command: just casework-ui-up (root-authorized local loopback listener; stale PID file from interrupted attempt)
+cwd: repository root
+Wed Oct  7 11:58:31 UTC 2026
+               total        used        free      shared  buff/cache   available
+Mem:            7944        3413         431           5        4338        4531
+Swap:          12288           0       12287

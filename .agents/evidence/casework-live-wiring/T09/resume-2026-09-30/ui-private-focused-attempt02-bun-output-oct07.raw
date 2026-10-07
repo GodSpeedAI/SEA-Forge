@@ -1,0 +1,37 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/adapters/local/localAdapter.cursorOrder.test.ts:
+(pass) LocalContractAdapter cursor ordering > undefined boundary does not receive an already queued event; later revision is delivered [5.90ms]
+(pass) LocalContractAdapter cursor ordering > same-epoch future floor suppresses its boundary allocation but delivers a later event [3.82ms]
+(pass) LocalContractAdapter cursor ordering > supplied revision boundary does not receive queued H+1 and receives later H+2 [1.96ms]
+(pass) LocalContractAdapter cursor ordering > public execution orders progress, snapshots, settlement, and subsequent snapshot cursors [4.37ms]
+(pass) LocalContractAdapter cursor ordering > progress leaves retained snapshots unchanged and each new snapshot adds one history point [3.17ms]
+(pass) LocalContractAdapter cursor ordering > event delivery is case-local and unsubscribe before queued drain prevents delivery [1.70ms]
+
+src/adapters/local/localAdapter.cursorBounds.test.ts:
+(pass) LocalContractAdapter cursor validation and bounded delivery > validates constructor seed against the final snapshot and trajectory cursor [1.20ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > template-committed case starts with matching snapshot and trajectory seed cursors [1.53ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > accepts leading-zero decimal epoch and sequence by numeric equality [1.45ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > rejects malformed, unsafe, wrong-epoch, and over-ceiling floors once without registering [7.75ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > a future floor suppresses the exact boundary allocation and delivers the next real event [1.92ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > 64 pending events stay FIFO; the 65th disposes only the backlogged subscriber [26.19ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > drains exactly 64 pending slow-subscriber events in FIFO order [27.27ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > reentrant enqueue remains FIFO while an independent self-unsubscriber stops queued callbacks [2.47ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > a throwing onEvent is reported once and does not stop a healthy subscriber [0.95ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > a throwing onError callback does not prevent another subscriber drain [22.73ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > allocates the ceiling once, then rejects a snapshot without changing history or frontier [2.22ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > progress exhaustion reports once without publishing an ordinary event [1.21ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > settlement timer exhaustion reports once without a partial snapshot or side event [2.21ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > unsubscription clears the pending drain and a timer scheduling failure is reported once after commit [1.69ms]
+
+src/adapters/local/localAdapter.hostileThrownValues.test.ts:
+(pass) LocalContractAdapter hostile thrown values > contains coercion and instanceof traps while isolating the throwing subscriber [5.78ms]
+
+src/adapters/local/localAdapter.settlementAtomicity.test.ts:
+(pass) LocalContractAdapter settlement cursor atomicity > rejects settlement atomically when only one ordinal remains [2.57ms]
+(pass) LocalContractAdapter settlement cursor atomicity > commits two final ordinals as snapshot then side event with exact snapshot lookup [2.28ms]
+
+ 23 pass
+ 0 fail
+ 212 expect() calls
+Ran 23 tests across 4 files. [149.00ms]
