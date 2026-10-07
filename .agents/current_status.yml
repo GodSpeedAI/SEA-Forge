@@ -11,17 +11,29 @@ metadata:
   initialized: true
   last_updated: '2026-10-07'
   updated_by: >-
-    Oct07: T09 remains partial; HEAD/published f549bf0. Renderer unit independently
-    approved: focused 13/0, typecheck, build and canonical 299/0/1674; root
-    verified 18 actual capture pairs and nine emitted renderer JS hashes.
-    Helper 2157583f is exact gofmt-only from 38ca; independent source/race PASS,
-    root verified all three actual captures. Manager fa/af remains unwired.
-    Package-local original reports survive and were copied to BASE with cmp0;
-    earlier missing-record claim corrected immutably. Graft refreshed: 702 cards,
-    7785 nodes, 15203 edges; actual preflight/output/exit archived cmp0.
-    Root owns sole compiler for normal renderer checkpoint and push. Eleven
-    foreign staged blobs preserved; debt stays unstaged. Combined manager image
-    proposal/root decisions await independent design review; public V4 held.
+    Oct07: T09 remains partial. Renderer checkpoint74f86f0 committed and pushed
+    with normal hooks; exact remote SHA verified. CI125 summaries/1110 passed/
+    zero failed/4 ignored. All3 actual push captures archived cmp0; full237536
+    byte output SHA98d6504f. Eleven foreign staged blobs unchanged after push.
+    Renderer focused13/0, typecheck/build/canonical299/0/1674 accepted; root
+    verified18 actual capture pairs and9 emitted JS hashes. Helper2157583f
+    exact gofmt-only, independent source/race PASS and root3capturecmp0.
+    Managerab9f1/fixtureaf remains unwired. Core combined encoder design retained;
+    encoder3dba/fixturecf501 independently APPROVED focused GREEN7top/3nested,
+    formatting clean. Root eight actual/archive cmp0; inaccurate oldoutput
+    excluded, exact809720a6 preserved; duplicate native archive write recordedCW18.
+    Key extractiona6f0114 independently sourceREADY; manager onlydeclmove nowab9f1.
+    Exact six-file closure copied/independently READY in isolatedHEAD74 worktree.
+    Canonical firstattempt stopped at policy formatting, vet/tests notrun. Four
+    policy alignmenthunks repaired e156 bothcopies; exactformatter bytes/preimage
+    and8captures independently READY, onepreflight-exit archive explicitlylate.
+    Sandboxcanonical socketEPERM preserved; normal listenerpermission retry
+    canonical/fullmodule-race bothPASS. Root8actualcapturescmp0 and6sourcepairs
+    exact; result215524db, root boundedapproval. GraftPASS705/7801/15250,
+    all3actualcapturescmp0. ROOTsoleheavy normal scopedcommit/push next. Lifecyclecore
+    approved, supplement4752 independently APPROVED a3b591. Luna PhaseA bounded
+    lifecycle fixture/compile-seam source released, no runtimeapproval. Publicheld;
+    T09 partial. No primitivecheckpoint yet.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -226,12 +238,15 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
-    Checkpoint and push the approved three-file renderer assertion unit with
-    normal hooks and explicit paths. Root verified its fresh gates/captures;
-    preserve all eleven unrelated staged blobs and unstaged debt. Helper215
-    source/race verification passed; manager remains unwired. Independently
-    review combined image proposal plus root decisions before a separate bounded
-    test-first fixture release and lifecycle implementation. Public V4 is held.
+    Canonical/fullmodule-race isolatedHEAD74 exactsixfile snapshot bothPASS,
+    root8capturescmp0/6sourcepairs exact and boundedapproval. ROOTsoleheavy
+    coherent primitivecheckpoint and
+    scoped normalpush preserving11 foreign indexblobs. Snapshot excludesonly
+    unpublishedunwiredmanager files, no primaryGo/lifecycle/fullT09 claim.
+    PhaseA lifecycle fixture/compile-seam builder after supplement4752 reviewa3b591;
+    independent source review and actual expectedRED before fresh PhaseB algorithm.
+    Renderer74f86f0 published. Public held, T09 partial. Preserve
+    eleven unrelated staged blobs and unstaged debt; compiler serialized.
 
 agent_protocol:
   read_order:
@@ -305,17 +320,29 @@ handoff:
     fixture frozen68511dc; no compiler token. Independent source review/expectedRED must
     precede runtime implementation. Whole-focus equality corrected before any critic verdict.
   state_summary: >-
-    Oct07: T09 remains partial; HEAD/published f549bf0. Renderer unit independently
-    approved: focused 13/0, typecheck, build and canonical 299/0/1674; root
-    verified 18 actual capture pairs and nine emitted renderer JS hashes.
-    Helper 2157583f is exact gofmt-only from 38ca; independent source/race PASS,
-    root verified all three actual captures. Manager fa/af remains unwired.
-    Package-local original reports survive and were copied to BASE with cmp0;
-    earlier missing-record claim corrected immutably. Graft refreshed: 702 cards,
-    7785 nodes, 15203 edges; actual preflight/output/exit archived cmp0.
-    Root owns sole compiler for normal renderer checkpoint and push. Eleven
-    foreign staged blobs preserved; debt stays unstaged. Combined manager image
-    proposal/root decisions await independent design review; public V4 held.
+    Oct07: T09 remains partial. Renderer checkpoint74f86f0 committed and pushed
+    with normal hooks; exact remote SHA verified. CI125 summaries/1110 passed/
+    zero failed/4 ignored. All3 actual push captures archived cmp0; full237536
+    byte output SHA98d6504f. Eleven foreign staged blobs unchanged after push.
+    Renderer focused13/0, typecheck/build/canonical299/0/1674 accepted; root
+    verified18 actual capture pairs and9 emitted JS hashes. Helper2157583f
+    exact gofmt-only, independent source/race PASS and root3capturecmp0.
+    Managerab9f1/fixtureaf remains unwired. Core combined encoder design retained;
+    encoder3dba/fixturecf501 independently APPROVED focused GREEN7top/3nested,
+    formatting clean. Root eight actual/archive cmp0; inaccurate oldoutput
+    excluded, exact809720a6 preserved; duplicate native archive write recordedCW18.
+    Key extractiona6f0114 independently sourceREADY; manager onlydeclmove nowab9f1.
+    Exact six-file closure copied/independently READY in isolatedHEAD74 worktree.
+    Canonical firstattempt stopped at policy formatting, vet/tests notrun. Four
+    policy alignmenthunks repaired e156 bothcopies; exactformatter bytes/preimage
+    and8captures independently READY, onepreflight-exit archive explicitlylate.
+    Sandboxcanonical socketEPERM preserved; normal listenerpermission retry
+    canonical/fullmodule-race bothPASS. Root8actualcapturescmp0 and6sourcepairs
+    exact; result215524db, root boundedapproval. GraftPASS705/7801/15250,
+    all3actualcapturescmp0. ROOTsoleheavy normal scopedcommit/push next. Lifecyclecore
+    approved, supplement4752 independently APPROVED a3b591. Luna PhaseA bounded
+    lifecycle fixture/compile-seam source released, no runtimeapproval. Publicheld;
+    T09 partial. No primitivecheckpoint yet.
   established_conventions:
     - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
     - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."

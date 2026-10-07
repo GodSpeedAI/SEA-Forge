@@ -10,61 +10,69 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
-Renderer checkpoint ready: independently accepted three source files and fresh
-focused/typecheck/build/canonical gates. Root owns sole compiler for normal
-hooks; Graft refreshed702 cards/7785 nodes/15203 edges, all3 captures cmp0.
-Helper2157583f format-only source and focused race checks passed independently;
-root checked all3 actual captures. Manager remains unwired; combined-image
-design awaits independent review. Preserve foreign11 staged entries and debt.
+T00–T08 settled; T09 partial; T10–T12 not started. HEAD and verified remote
+tip are74f86f0964f92c5b1715eb0703a9b880d28cccae on the authorized branch
+casework/live-wiring-resume-2026-10-05. Renderer three-file unit committed/pushed
+with normal hooks; CI125 summaries/1110 passed/0 failed/4 ignored. Actual push
+triplet archived/rootcmp0; output237536 bytes SHA98d6504f.
 
-2026-10-07 resume: helper38ca independently reviewed and focusedrace13top plus
-13nested PASS; all3 actualcaptures rootcmp0. Prior package-local release756984af,
-resulta610c601, review508da6b6 and lifecyclepreregf48df1c8 survive unchanged;
-root read and archived all4 to BASE with cmp0. Earlier missing-record claim
-was a search-scope error, corrected immutably. Sole compiler renderer critic;
-Helper now2157583f after bounded gofmt-only alignment: root exactpreimage38ca,
-four whitespace hunks and actualgofmtstdout equality verified. Independent
-postformat source/race verification pending. Builder prepares lifecycle design.
-HEAD/published f549bf0, T09 partial, public V4 held, eleven foreign staged
-entries preserved. No root source edits.
+Root owns the sole compiler; no active process. Before each gate require
+available RAM>=1200 MiB, free swap>=512 MiB, and one compilation job. Other
+agents are source-only. Preserve all11 foreign staged blob identities,
+operator hooks/Jolli/worktree changes and unstaged DEBT.md additions.
 
-Current directives supersede earlier chronology. T00-T08 settled; T09 partial;
-T10-T12 not started. UI checkpoint f549bf0 published to the approved resume
-branch; exact remote tip verified. Earlier HEAD823/guard7b88 remain history.
+Private UI cursor checkpointf549bf0 remains published: independent focused,
+typecheck, canonical299/0/1674, build and all11 local journeys approved. Renderer
+unit now independently approved with its own three source hashes in every
+preflight; root verified18 actual capture pairs and9 emitted JS hashes.
 
-- Sole compiler owner: root; no active process. Other agents SOURCEONLY.
-  Fresh RAM/swap >=1200/512MiB required before each serialized gate.
-- Private UI source19c/orderb2a8/boundsa5ca/settlementef938/hostile31f and shared
-  conformanceedf checkpointed. Independent reviewc1a0e509/correction111abd25
-  approves focused/typecheck/full299/0/1674/build/canonical/all11 local journeys.
-  Actual E2E raw triplet compares exactly; result wrappers preserve missing LF.
-  First loopback refusal and interrupted run remain explicitly limited evidence.
-- Normal commit hooks passed. Push01 context-check failure repaired by handoff
-  touch; push02 JOIN95624 exit0, CI125 summaries/1110pass/0fail/4ignored.
-  All three push captures cmp0; full237536byte output SHA5976c73f.
-  This is private UI/local evidence, not live integration or T09 settlement.
-- Managerfa1601/testaf2df remains deliberately unwired. Retainedhelperd8df and
-  basefixture34df remain frozen; new policyfixture4c70 independently SOURCE
-  approvedb745 after design0e425 and fixturea429 defects were fixed.
-- Earlier Go3manager/8helper bundle rejectedcda4: correctionef532444 confirms
-  six manual tool transcriptions, no original captures. Keep as observations.
-  NEW direct-capture runs compile and reach intended stub failures for3manager,
-  8basehelper and5policy top-level tests. All nine actual/tmp originals archived
-  and compared immediately; independent review8963e3a8 re-compared all nine
-  originals and approved only the bounded actual RED prerequisite.
-  No algorithm, lifecycle, Next or SSE approval; later assertions unreached.
-- Exact d8helper preimage preserved and verified before future implementation.
-  Root private algorithm decisions and full preregistration recorded. Cursor
-  Luna builder released SOURCEONLY for the one-file pure helper algorithm;
-  tests34df/4c and managerfa/af frozen. Differentcritic plus actual GREEN held.
-  Pure helper builder/critic loop proceeds;
-  retained helper must precede lifecycle integration.
-- Private16cohort/128attachments/1MiB ratified; no heap/RSS guarantee.
-  PublicV4/bootstrap/frontier/schema C2 held for concrete complete design and
-  exact approval; all-writer fence remains unproven.
-- Eleven foreign staged identities unchanged; debt UNSTAGED. Preserve operator
-  hooks/Jolli/worktree. CW24/CW26 provenance limits remain explicit.
-- Continue through T12; split T13 and stop for operator review.
+Go retained helper2157583f is exact gofmt-only from38ca. Independent algorithm
+review/focused race passed; independent formatting source/race passed; root
+verified both capture triplets. Managerab9f1c/testaf2df remains unwired;
+base34df unchanged; policy e156 is exact gofmt-only from4c70. Original package-local assignment/result/review
+and lifecycle prereg survive unchanged, copied to BASE with cmp0. Earlier
+missing-record claim is corrected immutably; no reconstruction was performed.
+
+Pure encoder assignment5c8b57bd independently accepted for a separate test-first
+step. Recon Luna released only two NEW files: throwing seam and seven-case
+fixture. Different critic source review and actual focused RED precede algorithm
+implementation. Existing five manager/helper files remain frozen.
+Lifecycle per-lease matrixce3dc independently approved design-only: global Stop
+case requires a barrier before the first actual read. Recon prepares a separate
+failure-fixture assignment; no lifecycle source release yet.
+Encoder fixture repaired8e741/stub32f57 independently ready. Actual focused RED
+accepted: five positive failures solely at throwing seam, two refusal passes and
+three nested passes; no compile defect. Root repeated all four original/archive
+comparisons (cmp0). Pure encoder algorithm source released to Luna different from
+the original fixture author; all six existing fixtures/source identities frozen.
+Focused encoder GREEN independently approved: seven top-level and three nested
+PASS under race; formatting clean. Root all eight capture comparisons cmp0.
+Earlier output copy lost tabs; new exact809720a6 copy accepted, earlier bad copy
+excluded. Duplicate native write to exact copy recorded in CW-18; bytes unchanged.
+Key extractiona6f0114 independently source-ready; manager declaration-only move
+changed fa1601 to ab9f1c. Six exact primitive files were copied to isolated
+HEAD74f86f0 worktree for full Go gates before a coherent checkpoint and push.
+Canonical first attempt stopped at policy formatting before vet/tests. Four
+alignment hunks repaired to e156 in both copies; exact formatter stdout,
+preimage and eight captures independently verified, one preflight-exit archive
+explicitly late after quota interruption. Canonical retry reached tests but
+failed on sandbox Unix/loopback socket EPERM; its four captures remain exact.
+Normal listener-permission retry passed canonical format/vet/tests and full
+module race. Root compared all eight passing captures and six source pairs
+exactly; result215524db supports bounded primitive acceptance only. Explicit
+Graft build passed705 cards/7801 nodes/15250 edges, all three captures exact.
+Root now owns the sole heavy token for the scoped normal commit and push;
+other agents are source-only.
+Lifecycle core model approved; fresh three-finding supplement4752 specifies
+atomic cohort admission before list/read, both missing manager A cases, and
+cancel invocation outside mutex. Independent reviewa3b591 approves test-first
+release only. Luna builds the three-path PhaseA fixture/compile seams; a
+different critic must approve source and actual expected RED before a fresh
+PhaseB algorithm builder. Existing manager fixture and six primitives stay frozen.
+
+Private16 cohorts/128 attachments/combined1MiB serialized poller cap are
+ratified; no heap/RSS guarantee. Public V4/bootstrap/frontier/schema correction
+C-2 remains held for complete independent design review and exact approval.
 
 ## Changed Files
 
@@ -153,9 +161,11 @@ strict typecheck, production build with nine distinct renderer chunks, and
 canonical299/0/1674. Root verified all18 actual capture pairs and nine emitted
 renderer JavaScript artifact hashes. Preserve initial read-only Just scratch
 failure and ordinary-sandbox listener EPERM; authorized local retry passed.
-Three-file renderer checkpoint60 scoped paths pending normal hooks. Go helper
-2157583f format-only source review READY; focused race verification pending.
-Combined manager image design proposal/root decisions await independent review.
+Three-file renderer checkpoint74f86f0 published with normal hooks and exact
+remote verification. Go helper2157583f independent format/source/focused race
+verification passed; root checked all3 actual captures. Combined manager design
+was reviewed and rejected for missing lifecycle protocol/fixture details; fresh
+different-builder supplement awaits review. No lifecycle release yet.
 
 2026-10-07 resume: fresh independent retained helper review approves38ca
 only. Focused Go race tests passed13 top-level plus13 nested cases, exit0;
@@ -217,119 +227,47 @@ final exit before the next; save exact raw/preflight/exit captures and byte-comp
 
 ## Remaining
 
-Latest frozen candidates: manager unit1 stubee7afab1/tests2b2d1fbc with
-original assignmentde8c9019 awaits independent source review; it is unwired
-and has no algorithm/RED claim. Critic checks the afterAttach test-only seam
-and missing direct draining-slot coverage. CursorBounds3d3e1da/fresh record086b
-awaits a different critic after fixing c07a; frozen373a/prodd8/conformanceedf
-remain exact. No runtime gate may launch before push98632 joins and source
-approval. Compiler owner remains root for that normal publication retry.
+1. Commit and push the six independently verified private primitive files with
+   scoped evidence and normal hooks; both isolated full Go gates passed.
+2. Review the bounded lifecycle PhaseA fixture and compile seams independently.
+   Preserve managerab9f1/af2df/helper215758/base34df/policye156.
+   Source review precedes actual focused RED; a different builder implements,
+   then independent source/runtime GREEN with direct archival and comparisons.
+3. Implement private prepare/shared initializer/recurring poller/stop and detach
+   with full combined accounting, exact initial DTO/counts, all eight initial
+   starts before waiting, shared ownership and actual worker JOIN before reuse.
+   Then independently implement/verify Next, authenticated observation SSE,
+   UI sidecar/cache and remaining T09 live journeys.
+4. Complete the separate concrete public V4 correction design, independent
+   review and exact operator approval before affected contracts/runtime work.
+   Resolve durable ordering/history, case/world ID grammar, cold history and
+   canonical empty-cell bootstrap without relying on direct relay assumptions.
+5. Run all named T09 and applicable global gates/teeth with independent
+   confirmation before settlement. Continue T10 live browser ladder, T11
+   operational hardening and T12 final independent acceptance. Split T13,
+   then stop for operator review.
 
-Current: bounds3a801 rejected by c07a; fresh different builder fixes wrong-case
-subscription, exclusive-floor arithmetic, exact64 threshold, frontier alias,
-and execution/settlement setup. Private manager admission/rollback TESTFIRST
-builder active under root's accepted private design decision. Neither fixture
-nor manager source is approved/run/committed yet. Compiler token is idle.
-
-Manager correction3494e3de was rejected for circular stop-after-JOIN and
-candidate/control-marker ambiguity. Fresh builder writes a new narrow
-terminal-stop correction, including fixed-width private budget-image control
-encoding so failure markers fit an exactly-full image; all proposed policies
-still require approval. Existing inventory atomicity recon c548cd/f4d5a355
-is independently accepted only as bounded facts/candidate, no public V4 release.
-Read-only recon checks the previously approved 32 MiB source-line prerequisite.
-
-Latest independent fixture review c80c591a rejects bounds884987: both queues
-overflow in the proposed isolation test, leading-zero setup assumes a missing
-timer, reentrancy assertion is ineffective, and exhaustion/error cases are
-missing. Fresh different Luna repair builder owns only cursorBounds, preserving
-the old source separately. No runtime launch or implementation acceptance.
-Manager6 is rejected pending a focused fresh-builder normative addendum for
-captured-ledger, initializer, transient-memory and recovery semantics.
-
-Resume tasks: cursorBounds fixture884987fb is built but unapproved; a different
-Luna critic checks type/setup/assertions without compiling. Manager revision6
-60498c53 is document only under independent review; root flags captured-version
-ledger consistency and read-error recovery wording. Bootstrap component3 is
-independently accepted only as a held proposal. New read-only recon traces
-kernel inventory/write/publication synchronization before any full V4 design.
-Push session5909 owns the compiler token; no other gates may launch until joined.
-
-Build shared pollers using the independently verified trace port and non-sliding
-session revocation primitive, then authenticated SSE observation lifecycle, UI
-sidecar/cache and remaining T09 journeys. Run all named task/global gates and
-independent teeth before settling T09. T10 live browser ladder, T11 operational
-hardening and T12 final independent acceptance remain. Split T13, then stop.
-
-Local explicit-path checkpoints remain authorized. The operator explicitly approved
-e8f66a4/history publication to the new GitHub branch after automatic review rejection.
-Recheck branch availability and serialize normal push hooks; never overwrite
-the divergent existing remote branch, force, fetch, pull, merge or rebase.
-Next: independently review physical run.get admission before poller fixtures.
-Root proposal uses two bounded cooldown records and admission at EVERY retry
-write boundary; exact eight-head accounting and timeout consequences need review.
-The first reviewer hit a provider usage limit before a verdict. Fresh independent
-Luna review rejected the proposal for missing concrete API, reuse/cleanup ordering,
-production coverage and partial-cohort behavior. Eight initial reads are logical
-calls, as the approved round-four amendment states; physical retries retain pacing.
-A different Luna builder completed a documentation-only proposal repair. Root
-adjudicated admission before connection acquisition, exact matched-slot reuse,
-two-record cooldown, cleanup ordering and logical-budget failure accounting.
-Independent round-two source review first rejected ambiguous busy-state waiting;
-the binding no-spin supplement then approved declarations/fixtures only. A bounded
-Luna builder now owns new limiter stub/tests and only the Config field in client.go.
-Initial four-file fixture draft root hash/scope checks passed: client d2f993d7,
-stub f661bd8f, limiter fixtures93393464, client fixtures6b5c7ecb. Independent
-fixture critic REJECTed fabricated release/signal behavior, missing post-write
-cancellation barrier and incomplete fatal-path waiter joins. Different Luna builder
-gitleaks_sibling_builder now owns ONLY the two test-file repairs; client and stub
-remain frozen. Fresh repair froze limiter fixturesd9334d3e/clientfixtures3466befd;
-root rehashed both and the unchanged client/stub. Independent source rereview
-approved a focused compile attempt. Actual session65279 joined exit1: undefined t
-in waiter cleanup; ALL assertions unreached, not expected RED. Three original
-raw/exit/preflight captures are now native project evidence, root cmp exact.
-Different builder physical_admission_proposal_repair_builder owns ONLY the cleanup
-parameter/callback registration fix, completed as limiterfixturedae0406d. Attempt2
-joined1 mixed sandbox listener setup failure with expected assertions. Authorized
-escalated attempt3 joined1 revealed a shared fake-server counter race; both rejected.
-Root archived eight nonempty attempt2/3 captures with cmp exact. Fresh builder
-admission_retry_counter_fresh_builder fixed ONLY that counter/import, client fixture
-becd4266; root four hashes/scope matched. Independent source review then conditional
-one verbose escalated focused attempt4 is assigned to physical_admission_fixture_critic.
-Root supplement also requires pool state at permit
-release, since socket-close ordering alone does not prove discard/healthy release.
-Only physical_admission_fixture_critic may compile after its source approval;
-prior processes are joined. Fresh independent review and
-actual assertion RED are now accepted at the fixture boundary. Production work
-must satisfy the new bounded assignment and independent GREEN verification.
-Cursor/bootstrap public correction V4 still needs a concrete reviewed proposal.
-Bootstrap/Store inventory confirms the existing snapshot wrapper, separate template
-preflight flow, global Store subscriptions and missing SSE write deadlines. Source
-recon confirms successful case materialization precedes global case.submitted, but
-case.list can silently report empty/omit records on filesystem errors and race
-direct JSON writes. CW-13 is recorded; V4 inventory completeness remains unresolved.
-Root also observed discarded case.submitted publication errors (CW-14): successful
-commit alone cannot establish a real global case cursor or first-case readiness.
-Separate Luna source-options recon completed (55e5bdfd); root checked Go ListCases
-ignoring known unreadable IDs/missing arrays. It records repair compatibility and
-filesystem atomicity limits. No kernel correction is released.
+Commit/push meaningful independently verified units with explicit paths and
+normal hooks. Never fetch/pull/reset/clean/rebase/merge or force. Preserve the
+eleven foreign staged blobs and operator work. Update both status files after
+each unit; archive actual preflight/output/exit immediately after JOIN, before
+another gate. Existing manually transcribed/lost/corrected evidence retains
+its stated provenance limits (CW-24/CW-26).
 
 ## Blockers
 
-Public cursor V2 was rejected. Root V3 now proposes capture-time baselines,
-explicit fail-closed gap acknowledgement/readiness and a separate empty-cell
-bootstrap response. Resolve all
-concrete contract/entry-flow gaps before an operator approval request.
-V3 is now independently rejected: exact bootstrap/creation DTOs, actual case/world
-ID grammars, race-safe inventory/frontier bounds and concrete per-case Store/SSE
-gap/readiness interfaces remain unresolved. CW-11/12 record the new source debt.
-No public schema/runtime/version correction is released.
+Public C-2 correction remains held: concrete complete reviewed V4 and exact
+operator approval are required before affected public schema/runtime/version
+changes. Inventory completeness/all-writer ordering, bootstrap/creation DTOs,
+ID grammar, per-case Store/SSE gap/readiness and cold-history semantics must
+be resolved. Approved private prerequisites can proceed separately.
 
-Security selector/whole-path defects are verified repaired and checkpointed;
-publication authorization and normal push gates remain pending.
-Auth/trace production prerequisites and whole-module Go checks are approved.
-Physical admission, poller/SSE/UI integration and public contract correction remain
-unfinished; prerequisite approval does not settle T09.
+Private manager lifecycle is not implemented. Its proposal is independently
+approved and PhaseA test-first source work is released; implementation approval
+and actual lifecycle proof remain pending. The pure encoder algorithm is approved.
+Current Go manager fixture intentionally targets an unwired seam. Isolated
+full-module Go gates cover the six primitive files, not pending primary lifecycle work.
+T09 settlement and T10–T12 remain pending.
 
 ## Decisions
 
@@ -339,7 +277,8 @@ attachments and combined1MiB serialized current poller image, truthful safe
 failure and actual JOIN before release. Draft-only extra permission holds for
 those private implementation details are superseded by the new root design
 decision; no public API/schema/security or architecture boundary is authorized.
-Next is a bounded test-first private registry/lifecycle unit. Public V4 remains
+Next is the bounded combined-image test-first unit and lifecycle fixture plan.
+Public V4 remains
 held for its separate redesign decisions. The approved32MiB transport cap is
 already implemented, corrected by independently reviewed0f1c erratum.
 
