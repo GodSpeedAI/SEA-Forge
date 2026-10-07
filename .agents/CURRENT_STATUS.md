@@ -16,7 +16,8 @@ casework/live-wiring-resume-2026-10-05. Renderer three-file unit committed/pushe
 with normal hooks; CI125 summaries/1110 passed/0 failed/4 ignored. Actual push
 triplet archived/rootcmp0; output237536 bytes SHA98d6504f.
 
-Root owns the sole compiler; no active process. Before each gate require
+Root owns the sole heavy token; no active process. Other agents are
+source-only. Before each gate require
 available RAM>=1200 MiB, free swap>=512 MiB, and one compilation job. Other
 agents are source-only. Preserve all11 foreign staged blob identities,
 operator hooks/Jolli/worktree changes and unstaged DEBT.md additions.
@@ -61,14 +62,35 @@ Normal listener-permission retry passed canonical format/vet/tests and full
 module race. Root compared all eight passing captures and six source pairs
 exactly; result215524db supports bounded primitive acceptance only. Explicit
 Graft build passed705 cards/7801 nodes/15250 edges, all three captures exact.
-Root now owns the sole heavy token for the scoped normal commit and push;
-other agents are source-only.
+Root serialized the normal commit and first push; both processes have joined.
+Primitive checkpoint617dac3 committed with normal hooks: context-check and
+Rust cargo check passed. All three actual hook captures compare exactly;
+eleven foreign index blobs remain unchanged. Normal push01 stopped at the
+security scanner's one finding; all three actual captures compare exactly.
+The structured diagnostic found generic-api-key at evidence policy-format
+result:83. Root proved the committed line is exactly the private key type
+file's SHA-256 reference. All four original diagnostic archives compare exactly.
+Agent shell-copy deviation and two CR-normalized native copies are disclosed
+and excluded as valid native evidence copies; actual originals remain intact.
+Lunaformat builds only an exact fingerprint exception and its documentation;
+Independent review3ef3 approved the exact exception. Canonical security passed
+with no leaks found,516 commits/84.29MB; all three actual captures root-compared
+exactly. Scoped exception commit and normal push retry are next.
+Root owns the sole heavy token. CW-30 records the original missing metadata.
+Remote remains the earlier74 checkpoint; no bypass.
 Lifecycle core model approved; fresh three-finding supplement4752 specifies
 atomic cohort admission before list/read, both missing manager A cases, and
 cancel invocation outside mutex. Independent reviewa3b591 approves test-first
 release only. Luna builds the three-path PhaseA fixture/compile seams; a
 different critic must approve source and actual expected RED before a fresh
 PhaseB algorithm builder. Existing manager fixture and six primitives stay frozen.
+PhaseA is now frozen f932 manager/f90 worker/3b0 failure fixture. The critic
+identified undefined `caller` and forbidden direct cancel-function replacement
+in the held-read test; no compilation or expected
+RED has run. A fresh builder must repair the final independent findings.
+Fresh builder now froze fixture4ff2 after repairing caller binding, removing
+the cancel spy, and adding negative eligibility claims. Independent review
+pending; f932/f90/af and all six primitives remain unchanged. No Go RED yet.
 
 Private16 cohorts/128 attachments/combined1MiB serialized poller cap are
 ratified; no heap/RSS guarantee. Public V4/bootstrap/frontier/schema correction
