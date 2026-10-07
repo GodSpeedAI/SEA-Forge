@@ -10,11 +10,30 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
+Latest: guard7b88d4b normal push5909 joined0; remote verification34487 joined0
+confirms exact full SHA on approved resume branch. CI hook125 summaries:
+1110 passed/0 failed/4 ignored; Gitleaks512 commits/no leaks. Actual push raw
+and exit archived immediately and both cmp0. Root compiler token returned
+IDLE. Eleven operator staged paths remain excluded; T09 stays partial.
+
+Latest checkpoint: 7b88d4b46731afc096c0d45efd1de575489db2cd commits only
+the private guard and 41 explicit source/evidence/handoff paths. Normal
+commit hooks passed; session7767 joined0. Eleven excluded staged identities
+matched exactly afterward. Normal push to approved resume branch is active
+in session5909; root is sole heavy owner. No publication success claimed yet.
+
 Resume 2026-10-06: prior transient /tmp guard and UI originals are absent.
 Final twelve guard and three UI RED2 repository captures remain durable;
 their earlier cmp results are historical, not newly rerun. CW-24 records
 incomplete prior-attempt archival. Root owns all heavy gates. Fresh Luna
 critics review preserved hashes/evidence; manager revision6 is DOCONLY.
+
+Independent RED2 evidence verdict accepted by root with historical-comparison
+limits. Fresh Luna builder prepares remaining local cursor bounds fixtures;
+no algorithm or public contract implementation released. Guard explicit
+41-path commit is running normal hooks as sole compiler owner (session7767).
+Bootstrap revision3 review accepts DOCONLY with public/inventory/principal
+policy HOLDs; root reviewed its attempt/session rules, no source approval.
 
 Latest: private guard19bd9a57/fixture46caa4f5 is ROOTaccepted after independent
 final review8c9f8df3 and four final GREEN gates7811/49865/21717/97794, all joined0.
@@ -376,6 +395,36 @@ final exit before the next; save exact raw/preflight/exit captures and byte-comp
 
 ## Remaining
 
+Current: bounds3a801 rejected by c07a; fresh different builder fixes wrong-case
+subscription, exclusive-floor arithmetic, exact64 threshold, frontier alias,
+and execution/settlement setup. Private manager admission/rollback TESTFIRST
+builder active under root's accepted private design decision. Neither fixture
+nor manager source is approved/run/committed yet. Compiler token is idle.
+
+Manager correction3494e3de was rejected for circular stop-after-JOIN and
+candidate/control-marker ambiguity. Fresh builder writes a new narrow
+terminal-stop correction, including fixed-width private budget-image control
+encoding so failure markers fit an exactly-full image; all proposed policies
+still require approval. Existing inventory atomicity recon c548cd/f4d5a355
+is independently accepted only as bounded facts/candidate, no public V4 release.
+Read-only recon checks the previously approved 32 MiB source-line prerequisite.
+
+Latest independent fixture review c80c591a rejects bounds884987: both queues
+overflow in the proposed isolation test, leading-zero setup assumes a missing
+timer, reentrancy assertion is ineffective, and exhaustion/error cases are
+missing. Fresh different Luna repair builder owns only cursorBounds, preserving
+the old source separately. No runtime launch or implementation acceptance.
+Manager6 is rejected pending a focused fresh-builder normative addendum for
+captured-ledger, initializer, transient-memory and recovery semantics.
+
+Resume tasks: cursorBounds fixture884987fb is built but unapproved; a different
+Luna critic checks type/setup/assertions without compiling. Manager revision6
+60498c53 is document only under independent review; root flags captured-version
+ledger consistency and read-error recovery wording. Bootstrap component3 is
+independently accepted only as a held proposal. New read-only recon traces
+kernel inventory/write/publication synchronization before any full V4 design.
+Push session5909 owns the compiler token; no other gates may launch until joined.
+
 Build shared pollers using the independently verified trace port and non-sliding
 session revocation primitive, then authenticated SSE observation lifecycle, UI
 sidecar/cache and remaining T09 journeys. Run all named task/global gates and
@@ -453,6 +502,16 @@ Physical admission, poller/SSE/UI integration and public contract correction rem
 unfinished; prerequisite approval does not settle T09.
 
 ## Decisions
+
+Root accepts the reviewed private manager resource choices under the operator's
+standing completion and architectural delegation:16 cohort slots/128
+attachments and combined1MiB serialized current poller image, truthful safe
+failure and actual JOIN before release. Draft-only extra permission holds for
+those private implementation details are superseded by the new root design
+decision; no public API/schema/security or architecture boundary is authorized.
+Next is a bounded test-first private registry/lifecycle unit. Public V4 remains
+held for its separate redesign decisions. The approved32MiB transport cap is
+already implemented, corrected by independently reviewed0f1c erratum.
 
 Use Luna for builders and independent critics; Terra is unavailable. Root owns
 architecture, semantics, integration and acceptance. Rejection requires a different
