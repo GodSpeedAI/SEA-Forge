@@ -1,0 +1,1277 @@
+package server
+
+import (
+	"context"
+	"errors"
+	"reflect"
+	"runtime"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
+)
+
+type runObservationManagerListFunc func(context.Context, ports.CaseRef) (ports.RunListResult, error)
+
+func (f runObservationManagerListFunc) RunsListForCase(ctx context.Context, ref ports.CaseRef) (ports.RunListResult, error) {
+	return f(ctx, ref)
+}
+
+type runObservationManagerTraceFunc func(context.Context, string, string, string) (ports.RunTraceSnapshot, error)
+
+func (f runObservationManagerTraceFunc) ReadRunTrace(ctx context.Context, caseID, runID, planItemID string) (ports.RunTraceSnapshot, error) {
+	return f(ctx, caseID, runID, planItemID)
+}
+
+type runObservationManagerCurrentFake struct{ state auth.CurrentSessionState }
+
+func (f runObservationManagerCurrentFake) Current(string) (auth.CurrentSessionState, bool) {
+	return f.state, true
+}
+
+type runObservationManagerPerspectiveFake struct{ calls atomic.Int32 }
+
+func (f *runObservationManagerPerspectiveFake) VerifyPerspective(context.Context, ports.ActorClaim) error {
+	f.calls.Add(1)
+	return nil
+}
+
+type runObservationManagerContextFake struct {
+	mu        sync.Mutex
+	revisions map[string]projection.Revision
+	cursors   map[string]string
+	history   int
+	relay     int
+}
+
+func (f *runObservationManagerContextFake) Trajectory(caseID string) []projection.Revision {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.history++
+	revision, ok := f.revisions[caseID]
+	if !ok {
+		return nil
+	}
+	return []projection.Revision{revision}
+}
+
+func (f *runObservationManagerContextFake) CursorForCase(caseID string) (string, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.relay++
+	cursor, ok := f.cursors[caseID]
+	return cursor, ok
+}
+
+func runObservationManagerCaller(sessionID string) *requestIdentity {
+	return &requestIdentity{
+		Identity: auth.Identity{Username: "operator", ActorID: "operator_local", Role: "operator"},
+		Session:  &auth.Session{ID: sessionID},
+		Source:   "session",
+	}
+}
+
+func runObservationManagerContext(caseID, cursor string, parents ...string) *runObservationManagerContextFake {
+	return &runObservationManagerContextFake{
+		revisions: map[string]projection.Revision{
+			caseID: runObservationPresentContextRevision(caseID, cursor, parents...),
+		},
+		cursors: map[string]string{caseID: cursor},
+	}
+}
+
+func newRunObservationManagerFixture(
+	list runObservationListReader,
+	traces ports.RunTracePort,
+	current runObservationSessionCurrent,
+	verifier PerspectiveVerifier,
+	contextSource *runObservationManagerContextFake,
+) *runObservationManager {
+	guard := func(caseID string) (runObservationPresentContext, error) {
+		return checkRunObservationPresentContext(contextSource, contextSource, caseID)
+	}
+	authorize := func(ctx context.Context, caller runObservationCaller, caseID string, sessions runObservationSessionCurrent, perspective PerspectiveVerifier) error {
+		state, ok := sessions.Current(caller.sessionID)
+		if !ok || state.Claim != caller.claim {
+			return runObservationUnavailable("session is no longer current")
+		}
+		if err := perspective.VerifyPerspective(ctx, caller.claim); err != nil {
+			return err
+		}
+		return nil
+	}
+	return newRunObservationManager(list, traces, current, verifier, authorize, guard, func() time.Time {
+		return time.Date(2026, time.October, 6, 12, 0, 0, 0, time.UTC)
+	})
+}
+
+func runObservationManagerCurrent(claim ports.ActorClaim) runObservationManagerCurrentFake {
+	return runObservationManagerCurrentFake{state: auth.CurrentSessionState{Claim: claim, ValidUntil: time.Date(2026, time.October, 6, 13, 0, 0, 0, time.UTC)}}
+}
+
+func waitRunObservationManagerSignal(t *testing.T, ch <-chan struct{}, what string) {
+	t.Helper()
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+	select {
+	case <-ch:
+	case <-timer.C:
+		t.Fatalf("timed out waiting for %s", what)
+	}
+}
+
+type runObservationPrepareResult struct {
+	event contract.RunTraceObservationEvent
+	lease *runObservationLease
+	err   error
+}
+
+func waitRunObservationManagerReadOrSemanticFailure(
+	t *testing.T,
+	started <-chan struct{},
+	result <-chan runObservationPrepareResult,
+	what string,
+) {
+	t.Helper()
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+	select {
+	case <-started:
+	case got := <-result:
+		if got.err != nil || got.lease == nil {
+			t.Fatalf("Prepare returned before %s: got semantic failure event=%+v lease=%v err=%v; expected successful attachment reaching the controlled read", what, got.event, got.lease, got.err)
+		}
+		t.Fatalf("Prepare succeeded before %s: event=%+v lease=%v; controlled read was not reached", what, got.event, got.lease)
+	case <-timer.C:
+		t.Fatalf("timed out waiting for %s", what)
+	}
+}
+
+func awaitRunObservationManagerPrepare(
+	t *testing.T,
+	result <-chan runObservationPrepareResult,
+	what string,
+) runObservationPrepareResult {
+	t.Helper()
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+	select {
+	case got := <-result:
+		if got.err != nil || got.lease == nil {
+			t.Fatalf("%s did not reach its successful Prepare contract: event=%+v lease=%v err=%v", what, got.event, got.lease, got.err)
+		}
+		return got
+	case <-timer.C:
+		t.Fatalf("timed out waiting for %s Prepare result", what)
+		return runObservationPrepareResult{}
+	}
+}
+
+func cleanupRunObservationManager(
+	t *testing.T,
+	manager *runObservationManager,
+	releaseHeldReads func(),
+	cancelCallers ...context.CancelFunc,
+) {
+	t.Helper()
+	t.Cleanup(func() {
+		for _, cancel := range cancelCallers {
+			if cancel != nil {
+				cancel()
+			}
+		}
+		type ownedWorker struct {
+			key    runObservationPollerKey
+			cancel context.CancelFunc
+			done   <-chan struct{}
+		}
+		var owned []ownedWorker
+		if manager != nil {
+			manager.mu.Lock()
+			for key, entry := range manager.pollers {
+				if entry == nil {
+					owned = append(owned, ownedWorker{key: key})
+					continue
+				}
+				owned = append(owned, ownedWorker{key: key, cancel: entry.cancel, done: entry.workerDone})
+			}
+			manager.mu.Unlock()
+		}
+		// Cancellation and controlled fake-read release may unblock worker code;
+		// neither may run while holding the manager ownership mutex.
+		for _, worker := range owned {
+			if worker.cancel != nil {
+				worker.cancel()
+			}
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		joined := make(chan error, 1)
+		go func() {
+			if manager == nil {
+				joined <- runObservationUnavailable("nil manager in test cleanup")
+				return
+			}
+			joined <- manager.stopAndDrain(ctx)
+		}()
+		if releaseHeldReads != nil {
+			releaseHeldReads()
+		}
+		var drainErr error
+		select {
+		case drainErr = <-joined:
+		case <-ctx.Done():
+			t.Errorf("manager cleanup did not complete bounded stop/join: %v", ctx.Err())
+		}
+		for _, worker := range owned {
+			if worker.done == nil {
+				t.Errorf("manager cleanup found owned poller %+v without workerDone", worker.key)
+				continue
+			}
+			select {
+			case <-worker.done:
+			case <-ctx.Done():
+				t.Errorf("manager cleanup did not join owned worker %+v: %v", worker.key, ctx.Err())
+			}
+		}
+		remaining := -1
+		if manager != nil {
+			manager.mu.Lock()
+			remaining = len(manager.pollers)
+			manager.mu.Unlock()
+		}
+		if remaining != 0 {
+			t.Errorf("manager cleanup returned with %d owned poller entries", remaining)
+		}
+		if drainErr != nil {
+			if apperr.KindOf(drainErr) != apperr.KindUnavailable || len(owned) != 0 || remaining != 0 {
+				t.Errorf("manager cleanup stop/drain failed with %d captured workers and %d remaining entries: %v", len(owned), remaining, drainErr)
+			}
+		}
+	})
+}
+
+func waitRunObservationManagerRefsOrSemanticFailure(
+	t *testing.T,
+	manager *runObservationManager,
+	key runObservationPollerKey,
+	want int,
+	result <-chan runObservationPrepareResult,
+) {
+	t.Helper()
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+	for {
+		manager.mu.Lock()
+		entry := manager.pollers[key]
+		refs := 0
+		if entry != nil {
+			refs = len(entry.refs)
+		}
+		manager.mu.Unlock()
+		if refs >= want {
+			return
+		}
+		select {
+		case got := <-result:
+			if got.err != nil || got.lease == nil {
+				t.Fatalf("Prepare returned before %d real refs attached: event=%+v lease=%v err=%v; expected shared initializer attachment", want, got.event, got.lease, got.err)
+			}
+			t.Fatalf("Prepare succeeded before %d real refs attached: event=%+v lease=%v", want, got.event, got.lease)
+		case <-timer.C:
+			t.Fatalf("timed out waiting for %d real manager refs on %+v", want, key)
+		default:
+			runtime.Gosched()
+		}
+	}
+}
+
+func TestRunObservationManagerPrepareReturnsExactEmptyInitialEventAndLease(t *testing.T) {
+	const caseID, cursor = "case_1", "opaque/cursor-A"
+	var listCalls, traceCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: []ports.RunSummary{}, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(context.Context, string, string, string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		return ports.RunTraceSnapshot{}, errors.New("unexpected trace read")
+	})
+	caller := runObservationManagerCaller("session-A")
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(caller.Identity.Claim()), &runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, cursor, "item-A"))
+
+	event, lease, err := manager.prepare(context.Background(), caseID, caller)
+	if err != nil {
+		t.Fatalf("Prepare() error = %v, want successful empty cohort", err)
+	}
+	if lease == nil {
+		t.Fatal("Prepare() returned a nil lease for a successful empty cohort")
+	}
+	want := contract.RunTraceObservationEvent{
+		EventType: contract.RunTraceObservationEventType,
+		Cursor:    cursor,
+		Timestamp: "2026-10-06T12:00:00Z",
+		Payload: contract.RunTraceObservation{
+			CaseID: caseID, ObservedAt: "2026-10-06T12:00:00Z",
+			RunListState: "complete", ObservationState: "no_runs",
+			ListedRunCount: managerCount(0), SelectedRunCount: managerCount(0),
+			ValidatedRunCount: managerCount(0), UnreadableRunCount: managerCount(0),
+			UnavailableRunCount: managerCount(0), OmittedRunCount: managerCount(0),
+			HydrationReadBudget: contract.RunTraceHydrationReadBudget{Limit: 8, ReadsAttempted: 0},
+			Runs:                []contract.RunTraceRunObservation{},
+		},
+	}
+	if !reflect.DeepEqual(event, want) {
+		t.Fatalf("initial event = %+v, want exact current-cursor event %+v", event, want)
+	}
+	if listCalls.Load() != 1 || traceCalls.Load() != 0 {
+		t.Fatalf("list calls=%d trace calls=%d, want one scoped list and no reads", listCalls.Load(), traceCalls.Load())
+	}
+	if err := lease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach() error = %v", err)
+	}
+	if err := lease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("second Detach() was not idempotent: %v", err)
+	}
+}
+
+func managerCount(value int) *int { return &value }
+
+func TestRunObservationCallerSnapshotRetainsNoCredentialOrSessionPointer(t *testing.T) {
+	request := &requestIdentity{
+		Identity: auth.Identity{Username: "operator", ActorID: "operator_local", Role: "operator"},
+		Source:   "bearer",
+	}
+	got, err := runObservationCallerFromRequest(request)
+	if err != nil {
+		t.Fatalf("runObservationCallerFromRequest() error = %v", err)
+	}
+	want := runObservationCaller{source: "bearer", claim: request.Identity.Claim()}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("caller snapshot = %+v, want credential-free identity %+v", got, want)
+	}
+}
+
+func TestRunObservationManagerGuardRefusesBeforeListButValidParentReachesRead(t *testing.T) {
+	const caseID = "case_1"
+	var listCalls, traceCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: []ports.RunSummary{{
+			RunID: "run_1", CaseID: caseID, PlanItemID: "item-A", Execution: "active", Settlement: "unsettled",
+		}}, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(_ context.Context, gotCase, runID, itemID string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		return ports.RunTraceSnapshot{RunID: runID, CaseID: gotCase, PlanItemID: itemID, Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{}}, nil
+	})
+	caller := runObservationManagerCaller("session-A")
+	verifier := &runObservationManagerPerspectiveFake{}
+	current := runObservationManagerCurrent(caller.Identity.Claim())
+
+	badCursor := runObservationManagerContext(caseID, "cursor-old", "item-A")
+	badCursor.mu.Lock()
+	badCursor.cursors[caseID] = "cursor-current"
+	badCursor.mu.Unlock()
+	badManager := newRunObservationManagerFixture(list, traces, current, verifier, badCursor)
+	if event, lease, err := badManager.prepare(context.Background(), caseID, caller); err == nil || apperr.KindOf(err) != apperr.KindUnavailable || lease != nil || !reflect.DeepEqual(event, contract.RunTraceObservationEvent{}) {
+		t.Fatalf("stale-context Prepare() = (%+v, %v, %v), want zero wrapper/nil lease/unavailable", event, lease, err)
+	}
+	if listCalls.Load() != 0 || traceCalls.Load() != 0 {
+		t.Fatalf("stale context reached list/read: list=%d trace=%d", listCalls.Load(), traceCalls.Load())
+	}
+
+	goodManager := newRunObservationManagerFixture(list, traces, current, verifier, runObservationManagerContext(caseID, "cursor-current", "item-A"))
+	event, lease, err := goodManager.prepare(context.Background(), caseID, caller)
+	if err != nil {
+		t.Fatalf("current-context Prepare() error = %v; valid parent must reach list and trace", err)
+	}
+	if lease == nil || event.Payload.CaseID != caseID || event.Cursor != "cursor-current" {
+		t.Fatalf("current-context Prepare() returned event=%+v lease=%v", event, lease)
+	}
+	if listCalls.Load() != 1 || traceCalls.Load() != 1 {
+		t.Fatalf("valid candidate calls: list=%d trace=%d, want one each", listCalls.Load(), traceCalls.Load())
+	}
+	if err := lease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach() error = %v", err)
+	}
+}
+
+func TestRunObservationManagerRejectsPlanItemOutsideCapturedParentsBeforeRead(t *testing.T) {
+	const caseID = "case_1"
+	var listCalls, traceCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: []ports.RunSummary{{
+			RunID: "run_1", CaseID: caseID, PlanItemID: "item-not-current", Execution: "active", Settlement: "unsettled",
+		}}, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(context.Context, string, string, string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		return ports.RunTraceSnapshot{}, nil
+	})
+	caller := runObservationManagerCaller("session-A")
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(caller.Identity.Claim()), &runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, "cursor-1", "item-current"))
+	event, lease, err := manager.prepare(context.Background(), caseID, caller)
+	if err != nil || lease == nil {
+		t.Fatalf("Prepare() = (%+v, %v, %v), want completed unavailable wrapper and lease for the selected orphan", event, lease, err)
+	}
+	if event.Payload.ObservationState != "unavailable" || event.Payload.UnavailableRunCount == nil || *event.Payload.UnavailableRunCount != 1 || len(event.Payload.Runs) != 0 {
+		t.Fatalf("orphan candidate disclosed or miscounted: %+v", event.Payload)
+	}
+	if listCalls.Load() != 1 || traceCalls.Load() != 0 {
+		t.Fatalf("orphan candidate list/read calls=%d/%d, want one list and no trace read", listCalls.Load(), traceCalls.Load())
+	}
+	if err := lease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach(): %v", err)
+	}
+}
+
+func TestRunObservationManagerRejectsTraceIdentityMismatchWithoutDisclosure(t *testing.T) {
+	const caseID, runID, itemID = "case_1", "run_1", "item-current"
+	var traceCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		return ports.RunListResult{Runs: []ports.RunSummary{{
+			RunID: runID, CaseID: caseID, PlanItemID: itemID, Execution: "active", Settlement: "unsettled",
+		}}, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(context.Context, string, string, string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		return ports.RunTraceSnapshot{
+			RunID: "run-other", CaseID: caseID, PlanItemID: itemID,
+			Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{},
+		}, nil
+	})
+	caller := runObservationManagerCaller("session-A")
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(caller.Identity.Claim()), &runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, "cursor-1", itemID))
+	event, lease, err := manager.prepare(context.Background(), caseID, caller)
+	if err != nil || lease == nil {
+		t.Fatalf("Prepare() = (%+v, %v, %v), want completed unavailable wrapper and lease", event, lease, err)
+	}
+	if event.Payload.ObservationState != "unavailable" || event.Payload.UnavailableRunCount == nil || *event.Payload.UnavailableRunCount != 1 || len(event.Payload.Runs) != 0 {
+		t.Fatalf("mismatched trace identity disclosed or miscounted: %+v", event.Payload)
+	}
+	if traceCalls.Load() != 1 {
+		t.Fatalf("ReadRunTrace calls=%d, want exactly one selected candidate read", traceCalls.Load())
+	}
+	if err := lease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach(): %v", err)
+	}
+}
+
+func TestRunObservationManagerReservesPreparingCohortsBeforeList(t *testing.T) {
+	entered := make(chan struct{}, runObservationCohortLimit+2)
+	release := make(chan struct{})
+	var listCalls, traceCalls atomic.Int32
+	list := runObservationManagerListFunc(func(ctx context.Context, _ ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		entered <- struct{}{}
+		select {
+		case <-release:
+			return ports.RunListResult{Runs: []ports.RunSummary{}, UnreadableIDs: []string{}}, nil
+		case <-ctx.Done():
+			return ports.RunListResult{}, ctx.Err()
+		}
+	})
+	traces := runObservationManagerTraceFunc(func(context.Context, string, string, string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		return ports.RunTraceSnapshot{}, nil
+	})
+	verifier := &runObservationManagerPerspectiveFake{}
+	claim := ports.ActorClaim{ActorID: "operator_local", Role: "operator"}
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(claim), verifier, runObservationManagerContext("case_1", "cursor-1", "item-1"))
+	cleanupRunObservationManager(t, manager, nil)
+	type prepareResult = runObservationPrepareResult
+	results := make(chan prepareResult, runObservationCohortLimit)
+	contexts := make([]context.CancelFunc, runObservationCohortLimit)
+	var releaseOnce sync.Once
+	releaseLists := func() { releaseOnce.Do(func() { close(release) }) }
+	for i := 0; i < runObservationCohortLimit; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+		contexts[i] = cancel
+		go func(index int, ctx context.Context) {
+			results <- func() prepareResult {
+				event, lease, err := manager.prepare(ctx, "case_1", runObservationManagerCaller(string(rune('A'+index))))
+				return prepareResult{event: event, lease: lease, err: err}
+			}()
+		}(i, ctx)
+	}
+	defer func() {
+		releaseLists()
+		for _, cancel := range contexts {
+			cancel()
+		}
+	}()
+
+	for i := 0; i < runObservationCohortLimit; i++ {
+		select {
+		case <-entered:
+		case early := <-results:
+			t.Fatalf("Prepare returned before reaching blocked list (%d/%d): event=%+v lease=%v err=%v", i, runObservationCohortLimit, early.event, early.lease, early.err)
+		case <-time.After(2 * time.Second):
+			t.Fatalf("only %d preparing cohorts reached run.list", i)
+		}
+	}
+
+	extraEvent, extraLease, extraErr := manager.prepare(context.Background(), "case_1", runObservationManagerCaller("extra"))
+	if extraErr == nil || apperr.KindOf(extraErr) != apperr.KindUnavailable || extraLease != nil || !reflect.DeepEqual(extraEvent, contract.RunTraceObservationEvent{}) {
+		t.Fatalf("17th preparing cohort = (%+v, %v, %v), want typed capacity refusal/zero wrapper/nil lease", extraEvent, extraLease, extraErr)
+	}
+	if listCalls.Load() != runObservationCohortLimit || traceCalls.Load() != 0 {
+		t.Fatalf("at capacity list=%d trace=%d; want exactly %d lists and no trace reads", listCalls.Load(), traceCalls.Load(), runObservationCohortLimit)
+	}
+	releaseLists()
+	leases := make([]*runObservationLease, 0, runObservationCohortLimit)
+	for i := 0; i < runObservationCohortLimit; i++ {
+		select {
+		case result := <-results:
+			if result.err != nil || result.lease == nil {
+				t.Errorf("reserved Prepare %d returned lease=%v err=%v", i, result.lease, result.err)
+				continue
+			}
+			leases = append(leases, result.lease)
+		case <-time.After(2 * time.Second):
+			t.Fatalf("reserved Prepare %d did not finish after list release", i)
+		}
+	}
+	activeEvent, activeLease, activeErr := manager.prepare(context.Background(), "case_1", runObservationManagerCaller("active-extra"))
+	if activeErr == nil || apperr.KindOf(activeErr) != apperr.KindUnavailable || activeLease != nil || !reflect.DeepEqual(activeEvent, contract.RunTraceObservationEvent{}) {
+		t.Fatalf("17th active cohort = (%+v, %v, %v), want typed capacity refusal/zero wrapper/nil lease", activeEvent, activeLease, activeErr)
+	}
+	if listCalls.Load() != runObservationCohortLimit || traceCalls.Load() != 0 {
+		t.Fatalf("active capacity admitted work: list=%d trace=%d", listCalls.Load(), traceCalls.Load())
+	}
+	for i, lease := range leases {
+		if err := lease.detachAndDrain(context.Background()); err != nil {
+			t.Errorf("Detach %d: %v", i, err)
+		}
+	}
+}
+
+func TestRunObservationManagerPollerCapCountsInitializingEntries(t *testing.T) {
+	readStarted := make(chan struct{}, runObservationPollerLimit+1)
+	releaseReads := make(chan struct{})
+	var traceCalls atomic.Int32
+	runsByCase := make(map[string][]ports.RunSummary, 3)
+	revisions := make(map[string]projection.Revision, 3)
+	cursors := make(map[string]string, 3)
+	for cohort := 0; cohort < 3; cohort++ {
+		caseID := "case_" + string(rune('A'+cohort))
+		parents := make([]string, 8)
+		runs := make([]ports.RunSummary, 8)
+		for i := 0; i < 8; i++ {
+			runID := caseID + "_run_" + string(rune('A'+i))
+			itemID := "item_" + runID
+			parents[i] = itemID
+			runs[i] = ports.RunSummary{
+				RunID: runID, CaseID: caseID, PlanItemID: itemID,
+				Execution: "active", Settlement: "unsettled",
+			}
+		}
+		runsByCase[caseID] = runs
+		cursor := "cursor_" + caseID
+		cursors[caseID] = cursor
+		revisions[caseID] = runObservationPresentContextRevision(caseID, cursor, parents...)
+	}
+	contextSource := &runObservationManagerContextFake{revisions: revisions, cursors: cursors}
+	list := runObservationManagerListFunc(func(_ context.Context, ref ports.CaseRef) (ports.RunListResult, error) {
+		runs := runsByCase[string(ref)]
+		return ports.RunListResult{Runs: runs, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(ctx context.Context, gotCase, runID, itemID string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		readStarted <- struct{}{}
+		select {
+		case <-releaseReads:
+			return ports.RunTraceSnapshot{RunID: runID, CaseID: gotCase, PlanItemID: itemID, Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{}}, nil
+		case <-ctx.Done():
+			return ports.RunTraceSnapshot{}, ctx.Err()
+		}
+	})
+	claim := ports.ActorClaim{ActorID: "operator_local", Role: "operator"}
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(claim), &runObservationManagerPerspectiveFake{}, contextSource)
+	var releaseOnce sync.Once
+	releaseHeldReads := func() { releaseOnce.Do(func() { close(releaseReads) }) }
+	cleanupRunObservationManager(t, manager, releaseHeldReads)
+	type result = runObservationPrepareResult
+	results := make(chan result, 2)
+	for cohort := 0; cohort < 2; cohort++ {
+		caseID := "case_" + string(rune('A'+cohort))
+		go func(caseID string) {
+			event, lease, err := manager.prepare(context.Background(), caseID, runObservationManagerCaller("session-"+caseID))
+			results <- result{event: event, lease: lease, err: err}
+		}(caseID)
+	}
+	for i := 0; i < runObservationPollerLimit; i++ {
+		waitRunObservationManagerReadOrSemanticFailure(t, readStarted, results, "all 16 initializing poller reads")
+	}
+
+	thirdCase := "case_C"
+	thirdEvent, thirdLease, thirdErr := manager.prepare(context.Background(), thirdCase, runObservationManagerCaller("session-"+thirdCase))
+	if thirdErr != nil || thirdLease == nil || thirdEvent.Payload.ObservationState != "capacity_limited" {
+		t.Fatalf("third cohort with 16 initializers = (%+v, %v, %v), want capacity-limited wrapper and lease", thirdEvent, thirdLease, thirdErr)
+	}
+	if got := traceCalls.Load(); got != runObservationPollerLimit {
+		t.Fatalf("ReadRunTrace starts at 16 initializing entries=%d, want no 17th read", got)
+	}
+	if err := thirdLease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("third lease Detach(): %v", err)
+	}
+
+	releaseHeldReads()
+	for i := 0; i < 2; i++ {
+		select {
+		case got := <-results:
+			if got.err != nil || got.lease == nil || len(got.event.Payload.Runs) != 8 {
+				t.Fatalf("initial cohort result = (%+v, %v, %v), want eight validated runs", got.event, got.lease, got.err)
+			}
+			if err := got.lease.detachAndDrain(context.Background()); err != nil {
+				t.Fatalf("initial lease Detach(): %v", err)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatal("initial cohort did not complete after read release")
+		}
+	}
+}
+
+func TestRunObservationManagerCohortCapacityCountsDrainingLease(t *testing.T) {
+	const drainingCase = "case_15"
+	caseIDs := make([]string, runObservationCohortLimit+1)
+	revisions := make(map[string]projection.Revision, len(caseIDs))
+	cursors := make(map[string]string, len(caseIDs))
+	for i := range caseIDs {
+		caseID := "case_" + strconv.Itoa(i)
+		caseIDs[i] = caseID
+		cursor := "cursor_" + caseID
+		cursors[caseID] = cursor
+		parents := []string(nil)
+		if caseID == drainingCase {
+			parents = []string{"item-draining"}
+		}
+		revisions[caseID] = runObservationPresentContextRevision(caseID, cursor, parents...)
+	}
+	newCursor := "cursor_case_new"
+	cursors["case_new"] = newCursor
+	revisions["case_new"] = runObservationPresentContextRevision("case_new", newCursor)
+	var listCalls atomic.Int32
+	list := runObservationManagerListFunc(func(_ context.Context, ref ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		if string(ref) == drainingCase {
+			return ports.RunListResult{Runs: []ports.RunSummary{{
+				RunID: "run-draining", CaseID: drainingCase, PlanItemID: "item-draining", Execution: "active", Settlement: "unsettled",
+			}}, UnreadableIDs: []string{}}, nil
+		}
+		return ports.RunListResult{Runs: []ports.RunSummary{}, UnreadableIDs: []string{}}, nil
+	})
+	readStarted := make(chan struct{}, 2)
+	readCancelled := make(chan struct{}, 2)
+	readRelease := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseRead := func() { releaseOnce.Do(func() { close(readRelease) }) }
+	defer releaseRead()
+	var traceCalls atomic.Int32
+	traces := runObservationManagerTraceFunc(func(ctx context.Context, gotCase, runID, itemID string) (ports.RunTraceSnapshot, error) {
+		if gotCase != drainingCase {
+			return ports.RunTraceSnapshot{}, errors.New("unexpected trace read for empty cohort")
+		}
+		switch traceCalls.Add(1) {
+		case 1:
+			return ports.RunTraceSnapshot{RunID: runID, CaseID: gotCase, PlanItemID: itemID, Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{}}, nil
+		case 2:
+			readStarted <- struct{}{}
+			<-ctx.Done()
+			readCancelled <- struct{}{}
+			<-readRelease // The fake models an adapter that has not retired yet.
+			return ports.RunTraceSnapshot{}, ctx.Err()
+		default:
+			return ports.RunTraceSnapshot{}, errors.New("unexpected additional read")
+		}
+	})
+	contextSource := &runObservationManagerContextFake{revisions: revisions, cursors: cursors}
+	claim := ports.ActorClaim{ActorID: "operator_local", Role: "operator"}
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(claim), &runObservationManagerPerspectiveFake{}, contextSource)
+	cleanupRunObservationManager(t, manager, releaseRead)
+	leases := make([]*runObservationLease, 0, runObservationCohortLimit)
+	for i := 0; i < runObservationCohortLimit-1; i++ {
+		event, lease, err := manager.prepare(context.Background(), caseIDs[i], runObservationManagerCaller("session-"+caseIDs[i]))
+		if err != nil || lease == nil || event.Payload.ObservationState != "no_runs" {
+			t.Fatalf("empty cohort %d = (%+v, %v, %v), want active empty lease", i, event, lease, err)
+		}
+		leases = append(leases, lease)
+	}
+	drainingEvent, draining, err := manager.prepare(context.Background(), drainingCase, runObservationManagerCaller("session-"+drainingCase))
+	if err != nil || draining == nil || drainingEvent.Payload.CaseID != drainingCase {
+		t.Fatalf("16th cohort did not prepare: event=%+v lease=%v err=%v", drainingEvent, draining, err)
+	}
+	leases = append(leases, draining)
+	waitRunObservationManagerSignal(t, readStarted, "the exclusive poller's later read")
+	drainCtx, cancelDrain := context.WithCancel(context.Background())
+	cancelDrain()
+	drainResult := make(chan error, 1)
+	go func() { drainResult <- draining.detachAndDrain(drainCtx) }()
+	select {
+	case err := <-drainResult:
+		if err == nil {
+			t.Fatal("Detach returned success while its owned read was held")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Detach did not acknowledge draining with its canceled wait context")
+	}
+	waitRunObservationManagerSignal(t, readCancelled, "cancellation of the draining cohort's exclusive read")
+	before := listCalls.Load()
+	refused, refusedLease, refuseErr := manager.prepare(context.Background(), "case_new", runObservationManagerCaller("session-new"))
+	if refuseErr == nil || apperr.KindOf(refuseErr) != apperr.KindUnavailable || refusedLease != nil || !reflect.DeepEqual(refused, contract.RunTraceObservationEvent{}) {
+		t.Fatalf("different-key Prepare while cohort drains = (%+v, %v, %v), want refusal without DTO or lease", refused, refusedLease, refuseErr)
+	}
+	if got := listCalls.Load(); got != before {
+		t.Fatalf("cohort-capacity refusal called List: before=%d after=%d", before, got)
+	}
+	releaseRead()
+	if err := draining.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach JOIN after held read returned: %v", err)
+	}
+	for _, lease := range leases[:len(leases)-1] {
+		if err := lease.detachAndDrain(context.Background()); err != nil {
+			t.Fatalf("Detach empty cohort: %v", err)
+		}
+	}
+	admittedEvent, admitted, err := manager.prepare(context.Background(), "case_new", runObservationManagerCaller("session-new"))
+	if err != nil || admitted == nil || admittedEvent.Payload.ObservationState != "no_runs" {
+		t.Fatalf("Prepare after draining JOIN = (%+v, %v, %v), want newly admitted empty cohort", admittedEvent, admitted, err)
+	}
+	if err := admitted.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach newly admitted cohort: %v", err)
+	}
+}
+
+func TestRunObservationManagerPollerCapacityCountsDrainingEntries(t *testing.T) {
+	caseIDs := []string{"case_A", "case_B", "case_C"}
+	runsByCase := make(map[string][]ports.RunSummary, len(caseIDs))
+	revisions := make(map[string]projection.Revision, len(caseIDs))
+	cursors := make(map[string]string, len(caseIDs))
+	for _, caseID := range caseIDs {
+		count := 8
+		if caseID == "case_C" {
+			count = 1
+		}
+		parents := make([]string, count)
+		runs := make([]ports.RunSummary, count)
+		for i := 0; i < count; i++ {
+			runID := caseID + "_run_" + string(rune('A'+i))
+			itemID := "item_" + runID
+			parents[i] = itemID
+			runs[i] = ports.RunSummary{RunID: runID, CaseID: caseID, PlanItemID: itemID, Execution: "active", Settlement: "unsettled"}
+		}
+		runsByCase[caseID] = runs
+		cursor := "cursor_" + caseID
+		cursors[caseID] = cursor
+		revisions[caseID] = runObservationPresentContextRevision(caseID, cursor, parents...)
+	}
+	var listCalls atomic.Int32
+	list := runObservationManagerListFunc(func(_ context.Context, ref ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: runsByCase[string(ref)], UnreadableIDs: []string{}}, nil
+	})
+	secondReadStarted := make(chan string, 16)
+	readCancelled := make(chan string, 16)
+	readRelease := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseRead := func() { releaseOnce.Do(func() { close(readRelease) }) }
+	defer releaseRead()
+	var readMu sync.Mutex
+	readCount := make(map[string]int)
+	var caseCReads atomic.Int32
+	traces := runObservationManagerTraceFunc(func(ctx context.Context, gotCase, runID, itemID string) (ports.RunTraceSnapshot, error) {
+		if gotCase == "case_C" {
+			caseCReads.Add(1)
+		}
+		readMu.Lock()
+		readCount[runID]++
+		call := readCount[runID]
+		readMu.Unlock()
+		if call == 2 {
+			secondReadStarted <- gotCase + "/" + runID
+			<-ctx.Done()
+			readCancelled <- gotCase + "/" + runID
+			<-readRelease
+			return ports.RunTraceSnapshot{}, ctx.Err()
+		}
+		return ports.RunTraceSnapshot{RunID: runID, CaseID: gotCase, PlanItemID: itemID, Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{}}, nil
+	})
+	contextSource := &runObservationManagerContextFake{revisions: revisions, cursors: cursors}
+	claim := ports.ActorClaim{ActorID: "operator_local", Role: "operator"}
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(claim), &runObservationManagerPerspectiveFake{}, contextSource)
+	cleanupRunObservationManager(t, manager, releaseRead)
+	results := make(chan runObservationPrepareResult, 2)
+	for _, caseID := range caseIDs[:2] {
+		go func(caseID string) {
+			event, lease, err := manager.prepare(context.Background(), caseID, runObservationManagerCaller("session-"+caseID))
+			results <- runObservationPrepareResult{event: event, lease: lease, err: err}
+		}(caseID)
+	}
+	first := awaitRunObservationManagerPrepare(t, results, "first eight-run cohort")
+	second := awaitRunObservationManagerPrepare(t, results, "second eight-run cohort")
+	leases := map[string]*runObservationLease{first.event.Payload.CaseID: first.lease, second.event.Payload.CaseID: second.lease}
+	if len(first.event.Payload.Runs) != 8 || len(second.event.Payload.Runs) != 8 {
+		t.Fatalf("initial event run counts = (%d, %d), want eight each", len(first.event.Payload.Runs), len(second.event.Payload.Runs))
+	}
+	wantLaterReads := make(map[string]struct{}, 16)
+	for _, caseID := range caseIDs[:2] {
+		for _, run := range runsByCase[caseID] {
+			wantLaterReads[caseID+"/"+run.RunID] = struct{}{}
+		}
+	}
+	startedReads := make(map[string]struct{}, 16)
+	timer := time.NewTimer(2 * time.Second)
+	for len(startedReads) < runObservationPollerLimit {
+		select {
+		case got := <-secondReadStarted:
+			if _, ok := wantLaterReads[got]; !ok {
+				t.Fatalf("unexpected later read start %q, want one of the 16 exact cohort/run keys", got)
+			}
+			if _, duplicate := startedReads[got]; duplicate {
+				t.Fatalf("duplicate later read start %q", got)
+			}
+			startedReads[got] = struct{}{}
+		case <-timer.C:
+			t.Fatalf("only %d unique later reads started; want all 16 exact run keys", len(startedReads))
+		}
+	}
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+	drainCtx, cancelDrain := context.WithCancel(context.Background())
+	cancelDrain()
+	drainResult := make(chan error, 1)
+	go func() { drainResult <- leases["case_A"].detachAndDrain(drainCtx) }()
+	select {
+	case err := <-drainResult:
+		if err == nil {
+			t.Fatal("Detach returned success while a poller read was held")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Detach did not acknowledge poller draining with its canceled wait context")
+	}
+	canceledA := make(map[string]struct{}, 8)
+	for len(canceledA) < 8 {
+		select {
+		case got := <-readCancelled:
+			if len(got) >= len("case_A/") && got[:len("case_A/")] == "case_A/" {
+				if _, duplicate := canceledA[got]; duplicate {
+					t.Fatalf("duplicate canceled A read %q", got)
+				}
+				canceledA[got] = struct{}{}
+			} else if len(got) >= len("case_B/") && got[:len("case_B/")] == "case_B/" {
+				t.Fatalf("B poller canceled while only A detached: %q", got)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("only %d of A's 8 pollers entered cancellation", len(canceledA))
+		}
+	}
+	if len(startedReads) != runObservationPollerLimit || len(canceledA) != 8 {
+		t.Fatalf("draining premise starts=%d A-canceled=%d, want 16 and 8", len(startedReads), len(canceledA))
+	}
+	for _, caseID := range caseIDs[:2] {
+		for _, run := range runsByCase[caseID] {
+			key := runObservationPollerKey{caseID: caseID, runID: run.RunID, planItemID: run.PlanItemID}
+			manager.mu.Lock()
+			entry := manager.pollers[key]
+			refs := 0
+			var pollerCtx context.Context
+			var workerDone <-chan struct{}
+			if entry != nil {
+				refs = len(entry.refs)
+				pollerCtx = entry.ctx
+				workerDone = entry.workerDone
+			}
+			manager.mu.Unlock()
+			if entry == nil || refs != 1 || pollerCtx == nil || workerDone == nil {
+				t.Fatalf("poller ownership for %+v = entry=%v refs=%d ctx=%v workerDone=%v, want retained ref and live worker", key, entry != nil, refs, pollerCtx != nil, workerDone != nil)
+			}
+			select {
+			case <-workerDone:
+				t.Fatalf("poller worker %+v completed before held read release", key)
+			default:
+			}
+			select {
+			case <-pollerCtx.Done():
+				if caseID == "case_B" {
+					t.Fatalf("B poller %+v canceled while only A detached", key)
+				}
+			default:
+				if caseID == "case_A" {
+					t.Fatalf("A poller %+v was not canceled by detach", key)
+				}
+			}
+		}
+	}
+	third, thirdLease, thirdErr := manager.prepare(context.Background(), "case_C", runObservationManagerCaller("session-case_C"))
+	if thirdErr != nil || thirdLease == nil || third.Payload.ObservationState != "capacity_limited" {
+		t.Fatalf("third cohort while 16 pollers drain = (%+v, %v, %v), want capacity-limited event and lease", third, thirdLease, thirdErr)
+	}
+	if caseCReads.Load() != 0 {
+		t.Fatalf("capacity-limited third cohort started %d trace reads", caseCReads.Load())
+	}
+	if err := thirdLease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach capacity-limited lease: %v", err)
+	}
+	releaseRead()
+	if err := leases["case_A"].detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach JOIN after held poller read returned: %v", err)
+	}
+	if err := leases["case_B"].detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach second cohort: %v", err)
+	}
+	admitted, admittedLease, admittedErr := manager.prepare(context.Background(), "case_C", runObservationManagerCaller("session-case_C"))
+	if admittedErr != nil || admittedLease == nil || admitted.Payload.CaseID != "case_C" {
+		t.Fatalf("third cohort after poller JOIN = (%+v, %v, %v), want admitted cohort", admitted, admittedLease, admittedErr)
+	}
+	if err := admittedLease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach admitted third cohort: %v", err)
+	}
+}
+
+func TestRunObservationManagerAuthorizationRefusalReturnsNoLeaseBeforeList(t *testing.T) {
+	const caseID = "case_1"
+	var listCalls, traceCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: []ports.RunSummary{}, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(context.Context, string, string, string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		return ports.RunTraceSnapshot{}, nil
+	})
+	caller := runObservationManagerCaller("session-A")
+	perspective := &runObservationManagerPerspectiveFake{}
+	contextSource := runObservationManagerContext(caseID, "cursor-1", "item-1")
+	otherClaim := ports.ActorClaim{ActorID: "operator_other", Role: "operator"}
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(otherClaim), perspective, contextSource)
+	cleanupRunObservationManager(t, manager, nil)
+
+	if event, lease, err := manager.prepare(context.Background(), caseID, caller); err == nil || apperr.KindOf(err) != apperr.KindUnavailable || lease != nil || !reflect.DeepEqual(event, contract.RunTraceObservationEvent{}) {
+		t.Fatalf("stale-claim Prepare() = (%+v, %v, %v), want authorization error/zero wrapper/nil lease", event, lease, err)
+	}
+	if listCalls.Load() != 0 || perspective.calls.Load() != 0 {
+		t.Fatalf("authorization refusal reached downstream work: list=%d perspective=%d, want 0", listCalls.Load(), perspective.calls.Load())
+	}
+
+	// Authorization refusal precedes reservation by contract. A corrected claim
+	// retries admission and receives the exact successful empty-list event.
+	manager.sessions = runObservationManagerCurrent(caller.Identity.Claim())
+	event, lease, err := manager.prepare(context.Background(), caseID, caller)
+	if err != nil || lease == nil {
+		t.Fatalf("Prepare after authorization retry = (%+v, %v, %v), want successful no-runs event and empty lease", event, lease, err)
+	}
+	stamp := "2026-10-06T12:00:00Z"
+	want := contract.RunTraceObservationEvent{
+		EventType: contract.RunTraceObservationEventType,
+		Cursor:    "cursor-1",
+		Timestamp: stamp,
+		Payload: contract.RunTraceObservation{
+			CaseID: caseID, ObservedAt: stamp,
+			RunListState: "complete", ObservationState: "no_runs",
+			ListedRunCount: managerCount(0), SelectedRunCount: managerCount(0),
+			ValidatedRunCount: managerCount(0), UnreadableRunCount: managerCount(0),
+			UnavailableRunCount: managerCount(0), OmittedRunCount: managerCount(0),
+			HydrationReadBudget: contract.RunTraceHydrationReadBudget{Limit: 8, ReadsAttempted: 0, Exhausted: false},
+			Runs:                []contract.RunTraceRunObservation{},
+		},
+	}
+	if !reflect.DeepEqual(event, want) {
+		t.Fatalf("Prepare after authorization retry = %+v, want exact successful no-runs event %+v", event, want)
+	}
+	if perspective.calls.Load() != 4 || listCalls.Load() != 1 || traceCalls.Load() != 0 {
+		t.Fatalf("authorized retry downstream calls: perspective=%d list=%d trace=%d, want four boundary checks, one list, and no trace reads", perspective.calls.Load(), listCalls.Load(), traceCalls.Load())
+	}
+	if err := lease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach after authorization retry: %v", err)
+	}
+}
+
+func TestRunObservationManagerRefusedListReturnsUnavailableDTOAndEmptyLease(t *testing.T) {
+	const caseID = "case_1"
+	var listCalls, traceCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{}, runObservationUnavailable("fixture list refusal")
+	})
+	traces := runObservationManagerTraceFunc(func(context.Context, string, string, string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		return ports.RunTraceSnapshot{}, errors.New("failed run.list must not start candidate trace reads")
+	})
+	caller := runObservationManagerCaller("session-A")
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(caller.Identity.Claim()), &runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, "cursor-1", "item-1"))
+	cleanupRunObservationManager(t, manager, nil)
+
+	event, lease, err := manager.prepare(context.Background(), caseID, caller)
+	if err != nil || lease == nil {
+		t.Fatalf("Prepare after refused run.list = (%+v, %v, %v), want unavailable DTO and completed empty lease", event, lease, err)
+	}
+	if len(lease.pollers) != 0 {
+		t.Fatalf("refused-list lease owns %d pollers, want completed empty lease", len(lease.pollers))
+	}
+	stamp := "2026-10-06T12:00:00Z"
+	want := contract.RunTraceObservationEvent{
+		EventType: contract.RunTraceObservationEventType,
+		Cursor:    "cursor-1",
+		Timestamp: stamp,
+		Payload: contract.RunTraceObservation{
+			CaseID: caseID, ObservedAt: stamp,
+			RunListState: contract.RunTraceListState("unavailable"), ObservationState: contract.RunTraceObservationState("unavailable"),
+			HydrationReadBudget: contract.RunTraceHydrationReadBudget{Limit: 8},
+			Runs:                []contract.RunTraceRunObservation{},
+		},
+	}
+	if !reflect.DeepEqual(event, want) {
+		t.Fatalf("refused-list initial event = %+v, want exact unavailable DTO %+v", event, want)
+	}
+	counts := []*int{event.Payload.ListedRunCount, event.Payload.SelectedRunCount, event.Payload.ValidatedRunCount, event.Payload.UnreadableRunCount, event.Payload.UnavailableRunCount, event.Payload.OmittedRunCount}
+	for _, count := range counts {
+		if count != nil {
+			t.Fatal("refused-list DTO must leave every optional count absent")
+		}
+	}
+	if listCalls.Load() != 1 || traceCalls.Load() != 0 {
+		t.Fatalf("refused-list calls: list=%d trace=%d, want one list and no candidate reads", listCalls.Load(), traceCalls.Load())
+	}
+	// The approved empty lease's Next contract is ErrRunListUnavailable, but the
+	// current private lease declaration has no Next method; don't invent one here.
+}
+
+func TestRunObservationManagerCanceledPartialPrepareJoinsOwnedReadBeforeRetry(t *testing.T) {
+	const caseID = "case_1"
+	var listCalls, firstReads, secondReads atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: []ports.RunSummary{
+			{RunID: "run-first", CaseID: caseID, PlanItemID: "item-first", Execution: "active", Settlement: "unsettled"},
+			{RunID: "run-second", CaseID: caseID, PlanItemID: "item-second", Execution: "active", Settlement: "unsettled"},
+		}, UnreadableIDs: []string{}}, nil
+	})
+	firstReadStarted := make(chan struct{}, 1)
+	secondReadStarted := make(chan struct{}, 2)
+	secondReadReturned := make(chan struct{}, 2)
+	retryReadStarted := make(chan struct{}, 1)
+	allowRetry := make(chan struct{})
+	var retryOnce sync.Once
+	releaseRetry := func() { retryOnce.Do(func() { close(allowRetry) }) }
+	defer releaseRetry()
+	traces := runObservationManagerTraceFunc(func(ctx context.Context, gotCase, runID, itemID string) (ports.RunTraceSnapshot, error) {
+		switch runID {
+		case "run-first":
+			if firstReads.Add(1) == 1 {
+				firstReadStarted <- struct{}{}
+			}
+		case "run-second":
+			if secondReads.Add(1) == 1 {
+				secondReadStarted <- struct{}{}
+				<-ctx.Done()
+				secondReadReturned <- struct{}{}
+				return ports.RunTraceSnapshot{}, ctx.Err()
+			}
+			retryReadStarted <- struct{}{}
+			<-allowRetry
+			secondReadReturned <- struct{}{}
+		default:
+			t.Fatalf("unexpected run ID %q", runID)
+		}
+		return ports.RunTraceSnapshot{RunID: runID, CaseID: gotCase, PlanItemID: itemID, Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{}}, nil
+	})
+	caller := runObservationManagerCaller("session-A")
+	manager := newRunObservationManagerFixture(
+		list, traces, runObservationManagerCurrent(caller.Identity.Claim()), &runObservationManagerPerspectiveFake{},
+		runObservationManagerContext(caseID, "cursor-1", "item-first", "item-second"),
+	)
+	ctx, cancel := context.WithCancel(context.Background())
+	cleanupRunObservationManager(t, manager, releaseRetry, cancel)
+	defer cancel()
+	type prepareResult = runObservationPrepareResult
+	firstResult := make(chan prepareResult, 1)
+	go func() {
+		event, lease, err := manager.prepare(ctx, caseID, caller)
+		firstResult <- prepareResult{event: event, lease: lease, err: err}
+	}()
+	waitRunObservationManagerReadOrSemanticFailure(t, firstReadStarted, firstResult, "the first owned actual trace read")
+	waitRunObservationManagerReadOrSemanticFailure(t, secondReadStarted, firstResult, "the second owned actual trace read")
+	cancel()
+	waitRunObservationManagerSignal(t, secondReadReturned, "actual canceled read return")
+	select {
+	case got := <-firstResult:
+		if got.err == nil || apperr.KindOf(got.err) != apperr.KindUnavailable || got.lease != nil || !reflect.DeepEqual(got.event, contract.RunTraceObservationEvent{}) {
+			t.Fatalf("partially attached canceled Prepare = (%+v, %v, %v), want safe error/zero wrapper/nil lease", got.event, got.lease, got.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("failed Prepare did not join its canceled partial initializer")
+	}
+
+	secondResult := make(chan prepareResult, 1)
+	retryCtx, cancelRetry := context.WithCancel(context.Background())
+	defer cancelRetry()
+	go func() {
+		event, lease, err := manager.prepare(retryCtx, caseID, caller)
+		secondResult <- prepareResult{event: event, lease: lease, err: err}
+	}()
+	waitRunObservationManagerReadOrSemanticFailure(t, retryReadStarted, secondResult, "distinct retry read after rollback released owned state")
+	releaseRetry()
+	select {
+	case got := <-secondResult:
+		if got.err != nil || got.lease == nil || got.event.Payload.CaseID != caseID {
+			t.Fatalf("retry after joined rollback = (%+v, %v, %v), want successful cohort", got.event, got.lease, got.err)
+		}
+		if err := got.lease.detachAndDrain(context.Background()); err != nil {
+			t.Fatalf("retry lease Detach(): %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("retry did not finish after fake read returned")
+	}
+	if listCalls.Load() != 2 || firstReads.Load() != 2 || secondReads.Load() != 2 {
+		t.Fatalf("post-rollback calls list=%d first=%d second=%d, want 2 each", listCalls.Load(), firstReads.Load(), secondReads.Load())
+	}
+}
+
+func TestRunObservationManagerSharedInitializerSurvivesInitiatorCancellation(t *testing.T) {
+	const caseID, runID, itemID = "case_1", "run_1", "item-1"
+	var listCalls, readCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: []ports.RunSummary{{
+			RunID: runID, CaseID: caseID, PlanItemID: itemID, Execution: "active", Settlement: "unsettled",
+		}}, UnreadableIDs: []string{}}, nil
+	})
+	readStarted := make(chan struct{}, 2)
+	readRelease := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseRead := func() { releaseOnce.Do(func() { close(readRelease) }) }
+	defer releaseRead()
+	traceContextCancelled := make(chan struct{}, 2)
+	traces := runObservationManagerTraceFunc(func(ctx context.Context, gotCase, gotRun, gotItem string) (ports.RunTraceSnapshot, error) {
+		readCalls.Add(1)
+		readStarted <- struct{}{}
+		select {
+		case <-ctx.Done():
+			traceContextCancelled <- struct{}{}
+			return ports.RunTraceSnapshot{}, ctx.Err()
+		case <-readRelease:
+			return ports.RunTraceSnapshot{RunID: gotRun, CaseID: gotCase, PlanItemID: gotItem, Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{}}, nil
+		}
+	})
+	claim := ports.ActorClaim{ActorID: "operator_local", Role: "operator"}
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(claim), &runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, "cursor-1", itemID))
+	firstCtx, cancelFirst := context.WithCancel(context.Background())
+	secondCtx, cancelSecond := context.WithCancel(context.Background())
+	cleanupRunObservationManager(t, manager, releaseRead, cancelFirst, cancelSecond)
+	type result = runObservationPrepareResult
+	firstResult := make(chan result, 1)
+	go func() {
+		event, lease, err := manager.prepare(firstCtx, caseID, runObservationManagerCaller("session-first"))
+		firstResult <- result{event: event, lease: lease, err: err}
+	}()
+	waitRunObservationManagerReadOrSemanticFailure(t, readStarted, firstResult, "the first shared initializer read")
+
+	secondResult := make(chan result, 1)
+	go func() {
+		event, lease, err := manager.prepare(secondCtx, caseID, runObservationManagerCaller("session-second"))
+		secondResult <- result{event: event, lease: lease, err: err}
+	}()
+	waitRunObservationManagerRefsOrSemanticFailure(
+		t,
+		manager,
+		runObservationPollerKey{caseID: caseID, runID: runID, planItemID: itemID},
+		2,
+		secondResult,
+	)
+	cancelFirst()
+	select {
+	case got := <-firstResult:
+		if got.err == nil || got.lease != nil || !reflect.DeepEqual(got.event, contract.RunTraceObservationEvent{}) {
+			t.Fatalf("canceled initiating Prepare = (%+v, %v, %v), want typed failure/zero wrapper/nil lease", got.event, got.lease, got.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("initiating Prepare did not finish its owned rollback")
+	}
+	select {
+	case <-traceContextCancelled:
+		t.Fatal("initiator cancellation canceled manager-owned read still needed by a second watcher")
+	default:
+	}
+	releaseRead()
+	select {
+	case got := <-secondResult:
+		if got.err != nil || got.lease == nil || got.event.Payload.CaseID != caseID {
+			t.Fatalf("surviving watcher Prepare = (%+v, %v, %v), want successful shared result", got.event, got.lease, got.err)
+		}
+		if err := got.lease.detachAndDrain(context.Background()); err != nil {
+			t.Fatalf("surviving lease Detach(): %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("surviving watcher remained stranded after shared initializer completed")
+	}
+	if got := readCalls.Load(); got != 1 {
+		t.Fatalf("shared initializers made %d physical reads, want exactly one", got)
+	}
+}
+
+func TestRunObservationManagerDrainTimeoutKeepsAdmissionClosedUntilOwnedReadReturns(t *testing.T) {
+	const caseID, runID, itemID = "case_1", "run_1", "item-1"
+	readStarted := make(chan struct{}, 1)
+	readRelease := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseRead := func() { releaseOnce.Do(func() { close(readRelease) }) }
+	defer releaseRead()
+	var listCalls, readCalls atomic.Int32
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		listCalls.Add(1)
+		return ports.RunListResult{Runs: []ports.RunSummary{{RunID: runID, CaseID: caseID, PlanItemID: itemID, Execution: "active", Settlement: "unsettled"}}, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(ctx context.Context, gotCase, gotRun, gotItem string) (ports.RunTraceSnapshot, error) {
+		readCalls.Add(1)
+		readStarted <- struct{}{}
+		<-readRelease // Deliberately models actual adapter/client retirement after cancellation.
+		return ports.RunTraceSnapshot{RunID: gotRun, CaseID: gotCase, PlanItemID: gotItem, Execution: "active", Settlement: "unsettled", Frames: []ports.RunTraceFrame{}}, nil
+	})
+	caller := runObservationManagerCaller("session-A")
+	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(caller.Identity.Claim()), &runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, "cursor-1", itemID))
+	cleanupRunObservationManager(t, manager, releaseRead)
+	type result = runObservationPrepareResult
+	prepared := make(chan result, 1)
+	go func() {
+		event, lease, err := manager.prepare(context.Background(), caseID, caller)
+		prepared <- result{event: event, lease: lease, err: err}
+	}()
+	waitRunObservationManagerReadOrSemanticFailure(t, readStarted, prepared, "the owned trace read")
+
+	stopCtx, cancelStop := context.WithCancel(context.Background())
+	cancelStop()
+	if err := manager.stopAndDrain(stopCtx); err == nil {
+		t.Fatal("stopAndDrain with canceled wait context succeeded before owned worker joined")
+	}
+	if event, lease, err := manager.prepare(context.Background(), caseID, caller); err == nil || lease != nil || !reflect.DeepEqual(event, contract.RunTraceObservationEvent{}) {
+		t.Fatalf("Prepare after timed-out stop = (%+v, %v, %v), want admission refusal", event, lease, err)
+	}
+	if listCalls.Load() != 1 || readCalls.Load() != 1 {
+		t.Fatalf("work began during draining: list=%d reads=%d", listCalls.Load(), readCalls.Load())
+	}
+	releaseRead()
+	select {
+	case <-prepared:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Prepare rollback did not join the read after it actually returned")
+	}
+	if err := manager.stopAndDrain(context.Background()); err != nil {
+		t.Fatalf("second stopAndDrain() error = %v", err)
+	}
+	if err := manager.stopAndDrain(context.Background()); err != nil {
+		t.Fatalf("idempotent stopAndDrain() error = %v", err)
+	}
+}

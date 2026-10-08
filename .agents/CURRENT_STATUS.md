@@ -1,6 +1,6 @@
 # Current Status
 
-Updated: 2026-10-07
+Updated: 2026-10-08
 
 ## Objective
 
@@ -10,14 +10,169 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
-T00–T08 settled; T09 partial; T10–T12 not started. HEAD and verified remote
-tip are74f86f0964f92c5b1715eb0703a9b880d28cccae on the authorized branch
-casework/live-wiring-resume-2026-10-05. Renderer three-file unit committed/pushed
+LATEST: bounded Prepare/shared-poller/Stop independently APPROVED03be81b6
+with fixture-scope errata11398558/7a8f682e, all three read fully by root.
+Graft refresh passed708cards/7882nodes/15581edges; root compared six actual
+capture pairs and eleven source identities. Two malformed preflight copies
+remain preserved; only the dynamically sourced final copy is accepted.
+Normal scoped checkpoint/push is next; Next/SSE/UI and public C2 remain open.
+
+Canonical Go format/vet/tests and full-module race both passed with
+normal listener permission (receipts01e47029 and2a4cd19d). Each reports ten
+passing packages and five with no tests. Root compared all twelve actual/archive
+pairs and verified eleven source identities. Next/SSE/UI are not included in
+that approval. Root owns the sole heavy token, idle until normal checkpoint
+hooks; checkpoint/push precedes private Next test-first source release.
+Public C2 remains held; a new concrete proposal incorporates shared writer
+journaling because existing CLI/CaseRunner notifications are incomplete.
+
+Current: focused race retry02 passed all 53 top-level tests and 22 subtests
+(result7d321d11). Root independently compared all six actual/archive pairs
+and verified all eleven source identities. The canonical Go gate then failed
+only because `run_observation_manager_failure_test.go` needs gofmt; vet/tests
+did not run (resultf8af234c, root six byte comparisons and eleven hashes exact).
+Luna formatting builder owns only that file's exact stdout-only formatter
+transformation, with native preimage and immediately archived actual captures.
+Ten other sources remain frozen. Independent full-assignment/diff review,
+root verification, canonical retry and full-module race precede checkpoint.
+Canonical listener retry03 passed format/vet/tests (receipt01e47029); root
+compared all six actual captures and verified eleven source identities.
+Full-module race is next, with one compiler and unchanged source. Retry02
+c263dbcd failed in three packages due to sandbox
+Unix/TCP socket denial; root six exact captures and eleven hashes verified.
+Its lossless Base64 archive representation differs from the original raw-string
+instruction and is explicitly accepted after comparisons. Formatting-source review
+740ff1e8 and root five actual capture comparisons/ten frozen hashes accepted;
+failure fixture now8c71197a/47658B, one alignment space only.
+Next recon is complete;
+Next and live integration still need implementation. Public C2 remains held.
+
+Historical entries below preserve the earlier failures and repair sequence;
+the current paragraph above is authoritative for the next move.
+
+Current bounded repair: focused race gate dab62acb joined exit1, 50/53
+top-level PASS and all22 nested PASS; all seven authority/terminal groups
+PASS. Root compared all six original/archive pairs and verified eleven
+actual preflight source identities. Three existing fixture oracles failed:
+the supposed stale Store/Relay cursors agree, the old single-auth expectation
+conflicts with required repeated checks, and first read start is not gated
+before cancellation. Fresh Luna FORMAT has source-only grant75cd9bfd for
+only those three tests, exact native preimage first. All production/other
+fixtures remain frozen. Independent review then fresh full focused rerun;
+root sole compiler token is idle. No lifecycle GREEN or checkpoint yet.
+
+C2 revision2f0d76117 was independently rejected e85135de for unresolved
+root choices, same-cursor stale-intent binding and inventory membership.
+Writer recon152870db additionally disproves case-facts-to-global-event
+coverage for CLI and best-effort server publication. Root read both fully;
+public correction remains held, separate from the private fixture repair.
+
+Current verification: root accepted independent semantic source review425909
+with additive identity correction843dc54f after reading both and verifying
+decoded preimages/current source/eight frozen files. Renderer owns the SOLE
+compiler token for one focused race gate under grant5cc99e87, matching all
+TestRunObservation tests. Fresh memory/process/source preflight and five
+immediate actual lossless archives/comparisons are required. Root/other agents
+remain source/DOC-only. No actual GREEN result yet. Rev6 request context owns
+Prepare list/wait; shared worker has manager-owned lifetime, as independently
+reviewed. Review draft overwrite/incorrect initial hash remain CW-18 limits.
+
+Source frozen for independent review: manager22005e5c/29377B,
+workerb0fde3fe/13217B, fixture889f9648/41286B; resultb1c7e713.
+Root independently regenerated manager and fixture standard formatting and
+verified worker format-clean; fifteen fresh raw/archive byte comparisons pass.
+Builder lost original formatter paths and retained an earlier worker input;
+these provenance limits remain disclosed in CW-18, not erased by fresh proof.
+Renderer has full original instructions and frozen source for semantic review.
+C2 complete candidateffdfbdb3 exists; root architecture review is in progress,
+with independent review and exact operator approval still required. No compile
+or lifecycle GREEN has been claimed.
+
+Resume audit at 2026-10-08 12:19 UTC: HEAD remains 7c65be7 and all eleven
+foreign staged blobs match the saved baseline exactly. The interrupted Luna
+builder identified its own partial manager2caff199/workerff451845 edits;
+three original algorithm preimages remain intact, fixtureea181 unchanged,
+and no result receipt exists yet. RECON resumed the same bounded grant;
+renderer performs a separate overlap audit before final independent review.
+FORMAT resumed the disjoint C2 complete-candidate documentation task only;
+public implementation remains held for review and exact operator approval.
+Root flagged final handoff cancellation linearization for builder correction
+and independent scrutiny. Root owns the idle compiler token; no build started.
+
+Current algorithm repair: fresh different Luna RECON has FULL granta886842c.
+Root accepted actual focused RED after reading full output/command/exits,
+analyzing complete preflight and all5 exact archive comparisons. Seven groups
+failed; five nested failed/one passed; no compile/setup/panic/race error.
+Receiptc13f/additivecitation3b15, output10789B/SHA7a4c8a38; package4.767s.
+Root sole compiler token is idle. Builder edits ONLY manager/worker behavior;
+new fixture only exact standard formatting with witnessed output. Eight other
+fixtures/primitives remain frozen. Full independent semantic source review and
+actual GREEN/canonical/race gates are still required before acceptance/push.
+
+Historical execution (superseded by the completed focused RED): fixtureea181a2f/41237B/result6a280314 independently
+SOURCE READY97f1e524; root read full review and verified exact preimage/diff
+and ten frozen files. Sole compiler token transfers to renderer critic for
+one focused race RED under FULL grant74e82cb6. Fresh RAM/process preflight,
+actual JOIN and immediate five lossless archives/comparisons required.
+Root/other agents do no heavy work. No actual RED result yet.
+
+Current fixture51f73f94/41008B (result12fe9a50) resolves three earlier proof
+gaps, but independent reviewa830e313 and additive3b0/4635 reject missing
+pre-port exact manager registry/current-key assertions. Root read all records
+and verified ten unchanged hashes. Fresh different Luna RECON owns ONLY
+those assertions under FULL grant e2ff3c1b; native51 preimage first.
+Renderer independent source review precedes focused RED. Formatting unverified.
+
+Latest source verdict87aec112 REJECTS fixture4934 readiness for three proof
+gaps. Root read/hash-verified it. Fresh different Luna FORMAT now owns ONLY
+new-fixture repair under FULL archived grant61d5bf6d; metadata/failure fixture
+and eight other files stay frozen. Exact native fixture preimage precedes edits.
+Independent source review must approve before any focused race RED. Root
+sole heavy token remains idle. Current next_action has been consolidated.
+
+Source review has identified two proof corrections before compilation:
+pre-read invalid initiator plus valid survivor, and exact raw wrapper size
+above the cap rather than generic encoder error. Root decisions532ce28f
+preserve the bounded encoder's deliberate nil/sentinel oversize refusal.
+Await immutable critic verdict, then a different builder repairs only the
+new fixture. No source approval or compiler grant yet.
+
+Frozen current Oct08 TDD source: manager47c95f3b, failurefixtureccbbe234,
+new authority-terminal fixture4934e9c5 (seven groups/four handoff cells).
+Resultb1705384 uses the actual basename `run-observation-watcher-terminal-tdd-source-result-oct08.md`.
+Root verified preimages, four metadata hunks, four manual setups and the
+full new fixture, including exact terminal final DTO/state assertions.
+Renderer independently reviews full grantbfcfa5cd/clarification2f9b plus
+actual implementation. Compilation/RED and lifecycle approval remain pending.
+
+Current Oct08: supplementfe1e9e05 independently DOC-approved b5acb054;
+root read and hash-verified the full review. Fresh Luna RECON has bounded
+TDD source grantbfcfa5cd: two immutable lease values/required begin inputs,
+four manual fixture setups and a new seven-group authority-terminal fixture.
+Exact native preimages precede edits. Renderer source review precedes RED;
+worker/other fixtures stay frozen. No algorithm or runtime approval yet.
+Root decoded both native preimages byte-exact against source before edits.
+Test2 clarification2f9b7471 targets recurring terminal outer-cap fallback
+after a fitting initial state, preserving unchanged limits and real calls.
+
+Latest Oct08: DOC review7108ed75 rejects TDD readiness for missing final
+handoff coverage when a held list returns empty or unavailable. Fresh different
+Luna FORMAT owns an additive four-subcase matrix supplement and terminal
+owner/cache read-count proof. Assignmentf31d15ef and supplementfe1e9e05 are
+written, root-read and hash-verified. All source remains frozen; renderer must
+independently review the complete instructions and supplement before release.
+No lifecycle GREEN or source approval is claimed.
+
+T00–T08 settled; T09 partial; T10–T12 not started. Local HEAD is
+7c65be70ecf14c77df1a7749e9fa5526e28eabc1, also the verified remote tip on
+casework/live-wiring-resume-2026-10-05. Normal push retry passed with normal
+hooks: CI125 summaries/1110 passed/0 failed/4 ignored. All three actual push
+captures compare exactly; output237347 bytes/SHA544ba602. Renderer unit committed/pushed
 with normal hooks; CI125 summaries/1110 passed/0 failed/4 ignored. Actual push
 triplet archived/rootcmp0; output237536 bytes SHA98d6504f.
 
-Root owns the sole heavy token; no active process. Other agents are
-source-only. Before each gate require
+Root owns the sole heavy token, idle after the joined focused watcher/
+terminal RED gate; other agents are source-only. Before each gate require
 available RAM>=1200 MiB, free swap>=512 MiB, and one compilation job. Other
 agents are source-only. Preserve all11 foreign staged blob identities,
 operator hooks/Jolli/worktree changes and unstaged DEBT.md additions.
@@ -75,9 +230,13 @@ and excluded as valid native evidence copies; actual originals remain intact.
 Lunaformat builds only an exact fingerprint exception and its documentation;
 Independent review3ef3 approved the exact exception. Canonical security passed
 with no leaks found,516 commits/84.29MB; all three actual captures root-compared
-exactly. Scoped exception commit and normal push retry are next.
-Root owns the sole heavy token. CW-30 records the original missing metadata.
-Remote remains the earlier74 checkpoint; no bypass.
+exactly. Security checkpoint7c65be7 committed with normal hooks; all three
+actual commit captures compare exactly and eleven foreign index blobs remain
+unchanged. Normal push retry is next.
+CW-30 closes the specific source-hash finding; the scanner recipe's missing
+structured finding metadata remains open harness debt. Critic owns the sole
+heavy token has returned to root after the compile failure; other agents are source-only.
+Remote7c65be7 verified after normal push; eleven foreign index blobs unchanged.
 Lifecycle core model approved; fresh three-finding supplement4752 specifies
 atomic cohort admission before list/read, both missing manager A cases, and
 cancel invocation outside mutex. Independent reviewa3b591 approves test-first
@@ -90,7 +249,107 @@ in the held-read test; no compilation or expected
 RED has run. A fresh builder must repair the final independent findings.
 Fresh builder now froze fixture4ff2 after repairing caller binding, removing
 the cancel spy, and adding negative eligibility claims. Independent review
-pending; f932/f90/af and all six primitives remain unchanged. No Go RED yet.
+approved0112; f932/f90/af and all six primitives remain unchanged. Actual
+Go RED follows normal push JOIN and archival, before fresh PhaseB algorithm.
+Focused PhaseA attempted once but failed compilation at unused `caller`:323;
+no tests ran and it is not expected RED. Root compared all four captures with
+their originals. Fresh recon builder fixes only that unused binding; a different
+critic and actual compiled assertion RED still precede PhaseB.
+Root decoded the repair preimage and caught fixture7d's one changed binding
+in the wrong named test: held-read lost its needed caller, while GlobalStop's
+unused caller remains. The result's claimed function scope is incorrect.
+Independent review d59c70c7 rejected both defects and the inaccurate result.
+No retry ran. A different builder now restores the held-read caller and removes
+the unused GlobalStop caller using named function context; a different critic
+must verify the actual two hunks before any compiler retry.
+Corrective builder froze fixture e63e050a. Root decoded its exact 7d preimage
+and verified both named binding changes; against the earlier 4ff2 source,
+the net change is precisely the GlobalStop unused binding. All nine frozen
+supporting sources match. Independent source review 0ec6cfa4 confirms READY.
+Root transferred the sole compiler slot to the critic for one fresh focused
+RED attempt with exact capture archival before any further gate. No algorithm
+release or runtime approval is implied.
+Actual retry02 compiled and ran nine cases, all failing at the intentionally
+unwired lifecycle setup/assertions. Root decoded and byte-compared all five
+captures against their originals and accepted only the expected RED prerequisite.
+Root owns the compiler slot again, idle. Phase B awaits independent review of
+the reverse-ref ambiguity: the frozen draining test retains a canceled ref
+until held-worker JOIN, while eligible lease membership must clear atomically.
+The root clarification preserves noneligible drain ownership without new state
+or weakened tests; independent semantic review 7a43b40d approves that protocol
+only. Read-start, survivor and cancellation decisions must all use exact
+forward membership plus a lease that is not draining, never raw reverse size.
+Builder recon also proved two missing production boundaries: no-argument
+creator completion cannot join an exact lease, and completion-only channels
+cannot cancel an in-flight list. A bounded documentation correction now
+specifies exact-lease creator completion, a separate lease cancellation signal,
+and a joined local context bridge. The new fixture needs only private helper
+call adaptations plus two focused cancellation/JOIN cases; original behavior
+assertions, original manager fixture and all six primitives remain protected.
+Independent proposal review and actual test-first RED precede implementation.
+Creator/list proposal 3a5e5d70 was independently rejected (27b7295c): a
+successful Prepare must cancel its local context before joining the bridge;
+otherwise the bridge and creator completion never finish. The correction must
+also make late reservation checks, typed zero/nil failure assertions and
+timeout completion semantics explicit. A different documentation builder is
+supplied supplement 37d943ad plus additive context-scope erratum 1efaaaea;
+independent review is pending before TDD source release. Automatic review
+rejected overwriting the immutable supplement, so the original was preserved
+and the scope clarification added separately. No source changed.
+Correction review 49bba9ae resolved those findings but rejected one remaining
+gap: a caller-canceled held list may return success, so admission must also
+check the local cancellation signal. The fresh final proposal adds a required
+channel argument checked without blocking under the manager mutex, plus a
+third test for that exact case. Completion channels stay stable; existing
+draining/stopping flags claim one bounded drain owner, with actual JOIN before
+completion/capacity release. Final supplement6526 is written. Review03243
+gave proposal-only approval, but subsequent critic findings require an additive
+clarification: stop only watcherless entries and limit16 logical waiting drain
+owners, allowing finalizer tails after actual JOIN and registry removal.
+Previous qualification and clarification turns hit usage limits; Oct08 reset
+retries succeeded. Dispositionbd0a withholds approval; a different Luna builder
+wrote additive24line erratumcc4d. Root verified its actual bytes and all10
+frozen source hashes. Independent review315b approves the proposal only;
+root read the actual review and verified its hash. Two-file TDD source work
+is now released to Luna FORMAT, with exact native preimages first. The
+lifecycle bodies remain deliberate stubs; no source/runtime approval yet.
+Builder froze manager9e8c/fixture06c2, result a2d1 plus citation erratumfbc3.
+Root verified both exact decoded preimages and original nine-case fixture
+prefix unchanged except the eight authorized call changes. Twelve cases are
+present. Root static review found mixed named/unnamed reservation parameters
+and three struct-valued membership lookups used as booleans. Independent
+review38e4 rejects readiness for those four static errors. A fresh different
+Luna RECON builder is repairing only the signature and three membership
+lookups, preserving all12 tests/assertions and eight frozen files. Repairresult
+4c27 freezes managerb7f0/fixtureef58; root decoded both current preimages and
+confirmed exactly four repair hunks. Independent repaired-source review is
+approved by source reviewea9228, read by root. Focused12-case raceRED joined
+exit1: twelve compiled/zero passed/twelve expected unwired assertion failures,
+no compiler, panic or race error. Actual preflight RAM3,343,648 KiB/swap3,565,852
+KiB/no competing compiler. Root read all five actual captures and independently
+compared decoded archives byte-exact; output5,758 bytes/SHA95051f1b. Bounded
+root acceptance recorded. Resultdece50 preserves an identity transcription
+error corrected by additive erratum4429; actual preflight is authoritative.
+Heavy token returned to ROOT, idle. A different Luna FORMAT builder now owns
+the two-file manager/worker algorithm, with all12 tests/originalaf/six primitives
+frozen. Algorithm now frozen as managerd7be1d7a/worker84382ffd, result a964dc9c.
+Root read all algorithm paths. Both reviewers found continued polling after
+accepted terminal state, missed terminal outer-cap fallback draining, and
+absent recurring/final-handoff watcher authorization and present-guard checks.
+Independent reviewecf2e06f rejects source readiness, read by root; no compiler
+or source approval. Originalrev6 already requires watcher identity/as-of
+cursor, both absent from the minimal lease. Fresh Luna RECON now owns a
+DOCONLY correction for exactly those two immutable private metadata fields,
+required admission inputs, four manual fixture setup amendments and focused
+authority/terminal regression tests. Independent review must approve the
+actual proposal before any source grant. Proposalde8c1647 and fullassignment
+7ffdd48c are written and root-read/hashverified; the critic is reviewing them
+with the immutable root terminal/shared-authority clarification. Accepted
+terminal publication/readiness precedes worker return; retained DTO/cache
+survives, with no worker wait on creator or premature valid-lease drain.
+No optional/test mode, new public
+surface or auth policy; original auth rules and public C2 hold remain binding.
+Readonly recon confirms all affected call sites fit the two-file scope.
 
 Private16 cohorts/128 attachments/combined1MiB serialized poller cap are
 ratified; no heap/RSS guarantee. Public V4/bootstrap/frontier/schema correction
@@ -249,17 +508,23 @@ final exit before the next; save exact raw/preflight/exit captures and byte-comp
 
 ## Remaining
 
-1. Commit and push the six independently verified private primitive files with
-   scoped evidence and normal hooks; both isolated full Go gates passed.
-2. Review the bounded lifecycle PhaseA fixture and compile seams independently.
-   Preserve managerab9f1/af2df/helper215758/base34df/policye156.
-   Source review precedes actual focused RED; a different builder implements,
-   then independent source/runtime GREEN with direct archival and comparisons.
-3. Implement private prepare/shared initializer/recurring poller/stop and detach
-   with full combined accounting, exact initial DTO/counts, all eight initial
-   starts before waiting, shared ownership and actual worker JOIN before reuse.
-   Then independently implement/verify Next, authenticated observation SSE,
-   UI sidecar/cache and remaining T09 live journeys.
+T09 progress: canonical contract/caps, protected Ask, run-child projection,
+private cursor handling, retained-image primitives and lazy renderer output
+have bounded independent approvals/checkpoints. Full T09 remains open because
+the observation lifecycle, Next/SSE/UI integration, public C2 correction and
+final live journey/gate confirmation are still pending. The numbered sequence
+below is the critical path; historical notes above are not additional tasks.
+
+1. Finish exact formatting-only repair of the failure fixture, independently
+   verify its transformation, then rerun canonical Go and full-module race.
+   Manager/worker semantic source review and focused race GREEN are complete:
+   all 53 top-level tests and 22 subtests passed. Broader verification is pending.
+2. Obtain final independent bounded lifecycle approval, explicitly refresh
+   Graft, and commit/push this verified unit with normal hooks while preserving
+   the eleven foreign staged blobs and unrelated operator changes.
+3. After the current prepare/shared-poller/stop/detach repair passes its full
+   review and gates, independently implement/verify Next, authenticated
+   observation SSE, UI sidecar/cache and remaining T09 live journeys.
 4. Complete the separate concrete public V4 correction design, independent
    review and exact operator approval before affected contracts/runtime work.
    Resolve durable ordering/history, case/world ID grammar, cold history and
@@ -284,9 +549,11 @@ changes. Inventory completeness/all-writer ordering, bootstrap/creation DTOs,
 ID grammar, per-case Store/SSE gap/readiness and cold-history semantics must
 be resolved. Approved private prerequisites can proceed separately.
 
-Private manager lifecycle is not implemented. Its proposal is independently
-approved and PhaseA test-first source work is released; implementation approval
-and actual lifecycle proof remain pending. The pure encoder algorithm is approved.
+Private manager lifecycle has actual failing regression evidence and a
+source repair in progress under granta886842c. The identity/cursor metadata
+and regression fixture are already implemented and independently source-ready;
+the corrected algorithm is awaiting independent review and fresh GREEN gates.
+The pure encoder is approved. Actual lifecycle proof remains pending.
 Current Go manager fixture intentionally targets an unwired seam. Isolated
 full-module Go gates cover the six primitive files, not pending primary lifecycle work.
 T09 settlement and T10–T12 remain pending.
