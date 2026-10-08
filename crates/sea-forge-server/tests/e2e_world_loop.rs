@@ -91,6 +91,19 @@ fn hop_3_verified_intake_decision_execution_and_settlement() {
     assert_eq!(intent.work_request_id, wr_id);
     assert_eq!(intent.context_completeness.as_deref(), Some("complete"));
 
+    // The EXACT observer context is recorded on the intent: the authority
+    // record can be tied to the precise context bundle available at decision
+    // time. What was made available is never authority.
+    let bound = intent
+        .context_bundle_ref
+        .as_ref()
+        .expect("E4 binds its exact context bundle identity");
+    assert_eq!(
+        bound["envelope_id"],
+        e4["payload"]["context_bundle_ref"]["envelope_id"],
+    );
+    assert_eq!(bound["world_ref"], world.as_str());
+
     // Decide with the real authority engine.
     let root = tempfile::tempdir().unwrap();
     let workspace = root.path().join("workspace");
@@ -209,4 +222,29 @@ fn hop_3_verified_intake_decision_execution_and_settlement() {
     write(&dir, "e5a_authorized_invocation.json", &inv.envelope);
     write(&dir, "e5b_execution_observation.json", &obs);
     write(&dir, "e6_operational_settlement.json", &settlement.envelope);
+}
+
+/// Falsification: a request whose context bundle identity does not sit in the
+/// request's world is refused at intake -- the lineage never silently crosses
+/// semantic worlds.
+#[test]
+#[allow(deprecated)]
+fn a_context_bundle_ref_outside_the_world_is_refused() {
+    let Some(dir) = std::env::var_os("E2E_DIR").map(PathBuf::from) else {
+        eprintln!("SKIP: E2E_DIR not set");
+        return;
+    };
+    let hash = std::env::var("E2E_DOMAIN_HASH").expect("E2E_DOMAIN_HASH");
+
+    let mut e4 = read(&dir, "e4_governed_work_request.json");
+    let e3 = read(&dir, "e3_context_packet.json");
+    e4["payload"]["context_bundle_ref"]["world_ref"] =
+        json!(format!("world:other@sha256:{}", "d".repeat(64)));
+
+    let err = sea_forge_server::governed_work_ingress::accept_governed_work_request(&e4, &e3, &hash)
+        .unwrap_err();
+    assert!(
+        format!("{err:?}").contains("World"),
+        "a bundle from another world must be refused: {err:?}"
+    );
 }

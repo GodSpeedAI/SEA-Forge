@@ -184,6 +184,12 @@ pub struct GovernedWorkIntent {
     /// What Context Kernel stated about the packet (`complete`, `partial`,
     /// `none`), or `None` when it stated nothing. Surfaced, never coerced.
     pub context_completeness: Option<String>,
+    /// The exact observer-context identity the request binds: the canonical
+    /// CEP godspeed.context_bundle envelope id + integrity hash, when one
+    /// was supplied. Recorded so the authority record can be tied to the
+    /// exact context available at decision time. A context bundle is never
+    /// authority; it only states what was made available.
+    pub context_bundle_ref: Option<Value>,
 }
 
 impl GovernedWorkIntent {
@@ -457,6 +463,58 @@ pub fn accept_governed_work_request(
     let world_ref = crate::world_pin::from_payload(payload)
         .map_err(|reason| GovernedIngressError::World { reason })?;
 
+    // 4c. Observer-context identity (optional): when the request binds a
+    //     canonical context bundle, its identity must sit in THIS world and be
+    //     content-addressed. What was made available is recorded - never
+    //     reinterpreted as authority.
+    let context_bundle_ref = match payload.get("context_bundle_ref") {
+        None | Some(Value::Null) => None,
+        Some(v) => {
+            let obj = v.as_object().ok_or_else(|| {
+                GovernedIngressError::MalformedEnvelope(
+                    "context_bundle_ref must be an object".into(),
+                )
+            })?;
+            let bundle_world = obj
+                .get("world_ref")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if bundle_world != world_ref {
+                return Err(GovernedIngressError::World {
+                    reason: format!(
+                        "context bundle is not in the request's world: {bundle_world:?}"
+                    ),
+                });
+            }
+            let envelope_id = obj
+                .get("envelope_id")
+                .and_then(Value::as_str)
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| {
+                    GovernedIngressError::MalformedEnvelope(
+                        "context_bundle_ref missing envelope_id".into(),
+                    )
+                })?;
+            let content_hash = obj
+                .get("content_hash")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let digest = content_hash.strip_prefix("sha256:").unwrap_or_default();
+            if !crate::governed_execution_boundary::is_sha256_hex(digest) {
+                return Err(GovernedIngressError::MalformedEnvelope(
+                    "context_bundle_ref content_hash must be sha256:<64 hex>".into(),
+                ));
+            }
+            Some(Value::Object({
+                let mut m = serde_json::Map::new();
+                m.insert("envelope_id".into(), Value::String(envelope_id.to_string()));
+                m.insert("content_hash".into(), Value::String(content_hash.to_string()));
+                m.insert("world_ref".into(), Value::String(bundle_world.to_string()));
+                m
+            }))
+        }
+    };
+
     // 5. Context binding: genuinely CK-produced, same work request, matching
     //    ref, real identity, recorded causality.
     check_producer(context_packet, "ContextPacketCreated", "context_kernel")?;
@@ -531,5 +589,6 @@ pub fn accept_governed_work_request(
             .and_then(|p| p.get("retrieval_completeness"))
             .and_then(Value::as_str)
             .map(str::to_string),
+        context_bundle_ref,
     })
 }
