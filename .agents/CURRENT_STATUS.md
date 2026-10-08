@@ -10,6 +10,92 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
+LATEST AUTHORIZATION: operator explicitly approved the separate recommended
+private policy:16 cohorts,128 attachments,1MiB serialized poller state;
+nonterminal overflow retains the lease without watermark advance for recovery,
+terminal overflow stops reads and keeps capacity counted until actual JOIN.
+Approval receipt:run-observation-private-policy-operator-approval-oct08.md.
+CW36 authorization gap is closed. Pure projection independently approved
+24c7f2c5; root read the full review and accepted its bounded conclusion.
+Canonical Go/focused race/corrected full-module race pass; Graft refresh passed
+and all six actual captures are root-compared. Commit this verified unit and
+reviewed C2 specification before the next integration implementation grant.
+
+CURRENT VERIFIED UNIT: the corrected full-module race02 returned actual child
+exit zero; root independently decoded/compared all six originals in archive
+d1a6fce0. There are738 pass events,5 skips,0 failures. Canonical Go02 and focused
+race also passed; final independent pure projection review is being completed.
+The earlier full-race01 negated-shell exit remains rejected and unchanged.
+Root owns the serialized Graft refresh; no other compiler is authorized.
+Public C2 reader recon identified a continuation-integrity gap needing an
+explicit design decision; writer inventory is under independent review.
+Private observer limits remain a separate pending operator question.
+
+CURRENT AUTHORIZATION GAP: independent Next architecture reviewf261af24 found
+the private16-cohort/128-attachment/1MiB policy still explicitly approval-gated
+in the governing proposal. It was omitted from root's six public C2 approval
+summary; do not treat that public approval as approval of the private limits.
+Root has asked for the exact private limits and recoverable/terminal overflow
+policy, with recommendation to approve. New lease integration source is held
+until an answer. Existing pure projection verification and approved public C2
+work continue. Security05 passed524 commits/91.42MB/no leaks and all six actual
+captures are root-compared; canonical Go retry is the critic's sole heavy gate.
+
+CURRENT GATES: canonical Go01 failed only read-only formatting before tests;
+root decoded/compared its six originals2df9448e. Fresh renderer repaired exactly
+gofmt whitespace in tests48c6d28e, preserving a before-edit lossless preimage;
+independent format review pending, algorithm5241e656 unchanged. Security05 is
+root's sole heavy operation; Next critic cannot compile until JOIN/archive/cmp.
+Private Next integration root decisions are under independent architecture
+review before a separate TDD source grant. C2 normative package4f24a5a2 is
+accepted for scoped implementation preparation, with writer audit/runtime open.
+
+VERIFIED NEXT MILESTONE: focused independent race passed8 top-level tests and
+12 malformed subtests (20 passes, zero failures). Root decoded and compared
+all six actual race originals from2e2d8330; canonical Go is the sole next
+heavy gate. Source5241e656/tests66e368ff remain frozen. Normative C2 package
+independently approved4f24a5a2; root reviewed the full verdict, precise parent
+diff and ADR. Supplemental spec/ADR do not claim migration/runtime readiness.
+d100 scanner remedy has independent narrow content review01af5627 plus exact
+config/hook scope completion2dad194d; canonical scanner retry remains pending.
+
+LATEST UNIT: over-cap expected RED confirmed nil error (not compile/setup
+failure); all six captures root-compared. Fresh FORMAT builder is released only
+the missing retained-frame-limit guard. Independent focused/race/canonical
+verification follows. The two d100 findings are independently classified as
+copied prose11050e19; a fresh Next-critic builder added two exact fingerprints,
+with separate renderer implementation review pending. C2v7 normative spec/ADR
+builder active; approved recommendation scope remains unchanged.
+
+AUTHORITATIVE: complete C2v7 designad82478f independently approved04d21470;
+root read the full review and v6-to-v7 delta. Six-area operator approval applies;
+no repeated approval request is needed. Normative supplemental spec/ADR authoring
+is delegated; runtime/schema code remains a separately bounded unit. Diagnostic
+of d100 found two copied-prose occurrences in immutable new evidence; safe
+independent classification is active, and no broad scanner exception is allowed.
+Next over-cap fixture66e368ff is independently SOURCE-READYdbecbfbc; actual
+focused RED is running with root as sole heavy owner. Guard remains unreleased.
+
+LATEST: push02 stopped on two further scanner findings in the newly committed
+history; remote is not advanced. Root compared all six actual push captures.
+The reviewed prior fingerprints restored security for523 commits, but do not
+cover new occurrences. Redacted diagnostic01 is the sole heavy operation;
+raw Match/Secret remain private. Next algorithm source review rejected missing
+retained-frame-cap validation (1025 frames could pass); fresh FORMAT builder
+adds an isolated over-cap test before expected RED and cap-guard repair.
+All prior fixtures remain intact. C2v7 ad82478f independent review active;
+six-recommendation operator approval remains valid.
+
+CHECKPOINT d100b9b: normal commit hooks passed for45 explicit paths, including
+the reviewed exact scanner remedy, source-reviewed fixture correction and
+operator approval record. Root archived and compared all six actual commit
+captures. Push retry is next with normal hooks; post-commit status refreshed
+for the context gate. Next algorithm builder is finishing a source-only result;
+runtime independent review remains pending. C2 revision6 review rejected two
+omissions (legacy bounded-reader completion and checked full-u64 TypeScript);
+root clarified both within approved recommendations and fresh revision7 repair
+is active. Operator approval remains valid; no implementation settlement.
+
 CURRENT VERIFIED RESUME: canonical security04 passed, scanning523 commits /
 91.37MB with no leaks. Root archived/decoded/compared all six actual captures.
 Revised Next source99dccce4 was accepted, then expected RED ran: six success
@@ -523,6 +609,13 @@ approved and root accepted, with focused/package and whole-module Go verificatio
 Shared pollers and full server cancellation/drain remain pending.
 
 ## Verification
+
+LATEST: canonical Go retry passed format/vet/tests (10 tested packages and
+5 with no tests); root decoded/compared all six actual originals4fb8b0f4.
+Full-module race01 emitted738 passes/5 skips/no failures, but its shell wrapper
+negated the child status before recording exit. The child exit is unresolved;
+this attempt is not accepted as full-race gate proof. Preserve exact originals
+and repeat with direct child return-code capture after archive/root comparison.
 
 RESUME: revised Next source review99dccce4 approves only tests/types/stub;
 root read the complete review and six-literal diff. Actual expected RED and

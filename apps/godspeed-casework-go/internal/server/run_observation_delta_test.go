@@ -2,6 +2,7 @@ package server
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -123,9 +124,9 @@ func TestRunObservationDeltaAdvancesWindowAndStandingsWithoutNewFrames(t *testin
 	base.HighestOrdinal = 2
 	prior := runObservationWatermark{
 		highestObservedOrdinal: 2,
-		execution: contract.RunExecutionStanding("active"),
-		settlement: contract.RunSettlementStanding("unsettled"),
-		observationState: contract.RunTraceRunObservationState("validated"),
+		execution:              contract.RunExecutionStanding("active"),
+		settlement:             contract.RunSettlementStanding("unsettled"),
+		observationState:       contract.RunTraceRunObservationState("validated"),
 		window: runObservationDeltaWindow{
 			generation: 1, totalFrameCount: 3, retainedFrameCount: 1, omittedFrameCount: 2, truncated: true,
 		},
@@ -287,6 +288,35 @@ func TestRunObservationDeltaRejectsMalformedOrUnavailableCapturesWithoutOutputs(
 				t.Fatalf("malformed/unavailable input returned partial data: %#v / %#v / %#v", got, gap, candidate)
 			}
 		})
+	}
+}
+
+func TestRunObservationDeltaRejectsCapturedFrameWindowAboveRetentionCap(t *testing.T) {
+	key := retainedTestKey()
+	const count = runObservationRetainedFrameLimit + 1
+	state := retainedTestState(key)
+	state.Generation = 7
+	state.AcceptedAt = retainedTestTime.Format(time.RFC3339Nano)
+	state.TotalFrameCount = count
+	state.HighestOrdinal = count
+	state.Frames = make([]retainedObservedFrame, 0, count)
+	state.SeenByID = make(map[string]uint64, count)
+	for i := 1; i <= count; i++ {
+		id := "over-cap-" + strconv.Itoa(i)
+		ordinal := uint64(i)
+		state.SeenByID[id] = ordinal
+		state.Frames = append(state.Frames, retainedObservedFrame{
+			Frame: retainedTestFrame(id, retainedTestTime.Format(time.RFC3339Nano)), FirstOrdinal: ordinal,
+		})
+	}
+
+	got, gap, candidate, err := buildRunObservationRunDelta(state, cloneRunObservationDeltaLedger(state.SeenByID), runObservationWatermark{})
+	if err == nil || apperr.KindOf(err) != apperr.KindUnavailable {
+		t.Fatalf("error = %v, want typed unavailable for over-cap captured window", err)
+	}
+	if !reflect.DeepEqual(got, runObservationRunDelta{}) || gap != nil ||
+		!reflect.DeepEqual(candidate, runObservationWatermark{}) {
+		t.Fatalf("over-cap captured window returned partial data: %#v / %#v / %#v", got, gap, candidate)
 	}
 }
 

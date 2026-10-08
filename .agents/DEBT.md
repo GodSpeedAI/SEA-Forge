@@ -1182,6 +1182,23 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 ### CW-30 Pre-push Gitleaks finding in source-hash evidence
 
+- **2026-10-08 restored for d100 history:** exact repair independently reviewed
+  01af5627 plus unchanged rule/hook scope verification2dad194d. Canonical
+  security05 passed524 commits/91.42MB with no leaks; root compared all six
+  originals. Next commit and publication still need normal new-history scan.
+- **2026-10-08 diagnosis of new-history recurrence:** independent safe review
+  11050e19 proves both d100 findings are copied ordinary prose in immutable
+  evidence, not credentials. A different builder added only their two exact
+  fingerprints; independent config review and canonical security remain
+  pending. Avoid copying the triggering phrase into future evidence records;
+  describe the safe category, source hashes and coordinates instead. This does
+  not permit ignoring whole evidence paths or scanner rules.
+- **2026-10-08 new-history recurrence:** normal push02 of d100b9b stopped on
+  two additional findings after scanning524 commits. The tested523-commit
+  security result above remains valid for its exact history; it does not
+  cover new occurrences. Root archived and compared all six actual push
+  originals. Redacted diagnosis is pending; no new exception or bypass is
+  authorized without direct classification and independent evidence.
 - **2026-10-08 scanner gate restored:** canonical security04 passed across
   523 commits /91.37MB with no leaks. Root compared all six actual capture
   originals against lossless archives. The two recurrence findings are closed
@@ -1336,3 +1353,80 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 - **Close:** refresh through the supported generator when available and verify
   against source. Do not replace the independently verified Graft/source proof
   with an unrefreshed generated graph or hand-edit `.ua/`.
+
+### CW-35 Private delta projection malformed-window validation
+
+- **2026-10-08 bounded unit closure:** independent final review24c7f2c5
+  approves the pure projection with focused/canonical/corrected full race
+  evidence. Root read and accepted the review. Its extra full1..H copied-ledger
+  validation is supported by producer invariants; a duplicate-ordinal branch
+  lacks an isolated test. Track that coverage limit without claiming integrated
+  Next/T09 completion. Previous format and cap defects are repaired.
+- **2026-10-08 corrected proof:** full-module race02 captures direct child
+  returncode zero; root compared all six originals in packetd1a6fce0. The JSON
+  stream has738 pass events,5 skips,0 failures. Canonical Go02 and focused race
+  pass; final independent unit review remains pending. Integrated Next is open.
+- **2026-10-08 exit-wrapper defect:** canonical retry is green and all six
+  originals are root-compared. Full-module race01 JSON appears successful
+  (738 passes,5 skips,no failures), but `if ! go test ...; then rc=$?` captures
+  the negated shell status rather than the test process exit. Preserve the
+  actual record unchanged and reject it as child-exit proof. Repeat with direct
+  subprocess return-code capture; output inference cannot close the gate.
+- **2026-10-08 format follow-up:** canonical Go stopped at format checking
+  before tests. A fresh builder applied only exact gofmt whitespace and kept
+  a native before-edit preimage; independent format review and canonical retry
+  remain pending. A transcribed archive byte count was corrected additively
+  without changing the archived bytes/hash (identity erratum6789538f).
+- **2026-10-08 focused verification:** over-cap test failed for the expected
+  nil-error reason before the fresh cap guard. The independent focused race
+  then passed8 top-level tests plus12 malformed subtests (20 pass events),
+  with root comparison of all six actual originals. Canonical Go and full
+  module race remain pending; this is not integrated Next/T09 closure.
+- **Status:** repair in progress; no runtime closure claimed.
+- **Evidence:** independent algorithm source review648bf4a5 found the pure
+  assembler accepted a coherent 1025-frame captured window despite the retained
+  constructor's 1024-frame cap. The original TDD fixtures also used six invalid
+  settlement values; a fresh builder corrected them and independent source
+  review99dccce4 approved the correction. Expected initial RED is preserved.
+- **Impact:** fabricated or malformed private capture inputs could be projected
+  past the declared retention invariant; impossible fixture values weaken proof.
+- **Close:** fixture66e368ff independently revieweddbecbfbc isolates the over-cap
+  failure. Confirm actual expected RED, add only the missing cap guard through
+  a fresh builder, then independently verify focused/race and canonical gates.
+
+### CW-36 Private manager policy approval was omitted from approval summary
+
+- **2026-10-08 closure:** operator explicitly answered “Approve the recommended
+  private policy” to the separate exact limits/overflow request. Receipt:
+  `run-observation-private-policy-operator-approval-oct08.md`. The earlier gap
+  remains historical; no runtime or T09 completion follows from approval.
+- **Status:** awaiting exact operator decision; new lease integration held.
+- **Evidence:** independent architecture reviewf261af24 verifies revision6 and
+  correction3 still require exact approval for16 cohorts,128 attachments and
+  the1MiB serialized current-state/overflow policy. Root's approved six public
+  C2 recommendation areas did not explicitly include those private limits.
+- **Impact:** public approval must not silently authorize a separately gated
+  private policy. Existing source/gate evidence cannot substitute for operator
+  authorization. No new lease integration source has been released.
+- **Close:** record an explicit decision on those exact limits and recoverable
+  nonterminal versus terminal stop/count-until-JOIN behavior. Root recommends
+  approval and has asked; continue unaffected public work and pure verification.
+
+### CW-37 Bounded reader continuation trust and input allocation need decisions
+
+- **Status:** architectural clarification in progress; no reader implementation.
+- **Evidence:** `run-observation-bounded-ledger-reader-recon-oct08.md` and
+  `run-observation-bounded-ledger-reader-design-options-oct08.md` show there is
+  no drop-in authenticated continuation. Predecessor checksum alone cannot
+  prove a client offset follows a server-validated prefix. Existing full-ledger
+  readers and checkpoint proof materialize history; response byte limits do
+  not bound raw JSONL row allocation.
+- **Impact:** trusting offsets or rereading the entire prefix per page defeats
+  integrity or boundedness. Checking row size after unbounded allocation also
+  defeats the intended budget. The proposed1MiB raw row may omit valid1MiB
+  event payloads once the ledger envelope is included.
+- **Next:** independently review a process-lifetime signer using existing
+  Ed25519/getrandom with no persisted key and explicit row/page input budgets;
+  obtain targeted approval for that key lifecycle and new limits, then update
+  the normative spec/ADR before a bounded TDD implementation grant. Preserve
+  existing authority checks and the legacy response wrapper.

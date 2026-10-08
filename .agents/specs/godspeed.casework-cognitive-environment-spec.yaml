@@ -4,9 +4,9 @@ metadata:
   id: godspeed.casework-cognitive-environment
   title: GodSpeed Casework System Front End and Cognitive Environment
   status: authoritative
-  version: "0.2.5"
+  version: "0.2.6"
   created: "2026-09-18"
-  revised: "2026-09-30"
+  revised: "2026-10-08"
   purpose: >-
     Define the replacement Go operational front end and React cognitive environment
     for governed SEA Forge casework, with explicit authority, migration, and proof
@@ -15,9 +15,15 @@ metadata:
   normative_language: RFC 2119
 authority:
   architecture_decision: docs/decisions/ADR-006-godspeed-casework-ui-replacement.md
+  supplemental_specifications:
+    - path: .agents/specs/casework-live-cursor-v4-spec.yaml
+      decision: docs/decisions/ADR-008-casework-live-cursor-v4.md
+      status: review
+      scope: C2 live cursor V4 only
   precedence:
     - Repository AGENTS.md and scoped instructions govern implementation procedure.
     - This specification governs casework-environment behavior and acceptance.
+    - Once accepted by independent review, the narrower casework-live-cursor-v4 supplement governs its V4 cursor, capture, bootstrap, journal, frontier, history, Store, SSE, error, and verification details; this specification remains authoritative elsewhere.
     - The linked plan schedules implementation but cannot weaken this specification.
   change_rule: >-
     Changes to public contracts, persisted schemas, authority boundaries, dependencies,
