@@ -11,6 +11,12 @@ metadata:
   initialized: true
   last_updated: '2026-10-08'
   updated_by: >-
+    CURRENT Oct08: lifecycle a8c9ad6 normal push02 PASS; exact remote SHA
+    verified. Root six lossless original push capture comparisons complete.
+    Operator requests all completed task work checkpointed before continuing;
+    Luna inventory recon/independent review active. Root heavy idle; Next held
+    until checkpoints; C2 revision5 independently REJECTED for global versus
+    per-case ordinal gap ambiguity. Root accepts rejection; exact approval held.
     CURRENT: bounded lifecycle03be81b6+scopeerrata rootaccepted; canonical
     Go andfullmodule race GREEN; Graft708cards root6exactcaptures verified.
     Normal scoped checkpoint/push next, then private Next. C2 remainsheld.
@@ -274,6 +280,22 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
+    CURRENT Oct08: normal push02 PASS; remote branch exactly
+    a8c9ad6a81f50919a7691aba00b20102c9a1039e; root six archived original
+    captures decoded and compared. Checkpoint remaining completed task work
+    in explicit-path groups after Luna scope recon/independent inventory review,
+    preserving eleven foreign staged blobs and all unrelated hook/Jolli work.
+    Then release private Next test-first projection; root heavy idle.
+    C2 revision5 independently REJECTED465d8ac8 for global versus per-case
+    ordinal gap ambiguity; root accepts rejection. Public source held.
+    Older entries below are historical and superseded by this paragraph.
+    CURRENT: checkpointa8c9ad6 committed normalhooks/129explicitpaths; root
+    sixcommit actualcaptures/five committedsources/11foreignstagedOIDs exact.
+    Push01 failed context-check frompreservedotherdirtyprojectfiles withno
+    postcommitSTATUSupdate; all6push actualcaptures rootcompared. Status now
+    refreshed, rerun justcontext-check then SAME normalpush (no hookbypass).
+    ROOT soleheavy owner; Nextsourcehelduntilpush completes. PublicC2held,
+    freshrevision5 DOCrepair undercriticfindings inprogress, no sourceapproval.
     AUTHORITATIVE: bounded Prepare/sharedpoller/Stop independentlyAPPROVED
     03be81b6+scopeerrata11398558/7a8f682e, root fullread/accepted. Canonical
     Go andfullmodule race GREEN10tested/5no-tests, focused53+22 GREEN.
@@ -626,6 +648,7 @@ handoff:
     - "committed this session (T04C): SupervisorConfig + supervisor.rs + AdvanceCaller/AdvanceScope::Supervisor + per-case key locks + sfwp_supervisor tests + T04C gates/teeth + T04/confirmation.md; T04 SETTLED"
   decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
   warnings:
+    - "CURRENT Oct08 C-2: revision5 independent review465d8ac8 REJECTS exact-approval readiness because global ledger scan gaps cannot be inferred or isolated from per-case ordinal spacing. Root accepts rejection. New concrete revision and independent review precede exact operator approval; public implementation remains held. Older C-2 warnings below are historical."
     - "C-2 correction: Section0 direct relay does not prove append order/restart history; exact ULID producer conflicts with cursor grammar/comparisons, and empty bootstrap is noncanonical. Decision log/report updated. Public correction held; V3 independently rejected, concrete reviewed V4 and exact operator approval required before affected implementation. Approved auth/trace prerequisites are checkpointed."
     - "T09 contract redesign trigger recorded under decision-log redesign_reviews.T09-contract and report Section0.0; operator and independent architecture approved. Implement after T08 settles; independently verify implementation. Existing execution_trace child objects need no kind change."
     - "Critic t04-critic returned procedural REJECT (C uncommitted at review; no T04/confirmation.md; its live cargo re-runs hit a 30s env timeout) with ZERO code findings; grounds closed in T04/confirmation.md, which stands as the settlement record. Report via team mailbox msg_00002+msg_00003."

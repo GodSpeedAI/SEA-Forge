@@ -1,0 +1,172 @@
+import { describe, expect, test } from 'bun:test'
+import type { CaseworkPort, InteractionIntent, StreamEvent, XSnapshot } from '../../ports/contract'
+import { LocalContractAdapter, NORTHSTAR_CASE_ID } from './localAdapter'
+
+type ControlledTimer = { handle: number; callback: () => void; delay: number; cancelled: boolean; fired: boolean }
+
+function installControlledTimers() {
+  const timers: ControlledTimer[] = []
+  const setTimeoutBefore = globalThis.setTimeout
+  const clearTimeoutBefore = globalThis.clearTimeout
+  globalThis.setTimeout = ((callback: TimerHandler, delay?: number) => {
+    if (typeof callback !== 'function') throw new TypeError('controlled timers require a callback')
+    const handle = timers.length + 1
+    timers.push({ handle, callback: () => callback(), delay: Number(delay ?? 0), cancelled: false, fired: false })
+    return handle as unknown as ReturnType<typeof setTimeout>
+  }) as unknown as typeof setTimeout
+  globalThis.clearTimeout = ((handle: ReturnType<typeof setTimeout>) => {
+    const timer = timers[Number(handle) - 1]
+    if (timer) timer.cancelled = true
+  }) as typeof clearTimeout
+  return {
+    latestHandle: () => timers.at(-1)?.handle,
+    scheduledAfter: (handle: number) => timers.filter((timer) => timer.handle > handle),
+    runHandle(handle: number) {
+      const timer = timers.find((candidate) => candidate.handle === handle)
+      if (!timer || timer.cancelled || timer.fired) throw new Error(`no pending timer for handle ${handle}`)
+      timer.fired = true
+      timer.callback()
+    },
+    restore() {
+      globalThis.setTimeout = setTimeoutBefore
+      globalThis.clearTimeout = clearTimeoutBefore
+    },
+  }
+}
+
+const actor = { actor_id: 'usr-sam', role: 'case_architect' as const }
+
+function executeIntent(cursor: string, targetId: string): InteractionIntent {
+  return {
+    intent_id: 'settlement-atomicity-execute',
+    client_cursor: cursor,
+    kind: 'CONSEQUENTIAL_CASE',
+    actor,
+    target_object_id: targetId,
+    action_name: 'EXECUTE_ITEM',
+    case_id: NORTHSTAR_CASE_ID,
+  } as InteractionIntent
+}
+
+function seedFinalCursor(adapter: LocalContractAdapter, cursor: string) {
+  const internals = adapter as unknown as {
+    cases: Map<string, { snaps: XSnapshot[]; points: Array<{ cursor: string }> }>
+    ordinaryFrontiers: Map<string, { readonly epochText: string; readonly epoch: number; sequence: number }>
+  }
+  const record = internals.cases.get(NORTHSTAR_CASE_ID)!
+  const last = record.snaps.length - 1
+  record.snaps[last] = { ...record.snaps[last]!, cursor }
+  record.points[last] = { ...record.points[last]!, cursor }
+  internals.ordinaryFrontiers.set(NORTHSTAR_CASE_ID, {
+    epochText: cursor.split('.')[0]!,
+    epoch: Number(cursor.split('.')[0]),
+    sequence: Number(cursor.split('.')[1]),
+  })
+  return { internals, record }
+}
+
+async function startPublicExecution(
+  adapter: LocalContractAdapter,
+  timers: ReturnType<typeof installControlledTimers>,
+  events: StreamEvent[],
+  errors: Error[],
+) {
+  const pendingInitial = adapter.getSnapshot(NORTHSTAR_CASE_ID, actor.actor_id, actor.role)
+  timers.runHandle(timers.latestHandle()!)
+  const initial = await pendingInitial
+  const target = initial.visible_objects.find((object) => object.actions.some((action) => action.intent === 'EXECUTE_ITEM'))
+  expect(target).toBeDefined()
+
+  const port: CaseworkPort = adapter
+  const stop = port.subscribeEvents(NORTHSTAR_CASE_ID, undefined, (event) => events.push(event), (error) => errors.push(error))
+  const beforeDispatch = timers.latestHandle() ?? 0
+  const pendingResponse = adapter.dispatchIntent(executeIntent(initial.cursor, target!.id))
+  const dispatchHandle = timers.latestHandle()!
+  expect(dispatchHandle).toBeGreaterThan(beforeDispatch)
+  timers.runHandle(dispatchHandle)
+  const response = await pendingResponse
+  expect(response.success).toBe(true)
+
+  const registrations = timers.scheduledAfter(dispatchHandle)
+  const startDelivery = registrations.find((timer) => timer.delay === 0)
+  const executionTimers = registrations.filter((timer) => timer.delay > 0)
+  expect(startDelivery).toBeDefined()
+  expect(executionTimers.length).toBeGreaterThan(0)
+  const settlementTimer = executionTimers.reduce((latest, timer) => timer.delay >= latest.delay ? timer : latest)
+  timers.runHandle(startDelivery!.handle)
+  const startSnapshot = events.find((event) => event.event_type === 'snapshot' && event.cursor !== initial.cursor)
+  expect(startSnapshot).toBeDefined()
+  expect(startSnapshot!.cursor).toBe(response.new_cursor)
+  events.length = 0
+  return { stop, settlementTimer }
+}
+
+describe('LocalContractAdapter settlement cursor atomicity', () => {
+  test('rejects settlement atomically when only one ordinal remains', async () => {
+    const timers = installControlledTimers()
+    const adapter = new LocalContractAdapter({ speed: 200, latency: 0 })
+    const events: StreamEvent[] = []
+    const errors: Error[] = []
+    let stop = () => {}
+    try {
+      const execution = await startPublicExecution(adapter, timers, events, errors)
+      stop = execution.stop
+      const { internals, record } = seedFinalCursor(adapter, '1.9999999998')
+      const snapshotsBefore = structuredClone(record.snaps)
+      const pointsBefore = structuredClone(record.points)
+      const frontier = internals.ordinaryFrontiers.get(NORTHSTAR_CASE_ID)!
+      const frontierBefore = { ...frontier }
+
+      timers.runHandle(execution.settlementTimer.handle)
+
+      expect(errors).toHaveLength(1)
+      expect(events).toEqual([])
+      expect(record.snaps).toEqual(snapshotsBefore)
+      expect(record.points).toEqual(pointsBefore)
+      expect(internals.ordinaryFrontiers.get(NORTHSTAR_CASE_ID)).toEqual(frontierBefore)
+    } finally {
+      stop()
+      timers.restore()
+    }
+  })
+
+  test('commits two final ordinals as snapshot then side event with exact snapshot lookup', async () => {
+    const timers = installControlledTimers()
+    const adapter = new LocalContractAdapter({ speed: 200, latency: 0 })
+    const events: StreamEvent[] = []
+    const errors: Error[] = []
+    let stop = () => {}
+    try {
+      const execution = await startPublicExecution(adapter, timers, events, errors)
+      stop = execution.stop
+      const { internals, record } = seedFinalCursor(adapter, '1.9999999997')
+      const pointsBefore = structuredClone(record.points)
+
+      timers.runHandle(execution.settlementTimer.handle)
+      const delivery = timers.scheduledAfter(execution.settlementTimer.handle).find((timer) => timer.delay === 0)
+      expect(delivery).toBeDefined()
+      timers.runHandle(delivery!.handle)
+
+      expect(errors).toEqual([])
+      expect(events.map((event) => event.event_type)).toEqual(['snapshot', 'settlement_recorded'])
+      expect(events.map((event) => event.cursor)).toEqual(['1.9999999998', '1.9999999999'])
+      expect(record.points).toHaveLength(pointsBefore.length + 1)
+      expect(record.points.at(-1)?.cursor).toBe('1.9999999998')
+      expect(internals.ordinaryFrontiers.get(NORTHSTAR_CASE_ID)?.sequence).toBe(9_999_999_999)
+
+      const snapshot = adapter.getSnapshotAt(NORTHSTAR_CASE_ID, '1.9999999998', actor.actor_id, actor.role)
+      const snapshotRead = timers.latestHandle()!
+      timers.runHandle(snapshotRead)
+      expect((await snapshot).cursor).toBe('1.9999999998')
+
+      const sideEventLookup = adapter.getSnapshotAt(NORTHSTAR_CASE_ID, '1.9999999999', actor.actor_id, actor.role)
+      const sideEventRead = timers.latestHandle()!
+      timers.runHandle(sideEventRead)
+      await expect(sideEventLookup).rejects.toThrow('No snapshot at')
+    } finally {
+      stop()
+      timers.restore()
+    }
+  })
+})
+

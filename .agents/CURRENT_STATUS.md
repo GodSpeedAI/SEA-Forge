@@ -10,6 +10,19 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
+CURRENT: lifecycle checkpoint a8c9ad6 committed and pushed with normal hooks;
+remote branch casework/live-wiring-resume-2026-10-05 is exactly
+a8c9ad6a81f50919a7691aba00b20102c9a1039e (actual ls-remote verified).
+All six push02 original captures are losslessly archived as XZ/Base64 JSON
+and decoded/compared byte-for-byte by root. Push01 context failure remains
+preserved; truthful post-commit status refresh fixed it without a gate bypass.
+Operator requests checkpointing all completed task artifacts before continuing.
+Luna recon and independent inventory review are active; eleven foreign staged
+blobs and unrelated hook/Jolli changes remain protected. Root heavy token idle.
+Private Next source remains held until those checkpoints; C2 revision5 is
+independently rejected for global versus per-case ordinal gap ambiguity.
+Root accepts the rejection; exact operator approval remains held. T09 is partial.
+
 LATEST: bounded Prepare/shared-poller/Stop independently APPROVED03be81b6
 with fixture-scope errata11398558/7a8f682e, all three read fully by root.
 Graft refresh passed708cards/7882nodes/15581edges; root compared six actual
@@ -549,14 +562,14 @@ changes. Inventory completeness/all-writer ordering, bootstrap/creation DTOs,
 ID grammar, per-case Store/SSE gap/readiness and cold-history semantics must
 be resolved. Approved private prerequisites can proceed separately.
 
-Private manager lifecycle has actual failing regression evidence and a
-source repair in progress under granta886842c. The identity/cursor metadata
-and regression fixture are already implemented and independently source-ready;
-the corrected algorithm is awaiting independent review and fresh GREEN gates.
-The pure encoder is approved. Actual lifecycle proof remains pending.
-Current Go manager fixture intentionally targets an unwired seam. Isolated
-full-module Go gates cover the six primitive files, not pending primary lifecycle work.
-T09 settlement and T10–T12 remain pending.
+The bounded private Prepare/poller/Stop lifecycle is independently approved,
+verified by current-source canonical Go and full-module race gates, committed
+and published as a8c9ad6. It remains unwired. Private Next projection and lease
+integration are the next implementation units after the requested checkpoint.
+C2 revision5 was independently rejected for ambiguous global versus per-case
+ordinal gaps; root accepts the rejection. Preserve that draft and review, then
+resolve the concrete global scan rule before another independent review and
+exact operator approval request. T09 settlement and T10–T12 remain pending.
 
 ## Decisions
 
@@ -566,7 +579,7 @@ attachments and combined1MiB serialized current poller image, truthful safe
 failure and actual JOIN before release. Draft-only extra permission holds for
 those private implementation details are superseded by the new root design
 decision; no public API/schema/security or architecture boundary is authorized.
-Next is the bounded combined-image test-first unit and lifecycle fixture plan.
+Next is the private delta projection test-first unit, then lease integration.
 Public V4 remains
 held for its separate redesign decisions. The approved32MiB transport cap is
 already implemented, corrected by independently reviewed0f1c erratum.
