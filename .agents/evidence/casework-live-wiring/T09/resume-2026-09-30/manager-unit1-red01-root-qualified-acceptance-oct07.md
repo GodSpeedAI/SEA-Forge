@@ -1,0 +1,7 @@
+# Root qualified acceptance: manager Unit1 RED01
+
+The independent verdict `run_observation_manager_unit1_red01_independent_negative_verdict_oct07.md` and its separate command-provenance correction are accepted only as evidence of one semantic stub failure. The selected canceled-partial-Prepare test compiled, then failed before the controlled read because the private stub was unwired. Worker retirement, rollback, retry and capacity behavior remain untested. All three actual captures were archived with exact comparisons before ownership release.
+
+The complete command from root's execution record was `GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1 go test -race -count=1 -parallel=1 -timeout=60s ./internal/server -run '^TestRunObservationManagerCanceledPartialPrepareJoinsOwnedReadBeforeRetry$'`. This is a transcription of the execution record, not an additional raw capture or a claim that the captures themselves contain that command.
+
+Before implementation release, root discovered a separate fixture mismatch: list-unavailable must produce the reviewed unavailable DTO and completed empty lease; auth/guard/cancellation/stop/irreducible assembly failures produce zero wrapper and nil lease. A fresh different builder is repairing this distinction. The selected RED does not approve that contradictory fixture or the manager algorithm. T09 remains partial.

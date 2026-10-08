@@ -10,6 +10,15 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
+CHECKPOINT CURRENT: f56fc17 preserves 56 original source-directory evidence
+files plus the reviewed inventory manifest and handoff. Normal hooks passed;
+root decoded/compared all six actual commit captures and verified all eleven
+foreign staged identities. Initial untracked pathspec failure remains archived.
+Observation verification history is the next evidence-only checkpoint, then
+held C2 drafts/report corrections and task-only debt through an alternate
+index. No new source implementation is released until those commits finish.
+The published lifecycle a8c9ad6 and held C2 revision5 remain as described below.
+
 CURRENT: lifecycle checkpoint a8c9ad6 committed and pushed with normal hooks;
 remote branch casework/live-wiring-resume-2026-10-05 is exactly
 a8c9ad6a81f50919a7691aba00b20102c9a1039e (actual ls-remote verified).

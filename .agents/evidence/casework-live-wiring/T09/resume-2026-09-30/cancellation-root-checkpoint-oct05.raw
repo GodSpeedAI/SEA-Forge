@@ -1,0 +1,197 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/sea-rs
+context check passed
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling libsqlite3-sys v0.30.1
+    Checking rusqlite v0.32.1
+    Checking sea-forge-capability v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-capability)
+    Checking sea-forge-thoth v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-thoth)
+   Compiling ring v0.17.14
+   Compiling rustls v0.23.45
+    Checking rustls-webpki v0.103.15
+    Checking tokio-rustls v0.26.4
+    Checking hyper-rustls v0.27.9
+    Checking reqwest v0.12.28
+    Checking sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+    Checking sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Checking sea-forge-artifact-ip v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-artifact-ip)
+    Checking sea-forge-cli v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-cli)
+    Finished `dev` profile [unoptimized] target(s) in 1m 05s
+[entire] Entire CLI is enabled but not installed or not on PATH. Skipping Entire Git hook; continuing. Installation guide: https://docs.entire.io/cli/installation#installation-methods
+[understand-anything] commit 8f8158012ed30ac98c59386b10bc372de04028c2 changed source files; the .ua knowledge graph is now stale.
+[understand-anything] Re-run the understand skill (incremental mode) to refresh /home/sprime01/projects/sea-rs/.ua.
+[casework/live-wiring 8f81580] fix(casework): retire canceled SFWP calls before pool reuse
+ 122 files changed, 5248 insertions(+), 5 deletions(-)
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-fixture-first-frozen.go.snapshot
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-fixture-independent-review-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-fixture-second-frozen.go.snapshot
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-fixture-third-frozen-oct05.go.snapshot
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-gate-evidence-root-findings-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-independent-gate-copy-mapping-erratum-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-peer-read-repair-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-preflight-process-scan-deviation-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-retirement-independent-review-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-root-acceptance-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-runtime-independent-gates-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-runtime-source-readiness-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-serialized-independent-approval-corrected-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/cancellation-serialized-independent-approval-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate1-focused.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate1-focused.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate1-preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate1-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate2-preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate2-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate2-sfwp.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate2-sfwp.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate3-canonical.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate3-canonical.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate3-preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate3-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate4-module.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate4-module.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate4-preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/final-cancellation-fixed-fixtures-oct05/gate4-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/cancellation-serialized-independent-approval-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/cancellation-serialized-independent-audit-supplement-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-canonical-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-canonical.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-canonical.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-focused-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-focused.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-focused.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-module-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-module.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-module.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-sfwp-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-sfwp.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/independent-cancellation-oct05/rootcritic-sfwp.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/observation-cancellation-fixture-independent-reject-v2.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/observation-cancellation-fixture-independent-reject.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/observation-cancellation-runtime-root-assignment.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/response-cap-fixture-builder-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/response-cap-fixture-independent-source-review-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/response-cap-fixture-repair-root-assignment-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/response-cap-overlay-diagnostic-preparation-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/response-cap-overlay-diagnostic-results-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/response-cap-overlay-source-review-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/response-cap-timeout-recon-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-baseline-preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-baseline-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-baseline.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-baseline.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-current-preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-current-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-current.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/responsecapdiag-current.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-canonical-attempt1.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-canonical-retry.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-canonical-retry.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-canonical.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-focused.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-focused.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-module-race.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-module-race.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-canonical-retry.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-canonical-retry.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-canonical.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-canonical.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-focused.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-focused.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-module-race.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-module-race.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-sfwp.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-preflight-sfwp.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-sfwp-race.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/rootcritic-sfwp-race.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05-focused-race.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05-focused-race.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05-preflight-1.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05-preflight-1.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05builder-focused-final.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05builder-focused-final.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05builder-focused-first-failure.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05builder-focused-first-failure.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05builder-preflight-3.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05builder-preflight-3.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-canonical-attempt1-verified-v2.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-canonical-attempt1-verified.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-canonical-attempt1-verified.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-canonical-first-attempt.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-canonical-retry-verified.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-canonical.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-canonical.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-focused.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-focused.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-module-race.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-module-race.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-canonical-retry.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-canonical-retry.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-canonical.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-canonical.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-focused.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-focused.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-module-race.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-module-race.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-sfwp-verified.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-sfwp.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-preflight-sfwp.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-sfwp-race-verified.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-sfwp-race.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/unit5a-oct05critic-sfwp-race.raw
+ create mode 100644 apps/godspeed-casework-go/internal/adapters/sfwp/client_cancellation_test.go

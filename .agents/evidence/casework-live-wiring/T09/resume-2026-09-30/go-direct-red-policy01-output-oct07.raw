@@ -1,0 +1,29 @@
+--- FAIL: TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic (0.00s)
+    --- FAIL: TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic/ordinal_nonterminal (0.00s)
+        run_observation_retained_policy_test.go:97: ordinal overflow outcome=1, want 3
+    --- FAIL: TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic/ordinal_terminal (0.00s)
+        run_observation_retained_policy_test.go:97: ordinal overflow outcome=1, want 3
+    run_observation_retained_policy_test.go:116: generation overflow=1/(*server.runObservationRetainedState)(nil), want stop-scheduling safe copy
+--- FAIL: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly (0.04s)
+    --- FAIL: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/completed_unsettled (0.00s)
+        run_observation_retained_policy_test.go:158: execution/settlement "completed"/"unsettled" gave 1/(*server.runObservationRetainedState)(nil), want rejected marker 3
+    --- FAIL: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/failed_unsettled (0.00s)
+        run_observation_retained_policy_test.go:158: execution/settlement "failed"/"unsettled" gave 1/(*server.runObservationRetainedState)(nil), want rejected marker 3
+    --- FAIL: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/terminated_unsettled (0.01s)
+        run_observation_retained_policy_test.go:158: execution/settlement "terminated"/"unsettled" gave 1/(*server.runObservationRetainedState)(nil), want rejected marker 3
+    --- FAIL: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/active_accepted (0.00s)
+        run_observation_retained_policy_test.go:158: execution/settlement "active"/"accepted" gave 1/(*server.runObservationRetainedState)(nil), want rejected marker 2
+    --- FAIL: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/active_rejected (0.02s)
+        run_observation_retained_policy_test.go:158: execution/settlement "active"/"rejected" gave 1/(*server.runObservationRetainedState)(nil), want rejected marker 2
+--- FAIL: TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates (0.00s)
+    --- FAIL: TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates/3 (0.00s)
+        run_observation_retained_policy_test.go:188: final marker 3 accepted/changed on later candidate: 1/(*server.runObservationRetainedState)(nil)
+    --- FAIL: TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates/4 (0.00s)
+        run_observation_retained_policy_test.go:188: final marker 4 accepted/changed on later candidate: 1/(*server.runObservationRetainedState)(nil)
+--- FAIL: TestRunObservationRetainedPolicyPreservesResponseCounts (0.00s)
+    run_observation_retained_policy_test.go:203: candidate outcome/state = 1/(*server.runObservationRetainedState)(nil), want accepted/non-nil
+--- FAIL: TestRunObservationRetainedPolicyRecoveryAndInputRejection (0.00s)
+    run_observation_retained_policy_test.go:241: candidate outcome/state = 1/(*server.runObservationRetainedState)(nil), want accepted/non-nil
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.144s
+FAIL

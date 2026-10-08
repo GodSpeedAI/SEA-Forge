@@ -11,6 +11,9 @@ metadata:
   initialized: true
   last_updated: '2026-10-08'
   updated_by: >-
+    CHECKPOINT CURRENT: f56fc17 preserves56original evidence files plus
+    inventory/handoff; normalhooks PASS/root6actualcapturecomparisons/foreign11
+    exact. Commit remaining observation history then held C2/task-only debt.
     CURRENT Oct08: lifecycle a8c9ad6 normal push02 PASS; exact remote SHA
     verified. Root six lossless original push capture comparisons complete.
     Operator requests all completed task work checkpointed before continuing;
@@ -280,6 +283,11 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
+    CHECKPOINT CURRENT: f56fc17 committed normalhooks; root six actual
+    capture comparisons and eleven foreign staged identities exact. Finish
+    observation history checkpoint, then held C2/report/debt DOC checkpoint
+    with alternate-index task-only DEBT preserving foreign8eda/worktree.
+    All new source held until requested checkpoint completes.
     CURRENT Oct08: normal push02 PASS; remote branch exactly
     a8c9ad6a81f50919a7691aba00b20102c9a1039e; root six archived original
     captures decoded and compared. Checkpoint remaining completed task work

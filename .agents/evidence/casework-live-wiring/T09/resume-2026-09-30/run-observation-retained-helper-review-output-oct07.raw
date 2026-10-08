@@ -1,0 +1,54 @@
+=== RUN   TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic
+=== RUN   TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic/ordinal_nonterminal
+=== RUN   TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic/ordinal_terminal
+--- PASS: TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic/ordinal_nonterminal (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyOverflowMarkersAreExactAndAtomic/ordinal_terminal (0.00s)
+=== RUN   TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly
+=== RUN   TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/completed_unsettled
+=== RUN   TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/failed_unsettled
+=== RUN   TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/terminated_unsettled
+=== RUN   TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/active_accepted
+=== RUN   TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/active_rejected
+--- PASS: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly (0.30s)
+    --- PASS: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/completed_unsettled (0.08s)
+    --- PASS: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/failed_unsettled (0.07s)
+    --- PASS: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/terminated_unsettled (0.05s)
+    --- PASS: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/active_accepted (0.05s)
+    --- PASS: TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly/active_rejected (0.05s)
+=== RUN   TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates
+=== RUN   TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates/3
+=== RUN   TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates/4
+--- PASS: TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates/3 (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyFinalMarkersRefuseLaterCandidates/4 (0.00s)
+=== RUN   TestRunObservationRetainedPolicyPreservesResponseCounts
+--- PASS: TestRunObservationRetainedPolicyPreservesResponseCounts (0.00s)
+=== RUN   TestRunObservationRetainedPolicyRecoveryAndInputRejection
+=== RUN   TestRunObservationRetainedPolicyRecoveryAndInputRejection/requested_snapshot_key_mismatch
+=== RUN   TestRunObservationRetainedPolicyRecoveryAndInputRejection/prior_requested_key_mismatch
+=== RUN   TestRunObservationRetainedPolicyRecoveryAndInputRejection/invalid_total_1
+=== RUN   TestRunObservationRetainedPolicyRecoveryAndInputRejection/invalid_total_0
+--- PASS: TestRunObservationRetainedPolicyRecoveryAndInputRejection (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyRecoveryAndInputRejection/requested_snapshot_key_mismatch (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyRecoveryAndInputRejection/prior_requested_key_mismatch (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyRecoveryAndInputRejection/invalid_total_1 (0.00s)
+    --- PASS: TestRunObservationRetainedPolicyRecoveryAndInputRejection/invalid_total_0 (0.00s)
+=== RUN   TestRunObservationRetainedCandidateCopiesPointersAndCapturesWindow
+--- PASS: TestRunObservationRetainedCandidateCopiesPointersAndCapturesWindow (0.00s)
+=== RUN   TestRunObservationRetainedCandidateClonesPriorAndSourcePointers
+--- PASS: TestRunObservationRetainedCandidateClonesPriorAndSourcePointers (0.00s)
+=== RUN   TestRunObservationRetainedCandidateKeepsFirstOrdinalsAcrossReorderAndShorterWindow
+--- PASS: TestRunObservationRetainedCandidateKeepsFirstOrdinalsAcrossReorderAndShorterWindow (0.00s)
+=== RUN   TestRunObservationRetainedCandidateRejectsDuplicateIDsInOneWindow
+--- PASS: TestRunObservationRetainedCandidateRejectsDuplicateIDsInOneWindow (0.00s)
+=== RUN   TestRunObservationRetainedCandidateRejectsBudgetAtomicallyAndRecovers
+--- PASS: TestRunObservationRetainedCandidateRejectsBudgetAtomicallyAndRecovers (0.05s)
+=== RUN   TestRunObservationRetainedCandidateTerminalRefusalKeepsOnlySafePriorState
+--- PASS: TestRunObservationRetainedCandidateTerminalRefusalKeepsOnlySafePriorState (0.05s)
+=== RUN   TestRunObservationRetainedImageFixedWidthControlsAndExactLimit
+--- PASS: TestRunObservationRetainedImageFixedWidthControlsAndExactLimit (0.10s)
+=== RUN   TestRunObservationRetainedCandidateBoundsWindowAndOrdinalOverflow
+--- PASS: TestRunObservationRetainedCandidateBoundsWindowAndOrdinalOverflow (0.01s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	1.657s

@@ -1,0 +1,117 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/sea-rs
+context check passed
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Finished `dev` profile [unoptimized] target(s) in 2.74s
+[understand-anything] commit 4862cac24c8f24b8026d23b455b61fe9423b047d changed source files; the .ua knowledge graph is now stale.
+[understand-anything] Re-run the understand skill (incremental mode) to refresh /home/sprime01/projects/sea-rs/.ua.
+[casework/live-wiring 4862cac] feat(casework): pace physical run_get attempts
+ 57 files changed, 2475 insertions(+), 101 deletions(-)
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt2-exit-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt2-gofmt-exit-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt2-preflight-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt2-raw-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt3-exit-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt3-gofmt-exit-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt3-preflight-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt3-raw-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt4-exit-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt4-preflight-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempt4-raw-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-attempts2-3-root-capture-supplement-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-casework-go-check-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-casework-go-check-oct06.preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-casework-go-check-oct06.preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-casework-go-check-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-compile-failure-exit-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-compile-failure-preflight-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-compile-failure-raw-oct06.txt
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-compile-failure-root-capture-supplement-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-focused-initial-capture-gap-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-focused-initial-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-focused-initial-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-focused-repeat-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-focused-repeat-oct06.preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-focused-repeat-oct06.preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-focused-repeat-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-main-wiring-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-module-race-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-module-race-oct06.preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-module-race-oct06.preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-module-race-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-production-independent-rereview-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-production-independent-runtime-verdict-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-production-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-production-root-acceptance-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-production-root-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-root-source-adjudication-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-sfwp-race-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-sfwp-race-oct06.preflight.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-sfwp-race-oct06.preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/physical-admission-sfwp-race-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-assertion-red-attempt3-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-assertion-red-attempt4-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-cleanup-compile-fix-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-fixture-root-review-supplement-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-fixture-source-rereview-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-fixture-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-focused-assertion-red-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-retry-counter-source-review-oct06.md
+ create mode 100644 apps/godspeed-casework-go/internal/adapters/sfwp/client_run_get_admission_test.go
+ create mode 100644 apps/godspeed-casework-go/internal/adapters/sfwp/run_get_admission.go
+ create mode 100644 apps/godspeed-casework-go/internal/adapters/sfwp/run_get_admission_test.go
