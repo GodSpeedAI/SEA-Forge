@@ -10,6 +10,25 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
+ACTIVE: checkpoint publication stopped on two Gitleaks findings; no new
+checkpoint was pushed. Root archived and compared all six actual push01
+captures. Luna renderer owns one redacted diagnostic and the sole heavy token;
+no other compilation/gates. Normal hooks remain enabled. Finding classification
+and a narrow independently reviewed fix precede retry. The task work is already
+committed; private Next TDD tests/stub source-only edits are now released to
+Luna FORMAT in two new files, with no compiler token or algorithm release.
+Public C2 remains held; root global-frontier DOC clarification is recorded.
+
+AUTHORITATIVE CHECKPOINT: completed task work is committed in f56fc17
+(original evidence),36bcd1b (observation lineage), and58f4c34 (held C2/task debt).
+Normal hooks passed for all three. Root verified all six last-commit captures,
+all 67 final committed paths, exact original full worktree DEBT and all eleven
+protected staged blobs. The final commit's six receipt archives remain local
+for inclusion with the next meaningful milestone; no earlier task artifacts
+remain untracked. Publish these commits normally, then release private Next
+test-first projection. Root owns sole heavy token for push hooks; source frozen.
+C2 revision5 remains rejected/held; no public correction approval is inferred.
+
 CHECKPOINT CURRENT: f56fc17 preserves 56 original source-directory evidence
 files plus inventory/handoff; 36bcd1b preserves observation verification history
 (455 paths). Both normal commit hooks passed; root compared all twelve actual

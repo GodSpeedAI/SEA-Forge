@@ -168,6 +168,22 @@
 			"addedAt": "2026-09-24T00:54:16.249Z",
 			"updatedAt": "2026-09-24T01:05:48.700Z",
 			"commitHash": null
+		},
+		"stage0-migration-map": {
+			"slug": "stage0-migration-map",
+			"title": "CEP / world_ref migration — Stage 0 migration map",
+			"sourcePath": "/home/sprime01/projects/sea-rs-cep-migration/.agents/reports/cep-world-migration/stage0-migration-map.md",
+			"addedAt": "2026-10-04T15:25:55.358Z",
+			"updatedAt": "2026-10-04T15:25:55.358Z",
+			"commitHash": null
+		},
+		"DEBT": {
+			"slug": "DEBT",
+			"title": "Debt ledger — CEP / world_ref migration (Stages 0–6)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/DEBT.md",
+			"addedAt": "2026-10-05T01:38:40.211Z",
+			"updatedAt": "2026-10-05T01:38:40.211Z",
+			"commitHash": null
 		}
 	},
 	"skills": {

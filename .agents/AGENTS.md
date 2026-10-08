@@ -38,3 +38,5 @@ Every agent session ending with project changes must update the handoff state be
 * **One home per fact**: Reference canonical sources; do not copy specifications into scratch notes or duplicate ledgers.
 * **Never fabricate evidence**: Only record commands that were actually executed and results that were observed.
 * **No conversational transcripts**: Keep memory files concise, structured, and free of chat transcripts or machine-specific absolute paths.
+
+**Any debt you encounter while woriking that is out of scope or doesn't block your work must be recorded in .agents/DEBT.md**
