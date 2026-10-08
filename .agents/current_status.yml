@@ -11,6 +11,10 @@ metadata:
   initialized: true
   last_updated: '2026-10-08'
   updated_by: >-
+    CURRENT checkpoint f56fc17+36bcd1b normalhooks PASS; root12actual
+    capture comparisons. Evidence originals56exact; secondcommit454/455exact,
+    oneGitCRLFnormalization delegatedadditivearchive/erratum. Final heldC2
+    drafts/report/task-onlyDEBT checkpoint next, no newsource yet.
     CHECKPOINT CURRENT: f56fc17 preserves56original evidence files plus
     inventory/handoff; normalhooks PASS/root6actualcapturecomparisons/foreign11
     exact. Commit remaining observation history then held C2/task-only debt.
@@ -283,6 +287,17 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
+    IMMEDIATE: complete final DOC checkpoint using reviewed losslesswrapper
+    a7667b2a+erratum1e9e982a and task-ownedDEBTrevision2 durable snapshot
+    46a26628. Preserve fullworktree DEBT and originalforeign8eda realindex;
+    independent extraction review precedes normal alternate-index commit.
+    Foreign staged baseline will intentionally remain older than committed
+    task-onlyDEBT; retain complete task entries during later operator integration.
+    CURRENT checkpoint f56fc17+36bcd1b complete. Native additive archive and
+    independent review must preserve one GitCRLF-normalized historical raw.
+    Commit held C2/report corrections and task-only DEBT via alternate index,
+    keeping original full worktree DEBT and all eleven real-index blobs exact.
+    Then normal push/verification and release private Next test-first unit.
     CHECKPOINT CURRENT: f56fc17 committed normalhooks; root six actual
     capture comparisons and eleven foreign staged identities exact. Finish
     observation history checkpoint, then held C2/report/debt DOC checkpoint

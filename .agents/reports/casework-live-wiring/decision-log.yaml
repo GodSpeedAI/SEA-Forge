@@ -110,6 +110,32 @@ corrections:
       stacks). This is an executor decision, NOT operator approval: it is recorded here and in
       current_status.yml handoff.warnings, and renaming recipes later is cheap.
 
+  C-2:
+    recorded: '2026-10-05'
+    discovered_in_task: T09
+    status: PUBLIC-CORRECTION-HELD-FOR-INDEPENDENT-AND-OPERATOR-REVIEW
+    report_claim: >-
+      Section0.2 event streaming says the Go SSE bridge can relay the subscription
+      directly; this does not establish durable ordering or restart history.
+    finding: >-
+      Kernel publishes after separate blocking append tasks complete, which does
+      not prove broadcast order equals append order. Existing get_range resolves
+      exact ULID cursor identities to authoritative append ordinals. Canonical
+      numeric-dot grammar and downstream lexical/numeric comparisons conflict
+      with the actual producer. Cold replay of current Facts cannot reconstruct
+      past captures; empty bootstrap is also not a canonical case revision.
+    evidence:
+      - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-contract-independent-recon-oct05.md
+      - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-contract-v2-independent-review-oct05.md
+      - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/empty-world-bootstrap-contract-recon-oct05.md
+    protocol_action: >-
+      Report Section0 amended, handoff warned and defects surfaced to operator.
+      Affected public contracts/runtime/version changes are stopped. Root V3 is
+      a held design proposal; independent review must resolve concrete semantics
+      before an exact operator approval request. Approved trace/auth prerequisites
+      proceed separately without relying on the rejected direct-relay assumption.
+    resolution: Pending; no correction implementation authorized.
+
 baseline:
   B-1:
     recorded: '2026-09-23'

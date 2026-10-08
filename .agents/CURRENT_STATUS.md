@@ -11,13 +11,24 @@ through T12, then split T13 and stop for operator review. Follow the exact
 ## Worktree State
 
 CHECKPOINT CURRENT: f56fc17 preserves 56 original source-directory evidence
-files plus the reviewed inventory manifest and handoff. Normal hooks passed;
-root decoded/compared all six actual commit captures and verified all eleven
-foreign staged identities. Initial untracked pathspec failure remains archived.
-Observation verification history is the next evidence-only checkpoint, then
-held C2 drafts/report corrections and task-only debt through an alternate
-index. No new source implementation is released until those commits finish.
-The published lifecycle a8c9ad6 and held C2 revision5 remain as described below.
+files plus inventory/handoff; 36bcd1b preserves observation verification history
+(455 paths). Both normal commit hooks passed; root compared all twelve actual
+commit capture pairs. All 56 source-directory originals match their committed
+bytes; 454/455 second-commit paths match. One historical raw preflight was
+Git-normalized from CRLF to LF; additive lossless preservation/correction is
+delegated, with no promotion of that historical capture as accepted proof.
+Held C2 drafts/report corrections and task-only debt are the final requested
+checkpoint, using an alternate index to preserve the foreign DEBT base and
+all eleven staged blobs. New source remains held until checkpoints finish.
+Published lifecycle a8c9ad6 and rejected/held C2 revision5 remain unchanged.
+
+The historical log's lossless wrapper is independently approved (a7667b2a,
+with wording erratum1e9e982a); root also verified its exact 14-CRLF conversion.
+Task-only DEBT revision2 corrects the omitted-baseline reference and preserves
+the complete CW section exactly. Its durable evidence snapshot will be the
+committed DEBT content; the original full worktree and staged8eda remain intact.
+That staged baseline is deliberately older than the new task-only DEBT tree;
+future operator integration must retain the task entries from the full worktree.
 
 CURRENT: lifecycle checkpoint a8c9ad6 committed and pushed with normal hooks;
 remote branch casework/live-wiring-resume-2026-10-05 is exactly

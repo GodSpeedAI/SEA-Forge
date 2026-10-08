@@ -1,0 +1,13 @@
+{
+  "kind": "lossless-current-worktree-byte-preservation",
+  "source_path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-primitives-gitleaks-diag-preflight-oct07.raw",
+  "source_bytes": 857,
+  "source_sha256": "824c110962c6b62f62e3f9f4088555c9249f3da8570c82a69be508398c9cf992",
+  "source_origin": "Exact current worktree bytes read on 2026-10-08 before this additive correction.",
+  "evidence_role": "Historical preflight record only. It is not scanner output or proof that a diagnostic command ran.",
+  "committed_blob_bytes": 843,
+  "committed_blob_sha256": "7a00a48311963e23f6665d35b5a82e999d6a504e7a12ef6814594255a1e4c643",
+  "line_ending_comparison": "Replacing each CRLF pair with LF produces the committed blob exactly; 14 CR bytes are absent after repository clean-filter normalization.",
+  "encoding": "base64",
+  "raw_base64": "VVRDIDIwMjYtMTAtMDdUMjI6MzM6NDdaCk1lbUF2YWlsYWJsZV9LaUI9MzA1NTQzNiByZXF1aXJlZF9taW5fS2lCPTEyMjg4MDAKU3dhcEZyZWVfS2lCPTk4MjE0NzIgcmVxdWlyZWRfbWluX0tpQj01MjQyODgKY29tcGV0aW5nX2dvX3J1c3RfY291bnQ9MApIRUFEPTYxN2RhYzNkZGY3OGI2NjBjYTk1ZjFjN2E1M2ZkZjU5Yjg3NjUzZDUKZ2l0bGVha3NfY29uZmlnX3NoYTI1Nj02MDhhNjg3ZTUzYmEzNjVmYzc0M2FlNmM4ZDJkZWQ3YTFjMDA2ZThjNmIwZjVmMjA5MTA5ZDA1NWY2ZTVhZDA1CnNlY3VyaXR5X3JlY2lwZToKIyBTdXBwbHktY2hhaW4gKyBzZWNyZXQgc2NhbjogY2FyZ28tZGVueSB0aGVuIGdpdGxlYWtzLg0KIyBgY2FyZ28gZGVueSBjaGVjayBhZHZpc29yaWVzYCBmZXRjaGVzIHRoZSBSdXN0U2VjIGRhdGFiYXNlOyB0aGUgb3RoZXINCiMgY2F0ZWdvcmllcyBhcmUgb2ZmbGluZS4gZ2l0bGVha3Mgc2NhbnMgc3RhZ2VkICsgY29tbWl0dGVkIGhpc3RvcnkuDQpbZ3JvdXAoJ3F1YWxpdHknKV0NCmRlbnk6DQogICAgY2FyZ28gZGVueSBjaGVjaw0KDQpbZ3JvdXAoJ3F1YWxpdHknKV0NCnNlY3VyaXR5Og0KICAgICMhL3Vzci9iaW4vZW52IGJhc2gNCiAgICB7e3NldH19DQogICAganVzdCBkZW55DQogICAgZ2l0bGVha3MgZGV0ZWN0IC0tbm8tYmFubmVyIC0tcmVkYWN0DQoNCnBpbm5lZF9naXRsZWFrc192ZXJzaW9uOgpJbmZvOiBOZXcgZGV2Ym94IGF2YWlsYWJsZTogMC4xNy41IC0+IHYwLjE4LjQuIFBsZWFzZSBydW4gYGRldmJveCB2ZXJzaW9uIHVwZGF0ZWAuCkluZm86IFJ1bm5pbmcgc2NyaXB0ICJnaXRsZWFrcyIgb24gL2hvbWUvc3ByaW1lMDEvcHJvamVjdHMvc2VhLXJzCjguMzAuMQo="
+}
