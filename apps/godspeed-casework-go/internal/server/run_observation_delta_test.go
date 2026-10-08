@@ -26,7 +26,7 @@ func TestRunObservationDeltaUsesCapturedOrdinalRangeAndSourceOrder(t *testing.T)
 	state.Generation = 9
 	state.AcceptedAt = retainedTestTime.Format(time.RFC3339Nano)
 	state.Execution = "completed"
-	state.Settlement = "settled"
+	state.Settlement = "accepted"
 	state.ObservationState = "validated"
 	state.TotalFrameCount = 7
 	state.Frames[1], state.Frames[2] = state.Frames[2], state.Frames[1]
@@ -48,7 +48,7 @@ func TestRunObservationDeltaUsesCapturedOrdinalRangeAndSourceOrder(t *testing.T)
 		t.Fatalf("captured identity/time = %#v", got)
 	}
 	if got.execution != contract.RunExecutionStanding("completed") ||
-		got.settlement != contract.RunSettlementStanding("settled") ||
+		got.settlement != contract.RunSettlementStanding("accepted") ||
 		got.observationState != contract.RunTraceRunObservationState("validated") {
 		t.Fatalf("captured standings = %#v", got)
 	}
@@ -135,7 +135,7 @@ func TestRunObservationDeltaAdvancesWindowAndStandingsWithoutNewFrames(t *testin
 	grown.Generation = 2
 	grown.AcceptedAt = retainedTestTime.Add(time.Second).Format(time.RFC3339Nano)
 	grown.Execution = "completed"
-	grown.Settlement = "settled"
+	grown.Settlement = "accepted"
 	grown.TotalFrameCount = 3
 	grown.HighestOrdinal = 2
 	grownWindow := runObservationDeltaWindow{
@@ -151,7 +151,7 @@ func TestRunObservationDeltaAdvancesWindowAndStandingsWithoutNewFrames(t *testin
 		t.Fatalf("window growth with unchanged H = %#v / %#v", first, firstGap)
 	}
 	if first.observedAt != grown.AcceptedAt || first.execution != contract.RunExecutionStanding("completed") ||
-		first.settlement != contract.RunSettlementStanding("settled") || grownWatermark.highestObservedOrdinal != 2 ||
+		first.settlement != contract.RunSettlementStanding("accepted") || grownWatermark.highestObservedOrdinal != 2 ||
 		grownWatermark.window != grownWindow || grownWatermark.execution != first.execution || grownWatermark.settlement != first.settlement {
 		t.Fatalf("standing/window watermark did not advance: %#v / %#v", first, grownWatermark)
 	}
@@ -181,7 +181,7 @@ func TestRunObservationDeltaDeepCopiesOptionalFramePointersAndInputs(t *testing.
 	key := retainedTestKey()
 	state := retainedTestState(key, "opaque/rewrite:does-not-change-ordinal")
 	state.Execution = "completed"
-	state.Settlement = "settled"
+	state.Settlement = "accepted"
 	state.HighestOrdinal = 1
 	stateBefore := cloneRetainedTestState(state)
 	ledger := cloneRunObservationDeltaLedger(state.SeenByID)
@@ -294,7 +294,7 @@ func TestRunObservationDeltaAcceptsEmptySuccessfulTerminalCapture(t *testing.T) 
 	key := retainedTestKey()
 	state := retainedTestState(key)
 	state.Execution = "completed"
-	state.Settlement = "settled"
+	state.Settlement = "accepted"
 	state.ObservationState = "validated"
 	state.TotalFrameCount = 0
 	state.HighestOrdinal = 0

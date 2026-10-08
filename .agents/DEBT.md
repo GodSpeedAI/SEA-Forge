@@ -1182,6 +1182,34 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 ### CW-30 Pre-push Gitleaks finding in source-hash evidence
 
+- **2026-10-08 scanner gate restored:** canonical security04 passed across
+  523 commits /91.37MB with no leaks. Root compared all six actual capture
+  originals against lossless archives. The two recurrence findings are closed
+  for this tested history by independently reviewed exact fingerprints;
+  normal publication remains a separate pending gate. New occurrences remain
+  subject to detection. Earlier failed attempts below are immutable history.
+- **2026-10-08 sandbox retry:** security03 could not acquire the Cargo
+  advisory database lock on a read-only sandbox path and did not reach
+  scanning. Its six actual captures are preserved and root-compared.
+  Security04 runs the same canonical recipe with normal gate permissions;
+  no scanner or hook behavior changed. This infrastructure retry is not a
+  successful security result until the command joins and is verified.
+- **2026-10-08 remedy review:** exact two fingerprint additions are approved
+  by independent implementation review03bb2e57, including eight absent
+  membership controls. This is not a scanner-runtime pass. Security02 failed
+  before scanning because just could not create its runtime temporary path;
+  actual six captures are preserved under checkpoint-security02. Security03
+  uses documented JUST_TEMPDIR=/tmp with the same canonical gate and remains
+  pending. Operator commit ff15744 is the new baseline; its hook changes were
+  not made by the fingerprint builder.
+- **2026-10-08 classification update:** the renderer independently verified
+  both recurrence findings as false positives. C2 revision2 line58 columns2–42
+  fall entirely within ordinary handshake-rejection prose; the inventory
+  columns33097–33210 intersect the manager-test-87be preimage filename/SHA row,
+  whose digest matches its 58927-byte worktree and HEAD blob. A fresh builder
+  is assigned two exact commit/path/rule/line fingerprints only. Independent
+  exception review, canonical security and normal push remain pending;
+  classification does not close the gate failure. Raw Match/Secret stay private.
 - **2026-10-08 recurrence, classification pending:** completed task history
   checkpoints f56fc17/36bcd1b/58f4c34 passed normal commit hooks, but their
   normal push stopped on two security findings (522 commits, approximately

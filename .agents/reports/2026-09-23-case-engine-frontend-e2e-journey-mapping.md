@@ -18,6 +18,13 @@ This report was checked against the working tree by five independent verifiers, 
 
 ### 0.0 T09 contract review (2026-09-30; operator and independent architecture approval)
 
+**C-2 authorization update, 2026-10-08:** the operator explicitly approved all
+six recommended journal/frontier/digest/ID/bootstrap/stream-budget changes.
+See decision D-C2-recommendations-2026-10-08 and its bounded approval record.
+Earlier public approval HOLD statements are historical. Concrete revision6
+independent design review, authored specs/ADR, all-writer audit and actual
+verification remain required; approval does not establish runtime correctness.
+
 The T09 redesign trigger applies to live execution observations without a measured percentage
 and to full grounded Thoth answer disclosures. Existing `execution_trace` objects already
 represent run children; that part is an implementation gap. A scoped additive contract proposal

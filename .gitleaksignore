@@ -13,3 +13,5 @@ fd0475721fea79d899dcf0535b31f5250652ce4c:4/full.jsonl:private-key:310
 62c5e4694efcfed05925c72af15b61dc1119c11b:crates/sea-forge-agent/src/delegation.rs:generic-api-key:771
 62c5e4694efcfed05925c72af15b61dc1119c11b:crates/sea-forge-server/tests/conformance_m16.rs:generic-api-key:134
 617dac3ddf78b660ca95f1c7a53fdf59b87653d5:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-primitives-policy-gofmt-repair-result-oct07.md:generic-api-key:83
+58f4c34d9aa0f4f9534bbcb6a402600f6c9de3c0:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision2-oct08.md:generic-api-key:58
+f56fc1756a68a4ca5a42f6e98b9ec690821f5088:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/task-artifact-checkpoint-inventory-oct08.json:generic-api-key:1

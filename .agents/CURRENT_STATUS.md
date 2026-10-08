@@ -10,6 +10,41 @@ through T12, then split T13 and stop for operator review. Follow the exact
 
 ## Worktree State
 
+CURRENT VERIFIED RESUME: canonical security04 passed, scanning523 commits /
+91.37MB with no leaks. Root archived/decoded/compared all six actual captures.
+Revised Next source99dccce4 was accepted, then expected RED ran: six success
+tests fail solely on the unavailable stub, no build errors. All six originals
+are archived/compared. Fresh renderer Luna implements only delta.go; tests and
+old eleven files remain frozen. Independent runtime verification follows.
+The operator explicitly approved all six C2 recommendations after requesting
+their details; approval is recorded in c2-six-recommendations-operator-approval-
+oct08.md. Revision6 candidate7e9009c5 is written; fresh independent review is
+active before public implementation/spec release. No task settlement claimed.
+
+OPERATOR BASELINE 2026-10-08: the operator committed ff15744, including the
+previously protected staged work, task artifacts, hooks and prepared Next
+tests/stub. Preserve that commit and use it as the new baseline; the former
+eleven staged-blob preservation assertions are historical, not current-index
+requirements. Next source review rejected six impossible `settled` fixtures;
+a different builder changed only those values to `accepted`, with revised
+independent source review pending. The two exact scanner exceptions passed
+independent implementation review03bb2e57. Security02 failed before scanning
+because just's runtime temp directory is read-only; all six originals were
+archived and compared. Security03 uses documented JUST_TEMPDIR=/tmp and is
+the sole active heavy operation. C2 complete revision6 DOC-only build is active.
+
+RESUME 2026-10-08: HEAD remains 58f4c34; the three requested checkpoints
+are committed, but publication is pending. The diagnostic has joined; root
+decoded and compared all five actual capture originals (preflight exit is
+inline). Both findings are now independently classified as prose/checksum
+false positives. A fresh Luna builder is assigned only two exact fingerprint
+additions; independent review and canonical security must precede push retry.
+No scanner rule, hook or broad path exception is authorized. A fresh Luna
+critic is reviewing the prepared private Next tests/stub; no algorithm or RED
+run has been released. Earlier Luna usage errors occurred, but the renderer
+critic resumed successfully; capacity is checked per assignment. No compiler
+is active. Public C2 revision6 remains unwritten and approval held.
+
 ACTIVE: checkpoint publication stopped on two Gitleaks findings; no new
 checkpoint was pushed. Root archived and compared all six actual push01
 captures. Luna renderer owns one redacted diagnostic and the sole heavy token;
@@ -489,6 +524,13 @@ Shared pollers and full server cancellation/drain remain pending.
 
 ## Verification
 
+RESUME: revised Next source review99dccce4 approves only tests/types/stub;
+root read the complete review and six-literal diff. Actual expected RED and
+algorithm release remain pending. Security03 failed before scanning when
+Cargo advisory locking encountered a read-only sandbox path. Root archived
+and compared all six originals. Security04 is running with normal permissions,
+the same canonical gate and documented JUST_TEMPDIR=/tmp; no bypass.
+
 Renderer Oct07 independent source/runtime gates accepted: focused13/0/35,
 strict typecheck, production build with nine distinct renderer chunks, and
 canonical299/0/1674. Root verified all18 actual capture pairs and nine emitted
@@ -594,6 +636,12 @@ another gate. Existing manually transcribed/lost/corrected evidence retains
 its stated provenance limits (CW-24/CW-26).
 
 ## Blockers
+
+CURRENT AUTHORIZATION: operator approval of all six recommended C2 changes is
+recorded. Earlier public-approval HOLD text below is historical. The remaining
+C2 gates are independent complete-design review, authored spec/schema/ADR
+updates, complete writer migration audit and source/runtime proof. Material
+decisions outside the approved recommendations still require disclosure.
 
 Public C-2 correction remains held: concrete complete reviewed V4 and exact
 operator approval are required before affected public schema/runtime/version
