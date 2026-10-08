@@ -1,0 +1,6 @@
+# TOOTH (a): unknown verb -> typed unavailable, no retry storm (permanent: client_test.go)
+=== RUN   TestUnknownVerbIsTypedUnavailableWithoutRetryStorm
+--- PASS: TestUnknownVerbIsTypedUnavailableWithoutRetryStorm (0.00s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.012s
+EXIT=0

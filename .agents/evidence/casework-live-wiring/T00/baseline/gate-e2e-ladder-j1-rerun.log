@@ -1,0 +1,9 @@
+casework-ui-up: serving http://127.0.0.1:4178 (pid 813176)
+casework-ui-up: log: .sea-forge/casework-ui/ui.log
+Checking if dev server is running at http://127.0.0.1:4178
+Dev server is ready. Running tests with base=http://127.0.0.1:4178
+Output directory: /home/sprime01/projects/sea-rs/.agents/evidence/casework-live-wiring/T00/baseline/ui-ladder-j1-rerun
+[FAIL] J1: Focus substrate (4/5 steps, 122372ms)
+  Error: same objects by identity after refocus
+J1_RERUN_EXIT=1
+casework-ui-down: stopped (pid 813176)

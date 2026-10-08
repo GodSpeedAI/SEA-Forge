@@ -1,0 +1,1 @@
+{"answer": "settled", "confidence": 0.55, "distribution": {"settled": 0.55, "not_settled": 0.35, "insufficient_evidence": 0.1}, "reason": "A single builder result was admitted under a happy-path mock session with only one correction, suggesting the represented work closes, though the sparse records and lack of explicit settlement evidence leave some doubt."}

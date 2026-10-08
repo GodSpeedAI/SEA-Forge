@@ -1,0 +1,40 @@
+You are the candidate generator in a governed route-discovery loop. Propose exactly 3 candidate moves.
+
+ROUTE GOAL (frozen):
+- baseline: an e2e-happy probe at the fixture default max_rounds=4 settles (settled_accepted); established by THIS route's own probes
+- discriminator: an e2e-lying probe on this route honestly fails verification (verification_failed_nonsettlement)
+- boundary: the minimal settling budget r* in {1..8} is discovered by THIS route's own probes such that max_rounds=r* settles and max_rounds=r*-1 exhausts payment (budget_exhausted)
+
+Prior evidence (ORDERING ONLY — never a substitute for this route's own probes): on this fixture family, e2e-happy at max_rounds 1 and 2 exhausted payment and the fixture default 4 settled; e2e-lying runs have not settled. This route must still establish its own consequences.
+
+BOUNDED NEIGHBORHOOD (the ONLY operations you may propose; each costs 1 probe unit; 3 probe units remain; operations already probed or denied on this route are excluded):
+  - {op_id: run_case:e2e-happy:1, scenario: e2e-happy, max_rounds: 1}
+  - {op_id: run_case:e2e-happy:7, scenario: e2e-happy, max_rounds: 7}
+  - {op_id: run_case:e2e-lying:1, scenario: e2e-lying, max_rounds: 1}
+  - {op_id: run_case:e2e-lying:3, scenario: e2e-lying, max_rounds: 3}
+  - {op_id: run_case:e2e-lying:6, scenario: e2e-lying, max_rounds: 6}
+  - {op_id: run_case:e2e-lying:7, scenario: e2e-lying, max_rounds: 7}
+  - {op_id: run_case:e2e-lying:8, scenario: e2e-lying, max_rounds: 8}
+  - {op_id: run_case:e2e-forged-report:1, scenario: e2e-forged-report, max_rounds: 1}
+  - {op_id: run_case:e2e-forged-report:2, scenario: e2e-forged-report, max_rounds: 2}
+  - {op_id: run_case:e2e-forged-report:3, scenario: e2e-forged-report, max_rounds: 3}
+  - {op_id: run_case:e2e-forged-report:4, scenario: e2e-forged-report, max_rounds: 4}
+  - {op_id: run_case:e2e-forged-report:5, scenario: e2e-forged-report, max_rounds: 5}
+  - {op_id: run_case:e2e-forged-report:6, scenario: e2e-forged-report, max_rounds: 6}
+  - {op_id: run_case:e2e-forged-report:7, scenario: e2e-forged-report, max_rounds: 7}
+  - {op_id: run_case:e2e-forged-report:8, scenario: e2e-forged-report, max_rounds: 8}
+
+TYPED CANDIDATE SCHEMA - each candidate is EXACTLY one JSON object with EXACTLY these fields (no extra fields, no shell plans, no commands):
+{
+  "candidate_id": "<unique id, lowercase letters/digits/hyphens, e.g. cand-1>",
+  "correlation_id": "t23-route-001-iter4",
+  "operation": "run_case",
+  "bounded_input": {"scenario": "<e2e-happy|e2e-lying|e2e-forged-report>", "max_rounds": <integer 1..8>},
+  "expected_role": "<establish_baseline|establish_discriminator|boundary_probe>",
+  "prerequisite_refs": [],
+  "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+  "rationale": "<one short sentence, evidence only>"
+}
+Constraint: all three candidates must propose DISTINCT (scenario, max_rounds) operations from the bounded neighborhood.
+
+OUTPUT: STRICTLY a JSON array of exactly 3 candidate objects. No prose, no markdown fences, no commentary.

@@ -58,14 +58,28 @@ lint:
 typecheck:
     cargo check --workspace --all-targets --locked
 
+# Type-check one workspace crate. Example: `just crate-check sea-forge-core`.
+[group('quality')]
+crate-check crate:
+    cargo check -p "{{crate}}" --locked
+
+# Standard package-scoped type-check interface; retains the established crate gate.
+[group('quality')]
+check-package package:
+    just crate-check "{{package}}"
+
 # Supply-chain + secret scan: cargo-deny then gitleaks.
 # `cargo deny check advisories` fetches the RustSec database; the other
 # categories are offline. gitleaks scans staged + committed history.
 [group('quality')]
+deny:
+    cargo deny check
+
+[group('quality')]
 security:
     #!/usr/bin/env bash
     {{set}}
-    cargo deny check
+    just deny
     gitleaks detect --no-banner --redact
 
 # Apply only safe automatic fixes (rustfmt). Clippy fixes are intentionally
@@ -103,10 +117,721 @@ check:
 context-check:
     scripts/check-agent-context.sh
 
+# Verify the frozen E2E convergence preregistration (.agents/specs/
+# e2e-preregistration.yml) still matches the hash bound under
+# source.spec.sha256 in .agents/plans/e2e-plan.yml. A mismatch stops the
+# convergence/Gauntlet run until the change is reviewed and re-frozen.
+[group('quality')]
+e2e-prereg-check:
+    scripts/check-e2e-preregistration.sh
+
+# --- e2e convergence gates (plan: .agents/plans/e2e-plan.yml) ------------
+# Stable aliases bound by task T00 to the repository's real existing gates.
+# They orchestrate existing checks; they never duplicate or weaken them.
+
+# Plan global gate CHECK -> repository composite quality gate.
+[group('quality')]
+e2e-check:
+    just check
+
+# Plan global gate TEST -> repository test suite.
+[group('quality')]
+e2e-test:
+    just test
+
+# Plan global gate LINT -> formatting + lint gates.
+[group('quality')]
+e2e-lint:
+    just fmt-check
+    just lint
+
+# Plan global gate DELTA -> mechanical requirement/evidence matrix check.
+[group('quality')]
+e2e-delta-check:
+    scripts/e2e-delta-check.sh
+
+# Regenerate .agents/evidence/e2e/T00/delta0.md from the status file.
+[group('quality')]
+e2e-delta-report:
+    scripts/e2e-delta-report.sh > .agents/evidence/e2e/T00/delta0.md
+
+# Stable per-task gate entry point (plan verification.task_gate_contract).
+# Tasks bind themselves here as their contract tests land; unbound tasks fail
+# closed instead of passing vacuously.
+[group('quality')]
+e2e-gate TASK_ID:
+    #!/usr/bin/env bash
+    {{set}}
+    case "{{TASK_ID}}" in
+        T00)
+            just e2e-prereg-check
+            just e2e-delta-check
+            ;;
+        T01)
+            # Canonical semantic envelope + DomainForge identity foundation
+            # (lives in SWE_SEED swe-seed-core federation module).
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t01_envelope --test v1_contract --test federation_parity
+            ;;
+        T02)
+            # Cited context slice E2/E3/I4: canonical boundary on both sides.
+            # CK ingress gates (Context_Kernel) + SWE_SEED consumer adjudication,
+            # plus the live cross-binary MCP stdio integration (env-gated).
+            cargo test --manifest-path "${CONTEXT_KERNEL_ROOT:-$HOME/projects/Context_Kernel}/Cargo.toml" -p ck-mcp --lib --test acl_context_agent
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t02_context_slice --test context_kernel_client
+            ;;
+        T03)
+            # Navigation ingress + work contract E0/E1: GSA projector teeth +
+            # SWE_SEED canonical WorkRequested ingress incl. the cross-language
+            # golden fixture from GodSpeed-Agent's real projector.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_canonical_events.py" -q
+            GODSPEED_AGENT_ROOT="${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t03_work_ingress
+            ;;
+        T04)
+            # Governed work submission E4: SWE_SEED canonical emitter teeth
+            # (also regenerates the cross-repo golden fixture from the real
+            # producer) + SEA-Forge acceptance gate consuming that fixture.
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t04_governed_submission
+            cargo test -p sea-forge-server --test convergence_t04_governed_ingress
+            ;;
+        T05)
+            # Governed contact with reality E5A/E5B/I5: canonical
+            # AuthorizedInvocation emission from REAL authority decisions +
+            # ExecutionObservation adjudication bound to the exact authorized
+            # invocation, incl. the deny/escalate teeth through the real
+            # engine/runtime seam.
+            cargo test -p sea-forge-server --test convergence_t05_authorized_execution --test convergence_t05_execution_observation
+            ;;
+        T06)
+            # Operational settlement return E6/I6/I7: SEA-Forge settlement
+            # evaluation from ledger-settled observations against DECLARED
+            # criteria + canonical OperationalSettlement emission bound to the
+            # actual invocation chain (regenerates the cross-repo golden
+            # fixture), then SWE_SEED proof-plane adjudication consuming it —
+            # producer authority, duplicate/conflict idempotency, and no
+            # developmental promotion from operational settlement.
+            cargo test -p sea-forge-server --test convergence_t06_operational_settlement
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t06_operational_settlement
+            ;;
+        T07)
+            # Proof-to-RealityTrace boundary E7: canonical ProofCompleted
+            # emission bound to a REAL adjudicated OperationalSettlement for
+            # the SAME work_request_id (regenerates the cross-repo golden
+            # fixture), then sxr RealityTrace native ingestion consuming it —
+            # exclusive swe_seed producer authority, placeholder/drift
+            # identity gates, mandatory settlement causal parent with
+            # content-addressed reference resolution, expected-versus-observed
+            # comparison inputs preserved BY REFERENCE, and duplicate/
+            # claim-mismatch refusal so upstream facts are never rewritten.
+            cargo test --manifest-path "${SWE_SEED_ROOT:-$HOME/projects/SWE_SEED}/Cargo.toml" -p swe-seed-core --test convergence_t07_proof_completed
+            cargo test --manifest-path "${SXR_ROOT:-$HOME/projects/sxr}/Cargo.toml" -p sxr-core --test convergence_t07_proof_ingestion
+            ;;
+        T08)
+            # Expected-versus-observed developmental evidence E8/I8/I10:
+            # canonical EvidenceRecorded emission from RealityTrace over ONLY
+            # the comparison facts its REAL T07 gate preserved BY REFERENCE
+            # (regenerates the cross-repo golden fixture), then GodSpeed-
+            # Agent's Python ingestion gate consuming that fixture — exclusive
+            # realitytrace producer authority both directions, placeholder/
+            # drift identity gates, the complete nine-required-field battery,
+            # causality presence with out-of-band parent pinning,
+            # cryptographically bound difference (I10 probes detected and
+            # named), duplicate/claim-mismatch idempotency, and STRICTLY
+            # PROVISIONAL receipt: no SettlementRecorded/CapabilityUpdated or
+            # any promotion path exists from ingestion alone.
+            cargo test --manifest-path "${SXR_ROOT:-$HOME/projects/sxr}/Cargo.toml" -p sxr-core --test convergence_t08_evidence_emission
+            SXR_ROOT="${SXR_ROOT:-$HOME/projects/sxr}" uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t08_evidence_recorded.py" -q
+            ;;
+        T09)
+            # Developmental settlement + durable memory E9/I9: canonical
+            # five-type E9 emission stamped by the EXCLUSIVE producer
+            # (godspeed_agent) carrying the four common required payload
+            # fields and caused_by provenance to the justifying evidence;
+            # the durable memory gate enforcing placeholder/drift/namespace
+            # identity gates, quarantine of stripped provenance (never
+            # persisted as authoritative developmental truth), idempotent
+            # redelivery over the flock-guarded append-only ledger with
+            # restart survival via replay-through-the-gate, and the I9
+            # promotion gate — metabolized capability requires repeated
+            # settlement under DECLARED variation, composed with
+            # infer_capability_lifecycle / Capability.from_settlements;
+            # consumes the committed golden fixture from the real emitter.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t09_developmental_memory.py" -q
+            ;;
+        T10)
+            # Developmental memory feedback E10/I12: durable DevelopmentalMemory
+            # (memory_ledger -> godspeed_agent) projected from the T09 ledger
+            # via honest lifecycle (infer_capability_lifecycle / compute_metabolization),
+            # consumable for next navigation with gate-evaluation-after-memory;
+            # historical success may reduce search burden (rank boost) but never
+            # bypasses current governance, payment, or settlement-access gates;
+            # historical capability remains distinguishable from current affordance.
+            # Also bridges LearningProposalCreated to CK's learning-proposals://
+            # corpus as cited evidence with preserved provenance.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t10_developmental_memory_feedback.py" -q
+            ;;
+        T11)
+            # Whole-loop causality, replay, and recovery I2/I11/I14/I15: deterministic
+            # golden scenario E0→E10 with one stable WR_ID and one resolvable domain
+            # hash, plus cross-wire/duplicate/late/out-of-order/interruption/restart/
+            # wrong-domain harnesses. Python harness covers E0→E10 composition and
+            # GSA-side recovery; Rust harness covers SEA-Forge E4→E6 replay/late/
+            # wrong-domain/failure-visibility via real gates. No test-only E8.
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t11_whole_loop.py" -q
+            cargo test -p sea-forge-server --test convergence_t11_whole_loop
+            ;;
+        T12)
+            # Variation battery: confirms all 35 frozen requirements under 7 variation
+            # classes (prereg whole_loop_acceptance.variation_requirement.minimum_variation_classes):
+            #   success, authority_denial_or_escalation, proof_failure,
+            #   execution_failure_or_timeout, interruption_and_recovery,
+            #   duplicate_or_replayed_event, semantically_invalid_or_wrong_domain_identity.
+            # Also runs just e2e-delta-check (exit 0 required).
+            # Python harness covers E0→E10 under each variation through real GSA producers
+            # (project_desired_direction, project_work_requested, ingest_evidence_recorded,
+            # persist_developmental_event, build_developmental_memory_from_store).
+            # Rust harness covers SEA-Forge E4→E6 under each variation through real gates
+            # (accept_governed_work_request, emit_authorized_invocation, InvocationLedger,
+            # emit_operational_settlement).
+            uv run --project "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}" --extra dev python -m pytest "${GODSPEED_AGENT_ROOT:-$HOME/projects/godspeed_agent}/tests/test_convergence_t12_variation.py" -q
+            cargo test -p sea-forge-server --test convergence_t12_variation
+            just e2e-delta-check
+            ;;
+        *)
+            echo "fail: no gate is bound for {{TASK_ID}} yet; bind it in the e2e-gate recipe when the task's contract tests land" >&2
+            exit 1
+            ;;
+    esac
+
+# Verify the handoff a cold independent Workbench evaluator needs: concrete
+# commands and fixtures, exact owner-approved exclusions, and no protocol
+# placeholders. This stays outside CI until Task 12 owns release aggregation.
+[group('workbench')]
+workbench-completion-eval-inputs-check:
+    scripts/check-workbench-completion-eval-inputs.sh
+
 # Run the test suite (Shell-SPEC §10.3).
 [group('quality')]
 test:
     cargo test --workspace --all-features --locked
+
+# Test one workspace crate, optionally filtering by test name.
+# Example: `just crate-test sea-forge-core authority`.
+[group('quality')]
+crate-test crate test_filter='':
+    cargo test -p "{{crate}}" --locked "{{test_filter}}"
+
+# Standard package-scoped test interface; retains the established crate gate.
+[group('quality')]
+test-package package:
+    just crate-test "{{package}}"
+
+# Run doctests separately; the canonical test gate uses the full feature set.
+[group('quality')]
+test-doc:
+    cargo test --workspace --all-features --doc --locked
+
+# Explicit developer diagnostics. These are deliberately outside check, ci,
+# and verify: each is substantially more expensive than the normal gate.
+[group('quality')]
+timings:
+    cargo build --workspace --all-targets --locked --timings
+
+[group('quality')]
+coverage:
+    cargo llvm-cov --workspace --all-features --locked --html
+
+[group('quality')]
+mutation:
+    cargo mutants --workspace --all-features
+
+# Print compiler-cache diagnostics without making sccache a repository requirement.
+# Bound the client call so an unreachable cache daemon cannot hang a developer shell.
+[group('quality')]
+cache-stats:
+    #!/usr/bin/env bash
+    {{set}}
+    if ! command -v sccache >/dev/null 2>&1; then
+        echo "sccache is not installed or not on PATH"
+        exit 0
+    fi
+    sccache --show-stats &
+    pid=$!
+    for _ in {1..10}; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            wait "$pid"
+            exit $?
+        fi
+        sleep 1
+    done
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+    echo "sccache --show-stats timed out after 10 seconds" >&2
+    exit 1
+
+# Dependency-boundary gate (spec-full §6.1, spec-agent-orchestration G1/T12.5).
+# Kernel crates MUST stay synchronous: no async runtime and no HTTP client.
+# Only the approved adapter/runtime crates (sea-forge-agent, sea-forge-server)
+# may pull async or HTTP deps. Async runtimes: tokio, async-std, smol, embassy.
+# HTTP clients: reqwest, hyper, ureq, isahc, surf, attohttpc, minreq.
+[group('quality')]
+no-async-kernel:
+    #!/usr/bin/env bash
+    {{set}}
+    kernel_crates=(
+        sea-forge-core sea-forge-domain sea-forge-authority sea-forge-planner
+        sea-forge-sandbox sea-forge-runtime sea-forge-trace sea-forge-evidence
+        sea-forge-settlement sea-forge-capability sea-forge-extension
+        sea-forge-ledger sea-forge-domainforge sea-forge-spec-pipeline
+        sea-forge-cell sea-forge-artifact-ip sea-forge-self-model
+        sea-forge-thoth sea-forge-case-runner
+    )
+    forbidden_deps=(
+        tokio async-std smol embassy executor
+        reqwest hyper ureq isahc surf attohttpc minreq actix-http awc
+    )
+    status=0
+    for crate in "${kernel_crates[@]}"; do
+        for dep in "${forbidden_deps[@]}"; do
+            if output=$(cargo tree -i "$dep" -p "$crate" --locked 2>&1) \
+                && echo "$output" | grep -q "^$dep "; then
+                echo "fail: kernel crate $crate depends on $dep" >&2
+                status=1
+            fi
+        done
+    done
+    if [ "$status" -ne 0 ]; then
+        echo "fail: forbidden async/HTTP dependency in a kernel crate" >&2
+        exit 1
+    fi
+    echo "ok: no async runtime or HTTP client in ${#kernel_crates[@]} kernel crates"
+
+# Workbench (Bun workspace) lint + typecheck + build + test. Not part of the
+# kernel `check`/`ci` gates — the frontend is developed and gated separately
+# per docs/decisions/ADR-004-workbench-stack.md.
+[group('quality')]
+workbench-check: workbench-contracts-gate workbench-tauri-test
+    #!/usr/bin/env bash
+    {{set}}
+    cd workbench && bun install --frozen-lockfile && bun run check && bun run build && bun run test
+
+# Stage the server binary where `bundle.externalBin` expects it.
+#
+# Decision U-06: the packaged Workbench supervises its own kernel, so the server
+# ships inside the bundle as a Tauri sidecar. Tauri resolves sidecars by
+# target-triple suffix, and its build script fails outright when the named
+# binary is absent — which is why this is a dependency of every recipe that
+# compiles the host, not just of the packaging one.
+#
+# The staged copy is a build artifact and is gitignored. `debug` keeps the
+# workbench test loop fast; packaging uses `release`.
+[group('workbench')]
+workbench-sidecar profile='debug':
+    #!/usr/bin/env bash
+    {{set}}
+    triple="$(rustc -vV | sed -n 's/^host: //p')"
+    if [ "{{profile}}" = "release" ]; then
+        cargo build --locked --release -p sea-forge-server --bin sea-forge-server
+        built="target/release/sea-forge-server"
+    else
+        cargo build --locked -p sea-forge-server --bin sea-forge-server
+        built="target/debug/sea-forge-server"
+    fi
+    dest="workbench/apps/desktop/src-tauri/binaries/sea-forge-server-${triple}"
+    mkdir -p "$(dirname "$dest")"
+    # `cp` rather than a symlink: Tauri's bundler copies the file into the
+    # package, and a dangling link would ship a broken sidecar.
+    cp -f "$built" "$dest"
+    echo "[sidecar] staged {{profile}} sea-forge-server -> $dest"
+
+# Launch the Tauri desktop application with a debug sidecar.
+[group('workbench')]
+workbench-tauri-dev: (workbench-sidecar 'debug')
+    #!/usr/bin/env bash
+    {{set}}
+    cd workbench && bun install --frozen-lockfile
+    cd apps/desktop && bun run tauri dev
+
+# Build the standalone Tauri host crate without packaging the Workbench.
+[group('workbench')]
+workbench-host-build:
+    cargo build --locked --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
+
+# Build the installable Linux packages (SF-012).
+#
+# `deb` and `rpm` only. Every other target `tauri.conf.json` used to list has
+# been removed for the same reason: advertising a target nobody has built is
+# the over-claim SF-013 forbids.
+#
+#   * macOS (`app`, `dmg`) — the packet requires its Seatbelt journey to pass
+#     before macOS may be called supported, and that has not been run.
+#   * `appimage` — needs `libfuse2`, which AppImage's own tooling dlopens as
+#     `libfuse.so.2`. This host has FUSE 3 only, so linuxdeploy exits before
+#     producing anything. Re-enable by installing `libfuse2` and adding
+#     `"appimage"` back to `bundle.targets`; nothing else has to change.
+[group('workbench')]
+workbench-package: (workbench-sidecar 'release')
+    #!/usr/bin/env bash
+    {{set}}
+    cd workbench && bun install --frozen-lockfile
+    cd apps/desktop && bun run tauri build
+    echo "[package] bundles under workbench/apps/desktop/src-tauri/target/release/bundle/"
+
+# Inventory the built package: what actually ships, and what must not.
+#
+# The acceptance criteria are negative claims ("no Bun runtime, no untracked
+# generated source"), and a negative claim nobody checks is just a hope.
+[group('workbench')]
+workbench-package-inventory:
+    #!/usr/bin/env bash
+    {{set}}
+    bundle="workbench/apps/desktop/src-tauri/target/release/bundle"
+    deb="$(find "$bundle/deb" -name '*.deb' -print -quit 2>/dev/null || true)"
+    if [ -z "$deb" ]; then
+        echo "fail: no .deb found under $bundle — run 'just workbench-package' first" >&2
+        exit 1
+    fi
+    echo "[inventory] $deb"
+    contents="$(dpkg-deb -c "$deb")"
+    echo "$contents" | awk '{print $6, $3}' | sort
+    status=0
+    # A Bun or Node runtime in the bundle would mean the renderer is being
+    # served rather than compiled in — the frontend must ship as static assets.
+    if echo "$contents" | grep -Eq '/(bun|node|npm|deno)$'; then
+        echo "fail: a JavaScript runtime is present in the bundle" >&2
+        status=1
+    fi
+    # The sidecar is the whole point of U-06; a bundle without it cannot start
+    # a cell on a clean host.
+    if ! echo "$contents" | grep -q 'sea-forge-server'; then
+        echo "fail: the sea-forge-server sidecar is missing from the bundle" >&2
+        status=1
+    fi
+    # Source maps expose the renderer's original sources and are not needed to
+    # run it.
+    if echo "$contents" | grep -q '\.map$'; then
+        echo "fail: source maps are present in the bundle" >&2
+        status=1
+    fi
+    if [ "$status" -ne 0 ]; then exit 1; fi
+    echo "[inventory] ok: sidecar present, no JS runtime, no source maps"
+
+# --- demonstration cell -----------------------------------------------------
+
+# Seed a cell with real, inspectable records so the Workbench has something to
+# show on a fresh machine.
+#
+# These are not fixtures. Every record is produced by really running the kernel
+# — real runs, really authorized, really settled, really committed. A seeded
+# record survives being followed to its evidence, because there is nothing
+# behind it but the same code path an operator would have taken. Demo data that
+# could not survive that inspection would be fabricated evidence, which is the
+# one thing this system must never contain.
+[group('workbench')]
+cell-seed root='':
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/seed-cell.sh {{root}}
+
+# Remove the demonstration cell. Refuses anything without the seed marker.
+[group('workbench')]
+cell-reset root='':
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/reset-cell.sh {{root}} --yes
+
+# Open the packaged Workbench against the demonstration cell.
+#
+# No server is started here on purpose: the app supervises its own kernel
+# (U-06), so this is also the demonstration that it does.
+[group('workbench')]
+workbench-demo root='':
+    #!/usr/bin/env bash
+    {{set}}
+    cell="{{root}}"
+    [ -n "$cell" ] || cell="${SEA_FORGE_DEMO_ROOT:-$HOME/.sea-forge-demo}"
+    app="workbench/apps/desktop/src-tauri/target/release/sea-forge-workbench"
+    if [ ! -x "$app" ]; then
+        echo "no packaged Workbench at $app — run 'just workbench-package' first" >&2
+        exit 1
+    fi
+    if [ ! -d "$cell" ]; then
+        echo "no cell at $cell — run 'just cell-seed' first" >&2
+        exit 1
+    fi
+    echo "[demo] opening $cell"
+    SEA_FORGE_ROOT="$cell" \
+      SEA_FORGE_SOCKET="${SEA_FORGE_DEMO_SOCKET:-/tmp/sea-forge-demo.sock}" \
+      "$app"
+
+# Browser-only renderer evidence, driven by agent-browser without injecting
+# `__TAURI_INTERNALS__`. This is deliberately not an integrated Tauri claim:
+# Chrome cannot exercise Tauri's Linux WebKit bridge. It proves the renderer
+# fails closed when no native bridge is present and records screenshot/a11y
+# evidence for that condition.
+[group('workbench')]
+workbench-e2e-agent-browser:
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/workbench-e2e-agent-browser.sh
+
+# Case-authoring proof journeys (stale-precondition repair; dropped-commit
+# recovery without duplicate side effects) driven by agent-browser against the
+# real renderer with a mocked Tauri IPC bridge — the agent-browser counterpart
+# of the Playwright mocked-IPC harness, not real-stack coverage. Boots its own
+# ephemeral Vite server; requires `just workbench-check`-installed deps.
+[group('workbench')]
+workbench-e2e-case-authoring:
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/workbench-e2e-case-authoring.sh
+
+# Native Linux integration evidence. This packages the app, seeds a temporary
+# cell through real kernel/server operations, and drives the compiled WebKit
+# Workbench through Tauri's native WebDriver intermediary. It fails closed when
+# the machine lacks the documented `webkit2gtk-driver` prerequisite; it never
+# substitutes the mocked Playwright harness.
+[group('workbench')]
+workbench-e2e-real filter='':
+    #!/usr/bin/env bash
+    {{set}}
+    scripts/workbench-e2e-real.sh --preflight
+    just workbench-package
+    scripts/workbench-e2e-real.sh "{{filter}}"
+
+# The desktop host's own Rust tests.
+#
+# `src-tauri` is a separate Cargo workspace (ADR-004, K-06), so
+# `cargo test --workspace` from the repo root never compiles it. Nothing else
+# ran these, and the gap was not theoretical: the SF-005 identity gate made
+# every protected verb require an actor block, which broke the host's
+# `tests/bridge.rs` correlation-recovery scenarios — and the whole kernel suite
+# stayed green through it, because it never built them.
+#
+# This is the host's transport: the SFWP socket client, response pairing,
+# reconnect, and the actor the renderer is structurally unable to forge. It
+# needs a gate of its own precisely because it is out of the root workspace's
+# reach.
+[group('quality')]
+workbench-tauri-test: (workbench-sidecar 'debug')
+    #!/usr/bin/env bash
+    {{set}}
+    # Lint before test, for the same reason the tests exist at all: the root
+    # workspace's `just lint` cannot see this crate either, so without this line
+    # `src-tauri` is the one place in the repository where clippy never runs.
+    # It found dead code and an `.err().expect()` the day it was added.
+    cargo clippy --all-targets --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml -- -D warnings
+    cargo test --locked --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
+    cargo fmt --check --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
+
+# Regenerate Rust schemas and their TypeScript/AJV projections.
+[group('quality')]
+workbench-contracts-generate:
+    #!/usr/bin/env bash
+    {{set}}
+    cargo run --locked -p sea-forge-server --bin gen_sfwp_schema
+    cd workbench && bun install --frozen-lockfile && bun run generate:contracts
+
+# Validate the repository-local Workbench skill after editing it.
+[group('quality')]
+workbench-skill-check:
+    python3 .agents/skills/building-sea-forge-workbench/scripts/validate-skill.py
+
+# Generated-zone drift gate (ADR-005, GEN-01, API-01, ADR-004).
+#
+# Rust types are canonical; the TS interfaces, AJV validators, and UI token
+# sheet are committed *projections*. This regenerates each one and requires the
+# result to be byte-identical to what is committed. The Rust->JSON-Schema half
+# is already gated by `conformance_sfwp::generated_schemas_are_committed_and_current`,
+# so it is not repeated here.
+#
+# Workbench-only by design: the kernel gates (`check`, `ci`) must not acquire a
+# Bun dependency (K-06).
+[group('quality')]
+workbench-contracts-gate:
+    #!/usr/bin/env bash
+    {{set}}
+    cd workbench
+    bun install --frozen-lockfile
+    bun run generate:contracts
+    # `git diff` alone would pass a regeneration that *added* a file — a new
+    # SFWP type shows up untracked, not modified. Both checks are needed.
+    if ! git diff --exit-code -- packages/contracts/generated; then
+        echo "fail: generated TS/AJV contracts drifted from the committed schemas." >&2
+        echo "      run 'just workbench-contracts-generate' and commit the result." >&2
+        exit 1
+    fi
+    untracked="$(git status --porcelain --untracked-files=all -- packages/contracts/generated)"
+    if [ -n "$untracked" ]; then
+        echo "fail: generation produced files that are not committed:" >&2
+        echo "$untracked" >&2
+        exit 1
+    fi
+    # The token sheet is a byte copy of the spec source, not a transform.
+    # The contracts gate invokes the token drift script directly because the
+    # repository pins no separate Node toolchain.
+    bun packages/sea-forge-ui-tokens/scripts/check-drift.mjs
+    # ADR-004: src-tauri is its own Cargo workspace root. If its `[workspace]`
+    # table were removed, cargo would walk up and adopt the repository root,
+    # pulling Tauri's async dependency tree into the kernel workspace (BUILD-01).
+    # `cargo metadata` names the root it actually resolved, which a grep for
+    # `[workspace]` cannot.
+    expected="$(cd apps/desktop/src-tauri && pwd -P)"
+    # `|| true`: removing the table makes cargo error outright rather than
+    # report a different root, and under `set -e` that would kill the recipe
+    # before it could say why. An empty `actual` fails the comparison below and
+    # prints the fix.
+    actual="$(cargo metadata --no-deps --offline --format-version 1 \
+        --manifest-path apps/desktop/src-tauri/Cargo.toml 2>/dev/null \
+        | jq -r .workspace_root || true)"
+    if [ "$actual" != "$expected" ]; then
+        echo "fail: src-tauri resolved to workspace root '$actual', expected '$expected'." >&2
+        echo "      restore the empty [workspace] table in apps/desktop/src-tauri/Cargo.toml (ADR-004)." >&2
+        exit 1
+    fi
+    echo "ok: generated contracts, UI tokens, and the Tauri workspace boundary are current"
+
+# Start the Workbench Vite dev server in the background (http://localhost:1420).
+[group('workbench')]
+workbench-dev-up:
+    #!/usr/bin/env bash
+    {{set}}
+    mkdir -p workbench/.pid
+    if [ -f workbench/.pid/dev.pid ] && kill -0 "$(cat workbench/.pid/dev.pid)" 2>/dev/null; then
+        echo "[workbench-dev] already running (PID $(cat workbench/.pid/dev.pid)) on http://localhost:1420"
+        exit 0
+    fi
+    # Abort if another process already owns port 1420
+    if fuser 1420/tcp >/dev/null 2>&1; then
+        echo "[workbench-dev] fail: port 1420 is already in use (run 'fuser -k 1420/tcp' to clear it)" >&2
+        exit 1
+    fi
+    rm -f workbench/.pid/dev.pid
+    echo "[workbench-dev] starting Vite dev server..."
+    cd workbench && mkdir -p .pid
+    setsid bash -c 'echo $$ > .pid/dev.pid && exec bun run dev > .pid/dev.log 2>&1' &
+    sleep 2
+    if [ -f .pid/dev.pid ]; then
+        pid=$(cat .pid/dev.pid)
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "[workbench-dev] started (PID $pid) on http://localhost:1420 — log: workbench/.pid/dev.log"
+        else
+            echo "[workbench-dev] fail: process $pid exited during startup — see workbench/.pid/dev.log" >&2
+            rm -f .pid/dev.pid
+            exit 1
+        fi
+    else
+        echo "[workbench-dev] fail: pid file was not created" >&2
+        exit 1
+    fi
+
+# Stop the running Workbench Vite dev server.
+#
+# Teardown touches only the PID recorded by `workbench-dev-up`
+# (`workbench/.pid/dev.pid`; that recipe starts the server as a `setsid`
+# session leader, so signalling the recorded PID's group reaches Vite and its
+# children). Nothing is killed merely for listening on port 1420: a missing or
+# stale pid file is reported and cleaned up, never turned into collateral
+# damage (F-25.d).
+[group('workbench')]
+workbench-dev-down:
+    #!/usr/bin/env bash
+    {{set}}
+    pid_file="workbench/.pid/dev.pid"
+    if [ ! -f "$pid_file" ]; then
+        echo "[workbench-dev] warn: no pid file at $pid_file — nothing was started by workbench-dev-up; port 1420 is left untouched" >&2
+        exit 0
+    fi
+    pid=$(cat "$pid_file")
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-dev] warn: recorded PID $pid is not running — removing stale $pid_file" >&2
+        rm -f "$pid_file"
+        exit 0
+    fi
+    echo "[workbench-dev] stopping PID $pid"
+    kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+    for i in 1 2 3 4 5; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 1
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-dev] PID $pid did not exit; sending SIGKILL to its group"
+        kill -9 -- -"$pid" 2>/dev/null || true
+    fi
+    rm -f "$pid_file"
+    echo "[workbench-dev] stopped"
+
+# Start Storybook component explorer in the background (http://localhost:6006).
+[group('workbench')]
+workbench-storybook-up:
+    #!/usr/bin/env bash
+    {{set}}
+    mkdir -p workbench/.pid
+    if [ -f workbench/.pid/storybook.pid ] && kill -0 "$(cat workbench/.pid/storybook.pid)" 2>/dev/null; then
+        echo "[workbench-storybook] already running (PID $(cat workbench/.pid/storybook.pid)) on http://localhost:6006"
+        exit 0
+    fi
+    # Abort if another process already owns port 6006
+    if fuser 6006/tcp >/dev/null 2>&1; then
+        echo "[workbench-storybook] fail: port 6006 is already in use (run 'fuser -k 6006/tcp' to clear it)" >&2
+        exit 1
+    fi
+    rm -f workbench/.pid/storybook.pid
+    echo "[workbench-storybook] starting Storybook..."
+    cd workbench && mkdir -p .pid
+    setsid bash -c 'echo $$ > .pid/storybook.pid && exec bun run --cwd packages/sea-forge-ui-components storybook > .pid/storybook.log 2>&1' &
+    sleep 3
+    if [ -f .pid/storybook.pid ]; then
+        pid=$(cat .pid/storybook.pid)
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "[workbench-storybook] started (PID $pid) on http://localhost:6006 — log: workbench/.pid/storybook.log"
+        else
+            echo "[workbench-storybook] fail: process $pid exited during startup — see workbench/.pid/storybook.log" >&2
+            rm -f .pid/storybook.pid
+            exit 1
+        fi
+    else
+        echo "[workbench-storybook] fail: pid file was not created" >&2
+        exit 1
+    fi
+
+# Stop the running Storybook component explorer.
+#
+# Same PID-file-scoped teardown as `workbench-dev-down` (F-25.d): only the
+# process group recorded by `workbench-storybook-up` is signalled; port 6006
+# is never used to identify a victim.
+[group('workbench')]
+workbench-storybook-down:
+    #!/usr/bin/env bash
+    {{set}}
+    pid_file="workbench/.pid/storybook.pid"
+    if [ ! -f "$pid_file" ]; then
+        echo "[workbench-storybook] warn: no pid file at $pid_file — nothing was started by workbench-storybook-up; port 6006 is left untouched" >&2
+        exit 0
+    fi
+    pid=$(cat "$pid_file")
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-storybook] warn: recorded PID $pid is not running — removing stale $pid_file" >&2
+        rm -f "$pid_file"
+        exit 0
+    fi
+    echo "[workbench-storybook] stopping PID $pid"
+    kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+    for i in 1 2 3 4 5; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 1
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "[workbench-storybook] PID $pid did not exit; sending SIGKILL to its group"
+        kill -9 -- -"$pid" 2>/dev/null || true
+    fi
+    rm -f "$pid_file"
+    echo "[workbench-storybook] stopped"
+
+# Convenient aliases for Workbench dev server and Storybook commands
+alias dev-up := workbench-dev-up
+alias dev-down := workbench-dev-down
+alias storybook-up := workbench-storybook-up
+alias storybook-down := workbench-storybook-down
 
 # Canonical clean, deterministic, noninteractive CI verification.
 # GitHub Actions invokes this (or its documented constituent recipes when
@@ -121,8 +846,14 @@ ci:
     just typecheck
     just security
     just test
+    just no-async-kernel
     just build
     echo "[ci] all gates green"
+
+# Standard normal-verification interface; ci remains the authoritative recipe.
+[group('quality')]
+verify:
+    just ci
 
 # Re-converge after a pull that touched Cargo.toml/Cargo.lock/rust-toolchain.
 [group('setup')]
@@ -400,3 +1131,558 @@ publish-bootstrap crate:
     just release-check
     cargo publish --locked -p {{crate}}
     echo "[publish-bootstrap] {{crate}} published; now link the repo on https://crates.io/crates/{{crate}}/settings"
+
+# --- casework-environment plan (plan: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml)
+# GATE_GO, activated by T01: Go format, vet, and tests for the casework front end. This is the gate
+# the plan names `just casework-go-check`; it must observe the real implementation, never a stub.
+[group('casework')]
+casework-go-check:
+    #!/usr/bin/env bash
+    {{set}}
+    module="apps/godspeed-casework-go"
+    if [ ! -f "$module/go.mod" ]; then
+      echo "casework-go-check: no Go module at $module" >&2
+      exit 1
+    fi
+    if ! command -v go >/dev/null 2>&1; then
+      echo "casework-go-check: the Go toolchain is required (mise declares it in mise.toml)" >&2
+      exit 1
+    fi
+    cd "$module"
+    unformatted="$(gofmt -l .)"
+    if [ -n "$unformatted" ]; then
+      echo "casework-go-check: gofmt would rewrite:" >&2
+      printf '%s\n' "$unformatted" >&2
+      exit 1
+    fi
+    go vet ./...
+    go test ./...
+    echo "casework-go-check: format, vet and tests green"
+
+# GATE_UI, activated by T03: frozen install, typecheck, production build and tests for the cognitive
+# UI app. The plan names `just casework-ui-check`; it must observe the real app, never a stub.
+[group('casework')]
+casework-ui-check:
+    #!/usr/bin/env bash
+    {{set}}
+    app="apps/godspeed-cognitive-ui"
+    if [ ! -f "$app/package.json" ]; then
+      echo "casework-ui-check: no app at $app" >&2
+      exit 1
+    fi
+    if ! command -v bun >/dev/null 2>&1; then
+      echo "casework-ui-check: bun is required (mise declares it in mise.toml)" >&2
+      exit 1
+    fi
+    cd "$app"
+    bun install --frozen-lockfile
+    bun run typecheck
+    bun run build
+    bun test
+    echo "casework-ui-check: frozen install, typecheck, build and tests green"
+
+# Operator controls for the fixture-backed cognitive UI (T03). The dev server binds a fixed port
+# (default 4178, strict) so the printed URL is the served URL. `up` is idempotent: if something
+# already answers on the port it says so and reuses it. Detached via setsid; pidfile and log live
+# under /.sea-forge/ (gitignored).
+casework_ui_port := "4178"
+
+[group('casework')]
+casework-ui-up port=casework_ui_port:
+    #!/usr/bin/env bash
+    {{set}}
+    app="apps/godspeed-cognitive-ui"
+    url="http://127.0.0.1:{{port}}"
+    run_dir=".sea-forge/casework-ui"
+    pidfile="$run_dir/ui.pid"
+    logfile="$run_dir/ui.log"
+    mkdir -p "$run_dir"
+    if curl -sSf -o /dev/null --max-time 2 "$url" 2>/dev/null; then
+      echo "casework-ui-up: something already answers at $url - reusing it (log: $logfile)"
+      exit 0
+    fi
+    if [ -f "$pidfile" ]; then
+      stale="$(cat "$pidfile")"
+      if kill -0 "$stale" 2>/dev/null; then
+        echo "casework-ui-up: pid $stale is alive but nothing answers on the port; stopping it" >&2
+        kill -TERM -- -"$stale" 2>/dev/null || kill -TERM "$stale" 2>/dev/null || true
+        sleep 1
+      fi
+      rm -f "$pidfile"
+    fi
+    if [ ! -d "$app/node_modules" ]; then
+      echo "casework-ui-up: installing dependencies (frozen lockfile)"
+      (cd "$app" && bun install --frozen-lockfile)
+    fi
+    cd "$app"
+    setsid nohup bun run dev --port "{{port}}" --strictPort >"../../$logfile" 2>&1 &
+    pid=$!
+    echo "$pid" > "../../$pidfile"
+    cd ../..
+    for i in $(seq 1 50); do
+      if curl -sSf -o /dev/null --max-time 1 "$url" 2>/dev/null; then
+        echo "casework-ui-up: serving $url (pid $pid)"
+        echo "casework-ui-up: log: $logfile"
+        exit 0
+      fi
+      if ! kill -0 "$pid" 2>/dev/null; then
+        echo "casework-ui-up: dev server exited during startup; log tail:" >&2
+        tail -20 "$logfile" >&2 || true
+        rm -f "$pidfile"
+        exit 1
+      fi
+      sleep 0.2
+    done
+    echo "casework-ui-up: nothing answered $url within 10s; log tail:" >&2
+    tail -20 "$logfile" >&2 || true
+    exit 1
+
+# Stop the dev server started by `casework-ui-up`. Idempotent; refuses to kill a pid that is not the
+# UI (guards against pid reuse after a reboot).
+[group('casework')]
+casework-ui-down:
+    #!/usr/bin/env bash
+    {{set}}
+    run_dir=".sea-forge/casework-ui"
+    pidfile="$run_dir/ui.pid"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-ui-down: not running (no pidfile)"
+      exit 0
+    fi
+    pid="$(cat "$pidfile")"
+    if ! kill -0 "$pid" 2>/dev/null; then
+      rm -f "$pidfile"
+      echo "casework-ui-down: not running (stale pidfile removed)"
+      exit 0
+    fi
+    if ! tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -qiE 'bun|vite|node'; then
+      echo "casework-ui-down: pid $pid does not look like the casework UI; not killing it" >&2
+      rm -f "$pidfile"
+      exit 1
+    fi
+    kill -TERM -- -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    for i in $(seq 1 25); do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.2
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+      kill -KILL -- -"$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
+    fi
+    rm -f "$pidfile"
+    echo "casework-ui-down: stopped (pid $pid)"
+
+# Report up/down, the URL, the pid, and the last log lines — the first thing to run when the UI
+# looks wrong.
+[group('casework')]
+casework-ui-status port=casework_ui_port:
+    #!/usr/bin/env bash
+    {{set}}
+    url="http://127.0.0.1:{{port}}"
+    run_dir=".sea-forge/casework-ui"
+    pidfile="$run_dir/ui.pid"
+    logfile="$run_dir/ui.log"
+    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      echo "casework-ui-status: up (pid $(cat "$pidfile"))"
+    else
+      echo "casework-ui-status: down (no live pidfile)"
+    fi
+    if curl -sSf -o /dev/null --max-time 2 "$url" 2>/dev/null; then
+      echo "casework-ui-status: answering at $url"
+    else
+      echo "casework-ui-status: nothing answers at $url"
+    fi
+    if [ -f "$logfile" ]; then
+      echo "casework-ui-status: last log lines ($logfile):"
+      tail -5 "$logfile" | sed 's/^/  /'
+    fi
+
+# Operator controls for the Go casework boundary (serve mode, fixture-labeled provider). Mirrors
+# the cognitive UI recipe discipline: fixed loopback address, idempotent up, pidfile + log under
+# .sea-forge/casework-go/ (gitignored), down refuses to kill a foreign pid.
+casework_go_addr := "127.0.0.1:4179"
+
+# Build and start the Go casework boundary server in the background (default 127.0.0.1:4179).
+[group('casework')]
+casework-go-up addr=casework_go_addr:
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    module="apps/godspeed-casework-go"
+    run_dir=".sea-forge/casework-go"
+    pidfile="$run_dir/server.pid"
+    logfile="$run_dir/server.log"
+    bin="$run_dir/server-bin"
+    health="http://127.0.0.1:${addr#*:}/api/healthz"
+    mkdir -p "$run_dir"
+    if curl -sSf -o /dev/null --max-time 2 "$health" 2>/dev/null; then
+      echo "casework-go-up: something already answers at $health - reusing it (log: $logfile)"
+      exit 0
+    fi
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        echo "casework-go-up: pid $pid is alive but nothing answers on the addr; stopping it" >&2
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+      fi
+      rm -f "$pidfile"
+    fi
+    echo "casework-go-up: building server binary (fixture stack builds with -tags casework_fixture; the default build cannot select fixtures)"
+    (cd "$module" && go build -tags casework_fixture -o "../../$bin" ./cmd/godspeed-casework) || exit 1
+    echo "casework-go-up: starting (fixture-labeled provider) on $addr"
+    setsid nohup "$bin" -serve -addr "$addr" -config "$module/configs/fixture-serve.json" >>"$logfile" 2>&1 &
+    echo $! > "$pidfile"
+    for _ in $(seq 1 40); do
+      if curl -sSf -o /dev/null --max-time 1 "$health" 2>/dev/null; then
+        echo "casework-go-up: answering at $health (pid $(cat "$pidfile"), log: $logfile)"
+        exit 0
+      fi
+      sleep 0.5
+    done
+    echo "casework-go-up: server did not become healthy; see $logfile" >&2
+    exit 1
+
+# Stop the Go casework boundary server.
+[group('casework')]
+casework-go-down addr=casework_go_addr:
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    pidfile=".sea-forge/casework-go/server.pid"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-go-down: no pidfile (nothing to stop)"
+      exit 0
+    fi
+    pid="$(cat "$pidfile")"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      if ! grep -aq "godspeed-casework" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-go-down: pid $pid is not the casework server; refusing to kill it" >&2
+        exit 1
+      fi
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+      echo "casework-go-down: stopped $pid"
+    else
+      echo "casework-go-down: pid $pid is not running"
+    fi
+    rm -f "$pidfile"
+
+# Report up/down status, health endpoint, pid, and logs for the Go casework boundary server.
+[group('casework')]
+casework-go-status addr=casework_go_addr:
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    pidfile=".sea-forge/casework-go/server.pid"
+    logfile=".sea-forge/casework-go/server.log"
+    health="http://127.0.0.1:${addr#*:}/api/healthz"
+    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      echo "casework-go-status: up (pid $(cat "$pidfile"))"
+    else
+      echo "casework-go-status: down"
+    fi
+    if curl -sSf --max-time 2 "$health" 2>/dev/null; then
+      echo ""
+      echo "casework-go-status: answering at $health"
+    else
+      echo "casework-go-status: nothing answers at $health"
+    fi
+    if [ -f "$logfile" ]; then
+      echo "casework-go-status: last log lines ($logfile):"
+      tail -5 "$logfile" | sed 's/^/  /'
+    fi
+
+# Start both Go casework boundary and cognitive UI dev servers for the full demo experience.
+[group('casework')]
+casework-demo-up: casework-go-up casework-ui-up
+    @echo "casework-demo-up: cognitive environment at http://127.0.0.1:4178 (go boundary at {{casework_go_addr}})"
+
+# --- casework live-stack wiring (plan: .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml) ---
+# Operator controls for the REAL live stack: the Rust sea-forge-server kernel plus the Go
+# godspeed-casework gateway, both against one durable cell under .sea-forge/casework-live/
+# (gitignored). The fixture-stack recipes above (casework-go-up/down/status, casework-demo-up)
+# are untouched; the UI dev-server recipes (casework-ui-up/down/status) are shared by both
+# stacks (vite on :4178 proxies /api to the gateway addr).
+#
+# Honesty note: until plan task T05 lands, the live gateway still serves FIXTURE-LABELED
+# in-process providers (configs/live-serve.json endpoints are "fixture:in-process"); only the
+# cell/evidence roots are live. The `up` recipes have teeth: a second server or gateway start
+# exits non-zero instead of silently reusing or double-starting.
+casework_live_dir := ".sea-forge/casework-live"
+
+# Initialize the live cell (idempotent): create .sea-forge/casework-live/cell and, on first run,
+# the T03 seed — server.yaml with the invoking OS user bound to the operator actor, the E2E plan
+# templates from fixtures/cells/e2e/templates/, and the E2E authority policy at
+# authority/active-policy.json. Gateway/security-officer/lifecycle-custodian bindings are still
+# absent (they arrive with T02). An existing server.yaml is never modified: on a re-run the recipe
+# only prints what is installed.
+[group('casework')]
+casework-cell-init:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    cell="$live_dir/cell"
+    fixtures="fixtures/cells/e2e"
+    mkdir -p "$live_dir" "$cell"
+    if [ -f "$cell/server.yaml" ]; then
+      echo "casework-cell-init: cell already initialized at $cell (server.yaml present; not modified)"
+      echo "casework-cell-init: installed templates: $(ls "$cell/templates"/*.yaml 2>/dev/null | xargs -r -n1 basename | tr '\n' ' ')"
+      echo "casework-cell-init: active policy: $([ -f "$cell/authority/active-policy.json" ] && echo "$cell/authority/active-policy.json" || echo ABSENT)"
+      echo "casework-cell-init: identity bindings in server.yaml: $(grep -c 'actor_id:' "$cell/server.yaml" 2>/dev/null || echo 0)"
+      echo "casework-cell-init: cell path: $(cd "$cell" && pwd)"
+      exit 0
+    fi
+    uid="$(id -u)"
+    cat > "$cell/server.yaml" <<YAML
+    # Live-stack cell (plan casework-live-wiring-production T00/T03/T02).
+    # The invoking OS user (uid $uid) is bound to the operator actor; the
+    # gateway section (T02, decision D-2) makes that same uid the gateway
+    # principal and allowlists the end-user actors it may speak for with
+    # `on_behalf_of`. One uid carries every binding here because the whole
+    # local stack runs as one OS user; the allowlist is what bounds it.
+    identity:
+      bindings:
+        - uid: $uid
+          actor_id: operator_local
+          roles: ["operator"]
+        - uid: $uid
+          actor_id: security_officer
+          roles: ["R-SO"]
+        - uid: $uid
+          actor_id: lifecycle_custodian
+          roles: ["R-LC"]
+        - uid: $uid
+          actor_id: gateway
+          roles: ["service"]
+    gateway:
+      uid: $uid
+      actor: gateway
+      delegable_actors: [operator_local, security_officer, lifecycle_custodian]
+    YAML
+    mkdir -p "$cell/templates" "$cell/authority"
+    cp "$fixtures"/templates/*.yaml "$cell/templates/"
+    cp "$fixtures/policy.yaml" "$cell/authority/active-policy.json"
+    echo "casework-cell-init: wrote $cell/server.yaml (operator + security-officer + lifecycle-custodian bound to uid $uid; uid $uid is the T02 gateway principal)"
+    echo "casework-cell-init: delegable actors: operator_local, security_officer, lifecycle_custodian"
+    echo "casework-cell-init: installed templates: $(ls "$cell/templates"/*.yaml | xargs -n1 basename | tr '\n' ' ')"
+    echo "casework-cell-init: wrote $cell/authority/active-policy.json (E2E policy: write_file + approval_resolution for operator)"
+    echo "casework-cell-init: cell path: $(cd "$cell" && pwd)"
+
+# Build and start the sea-forge-server kernel against the live cell, configured only via
+# SEA_FORGE_ROOT/SEA_FORGE_SOCKET plus <cell>/server.yaml (the server takes no CLI arguments).
+# Teeth: refuses to start when our pidfile is live, or when the cell socket already exists.
+[group('casework')]
+casework-server-up:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    cell="$live_dir/cell"
+    pidfile="$live_dir/server.pid"
+    logfile="$live_dir/server.log"
+    socket="$cell/server.sock"
+    mkdir -p "$live_dir"
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && grep -aq "sea-forge-server" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-server-up: server already running (pid $pid, socket $socket)" >&2
+        exit 1
+      fi
+    fi
+    if [ -S "$socket" ]; then
+      echo "casework-server-up: socket $socket already exists; if no server owns it, remove it manually" >&2
+      exit 1
+    fi
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      echo "casework-server-up: removing stale pidfile (pid ${pid:-empty} not alive or not the server)"
+      rm -f "$pidfile"
+    fi
+    echo "casework-server-up: building sea-forge-server (waits politely if another cargo holds the target lock)"
+    cargo build --locked -p sea-forge-server --bin sea-forge-server
+    echo "casework-server-up: starting server (cell $cell, socket $socket, log: $logfile)"
+    SEA_FORGE_ROOT="$cell" SEA_FORGE_SOCKET="$socket" setsid nohup target/debug/sea-forge-server >>"$logfile" 2>&1 &
+    echo $! >"$pidfile"
+    for _ in $(seq 1 120); do
+      if [ -S "$socket" ]; then
+        echo "casework-server-up: listening (pid $(cat "$pidfile"), socket $socket, log: $logfile)"
+        exit 0
+      fi
+      pid="$(cat "$pidfile")"
+      if ! kill -0 "$pid" 2>/dev/null; then
+        echo "casework-server-up: server exited during startup; log tail:" >&2
+        tail -20 "$logfile" >&2 || true
+        rm -f "$pidfile"
+        exit 1
+      fi
+      sleep 0.5
+    done
+    echo "casework-server-up: socket $socket did not appear within 60s; log tail:" >&2
+    tail -20 "$logfile" >&2 || true
+    if ! kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      rm -f "$pidfile"
+    fi
+    exit 1
+
+# Stop the sea-forge-server kernel. Mirrors casework-go-down discipline: idempotent, refuses to
+# kill a pid that is not the server, removes a lingering socket only once no server owns it.
+# Cell data under the live dir is never touched.
+[group('casework')]
+casework-server-down:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    pidfile="$live_dir/server.pid"
+    socket="$live_dir/cell/server.sock"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-server-down: not running (no pidfile)"
+    else
+      pid="$(cat "$pidfile")"
+      if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$pidfile"
+        echo "casework-server-down: not running (stale pidfile removed)"
+      elif ! grep -aq "sea-forge-server" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-server-down: pid $pid does not look like sea-forge-server; not killing it" >&2
+        rm -f "$pidfile"
+        exit 1
+      else
+        kill -TERM "$pid" 2>/dev/null || true
+        for _ in $(seq 1 25); do
+          kill -0 "$pid" 2>/dev/null || break
+          sleep 0.2
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+          kill -KILL "$pid" 2>/dev/null || true
+        fi
+        rm -f "$pidfile"
+        echo "casework-server-down: stopped (pid $pid)"
+      fi
+    fi
+    # The server removes its own socket on shutdown; clear a lingering one only when no live
+    # server owns it. The server holds an exclusive flock on server.sock.lock for its lifetime,
+    # so a lock we can take proves the owner is gone — no cmdline string-matching heuristics.
+    if [ -S "$socket" ]; then
+      if flock -n "$socket.lock" true 2>/dev/null; then
+        rm -f "$socket"
+        echo "casework-server-down: removed lingering socket $socket (socket lock free; no server owns it)"
+      else
+        echo "casework-server-down: socket $socket is still owned by a live server (socket lock held); leaving it"
+      fi
+    fi
+
+# Build and start the Go gateway in serve mode against the LIVE cell (default 127.0.0.1:4179).
+# Like casework-go-up, but pointed at apps/godspeed-casework-go/configs/live-serve.json with the
+# cell injected via GODSPEED_CELL_ROOT (the file deliberately omits cell_root so the temp cell
+# location stays a recipe-level decision). Until T05 the gateway serves FIXTURE-LABELED
+# in-process providers against live cell roots. Teeth: refuses to silently reuse a foreign
+# process that already answers /api/healthz (e.g. the fixture casework-go-up).
+[group('casework')]
+casework-live-go-up addr="127.0.0.1:4179":
+    #!/usr/bin/env bash
+    {{set}}
+    addr="{{addr}}"
+    module="apps/godspeed-casework-go"
+    live_dir="{{casework_live_dir}}"
+    cell="$live_dir/cell"
+    pidfile="$live_dir/go.pid"
+    logfile="$live_dir/go.log"
+    bin="$live_dir/go-bin"
+    health="http://127.0.0.1:${addr#*:}/api/healthz"
+    mkdir -p "$live_dir"
+    if [ ! -f "$cell/server.yaml" ]; then
+      echo "casework-live-go-up: no cell at $cell - run just casework-cell-init first" >&2
+      exit 1
+    fi
+    if curl -sSf -o /dev/null --max-time 2 "$health" 2>/dev/null; then
+      if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null \
+        && grep -aq "casework-live/go-bin" "/proc/$(cat "$pidfile")/cmdline" 2>/dev/null; then
+        echo "casework-live-go-up: our gateway already answers at $health - reusing it (log: $logfile)"
+        exit 0
+      fi
+      echo "casework-live-go-up: a foreign process is answering /api/healthz at $addr (possibly the fixture casework-go-up); stop it first (just casework-go-down)" >&2
+      exit 1
+    fi
+    if [ -f "$pidfile" ]; then
+      pid="$(cat "$pidfile")"
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        echo "casework-live-go-up: pid $pid is alive but nothing answers on the addr; stopping it" >&2
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+      fi
+      rm -f "$pidfile"
+    fi
+    echo "casework-live-go-up: building gateway binary"
+    (cd "$module" && go build -o "../../$bin" ./cmd/godspeed-casework) || exit 1
+    echo "casework-live-go-up: starting LIVE gateway on $addr against live cell $cell (provenance go:live:sfwp, T06)"
+    GODSPEED_CELL_ROOT="$cell" setsid nohup "$bin" -serve -addr "$addr" -config "$module/configs/live-serve.json" >>"$logfile" 2>&1 &
+    echo $! >"$pidfile"
+    for _ in $(seq 1 40); do
+      if curl -sSf -o /dev/null --max-time 1 "$health" 2>/dev/null; then
+        echo "casework-live-go-up: answering at $health (pid $(cat "$pidfile"), log: $logfile)"
+        exit 0
+      fi
+      sleep 0.5
+    done
+    echo "casework-live-go-up: gateway did not become healthy; see $logfile" >&2
+    tail -20 "$logfile" >&2 || true
+    exit 1
+
+# Stop the live Go gateway. Mirrors casework-go-down with the live pidfile and a cmdline guard
+# that recognizes only the casework-live go-bin (never the fixture gateway's binary).
+[group('casework')]
+casework-live-go-down addr="127.0.0.1:4179":
+    #!/usr/bin/env bash
+    {{set}}
+    pidfile="{{casework_live_dir}}/go.pid"
+    if [ ! -f "$pidfile" ]; then
+      echo "casework-live-go-down: no pidfile (nothing to stop)"
+      exit 0
+    fi
+    pid="$(cat "$pidfile")"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      if ! grep -aq "casework-live/go-bin" "/proc/$pid/cmdline" 2>/dev/null; then
+        echo "casework-live-go-down: pid $pid is not the live casework gateway; refusing to kill it" >&2
+        exit 1
+      fi
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+      echo "casework-live-go-down: stopped $pid"
+    else
+      echo "casework-live-go-down: pid ${pid:-empty} is not running"
+    fi
+    rm -f "$pidfile"
+
+# Tear down the whole live stack: gateway first, then the kernel. Processes only — the cell
+# data at .sea-forge/casework-live/cell (ledgers, requests, server.yaml) is always preserved.
+[group('casework')]
+casework-stack-down:
+    #!/usr/bin/env bash
+    {{set}}
+    live_dir="{{casework_live_dir}}"
+    set +e
+    just casework-live-go-down
+    go_rc=$?
+    just casework-server-down
+    server_rc=$?
+    set -e
+    if [ "$go_rc" -eq 0 ]; then
+      echo "casework-stack-down: casework-live-go-down ok"
+    else
+      echo "casework-stack-down: casework-live-go-down FAILED (exit $go_rc)" >&2
+    fi
+    if [ "$server_rc" -eq 0 ]; then
+      echo "casework-stack-down: casework-server-down ok"
+    else
+      echo "casework-stack-down: casework-server-down FAILED (exit $server_rc)" >&2
+    fi
+    echo "casework-stack-down: cell data preserved at $live_dir/cell (teardown is processes-only, never data)"
+    if [ "$go_rc" -ne 0 ] || [ "$server_rc" -ne 0 ]; then
+      exit 1
+    fi
+
+# One pinned world from GodSpeed-Agent E1 to the evidence it records, across real production surfaces in five
+# repos, plus the refusal paths. Needs sibling checkouts (override with *_ROOT) and the domainforge CLI.
+[group('quality')]
+e2e-world-loop:
+    ./scripts/e2e-world-loop.sh

@@ -1,0 +1,122 @@
+.gs-r-text-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--dock-bg);
+  color: var(--dock-ink);
+}
+
+.gs-r-text-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--dock-line);
+  background: var(--dock-bg);
+  align-items: center;
+}
+
+.gs-r-text-wrap-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--dock-line);
+  background: var(--dock-bg-2);
+  color: var(--dock-ink);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.15s ease-out;
+}
+
+.gs-r-text-wrap-btn:hover {
+  background: var(--dock-bg);
+  border-color: var(--dock-ink-2);
+}
+
+.gs-r-text-wrap-btn[aria-pressed='true'] {
+  background: var(--dock-bg);
+  border-color: var(--tone-progress);
+  color: var(--tone-progress);
+}
+
+.gs-r-text-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--dock-bg);
+}
+
+.gs-r-text-lines {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.gs-r-text-line {
+  display: flex;
+  align-items: flex-start;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.1s ease-out;
+  min-height: 20px;
+  word-break: break-all;
+}
+
+.gs-r-text-line[data-selected='true'] {
+  background: rgba(62, 139, 240, 0.15);
+}
+
+.gs-r-text-line:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gs-r-text-line--wrap {
+  white-space: pre-wrap;
+}
+
+.gs-r-text-line:not(.gs-r-text-line--wrap) {
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+}
+
+.gs-r-text-number {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 8px;
+  color: var(--dock-ink-2);
+  font-size: 11px;
+  border-right: 1px solid var(--dock-line);
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.1);
+  user-select: none;
+  height: 100%;
+}
+
+.gs-r-text-code {
+  flex: 1;
+  padding: 0 8px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-r-text-code mark {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 1px 2px;
+  border-radius: 0;
+  color: inherit;
+}
+
+.gs-r-text-footer {
+  padding: 6px 8px;
+  border-top: 1px solid var(--dock-line);
+  background: var(--dock-bg-2);
+  font-size: 11px;
+  color: var(--dock-ink-2);
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "bounded_input": {
+      "max_rounds": 5,
+      "scenario": "e2e-happy"
+    },
+    "candidate_id": "cand-1",
+    "correlation_id": "t23-route-001-iter2",
+    "finished_at_utc": "2026-09-19T02:25:44.526523+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i2-cand-1",
+    "settlement_committed_count": 3,
+    "started_at_utc": "2026-09-19T02:25:43.919501+00:00",
+    "state_db_sha256": "913d5fc12a5aa3435f2db2afbd83f26cfac3f7847306af7be16ee35c62ffffba",
+    "terminal_class": "settled"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 5,
+      "scenario": "e2e-lying"
+    },
+    "candidate_id": "cand-2",
+    "correlation_id": "t23-route-001-iter2",
+    "finished_at_utc": "2026-09-19T02:25:45.034794+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i2-cand-2",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T02:25:44.531071+00:00",
+    "state_db_sha256": "0586e79455ea80360ffdeee64d9c8f6932c9d641cd7f9fc34eaddc97638ac010",
+    "terminal_class": "budget_exhausted"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 6,
+      "scenario": "e2e-happy"
+    },
+    "candidate_id": "cand-3",
+    "correlation_id": "t23-route-001-iter2",
+    "finished_at_utc": "2026-09-19T02:25:45.443531+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i2-cand-3",
+    "settlement_committed_count": 3,
+    "started_at_utc": "2026-09-19T02:25:45.039556+00:00",
+    "state_db_sha256": "05747e4f7e463a1f6dae8979696109b911e47f414d2b13283262668f01f6c157",
+    "terminal_class": "settled"
+  }
+]

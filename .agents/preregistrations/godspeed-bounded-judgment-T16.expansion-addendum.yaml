@@ -1,0 +1,60 @@
+# =============================================================================
+# T16 DISCRIMINATION-CORRECTION EXPANSION ADDENDUM (append-only, frozen)
+# =============================================================================
+schema: godspeed-bounded-judgment.t16-expansion
+created_utc: "2026-09-18"
+reason:
+  shuffle_tooth_failure: >-
+    The exact class-preserving permutation tooth on the 9-case corpus:
+    DeepSeek observed 0.667 = the maximum over all 84 permutations (exact
+    one-sided p = 4/84 = 0.0476, tied at max); Prime observed 0.556 with
+    exact p = 34/84 = 0.4048. The measurement cannot discriminate provider
+    signal from class-preserving label noise at N=9.
+existing_corpus: {N: 9, settled: 3, not_settled: 6}
+design_analysis:
+  method: >-
+    closed-form multivariate-hypergeometric null over class-preserving
+    permutations for candidate N, against a SIMULATED provider at the frozen
+    D-bar region (p = 0.85/0.9 per class, ~10% abstention); no future
+    provider answers used.
+  finding: >-
+    the permutation null's maximum is bounded at ~0.5 for balanced corpora
+    (the answer multiset limits perfect alignment), so a provider at or near
+    the 0.8 D-bar separates at exact p < 1e-5 for every candidate N >= 16.
+    N=25 chosen for family/mechanism coverage margin, not statistical
+    necessity.
+target_expanded_N: 25
+target_class_composition: {settled: 12, not_settled: 13}
+case_families: "single fixture family (tests/fixtures/target) crossed with mechanisms and per-case id seeds; fixture identity therefore carries NO class signal"
+mechanism_mix:
+  settled: "e2e-happy x9 new (distinct id seeds; distinct settlement orders emerge from seed variation)"
+  not_settled: "e2e-lying x3 (lying result document), budget-r1 x2 (round-constraint), e2e-forged-report x2 (forged verification artifact; smoke-verified typed terminal budget_exhausted in 3 iterations)"
+exclusion_rules: >-
+  a case is excluded with reason if: the run errors (not a typed terminal);
+  the intended mechanism did not fire (checked per-case: budget cases must
+  show round-constraint exhaustion; lying/forged cases must show verifier
+  FAIL evidence in the event log); the state db contains more than one run
+  (state-dir reuse detection).
+generation_procedure: >-
+  identical to the settled T15 round-3 recipe: copies of tests/fixtures/target
+  with per-case GAUNTLET_ID_SEED, GAUNTLET_CLOCK=deterministic, frozen control
+  env; headless gauntlet run; state db hashed into the expanded manifest.
+  State dirs are wiped per case before execution (round-2 reuse lesson).
+replacement_rule: "an excluded case is replaced by ONE rerun of the same case id with a fresh state dir; a second failure excludes the case id without replacement and the achieved composition is frozen as-is (no top-ups to hit the target)"
+unchanged:
+  DecisionSurface: "settlement-outcome prediction (t16-settlement-outcome/v1)"
+  answer_domain: [settled, not_settled, insufficient_evidence]
+  truth_projection: {settled: settled, budget_exhausted: not_settled}
+  provider_contract: "codex replaced per the provider-substitution addendum; DeepSeek-ClinePass + Prime-Agent; prompts byte-identical"
+  baseline: "face-value rule, byte-identical"
+  scoring: "providers and baseline both scored against truth_label (round-5 alignment)"
+  D_bar: "accuracy >= 0.8 non-abstaining, both providers"
+  AE_rule: "frozen"
+  falsification_scope: "this surface, this corpus, these provider paths"
+metadata_leakage_inspection: >-
+  KNOWN CAVEAT recorded: invocation session_ref values ('mock-e2e-happy' /
+  'mock-e2e-lying' / etc.) are class-correlated corpus artifacts present in
+  the frozen provider input definition. Providers did not demonstrably exploit
+  them in round-4 (accuracy at the class prior), but the expanded corpus
+  cannot de-leak without changing the frozen input definition; recorded, not
+  fixed.

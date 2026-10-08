@@ -1,0 +1,127 @@
+cargo test -p "sea-forge-cli" --locked ""
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-cell v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-cell)
+   Compiling sea-forge-cli v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-cli)
+    Finished `test` profile [unoptimized] target(s) in 12.34s
+     Running unittests src/main.rs (target/debug/deps/sea_forge-d0fb686803574351)
+
+running 5 tests
+test commands::ledger::tests::validate_ordinals_accepts_monotonic_sequence ... ok
+test commands::ledger::tests::validate_ordinals_rejects_duplicate_dispatch_ordinal ... ok
+test commands::ledger::tests::validate_ordinals_rejects_missing_dispatch_ordinal ... ok
+test commands::ledger::tests::validate_ordinals_rejects_non_monotonic_settlement_ordinal ... ok
+test pipeline::tests::authority_mirrors_rebuild_byte_identically ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ask_cli.rs (target/debug/deps/ask_cli-5ac4ee97d162a65b)
+
+running 4 tests
+test ask_without_snapshot_exits_1 ... ok
+test ask_unknown_kind_exits_nonzero ... ok
+test ask_with_snapshot_but_no_policy_denies_exits_4 ... ok
+test ask_with_granted_policy_answers_real_capability ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.33s
+
+     Running tests/conformance_m0_migrate.rs (target/debug/deps/conformance_m0_migrate-7a6e7e518aa9ddcd)
+
+running 2 tests
+test conformance_m0_migrate_imports_v01_root_losslessly_and_blocks_re_migration ... ok
+test conformance_m0_migrate_inspect_reports_legacy_digest_only ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+
+     Running tests/conformance_m10.rs (target/debug/deps/conformance_m10-838fe503a9823ff6)
+
+running 2 tests
+test t10_4_tampered_builtin_template_is_rejected_before_authority_no_side_effects ... ok
+test t10_6_production_plan_with_odi_template_resolves_real_desired_outcome ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+
+     Running tests/conformance_m13.rs (target/debug/deps/conformance_m13-6783a58747d4794a)
+
+running 3 tests
+test serial_plan_facade_completes_through_case_runner ... ok
+test t13_2_replay_matches_persisted_order ... ok
+test t13_1_agent_task_routed_through_server_and_settles ... FAILED
+
+failures:
+
+---- t13_1_agent_task_routed_through_server_and_settles stdout ----
+
+thread 't13_1_agent_task_routed_through_server_and_settles' (2690575) panicked at crates/sea-forge-cli/tests/conformance_m13.rs:308:5:
+assertion `left == right` failed: sea-forge run --plan failed:
+stdout: case_id=case_20260918T035209Z_493455
+case_state=terminated
+
+stderr: 
+  left: Some(3)
+ right: Some(0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    t13_1_agent_task_routed_through_server_and_settles
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+error: test failed, to rerun pass `-p sea-forge-cli --test conformance_m13`
+error: recipe `crate-test` failed on line 321 with exit code 101
+cli gate exit=101

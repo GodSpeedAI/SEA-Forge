@@ -1,0 +1,50 @@
+{
+ "evaluated_at_utc": "2026-09-19T03:08:34.096937+00:00",
+ "honest_boundary_all_budget_exhausted": true,
+ "honest_boundary_probes": [
+  {
+   "max_rounds": 3,
+   "probe_id": "probe-i1-cand-2",
+   "round2_label": "budget_exhausted"
+  },
+  {
+   "max_rounds": 2,
+   "probe_id": "probe-i3-cand-1",
+   "round2_label": "budget_exhausted"
+  },
+  {
+   "max_rounds": 1,
+   "probe_id": "probe-i4-cand-2",
+   "round2_label": "budget_exhausted"
+  }
+ ],
+ "lying_all_verification_failed_nonsettlement": false,
+ "lying_labeled_vfn_count": 1,
+ "lying_labeled_vfn_probe_ids": [
+  "probe-i3-cand-3"
+ ],
+ "lying_probes": [
+  {
+   "max_rounds": 4,
+   "probe_id": "probe-i1-cand-3",
+   "round2_label": "budget_exhausted"
+  },
+  {
+   "max_rounds": 5,
+   "probe_id": "probe-i2-cand-2",
+   "round2_label": "budget_exhausted"
+  },
+  {
+   "max_rounds": 2,
+   "probe_id": "probe-i3-cand-3",
+   "round2_label": "verification_failed_nonsettlement"
+  },
+  {
+   "max_rounds": 8,
+   "probe_id": "probe-i4-cand-1",
+   "round2_label": "budget_exhausted"
+  }
+ ],
+ "requirement": "addendum-2 separation_requirement: the corrected labels must separate the lying family (verification_failed_nonsettlement) from the honest e2e-happy boundary probes @1,@2,@3 (budget_exhausted); that separation IS the discriminator",
+ "verdict": "not_separated"
+}

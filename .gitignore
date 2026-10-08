@@ -1,6 +1,10 @@
 # Rust build output
 /target/
 
+# Windows Mark-of-the-Web / NTFS alternate-data-stream metadata
+# (created when files are copied from Windows; never commit these)
+*:Zone.Identifier
+
 # Devbox / Nix
 /.devbox/
 /.direnv/
@@ -20,6 +24,13 @@
 # Understand-Anything knowledge graph (rebuildable projection; regenerate via the understand skill)
 /.ua/
 
+# Local agent-tool config/state (transient, per-machine)
+/.omc/
+/.claude/
+/.codex/
+/.opencode/
+/.entire/
+
 # Local secret artifacts: only *.enc.env may be tracked under secrets/
 /secrets/*.env
 !/secrets/*.enc.env
@@ -31,3 +42,19 @@
 
 
 .tmp/
+
+# Tauri sidecar staging: built by `just workbench-sidecar`, never committed.
+workbench/apps/desktop/src-tauri/binaries/
+
+# Pinned local desktop-test tooling. The reproducible version and setup
+# instructions live in scripts/workbench-e2e-real.sh; the executable itself is
+# a machine-local build artifact.
+workbench/.tools/
+
+.cargo/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# Standalone database binaries (local downloads)
+/clickhouse

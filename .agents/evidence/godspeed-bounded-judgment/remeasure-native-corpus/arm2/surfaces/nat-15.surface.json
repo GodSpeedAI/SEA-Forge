@@ -1,0 +1,96 @@
+{
+ "addendum2_sha256": "087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a",
+ "correction_round": 2,
+ "probe_id": "probe-t25-negative-r1",
+ "provenance": {
+  "artifact_dir": "/home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/evidence",
+  "artifact_paths": {
+   "873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41": "/home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/evidence/objects/87/3c/873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41",
+   "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12": "/home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/evidence/objects/98/cb/98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+  },
+  "db_pin_verified": true,
+  "recompute_reasons": [],
+  "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/state/gauntlet-state.db",
+  "state_db_sha256_actual": "097e1af5bad144c661c6c11126a6077e0ccbddedde654ba9e0702f885bf19d88",
+  "state_db_sha256_pinned": "097e1af5bad144c661c6c11126a6077e0ccbddedde654ba9e0702f885bf19d88"
+ },
+ "schema": "godspeed-bounded-judgment.t23-corrected-judgment-surface",
+ "status": "ok",
+ "surface": {
+  "bounded_input": {
+   "max_rounds": 3,
+   "scenario": "e2e-happy"
+  },
+  "candidate_id": "t25-negative-r1",
+  "correlation_id": "t25-negative-r1",
+  "evidence_artifacts": [
+   {
+    "content": "{\"tests\": 1, \"failures\": 0, \"command\": \"scripts/check.sh --marker\"}",
+    "kind": "test_report",
+    "locator": "evidence/marker-check-report.json",
+    "sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+   },
+   {
+    "content": "{\"tests\": 2, \"failures\": 0, \"command\": \"scripts/check.sh\"}",
+    "kind": "test_report",
+    "locator": "evidence/check-report.json",
+    "sha256": "873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41"
+   }
+  ],
+  "mechanism": "t15-frozen-case-execution",
+  "operation": "run_case",
+  "probe_id": "probe-t25-negative-r1",
+  "settlement_committed_count": 2,
+  "settlement_progression": [
+   {
+    "evidence_ref": "sha256:98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+    "order": 1,
+    "unit_id": "AK-901",
+    "verification_ref": "vrf-2HSAVBRTTC5ETKTAE65VGWZWY6"
+   },
+   {
+    "evidence_ref": "sha256:873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41",
+    "order": 2,
+    "unit_id": "AK-902",
+    "verification_ref": "vrf-Y8F4E9XVG1TSV3P3B9T1SDWE11"
+   }
+  ],
+  "state_db_sha256": "097e1af5bad144c661c6c11126a6077e0ccbddedde654ba9e0702f885bf19d88",
+  "timing": {
+   "checkpoint_iterations": [
+    1,
+    2,
+    2
+   ],
+   "event_clock_first": 0,
+   "event_clock_last": 20,
+   "finished_at_utc": "2026-09-19T04:20:58.838828+00:00",
+   "started_at_utc": "2026-09-19T04:20:58.535321+00:00",
+   "wall_seconds": 0.303
+  },
+  "typed_terminal": {
+   "run_terminal_states": [
+    "budget_exhausted"
+   ],
+   "terminal_class": "budget_exhausted"
+  },
+  "unit_dispatch_pattern": {
+   "dispatch_sequence": [
+    "AK-901",
+    "AK-902"
+   ],
+   "per_unit": [
+    {
+     "dispatches": 1,
+     "settlements": 1,
+     "unit_id": "AK-901"
+    },
+    {
+     "dispatches": 1,
+     "settlements": 1,
+     "unit_id": "AK-902"
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,15 @@
+=== F7 ROUND 1 ===
+--- PASS: TestLiveKillMidCommitRecovery (0.47s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.487s
+EXIT=0
+=== F7 ROUND 2 ===
+--- PASS: TestLiveKillMidCommitRecovery (0.35s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.364s
+EXIT=0
+=== F7 ROUND 3 ===
+--- PASS: TestLiveKillMidCommitRecovery (0.35s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.370s
+EXIT=0

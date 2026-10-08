@@ -1,0 +1,14 @@
+started_at=2026-09-19T17:59:48Z
+MemAvailable:    3589484 kB SwapFree:        7833572 kB preflight[lint]
+lint exit=0 wall_s=52
+MemAvailable:    3540912 kB SwapFree:        7820248 kB preflight[typecheck]
+typecheck exit=0 wall_s=36
+MemAvailable:    3395144 kB SwapFree:        7821000 kB preflight[test]
+test exit=0 wall_s=290
+MemAvailable:    3601372 kB SwapFree:        7688776 kB preflight[proof]
+proof exit=127 wall_s=25
+MemAvailable:    3752492 kB SwapFree:        7666700 kB preflight[security]
+security exit=1 wall_s=52
+MemAvailable:    3781800 kB SwapFree:        7486428 kB preflight[build]
+build exit=0 wall_s=70
+finished_at=2026-09-19T18:08:33Z

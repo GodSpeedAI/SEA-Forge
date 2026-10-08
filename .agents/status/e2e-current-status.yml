@@ -1,0 +1,500 @@
+# =============================================================================
+# e2e-current-status — GodSpeed Canonical Runtime Convergence
+# =============================================================================
+# Plan:   .agents/plans/e2e-plan.yml  (schema-bound to source.spec there)
+# Frozen target: .agents/specs/e2e-preregistration.yml (id below, SHA-256 bound
+# in the plan's source.spec.sha256; verified by `just e2e-prereg-check`).
+#
+# One verdict per explicit frozen requirement (12 edges + 15 global invariants
+# + 8 envelope identity rules = 35). Verdicts use the frozen vocabulary from
+# preregistration.current_state_assessment.allowed_verdicts:
+#   CONFIRMED | PARTIAL | ABSENT | CONTRADICTED | UNKNOWN
+# Reference-implementation rule applies: gen-1/synthetic/mock-only evidence can
+# never produce CONFIRMED.
+#
+# FORMAT CONTRACT (parsed by scripts/e2e-delta-check.sh):
+#   `requirements:` block, records start with `  - id: <ID>`; scalar keys are
+#   two-space indented under the record; `evidence:` holds `- <repo>/<path>`
+#   entries resolved against $REPOS_ROOT (default ~/projects). Keep entries in
+#   canonical ID order (E*, then I*, then ENV-I*). Machine-edited only via the
+#   documented task flow; append-only correction history lives in
+#   .agents/evidence/e2e/<TID>/.
+# =============================================================================
+
+schema: e2e.current_status
+schema_version: "1.0"
+plan_id: godspeed-canonical-runtime-convergence
+plan_version: "0.1.0"
+spec_id: godspeed-canonical-runtime-convergence
+spec_version: "0.1.0"
+preregistration_sha256: ef5710893c5bcc569a4757371c54d4d2e5e6168e1df61d2d7433b6889eaa879f
+
+updated: "2026-08-25"
+updated_by: "opencode (T12 variation battery + fresh independent final verifier, CONFIRM — plan settled)"
+
+execution:
+  # 2026-08-25 verifier control-plane correction: this block was stale at
+  # Delta-0 (current_task: T00, last_settled_task: null) while T00 had already
+  # executed (evidence: .agents/evidence/e2e/T00/delta0.md; gates pass) and the
+  # T01 implementation had landed builder-green. Dependency satisfaction under
+  # plan dependency_graph requires T01 SETTLED — not merely implemented —
+  # before T02/T03 unblock. Projection corrected to: T01 in flight pending
+  # fresh independent adversarial confirmation; T02/T03 remain blocked by T01.
+  # 2026-08-25 independent adversarial confirmation returned CONFIRM
+  # (.agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md):
+  # T01 settled; T02/T03 unblocked per dependency_graph.
+  # 2026-08-25 T02 (E2/E3/I4) and T03 (E0/E1) executed per plan; gates green
+  # incl. live cross-binary MCP stdio integration and cross-language golden
+  # fixture. Both settled; evidence under .agents/evidence/e2e/{T02,T03}/.
+  # 2026-08-25 T04 (E4) built by builder subagent, then CONFIRMed by fresh
+  # independent adversarial subagent (22 attacks; gates green; D1-D3
+  # strictness gaps recorded as debt, judged non-falsifying). Evidence:
+  # .agents/evidence/e2e/T04/{t04-report,t04-verifier-independent-confirmation}.md
+  # 2026-08-25 T05 (E5A/E5B/I5) built by builder subagent composing the REAL
+  # authority engine + sea_forge_runtime::execute, then CONFIRMed by fresh
+  # independent adversarial subagent (20 attacks incl. all three plan
+  # falsifiers; A9-A11 trust/durability items recorded as non-falsifying
+  # debt). Evidence: .agents/evidence/e2e/T05/.
+  # 2026-08-25 T06 (E6/I6/I7) built by builder subagent composing the real
+  # settlement machinery, then CONFIRMed by fresh independent adversarial
+  # subagent (preregistered battery F1/F2/I6/A1-A12 executed empirically;
+  # exit-zero coercion held end-to-end cross-repo; T05-A10d/A11 closed;
+  # T04-D1/D2/D3 not reproduced). Evidence: .agents/evidence/e2e/T06/.
+  # 2026-08-25 T07 (E7) built by builder subagent across SWE_SEED (canonical
+  # ProofCompleted bound to real T06-adjudicated settlements via
+  # content-addressed refs) and sxr (native ingestion gate preserving
+  # upstream facts by reference), then CONFIRMed by fresh independent
+  # adversarial subagent (43 empirical attacks; both plan teeth held;
+  # residual D1-D4 debt recorded for T08). Evidence:
+  # .agents/evidence/e2e/T07/.
+  # 2026-08-25 T08 (E8/I8/I10) built by builder subagent across sxr (canonical
+  # EvidenceRecorded emitter over real T07 ComparisonInputs, digest-pinned
+  # refs) and godspeed_agent (Python gate with mirrored placeholder set,
+  # ProvisionalEvidence frozen type with zero promotion surface), then
+  # CONFIRMed by fresh independent adversarial subagent (67 empirical checks;
+  # all three plan falsifiers impossible incl. zero-write receipt promotion;
+  # V20 wire-field-convention trust placement + minor degenerate-value
+  # acceptances recorded as debt). Evidence: .agents/evidence/e2e/T08/.
+  # 2026-08-25 T09 (E9/I9) built by builder subagent across godspeed_agent
+  # (canonical developmental_events projector, durable developmental_memory
+  # gate) and CONFIRMed by fresh independent adversarial subagent (74
+  # empirical checks in dedicated harness; D1 admitted-ghost-evidence debt
+  # recorded for T10). Evidence: .agents/evidence/e2e/T09/.
+  # 2026-08-25 T10 (E10/I12) built by builder subagent across
+  # godspeed_agent (memory→navigation with documented gate-after-memory) and
+  # CK learning-proposals bridge, then CONFIRMed by fresh independent
+  # adversarial subagent (20 empirical checks; horizon governance
+  # documentation debt noted). Evidence: .agents/evidence/e2e/T10/.
+  # 2026-08-25 T11 (I2/I11/I14/I15) built by builder subagent as
+  # deterministic golden harness across E0→E10 (real GSA producers + Rust
+  # gates), then CONFIRMed by fresh independent adversarial subagent
+  # (16 empirical checks incl. cross-wire/replay/interruption/restart).
+  # Evidence: .agents/evidence/e2e/T11/.
+  # 2026-08-25 T12 variation battery executed (7 classes, 25 tests +
+  # delta-check) and FRESH INDEPENDENT FINAL VERIFIER returned CONFIRM
+  # (13 independent attacks, all PASS). All 35 frozen requirements
+  # CONFIRMED; delta = 0. Plan settled.
+  current_task: null
+  last_settled_task: T12
+  ready: []
+  blocked: {}
+  settled_next_action: "none — plan settled"
+
+delta_summary:
+  confirmed: 35
+  partial: 0
+  absent: 0
+  contradicted: 0
+  unknown: 0
+  open_delta: "0 open after T11 settled I2/I11/I14/I15 — all 35 requirements CONFIRMED"
+
+requirements:
+  - id: E0
+    kind: edge
+    title: desired_direction_to_navigation
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/godspeed_nav/canonical_events.py
+      - godspeed_agent/tests/test_canonical_events.py
+      - .agents/evidence/e2e/T03/t03-report.md
+    open_delta: "CLOSED (T03): project_desired_direction emits the canonical E0 envelope with direction_id/direction_type/desired_state stamped by the authoritative external-environment producer; incomplete directions fail closed. Destination-as-affordance remains blocked by GSA's type-level rule (potential_cannot_execute, affordance_requires_pathway_and_payment)."
+
+  - id: E1
+    kind: edge
+    title: selected_affordance_to_work_contract
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/godspeed_nav/canonical_events.py
+      - SWE_SEED/crates/swe-seed-core/src/federation/work_ingress.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t03_work_ingress.rs
+      - .agents/evidence/e2e/T03/t03-report.md
+    open_delta: "CLOSED (T03): selected executable affordances project into canonical WorkRequested stamped by the exclusive producer (godspeed_agent) with full contract fields; destination-only inputs and settlement-criteria-less objectives are rejected on BOTH sides; domain cross-wire rejected via drift gate; cross-language golden fixture from GSA's real projector passes SWE_SEED's ingress."
+
+  - id: E2
+    kind: edge
+    title: context_requirement
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - Context_Kernel/crates/ck-mcp/src/lib.rs
+      - SWE_SEED/crates/swe-seed-core/src/federation/context_client.rs
+      - SWE_SEED/crates/swe-seed-core/tests/context_kernel_client.rs
+      - .agents/evidence/e2e/T02/t02-report.md
+    open_delta: "CLOSED (T02): E2 requests ARE canonical v1 envelopes from the exclusive swe_seed producer; CK ingress gates identity/correlation/producer fail-closed; correlation carried end-to-end; proven by live cross-binary MCP stdio test plus dispatch teeth. Corpus allowlist enforced on both wire shapes."
+
+  - id: E3
+    kind: edge
+    title: evidence_bearing_context
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - Context_Kernel/crates/ck-mcp/src/agentic_capability_loop.rs
+      - SWE_SEED/crates/swe-seed-core/src/federation/context_client.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t02_context_slice.rs
+      - .agents/evidence/e2e/T02/t02-report.md
+    open_delta: "CLOSED (T02): E3 responses are canonical envelopes stamped by context-kernel citing the E2 request as causal parent; citations preserve resolvable provenance; required-context absence is an explicit governed no-context outcome (never silent zero-citation success); cross-wired packets rejected at the consumer boundary."
+
+  - id: E4
+    kind: edge
+    title: governed_work_submission
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/governed_submission.rs
+      - sea-rs/crates/sea-forge-server/src/governed_work_ingress.rs
+      - sea-rs/crates/sea-forge-server/tests/convergence_t04_governed_ingress.rs
+      - .agents/evidence/e2e/T04/t04-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T04): canonical GovernedWorkRequest emission on the T01 substrate (all 8 frozen fields, packet bound to same cycle, causality recorded) and SEA-Forge ingress gate enforcing producer authority, identity vs locally-resolved model, semantic-intent battery, distinct proof/settlement obligations, and context-packet causal-parent binding. Independent adversarial battery (22 attacks incl. all three plan falsifiers + fresh compositions) failed to falsify; D1-D3 strictness gaps recorded as debt in the verifier artifact."
+
+  - id: E5A
+    kind: edge
+    title: authorized_execution
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sea-rs/crates/sea-forge-server/src/governed_execution_boundary.rs
+      - sea-rs/crates/sea-forge-server/tests/convergence_t05_authorized_execution.rs
+      - .agents/evidence/e2e/T05/t05-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T05): canonical AuthorizedInvocation emitted only from a REAL Allow AuthorityDecision (deny/escalate mint no envelope, no grant, no side effect); mandatory GovernedWorkRequest causality; execution runs through sea_forge_runtime::execute under the genuine grant; forged decision conjuncts refused. Independent battery incl. grant-minting and runtime-level foreign-action attacks held."
+
+  - id: E5B
+    kind: edge
+    title: execution_observation
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sea-rs/crates/sea-forge-server/src/governed_execution_boundary.rs
+      - sea-rs/crates/sea-forge-server/tests/convergence_t05_execution_observation.rs
+      - .agents/evidence/e2e/T05/t05-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T05): InvocationLedger binds observations to the exact authorized invocation generation — mandatory E5A-parent citation, late/superseded generations refuse forever, cross-wired work_request_id/invocation_id refused, duplicate delivery idempotent, self-asserted authority refused (outcome reports cite ledger-recorded decision ids only)."
+
+  - id: E6
+    kind: edge
+    title: operational_settlement_to_proof_plane
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sea-rs/crates/sea-forge-server/src/governed_settlement_return.rs
+      - SWE_SEED/crates/swe-seed-core/src/federation/operational_settlement.rs
+      - .agents/evidence/e2e/T06/t06-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T06): settlement evaluated from ledger-settled observations vs DECLARED E4 criteria (exit-zero alone can never accept; non-completion rejected even with criteria text present); canonical envelope carries all 7 frozen fields with mandatory E5A+E5B causality and content-addressed evidence_refs; SWE_SEED adjudicator binds to originating work_request_id with restart-safe idempotency and conflicting-resettlement refusal. Independent empirical battery incl. end-to-end exit-zero coercion held cross-repo."
+
+  - id: E7
+    kind: edge
+    title: proof_to_realitytrace
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/proof_completed.rs
+      - sxr/sxr-core/src/proof_ingest.rs
+      - .agents/evidence/e2e/T07/t07-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T07): canonical ProofCompleted binds ONLY to real T06-adjudicated settlements via content-addressed refs (forged/empty/foreign-cycle refused at both seams; digest forgery caught by recomputation); sxr native gate preserves expected-vs-observed inputs by reference with ClaimMismatch divergence naming and first-record integrity; 43 empirical attacks held. Residual D1-D4 debt (out-of-band digest pinning, undelivered-bundle markers, in-process bypass characterization) recorded for T08."
+
+  - id: E8
+    kind: edge
+    title: reality_evidence_to_developmental_navigation
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sxr/sxr-core/src/evidence_emit.rs
+      - godspeed_agent/godspeed_nav/evidence_ingest.py
+      - .agents/evidence/e2e/T08/t08-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T08): canonical EvidenceRecorded emitted only from real T07 ComparisonInputs (digest-bound difference, pinned proof/settlement refs, settlement+proof chain causality); GSA Python gate enforces exclusive producer, mirrored placeholder set, nine-field battery, cross-wire/replay refusal; golden fixture byte-identical through the real T07-ingest→E8-emit chain. 67 empirical checks held."
+
+  - id: E9
+    kind: edge
+    title: developmental_settlement_to_memory
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/godspeed_nav/developmental_events.py
+      - godspeed_agent/godspeed_nav/developmental_memory.py
+      - .agents/evidence/e2e/T09/t09-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T09): canonical E9 envelopes carry the four frozen common fields (work_request_id, source_evidence_refs, developmental_decision, domain_model_ref) stamped by the exclusive godspeed_agent producer; provenance retained to justifying evidence; durable gate enforces evidence-presence quarantine and replay-with-mutation refusal. Independent battery (74 checks) held; D1 admitted-ghost-evidence debt recorded."
+
+  - id: E10
+    kind: edge
+    title: developmental_memory_to_next_navigation
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/godspeed_nav/developmental_memory.py
+      - godspeed_agent/godspeed_nav/runtime.py
+      - .agents/evidence/e2e/T10/t10-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T10): memory→navigation with documented gate-after-memory — durable DevelopmentalMemory honestly derived (infer_capability_lifecycle) measurably boosts horizon/candidates but never bypasses governance/payment/settlement/risk; CK learning-proposals bridge atomic; 20-check harness held."
+
+  - id: I1
+    kind: invariant
+    title: real_domainforge_identity
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/identity.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): VerifiedDomainIdentity gates canonical construction; fallback pseudo-hash/all-zero/malformed/missing/mismatching artifacts are typed rejections; strict_resolve errors instead of falling back. Independent attacks V-A2/V-A3/V-A3b/V-A3c failed to falsify; substrate-trust limits recorded as debt D1-D2 in the verifier artifact."
+
+  - id: I2
+    kind: invariant
+    title: whole_cycle_traceability
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/tests/test_convergence_t11_whole_loop.py
+      - sea-rs/crates/sea-forge-server/tests/convergence_t11_whole_loop.rs
+      - .agents/evidence/e2e/T11/t11-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T11): deterministic golden harness wr-gsf-t11-001 spans E0→E10 with stable work_request_id and DomainForge identity; 12 observations captured; provenance chain 12 ids; cross-wire/replay/interruption attacks held."
+
+  - id: I3
+    kind: invariant
+    title: single_authoritative_producer
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/producers.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): exclusive producer registry pinned to the frozen edge topology; validate_producer + composed validate_envelope fail closed on wrong/unknown producers, unknown event types, and case/format forgeries. Independent attacks V-A4/V-A4b confirmed rejection at the canonical gate; legacy extractor divergence recorded as debt D5 (edge adoption = T02+/T06 scope)."
+
+  - id: I4
+    kind: invariant
+    title: context_kernel_cannot_create_authority
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - Context_Kernel/crates/ck-mcp/src/agentic_capability_loop.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t02_context_slice.rs
+      - .agents/evidence/e2e/T02/t02-report.md
+    open_delta: "CLOSED (T02): CK computes and emits no authority decision — authority fields are pass-through references only; even a context-kernel-stamped AuthorityChecked envelope fails producer authority (registry owner = sea_forge); packet consumers treat authority_reference as opaque."
+
+  - id: I5
+    kind: invariant
+    title: authority_before_side_effect
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sea-rs/crates/sea-forge-authority/src
+      - sea-rs/crates/sea-forge-server/src/governed_execution_boundary.rs
+      - .agents/evidence/e2e/T05/t05-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T05): deny/escalate decisions produce no envelope, no grant, and no governed side effect; grants mint only on Allow and the real runtime refuses foreign actions under genuine grants; forged authority in execution responses gains no effect. Independent empirical attacks against engine + runtime held."
+
+  - id: I6
+    kind: invariant
+    title: proof_and_operational_settlement_distinct
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sea-rs/crates/sea-forge-server/src/governed_settlement_return.rs
+      - SWE_SEED/crates/swe-seed-core/src/federation/operational_settlement.rs
+      - .agents/evidence/e2e/T06/t06-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T06): three-way distinction machine-enforced — settlement status vocabulary refuses proof terms (proof_passed/success/proved); SWE_SEED operational-facts type carries zero proof/capability shape; no derivation path from OperationalSettlement to ProofCompleted exists on the boundary."
+
+  - id: I7
+    kind: invariant
+    title: settlement_cannot_promote_developmental_state
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sea-rs/crates/sea-forge-server/src/governed_settlement_return.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t06_operational_settlement.rs
+      - .agents/evidence/e2e/T06/t06-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T06): no composition path from OperationalSettlement to SettlementRecorded/CapabilityUpdated exists; forged developmental events fail the godspeed_agent-exclusive producer gate even when derived from a settlement parent; consumer output type is capability-free by construction."
+
+  - id: I8
+    kind: invariant
+    title: evidence_recorded_provisional_until_gsa_evaluation
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/godspeed_nav/evidence_ingest.py
+      - godspeed_agent/godspeed_nav/runtime.py
+      - .agents/evidence/e2e/T08/t08-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T08): ProvisionalEvidence frozen type exposes only to_ledger_record — zero writes to settlements/capabilities/trajectories/repetition schedules from any reachable ingestion surface; promotion remains solely via explicit GSA record_settlement (abused empty-input settlement yields failed/latent/0.0, I9 intact). Verified by exhaustive surface enumeration in the independent battery."
+
+  - id: I9
+    kind: invariant
+    title: capability_requires_repeated_variation_settlement
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/godspeed_nav/developmental_memory.py
+      - godspeed_agent/godspeed_nav/schemas.py
+      - .agents/evidence/e2e/T09/t09-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T09): metabolized capability unreachable from a single successful settlement (real lifecycle machinery); replay-with-mutation refused; cross-capability citation and post-hoc variation gaming refused. Verified by exhaustive promotion-surface enumeration in the independent battery. D1 ghost-evidence admit debt noted (SHOULD-tier ENV-I7, inside disclosed trust theme)."
+
+  - id: I10
+    kind: invariant
+    title: no_silent_upstream_mutation
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - sxr/sxr-core/src/evidence_emit.rs
+      - godspeed_agent/godspeed_nav/evidence_ingest.py
+      - .agents/evidence/e2e/T08/t08-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T08): difference cryptographically bound to expected/observed at emission; divergent resubmission under fresh event_id with restacked difference named claim_mismatch; persisted first record immutable; fabricated 'equivalent' verdicts impossible even with fully restacked facts. V20 wire-field-convention trust placement recorded as debt, bounded by provisionality + I13."
+
+  - id: I11
+    kind: invariant
+    title: failure_remains_observable_and_linked
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/tests/test_convergence_t11_whole_loop.py
+      - sea-rs/crates/sea-forge-server/tests/convergence_t11_whole_loop.rs
+      - .agents/evidence/e2e/T11/t11-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T11): failed/rejected settlements remain observable and reloadable; stranded recovery preserves provenance; no failure disappearance under attack."
+
+  - id: I12
+    kind: invariant
+    title: prior_success_cannot_override_governance
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/godspeed_nav/developmental_memory.py
+      - godspeed_agent/godspeed_nav/runtime.py
+      - .agents/evidence/e2e/T10/t10-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T10): governance/payment/settlement/risk gates evaluated after memory boost — strong prior metabolized evidence cannot make a currently-denied action succeed; payment-exceeded or settlement-inaccessible paths remain blocked as possibilities; horizon missing-pathway still rejected."
+
+  - id: I13
+    kind: invariant
+    title: conformance_is_not_truth
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/consume.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): check_conformance is pure data-out (no effects, no claim-truth evaluation); conformant-but-false envelopes produce zero consequence — effects require explicit admission. Independent attacks V-A7/V-A9 held; observation recorded that authority pairing is enforced solely by validate_envelope (debt D5)."
+
+  - id: I14
+    kind: invariant
+    title: replay_cannot_duplicate_consequence
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/tests/test_convergence_t11_whole_loop.py
+      - sea-rs/crates/sea-forge-server/tests/convergence_t11_whole_loop.rs
+      - .agents/evidence/e2e/T11/t11-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T11): duplicate delivery idempotent (second duplicate, len==1); fresh event_id same payload yields no envelope_identity_conflict; cross-component replay harness held."
+
+  - id: I15
+    kind: invariant
+    title: restart_preserves_provenance
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - godspeed_agent/tests/test_convergence_t11_whole_loop.py
+      - sea-rs/crates/sea-forge-server/tests/convergence_t11_whole_loop.rs
+      - .agents/evidence/e2e/T11/t11-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T11): restart/resume preserves provenance — LedgerStore reload idempotent; interruption after execution before settlement then resume preserves same idempotency_key and caused_by chain."
+
+  - id: ENV-I1
+    kind: envelope_rule
+    title: model_hash_resolves_to_real_model
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/identity.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): verify_against_artifact binds declared hash to recomputed artifact bytes (missing/unreadable/mismatch are typed errors); check_drift rejects foreign/missing hashes at the boundary. Independent attacks V-A3/V-A8 recorded substrate-trust limits as debt D2/D6 without falsifying resolution semantics."
+
+  - id: ENV-I2
+    kind: envelope_rule
+    title: missing_domain_identity_fails_closed
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/identity.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): standalone fallback constant sha256(\"agentic_capability_loop\"), all-zero, malformed, fallback-sourced resolutions, and missing manifests all rejected fail-closed; no code path manufactures a hash. Independent attack V-A2 confirmed pseudo-hash children are quarantined at every adjudicating boundary (construction-side hardening = debt D1)."
+
+  - id: ENV-I3
+    kind: envelope_rule
+    title: work_request_id_stable_across_cycle
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/envelope.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): derive_event carries the parents' agreeing correlation unchanged, overwrites conflicting caller payloads, and makes any mismatch (given-vs-parent, parent-vs-parent, late cross-wire) fatal. Independent attacks V-A1a/V-A1b confirmed stability across three generations and fatal conflicts; whole-cycle composition remains I2 (open until edges land)."
+
+  - id: ENV-I4
+    kind: envelope_rule
+    title: derived_envelopes_identify_parents
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/envelope.rs
+      - SWE_SEED/crates/swe-seed-core/src/federation/consume.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): derivation requires >=1 distinct parent and records caused_by:<event_id> entries; malformed parent ids are rejected at validation. Independent attack V-A6 recorded that well-formed dangling ids pass the stateless gate (existence binding = debt D3, home in store-composing tasks)."
+
+  - id: ENV-I5
+    kind: envelope_rule
+    title: projection_without_rewrite
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/envelope.rs
+      - SWE_SEED/crates/swe-seed-core/tests/federation_parity.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): derivation projects parent correlation without silent rewrite (conflicts fatal; caller-supplied conflicting values overwritten by the parents' fixed identity); altered-payload-same-identity rewrite attempts are suppressed as duplicates. Independent attacks V-A5a/V-A1a/V-A1b held; cross-model causality representable and faithfully recorded (observation, debt D6)."
+
+  - id: ENV-I6
+    kind: envelope_rule
+    title: idempotent_durable_envelope_writes
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/idempotency.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): IdempotencyLedger admits exactly once per stable identity with fsync-per-admission; duplicates never rewrite storage; dedupe survives restart; corrupt lines fail closed. Independent attacks V-A5a (rewrite-after-restart suppressed) and V-A5b held; concurrent-admitter race recorded as REQUIRED-CLOSE debt D4 before any multi-process adoption."
+
+  - id: ENV-I7
+    kind: envelope_rule
+    title: evidence_refs_immutable_or_content_addressed
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/envelope.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): the envelope's provenance root entry is the content hash of a resolvable artifact (domain_model_hash:<verified-digest>), not a label or namespace constant. SHOULD-level rule honored on the substrate that exists; path-only output_ref in proof payloads is a forward obligation for E7 (T07), not an envelope-layer violation."
+
+  - id: ENV-I8
+    kind: envelope_rule
+    title: conformance_not_evidence_of_truth
+    verdict: CONFIRMED
+    evidence_kind: production_path
+    evidence:
+      - SWE_SEED/crates/swe-seed-core/src/federation/consume.rs
+      - SWE_SEED/crates/swe-seed-core/tests/convergence_t01_envelope.rs
+      - .agents/evidence/e2e/T01/t01-verifier-independent-confirmation.md
+    open_delta: "CLOSED (T01): check_conformance returns a pure structural report — no effects, no claim-truth evaluation, no expected-hash input; conformant authoritative lies produce zero consequence. Independent attacks V-A7/V-A9 held; conformance reports field-level registry membership only, authority pairing lives solely in validate_envelope (debt D5)."

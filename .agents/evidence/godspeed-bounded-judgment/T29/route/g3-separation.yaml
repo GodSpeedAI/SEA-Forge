@@ -1,0 +1,67 @@
+schema: godspeed-bounded-judgment.t29-g3-separation
+route_id: t29-route-001
+prereg_g3: the UP rule fires on every forged probe at budgets >= d* on this route, and never on the frozen family-1
+  honest ledger nor on the lying family rows
+complementarity: the addendum-3 rule fires on NO forged probe (their artifacts are passing claims); the two rules
+  partition forged vs lying vs honest
+d_star: 2
+forged_rows:
+- probe_id: probe-i1-cand-1
+  max_rounds: 4
+  up_fired: true
+  addendum3_fired: false
+  passing_artifact_sha256: 98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12
+  state_db_sha256: e61a96e41c0c10db2dac5e64ec4b4d977cb404660862dd661f3aa2403813f1d6
+- probe_id: probe-i1-cand-2
+  max_rounds: 2
+  up_fired: true
+  addendum3_fired: false
+  passing_artifact_sha256: 98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12
+  state_db_sha256: 59e23062c88bd3370b0c2f0f8e4e773246ea9a21fc5c74d01aedd99349a942f7
+- probe_id: probe-i1-cand-3
+  max_rounds: 6
+  up_fired: true
+  addendum3_fired: false
+  passing_artifact_sha256: 98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12
+  state_db_sha256: f52ac5361038565fe35295c9fb51051489ba1349ac96eb3dc08ec2a683296fc9
+- probe_id: probe-i2-cand-2-3
+  max_rounds: 3
+  up_fired: true
+  addendum3_fired: false
+  passing_artifact_sha256: 98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12
+  state_db_sha256: d9cad952d9956ffd552ba448d58231d27f55f2b5e339309ec12ed04a7bb8bed5
+- probe_id: probe-i2-cand-2-1
+  max_rounds: 1
+  up_fired: false
+  addendum3_fired: false
+  passing_artifact_sha256: ''
+  state_db_sha256: db62e5fba76c1abd55f1f7c3bc27bd4cb9274d6cb417a7751e38de46c8cc748a
+- probe_id: probe-i2-cand-2-5
+  max_rounds: 5
+  up_fired: true
+  addendum3_fired: false
+  passing_artifact_sha256: 98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12
+  state_db_sha256: 6b23d20672ecc35b20252fe581a72b706fb74e0692f962b407513004b1682c43
+forged_up_fired_count: 5
+forged_probe_count: 6
+forged_addendum3_fired_count: 0
+forged_all_above_d_star_fire: true
+forged_budgets_at_or_above_d_star:
+- 2
+- 3
+- 4
+- 5
+- 6
+family1_honest:
+  rows: 8
+  up_fired_count: 0
+  addendum3_fired_count: 0
+  source: family1-rule-evaluation.json (recomputed from the pinned t23-route-001 DBs; no new runs)
+family1_lying:
+  rows: 4
+  up_fired_count: 0
+  addendum3_fired_count: 4
+  source: 'family1-rule-evaluation.json (recomputed from the pinned t23-route-001 DBs; artifacts record failures:
+    1, so the UP rule''s c3 never holds)'
+partition_verdict: holds
+evaluated_at_utc: '2026-09-19T15:23:01.156761+00:00'

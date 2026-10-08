@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ10",
+  "oracle_name": "CJ10_DemonstratedKnowledgeReuseOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Reused knowledge/capability is disclosure-safe, traceable to source settlements, and unauthoritative projections fail closed.",
+  "authoritative_record_inspected": "sea-forge memory / /capabilities route",
+  "rationale": "Recall verified against authoritative ledger history; Workbench preview route correctly fails closed without false capability claims.",
+  "evidence_refs": [
+    "crates/sea-forge-cli/src/commands/recall.rs",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+  ],
+  "carried_state": {}
+}

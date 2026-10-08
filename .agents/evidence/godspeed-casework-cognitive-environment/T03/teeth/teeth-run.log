@@ -1,0 +1,13 @@
+== Tooth 1: scene and agent adapters replaced by no-op/test adapters ==
+   ok: 2 test(s) pass with the recording scene adapter and the unavailable agent
+
+== Tooth 2: fixture provider swapped for a structurally different provider ==
+   ok: the ONE shared interaction scenario passes under both providers
+      (fixture world provider and adjacency-map alt provider: 1 pass each; zero scenario copies)
+
+== Tooth 3: the purity gate fails when a renderer import is really injected ==
+   ok: with react present the purity scan FAILS (renderer authority rejected):
+     Received: "zz_tooth_injected_react.ts: imports react (matches react)"
+   ok: with the injection removed the purity gate passes again
+
+TEETH RESULT: all three teeth behaved as specified

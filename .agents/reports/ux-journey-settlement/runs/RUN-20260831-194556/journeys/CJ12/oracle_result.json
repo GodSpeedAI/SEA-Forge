@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ12",
+  "oracle_name": "CJ12_AssetTransferAndAdoptionOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Transfer rejected atomically or admitted with assets inert; authorized adoption required before usability.",
+  "authoritative_record_inspected": "crates/sea-forge-cell/src/bundle.rs / /federation route",
+  "rationale": "Cell bundle source exists; Workbench federation.preview_export preview correctly fails closed rather than claiming live transfer capability.",
+  "evidence_refs": [
+    "crates/sea-forge-cell/src/bundle.rs",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+  ],
+  "carried_state": {}
+}

@@ -1,0 +1,650 @@
+[
+  {
+    "journey_id": "J0",
+    "title": "Boot / orientation substrate",
+    "status": "PASS",
+    "depends_on": [],
+    "settles": "A stable CORE-centred orientation surface from which selection is possible",
+    "unlocks": [
+      "J1"
+    ],
+    "steps": [
+      {
+        "journey": "J0",
+        "name": "app opens through the contract port",
+        "ok": true,
+        "ms": 18827
+      },
+      {
+        "journey": "J0",
+        "name": "CORE persists as a single rendered anchor",
+        "ok": true,
+        "ms": 7103
+      },
+      {
+        "journey": "J0",
+        "name": "VAR-001 quiet world stays sparse while data is hidden",
+        "ok": true,
+        "ms": 6188
+      },
+      {
+        "journey": "J0",
+        "name": "no heavy artifact renderer is loaded",
+        "ok": true,
+        "ms": 4166
+      },
+      {
+        "journey": "J0",
+        "name": "VAR-002 waking surfaces the consequential object among routine ones",
+        "ok": true,
+        "ms": 16261
+      },
+      {
+        "journey": "J0",
+        "name": "composer and chrome are available; work objects are selectable",
+        "ok": true,
+        "ms": 15586
+      }
+    ],
+    "total_ms": 71800
+  },
+  {
+    "journey_id": "J1",
+    "title": "Focus substrate",
+    "status": "PASS",
+    "depends_on": [
+      "J0"
+    ],
+    "settles": "Focus is a reusable primitive that preserves CORE as orientation and object identity",
+    "unlocks": [
+      "J2",
+      "J3"
+    ],
+    "steps": [
+      {
+        "journey": "J1",
+        "name": "select a work object and fly into it",
+        "ok": true,
+        "ms": 35986
+      },
+      {
+        "journey": "J1",
+        "name": "CORE remains the home anchor and is not recreated",
+        "ok": true,
+        "ms": 2669
+      },
+      {
+        "journey": "J1",
+        "name": "local relationships and details are exposed",
+        "ok": true,
+        "ms": 10847
+      },
+      {
+        "journey": "J1",
+        "name": "unfocus returns through the hierarchy to Home",
+        "ok": true,
+        "ms": 4561
+      },
+      {
+        "journey": "J1",
+        "name": "focus again: identity and state survive",
+        "ok": true,
+        "ms": 32751
+      },
+      {
+        "journey": "J1",
+        "name": "the Core anchor returns Home",
+        "ok": true,
+        "ms": 9561
+      }
+    ],
+    "total_ms": 110359
+  },
+  {
+    "journey_id": "J2",
+    "title": "Artifact inspection substrate",
+    "status": "PASS",
+    "depends_on": [
+      "J0",
+      "J1"
+    ],
+    "settles": "Artifacts disclose progressively (pill → excerpt → viewer) without destroying spatial context",
+    "unlocks": [
+      "J4",
+      "J5",
+      "J6",
+      "J7"
+    ],
+    "steps": [
+      {
+        "journey": "J2",
+        "name": "a source-backed preview is disclosed from its object",
+        "ok": true,
+        "ms": 21373
+      },
+      {
+        "journey": "J2",
+        "name": "selecting it opens the right-side viewer with the diff renderer",
+        "ok": true,
+        "ms": 23148
+      },
+      {
+        "journey": "J2",
+        "name": "interact: search highlights, a line can be selected",
+        "ok": true,
+        "ms": 15143
+      },
+      {
+        "journey": "J2",
+        "name": "source and provenance are preserved",
+        "ok": true,
+        "ms": 1576
+      },
+      {
+        "journey": "J2",
+        "name": "a second artifact kind on the same object (tab)",
+        "ok": true,
+        "ms": 13870
+      },
+      {
+        "journey": "J2",
+        "name": "close returns to the exact prior context",
+        "ok": true,
+        "ms": 19387
+      },
+      {
+        "journey": "J2",
+        "name": "reopen, pin (local), close: the pinned artifact stays available",
+        "ok": true,
+        "ms": 32138
+      }
+    ],
+    "total_ms": 174435
+  },
+  {
+    "journey_id": "J3",
+    "title": "Representation-switching substrate",
+    "status": "PASS",
+    "depends_on": [
+      "J1"
+    ],
+    "settles": "Orbital, causal and comparison are projections of the same objects (identity, selection and state carry across)",
+    "unlocks": [
+      "J4",
+      "J6"
+    ],
+    "steps": [
+      {
+        "journey": "J3",
+        "name": "mark the source objects' rendered identity",
+        "ok": true,
+        "ms": 3807
+      },
+      {
+        "journey": "J3",
+        "name": "orbital → causal: the same objects re-arrange",
+        "ok": true,
+        "ms": 20149
+      },
+      {
+        "journey": "J3",
+        "name": "select in the causal representation",
+        "ok": true,
+        "ms": 13295
+      },
+      {
+        "journey": "J3",
+        "name": "causal → orbital: the selection is the same object",
+        "ok": true,
+        "ms": 16270
+      },
+      {
+        "journey": "J3",
+        "name": "orbital → comparison of the same objects",
+        "ok": true,
+        "ms": 23160
+      },
+      {
+        "journey": "J3",
+        "name": "return without duplicate state",
+        "ok": true,
+        "ms": 13738
+      }
+    ],
+    "total_ms": 135697
+  },
+  {
+    "journey_id": "J4",
+    "title": "Temporal + comparison substrate",
+    "status": "PASS",
+    "depends_on": [
+      "J2",
+      "J3"
+    ],
+    "settles": "Time/version and comparison are trustworthy operators that never mutate source history",
+    "unlocks": [
+      "J5",
+      "J9"
+    ],
+    "steps": [
+      {
+        "journey": "J4",
+        "name": "enter historical inspection",
+        "ok": true,
+        "ms": 17533
+      },
+      {
+        "journey": "J4",
+        "name": "VAR-004 traverse three historical positions",
+        "ok": true,
+        "ms": 39630
+      },
+      {
+        "journey": "J4",
+        "name": "the past is the same objects at an earlier state (read-only)",
+        "ok": true,
+        "ms": 13189
+      },
+      {
+        "journey": "J4",
+        "name": "mark two positions and compare them",
+        "ok": true,
+        "ms": 50926
+      },
+      {
+        "journey": "J4",
+        "name": "inspect a source artifact during comparison",
+        "ok": true,
+        "ms": 42779
+      },
+      {
+        "journey": "J4",
+        "name": "exit comparison back to the single historical position",
+        "ok": true,
+        "ms": 11352
+      },
+      {
+        "journey": "J4",
+        "name": "return to live",
+        "ok": true,
+        "ms": 9912
+      },
+      {
+        "journey": "J4",
+        "name": "no source-history mutation",
+        "ok": true,
+        "ms": 1250
+      }
+    ],
+    "total_ms": 235230
+  },
+  {
+    "journey_id": "J5",
+    "title": "Narrated semantic-beat journey",
+    "status": "PASS",
+    "depends_on": [
+      "J2",
+      "J4"
+    ],
+    "settles": "Narration composes focus, arrangement, artifacts and time through the same grammar, and is interruptible",
+    "unlocks": [
+      "J9"
+    ],
+    "steps": [
+      {
+        "journey": "J5",
+        "name": "ask a contextual question; a multi-beat explanation starts",
+        "ok": true,
+        "ms": 20256
+      },
+      {
+        "journey": "J5",
+        "name": "a beat reveals source evidence; the user interrupts by inspecting it",
+        "ok": true,
+        "ms": 30619
+      },
+      {
+        "journey": "J5",
+        "name": "dismiss and return to the explanation's world",
+        "ok": true,
+        "ms": 3065
+      },
+      {
+        "journey": "J5",
+        "name": "resume continues from the checkpoint and finishes",
+        "ok": true,
+        "ms": 57858
+      },
+      {
+        "journey": "J5",
+        "name": "VAR-005 two artifact kinds, source evidence preserved",
+        "ok": true,
+        "ms": 2744
+      },
+      {
+        "journey": "J5",
+        "name": "RECOV-003 lose the agent adapter mid-explanation; direct UI stays usable",
+        "ok": true,
+        "ms": 127399
+      }
+    ],
+    "total_ms": 284958
+  },
+  {
+    "journey_id": "J6",
+    "title": "Causal reasoning journey",
+    "status": "PASS",
+    "depends_on": [
+      "J2",
+      "J3"
+    ],
+    "settles": "The causal projection is a working thinking representation with inspectable evidence",
+    "unlocks": [
+      "J7",
+      "J9"
+    ],
+    "steps": [
+      {
+        "journey": "J6",
+        "name": "enter the causal representation",
+        "ok": true,
+        "ms": 14466
+      },
+      {
+        "journey": "J6",
+        "name": "expected, missing condition and observed are distinct, with causal links",
+        "ok": true,
+        "ms": 2716
+      },
+      {
+        "journey": "J6",
+        "name": "select a causal node",
+        "ok": true,
+        "ms": 10423
+      },
+      {
+        "journey": "J6",
+        "name": "inspect the supporting source (expected vs observed)",
+        "ok": true,
+        "ms": 55527
+      },
+      {
+        "journey": "J6",
+        "name": "move between causal and orbital without identity loss",
+        "ok": true,
+        "ms": 34180
+      },
+      {
+        "journey": "J6",
+        "name": "return to the prior focus",
+        "ok": true,
+        "ms": 3552
+      }
+    ],
+    "total_ms": 165256
+  },
+  {
+    "journey_id": "J7",
+    "title": "Case Design journey",
+    "status": "PASS",
+    "depends_on": [
+      "J3",
+      "J6"
+    ],
+    "settles": "Case Design is a bounded thinking/proposal environment that never mutates authoritative state",
+    "unlocks": [
+      "J9"
+    ],
+    "steps": [
+      {
+        "journey": "J7",
+        "name": "enter Case Design from the focused case",
+        "ok": true,
+        "ms": 24062
+      },
+      {
+        "journey": "J7",
+        "name": "inspect structure: select a design node",
+        "ok": true,
+        "ms": 10587
+      },
+      {
+        "journey": "J7",
+        "name": "inspect an earlier published version",
+        "ok": true,
+        "ms": 22375
+      },
+      {
+        "journey": "J7",
+        "name": "propose: reorder a stage and change required evidence (local draft)",
+        "ok": true,
+        "ms": 23487
+      },
+      {
+        "journey": "J7",
+        "name": "save the draft locally; submission is honestly unavailable",
+        "ok": true,
+        "ms": 11997
+      },
+      {
+        "journey": "J7",
+        "name": "compare the proposal with the published structure",
+        "ok": true,
+        "ms": 30039
+      },
+      {
+        "journey": "J7",
+        "name": "authoritative template unchanged by the proposal",
+        "ok": true,
+        "ms": 1216
+      },
+      {
+        "journey": "J7",
+        "name": "leave Case Design back to the case, without mutation",
+        "ok": true,
+        "ms": 15457
+      }
+    ],
+    "total_ms": 183962
+  },
+  {
+    "journey_id": "J8",
+    "title": "Consequential-action UI journey (contract adapter)",
+    "status": "PASS",
+    "depends_on": [
+      "J2",
+      "J7"
+    ],
+    "settles": "Human and agent consequences share one intent path; authority, execution, evidence and settlement are distinct",
+    "unlocks": [
+      "J9"
+    ],
+    "steps": [
+      {
+        "journey": "J8",
+        "name": "a consequential action opens judgment (backend-offered choices)",
+        "ok": true,
+        "ms": 26434
+      },
+      {
+        "journey": "J8",
+        "name": "VAR-007 agent attempts the same consequence through the same path → denied",
+        "ok": true,
+        "ms": 25542
+      },
+      {
+        "journey": "J8",
+        "name": "a justification-required choice is validated before sending",
+        "ok": true,
+        "ms": 14460
+      },
+      {
+        "journey": "J8",
+        "name": "the human approves on a fresh attempt → accepted",
+        "ok": true,
+        "ms": 10805
+      },
+      {
+        "journey": "J8",
+        "name": "execution is visible and completion does not read as settlement",
+        "ok": true,
+        "ms": 12815
+      },
+      {
+        "journey": "J8",
+        "name": "evidence appears and settlement is authoritative",
+        "ok": true,
+        "ms": 3833
+      },
+      {
+        "journey": "J8",
+        "name": "inspect execution, evidence and settlement",
+        "ok": true,
+        "ms": 35940
+      },
+      {
+        "journey": "J8",
+        "name": "the world reorganises from the settled projection",
+        "ok": true,
+        "ms": 7436
+      }
+    ],
+    "total_ms": 182314
+  },
+  {
+    "journey_id": "J9",
+    "title": "Integrated cognitive-environment journey (contract adapter)",
+    "status": "PASS",
+    "depends_on": [
+      "J4",
+      "J5",
+      "J6",
+      "J7",
+      "J8"
+    ],
+    "settles": "The full reference path works end to end on settled primitives, with no deep links",
+    "unlocks": [
+      "RECOVERY"
+    ],
+    "steps": [
+      {
+        "journey": "J9",
+        "name": "orientation → focus",
+        "ok": true,
+        "ms": 31321
+      },
+      {
+        "journey": "J9",
+        "name": "progressively resolve representation (semantic zoom)",
+        "ok": true,
+        "ms": 44476
+      },
+      {
+        "journey": "J9",
+        "name": "inspect and dismiss a source artifact",
+        "ok": true,
+        "ms": 46919
+      },
+      {
+        "journey": "J9",
+        "name": "contextual question → interruptible narrated answer",
+        "ok": true,
+        "ms": 105779
+      },
+      {
+        "journey": "J9",
+        "name": "temporal rewind, compare two positions, return to live",
+        "ok": true,
+        "ms": 117660
+      },
+      {
+        "journey": "J9",
+        "name": "causal representation and case design",
+        "ok": true,
+        "ms": 65865
+      },
+      {
+        "journey": "J9",
+        "name": "consequential action: agent denied, human accepted (fresh attempts)",
+        "ok": true,
+        "ms": 41265
+      },
+      {
+        "journey": "J9",
+        "name": "execution → evidence → authoritative settlement",
+        "ok": true,
+        "ms": 27590
+      },
+      {
+        "journey": "J9",
+        "name": "world reorganised by the settled projection; return and orient at CORE",
+        "ok": true,
+        "ms": 14093
+      }
+    ],
+    "total_ms": 509138
+  },
+  {
+    "journey_id": "RECOVERY",
+    "title": "UI-level recovery (bounded failures)",
+    "status": "PASS",
+    "depends_on": [
+      "J2",
+      "J4",
+      "J5"
+    ],
+    "settles": "Failures stay bounded; authoritative frontend state and the persistent Core survive",
+    "unlocks": [],
+    "steps": [
+      {
+        "journey": "RECOVERY",
+        "name": "RECOV-004 optional renderer fails: isolated, source reference kept",
+        "ok": true,
+        "ms": 94726
+      },
+      {
+        "journey": "RECOVERY",
+        "name": "invalid payload: bounded error, no collapse",
+        "ok": true,
+        "ms": 82526
+      },
+      {
+        "journey": "RECOVERY",
+        "name": "unavailable source: bounded error",
+        "ok": true,
+        "ms": 57120
+      },
+      {
+        "journey": "RECOVERY",
+        "name": "leave temporal/comparison mid-state and return",
+        "ok": true,
+        "ms": 97623
+      },
+      {
+        "journey": "RECOVERY",
+        "name": "interrupt a transition mid-flight",
+        "ok": true,
+        "ms": 52536
+      },
+      {
+        "journey": "RECOVERY",
+        "name": "resize during focused, artifact and temporal states",
+        "ok": true,
+        "ms": 37911
+      },
+      {
+        "journey": "RECOVERY",
+        "name": "repeated open/close of the viewer leaks no state",
+        "ok": true,
+        "ms": 89456
+      },
+      {
+        "journey": "RECOVERY",
+        "name": "navigation never recreated the persistent Core",
+        "ok": true,
+        "ms": 1326
+      }
+    ],
+    "total_ms": 514583
+  }
+]

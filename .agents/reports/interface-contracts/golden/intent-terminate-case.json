@@ -1,0 +1,33 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0010",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "TERMINATE_CASE",
+    "target_object_id": "case-31ab",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000422",
+    "actor": {
+      "actor_id": "actor-lc-4",
+      "role": "case_architect"
+    },
+    "parameters": {
+      "case_id": "case-31ab",
+      "reason": "Duplicate of case-31aa; the migration is tracked there."
+    }
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0010",
+      "success": true,
+      "new_cursor": "1.0000000423"
+    },
+    {
+      "intent_id": "intent-3f9c2a81-0010",
+      "success": false,
+      "refusal": {
+        "refusal_kind": "INVALID",
+        "message": "A termination reason is required and must not be blank."
+      }
+    }
+  ]
+}

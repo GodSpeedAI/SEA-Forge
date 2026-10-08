@@ -1,0 +1,43 @@
+schema: godspeed-bounded-judgment.t22-payment-counters
+task: T22
+iteration: 1
+correction_round: 2
+wall_clock_seconds: 56.456
+provider_calls:
+  count: 4
+  by_identity:
+  - seq: 1
+    purpose: candidate_generation
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: responded
+    started_at_utc: '2026-09-19T01:45:45.072259+00:00'
+    duration_seconds: 19.053
+  - seq: 2
+    purpose: probe_judgment:probe-cand-1
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: responded
+    started_at_utc: '2026-09-19T01:46:06.159481+00:00'
+    duration_seconds: 16.438
+  - seq: 3
+    purpose: probe_judgment:probe-cand-2
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: responded
+    started_at_utc: '2026-09-19T01:46:22.598484+00:00'
+    duration_seconds: 9.423
+  - seq: 4
+    purpose: probe_judgment:probe-cand-3
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: responded
+    started_at_utc: '2026-09-19T01:46:32.021664+00:00'
+    duration_seconds: 9.487
+probes_run: 3
+tool_executions: 3
+failed_executions: 0
+tokens_and_cost: 'n/a: the frozen provider seam (opencode run) does not expose token/cost accounting; honest gap
+  per prereg payment_counters_frozen.tokens_and_cost'
+operator_decisions: 0
+probe_data_root: /home/sprime01/.local/share/godspeed-route-discovery/T22/round2

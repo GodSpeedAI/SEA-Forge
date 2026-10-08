@@ -1,0 +1,9 @@
+tooth: degenerate_domain
+domain:
+- satisfied
+expected: a single-effective-label domain is a specification defect and is REJECTED, never scored
+behaved_as_specified: true
+enforcement: the frozen domain has 3 labels incl. explicit insufficiency; a 1-label domain fails the closure/non-vacuity rule
+  (spec AnswerDomain)
+mode: degenerate-domain
+executed_at: '2026-09-18T00:09:41.359178+00:00'

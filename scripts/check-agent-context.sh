@@ -53,6 +53,7 @@ if printf '%s\n' "$base_changes" | grep -Fqx "$STATUS_FILE"; then
 fi
 
 if [ -n "$project_changes" ] && [ -z "$status_changed" ]; then
+  printf 'changed files that need a status update:\n%s\n' "$project_changes" >&2
   fail 'project files changed without a corresponding CURRENT_STATUS.md update'
 fi
 

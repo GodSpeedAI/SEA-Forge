@@ -1,0 +1,32 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "correlation_id": "t23-route-001-iter4",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-lying", "max_rounds": 8},
+    "expected_role": "establish_discriminator",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Maximal budget gives the lying probe the best chance to reach a settlement attempt that verification then rejects as nonsettlement."
+  },
+  {
+    "candidate_id": "cand-2",
+    "correlation_id": "t23-route-001-iter4",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 1},
+    "expected_role": "boundary_probe",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Tests the low end of the settling budget on this route to confirm payment exhaustion below any candidate r*."
+  },
+  {
+    "candidate_id": "cand-3",
+    "correlation_id": "t23-route-001-iter4",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 7},
+    "expected_role": "boundary_probe",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Tests a high budget above the default 4 that settles, bracketing the minimal settling budget from above."
+  }
+]

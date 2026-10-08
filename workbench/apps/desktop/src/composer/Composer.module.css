@@ -1,0 +1,76 @@
+/* Composer: persistent contextual action surface. Donor `#hud` glass treatment
+ * (blur, border, radius, shadow) preserved; product semantics own the copy. */
+
+.composer {
+  position: fixed;
+  right: 34px;
+  bottom: 34px;
+  z-index: 20;
+  width: 292px;
+  padding: 22px 24px 18px;
+  background: rgba(10, 14, 22, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  color: rgba(233, 240, 248, 0.92);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 18px;
+  font-size: 10px;
+  letter-spacing: 0.34em;
+}
+
+.head span:last-child {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(200, 214, 229, 0.55);
+}
+
+.composer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.composer button {
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  color: rgba(233, 240, 248, 0.92);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.composer button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.composer button:not(:disabled):hover {
+  border-color: rgba(255, 179, 92, 0.6);
+}
+
+@media (max-width: 760px) {
+  .composer {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    width: auto;
+  }
+}

@@ -1,0 +1,439 @@
+bun install v1.4.0 (34cbb9a40)
+
+Checked 83 installs across 133 packages (no changes) [5.00ms]
+$ tsc --noEmit
+$ NODE_ENV=production vite build
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 109 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                     0.47 kB │ gzip:   0.30 kB
+dist/assets/inter-vietnamese-400-normal-DMkecbls.woff2              4.97 kB
+dist/assets/inter-vietnamese-600-normal-Cc8MFFhd.woff2              5.10 kB
+dist/assets/inter-vietnamese-500-normal-DOriooB6.woff2              5.11 kB
+dist/assets/inter-greek-ext-400-normal-DGGRlc-M.woff2               5.26 kB
+dist/assets/inter-greek-ext-500-normal-C4iEst2y.woff2               5.43 kB
+dist/assets/inter-greek-ext-600-normal-DRtmH8MT.woff2               5.43 kB
+dist/assets/ibm-plex-mono-vietnamese-500-normal-C8zxqsMH.woff       5.62 kB
+dist/assets/ibm-plex-mono-vietnamese-400-normal-DDuiU_S-.woff       5.62 kB
+dist/assets/ibm-plex-mono-vietnamese-600-normal-iLQfcSjf.woff       5.71 kB
+dist/assets/ibm-plex-mono-cyrillic-ext-500-normal-BIfNGwUT.woff     5.77 kB
+dist/assets/ibm-plex-mono-cyrillic-ext-600-normal-9HEixskS.woff     5.79 kB
+dist/assets/ibm-plex-mono-cyrillic-ext-400-normal-DMdlQ8Kv.woff     5.82 kB
+dist/assets/ibm-plex-mono-vietnamese-400-normal-BulugwFq.woff2      5.87 kB
+dist/assets/ibm-plex-mono-vietnamese-500-normal-DZ4AoWbu.woff2      6.04 kB
+dist/assets/inter-vietnamese-400-normal-Bbgyi5SW.woff               6.50 kB
+dist/assets/inter-vietnamese-500-normal-mJboJaSs.woff               6.60 kB
+dist/assets/inter-vietnamese-600-normal-BuLX-rYi.woff               6.64 kB
+dist/assets/ibm-plex-mono-cyrillic-ext-400-normal-xuaO2J-f.woff2    6.91 kB
+dist/assets/ibm-plex-mono-vietnamese-600-normal-D2EvbN8M.woff2      6.93 kB
+dist/assets/ibm-plex-mono-cyrillic-ext-500-normal-BqneJy0T.woff2    6.97 kB
+dist/assets/inter-greek-ext-400-normal-KugGGMne.woff                7.06 kB
+dist/assets/inter-greek-ext-500-normal-2j5mBUwD.woff                7.19 kB
+dist/assets/ibm-plex-mono-cyrillic-400-normal-CEL4l2ZJ.woff         7.20 kB
+dist/assets/ibm-plex-mono-cyrillic-500-normal-Ael50iVv.woff         7.21 kB
+dist/assets/inter-greek-ext-600-normal-B8X0CLgF.woff                7.21 kB
+dist/assets/ibm-plex-mono-cyrillic-600-normal-fLZuRloM.woff         7.27 kB
+dist/assets/ibm-plex-mono-cyrillic-ext-600-normal-V-xxqcpd.woff2    7.69 kB
+dist/assets/inter-cyrillic-400-normal-obahsSVq.woff2                7.71 kB
+dist/assets/inter-greek-400-normal-B4URO6DV.woff2                   7.78 kB
+dist/assets/inter-cyrillic-500-normal-BasfLYem.woff2                7.90 kB
+dist/assets/inter-greek-500-normal-BIZE56-Y.woff2                   7.92 kB
+dist/assets/inter-greek-600-normal-plRanbMR.woff2                   7.94 kB
+dist/assets/inter-cyrillic-600-normal-CWCymEST.woff2                7.97 kB
+dist/assets/ibm-plex-mono-cyrillic-400-normal-BSMlKf0J.woff2        8.36 kB
+dist/assets/ibm-plex-mono-cyrillic-500-normal-Bq9vWWag.woff2        8.46 kB
+dist/assets/ibm-plex-mono-cyrillic-600-normal-CTOM6hUh.woff2        9.35 kB
+dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff                 9.78 kB
+dist/assets/inter-greek-400-normal-q2sYcFCs.woff                    9.92 kB
+dist/assets/inter-cyrillic-600-normal-4D_pXhcN.woff                 9.94 kB
+dist/assets/inter-cyrillic-500-normal-CxZf_p3X.woff                 9.94 kB
+dist/assets/inter-greek-500-normal-Xzm54t5V.woff                    9.98 kB
+dist/assets/inter-greek-600-normal-BZpKdvQh.woff                   10.03 kB
+dist/assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2           10.23 kB
+dist/assets/inter-cyrillic-ext-500-normal-B0yAr1jD.woff2           10.43 kB
+dist/assets/inter-cyrillic-ext-600-normal-Dfes3d0z.woff2           10.48 kB
+dist/assets/ibm-plex-mono-latin-ext-400-normal-D3D2R8hC.woff       11.77 kB
+dist/assets/ibm-plex-mono-latin-ext-500-normal-CZ70TYgx.woff       11.77 kB
+dist/assets/ibm-plex-mono-latin-ext-600-normal-DmB0ttJJ.woff       11.83 kB
+dist/assets/ibm-plex-mono-latin-400-normal-CvHOgSBP.woff           13.14 kB
+dist/assets/ibm-plex-mono-latin-500-normal-CB9ihrfo.woff           13.16 kB
+dist/assets/ibm-plex-mono-latin-600-normal-DWFSQ4vo.woff           13.21 kB
+dist/assets/inter-cyrillic-ext-400-normal-DQukG94-.woff            13.34 kB
+dist/assets/ibm-plex-mono-latin-ext-400-normal-BmRBH3aV.woff2      13.35 kB
+dist/assets/ibm-plex-mono-latin-ext-500-normal-CAhNIIs5.woff2      13.43 kB
+dist/assets/inter-cyrillic-ext-500-normal-BmqWE9Dz.woff            13.45 kB
+dist/assets/inter-cyrillic-ext-600-normal-Bcila6Z-.woff            13.46 kB
+dist/assets/ibm-plex-mono-latin-ext-600-normal-D38SheWl.woff2      14.33 kB
+dist/assets/ibm-plex-mono-latin-400-normal-DMJ8VG8y.woff2          14.71 kB
+dist/assets/ibm-plex-mono-latin-500-normal-DSY6xOcd.woff2          14.89 kB
+dist/assets/ibm-plex-mono-latin-600-normal-BgSNZQsw.woff2          15.62 kB
+dist/assets/inter-latin-400-normal-C38fXH4l.woff2                  23.66 kB
+dist/assets/inter-latin-500-normal-Cerq10X2.woff2                  24.27 kB
+dist/assets/inter-latin-600-normal-LgqL8muc.woff2                  24.45 kB
+dist/assets/inter-latin-400-normal-CyCys3Eg.woff                   30.70 kB
+dist/assets/inter-latin-600-normal-CiBQ2DWP.woff                   31.26 kB
+dist/assets/inter-latin-500-normal-BL9OpVg8.woff                   31.28 kB
+dist/assets/inter-latin-ext-400-normal-C1nco2VV.woff2              35.00 kB
+dist/assets/inter-latin-ext-500-normal-CV4jyFjo.woff2              36.02 kB
+dist/assets/inter-latin-ext-600-normal-D2bJ5OIk.woff2              36.26 kB
+dist/assets/inter-latin-ext-400-normal-77YHD8bZ.woff               47.56 kB
+dist/assets/inter-latin-ext-500-normal-BxGbmqWO.woff               48.49 kB
+dist/assets/inter-latin-ext-600-normal-CIVaiw4L.woff               48.67 kB
+dist/assets/ChartRenderer-CXu5aNkw.css                              1.79 kB │ gzip:   0.66 kB
+dist/assets/TextRenderer-B-99t0ue.css                               1.93 kB │ gzip:   0.65 kB
+dist/assets/MarkdownRenderer-BB-k9qfO.css                           2.22 kB │ gzip:   0.62 kB
+dist/assets/TableRenderer-B48wdwu6.css                              2.35 kB │ gzip:   0.75 kB
+dist/assets/JsonRenderer-Dt1irXrB.css                               2.62 kB │ gzip:   0.83 kB
+dist/assets/TraceRenderer-Cj8uC_SS.css                              2.76 kB │ gzip:   0.78 kB
+dist/assets/DiffRenderer-DvIwXQsm.css                               2.87 kB │ gzip:   0.84 kB
+dist/assets/GraphRenderer-BIyWNmgm.css                              2.99 kB │ gzip:   0.87 kB
+dist/assets/TimelineRenderer-ZfWJRc-X.css                           3.21 kB │ gzip:   0.89 kB
+dist/assets/index-07YQ6yHr.css                                     97.80 kB │ gzip:  16.52 kB
+dist/assets/highlight-BXhsKxOJ.js                                   0.37 kB │ gzip:   0.26 kB
+dist/assets/TextRenderer-Zvs8B1j7.js                                1.69 kB │ gzip:   0.86 kB
+dist/assets/MarkdownRenderer-OzOvJShT.js                            2.10 kB │ gzip:   0.76 kB
+dist/assets/TableRenderer-DOQo_-4h.js                               2.33 kB │ gzip:   1.06 kB
+dist/assets/DiffRenderer-C7B9rAkF.js                                2.82 kB │ gzip:   1.24 kB
+dist/assets/ChartRenderer-B_UWivW0.js                               3.11 kB │ gzip:   1.42 kB
+dist/assets/TimelineRenderer-C71VGLCP.js                            3.30 kB │ gzip:   1.16 kB
+dist/assets/TraceRenderer-IX8LTwXi.js                               3.43 kB │ gzip:   1.14 kB
+dist/assets/JsonRenderer-DL4mVUJ5.js                                3.86 kB │ gzip:   1.17 kB
+dist/assets/GraphRenderer-BEtn_yge.js                               6.00 kB │ gzip:   2.48 kB
+dist/assets/httpCaseworkAdapter-BfSkWyjN.js                        10.43 kB │ gzip:   3.70 kB
+dist/assets/index-CdN8EEXV.js                                     907.36 kB │ gzip: 251.27 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.73s
+bun test v1.4.0 (34cbb9a40)
+
+src/layout/layout.test.ts:
+(pass) layout > Home layout > places the six regions at their data slots [2.19ms]
+(pass) layout > Focusing northstar > makes it the center and places its facets [0.52ms]
+(pass) layout > Causal surface > places exactly the causal members [0.52ms]
+(pass) layout > Judgment surface > gives the judged object role [0.19ms]
+(pass) layout > Compare input > annotates placements with change classes [0.68ms]
+(pass) layout > Design mode > places the template children with glyphs [1.70ms]
+(pass) layout > layout.ts code quality > does not contain fixture ids [8.12ms]
+(pass) layout > cameraFor > computes camera position from layout [0.05ms]
+
+src/narrative/conduct.test.ts:
+(pass) beatFromNarration > maps focus directive [1.55ms]
+(pass) beatFromNarration > maps highlight directive [1.19ms]
+(pass) beatFromNarration > maps annotate directive [1.68ms]
+(pass) beatFromNarration > openArtifact increases holdMs to ARTIFACT_BEAT_MS [1.75ms]
+(pass) beatFromNarration > x.arrange maps to surface [1.47ms]
+(pass) beatFromNarration > x.reveal adds to reveal array [1.11ms]
+(pass) beatFromNarration > x.dim sets dim array [1.32ms]
+(pass) beatFromNarration > x.compare sets up comparison [1.21ms]
+(pass) beatFromNarration > temporalStep moves relative to cursor [1.60ms]
+(pass) beatFromNarration > temporalStep clamps at ends [1.04ms]
+(pass) beatFromNarration > x.temporalTo live resolves to newest cursor [0.96ms]
+(pass) beatFromNarration > x.temporalTo specific cursor sets cursor [1.23ms]
+(pass) beatFromNarration > camera.target core clears focus [0.89ms]
+(pass) beatFromNarration > multiple directives stack effects [0.91ms]
+(pass) explain > with localAgent returns true and eventually has beats with complete=true [203.90ms]
+(pass) explain > with failAfter 2 ends with error and sets agent unavailable [202.14ms]
+(pass) explain > with null agent returns false and changes nothing [1.79ms]
+(pass) explain > agent returns null for unknown question [1.02ms]
+(pass) explain > explain with no agent available returns false [0.96ms]
+
+src/narrative/player.test.ts:
+(pass) NarrativePlayer > narrativeStarted applies beat 0 immediately [1.17ms]
+(pass) NarrativePlayer > next beat applies after its holdMs when complete is true [1.02ms]
+(pass) NarrativePlayer > waits when beats have not arrived yet [1.15ms]
+(pass) NarrativePlayer > ends after last beat once narrativeComplete arrives [2.89ms]
+(pass) NarrativePlayer > pauseNarrative stops advancing and saves remaining hold [2.03ms]
+(pass) NarrativePlayer > resumeNarrative continues from same index after minimum 900ms [4.05ms]
+(pass) NarrativePlayer > narrativeFailed after 2 beats ends with error set [1.12ms]
+(pass) NarrativePlayer > home cancels narrative [0.90ms]
+(pass) NarrativePlayer > uses default hold when beat holdMs is undefined [0.86ms]
+(pass) NarrativePlayer > switching narratives drops previous timer [0.77ms]
+(pass) NarrativePlayer > dispose clears timers and stops player [0.78ms]
+(pass) NarrativePlayer > beats with focus, reveal, and other attributes are applied [0.92ms]
+(pass) NarrativePlayer > streamed beats come after narrativeStarted [0.88ms]
+
+src/model/store.test.ts:
+(pass) store.reduce > focus > focus builds the focus path [0.20ms]
+(pass) store.reduce > focus > back pops focus [0.12ms]
+(pass) store.reduce > home > resets focus, compare, timeline, design and returns to now [0.27ms]
+(pass) store.reduce > timeline > setTime opens the timeline [0.03ms]
+(pass) store.reduce > timeline > returnToNow closes the timeline [0.04ms]
+(pass) store.reduce > markTime > keeps at most 2 marks [0.17ms]
+(pass) store.reduce > markTime > toggles marks [0.17ms]
+(pass) store.reduce > compare > openCompare sets surface and compare state [0.13ms]
+(pass) store.reduce > compare > refuses to compare a cursor with itself [0.03ms]
+(pass) store.reduce > compare > closeCompare restores prior revision and surface [0.11ms]
+(pass) store.reduce > expandArtifact and collapseArtifact > collapseArtifact restores exact ViewSnapshot [0.14ms]
+(pass) store.reduce > pinArtifact > toggles pinned state [0.14ms]
+(pass) store.reduce > invoke > opens judgment for consequential action [0.18ms]
+(pass) store.reduce > invoke > routes ADD_DISCRETIONARY_WORK to the discretionary drawer, not judgment (T09) [0.15ms]
+(pass) store.reduce > invoke > is a no-op in the past [0.07ms]
+(pass) store.reduce > intentSettled > intentSettled with refused state clears pending [0.04ms]
+(pass) store.reduce > narrative actions > narrativeStarted/narrativeBeat/narrativeComplete [0.13ms]
+(pass) store.reduce > narrative actions > applyBeat with compare opens comparison [0.15ms]
+(pass) store.reduce > design > enterDesign + designDraft + setMode(world) restores returnFocus [0.07ms]
+(pass) store.reduce > loadHistory > keeps past revision when standing in the past [0.04ms]
+(pass) store.reduce > loadHistory > follows now when at now [0.11ms]
+(pass) store.reduce > connection state > represents reconnecting and prolonged interruption without changing world history [0.05ms]
+(pass) store.reduce > mutation safety > never mutates history snapshots [0.39ms]
+(pass) store (Store interface) > dispatch and subscribe work [0.10ms]
+(pass) store (Store interface) > listen receives state, prev, and action [0.04ms]
+
+src/model/view.test.ts:
+(pass) view > diffObjects > classifies added objects [0.21ms]
+(pass) view > diffObjects > classifies removed objects [0.10ms]
+(pass) view > diffObjects > detects changed title [0.25ms]
+(pass) view > diffObjects > detects changed status [0.11ms]
+(pass) view > diffObjects > marks unchanged objects as same [0.21ms]
+(pass) view > mergeForCompare > keeps removed objects as ghosts [0.17ms]
+(pass) view > mergeForCompare > never duplicates ids [0.04ms]
+(pass) view > mergeForCompare > merges artifacts from both sides [0.12ms]
+(pass) view > worldView > returns world view in normal mode [0.32ms]
+(pass) view > worldView > returns compare surface when compare is active [0.35ms]
+(pass) view > findArtifact > finds artifact in current snapshot [0.07ms]
+(pass) view > findArtifact > finds artifact in history when not in current snapshot [0.15ms]
+
+src/model/derive.test.ts:
+(pass) derive: kernel kind → presentation > the kernel kinds map to the UI presentation classes [0.05ms]
+(pass) derive: kernel status → tone and phrase > ACTIVE/ready work is progress; COMPLETED is ok; BLOCKED/WAITING is attention [0.04ms]
+(pass) derive: kernel status → tone and phrase > phrases replace engine jargon only when the backend sent no badge [0.04ms]
+(pass) derive: kernel status → tone and phrase > an authored tone extension wins over derivation [0.03ms]
+(pass) derive: depends_on → sentry explanation > unmet dependencies are named with their standing [0.04ms]
+(pass) derive: depends_on → sentry explanation > completed dependencies never block [0.01ms]
+(pass) derive: depends_on → sentry explanation > multiple blockers are listed together [0.03ms]
+(pass) derive: depends_on → sentry explanation > settled work is not sentry-blocked, and unknown dependencies are ignored [0.06ms]
+
+src/app/live.test.ts:
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/live.test.ts:38:18)
+
+(pass) connectLive connection recovery > marks a prolonged outage interrupted and returns live only after a source snapshot [44.87ms]
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/live.test.ts:70:18)
+
+(pass) connectLive connection recovery > clears the interruption timer when the subscription is disposed [31.21ms]
+(pass) connectLive connection recovery > keeps a stale-refusal refresh in history when a later live snapshot arrives [1.97ms]
+
+src/app/intents.test.ts:
+(pass) createIntentPath stale projection recovery > fetches one fresh snapshot, preserves the refusal, and keeps the current focus [1.95ms]
+(pass) createIntentPath stale projection recovery > keeps the stale refusal and reports a failed refresh without replaying the intent [1.15ms]
+(pass) createIntentPath stale projection recovery > does not merge a deferred old-case refresh after the user switches cases [1.15ms]
+(pass) createIntentPath stale projection recovery > rejects a refresh response that identifies a different case [1.20ms]
+(pass) createIntentPath stale projection recovery > rejects a refresh response with a missing case identity [1.19ms]
+(pass) createIntentPath stale projection recovery > rejects a refresh response with a non-string case identity [1.37ms]
+
+src/app/design.test.ts:
+(pass) design > designModel > reads the stages from the template layers node [0.12ms]
+(pass) design > designModel > extracts name and description from root [0.02ms]
+(pass) design > designModel > reads roles and evidence [0.06ms]
+(pass) design > moveItem > swaps neighbors [0.19ms]
+(pass) design > moveItem > does nothing at the ends [0.15ms]
+(pass) design > moveItem > returns new snapshot without mutating input [0.10ms]
+(pass) design > toggleRequired > flips required flag [0.29ms]
+(pass) design > toggleRequired > returns new snapshot without mutating input [0.08ms]
+(pass) design > isDirty > is false for no draft [0.03ms]
+(pass) design > isDirty > is true after an edit [0.14ms]
+(pass) design > isDirty > is false when draft revision is null [0.03ms]
+
+src/scene/lod.test.ts:
+(pass) nextLod > plain thresholds (no hysteresis on the way up) > stays at level 0 when size is below threshold [0.06ms]
+(pass) nextLod > plain thresholds (no hysteresis on the way up) > switches UP to level 1 when size >= 34 [0.01ms]
+(pass) nextLod > plain thresholds (no hysteresis on the way up) > switches UP to level 2 when size >= 120 [0.05ms]
+(pass) nextLod > plain thresholds (no hysteresis on the way up) > switches UP to level 3 when size >= 420 [0.01ms]
+(pass) nextLod > plain thresholds (no hysteresis on the way up) > switches up immediately from any level without hysteresis [0.01ms]
+(pass) nextLod > hysteresis on the way down (per level) > stays at level 1 when size dips below 34 but above hysteresis threshold [0.02ms]
+(pass) nextLod > hysteresis on the way down (per level) > drops from level 1 to 0 when size falls below hysteresis threshold [0.02ms]
+(pass) nextLod > hysteresis on the way down (per level) > stays at level 2 when size dips below 120 but above hysteresis threshold [0.12ms]
+(pass) nextLod > hysteresis on the way down (per level) > drops from level 2 to 1 when size falls below hysteresis threshold of level 2 [0.06ms]
+(pass) nextLod > hysteresis on the way down (per level) > stays at level 3 when size dips below 420 but above hysteresis threshold [0.10ms]
+(pass) nextLod > hysteresis on the way down (per level) > drops from level 3 to 2 when size falls below hysteresis threshold of level 3 [0.04ms]
+(pass) nextLod > multi-level jumps > jumps from level 0 directly to level 3 when size is large [0.04ms]
+(pass) nextLod > multi-level jumps > jumps from level 3 directly to level 0 when size is very small [0.04ms]
+(pass) nextLod > multi-level jumps > jumps down multiple levels with hysteresis applied per level [0.12ms]
+(pass) nextLod > multi-level jumps > drops from level 2 through multiple levels to level 0 with hysteresis [0.02ms]
+(pass) nextLod > boundary values > treats exactly at threshold as switching to next level [0.01ms]
+(pass) nextLod > boundary values > treats just below threshold as not switching [0.01ms]
+(pass) nextLod > boundary values > treats hysteresis boundary precisely [0.02ms]
+(pass) nextLod > LodTracker > tracks and returns LOD for new objects [0.12ms]
+(pass) nextLod > LodTracker > applies hysteresis for tracked objects [0.03ms]
+(pass) nextLod > LodTracker > detects changes when LOD level changes [0.03ms]
+(pass) nextLod > LodTracker > tracks multiple objects independently [0.02ms]
+(pass) nextLod > LodTracker > forgets tracked objects [0.02ms]
+(pass) nextLod > LodTracker > consumeChanged clears the changed set [0.13ms]
+(pass) nextLod > LodTracker > handles multi-level jumps in tracker [0.06ms]
+(pass) nextLod > LodTracker > applies hysteresis correctly across multiple updates [0.04ms]
+
+src/ports/wireContract.test.ts:
+(pass) canonical wire contract: exhaustive kind lists > the hardcoded lists have no duplicates [0.09ms]
+(pass) canonical wire contract: exhaustive kind lists > the compile-time pins are active (WireContractPins resolves to all-true) [0.05ms]
+(pass) golden world snapshot > world-snapshot.json matches the canonical CognitiveWorldSnapshot shape [0.41ms]
+(pass) golden world snapshot > union-free golden fields typecheck directly against the canonical types [0.02ms]
+(pass) golden intent fixtures > every consequential intent kind has exactly one well-formed golden fixture [0.55ms]
+(pass) golden intent fixtures > every refusal kind is exercised at least once across the goldens [0.16ms]
+(pass) golden template and preflight fixtures > templates-entry-options.json matches the canonical template shapes [0.16ms]
+(pass) golden template and preflight fixtures > template-preflight-pass.json passes with a digest and no reasons [0.04ms]
+(pass) golden template and preflight fixtures > template-preflight-fail.json fails with reasons and no digest [0.03ms]
+(pass) golden SSE event fixtures > sse-events.jsonl carries exactly one well-formed line per stream event kind [0.24ms]
+
+src/ports/project.test.ts:
+(pass) projectSnapshot > adds core when withCore is true and parents roots to it [0.17ms]
+(pass) projectSnapshot > does not add core when withCore is false [0.04ms]
+(pass) projectSnapshot > maps badge→status.label [0.03ms]
+(pass) projectSnapshot > uses status phrase when badge is empty [0.02ms]
+(pass) projectSnapshot > spatial_layout radius maps to slot.size = 2×radius [0.05ms]
+(pass) projectSnapshot > relationships map to internal kinds [0.10ms]
+(pass) projectSnapshot > artifacts are collected from visible objects [0.04ms]
+(pass) projectHistory > orders by cursor and labels the last revision as Now [0.78ms]
+(pass) projectHistory > compareCursor handles epoch and seq correctly [0.11ms]
+(pass) loadCaseHistory > loads case history through LocalContractAdapter returning 6 revisions [9.92ms]
+(pass) compareCursor > correctly orders cursors by epoch first, then sequence [0.06ms]
+(pass) compareCursor > handles missing sequence as 0 [0.01ms]
+
+src/camera/camera.test.ts:
+(pass) project: camera target lands on focal point [0.19ms]
+(pass) project/unproject round-trip at tilt 0, roll 0 [0.06ms]
+(pass) project/unproject round-trip at tilt 0, roll 0.2 [0.31ms]
+(pass) zoomAt keeps world point under cursor fixed (tilt 0) [0.22ms]
+(pass) zoom clamping: min limit [0.03ms]
+(pass) zoom clamping: max limit [0.06ms]
+(pass) zoom clamping: default limits [0.06ms]
+(pass) lerpCamera: endpoints exact [0.12ms]
+(pass) lerpCamera: zoom geometric at t=0.5 [0.06ms]
+(pass) panBy moves a world point with the pointer (tilt 0) [0.14ms]
+(pass) clampTilt: clamps to [0, 1.2] [0.18ms]
+(pass) easeInOutCubic: range [0, 1] for input [0, 1] [0.06ms]
+(pass) flightDuration: basic calculation [0.06ms]
+(pass) flightDuration: zoom change increases duration [0.04ms]
+(pass) sampleFlight: returns from camera at start [0.10ms]
+(pass) sampleFlight: returns to camera at end [0.03ms]
+(pass) sampleFlight: returns done=false between start and end [0.14ms]
+(pass) sampleFlight: interpolates correctly at midpoint [0.09ms]
+(pass) project with depth (z != 0) [0.05ms]
+(pass) project with tilt [0.03ms]
+
+src/ui/journeys.test.tsx:
+(pass) journey: login/session > the local adapter self-reports a session; login/logout transitions it [122.95ms]
+(pass) journey: login/session > login refuses an empty username typed [61.51ms]
+(pass) journey: login/session > the login screen renders with fields and an error card [5.32ms]
+(pass) journey: login/session > the session badge shows the resolved actor_id and role [0.69ms]
+(pass) journey: case design (CJ04) > picker loads fixture templates through TemplateSourcePort [4.17ms]
+(pass) journey: case design (CJ04) > submit is disabled until preflight passes, then the commit focuses the new case [354.12ms]
+(pass) journey: case design (CJ04) > PROPOSE_CASE with a digest that no longer matches is refused STALE_PROJECTION [181.66ms]
+(pass) journey: discretionary add > the drawer shows the proposer from the session and marks both fields required [1.11ms]
+(pass) journey: discretionary add > missing justification is refused JUSTIFICATION_REQUIRED; missing title INVALID; a full proposal lands [575.45ms]
+(pass) journey: execute + execution pill + sentry > EXECUTE_ITEM updates standing through snapshot events without a reload [787.10ms]
+(pass) journey: execute + execution pill + sentry > sentry transparency: a dependent item explains what blocks it, and unlocks when it completes [785.72ms]
+(pass) journey: execute + execution pill + sentry > the pill shows real reported progress, and Reconnecting hides any number [2.38ms]
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:399:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:399:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:399:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:399:23)
+
+[event stream] warn: connection interrupted
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/ui/journeys.test.tsx:383:18)
+
+(pass) journey: execute + execution pill + sentry > TOOTH: SSE drop flips the store to reconnecting via the live adapter error path, and an event resumes it [129.07ms]
+(pass) journey: human task judgment > COMPLETE_HUMAN_TASK without justification is refused; the panel shows the typed kind [183.58ms]
+(pass) journey: human task judgment > a justification completes the task through a snapshot event [215.89ms]
+(pass) journey: human task judgment > role refusals surface verbatim: a developer cannot approve the release gate [183.44ms]
+(pass) journey: human task judgment > an approval by a case architect is accepted and execution begins [785.57ms]
+(pass) journey: lifecycle (the offered-action tooth) > the head snapshot offers Reopen and Terminate on the case, and the panel renders exactly those [6.28ms]
+(pass) journey: lifecycle (the offered-action tooth) > TOOTH: an object the snapshot did not offer lifecycle actions on renders none, and a fabricated dispatch is refused [182.12ms]
+(pass) journey: lifecycle (the offered-action tooth) > terminate with a reason lands; reopen brings the case back [426.28ms]
+(pass) journey: artifact dock > a resolution failure renders the localized error card with the ref [32.65ms]
+(pass) journey: artifact dock > a digest mismatch is refused, never rendered as the requested artifact [61.39ms]
+(pass) journey: lazy renderers (VAR-006) > all nine source renderers are registered as separate lazy chunks, none loaded eagerly [0.14ms]
+(pass) journey: lazy renderers (VAR-006) > the tracking set stays empty until a renderer actually loads (ladder J2 asserts fetches) [0.01ms]
+(pass) journey: CJ10-CJ12 unavailable in this deployment > rendered as static descriptors — never buttons, never dispatchable [0.55ms]
+
+src/artifacts/renderers/highlight.test.ts:
+(pass) highlight > empty query returns one part with hit false and count 0 [0.12ms]
+(pass) highlight > case-insensitive matching [0.12ms]
+(pass) highlight > multiple hits [0.07ms]
+(pass) highlight > special regex characters are literal [0.15ms]
+(pass) highlight > query with brackets [0.07ms]
+(pass) highlight > no match returns single non-hit part [0.04ms]
+(pass) highlight > query at start [0.02ms]
+(pass) highlight > query at end [0.03ms]
+(pass) highlight > non-overlapping patterns [0.02ms]
+
+src/artifacts/renderers/graphLayout.test.ts:
+(pass) graphLayout > handles a simple chain: A -> B -> C [0.46ms]
+(pass) graphLayout > handles a diamond: A -> B,C; B,C -> D [0.06ms]
+(pass) graphLayout > handles a 2-cycle: A <-> B (does not hang) [0.04ms]
+(pass) graphLayout > is deterministic: same input produces same output [0.05ms]
+(pass) graphLayout > handles empty graph [0.02ms]
+(pass) graphLayout > handles isolated nodes [0.03ms]
+(pass) graphLayout > spreads nodes vertically within a layer [0.04ms]
+
+src/adapters/local/northstarData.test.ts:
+(pass) northstar contract data > six snapshots with strictly increasing contract cursors [0.10ms]
+(pass) northstar contract data > trajectory has one checkpoint per snapshot [0.04ms]
+(pass) northstar contract data > every artifact ref resolves and every relationship endpoint exists [0.19ms]
+(pass) northstar contract data > the live release offers a consequential approval [0.05ms]
+(pass) northstar contract data > causal representations use the role vocabulary [0.07ms]
+(pass) northstar contract data > perspective is stamped and data at rest is not shared between calls [1.35ms]
+(pass) template contract data > two published versions, 4 then 5 stages [0.10ms]
+
+src/adapters/local/localAdapter.test.ts:
+(pass) LocalContractAdapter > shared CaseworkPort behavioral conformance [543.70ms]
+(pass) LocalContractAdapter > shared conformance accepts an ordered retained prefix before the accepted cursor [507.89ms]
+(pass) LocalContractAdapter > shared conformance rejects a retained prefix that omits the accepted cursor [395.82ms]
+(pass) LocalContractAdapter > shared conformance rejects retained replay cursors delivered out of order [319.77ms]
+(pass) LocalContractAdapter > duplicate intent_id returns DUPLICATE_IN_FLIGHT [363.98ms]
+(pass) LocalContractAdapter > unauthorized role agent_operator returns AUTHORITY_DENIED [184.82ms]
+(pass) LocalContractAdapter > unauthorized role developer returns UNAUTHORIZED_ROLE [182.67ms]
+(pass) LocalContractAdapter > ESCALATE_OR_OVERRIDE without justification returns JUSTIFICATION_REQUIRED [183.21ms]
+(pass) LocalContractAdapter > unknown target returns INVALID [182.82ms]
+(pass) LocalContractAdapter > unavailable action on target returns UNAVAILABLE [182.75ms]
+(pass) LocalContractAdapter > resolveArtifact returns independent clones [3.42ms]
+(pass) LocalContractAdapter > failArtifacts rejects with error [2.74ms]
+(pass) LocalContractAdapter > corruptArtifacts returns malformed content [2.65ms]
+(pass) LocalContractAdapter > getSnapshot with agent_operator role has no consequential actions [2.36ms]
+(pass) LocalContractAdapter > accepted intent completion precedes settlement [333.66ms]
+(pass) LocalContractAdapter > accepted intent emits snapshot, execution progress, and settlement events [283.77ms]
+
+src/adapters/http/httpTrajectory.test.ts:
+(pass) HttpCaseworkAdapter temporal trajectory > requests the authenticated case trajectory and returns the canonical response [0.69ms]
+(pass) HttpCaseworkAdapter temporal trajectory > surfaces typed unknown or unavailable retained history refusals [0.30ms]
+(pass) HttpCaseworkAdapter temporal trajectory > rejects a trajectory for a different case with a typed invalid refusal [0.17ms]
+(pass) HttpCaseworkAdapter temporal trajectory > rejects missing trajectory points or cursors with a typed invalid refusal [0.12ms]
+(pass) HttpCaseworkAdapter temporal trajectory > rejects every missing or incorrectly typed required trajectory field [1.48ms]
+(pass) HttpCaseworkAdapter temporal trajectory > accepts empty unknown actor attribution and an omitted optional active stage [0.49ms]
+
+src/adapters/http/httpCaseworkAdapter.test.ts:
+(pass) HttpCaseworkAdapter > session() learns identity from /api/session and caches it [0.23ms]
+(pass) HttpCaseworkAdapter > getSnapshot ignores client-asserted actors and stamps the server perspective [0.23ms]
+(pass) HttpCaseworkAdapter > dispatchIntent sends the CSRF header and surfaces typed refusals verbatim [0.47ms]
+(pass) HttpCaseworkAdapter > pre-dispatch gateway refusals (rate limit) throw typed, never retry [0.26ms]
+(pass) HttpCaseworkAdapter > resolveArtifact returns the canonical authenticated payload with Unicode intact [0.40ms]
+(pass) HttpCaseworkAdapter > resolveArtifact preserves an empty artifact body [0.13ms]
+(pass) HttpCaseworkAdapter > resolveArtifact surfaces typed not-found errors from the gateway [0.16ms]
+(pass) HttpCaseworkAdapter > resolveArtifact rejects a response whose digest differs from the requested digest [0.16ms]
+(pass) HttpCaseworkAdapter > unauthenticated reads surface a sign-in refusal, not a leak [0.13ms]
+(pass) HttpCaseworkAdapter > subscribeEvents filters other cases and forwards same-case revisions [0.53ms]
+(pass) HttpCaseworkAdapter > queryTemporalTrajectory calls the authenticated endpoint and preserves a typed not-found refusal [0.36ms]
+
+src/adapters/http/httpCaseworkAdapter.nativeEvents.test.ts:
+(pass) HttpCaseworkAdapter native EventSource recovery > uses capped exponential retries, resumes from the last cursor, and ignores replayed frames [0.62ms]
+(pass) HttpCaseworkAdapter native EventSource recovery > disposal closes the source and cancels a pending retry [0.18ms]
+(pass) HttpCaseworkAdapter native EventSource recovery > open and drop cycles grow to the cap; malformed and foreign frames do not advance the cursor [0.29ms]
+(pass) HttpCaseworkAdapter native EventSource recovery > delivers a resync control frame without suppressing the snapshot at the same retained cursor [0.13ms]
+
+ 258 pass
+ 0 fail
+ 1271 expect() calls
+Ran 258 tests across 21 files. [9.41s]
+casework-ui-check: frozen install, typecheck, build and tests green

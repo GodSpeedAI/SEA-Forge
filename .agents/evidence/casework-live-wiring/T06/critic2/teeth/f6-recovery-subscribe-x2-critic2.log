@@ -1,0 +1,28 @@
+=== ROUND 1 ===
+    live_recovery_test.go:135: commit outcome unresolved across the restart (unavailable: the authority has no record of request gw-39162-3-case_commit (it never crossed admission); it is safe to retry only with a NEW request id (recover)); retrying with a new request id
+    live_recovery_test.go:139: post-recovery case case_20260926T015614Z_43892c committed
+--- PASS: TestLiveKillMidCommitRecovery (0.39s)
+=== RUN   TestLiveSubscriptionResumeAcrossRestart
+    live_subscribe_test.go:115: case A (case_20260926T015614Z_e17ea1) frames streaming; last cursor 01M3DPTS5A7YDR2D5NN2HSZSZV
+    live_subscribe_test.go:119: server killed under an active subscription; restarting
+    live_subscribe_test.go:131: commit outcome unresolved across the restart (unavailable: the authority has no record of request gw-39162-2-case_commit (it never crossed admission); it is safe to retry only with a NEW request id (recover)); retrying with a new request id
+    live_subscribe_test.go:138: case B (case_20260926T015614Z_983597) frames delivered across the restart boundary; last cursor 01M3DPTSGEWK63QM0D9JRE9VKX
+    live_subscribe_test.go:180: no frames after the last delivered cursor (expected: none were committed)
+--- PASS: TestLiveSubscriptionResumeAcrossRestart (0.43s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.853s
+EXIT=0
+=== ROUND 2 ===
+    live_recovery_test.go:135: commit outcome unresolved across the restart (unavailable: the authority has no record of request gw-39286-3-case_commit (it never crossed admission); it is safe to retry only with a NEW request id (recover)); retrying with a new request id
+    live_recovery_test.go:139: post-recovery case case_20260926T015616Z_1b2443 committed
+--- PASS: TestLiveKillMidCommitRecovery (0.39s)
+=== RUN   TestLiveSubscriptionResumeAcrossRestart
+    live_subscribe_test.go:115: case A (case_20260926T015616Z_0a2ad7) frames streaming; last cursor 01M3DPTVD1DBDSQ939RJS15F6A
+    live_subscribe_test.go:119: server killed under an active subscription; restarting
+    live_subscribe_test.go:131: commit outcome unresolved across the restart (unavailable: the authority has no record of request gw-39286-2-case_commit (it never crossed admission); it is safe to retry only with a NEW request id (recover)); retrying with a new request id
+    live_subscribe_test.go:138: case B (case_20260926T015617Z_21e145) frames delivered across the restart boundary; last cursor 01M3DPTVQNCGPC695W541DHHA4
+    live_subscribe_test.go:180: no frames after the last delivered cursor (expected: none were committed)
+--- PASS: TestLiveSubscriptionResumeAcrossRestart (0.39s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.859s
+EXIT=0

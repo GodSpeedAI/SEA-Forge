@@ -1,0 +1,4 @@
+VERIFY-BREADTH: FAIL (3 findings, 187 checks)
+  - frozen input hash mismatch: godspeed-bounded-judgment-T29.prereg.yaml
+  - frozen input hash mismatch: godspeed-bounded-judgment-T21.prereg.addendum-1.yaml
+  - T29 evidence-manifest.yml missing

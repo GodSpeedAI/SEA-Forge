@@ -1,0 +1,22 @@
+{
+ "tooth": "shuffle",
+ "n_shuffles": 500,
+ "providers": {
+  "deepseek-clinepass": {
+   "observed_accuracy": 0.6666666666666666,
+   "shuffled_mean": 0.3753333333333333,
+   "shuffled_max": 0.6666666666666666,
+   "shuffled_p95": 0.5555555555555556,
+   "collapses_below_observed": false
+  },
+  "prime-agent": {
+   "observed_accuracy": 0.5555555555555556,
+   "shuffled_mean": 0.4762222222222222,
+   "shuffled_max": 0.7777777777777778,
+   "shuffled_p95": 0.6666666666666666,
+   "collapses_below_observed": false
+  }
+ },
+ "behaved_as_specified": false,
+ "declared_expected": "Agreement collapses; a surviving high score fails the task."
+}

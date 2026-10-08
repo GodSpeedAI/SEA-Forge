@@ -1,0 +1,4 @@
+# POST /api/intents PROPOSE_CASE (actor operator_local, digest from preflight above)
+{"intent_id":"critic-propose-1","success":false,"refusal":{"refusal_kind":"UNAVAILABLE","message":"the authority has no record of request critic-propose-1 (it never crossed admission); it is safe to retry only with a NEW request id"},"error_code":"UNAVAILABLE","error_message":"the authority has no record of request critic-propose-1 (it never crossed admission); it is safe to retry only with a NEW request id"}
+
+CURL_EXIT=0

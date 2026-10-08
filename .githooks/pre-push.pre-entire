@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Pre-push hook. Delegates to `just pre-push`, which currently aliases
+# `just ci` (context + fmt + clippy + typecheck + deny + gitleaks + tests +
+# build). This is the broadest reliable local verification before a push.
+#
+# Bypass: `git push --no-verify`. GitHub's required `CI / gate` check still
+# applies to the pull request.
+set -euo pipefail
+
+# Read the refs git is pushing; refuse only on pushes to main.
+zero="0000000000000000000000000000000000000000"
+while read -r _local _remote _sha_local _sha_remote; do
+    if [ "$_sha_remote" = "$zero" ] && [ "$_local" = "refs/heads/main" ]; then
+        echo "pre-push: refusing to create a remote main branch" >&2
+        exit 1
+    fi
+done
+
+if command -v devbox >/dev/null 2>&1; then
+    devbox run -- just pre-push
+else
+    if ! command -v just >/dev/null 2>&1; then
+        echo "pre-push: neither devbox nor just found on PATH; install devbox and run 'just setup'" >&2
+        exit 1
+    fi
+    just pre-push
+fi

@@ -1,0 +1,8 @@
+# Golden capture run that produced testdata/frames.json (32 recorded real-server frames)
+=== RUN   TestGoldenCapture
+    golden_capture_test.go:170: recording artifact.get as a tombstone: KERNEL FINDING (plan casework-live-wiring T05): sea-forge-server cannot execute write_file plan items. crates/sea-forge-server/src/case_dispatch.rs execute_sandbox routes every operation through sea_forge_runtime::execute -> the sandbox's execute, which accepts only execute_command (local.rs / jail.rs return input_error for write_file); the CLI routes write_file through sea_forge_sandbox::materialize (crates/sea-forge-cli/src/pipeline.rs:519) but the server does not. The durable signature is a settlement_event with basis ["episode_dispatch_error","input_error"] and no CommandFinished/ArtifactCaptured trace. Fix: route Operation::WriteFile through sea_forge_sandbox::materialize in execute_sandbox, exactly as the CLI does. The affected assertions are skips that disappear once the fix lands.
+    golden_capture_test.go:330: recorded 32 golden frames to testdata/frames.json
+--- PASS: TestGoldenCapture (0.51s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.513s
+EXIT=0

@@ -1,0 +1,3 @@
+# (a) exact replay: same intent_id critic-exec-1, same body
+{"intent_id":"critic-exec-1","success":true,"new_cursor":"01M3DCP9QBCVFCEGA7TV77FA6Y"}
+

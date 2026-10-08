@@ -1,0 +1,12 @@
+tooth: shuffled_labels
+expected: 'shuffling recorded outcomes collapses agreement toward/below the real pairing; a surviving high score means the
+  harness computed nothing real: TASK FAILS'
+result: VACUOUS_NO_BASELINE_VARIANCE
+behaved_as_specified: null
+baseline_label_counts:
+  PASS: 17
+in_domain_baseline_labels: 0
+reason: the recorded deterministic outcome is single-class and outside the frozen answer domain, so there is no pairable label
+  variance to shuffle; agreement-based scoring is 0-pair by the no-coercion rule and the shuffle attack cannot be established
+  on THIS corpus
+disclosure: this is itself a surface finding feeding the outcome classification; it is recorded verbatim in the outcome decision

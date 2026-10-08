@@ -1,0 +1,625 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-case-runner v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-case-runner)
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `test` profile [unoptimized] target(s) in 1m 14s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_server-335b5ae014bcc92d)
+
+running 83 tests
+test config::tests::absolute_socket_path_is_honored_verbatim ... ok
+test config::tests::default_layout_matches_the_conventional_cell ... ok
+test config::tests::load_rejects_invalid_agent_endpoint_with_asserted_status ... ok
+test config::tests::load_accepts_explicit_loopback_test_endpoint ... ok
+test config::tests::load_rejects_unknown_top_level_field_before_startup ... ok
+test config::tests::relative_socket_path_composes_under_root ... ok
+test config::tests::resolved_socket_path_is_always_absolute ... ok
+test identity::tests::a_binding_with_no_roles_authorizes_nothing ... ok
+test identity::tests::a_bound_actor_on_its_own_uid_resolves ... ok
+test identity::tests::a_claim_for_another_uids_actor_is_refused ... ok
+test identity::tests::a_missing_claim_is_refused_before_anything_else ... ok
+test identity::tests::a_role_the_actor_does_not_hold_is_refused ... ok
+test identity::tests::an_actor_block_is_read_off_the_raw_line ... ok
+test identity::tests::an_unconfigured_cell_refuses_every_protected_verb ... ok
+test identity::tests::an_unverifiable_peer_is_refused_even_with_a_valid_claim ... ok
+test config::tests::load_accepts_valid_agent_config ... ok
+test config::tests::load_rejects_non_loopback_http_endpoint_without_test_flag ... ok
+test lifecycle_contract_tests::a_missing_notify_command_blocks_startup_with_the_fix_named ... ok
+test lifecycle_contract_tests::a_notify_command_on_path_preflights_clean ... ok
+test config::tests::load_rejects_unbounded_startup_limits ... ok
+test identity::tests::a_malformed_actor_block_reads_as_absent ... ok
+test lifecycle_contract_tests::a_panicking_handler_is_reported_not_propagated ... ok
+test lifecycle_contract_tests::an_unset_notify_command_preflights_clean ... ok
+test cancellation_tests::cancellation_is_authorized_and_durably_recorded_before_signalling ... ok
+test notify_tests::fire_notify_chatty_hook_does_not_deadlock ... ok
+test sfwp::approvals::tests::a_cell_with_no_journal_lists_nothing_without_claiming_a_read_failure ... ok
+test sfwp::approvals::tests::an_unparseable_journal_is_reported_rather_than_read_as_an_empty_queue ... ok
+test sfwp::approvals::tests::one_cases_resolved_approval_does_not_empty_another_cases_inbox ... ok
+test sfwp::assets::tests::empty_cell_lists_nothing_rather_than_a_builtin_catalog ... ok
+test sfwp::assets::tests::endpoint_standing_words_match_the_kernels_own_vocabulary ... ok
+test sfwp::assets::tests::standing_and_blocking_are_independent ... ok
+test sfwp::case_views::tests::a_case_id_cannot_traverse_out_of_the_cases_directory ... ok
+test sfwp::case_views::tests::a_missing_case_is_not_found_rather_than_unreadable ... ok
+test sfwp::case_views::tests::listing_a_cell_with_no_cases_directory_is_an_empty_list_not_an_error ... ok
+test sfwp::correlation::tests::a_later_outcome_cannot_replace_the_one_already_published ... ok
+test sfwp::correlation::tests::a_pending_record_refuses_concurrent_retry_without_erasing_its_locator ... ok
+test sfwp::correlation::tests::a_pending_request_still_dedupes_after_the_store_is_reopened ... ok
+test sfwp::correlation::tests::a_record_written_before_sf_006_proceeds_rather_than_being_refused ... ok
+test sfwp::correlation::tests::a_second_pending_write_cannot_reopen_a_settled_record ... ok
+test lifecycle_contract_tests::a_timeout_without_a_request_id_is_still_typed ... ok
+test sfwp::correlation::tests::an_unwritable_store_reports_the_failure_rather_than_swallowing_it ... ok
+test sfwp::correlation::tests::payload_hash_is_stable_under_key_reordering ... ok
+test sfwp::correlation::tests::restart_settlement_prevents_a_hashless_pending_record_from_reexecuting ... ok
+test sfwp::correlation::tests::restart_settles_a_pending_record_as_interrupted_without_reexecuting_it ... ok
+test sfwp::correlation::tests::a_terminal_record_replays_its_own_payload_and_refuses_a_different_one ... ok
+test sfwp::delegation_preview::tests::model_provenance_separates_requested_endpoint_and_built_in ... ok
+test sfwp::delegation_preview::tests::required_authority_is_read_off_the_action_serde_writes ... ok
+test sfwp::delegation_preview::tests::retention_provenance_tracks_the_level_that_declared_it ... ok
+test sfwp::delegation_preview::tests::retention_words_match_the_modes_the_plan_item_records ... ok
+test sfwp::delegations::tests::enum_words_match_the_records_they_report ... ok
+test sfwp::delegations::tests::standing_separates_forgotten_runs_from_cancelled_and_settled_ones ... ok
+test lifecycle_contract_tests::a_timeout_names_the_request_to_recover_with ... ok
+test lifecycle_contract_tests::a_bare_name_is_preflighted_against_path_not_the_cwd ... ok
+test sfwp::run_views::tests::a_criterion_is_decided_by_the_settlements_own_basis_token ... ok
+test sfwp::run_views::tests::a_criterion_with_no_settlement_is_unavailable_not_satisfied ... ok
+test sfwp::run_views::tests::a_missing_run_is_not_found_rather_than_unreadable ... ok
+test sfwp::run_views::tests::a_run_id_cannot_traverse_out_of_the_runs_directory ... ok
+test sfwp::run_views::tests::an_evaluator_score_is_recorded_never_satisfied ... ok
+test sfwp::run_views::tests::listing_a_cell_with_no_runs_directory_is_an_empty_list_not_an_error ... ok
+test sfwp::thoth::tests::a_denied_answer_keeps_its_omitted_classes_and_notice ... ok
+test socket_contract_tests::a_bindable_socket_path_is_accepted ... ok
+test socket_contract_tests::an_overlong_socket_path_is_rejected_with_the_fix_named ... ok
+test socket_contract_tests::the_budget_leaves_room_for_the_binding_suffix ... ok
+test status_rebuild_tests::status_resolves_a_pre_restart_case_from_disk ... ok
+test swe_seed_reconciliation::tests::declaration_before_evidence_correlates_once_evidence_lands ... ok
+test swe_seed_reconciliation::tests::mismatched_hash_never_correlates ... ok
+test swe_seed_reconciliation::tests::mismatched_run_never_correlates ... ok
+test swe_seed_reconciliation::tests::mismatched_verifier_never_correlates ... ok
+test swe_seed_reconciliation::tests::repeated_reconcile_is_idempotent_no_duplicate_entries ... ok
+test swe_seed_reconciliation::tests::two_runs_in_one_case_correlate_independently ... ok
+test transcript_seal::tests::ciphertext_never_contains_the_plaintext_marker ... ok
+test transcript_seal::tests::crypto_shred_makes_ciphertext_permanently_unrecoverable ... ok
+test transcript_seal::tests::missing_ciphertext_fails_verification ... ok
+test transcript_seal::tests::missing_key_fails_verification ... ok
+test transcript_seal::tests::restart_reads_durable_state_from_disk_not_memory ... ok
+test transcript_seal::tests::round_trip_verifies ... ok
+test transcript_seal::tests::tampered_ciphertext_fails_verification ... ok
+test transcript_seal::tests::wrong_key_fails_verification ... ok
+test sfwp::readiness::tests::an_uninitialized_cell_is_unknown_without_a_synthetic_source_citation ... ok
+test lifecycle_contract_tests::a_timed_out_request_keeps_running ... ok
+test sfwp::readiness::tests::a_stale_snapshot_never_reports_readiness_as_success ... ok
+test sfwp::readiness::tests::a_verified_snapshot_is_projected_as_a_committed_digest_not_a_code_location ... ok
+test notify_tests::fire_notify_hung_hook_times_out ... ok
+
+test result: ok. 83 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 30.52s
+
+     Running unittests src/bin/gen_sfwp_schema.rs (target/debug/deps/gen_sfwp_schema-1dc9981ab4515603)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/sea_forge_server-81b5c1023d9aa66f)
+
+running 2 tests
+test tests::accepts_program_name_only ... ok
+test tests::rejects_extra_command_line_arguments ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli_arguments.rs (target/debug/deps/cli_arguments-7c7ef85c4065defb)
+
+running 1 test
+test unknown_argument_exits_two_without_creating_cell_state ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_approvals.rs (target/debug/deps/conformance_approvals-8643b74098f3c54d)
+
+running 7 tests
+test an_unrecognized_decision_is_refused_rather_than_defaulted ... ok
+test an_expired_approval_is_flagged_rather_than_hidden ... ok
+test a_decided_approval_no_longer_appears_as_pending ... ok
+test approval_list_is_empty_for_a_cell_with_no_journal ... ok
+test approval_list_scopes_to_one_case_when_asked ... ok
+test approval_list_yields_the_identifiers_a_decision_requires ... ok
+test approval_methods_are_advertised_by_hello_and_describe ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/conformance_assets.rs (target/debug/deps/conformance_assets-20e55d68b3c70acc)
+
+running 12 tests
+test a_configured_endpoint_with_no_evidence_stays_declared ... ok
+test a_rejected_probe_is_probed_and_blocked_with_its_basis ... ok
+test an_accepted_probe_promotes_an_endpoint_to_demonstrated ... ok
+test an_unparseable_template_is_reported_not_dropped ... ok
+test asset_list_is_advertised_as_an_inspect_method ... ok
+test extension_standing_is_the_registrys_own_word_and_quarantine_blocks ... ok
+test materialized_templates_are_listed_with_their_identity_digest ... ok
+test probe_evidence_does_not_leak_between_endpoints ... ok
+test empty_cell_returns_an_empty_catalog ... ok
+test registry_registration_alone_reaches_probed_but_not_demonstrated ... ok
+test the_most_recent_probe_decides_standing ... ok
+test the_three_kinds_keep_disjoint_standing_vocabularies ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/conformance_authority_nonbypass.rs (target/debug/deps/conformance_authority_nonbypass-0a8566edf8d4ee40)
+
+running 8 tests
+test t04_1_allow_shaped_provider_output_cannot_produce_allow_under_deny_policy ... ok
+test t04_3_provider_unreachable_settles_rejected_typed_never_allowed ... ok
+test t04_8_unknown_operation_kind_cannot_mint_canonical_vocabulary ... ok
+test t04_4_out_of_domain_provider_body_is_typed_failure_never_coerced ... ok
+test t04_6_provider_override_directive_is_inert_never_reenters_authority ... ok
+test t04_7_vacuity_guard_deny_policy_actually_denies_control ... ok
+test t04_5_contradictory_provider_answers_preserved_no_allow_escalation ... ok
+test t04_2_provider_timeout_settles_rejected_typed_never_allowed ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.06s
+
+     Running tests/conformance_case_authoring.rs (target/debug/deps/conformance_case_authoring-20a599cdf4aeda6c)
+
+running 7 tests
+test entry_options_is_empty_not_fabricated_when_no_templates_exist ... ok
+test commit_with_stale_precondition_is_rejected_with_no_case_created ... ok
+test entry_options_lists_materialized_template_honestly ... ok
+test preflight_ok_returns_items_and_a_reusable_precondition ... ok
+test preflight_unknown_template_reports_errors_not_a_transport_error ... ok
+test commit_outcome_is_recoverable_via_request_get_status ... ok
+test commit_with_matching_precondition_creates_a_real_case ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/conformance_case_episode.rs (target/debug/deps/conformance_case_episode-faef2d458c18329e)
+
+running 11 tests
+test a_denied_episode_records_why_it_stopped ... ok
+test a_denial_is_settled_as_a_denial_not_a_spawn_failure ... ok
+test a_denied_episode_creates_no_workspace_and_no_artifacts ... ok
+test a_nonzero_exit_is_rejected_with_the_reason_named ... ok
+test a_satisfied_criteria_set_is_accepted ... ok
+test a_denied_episode_still_records_its_authority_decision ... ok
+test a_zero_exit_without_the_declared_artifact_is_rejected ... ok
+test an_escalated_episode_opens_an_approval_and_runs_nothing ... ok
+test an_allowed_episode_records_its_trace_and_evidence ... ok
+test a_settled_episode_materializes_the_records_the_views_read ... ok
+test every_settlement_records_the_authority_verdict_first ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/conformance_case_views.rs (target/debug/deps/conformance_case_views-1aa6bf7bc33c045b)
+
+running 9 tests
+test a_traversing_case_id_is_refused_rather_than_resolved ... ok
+test an_unknown_case_is_typed_not_found_not_a_generic_error ... ok
+test case_list_is_empty_for_a_fresh_cell_rather_than_an_error ... ok
+test case_view_methods_are_advertised_by_hello_and_describe ... ok
+test an_oversized_plan_degrades_to_absence_exactly_like_a_missing_plan ... ok
+test an_oversized_case_record_surfaces_as_unreadable_not_as_an_oom ... ok
+test a_committed_case_appears_in_list_overview_and_horizon ... ok
+test execution_and_settlement_are_separate_vocabularies ... ok
+test an_oversized_case_events_journal_folds_to_nothing_rather_than_reading_it ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+
+     Running tests/conformance_delegation_preview.rs (target/debug/deps/conformance_delegation_preview-e034bc2deb822fb0)
+
+running 14 tests
+test an_over_long_instruction_is_blocked_against_the_endpoints_own_cap ... ok
+test an_accepted_probe_carries_its_evidence_into_the_preview ... ok
+test an_absent_token_budget_is_omitted_rather_than_zeroed ... ok
+test a_requested_model_is_distinguishable_from_an_endpoint_default ... ok
+test an_unconfigured_endpoint_has_no_standing_and_no_contract ... ok
+test a_rejected_probe_blocks_the_preview_the_way_it_blocks_the_catalog ... ok
+test every_unmet_precondition_is_reported_not_only_the_first ... ok
+test delegation_preview_is_advertised_as_an_inspect_method ... ok
+test preview_creates_no_run_case_or_ledger_entry ... ok
+test preview_names_the_required_authority_without_deciding_it ... ok
+test preview_projects_the_contract_a_delegation_would_run_under ... ok
+test the_instruction_is_reported_by_hash_and_size_only ... ok
+test transcript_retention_is_resolved_through_the_endpoint_then_the_cell ... ok
+test the_contract_digest_moves_when_the_delegation_would_differ ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/conformance_delegations.rs (target/debug/deps/conformance_delegations-6330b5bfdfe83199)
+
+running 12 tests
+test a_cancelled_delegation_settles_and_reports_cancellation_as_its_termination ... ok
+test an_absent_token_budget_is_omitted_rather_than_zeroed ... ok
+test a_delegation_is_attributed_to_the_case_that_claims_it ... ok
+test a_delegation_with_no_settlement_and_no_handle_is_unresolved ... ok
+test a_fresh_cell_has_an_empty_roster_rather_than_an_error ... ok
+test a_finished_delegation_reports_its_dialogue_against_its_bounds ... ok
+test cancelling_a_delegation_that_is_not_active_is_refused ... ok
+test delegation_list_is_advertised_as_an_inspect_method ... ok
+test listing_the_roster_creates_nothing ... ok
+test non_delegation_runs_are_not_in_the_roster ... ok
+test standing_and_settlement_are_separate_facts ... ok
+test unsettled_delegations_sort_ahead_of_settled_ones ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/conformance_dispatch_remediation.rs (target/debug/deps/conformance_dispatch_remediation-de56a08921f3b222)
+
+running 3 tests
+test f02_mixed_batch_rejects_before_any_episode_spawns ... ok
+test f19_huge_timeout_is_clamped_not_panic ... ok
+test f03_escalated_required_item_parks_case_not_terminates ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/conformance_identity.rs (target/debug/deps/conformance_identity-3bc5bff6a397c021)
+
+running 15 tests
+test a_protected_verb_without_an_actor_is_refused ... ok
+test a_bound_actor_passes_the_gate_and_is_judged_on_the_request_itself ... ok
+test a_request_cannot_verify_one_actor_and_attribute_its_work_to_another ... ok
+test a_role_the_actor_does_not_hold_is_refused ... ok
+test an_escalated_approval_is_bound_to_committed_criteria ... ok
+test a_submitter_cannot_approve_their_own_work_but_another_actor_can ... ok
+test an_unbound_actor_id_is_refused_on_a_configured_cell ... ok
+test an_unconfigured_cell_refuses_protected_work_even_with_a_valid_actor ... ok
+test identity_get_reports_an_unconfigured_cell_in_the_refusal_vocabulary ... ok
+test approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones ... ok
+test identity_get_reports_the_actors_this_connection_may_claim ... ok
+test inspect_verbs_still_work_without_an_actor ... ok
+test the_catalog_advertises_every_method_a_client_can_call ... ok
+test reconnecting_does_not_launder_a_self_approval ... ok
+test ask_is_reachable_over_a_socket_with_an_identity_block ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/conformance_lifecycle.rs (target/debug/deps/conformance_lifecycle-2c9ef9e526b588c6)
+
+running 10 tests
+test a_reload_with_no_file_present_changes_nothing ... ok
+test a_reload_cannot_relocate_the_cell ... ok
+test a_valid_reload_replaces_the_live_snapshot ... ok
+test an_invalid_reload_keeps_the_last_known_good ... ok
+test a_malformed_server_yaml_blocks_startup ... ok
+test an_invalid_agent_endpoint_blocks_startup ... ok
+test a_notify_command_that_cannot_run_blocks_startup ... ok
+test an_invalid_reload_publishes_an_operator_visible_event ... ok
+test an_absent_server_yaml_is_a_first_run_not_a_failure ... ok
+test a_hung_endpoint_is_bounded_and_the_server_keeps_serving ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.02s
+
+     Running tests/conformance_m11_ask.rs (target/debug/deps/conformance_m11_ask-0b971413a97b1a39)
+
+running 6 tests
+test unknown_request_verb_fails_clean_not_panic ... ok
+test ask_request_wire_tag_is_snake_case_ask ... ok
+test server_ask_unknown_kind_errors_without_panicking ... ok
+test server_ask_denied_leaks_no_restricted_facts ... ok
+test server_ask_allowed_returns_answer ... ok
+test server_ask_ledgers_the_full_question_to_answer_chain ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.57s
+
+     Running tests/conformance_m12.rs (target/debug/deps/conformance_m12-68552733aa5a64e1)
+
+running 15 tests
+test t12_2_denied_external_api_has_no_connection_or_secret_read ... ok
+test t12_3_credential_sentinel_never_enters_persisted_probe_records ... ok
+test t12_1_probe_records_intent_plan_authority_evidence_and_settlement ... ok
+test t12_2_denied_secret_access_has_no_connection_or_secret_read ... ok
+test t12_6_http_5xx_settles_rejected_with_typed_subcode ... ok
+test t12_6_http_4xx_settles_rejected_with_typed_subcode ... ok
+test t12_6_oversize_response_settles_rejected_with_typed_subcode ... ok
+test t12_6_redirect_settles_rejected_with_typed_subcode ... ok
+test t12_6_schema_invalid_settles_rejected_with_typed_subcode ... ok
+test t12_6_unreachable_settles_rejected_with_typed_subcode ... ok
+test t12_7_probe_registers_adapter_with_config_derived_version ... ok
+test t12_7_identical_config_reprobe_is_idempotent_and_stable ... ok
+test t12_7_registration_failure_settles_the_run_fail_closed ... ok
+test t12_endpoint_registration_marks_self_model_snapshot_stale ... ok
+test t12_7_config_edit_then_reprobe_replaces_in_place_and_marks_stale ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+
+     Running tests/conformance_m13.rs (target/debug/deps/conformance_m13-b82ad147b3de046e)
+
+running 25 tests
+test t13_2_non_executable_activation_returns_typed_error ... ok
+test planned_agent_rejection_uses_case_context_once ... ok
+test t13_2_permit_completion_rederives_before_stale_action ... ok
+test planned_agent_episode_uses_case_context ... ok
+test t13_2_post_dispatch_failure_settles_and_drains_siblings ... ok
+test t13_3_restart_after_durable_cancellation_settles_once ... ok
+test t13_agent_success_with_failed_output_criteria_settles_rejected ... ok
+test t13_2_human_task_waits_for_dispatched_episode_settlement ... ok
+test t13_delegation_denied_secret_access_no_credential_read ... ok
+test t13_delegation_completes_with_transcript_evidence ... ok
+test t13_delegation_denied_without_agent_task_policy ... ok
+test t13_endpoint_error_settles_rejected_with_transcript ... ok
+test t13_token_budget_breach_settles_turn_cap_exceeded ... ok
+test t13_transcript_artifact_hash_verifies ... ok
+test t15_case_dispatch_settlement_reuses_real_basis_not_synthetic ... ok
+test t15_schema_invalid_response_settles_rejected_without_payload_leak ... ok
+test t15_schema_valid_response_settles_accepted_with_named_evidence ... ok
+test t15_turn_cap_exceeded_with_satisfied_criteria_accepts_and_retains_basis ... ok
+test t16_redaction_digest_identical_across_full_and_summarized_modes ... ok
+test t13_2_mixed_episodes_share_server_cap ... ok
+test t13_2_server_semaphore_caps_concurrent_delegations ... ok
+test t16_sealed_verification_failure_settles_rejected_never_summary_only_success ... ok
+test t16_case_dispatch_retention_precedence_item_endpoint_global_default ... ok
+test t13_2_submit_waits_for_direct_delegate_permit ... ok
+test t13_3_cancel_one_of_three_siblings_settle_normally ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+     Running tests/conformance_m16.rs (target/debug/deps/conformance_m16-c81298ccd021c54b)
+
+running 18 tests
+test t16_1_real_acp_host_release_gate ... ignored, release gate: set SEA_FORGE_REAL_ACP_ARGV/SEA_FORGE_REAL_ACP_ENV
+test acp_fixture_child ... ok
+test t16_1_portable_acp_session_commits_transcript_evidence ... ok
+test t16_2_permission_allow_and_deny_are_recorded_and_session_survives ... ok
+test t16_4_minimal_env_workspace_cwd_and_escalation_refused ... ok
+test t16_2_server_restart_rejects_orphaned_approval_episode_once ... ok
+test t16_6_real_swe_seed_release_gate ... ignored, release gate: configured SWE_SEED-projected ACP host required
+test t16_2_escalated_permission_suspends_and_resolves_same_session ... ok
+test t16_6_swe_seed_commit_mismatch_rejects_but_preserves_transcript ... ok
+test t16_6_portable_swe_seed_artifacts_are_hashed_and_run_correlated ... ok
+test t16_7_acp_transcript_redaction_scrubs_sentinels_before_hash_and_storage ... ok
+test t16_5_disconnect_preserves_partial_transcript_and_resumes_linked_episode ... ok
+test t16_7_unsupported_protocol_version_rejects_before_prompt ... ok
+test t16_8_late_swe_seed_declaration_reconciles_at_read_time ... ok
+test t16_8_late_swe_seed_declaration_reconciles_on_server_startup ... ok
+test t16_8_server_owned_swe_seed_declaration_correlates_immediately ... ok
+test t16_3_every_v1_tool_kind_maps_and_unknown_kind_denies ... ok
+test t16_2_escalated_permission_timeout_denies_and_session_continues ... ok
+
+test result: ok. 16 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 1.03s
+
+     Running tests/conformance_role_propagation.rs (target/debug/deps/conformance_role_propagation-b387a90f31d7bcb6)
+
+running 1 test
+test f08_verified_role_reaches_the_authority_evaluation ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/conformance_run_locator.rs (target/debug/deps/conformance_run_locator-49d2c740b9879f47)
+
+running 6 tests
+test a_duplicated_id_resolves_to_the_flat_layout ... ok
+test a_case_sees_the_settlement_of_its_own_case_owned_run ... ok
+test run_list_reports_both_layouts_once_each ... ok
+test the_case_owned_probe_does_not_widen_the_traversal_surface ... ok
+test both_layouts_resolve_through_one_run_get ... ok
+test both_layouts_still_resolve_after_a_restart ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/conformance_run_views.rs (target/debug/deps/conformance_run_views-e8153fb2eed097f8)
+
+running 11 tests
+test a_criterion_with_no_settlement_record_is_unavailable_not_satisfied ... ok
+test each_criterion_pairs_with_the_settlements_own_basis_token ... ok
+test a_missing_run_is_a_typed_not_found_never_an_empty_view ... ok
+test an_oversized_settlement_record_degrades_to_an_unsettle_run ... ok
+test a_run_id_cannot_traverse_out_of_the_runs_directory ... ok
+test execution_termination_and_settlement_are_reported_as_separate_facts ... ok
+test run_list_is_empty_for_a_fresh_cell_rather_than_an_error ... ok
+test run_list_scoped_to_a_case_returns_only_the_runs_that_case_claims ... ok
+test the_record_inventory_reports_absent_files_as_absent ... ok
+test the_run_methods_are_advertised_in_the_negotiated_catalog ... ok
+test an_oversized_trace_journal_folds_to_nothing_rather_than_reading_it ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+     Running tests/conformance_sfwp.rs (target/debug/deps/conformance_sfwp-659d71418e539fc7)
+
+running 19 tests
+test durable_mutation_without_request_id_fails_closed_before_admission ... ok
+test a_retried_request_replays_its_outcome_instead_of_mutating_twice ... ok
+test oversized_precondition_records_fail_with_typed_error_before_any_side_effect ... ok
+test a_reused_request_id_with_a_changed_payload_is_refused_with_no_mutation ... ok
+test precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint ... ok
+test live_subscriber_receives_pushed_event ... ok
+test readiness_get_is_listed_as_inspect ... ok
+test a_terminal_outcome_and_its_dedupe_key_survive_a_restart ... ok
+test end_to_end_correlation_reconnect_and_gap_recovery ... ok
+test stale_precondition_on_approve_is_rejected_with_no_side_effect ... ok
+test system_describe_lists_classes ... ok
+test system_hello_returns_protocol_version_and_implemented_methods ... ok
+test unknown_events_cursor_errors_instead_of_replaying_from_start ... ok
+test unknown_verb_still_rejected_cleanly ... ok
+test readiness_get_endpoint_configuration_is_not_readiness_evidence ... ok
+test readiness_get_no_committed_sources_is_unknown ... ok
+test readiness_get_intended_operation_foregrounds_relevant_capability ... ok
+test request_admission_refuses_overflow_and_cancels_waiters_without_effects ... ok
+wrote 57 SFWP schema files to /tmp/.tmpyUgusr
+test generated_schemas_are_committed_and_current ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.18s
+
+     Running tests/conformance_topology.rs (target/debug/deps/conformance_topology-c28ffb0ac4ace7bb)
+
+running 3 tests
+test topology_concurrent_one_branch_rejected_rollup_never_fires_and_case_terminates ... ok
+test topology_concurrent_all_branches_accept_and_rollup_fires ... ok
+test topology_sequential_dispatches_through_the_server_in_order ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/conformance_transport_hardening.rs (target/debug/deps/conformance_transport_hardening-4c9a5322398ae532)
+
+running 9 tests
+test a_second_server_with_same_root_and_different_socket_fails_closed ... ok
+test regular_file_socket_destination_is_refused_without_data_loss ... ok
+test symlink_socket_destination_is_refused_without_touching_its_target ... ok
+test connection_churn_does_not_terminate_the_server ... ok
+test an_oversized_request_line_is_rejected_and_the_server_survives ... ok
+test a_second_server_on_a_live_socket_fails_closed ... ok
+test a_stale_socket_does_not_block_a_restart ... ok
+test the_published_socket_is_owner_only ... ok
+test partial_request_line_times_out_and_releases_the_connection ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.05s
+
+     Running tests/convergence_t04_governed_ingress.rs (target/debug/deps/convergence_t04_governed_ingress-88c28c8e91e507ce)
+
+running 12 tests
+test e4_golden_fixture_from_swe_seed_producer_is_accepted ... ok
+test t04_context_ref_to_another_packet_is_rejected ... ok
+test t04_drift_on_the_referenced_context_packet_is_rejected_too ... ok
+test t04_different_domain_model_is_rejected ... ok
+test t04_cross_wired_context_packet_is_rejected ... ok
+test t04_placeholder_pseudo_identity_is_rejected ... ok
+test t04_empty_semantic_fields_are_opaque_commands_too ... ok
+test t04_lost_causal_lineage_is_rejected ... ok
+test t04_opaque_command_only_request_cannot_settle ... ok
+test t04_non_swe_seed_producer_stamp_is_rejected ... ok
+test t04_proof_contract_may_not_collapse_into_settlement_criteria ... ok
+test t04_swapped_in_foreign_packet_is_rejected ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/convergence_t05_authorized_execution.rs (target/debug/deps/convergence_t05_authorized_execution-94fd4de45eb1c5e8)
+
+running 10 tests
+test t05_allow_decision_emits_the_frozen_authorized_invocation ... ok
+test t05_emission_refuses_placeholder_and_drifted_model_identity ... ok
+test t05_emitted_envelope_matches_the_canonical_wire_family ... ok
+test t05_emission_requires_meaningful_correlation_and_causality ... ok
+test t05_both_allow_conjuncts_are_load_bearing_on_real_decisions ... ok
+test t05_denied_authority_produces_no_invocation_and_no_side_effect ... ok
+test t05_forged_authorized_invocation_stamps_are_refused_at_admission ... ok
+test t05_escalated_authority_produces_no_invocation_and_no_side_effect ... ok
+test t05_side_effect_helper ... ok
+test t05_governed_side_effect_runs_only_after_authorization_and_emission ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/convergence_t05_execution_observation.rs (target/debug/deps/convergence_t05_execution_observation-1e10fc258483ad3a)
+
+running 10 tests
+test e5b_valid_observation_settles_against_the_exact_authorized_invocation ... ok
+test t05_duplicate_delivery_is_consequence_free ... ok
+test t05_forged_authority_decision_inside_response_has_no_authority_effect ... ok
+test t05_cross_wired_work_request_is_rejected ... ok
+test t05_admission_requires_causality_full_payload_and_is_idempotent ... ok
+test t05_real_t04_governed_work_request_feeds_invocation_causality ... ok
+test t05_observation_must_cite_its_own_authorized_invocation_as_parent ... ok
+test t05_late_observation_from_previous_generation_cannot_settle_current_slot ... ok
+test t05_missing_or_placeholder_identity_in_observation_is_rejected ... ok
+test t05_wrong_producer_on_observations_is_rejected_both_directions ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/convergence_t06_operational_settlement.rs (target/debug/deps/convergence_t06_operational_settlement-d54a2a4dbabde044)
+
+running 14 tests
+test t06_empty_or_blank_declared_criteria_are_refused ... ok
+test t06_evaluation_requires_a_ledger_settled_observation ... ok
+test t06_emission_requires_the_actual_invocation_chain_as_causality ... ok
+test t06_emission_refuses_placeholder_and_drifted_model_identity ... ok
+test t06_emitted_envelope_matches_the_canonical_wire_family ... ok
+test e6_full_governed_chain_settles_operationally_and_emits_the_frozen_envelope ... ok
+test t06_criteria_come_from_the_declared_governed_request_chain ... ok
+test t06_exit_zero_alone_cannot_produce_acceptance_even_with_status_completed ... ok
+test t06_partial_attestation_is_rejection_not_success ... ok
+test t06_tooth1_exit_zero_with_violated_criteria_records_failure ... ok
+test t06_every_projected_field_is_validated_on_the_wire ... ok
+test t06_wrong_producer_stamps_are_refused_at_wire_validation ... ok
+test t06_writes_golden_fixture_for_swe_seed_adjudication ... ok
+test t06_non_completed_statuses_never_settle_accepted_regardless_of_effects ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/convergence_t11_whole_loop.rs (target/debug/deps/convergence_t11_whole_loop-fd81f2c4d075a8cc)
+
+running 6 tests
+test t11_wrong_domain_identity_is_rejected_at_ingress ... ok
+test t11_duplicate_observation_is_idempotent ... ok
+test t11_failed_settlement_remains_observable ... ok
+test t11_duplicate_settlement_via_replay_is_idempotent ... ok
+test t11_whole_loop_traceability_via_real_gates ... ok
+test t11_late_observation_cannot_settle_against_wrong_invocation ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/convergence_t12_variation.rs (target/debug/deps/convergence_t12_variation-7206a0fff8ec2a36)
+
+running 14 tests
+test t12_cross_wired_work_request_rejected ... ok
+test t12_authority_escalated_produces_no_invocation ... ok
+test t12_authority_denied_produces_no_invocation_and_no_side_effect ... ok
+test t12_duplicate_observation_is_idempotent ... ok
+test t12_execution_failure_settlement_rejected_but_observable ... ok
+test t12_execution_timeout_settlement_rejected ... ok
+test t12_interruption_after_execution_before_settlement_preserves_provenance ... ok
+test t12_malformed_envelope_rejected ... ok
+test t12_stale_domain_model_rejected ... ok
+test t12_late_observation_cannot_settle_after_supersession ... ok
+test t12_missing_evidence_artifact_rejected_or_rejected_settlement ... ok
+test t12_wrong_domain_identity_fails_closed_at_ingress_and_execution ... ok
+test t12_operational_settlement_failure_after_exit_zero ... ok
+test t12_success_via_real_gates ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests sea_forge_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

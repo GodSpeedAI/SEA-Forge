@@ -1,0 +1,463 @@
+cargo test --workspace --all-features --locked
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling ring v0.17.14
+   Compiling rustls v0.23.42
+   Compiling rustls-webpki v0.103.13
+   Compiling tokio-rustls v0.26.4
+   Compiling hyper-rustls v0.27.9
+   Compiling reqwest v0.12.28
+   Compiling sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+warning: unused import: `evaluate_operational_settlement`
+  --> crates/sea-forge-server/tests/convergence_t11_whole_loop.rs:27:34
+   |
+27 |     emit_operational_settlement, evaluate_operational_settlement, SettlementOptionalFields,
+   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sea-forge-server` (test "convergence_t11_whole_loop") generated 1 warning (run `cargo fix --test "convergence_t11_whole_loop" -p sea-forge-server` to apply 1 suggestion)
+warning: constant `DOMAIN_HASH` is never used
+  --> crates/sea-forge-server/tests/convergence_t12_variation.rs:48:7
+   |
+48 | const DOMAIN_HASH: &str = "9f7a7c2e3b4d5e6f7890a1b2c3d4e5f67890abcdef1234567890abcdef12345678"; // placeholder, replaced by real helper
+   |       ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sea-forge-server` (test "convergence_t12_variation") generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 1m 12s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_agent-f5b2966ce2386df4)
+
+running 43 tests
+test acp::tests::known_kinds_are_exhaustive_per_schema_v1 ... ok
+test acp::tests::closed_transport_is_disconnect ... ok
+test acp::tests::cancellation_during_episode_settles_cancelled ... ok
+test acp::tests::handshake_and_prompt_completes_with_transcript ... ok
+test acp::tests::oversized_ndjson_line_is_rejected_before_parse ... ok
+test acp::tests::protocol_version_mismatch_terminates_endpoint_error ... ok
+test acp::tests::permission_request_is_mediated_and_denial_keeps_session_alive ... ok
+test acp::tests::titled_tool_call_is_recorded_and_charged_once ... ok
+test acp::tests::spawn_rejects_empty_argv ... ok
+test config::tests::acp_endpoint_rejects_shell_argv0 ... ok
+test acp::tests::titleless_tool_call_update_counts_against_turn_cap ... ok
+test acp::tests::unmapped_permission_kind_is_typed_denied_and_recorded ... ok
+test config::tests::acp_endpoint_requires_argv_and_synthesizes_descriptor_url ... ok
+test acp::tests::retained_tool_calls_are_capped_without_ignoring_updates ... ok
+test config::tests::acp_env_entries_must_be_key_value ... ok
+test config::tests::config_rejects_asserted_derived_status ... ok
+test config::tests::retention_field_defaults_when_absent_from_serialized_config ... ok
+test config::tests::retention_invalid_item_override_is_a_typed_error_not_a_silent_default ... ok
+test config::tests::retention_parse_rejects_unknown_and_empty_values ... ok
+test config::tests::snapshot_hash_changes_when_endpoint_config_changes ... ok
+test config::tests::retention_precedence_item_beats_endpoint_beats_global_beats_default ... ok
+test delegation::tests::cancellation_before_first_turn ... ok
+test delegation::tests::cancellation_after_provider_response_wins_over_completion ... ok
+test delegation::tests::canonical_field_ordering_is_stable ... ok
+test delegation::tests::endpoint_error_terminates_with_transcript ... ok
+test delegation::tests::known_secret_token_is_redacted ... ok
+test delegation::tests::credential_redacted_from_transcript ... ok
+test delegation::tests::produce_transcript_digest_matches_returned_bytes ... ok
+test delegation::tests::hostile_tool_request_is_denied_without_side_effect ... ok
+test delegation::tests::produce_transcript_is_deterministic ... ok
+test delegation::tests::sentinel_redaction_is_case_insensitive ... ok
+test delegation::tests::redaction_preserves_utf8 ... ok
+test delegation::tests::streaming_chunk_boundary_reconstruction ... ok
+test delegation::tests::token_budget_terminates ... ok
+test delegation::tests::unrelated_secrets_are_not_over_redacted ... ok
+test delegation::tests::single_turn_completes ... ok
+test delegation::tests::sentinels_are_redacted ... ok
+test network::tests::loopback_http_requires_explicit_test_policy ... ok
+test network::tests::rejects_private_and_metadata_addresses ... ok
+test provider::tests::malformed_provider_response_is_typed ... ok
+test provider::tests::anthropic_request_shape_is_pinned ... ok
+test provider::tests::openai_request_shape_is_pinned ... ok
+test acp::tests::notifications_cannot_outlive_episode_wall_clock_budget ... ok
+
+test result: ok. 43 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/provider_contract.rs (target/debug/deps/provider_contract-b1c6548b17a1755c)
+
+running 3 tests
+test anthropic_provider_sends_pinned_request_and_parses_response ... ok
+test openai_provider_sends_pinned_request_and_parses_response ... ok
+test provider_maps_endpoint_failures_without_body_leakage ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.02s
+
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_artifact_ip-661a30f0343d051e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m8.rs (target/debug/deps/conformance_m8-16358ed83e8cd998)
+
+running 44 tests
+test all_source_licenses_must_match_transition_policy ... ok
+test attestation_without_passed_maturity_gate_leaves_stage_unchanged ... ok
+test conformance_m8_degraded_attestation_never_invents_missing_controls ... ok
+test conformance_m8_derive_rejects_incomplete_derived_from ... ok
+test conformance_m8_derive_rejects_output_identity_matching_any_input ... ok
+test conformance_m8_derive_rejects_result_artifact_reusing_any_source_id ... ok
+test conformance_m8_derive_rejects_source_identity_count_mismatch ... ok
+test conformance_m8_derive_rejects_source_identity_pair_mismatch ... ok
+test conformance_m8_fabricated_accepted_value_source_without_run_records_is_rejected ... ok
+test conformance_m8_domain_model_ref_requires_real_validated_model ... ok
+test conformance_m8_attested_cognitive_stays_cognitive_and_controls_are_explicit ... ok
+test conformance_m8_non_cognitive_multi_source_requires_parent_for_each_source ... ok
+test conformance_m8_generic_execution_result_is_not_value_evidence ... ok
+test conformance_m8_forged_attestation_action_cannot_reach_backend ... ok
+test conformance_m8_attestation_required_and_degraded ... ok
+test conformance_m8_pending_transition_is_idempotent_and_terminal_is_final ... ok
+test conformance_m8_attested_token_resolves_ledger_record ... ok
+test conformance_m8_rebuild_rejects_allow_for_substituted_transition_action ... ok
+test conformance_m8_pre_mint_token_requires_explicit_controls ... ok
+test conformance_m8_rebuild_rejects_attestation_without_exact_authority_binding ... ok
+test conformance_m8_registration_only_accepts_verified_descriptor_evidence ... ok
+test conformance_m8_registration_resolves_evidence_from_verified_ledger_not_caller ... ok
+test conformance_m8_rejects_teleport_before_transform_and_dag_corruption ... ok
+test conformance_m8_relabelled_value_evidence_is_rejected ... ok
+test conformance_m8_required_metadata_rejects_missing_or_empty_product_contract_field ... ok
+test conformance_m8_required_metadata_rejects_unknown_selector ... ok
+test conformance_m8_partial_strong_declaration_is_rejected ... ok
+test conformance_m8_rebuild_rejects_approval_for_unrelated_decision_and_criteria ... ok
+test conformance_m8_promote_derive_product_capital_and_rebuild_are_governed ... ok
+test conformance_m8_rights_profile_fabricated_accepted_without_authority_is_rejected ... ok
+test conformance_m8_transition_proposal_rejects_caller_governance_fields ... ok
+test conformance_m8_unresolved_governance_reference_rejects_transition ... ok
+test approval_only_capital_rejected ... ok
+test content_changing_capitalize_rejected ... ok
+test conformance_m8_semantic_anchor_class_must_match_gate ... ok
+test exact_transition_grant_cannot_be_reused_for_substituted_input ... ok
+test forged_stale_state_catalog_capital_files_removed_overwritten_by_rebuild ... ok
+test conformance_m8_semantic_anchor_must_resolve_in_ledgered_domain_model ... ok
+test value_evidence_without_underlying_accepted_evidence_is_rejected ... ok
+test conformance_m8_retirement_preserves_capital_maturity_and_ignores_forged_view ... ok
+test conformance_m8_rebuild_rejects_approval_with_missing_or_wrong_criteria_hashes ... ok
+test deleting_middle_token_fails_complete_chain ... ok
+test quality_only_capital_rejected ... ok
+test conformance_m8_value_evidence_acceptance_is_derived_from_sources ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_authority-8717bd01c7e54710)
+
+running 43 tests
+test resolver_tests::allow_is_identity_and_candidate_order_is_irrelevant ... ok
+test resolver_tests::deny_blocks_every_other_candidate ... ok
+test resolver_tests::incompatible_boundaries_deny ... ok
+test resolver_tests::degraded_requires_permission_and_accumulates_controls ... ok
+test resolver_tests::escalation_blocks_while_retaining_boundaries ... ok
+test resolver_tests::legacy_non_transition_sod_omits_transition_kind_in_serialization ... ok
+test resolver_tests::missing_required_evidence_denies ... ok
+test tests::allowlisted_api_host_reaches_unsupported_surface_escalation ... ok
+test tests::approval_required_rule_escalates_without_resolution ... ok
+test resolver_tests::capitalize_sod_escalates_only_capitalize_with_role_and_decision_markers ... ok
+test tests::automated_agent_requires_sponsor ... ok
+test resolver_tests::sod_requester_role_must_match_actor ... ok
+test tests::approved_resolved_after_expiry_is_denied ... ok
+test tests::approved_before_expiry_remains_valid_after_wall_clock_ttl ... ok
+test resolver_tests::sod_transition_kind_validation_is_fail_closed ... ok
+test tests::configured_service_identity_can_authorize ... ok
+test resolver_tests::capitalize_sod_post_approval_grant_and_exact_action_binding ... ok
+test tests::caller_supplied_approval_refs_do_not_change_escalation ... ok
+test tests::configured_engine_must_fail_closed_and_unavailability_blocks ... ok
+test tests::boundary_and_degraded_requirements_survive_into_grants ... ok
+test tests::engine_constructor_rejects_unvalidated_allow_any_command_bundle ... ok
+test tests::configured_sod_approver_role_propagates_to_decision ... ok
+test tests::execution_grant_rejects_timeout_or_artifact_substitution ... ok
+test tests::forged_identity_and_substitute_executable_cannot_use_allow_rules ... ok
+test tests::expired_decision_cannot_receive_grant ... ok
+test tests::denied_or_substituted_action_cannot_receive_grant ... ok
+test tests::f25h_grant_binds_the_decision_time_executable_identity ... ok
+test tests::domainforge_candidate_is_composed_with_local_authority ... ok
+test tests::exact_ledgered_approval_yields_one_exact_grant ... ok
+test tests::grant_is_bound_to_exact_action_and_context ... ok
+test tests::malformed_executable_actions_are_unclassified ... ok
+test tests::opaque_constraint_preempts_repeated_ambiguous_action ... ok
+test tests::generated_zone_boundary_precedes_allow_rule ... ok
+test tests::reserved_transition_grant_rejects_a_substituted_action ... ok
+test tests::non_canonical_spellings_cannot_bypass_hard_boundaries ... ok
+test tests::policy_bundle_hash_is_independent_of_source_base_path ... ok
+test tests::v02_identity_map_resolves_and_unknown_identity_escalates ... ok
+test tests::rule_disposition_cannot_override_rbac_or_sod ... ok
+test tests::same_canonical_request_has_stable_decision_and_hashes ... ok
+test tests::m8_attestation_parameter_mismatches_deny_before_grant ... ok
+test tests::unclassified_and_reserved_surfaces_fail_closed ... ok
+test tests::m8_transition_parameter_mismatches_deny_before_grant ... ok
+test tests::wrong_self_expired_rejected_or_tampered_approval_is_denied ... ok
+
+test result: ok. 43 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/conformance_m0_authority.rs (target/debug/deps/conformance_m0_authority-34d74c52bb1199d9)
+
+running 19 tests
+test complete_pairwise_matrix_is_commutative ... ok
+test m8_attestation_rule_missing_role_constraints_is_schema_error ... ok
+test m8_capitalization_schema_requires_approval_promote_and_value_evidence ... ok
+test memory_scope_entity_allows_named_entity ... ok
+test domainforge_authority_is_model_semantic ... ok
+test memory_scope_entity_denies_other_entity ... ok
+test memory_scope_any_allows_all ... ok
+test m13_agent_task_requires_exact_endpoint_policy_and_grant_binding ... ok
+test m12_agent_probe_requires_exact_endpoint_policy_and_grant_binding ... ok
+test m8_transition_rule_missing_required_contract_is_schema_error ... ok
+test memory_scope_own_allows_same_entity ... ok
+test memory_scope_hash_changes_with_target ... ok
+test memory_scope_missing_denies ... ok
+test misspelled_top_level_bundle_key_is_rejected ... ok
+test memory_scope_own_denies_cross_entity ... ok
+test resolution_is_idempotent_and_group_order_independent ... ok
+test memory_scope_grant_carries_boundary ... ok
+test settlement_authority_descriptor_selects_one_strong_adapter_and_local_cannot_be_strong ... ok
+test reserved_mutator_into_generated_zone_denies_even_under_allow_all_policy ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_capability-2261306eae73461b)
+
+running 3 tests
+test promotion::tests::parse_fixed_is_char_boundary_and_overflow_safe ... ok
+test tests::projection_extension_contract_requires_known_surface_and_hashes ... ok
+test memory::f25r_tests::non_utf8_line_degrades_to_skipped_not_scan_failure ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m4a.rs (target/debug/deps/conformance_m4a-14baf171b6456792)
+
+running 21 tests
+test f13_wildcard_capability_identity_is_rejected ... ok
+test f13_substring_plan_items_do_not_aggregate_into_unrelated_capability ... ok
+test f13_exact_plan_item_mapping_still_aggregates ... ok
+test m4a_gameable_feedback_weight_below_threshold ... ok
+test m4a_post_hoc_criteria_integrity_failure ... ok
+test m4a_raw_counts_match_5_mixed_runs ... ok
+test m4a_local_declaration_zero_qualifying_weight ... ok
+test m4a_policy_change_contraction ... ok
+test m4a_rebuild_byte_identical_modulo_rebuilt_at ... ok
+test m4a_repeated_variation_no_coverage_increase ... ok
+test m4a_low_attribution_weight_below_threshold ... ok
+test m4a_require_proven_denies_not_proven ... ok
+test m4a_require_proven_allows_when_proven ... ok
+test thoth_sod_copied_declaration_cannot_bypass_promotion ... ok
+test m4a_regression_contraction ... ok
+test thoth_sod_different_author_can_qualify_for_promotion ... ok
+test thoth_sod_same_author_cannot_qualify_for_promotion ... ok
+test m4a_self_declaration_integrity_failure ... ok
+test thoth_sod_replayed_declaration_cannot_bypass_promotion ... ok
+test thoth_sod_relabeled_declaration_cannot_bypass_promotion ... ok
+test m4a_three_qualifying_declarations_promotion_to_proven ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m4b.rs (target/debug/deps/conformance_m4b-82dfac4905fb326f)
+
+running 15 tests
+test extraction_never_panics_or_errors ... ok
+test dedup_key_is_deterministic ... ok
+test corrupt_index_falls_back_without_panicking ... ok
+test kind_filter_returns_only_matching_kind ... ok
+test missing_index_falls_back_without_creating_a_file ... ok
+test own_scope_recall_returns_only_requester_items ... ok
+test index_delete_yields_identical_recall_via_fallback ... ok
+test fts_index_and_linear_scan_agree_on_timestamp_tie_break ... ok
+test recall_limit_capped_at_50 ... ok
+test appended_item_forces_stale_index_to_fall_back ... ok
+test fts_index_query_is_result_equivalent_to_linear_scan_including_mid_word_substrings ... ok
+test two_entity_extraction_deduplicates_and_links_provenance ... ok
+test indexed_results_are_deterministically_ordered_on_timestamp_ties ... ok
+test rebuild_writes_queryable_fts5_schema_and_source_commitment ... ok
+test tampered_source_digest_is_detected_as_stale ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_case_runner-0178256687d0ced4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m5.rs (target/debug/deps/conformance_m5-630ce81fd74c9a63)
+
+running 6 tests
+test self_invoke_noop_fail ... ignored
+test self_invoke_noop_pass ... ignored
+test denied_generated_zone_edit_is_quarantined_before_authority ... ok
+test invalid_predecessor_chain_quarantines_the_stage ... ok
+test accepted_stage_settles_and_completes_case ... ok
+test downstream_sentry_blocked_by_rejected_predecessor ... ok
+
+test result: ok. 4 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_cell-bd90f26e53727aff)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/bundle_size_bound.rs (target/debug/deps/bundle_size_bound-e683cdf0d01e73d9)
+
+running 3 tests
+test a_bundle_at_the_limit_is_still_read ... ok
+test read_manifest_rejects_a_bundle_over_the_size_limit ... ok
+test import_rejects_a_bundle_over_the_size_limit ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+     Running tests/conformance_m6.rs (target/debug/deps/conformance_m6-948e0f62b3a2240f)
+
+running 20 tests
+test absent_cell_is_legacy_valid ... ok
+test cell_identity_is_stable ... ok
+test extra_entry_in_bundle_rejected ... ok
+test export_with_unresolvable_runs_fails_closed_not_silently_empty ... ok
+test legacy_sea_forge_symlink_is_inert_to_import ... ok
+test imported_template_not_instantiable_pre_adopt ... ok
+test export_import_verifies_hashes ... ok
+test missing_manifest_rejected ... ok
+test traversal_absolute_path_rejected ... ok
+test read_manifest_inspects_bundle ... ok
+test local_capability_counts_unchanged ... ok
+test tampered_bundle_rejected_atomically ... ok
+test re_import_replaces_prior ... ok
+test traversal_imported_root_symlink_rejected ... ok
+test traversal_malicious_bundle_id_rejected ... ok
+test traversal_parent_escape_path_rejected ... ok
+test traversal_malicious_cell_id_rejected ... ok
+test unknown_schema_version_rejected ... ok
+test traversal_duplicate_normalized_paths_rejected ... ok
+test traversal_symlink_parent_escape_rejected ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/projection_bundle_boundary.rs (target/debug/deps/projection_bundle_boundary-6aab603cfe807f11)
+
+running 2 tests
+test federation_proof_is_by_hash_not_enum_deserialization ... ok
+test self_model_projections_round_trip_through_federation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/sea_forge-ad52e6820e8c55a0)
+
+running 5 tests
+test commands::ledger::tests::validate_ordinals_rejects_duplicate_dispatch_ordinal ... ok
+test commands::ledger::tests::validate_ordinals_accepts_monotonic_sequence ... ok
+test commands::ledger::tests::validate_ordinals_rejects_missing_dispatch_ordinal ... ok
+test commands::ledger::tests::validate_ordinals_rejects_non_monotonic_settlement_ordinal ... ok
+test pipeline::tests::authority_mirrors_rebuild_byte_identically ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ask_cli.rs (target/debug/deps/ask_cli-d702fe96b237d530)
+
+running 4 tests
+test ask_without_snapshot_exits_1 ... ok
+test ask_unknown_kind_exits_nonzero ... ok
+test ask_with_snapshot_but_no_policy_denies_exits_4 ... ok
+test ask_with_granted_policy_answers_real_capability ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.42s
+
+     Running tests/conformance_m0_migrate.rs (target/debug/deps/conformance_m0_migrate-a93ae2b33f3dda45)
+
+running 2 tests
+test conformance_m0_migrate_imports_v01_root_losslessly_and_blocks_re_migration ... ok
+test conformance_m0_migrate_inspect_reports_legacy_digest_only ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/conformance_m10.rs (target/debug/deps/conformance_m10-1fd788a1b830d6c9)
+
+running 2 tests
+test t10_4_tampered_builtin_template_is_rejected_before_authority_no_side_effects ... ok
+test t10_6_production_plan_with_odi_template_resolves_real_desired_outcome ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+
+     Running tests/conformance_m13.rs (target/debug/deps/conformance_m13-a9e6c4e3f4e6b5ea)
+
+running 3 tests
+test serial_plan_facade_completes_through_case_runner ... ok
+test t13_2_replay_matches_persisted_order ... ok
+test t13_1_agent_task_routed_through_server_and_settles ... FAILED
+
+failures:
+
+---- t13_1_agent_task_routed_through_server_and_settles stdout ----
+
+thread 't13_1_agent_task_routed_through_server_and_settles' (2340573) panicked at crates/sea-forge-cli/tests/conformance_m13.rs:308:5:
+assertion `left == right` failed: sea-forge run --plan failed:
+stdout: case_id=case_20260918T014107Z_343c0b
+case_state=terminated
+
+stderr: 
+  left: Some(3)
+ right: Some(0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    t13_1_agent_task_routed_through_server_and_settles
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+error: test failed, to rerun pass `-p sea-forge-cli --test conformance_m13`
+error: recipe `test` failed on line 315 with exit code 101
+workspace exit=101

@@ -1,0 +1,20 @@
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	1.026s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.948s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/artifactstore	1.068s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	1.041s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	1.031s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	1.197s
+--- FAIL: TestAcceptedImplementRunsStagedFixtureRevisions (0.01s)
+    coordinator_test.go:233: acceptance must append revision 1151 immediately, live is 1153
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/coordinator	0.239s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	1.040s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	1.057s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.096s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	2.413s
+FAIL
+FIXTURE_TAG_TEST_EXIT=1

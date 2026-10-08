@@ -1,0 +1,1 @@
+{"answer": "settled", "confidence": 0.65, "distribution": {"settled": 0.65, "not_settled": 0.25, "insufficient_evidence": 0.10}, "reason": "All three builder iterations were admitted with no rejected states and a happy-path session reference, indicating the run is converging toward an accepted settlement rather than exhausting budget."}

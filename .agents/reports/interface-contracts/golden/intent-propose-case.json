@@ -1,0 +1,38 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0001",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "PROPOSE_CASE",
+    "target_object_id": "tpl-service-migration-v2",
+    "case_id": "case-new",
+    "client_cursor": "1.0000000410",
+    "actor": {
+      "actor_id": "actor-op-7",
+      "role": "agent_operator"
+    },
+    "parameters": {
+      "params": {
+        "environment": "staging",
+        "target_service": "billing-api"
+      },
+      "preflight_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "template_ref": "tpl-service-migration-v2"
+    }
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0001",
+      "success": true,
+      "new_cursor": "1.0000000412"
+    },
+    {
+      "intent_id": "intent-3f9c2a81-0001",
+      "success": false,
+      "refusal": {
+        "refusal_kind": "STALE_PROJECTION",
+        "message": "The world has moved since the preflight: the template was revised. Run preflight again and commit the fresh digest.",
+        "current_cursor": "1.0000000418"
+      }
+    }
+  ]
+}

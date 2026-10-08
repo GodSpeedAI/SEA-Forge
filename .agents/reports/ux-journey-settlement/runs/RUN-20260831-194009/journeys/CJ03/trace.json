@@ -1,0 +1,107 @@
+{
+  "run_id": "RUN-20260831-194009",
+  "timestamp": "2026-08-31T19:40:46.918133+00:00",
+  "journey_id": "CJ03",
+  "journey_name": "Ground Work in Semantic Meaning",
+  "source_story_ids": [
+    "5.1",
+    "5.2",
+    "5.3",
+    "5.4",
+    "5.5",
+    "5.6",
+    "5.7"
+  ],
+  "canonical_source_hashes": {
+    ".sea/interaction/canonicalization-matrix.csv": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4",
+    ".sea/interaction/canonical-journey-catalog.md": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af",
+    ".sea/interaction/journey-grammar.md": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb",
+    ".sea/interaction/interaction-model.sea": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc",
+    ".sea/interaction/journey-capability-map.md": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37",
+    ".sea/interaction/coverage-report.md": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687",
+    ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9",
+    ".agents/specs/spec-minimum.md": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3",
+    ".agents/specs/spec-full.md": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+  },
+  "implementation_revision": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "harness_revision": "v2.0.0",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "actor_and_role": {
+    "actor": "domain_author",
+    "role": "domain author"
+  },
+  "starting_state": "A domain or plan author selects or supplies a source set, a plan needs semantic references, source drift is detected, or a projection is requested.",
+  "actor_visible_observations": [],
+  "browser_actions": [],
+  "screenshot_references": [
+    {
+      "sequence": 1,
+      "name": "CJ03-001-entry-models-view.png",
+      "relative_path": "screenshots/CJ03/CJ03-001-entry-models-view.png",
+      "moment_kind": "entry",
+      "description": "Domain models surface"
+    },
+    {
+      "sequence": 2,
+      "name": "CJ03-002-settlement-semantic-validation.png",
+      "relative_path": "screenshots/CJ03/CJ03-002-settlement-semantic-validation.png",
+      "moment_kind": "settlement_state",
+      "description": "Semantic model snapshot and validation state"
+    }
+  ],
+  "snapshot_references": [],
+  "interface_projections_encountered": [
+    "workbench_domain_models_route"
+  ],
+  "capability_bindings_invoked": [
+    "DomainForge parsing and semantic validation",
+    "model inspection",
+    "plan reference resolution",
+    "hash pinning",
+    "version-skew checks",
+    "deterministic projection",
+    "and output validation."
+  ],
+  "execution_identifiers": {
+    "tests_run": 26,
+    "tests_failed": 0
+  },
+  "evidence_references": [
+    ".sea/interaction/interaction-model.sea"
+  ],
+  "settlement_oracle_result": {
+    "journey_id": "CJ03",
+    "oracle_name": "CJ03_DomainForgeSemanticGroundingOracle",
+    "status": "ACCEPTED",
+    "completion_condition_evaluated": "Semantic references resolve against exact validated model snapshot or fail closed with diagnostics.",
+    "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea",
+    "rationale": "cargo test -p sea-forge-domainforge ran 26 test(s), 0 failed, exit=0. Diagnostics:  src/lib.rs (target/debug/deps/sea_forge_domainforge-bc68c2a38ad22e07)\n     Running tests/conformance_m0_domainforge.rs (target/debug/deps/conformance_m0_domainforge-368d0ffd73d3e11d)\n     Running tests/projection.rs (target/debug/deps/projection-f700abfd1c5c7420)\n   Doc-tests sea_forge_domainforge\n",
+    "evidence_refs": [
+      ".sea/interaction/interaction-model.sea"
+    ],
+    "carried_state": {
+      "tests_run": 26,
+      "tests_failed": 0
+    }
+  },
+  "gate_results": {
+    "ENTRY": "PASS",
+    "VISIBILITY": "PASS",
+    "REACHABILITY": "PASS",
+    "BINDING": "PASS",
+    "AUTHORITY": "PASS",
+    "EXECUTION": "PASS",
+    "EVIDENCE": "PASS",
+    "SETTLEMENT": "PASS",
+    "CONTINUITY": "PASS",
+    "RECOVERY": "PASS"
+  },
+  "final_status": "PASS",
+  "failure_diagnosis": {
+    "failure_code": "NONE",
+    "failure_locus": "none",
+    "expected": "",
+    "observed": "",
+    "reproducible_path": ""
+  }
+}

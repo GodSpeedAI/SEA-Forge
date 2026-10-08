@@ -1,0 +1,15 @@
+{
+  "intent_id": "critic2-disc-exec-2",
+  "kind": "CONSEQUENTIAL_CASE",
+  "action_name": "EXECUTE_ITEM",
+  "target_object_id": "item-disc-89880b6a",
+  "case_id": "case_20260926T014412Z_1b967f",
+  "client_cursor": "01M3DPAP6JNVEJ8H9JQW9GDGFR",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  },
+  "parameters": {
+    "item_id": "item-disc-89880b6a"
+  }
+}

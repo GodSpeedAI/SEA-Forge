@@ -1,0 +1,352 @@
+demo-calculator.aborted-digest-echo-2243:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 2
+    event_log: 6
+    evidence_productions: 0
+    observation_bindings: 0
+    records: 1
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type:
+    role_invocation: 1
+  absent_expected_kinds:
+  - correction_selection
+  - verification_record
+demo-calculator.budget-exhausted-freshseed-2307:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 7
+    event_log: 26
+    evidence_productions: 5
+    observation_bindings: 5
+    records: 11
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 5
+    role_invocation: 6
+  absent_expected_kinds:
+  - verification_record
+demo-calculator.cwd-bug-1510:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 1
+    event_log: 4
+    evidence_productions: 1
+    observation_bindings: 1
+    records: 1
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 10
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type:
+    role_invocation: 1
+  absent_expected_kinds:
+  - correction_selection
+  - verification_record
+demo-calculator.interrupted-2313:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 1
+    event_log: 3
+    evidence_productions: 0
+    observation_bindings: 0
+    records: 1
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type:
+    role_invocation: 1
+  absent_expected_kinds:
+  - correction_selection
+  - verification_record
+demo-calculator.parent-refused-0947:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 1
+    event_log: 1
+    evidence_productions: 0
+    observation_bindings: 0
+    records: 0
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type: {}
+  absent_expected_kinds:
+  - role_invocation
+  - correction_selection
+  - verification_record
+demo-calculator.parent-refused-0948b:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 1
+    event_log: 1
+    evidence_productions: 0
+    observation_bindings: 0
+    records: 0
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type: {}
+  absent_expected_kinds:
+  - role_invocation
+  - correction_selection
+  - verification_record
+demo-calculator.pre-fix-1349:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 2
+    event_log: 4
+    evidence_productions: 0
+    observation_bindings: 0
+    records: 1
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 2
+    schema_migrations: 10
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type:
+    role_invocation: 1
+  absent_expected_kinds:
+  - correction_selection
+  - verification_record
+demo-calculator.pre-settle-fix-1542:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 3
+    event_log: 9
+    evidence_productions: 1
+    observation_bindings: 2
+    records: 4
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 10
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 2
+    role_invocation: 2
+  absent_expected_kinds:
+  - verification_record
+demo-calculator.proof-2of3-2216:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 7
+    event_log: 28
+    evidence_productions: 4
+    observation_bindings: 4
+    records: 12
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 2
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 4
+    role_invocation: 6
+    verification_record: 2
+  absent_expected_kinds: []
+demo-calculator.refused-1535:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 1
+    event_log: 1
+    evidence_productions: 0
+    observation_bindings: 0
+    records: 0
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 10
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type: {}
+  absent_expected_kinds:
+  - role_invocation
+  - correction_selection
+  - verification_record
+demo-calculator.rpc-reservation-1624:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 2
+    event_log: 5
+    evidence_productions: 0
+    observation_bindings: 0
+    records: 1
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 0
+    sqlite_sequence: 3
+  records_by_type:
+    role_invocation: 1
+  absent_expected_kinds:
+  - correction_selection
+  - verification_record
+demo-calculator.settled-0904:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 5
+    event_log: 21
+    evidence_productions: 3
+    observation_bindings: 3
+    records: 10
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 3
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 3
+    role_invocation: 4
+    verification_record: 3
+  absent_expected_kinds: []
+demo-calculator.settled-3of3-clean-seed-0730:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 5
+    event_log: 21
+    evidence_productions: 4
+    observation_bindings: 4
+    records: 11
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 3
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 4
+    role_invocation: 4
+    verification_record: 3
+  absent_expected_kinds: []
+demo-calculator.settled-3of3-contaminated-seed-2234:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 4
+    event_log: 17
+    evidence_productions: 3
+    observation_bindings: 3
+    records: 9
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 3
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 3
+    role_invocation: 3
+    verification_record: 3
+  absent_expected_kinds: []
+demo-calculator.settled-3of3-sharpened-role-1044:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 5
+    event_log: 21
+    evidence_productions: 4
+    observation_bindings: 4
+    records: 11
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 3
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 4
+    role_invocation: 4
+    verification_record: 3
+  absent_expected_kinds: []
+demo-calculator.settled-rpc-1652:
+  tables:
+    capability_observations: 0
+    capability_transitions: 0
+    checkpoints: 4
+    event_log: 17
+    evidence_productions: 3
+    observation_bindings: 3
+    records: 9
+    revision_decisions: 0
+    revision_evaluations: 0
+    revision_proposals: 0
+    revision_restores: 0
+    runs: 1
+    schema_migrations: 11
+    settlements: 3
+    sqlite_sequence: 3
+  records_by_type:
+    correction_selection: 3
+    role_invocation: 3
+    verification_record: 3
+  absent_expected_kinds: []

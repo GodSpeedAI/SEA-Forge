@@ -1,0 +1,69 @@
+# =============================================================================
+# T26 EVIDENCE MANIFEST — frozen verifier identity (T26, pure confirmation)
+# =============================================================================
+# verify_discovery.py was authored FIRST by the T26 independent verifier,
+# its sha256 was frozen HERE before each version's first execution, and no
+# version was ever modified after that version's first execution. Defects
+# found by an execution are recorded below; the corrected version is
+# re-frozen before it runs. No change ever weakened a check against the
+# evidence (v2's fixes make the gate stricter: full 5-fingerprint grid
+# comparison and packet-path joins).
+schema: godspeed-bounded-judgment.t26-evidence-manifest
+task: T26
+verifier: fresh independent adversarial verifier (no involvement in T21..T25)
+frozen_utc: "2026-09-19"
+gate_script:
+  path: verify_discovery.py
+  sha256: b6378f018f8876d9565451674ce1d5a0678e3102b51296d22e080de96db94d15
+  run_from: /home/sprime01/projects/sea-rs (repo root)
+  run_command: python3 .agents/evidence/godspeed-bounded-judgment/T26/verify_discovery.py
+  expects: exit 0 (all recomputations reconcile)
+version_history:
+  - version: v1
+    sha256: acfb31c054bb520a44551300f8c67e46fc5aa99a2ec7410e5cbc08b7d7474e82
+    frozen_before_first_execution: true
+    first_execution_result: FAIL (17 errors after 892 checks)
+    defect_classification: >-
+      All 17 errors were defects in the VERIFIER's own code, none a
+      divergence in the evidence: (1) T23-round-3 "manifest implausibly
+      small" — wrong threshold (5) for a manifest that by design pins
+      exactly 4 files (it cannot pin itself); (2) 12x "packet DB path !=
+      observation DB path" — the verifier joined the packet's data: prefix
+      against the branch-level data root, dropping the T23 segment (my bug);
+      (3) "freeze pin must attest no replay record existed" — the verifier
+      read replay_record_exists_at_freeze from replay-record.yaml instead
+      of candidate-freeze.json where the attestation lives (my bug);
+      (4) "negative target must differ in GAUNTLET.md only" — tuple-arity
+      bug in the expectation ("GAUNTLET.md",) vs the emitted
+      ("GAUNTLET.md", "differs"); the observed diff itself was exactly the
+      required single-file GAUNTLET.md difference; (5) grid mismatch +
+      route-levels mismatch — grid_fp_for_case misclassified budget-C* as
+      the B family via a loose startswith("b") fallback, dropping
+      e2e-happy@1/@2 from the re-derived grid; the bug UNDER-counted the
+      reference grid (anti-evidence direction: it would have made novelty
+      easier to attain). Verifier code was not modified after this
+      execution; v2 was authored, frozen, then executed.
+  - version: v2 (FINAL)
+    sha256: b6378f018f8876d9565451674ce1d5a0678e3102b51296d22e080de96db94d15
+    frozen_before_first_execution: true
+    changes_from_v1: >-
+      threshold 5->4 for round-3 manifest size; packet data: prefix joined
+      against .../godspeed-route-discovery/T23; replay_record_exists_at_
+      freeze read from candidate-freeze.json; tree-diff expectation tuple
+      arity fixed; grid classifier uses family words only (forg/lying/
+      budget/accepted) with an explicit failure on unmappable ids; grid
+      loop failures become gate errors instead of exceptions.
+    first_execution_result: recorded in t26-confirmation.md
+freeze_ordering_rule: >-
+  this manifest pins the gate script BEFORE its first execution; the sha256
+  above is the frozen identity of the final version. Re-running the gate
+  later must reproduce the same result on an unchanged tree, verifiable
+  against this pin.
+outputs:
+  attacks: attacks.yaml
+  report: t26-confirmation.md
+read_only_scope: >-
+  the verifier writes ONLY the four T26 files (verify_discovery.py,
+  evidence-manifest.yml, attacks.yaml, t26-confirmation.md); all evidence,
+  preregistrations, plans, and raw data under $HOME/.local/share/godspeed-
+  route-discovery/ are read read-only.

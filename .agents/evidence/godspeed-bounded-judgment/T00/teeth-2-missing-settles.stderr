@@ -1,0 +1,4 @@
+GodSpeed plan validation: FAIL
+- task settlement mismatch: unsettled=['REQ-AUTH-001'] unknown=[]
+- REQ-AUTH-001 mapping=['T04'] but task.settles=[]
+- high-risk group authority_separation: REQ-AUTH-001 lacks adversarial confirmation

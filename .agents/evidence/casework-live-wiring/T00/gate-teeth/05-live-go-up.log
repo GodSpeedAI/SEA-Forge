@@ -1,0 +1,10 @@
+$ just casework-live-go-up
+casework-live-go-up: building gateway binary
+casework-live-go-up: starting on 127.0.0.1:4179 against live cell .sea-forge/casework-live/cell (FIXTURE-LABELED providers until T05)
+casework-live-go-up: answering at http://127.0.0.1:4179/api/healthz (pid 825512, log: .sea-forge/casework-live/go.log)
+exit=0
+
+$ curl -sS http://127.0.0.1:4179/api/healthz
+{"status":"ok","provenance":"go:fixture:northstar","liveCursor":1150}
+
+curl exit=0

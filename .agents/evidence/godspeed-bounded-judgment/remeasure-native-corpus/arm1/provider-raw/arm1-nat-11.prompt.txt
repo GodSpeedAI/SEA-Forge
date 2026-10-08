@@ -1,0 +1,8 @@
+You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+Question: Will this Gauntlet run settle accepted, or end non-settled (budget exhausted)?
+Answer domain for "answer": settled, not_settled, insufficient_evidence.
+You see the run's records BEFORE its terminal event: the dispatched builder's result documents (claims), correction selections, and produced evidence. Judge whether the represented work will close under the run's constraints. Use insufficient_evidence if the records genuinely cannot decide.
+JSON shape: {"answer": <label>, "confidence": <0..1>, "distribution": {<label>: <prob> for all three}, "reason": <one sentence>}
+
+Run records:
+{"invocations": [], "corrections": 0}

@@ -1,0 +1,52 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/adapters/local/localAdapter.test.ts:
+40 |       stateBoundaryDescription: 'local fixture trajectory cursor list',
+41 |     })
+42 |   })
+43 | 
+44 |   test('shared conformance accepts an ordered retained prefix before the accepted cursor', async () => {
+45 |     await expect(runReplayConformance(adapter, 'prefix-and-receipt')).resolves.toBeUndefined()
+                                                                                    ^
+error: expect(received).resolves.toBeUndefined()
+
+Expected promise that resolves
+Received promise that rejected: Promise { <rejected> }
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.test.ts:45:80)
+(fail) LocalContractAdapter > shared conformance accepts an ordered retained prefix before the accepted cursor [327.93ms]
+44 |   test('shared conformance accepts an ordered retained prefix before the accepted cursor', async () => {
+45 |     await expect(runReplayConformance(adapter, 'prefix-and-receipt')).resolves.toBeUndefined()
+46 |   })
+47 | 
+48 |   test('shared conformance rejects a retained prefix that omits the accepted cursor', async () => {
+49 |     await expect(runReplayConformance(adapter, 'prefix-only')).rejects.toThrow('timed out waiting for retained events')
+                                                                            ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "timed out waiting for retained events"
+Received message: "CaseworkPort conformance failed: resumed stream replays the accepted mutation cursor — got 1.0000000006~retained-prefix, expected at least 1.0000000007"
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.test.ts:49:72)
+(fail) LocalContractAdapter > shared conformance rejects a retained prefix that omits the accepted cursor [320.80ms]
+48 |   test('shared conformance rejects a retained prefix that omits the accepted cursor', async () => {
+49 |     await expect(runReplayConformance(adapter, 'prefix-only')).rejects.toThrow('timed out waiting for retained events')
+50 |   })
+51 | 
+52 |   test('shared conformance rejects retained replay cursors delivered out of order', async () => {
+53 |     await expect(runReplayConformance(adapter, 'unordered-prefix')).rejects.toThrow(
+                                                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "replay cursors advance chronologically"
+Received message: "CaseworkPort conformance failed: resumed stream replays the accepted mutation cursor — got 1.0000000006~retained-prefix~later, expected at least 1.0000000007"
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.test.ts:53:77)
+(fail) LocalContractAdapter > shared conformance rejects retained replay cursors delivered out of order [319.87ms]
+
+ 0 pass
+ 13 filtered out
+ 3 fail
+ 2 expect() calls
+Ran 3 tests across 1 file. [992.00ms]
+exit=1

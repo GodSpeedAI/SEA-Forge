@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ11",
+  "oracle_name": "CJ11_ArtifactTransformationAndMaturityOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Output is validated, hash-linked, settled at actual maturity or quarantined; file creation alone != runtime readiness.",
+  "authoritative_record_inspected": "crates/sea-forge-domainforge / /artifacts route",
+  "rationale": "DomainForge projections enforce hash linkage and deterministic derivation; Workbench artifact browser correctly renders preview status.",
+  "evidence_refs": [
+    "crates/sea-forge-domainforge",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+  ],
+  "carried_state": {}
+}

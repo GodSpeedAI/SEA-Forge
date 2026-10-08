@@ -1,0 +1,82 @@
+# =============================================================================
+# T05 PREREGISTRATION — loop correlation identity (joinability)
+# =============================================================================
+# FROZEN BEFORE implementation or harness execution (plan task T05, P3,
+# confirmation: independent_adversarial).
+schema: godspeed-bounded-judgment.t05-preregistration
+created_utc: "2026-09-17"
+task: T05
+settles: [REQ-PROV-021, REQ-PROV-022, REQ-SETTLE-001, REQ-GOAL-005, VAR-008, RECOV-004]
+
+identity_inspection_finding:
+  statement: >-
+    Inspection of a real minted run (proof-recipe shape) shows the per-case
+    ledger already carries a causal chain: intent -> case_plan ->
+    authority_evidence -> authority_request -> authority_decision (citing its
+    request by ledger entry ULID) -> settlement_event. DEFECT FOUND: the
+    settlement_event's authority_refs carry per-run string labels
+    ('auth_01','auth_02'), not ledger entry ULIDs — the exact string-convention
+    join the KNOWN FACT describes. The settlement -> authority-decision hop is
+    therefore NOT deterministically joinable from the ledger today.
+
+mechanism_choice:
+  chosen: >-
+    BIND the existing ledger causal-parent chain as the correlation mechanism
+    (direct-echo family), and repair the one broken hop. The loop correlation
+    identity is the ADMISSION intent entry's ledger ULID; every hop is joined
+    by committed causal references (authority_refs), which are unique,
+    non-guessable, and independent of human-readable ids.
+  why: >-
+    The chain already exists and is load-bearing (F-25.q integrity,
+    pre-action assurance, mirrors); introducing a second identity would create
+    a parallel correlation surface, which the plan forbids. No existing
+    repository contract forces a different representation. The only delta
+    needed is the settlement hop's references.
+  implementation_delta: >-
+    crates/sea-forge-cli/src/pipeline.rs: the settlement_event ledger commit
+    cites committed_decisions' entry ULIDs instead of decision_id labels.
+    Views, payloads, semantic envelope, and decision_ids are untouched.
+  non_goals: "no new store, service, or ledger; no field name mandate beyond the existing authority_refs column; no change to other repositories' schemas"
+
+joinability_harness:
+  path: ".agents/evidence/godspeed-bounded-judgment/T05/joinability_test.py"
+  discipline: "sha256 recorded in the decision log BEFORE first execution; never overwritten"
+  method: >-
+    Mints a real governed run (proof-recipe shape) and joins, walking committed
+    ledger causal references ONLY (never run_id string matching): settlement
+    -> authority_decision -> authority_request, and the full chain back to the
+    admission intent entry. Cross-checks each cited hop's subject_refs against
+    the settlement's run subjects.
+
+claims:
+  - "A single stable correlation identity can be bound at admission and preserved across meaning, judgment, authority, execution, observation, and settlement boundaries."
+  - "The chosen mechanism is lossless: every artifact that cites a judgment or a settlement is joinable to it."
+  - "False joins are impossible or explicitly rejected."
+  - "A settlement that contradicts a prior judgment leaves the original judgment immutable and correlatable (VAR-008)."
+
+falsifiers:
+  - "Two concurrent runs with similar human-readable ids produce a false join."
+  - "A restart or resume loses the correlation for in-flight artifacts."
+  - "A duplicate external id causes a wrong join instead of a rejection."
+  - "A missing hop is silently tolerated rather than reported."
+  - "A stale mapping binds a judgment to the wrong settlement."
+
+known_confounds:
+  - "Existing run_id strings are already reused across systems; a test that merely matches run_id strings proves nothing — the harness joins by causal references only and includes a string-similarity collision case."
+  - "The corpus/cases are small; collision cases are constructed deliberately."
+
+adversarial_cases:
+  - "similar-id collision: two runs with shared run_id prefixes; the joiner must resolve via ULIDs and must not join by string similarity"
+  - "restart: artifacts written across separate process invocations in one cell join by the same identity"
+  - "duplicate external id: duplicate decision_id labels across runs cause no wrong join"
+  - "missing hop: an absent referenced entry FAILS the join naming the missing hop"
+  - "stale mapping: a settlement citing a foreign ledger's ULID is rejected"
+  - "mismatched pair: a settlement citing a decision of another run is rejected by the subject cross-check"
+  - "immutability (VAR-008): appending a contradicting settlement leaves the original judgment entry byte-identical (predecessor-hash ledger discipline)"
+
+gates: ["just crate-test sea-forge-core", "python3 .agents/evidence/godspeed-bounded-judgment/T05/joinability_test.py"]
+confirmation_condition: >-
+  A fresh independent verifier receives the requirement ids, the mechanism
+  rationale, the joinability harness, and the raw evidence, and independently
+  attempts false joins and missing-hop cases, returning CONFIRM with no false
+  join achieved and no silent missing hop.

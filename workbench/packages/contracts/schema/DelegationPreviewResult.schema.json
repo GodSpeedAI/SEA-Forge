@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DelegationPreviewResult",
+  "description": "`delegation.preview` result body.",
+  "type": "object",
+  "properties": {
+    "blocking_reasons": {
+      "description": "Every unmet condition, not just the first. An operator repairing a\nrequest wants the whole list rather than one round trip per problem.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contract": {
+      "description": "Absent when the endpoint is unknown or its configuration will not\nsnapshot. There is then no contract to show, and assembling one from\nvalues that did not resolve would be the projection inventing truth.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JobContractPreview"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "eligible": {
+      "description": "True only when no precondition known at preview time is unmet *and* a\ncontract could be built. Never a prediction that `delegate` will be\nallowed — see the module docs.",
+      "type": "boolean"
+    },
+    "endpoint": {
+      "type": "string"
+    },
+    "evidence_refs": {
+      "description": "The evidence behind the standing, as `asset.list` reports it.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "standing": {
+      "description": "The endpoint's standing word from `asset.list`, verbatim. Absent when\nthe endpoint is not configured in this cell: an unconfigured endpoint\nhas no standing, and minting a word for it would put a fourth rung on a\nthree-rung ladder the kernel owns.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "endpoint",
+    "eligible"
+  ],
+  "$defs": {
+    "JobContractPreview": {
+      "description": "The job contract a delegation would run under.\n\nEvery field is derived from the endpoint descriptor and the request; nothing\nhere is a claim about what *did* happen, and nothing is stored.",
+      "type": "object",
+      "properties": {
+        "contract_digest": {
+          "description": "Identity of this exact contract. If the endpoint descriptor or any\nrequest value changes between preview and `delegate`, this digest\nchanges — so an operator can tell whether what they inspected is what\nwould run.",
+          "type": "string"
+        },
+        "endpoint_digest": {
+          "description": "`descriptor_config_sha256` — the identity of the endpoint configuration\nthis contract was built from.",
+          "type": "string"
+        },
+        "instruction_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "instruction_sha256": {
+          "description": "Hash of the instruction packet. The instruction text itself is never\nechoed back: the caller already has it, and a projection that repeated\nit would become a second place the packet lives.",
+          "type": "string"
+        },
+        "max_request_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "max_response_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "max_turns": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "model": {
+          "$ref": "#/$defs/ResolvedValue"
+        },
+        "provider_kind": {
+          "description": "`openai_compatible` | `anthropic` | `acp`, taken from the authority\naction rather than re-matched, so it cannot drift from what is submitted.",
+          "type": "string"
+        },
+        "required_authority": {
+          "description": "The authority action kind `delegate` will submit for evaluation\n(`agent_task`). Naming the action is not obtaining it: no decision\nexists until the command runs.",
+          "type": "string"
+        },
+        "timeout_secs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "token_budget": {
+          "description": "Absent means no token cap — the delegation is bounded by `max_turns`\nalone. Absence is reported as absence, not as a zero budget.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "transcript_retention": {
+          "$ref": "#/$defs/ResolvedValue"
+        }
+      },
+      "required": [
+        "provider_kind",
+        "endpoint_digest",
+        "model",
+        "transcript_retention",
+        "instruction_sha256",
+        "instruction_bytes",
+        "max_request_bytes",
+        "max_response_bytes",
+        "timeout_secs",
+        "max_turns",
+        "required_authority",
+        "contract_digest"
+      ]
+    },
+    "ResolvedValue": {
+      "description": "One resolved value together with who decided it.",
+      "type": "object",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/ValueSource"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "source"
+      ]
+    },
+    "ValueSource": {
+      "description": "Where a resolved value came from.\n\nClosed on purpose. Each variant is a distinct, recoverable fact about who\ndecided the value; a variant that could not be told apart from another would\nbe provenance theatre.",
+      "oneOf": [
+        {
+          "description": "The caller asked for this value explicitly in the preview request.",
+          "type": "string",
+          "const": "requested"
+        },
+        {
+          "description": "The endpoint descriptor in `server.yaml` declares it.",
+          "type": "string",
+          "const": "endpoint_default"
+        },
+        {
+          "description": "The cell-wide `[agent]` configuration supplied it.\n\nThis does *not* separate \"the cell chose this\" from \"the cell left it\nalone and the kernel's fallback applied\", because `AgentConfig`'s\nretention field is not an `Option` — after parsing, an explicit\n`summarized` and an absent one are the same value. Reporting a\n`built_in` here would be inventing a distinction the record does not\nhold.",
+          "type": "string",
+          "const": "cell_default"
+        },
+        {
+          "description": "Nothing declared it at any level and the kernel's own fallback applies.\nUsed only where the config type preserves the absence (`default_model`\nis an `Option`, so this is real for the model).",
+          "type": "string",
+          "const": "built_in"
+        }
+      ]
+    }
+  }
+}

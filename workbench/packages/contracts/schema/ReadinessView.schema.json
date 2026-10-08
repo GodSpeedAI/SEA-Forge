@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReadinessView",
+  "description": "The `readiness.get` view body — a read-only projection, not source truth.",
+  "type": "object",
+  "properties": {
+    "foundations": {
+      "description": "Foundational conditions (self-model / integrity substrate).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ReadinessItem"
+      }
+    },
+    "intended_operation": {
+      "description": "Echo of the intended operation this view was shaped for, if provided.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IntendedOperation"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operational_capabilities": {
+      "description": "Operational capabilities (what the operator can actually do now).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ReadinessItem"
+      }
+    },
+    "overall": {
+      "description": "Deterministically-derived overall verdict.",
+      "$ref": "#/$defs/OverallReadiness"
+    },
+    "recent_invalidations": {
+      "description": "Recent invalidations. Empty in this slice (no honest source yet).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Invalidation"
+      }
+    }
+  },
+  "required": [
+    "overall",
+    "foundations",
+    "operational_capabilities",
+    "recent_invalidations"
+  ],
+  "$defs": {
+    "IntendedOperation": {
+      "description": "The operation the operator intends to perform next, if any. Lets the view\nforeground the capabilities that operation actually depends on\n(operation-sensitivity). Mirrors the request example at\n`sea-forge-workbench-api-spec-v0.1.md:2037-2041`.",
+      "type": "object",
+      "properties": {
+        "method": {
+          "description": "The SFWP method (or method family) the operator intends to invoke next.",
+          "type": "string"
+        },
+        "resource_ref": {
+          "description": "Optional resource the operation targets. A citation string in this\nslice; not resolved to a canonical record digest.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "method"
+      ]
+    },
+    "Invalidation": {
+      "description": "A recorded invalidation of a prior readiness determination. Defined minimally\nbecause the spec references but never defines it. Not populated in this slice\n(no cache/invalidation layer exists to source real records).",
+      "type": "object",
+      "properties": {
+        "item_id": {
+          "description": "Which condition was invalidated.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Plain-language reason the prior determination no longer holds.",
+          "type": "string"
+        },
+        "source": {
+          "description": "The committed record that invalidated the prior standing, if available.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRecordRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "item_id",
+        "reason"
+      ]
+    },
+    "OverallReadiness": {
+      "description": "Overall readiness verdict, derived deterministically from the foundational\nsource standing and the worst operational condition.",
+      "oneOf": [
+        {
+          "description": "All foundations pass and no operational capability is degraded/blocked.",
+          "type": "string",
+          "const": "ready"
+        },
+        {
+          "description": "Foundations pass but at least one operational capability is degraded/blocked.",
+          "type": "string",
+          "const": "ready_with_limitations"
+        },
+        {
+          "description": "A foundation is blocked for a non-integrity reason.",
+          "type": "string",
+          "const": "blocked"
+        },
+        {
+          "description": "A foundation failed specifically on ledger/snapshot integrity verification.",
+          "type": "string",
+          "const": "integrity_halted"
+        },
+        {
+          "description": "A committed source remains readable but requires a rebuild before use.",
+          "type": "string",
+          "const": "stale"
+        },
+        {
+          "description": "No committed source record can prove the current standing.",
+          "type": "string",
+          "const": "unknown"
+        }
+      ]
+    },
+    "ReadinessItem": {
+      "description": "A single readiness condition, projected from kernel truth. Shapes the\nwireframe's `ReadinessConditionTable` row: an identity, a human label, a\ngrouping category, a status, a plain-language reason, and the committed\nsource record that proves it. A missing source is explicit and means the\nstanding is not proven; it never falls back to a code citation.",
+      "type": "object",
+      "properties": {
+        "category": {
+          "description": "Grouping bucket — `\"foundation\"` or `\"operational_capability\"`.",
+          "type": "string"
+        },
+        "id": {
+          "description": "Stable machine identity for this condition (e.g. `\"self_model_integrity\"`).",
+          "type": "string"
+        },
+        "name": {
+          "description": "Human-facing label (e.g. `\"Self-model integrity\"`).",
+          "type": "string"
+        },
+        "next_lawful_action": {
+          "description": "The next lawful action when this condition is not ready.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Plain-language reason for the status. Empty string when self-evidently ready.",
+          "type": "string"
+        },
+        "source": {
+          "description": "The committed source record that proves this standing, when available.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRecordRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "description": "Coarse condition status.",
+          "$ref": "#/$defs/ReadinessStatus"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "category",
+        "status",
+        "reason",
+        "next_lawful_action"
+      ]
+    },
+    "ReadinessStatus": {
+      "description": "Coarse status of a single readiness condition. Mirrors the four states the\nReadiness kit's capability rows can render.",
+      "oneOf": [
+        {
+          "description": "The condition is fully satisfied.",
+          "type": "string",
+          "const": "ready"
+        },
+        {
+          "description": "Usable but with a named limitation.",
+          "type": "string",
+          "const": "degraded"
+        },
+        {
+          "description": "The condition prevents the associated capability.",
+          "type": "string",
+          "const": "blocked"
+        },
+        {
+          "description": "Genuinely undetermined — distinct from `Blocked` (`unknown ≠ unavailable`).",
+          "type": "string",
+          "const": "unknown"
+        }
+      ]
+    },
+    "RebuildStanding": {
+      "description": "Whether the committed source can presently be rebuilt and verified.",
+      "type": "string",
+      "enum": [
+        "verified",
+        "rebuild_required"
+      ]
+    },
+    "SourceFreshness": {
+      "description": "Freshness of the canonical record behind a projection.",
+      "type": "string",
+      "enum": [
+        "current",
+        "stale"
+      ]
+    },
+    "SourceRecordRef": {
+      "description": "A content-addressed, ledger-committed source record behind a view.\n\nThis deliberately cannot hold a source file path or code citation.  A\nrenderer may show implementation location as explanatory material, but a\nreadiness standing must resolve to a committed record and digest.",
+      "type": "object",
+      "properties": {
+        "digest": {
+          "type": "string"
+        },
+        "entry_id": {
+          "type": "string"
+        },
+        "freshness": {
+          "$ref": "#/$defs/SourceFreshness"
+        },
+        "ledger_id": {
+          "type": "string"
+        },
+        "rebuild_standing": {
+          "$ref": "#/$defs/RebuildStanding"
+        },
+        "record_id": {
+          "type": "string"
+        },
+        "record_kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ledger_id",
+        "entry_id",
+        "record_kind",
+        "record_id",
+        "digest",
+        "freshness",
+        "rebuild_standing"
+      ]
+    }
+  }
+}

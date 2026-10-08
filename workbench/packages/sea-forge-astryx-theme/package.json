@@ -1,0 +1,12 @@
+{
+  "name": "@sea-forge/astryx-theme",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/theme.ts",
+  "types": "./src/theme.ts",
+  "peerDependencies": {
+    "@astryxdesign/core": "0.1.8",
+    "@astryxdesign/theme-neutral": "0.1.8"
+  }
+}

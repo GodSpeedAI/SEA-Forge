@@ -1,0 +1,77 @@
+# Gitleaks configuration for SEA Forge.
+#
+# Extends the default gitleaks ruleset. The only addition is a path
+# allowlist for `.entire/metadata/` — these are rebuildable session
+# artifacts (gitignored, not tracked) that exist only in prior git
+# history and contain simulated/fake tokens used to exercise the
+# redaction pipeline. They are not real credentials and are documented
+# as benign in `.agents/CURRENT_STATUS.md`. Source-tree test fixtures
+# carry inline `// gitleaks:allow` comments instead.
+title = "SEA Forge"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "rebuildable session artifacts and historical redaction-session transcripts (simulated tokens)"
+paths = [
+  '''\.entire/metadata/.*''',
+  # Entire CLI checkpoint transcript artifacts at the repo root (numbered
+  # session dirs). Gitignored now but remain in prior history; contain
+  # simulated/fake tokens from redaction-pipeline test sessions.
+  '''^[0-9]+/(full|transcript)\.jsonl$''',
+]
+
+# T17 gate-remediation additions (2026-09-18): commits that predate the
+# request-admission/redaction hardening contain simulated credentials in test
+# fixtures and the transcript-redaction sentinel corpus. All are fake values
+# asserted against by tests (e.g. `sk-live-…` is a synthetic token in a
+# delegation test; SECRET_SENTINELS exists precisely so transcripts are
+# redacted against a canonical fake-key corpus). Verified not real during the
+# bounded-judgment T17 gate remediation; commit-scoped so any NEW occurrence
+# in these paths still fails.
+[[allowlists]]
+description = "test fixtures and redaction sentinels with simulated credentials"
+commits = [
+  "c371fc1733d9b27f24331fd9ba83128c42b6c15c",
+  "4bda7946fc7bdf5e93aa89fe0594ddde154380a6",
+  "87e475b22fc6921fd7b39d791277d9401ef59b1a",
+]
+paths = [
+  '''crates/sea-forge-server/tests/fixtures/t04_governed_work_request\.json''',
+  '''crates/sea-forge-server/tests/convergence_t11_whole_loop\.rs''',
+  '''crates/sea-forge-server/tests/convergence_t12_variation\.rs''',
+  '''crates/sea-forge-agent/src/delegation\.rs''',
+  '''crates/sea-forge-server/tests/conformance_m16\.rs''',
+  '''crates/sea-forge-ledger/src/types\.rs''',
+  '''crates/sea-forge-ledger/tests/conformance_m0_ledger\.rs''',
+]
+
+# --- casework-environment plan, T00 remediation (operator-approved 2026-09-19) --------------
+# `just security` reported 14 `generic-api-key` findings at revision 6ce518f. They are
+# identifier-class matches introduced by the sibling Godspeed bounded-judgment plan's committed
+# evidence, not by this plan. Five independent adversarial verification rounds
+# (.agents/evidence/godspeed-casework-cognitive-environment/T00/T00-verification-round-{1..5}-NOT_CONFIRM.md)
+# reviewed them; the corrected re-measurement reads the real bytes at the recorded column offsets
+# and prints no matched value: the matched field is named `key` (observation records) or
+# `idempotency_key` (gate logs), and each value is 13-16 characters of lower-case alnum with
+# hyphens, all containing digits (entropy 3.55-3.75) - the shape of a record/idempotency
+# identifier, not of credential material. The records themselves are immutable evidence
+# (.agents/AGENTS.md), so they cannot be rewritten to remove the match.
+#
+# Deliberately narrow, following the commit-scoped precedent above: condition = AND so the
+# allowlist requires the commit AND the path AND the rule to all match. Any NEW occurrence in
+# these paths - or any occurrence elsewhere - still fails the gate.
+[[allowlists]]
+description = "casework T00: identifier-class generic-api-key matches in the bounded-judgment plan's evidence at 6ce518f (operator-approved 2026-09-19; analysis in .agents/evidence/godspeed-casework-cognitive-environment/T00/gate-baseline-seafoerge.md)"
+condition = "AND"
+commits = ["6ce518fcd9b01bc5a7037f80f5d8986a33cd2924"]
+rules = ["generic-api-key"]
+paths = [
+  '''\.agents/evidence/godspeed-bounded-judgment/T18/observations\.jsonl''',
+  '''\.agents/evidence/godspeed-bounded-judgment/T27/observations\.jsonl''',
+  '''\.agents/evidence/godspeed-bounded-judgment/repeatability/observations\.jsonl''',
+  '''\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift\.txt''',
+  '''\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK\.log''',
+  '''\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI\.log''',
+]

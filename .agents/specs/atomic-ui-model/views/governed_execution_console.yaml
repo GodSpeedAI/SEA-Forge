@@ -1,0 +1,112 @@
+# Atomic UI View: governed_execution_console
+# Upstream Behavioral Source: CJ07 Execute Governed Work
+
+view:
+  id: governed_execution_console
+  purpose: Observe, monitor, and control bounded execution within granted sandbox and isolation boundaries.
+
+sources:
+  journey: CJ07
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    case_identity: persistent
+    run_identity: persistent
+    sandbox_spec: persistent_during_execution
+
+regions:
+  - id: run_header
+    responsibility: anchor_run_identity_executor_and_status
+  - id: sandbox_boundary_panel
+    responsibility: expose_enforced_isolation_network_timeout_and_secret_limits
+  - id: execution_viewport
+    responsibility: stream_live_progress_events_and_captured_outputs
+  - id: resource_metrics_panel
+    responsibility: display_token_cpu_and_time_consumption_metrics
+  - id: execution_controls
+    responsibility: manage_active_execution_and_handoff_to_settlement
+
+elements:
+  # Run Header Region
+  - id: run_id_display
+    primitive: identity
+    region: run_header
+    binds: { entity: run_record, field: run_id }
+
+  - id: executor_identity_display
+    primitive: identity
+    region: run_header
+    binds: { entity: executor, field: provider_id }
+
+  - id: execution_status_badge
+    primitive: status
+    region: run_header
+    binds: { field: execution_lifecycle_state }
+
+  # Sandbox Boundary Region
+  - id: sandbox_bounds_inspector
+    primitive: inspector
+    region: sandbox_boundary_panel
+    binds: { entity: sandbox_spec }
+
+  - id: authority_grant_token_receipt
+    primitive: evidence_item
+    region: sandbox_boundary_panel
+    binds: { field: authority_grant_token }
+
+  # Execution Viewport Region
+  - id: event_stream_viewport
+    primitive: viewport
+    region: execution_viewport
+    binds: { entity: execution_events }
+
+  - id: execution_progress_bar
+    primitive: progress
+    region: execution_viewport
+    binds: { field: step_progress }
+
+  # Resource Metrics Region
+  - id: execution_duration_metric
+    primitive: metric
+    region: resource_metrics_panel
+    binds: { field: elapsed_time_seconds }
+
+  - id: token_consumption_metric
+    primitive: metric
+    region: resource_metrics_panel
+    binds: { field: tokens_consumed }
+
+  - id: output_artifact_receipt
+    primitive: artifact_reference
+    region: resource_metrics_panel
+    binds: { field: generated_artifact_ref }
+
+  # Execution Controls Region
+  - id: handoff_to_settlement_action
+    primitive: action
+    region: execution_controls
+    semantic_action: evaluate_and_settle_outcome
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  - id: cancel_active_run_action
+    primitive: action
+    region: execution_controls
+    semantic_action: monitor_or_cancel_active_work
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: retry_run_action
+    primitive: action
+    region: execution_controls
+    semantic_action: retry_via_successor_run
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: sandbox_provisioning_in_progress }
+  ready: { when: execution_active_and_monitored }
+  blocked: { when: authority_denied_or_missing_grant }
+  settled: { when: execution_terminated_handed_to_settlement }
+  error: { when: sandbox_violation_or_timeout_encountered }

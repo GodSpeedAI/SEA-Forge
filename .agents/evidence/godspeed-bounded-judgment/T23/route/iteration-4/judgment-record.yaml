@@ -1,0 +1,33 @@
+schema: godspeed-bounded-judgment.t23-judgment-record
+route_id: t23-route-001
+iteration: 4
+judge_input_rule: observation records only (typed terminal, settlement_committed count, artifact digest, timing);
+  never the builder/provider narrative, never the route goal
+probe_judgments:
+- probe_id: probe-i4-cand-1
+  candidate_id: cand-1
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/route/provider-raw/t23-route-001-iter4-judgment-probe-i4-cand-1-primary.raw.txt
+    abstention: false
+- probe_id: probe-i4-cand-2
+  candidate_id: cand-2
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/route/provider-raw/t23-route-001-iter4-judgment-probe-i4-cand-2-primary.raw.txt
+    abstention: false
+- probe_id: probe-i4-cand-3
+  candidate_id: cand-3
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/route/provider-raw/t23-route-001-iter4-judgment-probe-i4-cand-3-primary.raw.txt
+    abstention: false

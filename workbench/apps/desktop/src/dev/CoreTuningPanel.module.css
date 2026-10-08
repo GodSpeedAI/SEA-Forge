@@ -1,0 +1,147 @@
+/* Dev tuning panel: donor `#hud` glass + slider treatment, mechanically
+ * migrated. Dev-only; never part of the product surface. */
+
+.opener {
+  position: fixed;
+  left: 38px;
+  bottom: 76px;
+  z-index: 20;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(200, 214, 229, 0.55);
+  background: rgba(10, 14, 22, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.hud {
+  position: fixed;
+  right: 34px;
+  bottom: 34px;
+  z-index: 30;
+  width: 292px;
+  padding: 22px 24px 18px;
+  background: rgba(10, 14, 22, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  color: rgba(233, 240, 248, 0.92);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.hudHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 18px;
+  font-size: 10px;
+  letter-spacing: 0.34em;
+}
+
+.hudHead button {
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(200, 214, 229, 0.55);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.ctl {
+  margin-bottom: 16px;
+}
+
+.ctl:last-of-type {
+  margin-bottom: 8px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 7px;
+}
+
+.row label {
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(200, 214, 229, 0.55);
+}
+
+.row output {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: #ffb35c;
+  font-variant-numeric: tabular-nums;
+}
+
+.ctl input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ctl input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 179, 92, 0.75) var(--fill, 50%),
+    rgba(255, 255, 255, 0.13) var(--fill, 50%)
+  );
+}
+
+.ctl input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  margin-top: -5.5px;
+  background: #0c1017;
+  border: 1.5px solid #ffb35c;
+  box-shadow:
+    0 0 10px rgba(255, 179, 92, 0.65),
+    0 0 26px rgba(255, 179, 92, 0.25);
+}
+
+.ctl.cool .row output {
+  color: #7ad7ff;
+}
+
+.ctl.cool input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    90deg,
+    rgba(122, 215, 255, 0.7) var(--fill, 50%),
+    rgba(255, 255, 255, 0.13) var(--fill, 50%)
+  );
+}
+
+.ctl.cool input[type="range"]::-webkit-slider-thumb {
+  border-color: #7ad7ff;
+}
+
+.foot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(200, 214, 229, 0.55);
+}

@@ -1,0 +1,46 @@
+schema: casework-live-wiring.preregistration
+schema_version: '1.0'
+task: T02
+plan: casework-live-wiring-production
+written: '2026-09-23' # before any T02 implementation; by the orchestrator, not the builder
+operator_decision: D-2 (gateway principal + on_behalf_of allowlist; ADR required)
+
+claim: >-
+  on_behalf_of is honoured only from the gateway principal and never widens roles beyond the
+  target actor's bindings.
+
+falsifier: >-
+  Any accepted request whose effective actor is not in the allowlist, or whose role exceeds that
+  actor's binding.
+
+known_confounds:
+  - tests running as the same uid as both the gateway and the operator (mitigation: negative
+    tests must distinguish principals by server.yaml binding content, not by uid; at least one
+    test must use a bound uid that is NOT the test process uid where the harness allows, and the
+    suite must document which uid it runs as)
+
+teeth_from_plan:
+  - attack: "Send on_behalf_of from a uid bound as operator."
+    expected: "Refused with identity_not_bound or a new class identity_delegation_refused. No ledger write."
+  - attack: "Omit the gateway section from server.yaml."
+    expected: "All on_behalf_of requests are refused."
+
+confirmation_condition: >-
+  An independent agent's negative tests pass on a fresh cell.
+
+verification_bindings:
+  task_gates:
+    - "cargo test -p sea-forge-server identity"
+    - "cargo test -p sea-forge-server --test '*delegat*'"
+  global_gates_that_must_stay_green: >-
+    cargo test -p sea-forge-server -p sea-forge-planner -p sea-forge-case-runner -p sea-forge-cli;
+    (Go/bun gates unaffected unless the wire shape changes, which T02 must not do.)
+
+adr_required: .agents/reports/casework-live-wiring/adr-identity-delegation.md # threat model, revocation, audit fields; amends identity.rs:14-27
+
+scope_notes:
+  - Server-side only; browser authentication is T07.
+  - Every ledger/trace record from a delegated request carries BOTH principals (gateway + end user).
+  - SoD compares end-user actors, never the gateway.
+  - identity.get reports the effective actor.
+  - Default config: no gateway section => all on_behalf_of refused (fail-closed).

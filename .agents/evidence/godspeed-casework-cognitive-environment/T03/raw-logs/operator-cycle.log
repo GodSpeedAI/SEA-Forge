@@ -1,0 +1,30 @@
+$ operator-control cycle (up/curl/status/up-again/down/port-free/down-again/up/down)
+--- up
+casework-ui-up: serving http://127.0.0.1:4178 (pid 1187775)
+casework-ui-up: log: .sea-forge/casework-ui/ui.log
+--- curl
+HTTP 200
+--- status
+casework-ui-status: up (pid 1187775)
+casework-ui-status: answering at http://127.0.0.1:4178
+casework-ui-status: last log lines (.sea-forge/casework-ui/ui.log):
+  $ vite --port "4178" --strictPort
+  
+    VITE v7.3.6  ready in 138 ms
+  
+    ➜  Local:   http://127.0.0.1:4178/
+--- up while up (must reuse)
+casework-ui-up: something already answers at http://127.0.0.1:4178 - reusing it (log: .sea-forge/casework-ui/ui.log)
+--- down
+casework-ui-down: stopped (pid 1187775)
+--- port check after down
+curl: (28) Connection timed out after 2002 milliseconds
+port free (expected)
+--- down again (idempotent)
+casework-ui-down: not running (no pidfile)
+--- up again (repeatable)
+casework-ui-up: serving http://127.0.0.1:4178 (pid 1187911)
+casework-ui-up: log: .sea-forge/casework-ui/ui.log
+HTTP 200
+--- final down
+casework-ui-down: stopped (pid 1187911)

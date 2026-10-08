@@ -1,0 +1,70 @@
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(198,40): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "answered" | "partial" | "denied"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"answered" | "partial" | "denied"'.
+  Overload 2 of 2, '(expected: "answered" | "partial" | "denied"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"answered" | "partial" | "denied"'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(203,37): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "current" | "stale"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"current" | "stale"'.
+  Overload 2 of 2, '(expected: "current" | "stale"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"current" | "stale"'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(213,43): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "identity" | "architecture" | "declared_capability" | "installed_capability" | "demonstrated_capability" | "authority_requirements" | "environment_status" | "failure_condition" | "security_implementation" | "customer_private" | "credential_bearing" | "policy_thresholds"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"identity" | "architecture" | "declared_capability" | "installed_capability" | "demonstrated_capability" | "authority_requirements" | "environment_status" | "failure_condition" | "security_implementation" | "customer_private" | "credential_bearing" | "policy_thresholds"'.
+  Overload 2 of 2, '(expected: "identity" | "architecture" | "declared_capability" | "installed_capability" | "demonstrated_capability" | "authority_requirements" | "environment_status" | "failure_condition" | "security_implementation" | "customer_private" | "credential_bearing" | "policy_thresholds"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"identity" | "architecture" | "declared_capability" | "installed_capability" | "demonstrated_capability" | "authority_requirements" | "environment_status" | "failure_condition" | "security_implementation" | "customer_private" | "credential_bearing" | "policy_thresholds"'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(214,44): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "validated" | "unknown" | "unsupported" | "declared" | "installed" | "available" | "demonstrated"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"validated" | "unknown" | "unsupported" | "declared" | "installed" | "available" | "demonstrated"'.
+  Overload 2 of 2, '(expected: "validated" | "unknown" | "unsupported" | "declared" | "installed" | "available" | "demonstrated"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"validated" | "unknown" | "unsupported" | "declared" | "installed" | "available" | "demonstrated"'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(236,49): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+  Overload 2 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(237,80): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+  Overload 2 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(260,47): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "completed" | "pending" | "enabled" | "active" | "failed" | "terminated"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"completed" | "pending" | "enabled" | "active" | "failed" | "terminated"'.
+  Overload 2 of 2, '(expected: "completed" | "pending" | "enabled" | "active" | "failed" | "terminated"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"completed" | "pending" | "enabled" | "active" | "failed" | "terminated"'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(261,74): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+  Overload 2 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(262,52): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+  Overload 2 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(266,91): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: number): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'number'.
+  Overload 2 of 2, '(expected: number): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'number'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(276,42): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "run_started" | "item_activated" | "command_started" | "command_finished" | "item_completed" | "item_failed" | "item_terminated" | "human_task_completed" | "run_halted" | "run_finished"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"run_started" | "item_activated" | "command_started" | "command_finished" | "item_completed" | "item_failed" | "item_terminated" | "human_task_completed" | "run_halted" | "run_finished"'.
+  Overload 2 of 2, '(expected: "run_started" | "item_activated" | "command_started" | "command_finished" | "item_completed" | "item_failed" | "item_terminated" | "human_task_completed" | "run_halted" | "run_finished"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"run_started" | "item_activated" | "command_started" | "command_finished" | "item_completed" | "item_failed" | "item_terminated" | "human_task_completed" | "run_halted" | "run_finished"'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(283,54): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "completed" | "spawn_failed" | "timed_out" | "sandbox_violation" | "suspected_sandbox_violation"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"completed" | "spawn_failed" | "timed_out" | "sandbox_violation" | "suspected_sandbox_violation"'.
+  Overload 2 of 2, '(expected: "completed" | "spawn_failed" | "timed_out" | "sandbox_violation" | "suspected_sandbox_violation"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"completed" | "spawn_failed" | "timed_out" | "sandbox_violation" | "suspected_sandbox_violation"'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(332,84): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+  Overload 2 of 2, '(expected: string): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+../../.agents/reports/interface-contracts/tests/contract-conformance.test.ts(599,44): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: "ask_capability" | "ask_operation_requirements" | "ask_authority_requirements" | "ask_projection_support" | "ask_environment_status" | "ask_failure_explanation" | "ask_evidence_for_claim" | "ask_available_affordances" | "ask_why_denied"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"ask_capability" | "ask_operation_requirements" | "ask_authority_requirements" | "ask_projection_support" | "ask_environment_status" | "ask_failure_explanation" | "ask_evidence_for_claim" | "ask_available_affordances" | "ask_why_denied"'.
+  Overload 2 of 2, '(expected: "ask_capability" | "ask_operation_requirements" | "ask_authority_requirements" | "ask_projection_support" | "ask_environment_status" | "ask_failure_explanation" | "ask_evidence_for_claim" | "ask_available_affordances" | "ask_why_denied"): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '"ask_capability" | "ask_operation_requirements" | "ask_authority_requirements" | "ask_projection_support" | "ask_environment_status" | "ask_failure_explanation" | "ask_evidence_for_claim" | "ask_available_affordances" | "ask_why_denied"'.

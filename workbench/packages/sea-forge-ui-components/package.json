@@ -1,0 +1,42 @@
+{
+  "name": "@sea-forge/ui-components",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*.css": "./src/*.css"
+  },
+  "scripts": {
+    "check": "tsc -b --noEmit",
+    "test": "vitest run",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o storybook-static"
+  },
+  "dependencies": {
+    "@astryxdesign/core": "0.1.8",
+    "@astryxdesign/theme-neutral": "0.1.8",
+    "@sea-forge/astryx-theme": "workspace:*",
+    "@sea-forge/ui-tokens": "workspace:*",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@storybook/react": "^8.6.14",
+    "@storybook/react-vite": "^8.6.14",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "axe-core": "^4.10.3",
+    "jsdom": "^26.0.0",
+    "storybook": "^8.6.14",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,0 +1,6 @@
+@namespace "demo"
+@version "1.0.0"
+
+Entity "Sample" in demo
+Resource "Artifact" units in demo
+Flow "Artifact" from "Sample" to "Sample" quantity 1

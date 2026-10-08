@@ -1,0 +1,116 @@
+{
+ "addendum2_sha256": "087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a",
+ "correction_round": 2,
+ "probe_id": "probe-t24-case-001-replay-r1",
+ "provenance": {
+  "artifact_dir": "/home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/evidence",
+  "artifact_paths": {
+   "2614558d4e3b921fc32f5c040f61a126cad884debe9eff738b25e92a956a950e": "/home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/evidence/objects/26/14/2614558d4e3b921fc32f5c040f61a126cad884debe9eff738b25e92a956a950e",
+   "873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41": "/home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/evidence/objects/87/3c/873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41",
+   "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12": "/home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/evidence/objects/98/cb/98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+  },
+  "db_pin_verified": true,
+  "recompute_reasons": [],
+  "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/state/gauntlet-state.db",
+  "state_db_sha256_actual": "5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc",
+  "state_db_sha256_pinned": "5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc"
+ },
+ "schema": "godspeed-bounded-judgment.t23-corrected-judgment-surface",
+ "status": "ok",
+ "surface": {
+  "bounded_input": {
+   "max_rounds": 4,
+   "scenario": "e2e-happy"
+  },
+  "candidate_id": "t24-case-001",
+  "correlation_id": "t24-case-001",
+  "evidence_artifacts": [
+   {
+    "content": "{\"tests\": 1, \"failures\": 0, \"command\": \"scripts/check.sh --marker\"}",
+    "kind": "test_report",
+    "locator": "evidence/marker-check-report.json",
+    "sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+   },
+   {
+    "content": "{\"tests\": 2, \"failures\": 0, \"command\": \"scripts/check.sh\"}",
+    "kind": "test_report",
+    "locator": "evidence/check-report.json",
+    "sha256": "873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41"
+   },
+   {
+    "content": "{\"tests\": 3, \"failures\": 0, \"command\": \"scripts/check.sh --all\"}",
+    "kind": "test_report",
+    "locator": "evidence/full-check-report.json",
+    "sha256": "2614558d4e3b921fc32f5c040f61a126cad884debe9eff738b25e92a956a950e"
+   }
+  ],
+  "mechanism": "t15-frozen-case-execution",
+  "operation": "run_case",
+  "probe_id": "probe-t24-case-001-replay-r1",
+  "settlement_committed_count": 3,
+  "settlement_progression": [
+   {
+    "evidence_ref": "sha256:98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+    "order": 1,
+    "unit_id": "AK-901",
+    "verification_ref": "vrf-F7CHXMNDTR7JR69N2Z4GVT5QK5"
+   },
+   {
+    "evidence_ref": "sha256:873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41",
+    "order": 2,
+    "unit_id": "AK-902",
+    "verification_ref": "vrf-1X1KWMNCC9STPF1J9668J64Q93"
+   },
+   {
+    "evidence_ref": "sha256:2614558d4e3b921fc32f5c040f61a126cad884debe9eff738b25e92a956a950e",
+    "order": 3,
+    "unit_id": "AK-903",
+    "verification_ref": "vrf-32AK6X2WAXJXQR1BH271835V37"
+   }
+  ],
+  "state_db_sha256": "5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc",
+  "timing": {
+   "checkpoint_iterations": [
+    1,
+    2,
+    3,
+    3
+   ],
+   "event_clock_first": 0,
+   "event_clock_last": 30,
+   "finished_at_utc": "2026-09-19T04:09:31.341786+00:00",
+   "started_at_utc": "2026-09-19T04:09:30.836621+00:00",
+   "wall_seconds": 0.505
+  },
+  "typed_terminal": {
+   "run_terminal_states": [
+    "settled"
+   ],
+   "terminal_class": "settled"
+  },
+  "unit_dispatch_pattern": {
+   "dispatch_sequence": [
+    "AK-901",
+    "AK-902",
+    "AK-903"
+   ],
+   "per_unit": [
+    {
+     "dispatches": 1,
+     "settlements": 1,
+     "unit_id": "AK-901"
+    },
+    {
+     "dispatches": 1,
+     "settlements": 1,
+     "unit_id": "AK-902"
+    },
+    {
+     "dispatches": 1,
+     "settlements": 1,
+     "unit_id": "AK-903"
+    }
+   ]
+  }
+ }
+}

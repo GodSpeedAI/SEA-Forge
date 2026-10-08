@@ -1,0 +1,36 @@
+=== RUN   TestGoldenRequestEncoding
+=== RUN   TestGoldenRequestEncoding/system.hello
+=== RUN   TestGoldenRequestEncoding/readiness.get
+=== RUN   TestGoldenRequestEncoding/identity.get
+=== RUN   TestGoldenRequestEncoding/request.get_status.unknown
+=== RUN   TestGoldenRequestEncoding/case.entry_options
+=== RUN   TestGoldenRequestEncoding/case.preflight
+=== RUN   TestGoldenRequestEncoding/case.list
+=== RUN   TestGoldenRequestEncoding/approval.list
+=== RUN   TestGoldenRequestEncoding/events.get_range
+=== RUN   TestGoldenRequestEncoding/events.subscribe.ack
+=== RUN   TestGoldenRequestEncoding/case.commit
+=== RUN   TestGoldenRequestEncoding/case.commit.signoff
+=== RUN   TestGoldenRequestEncoding/case.commit.third
+=== RUN   TestGoldenRequestEncoding/case.commit.identity_not_bound
+=== RUN   TestGoldenRequestEncoding/case.commit.identity_delegation_refused
+--- PASS: TestGoldenRequestEncoding (0.02s)
+    --- PASS: TestGoldenRequestEncoding/system.hello (0.00s)
+    --- PASS: TestGoldenRequestEncoding/readiness.get (0.00s)
+    --- PASS: TestGoldenRequestEncoding/identity.get (0.00s)
+    --- PASS: TestGoldenRequestEncoding/request.get_status.unknown (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.entry_options (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.preflight (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.list (0.00s)
+    --- PASS: TestGoldenRequestEncoding/approval.list (0.00s)
+    --- PASS: TestGoldenRequestEncoding/events.get_range (0.00s)
+    --- PASS: TestGoldenRequestEncoding/events.subscribe.ack (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.signoff (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.third (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.identity_not_bound (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.identity_delegation_refused (0.00s)
+=== RUN   TestGoldenResponseDecoding
+--- PASS: TestGoldenResponseDecoding (0.00s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.025s

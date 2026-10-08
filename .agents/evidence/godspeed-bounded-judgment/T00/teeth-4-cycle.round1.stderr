@@ -1,0 +1,4 @@
+GodSpeed plan validation: FAIL
+- DAG edge mismatch: missing=[('T00', 'T14')] extra=[('T14', 'T00')]
+- initial blocked map does not exactly match task dependencies
+- current status blocked_tasks does not match task dependencies

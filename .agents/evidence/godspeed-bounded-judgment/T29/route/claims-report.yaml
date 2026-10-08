@@ -1,0 +1,82 @@
+# =============================================================================
+# T29 CLAIMS REPORT — the exact earned / unearned claims per the frozen prereg
+# (claims_frozen.may_earn / may_not_earn), with the evidence that bounds each.
+# =============================================================================
+schema: godspeed-bounded-judgment.t29-claims-report
+task: T29
+route_id: t29-route-001
+prereg_sha256: e844fce47c9860eeaacac0b8d27f0d28ef386da21f1c45ed878e85ba02af9672
+
+earned:
+  - claim: mechanism_survival_characterize_and_stop
+    statement: >-
+      The native route-discovery mechanism transferred to and completed a
+      materially different operation family in characterize-and-stop mode:
+      the T21 catalog/admission/selection modules, the addendum-1 probe
+      mechanism, the matched-negative discipline and the deterministic
+      goal-evaluation architecture were reused UNCHANGED; only the family
+      constants changed (scenario, goal, mechanical rule).
+    evidence:
+      - route/route-record.yaml (goal_met true, stop route_settled at
+        iteration 2 of <= 4; 6 of <= 8 probes)
+      - route/import-verification.yaml + every harness start (T21 modules
+        re-hashed against T21/evidence-manifest.yml, fail-closed)
+      - gate: verify_breadth.py PASS (617 checks, exit 0)
+  - claim: forged_family_detection_boundary_with_one_factor_negative
+    statement: >-
+      The forged-family detection boundary d* = 2 was established by THIS
+      route's own real probes: the UP rule fires at budgets
+      {2,3,4,5,6} (passing-claim artifact {"tests": 1, "failures": 0}
+      sha256 98cbdd08…, 0 settlements, bounded non-settlement) and does NOT
+      fire at d*-1 = 1 (0 dispatches, 0 artifacts). The matched negative
+      (forged@1) differs from the d* probe (forged@2) by exactly one declared
+      factor (budget), is a real probe with its own pinned DB and fresh seed,
+      and its label was recomputed from the DB, never assigned.
+    evidence:
+      - route/iteration-{1,2}/probe-observations.json + up-evaluations.json
+      - durable DBs/artifacts under
+        $HOME/.local/share/godspeed-route-discovery/T29/route-001-r1/
+      - gate recomputation of d*, the partition, and the negative label
+  - claim: cross_family_rule_complementarity
+    statement: >-
+      The family-2 UP rule and the frozen addendum-3 rule partition the two
+      adversarial families and the honest family: forged (this route) fires
+      UP only; lying (4 frozen rows) fires addendum-3 only; honest (8 frozen
+      rows) fires neither. Verified from the FROZEN family-1 ledger (12
+      pinned DBs re-hashed and recomputed; no new runs) plus this route's
+      probes.
+    evidence:
+      - route/g3-separation.yaml (partition_verdict: holds)
+      - route/family1-rule-evaluation.json (recomputed from pins)
+
+not_earned:
+  - claim: two_settleable_families_breadth
+    reason: no honest-completion scenario exists in the T21 catalog for this
+      family; every forged run is refused by the composed settlement gate by
+      construction (0 settlements on all 6 probes) — the prereg freezes this
+      claim as may_not_earn
+  - claim: general_route_discovery_capability
+    reason: one additional family, one catalog domain (run_case x budget
+      ladder x 3 fixture scenarios), bounded probe/iteration budgets
+  - claim: arbitrary_domain_transfer
+  - claim: large_scale_efficiency
+  - claim: metabolized_capability
+  - claim: autonomous_structural_learning
+  - claim: provider_independent_performance
+    reason: single provider setting (deepseek-clinepass primary; no
+      substitution or fallback was ever exercised on this route)
+  - claim: production_scale_reliability
+  - claim: any_learned_judgment_role
+    reason: the learned observer is observational evidence ONLY; its labels
+      (budget_exhausted for both retained moves) never entered retention, the
+      d* determination, or any settlement — proven by the gate's
+      observer-independent recomputation and tooth T3 (label flip is
+      computationally inert). Anchoring-replication datum: even on the
+      enriched surface showing passing-claim artifacts and 0 settlements, the
+      observer did not produce verification_failed_nonsettlement — consistent
+      with the preserved T23 round-2 judgment non-separation finding.
+
+falsified_layers: []   # none: every prereg prediction that was tested held
+                       # (d* in {2,3} -> observed 2; UP never fires on
+                       # honest/lying rows; addendum-3 never fires on forged)
+recorded_at_utc: '2026-09-19T15:45:00+00:00'

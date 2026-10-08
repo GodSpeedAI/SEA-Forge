@@ -1,0 +1,4 @@
+Command: GOMAXPROCS=2 GOFLAGS=-p=1 go build -o /tmp/casework-resume-gateway ./cmd/godspeed-casework
+Working directory: apps/godspeed-casework-go
+Exit: 0. Fresh binary produced for the committed source snapshot. This build does not prove the gateway was successfully started or exercised.
+RAM/process precheck before build: 3.8 GiB available; no Go/Cargo compiler processes.

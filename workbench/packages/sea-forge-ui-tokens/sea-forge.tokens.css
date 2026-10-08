@@ -1,0 +1,148 @@
+:root {
+  color-scheme: dark;
+
+  --surface-workspace: #0B1220;
+  --surface-panel: #111827;
+  --surface-panel-elevated: #1F2937;
+  --surface-muted: #334155;
+  --surface-overlay: #0F172A;
+  --surface-code: #08101D;
+
+  --fg-primary: #E5EDF8;
+  --fg-secondary: #94A3B8;
+  --fg-tertiary: #64748B;
+  --fg-inverse: #07111F;
+
+  --color-authority-allowed: #16A34A;
+  --color-authority-denied: #DC2626;
+  --color-authority-escalated: #F59E0B;
+  --color-authority-degraded: #D97706;
+  --color-authority-pending: #64748B;
+
+  --color-execution-running: #2563EB;
+  --color-execution-waiting: #64748B;
+  --color-execution-succeeded: #16A34A;
+  --color-execution-failed: #DC2626;
+  --color-execution-cancelled: #64748B;
+  --color-dialogue-streaming: #2563EB;
+  --color-dialogue-permission: #F59E0B;
+  --color-dialogue-terminated: #64748B;
+
+  --color-settlement-pending: #64748B;
+  --color-settlement-evaluating: #2563EB;
+  --color-settlement-accepted: #16A34A;
+  --color-settlement-rejected: #DC2626;
+  --color-settlement-escalated: #F59E0B;
+  --color-settlement-quarantined: #7C3AED;
+  --color-evidence-complete: #16A34A;
+  --color-evidence-missing: #F59E0B;
+  --color-evidence-failed: #DC2626;
+  --color-evidence-stale: #D97706;
+  --color-evidence-quarantined: #7C3AED;
+
+  --color-readiness-ready: #16A34A;
+  --color-readiness-degraded: #F59E0B;
+  --color-readiness-blocked: #DC2626;
+  --color-freshness-current: #16A34A;
+  --color-freshness-stale: #F59E0B;
+  --color-integrity-verified: #16A34A;
+  --color-integrity-partial: #64748B;
+  --color-integrity-pending: #F59E0B;
+  --color-integrity-failed: #DC2626;
+
+  --color-capability-attempted: #64748B;
+  --color-capability-demonstrated: #2563EB;
+  --color-capability-proven: #16A34A;
+  --color-capability-degraded: #F59E0B;
+  --color-capability-quarantined: #7C3AED;
+
+  --color-focus-primary: #2563EB;
+  --color-focus-ring: #60A5FA;
+  --color-attention: #F59E0B;
+  --color-danger: #DC2626;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-app-title: 600 20px/1.2 var(--font-sans);
+  --text-page-title: 600 18px/1.25 var(--font-sans);
+  --text-focus-title: 600 16px/1.3 var(--font-sans);
+  --text-section: 600 14px/1.4 var(--font-sans);
+  --text-body: 400 14px/1.5 var(--font-sans);
+  --text-label: 500 12px/1.4 var(--font-sans);
+  --text-meta: 400 12px/1.4 var(--font-sans);
+  --text-machine: 400 12px/1.5 var(--font-mono);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --row-compact: 32px;
+  --row-standard: 40px;
+  --row-review: 48px;
+  --panel-padding: 16px;
+  --section-gap: 12px;
+
+  --radius-status: 3px;
+  --radius-panel: 4px;
+  --radius-control: 4px;
+  --radius-overlay: 6px;
+  --border-standard: 1px solid var(--surface-muted);
+  --shadow-overlay: 0 12px 36px rgba(0, 0, 0, .30);
+
+  --ease-governed: cubic-bezier(.23, 1, .32, 1);
+  --motion-enter: 180ms;
+  --motion-exit: 140ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--surface-workspace);
+  color: var(--fg-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-workspace);
+  color: var(--fg-primary);
+  font: var(--text-body);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+code,
+pre,
+kbd,
+.machine-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

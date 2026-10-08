@@ -1,0 +1,702 @@
+schema: agent.development_plan
+schema_version: "1.0"
+
+metadata:
+  id: casework-live-wiring-production
+  title: "Wire the SEA-Forge case management system to the GodSpeed front end (Go gateway + Cognitive UI) to production readiness"
+  status: ready
+  version: "0.2.1"
+  amendment_note: >-
+    v0.2.1 (2026-09-23): T00 recipe naming re-planned per correction C-1 (decision log
+    corrections.C-1, option A). casework-go-up and casework-ui-up already exist as the prior plan's
+    fixture-stack recipes (118761a, 44ffadd); the live gateway recipe is therefore
+    casework-live-go-up. casework-ui-up stays shared. Executor decision taken after the
+    correction_protocol stop went unanswered; operator may override.
+  approved: "2026-09-23 — operator approved D-1, D-2, D-3 recommendations and the OIDC/argon2 dependencies; Playwright replaced by agent-browser"
+  created: "2026-09-23"
+  purpose: >-
+    Replace every fixture and local-adapter path between the browser and the SEA-Forge kernel with
+    live, governed wiring. A browser user must be able to complete CJ01-CJ09 end to end: orient,
+    discover, commit a case from a template, navigate, add discretionary work, execute, approve,
+    settle, inspect evidence, and reopen. Every step must leave durable kernel truth
+    (case-events.jsonl, ledgers) and be proven by a live agent-browser ladder. CJ10-CJ12 must work
+    live or be honestly marked unavailable.
+
+source:
+  spec:
+    path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+    note: "Go gateway + React environment spec (SFWP Unix socket at L59, Gauntlet adapter at L57, frozen contract at L46-50)."
+  implementation_brief:
+    path: .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md
+    note: >-
+      Read Section 0 (Verification Errata) FIRST. The body of that report has wrong verb names, wire
+      format, CLI commands, TraceKinds, Go ports and UI facts. This plan is based only on the verified facts.
+  supporting_sources:
+    - .agents/reports/interface-contracts/04-REACT-COGNITIVE-ENVIRONMENT-CONTRACT-SPECIFICATION.md
+    - .agents/reports/interface-contracts/08-MISSING-SEAMS-AND-EXTENSIONS-CATALOG.md
+    - .agents/reports/interface-contracts/typescript/types.ts
+    - .agents/reports/godspeed-cognitive-ui-functional/02-JOURNEY-CUBE.md
+    - .agents/plans/godspeed-casework-cognitive-environment.plan.yaml
+    - .sea/interaction/interaction-model.sea
+
+target_settlement: >-
+  With sea-forge-server, the Go gateway and the production UI build running against a real cell,
+  a clean Chromium session can execute the live ladder L0-L9 and L-RECOV. L0-L9 need no fixtures,
+  no LocalContractAdapter and no devtools injection. Each ladder step's backend assertion is proven
+  by reading the cell's durable state (case-events.jsonl, approvals.jsonl, ledgers). Two distinct
+  authenticated browser users with different roles are attributed correctly in the ledger. SoD
+  refusals, stale projections and daemon restarts are handled honestly in the UI.
+
+operating_contract:
+  core_principle: >-
+    The kernel stays the only authority over case truth, meaning and settlement. The gateway
+    translates and projects, and never decides. The UI requests, and never mutates truth locally.
+    A UI step does not count as done until its effect is visible in the cell's durable state.
+  rules:
+    - "Additive only on the server wire (ADR-003): new capability arrives as new verb-tagged Request variants. Existing variants are never reshaped."
+    - "The server stays zero-argument and env-configured. Do not add CLI flags to sea-forge-server."
+    - "Identity is never trusted from the client. Any delegated-actor mechanism is an explicit, ADR-backed server change (T02)."
+    - "Mirror the Rust Tauri bridge (workbench/apps/desktop/src-tauri/src/bridge.rs) for SFWP framing, request_id correlation and identity-error classes. Do not invent a second dialect."
+    - "Execution standing and settlement standing stay disjoint in every layer."
+    - "Fixture and local adapters stay only as test doubles. The production build must not be able to select them."
+    - "Never use the TraceKind names from the report body. Use the real enum (crates/sea-forge-core/src/types.rs:501)."
+  claim_states: [unverified, builder_verified, independently_confirmed, settled]
+  correction_protocol: >-
+    If a task finds that a verified fact in report Section 0 is wrong, stop. Record the correction in
+    the decision log and in report Section 0, then re-plan the affected tasks before continuing.
+  scope_control: >-
+    In scope: CJ01-CJ09 live, plus honest availability for CJ10-CJ12. Out of scope until T13:
+    federation export/import through the UI, memory promotion, live SXR discrepancy watching, and
+    the Gauntlet executor. The classic Tauri workbench keeps working but is not the target surface.
+
+artifacts:
+  current_status: .agents/current_status.yml
+  decision_log: .agents/reports/casework-live-wiring/decision-log.yaml
+  evidence_root: .agents/evidence/casework-live-wiring/
+  reports_root: .agents/reports/casework-live-wiring/
+  preregistration_root: .agents/evidence/casework-live-wiring/prereg/
+  status_rule: >-
+    Update current_status only after a task's gates pass and the evidence has been written. Never
+    mark a task settled on builder claims alone when its proof_level is P2 or P3.
+
+verification:
+  global_gates:
+    - "cargo test -p sea-forge-server -p sea-forge-planner -p sea-forge-case-runner -p sea-forge-cli"
+    - "cd apps/godspeed-casework-go && go vet ./... && go test -race ./..."
+    - "cd apps/godspeed-cognitive-ui && bun run typecheck && bun test"
+    - "cd apps/godspeed-cognitive-ui && bun e2e/run.ts   # existing local ladder must stay green (regression)"
+    - "just casework-e2e-live   # added in T10; the settlement gate"
+  gate_binding_rule: "A task is done only when its own gates and every global gate that existed before it are green."
+  proof_levels:
+    P0: "Compiles and type-checks."
+    P1: "Unit or contract tests prove the claim in isolation."
+    P2: "Integration test against a real sea-forge-server on a temp cell proves the durable effect."
+    P3: "Live browser ladder plus a durable-state assertion plus independent confirmation."
+
+dependency_graph:
+  edges:
+    - [T00, T01]
+    - [T00, T02]
+    - [T00, T03]
+    - [T00, T04]
+    - [T01, T06]
+    - [T01, T08]
+    - [T02, T05]
+    - [T03, T05]
+    - [T04, T05]
+    - [T04, T07]
+    - [T05, T06]
+    - [T05, T07]
+    - [T06, T08]
+    - [T07, T08]
+    - [T03, T09]
+    - [T06, T09]
+    - [T08, T09]
+    - [T08, T10]
+    - [T09, T10]
+    - [T10, T11]
+    - [T11, T12]
+    - [T12, T13]
+  critical_path: [T00, T04, T05, T06, T08, T09, T10, T11, T12]
+  parallel_tracks:
+    rust_kernel: [T02, T03, T04]
+    contract: [T01]
+    go_gateway: [T05, T06, T07]
+    ui: [T08, T09]
+  settlement_sequence: [T00, T01, T02, T03, T04, T05, T06, T07, T08, T09, T10, T11, T12, T13]
+
+initial_state:
+  current_task: T00
+  last_settled_task: null
+  ready: [T00]
+  blocked: []
+  note: "All operator decisions are settled (see operator_decisions.*.decision). Tasks other than T00 wait only on their depends_on."
+
+operator_decisions:
+  D-1:
+    decision: "APPROVED 2026-09-23 — adopt the recommendation below verbatim."
+    question: "Which UI<->gateway contract is canonical?"
+    options:
+      - "spec-04 CognitiveWorldSnapshot from interface-contracts/typescript/types.ts (what the UI's src/ports consumes)"
+      - "the Go projection + apps/godspeed-cognitive-ui/contracts/*.ts kebab-case intents"
+    recommendation: >-
+      spec-04. The UI (185 tests, an 11/11 local ladder) is built on it, and it carries per-object
+      ActionDescriptors with role-filtered intents, which the journeys need. The Go projection moves
+      to spec-04. contracts/*.ts is retired, or is kept as a documented internal subset with a mapping
+      table. Either way, exactly one contract ships.
+  D-2:
+    decision: "APPROVED 2026-09-23 — adopt the recommendation below verbatim."
+    question: "How do multiple browser users act as distinct kernel actors when the server derives identity from the socket peer uid?"
+    options:
+      - "Gateway principal: the server binds the gateway uid to role 'gateway' in server.yaml. Only that principal may send an on_behalf_of actor, and only for actors listed in a gateway-delegable allowlist. Every such request is ledgered with both principals."
+      - "One OS uid per role: run a gateway process per actor. This works for single-operator deployments but does not scale."
+      - "Single-actor deployment: the browser user IS the gateway uid, and role switching is out of scope."
+    recommendation: >-
+      Gateway principal (option 1), backed by an ADR that amends identity.rs:14-27. It must include
+      a revocation story, and it must ledger the principal pair so that SoD compares end-user actors,
+      never the gateway.
+  D-3:
+    decision: "APPROVED 2026-09-23 — adopt the recommendation below verbatim."
+    question: "Who advances a case after a sentry enables an item: a server-side supervisor, or an explicit operator 'execute' verb?"
+    recommendation: >-
+      Both, behind one engine call. Add an explicit case.advance/item.execute verb for operator-driven
+      work, plus an opt-in server supervisor task for auto-advancing SandboxedTask items. Both call
+      CaseRunner (next_ready_actions / run_sandboxed_episode / apply_episode_completion) in-process.
+      Neither shells out to the CLI.
+
+tasks:
+
+  T00:
+    title: "Baseline, decisions and live-stack scaffolding"
+    initial_status: ready
+    depends_on: []
+    proof_level: P1
+    confirmation: builder
+    settles: []
+    changes: >-
+      Records decisions D-1, D-2 and D-3 in the decision log. Adds justfile recipes that boot the
+      real stack on a temp cell: casework-cell-init, casework-server-up (env SEA_FORGE_ROOT and
+      SEA_FORGE_SOCKET, no flags), casework-live-go-up (-serve -addr 127.0.0.1:4179 -config
+      <live cfg>; distinct name per correction C-1 because casework-go-up is the pre-existing
+      fixture-stack recipe), casework-ui-up (vite :4178, shared with the fixture stack), and
+      casework-stack-down. Records baseline gate results.
+    proves: "The three processes start against one temp cell, and the recipes are idempotent and tear down cleanly."
+    does_not_prove: "Any data flows between the processes."
+    hot_context:
+      - "crates/sea-forge-server/src/config.rs:38,86-92 (socket resolution)"
+      - "crates/sea-forge-server/src/main.rs (zero-arg binary)"
+      - "apps/godspeed-casework-go/cmd/godspeed-casework/main.go:50-52 (flags)"
+      - "apps/godspeed-cognitive-ui/vite.config.ts (4178, /api proxy to 4179)"
+      - "justfile (existing fixture recipes casework-go-up/ui-up/down/status and casework-demo-up MUST stay untouched; casework-go-check, casework-ui-check, workbench-* also exist — correction C-1)"
+    steps:
+      - "Create .agents/reports/casework-live-wiring/decision-log.yaml and record D-1, D-2 and D-3 as APPROVED 2026-09-23 (recommendations adopted), and the dependency approvals (OIDC library, argon2; Playwright rejected in favour of agent-browser)."
+      - "Add the justfile recipes above, with pidfiles and a readiness wait on the socket file and on /api/healthz."
+      - "Capture the baseline: all global gates, and the existing local ladder."
+    gate:
+      - "just casework-cell-init && just casework-server-up && just casework-live-go-up && just casework-stack-down"
+    teeth:
+      - attack: "Start casework-server-up twice."
+        expected: "The second call detects the running server and exits non-zero with a clear message. It does not start a second listener."
+    redesign_trigger: "sea-forge-server cannot run against a temp cell without manual init steps that are missing from the CLI."
+
+  T01:
+    title: "Single canonical UI<->gateway wire contract (resolves GAP-A)"
+    initial_status: blocked
+    depends_on: [T00]
+    proof_level: P1
+    confirmation: independent
+    settles: [GAP-A]
+    changes: >-
+      Makes one contract the source of truth, per D-1. The recommended option is spec-04 types.ts.
+      Extends it with every intent the journeys need: PROPOSE_CASE (template_ref, params,
+      preflight_digest), ADD_DISCRETIONARY_WORK, EXECUTE_ITEM, COMPLETE_HUMAN_TASK, REOPEN_CASE,
+      TERMINATE_CASE, APPROVE_HUMAN_TASK, REJECT_HUMAN_TASK, ESCALATE_OR_OVERRIDE and OPEN_ARTIFACT.
+      Adds typed refusals (AUTHORITY_DENIED, UNAUTHORIZED_ROLE, SOD_VIOLATION, STALE_PROJECTION,
+      JUSTIFICATION_REQUIRED, UNAVAILABLE, INVALID). Adds the template entry-option and preflight
+      result shapes, and the SSE StreamEvent union. Generates Go structs from the contract, or checks
+      them against it.
+    proves: "The UI types, the Go JSON tags and a set of golden JSON fixtures all agree. A contract test fails on any drift."
+    does_not_prove: "That the kernel can perform the intents."
+    hot_context:
+      - "apps/godspeed-cognitive-ui/src/ports/contract.ts:1-45,147-169"
+      - "apps/godspeed-cognitive-ui/contracts/interaction.ts:9-40 (the competing kebab vocabulary)"
+      - "apps/godspeed-casework-go/internal/coordinator/coordinator.go:61-69,191-201"
+      - "apps/godspeed-casework-go/internal/projection/projection.go"
+    steps:
+      - "Write the contract ADR at .agents/reports/casework-live-wiring/adr-wire-contract.md."
+      - "Extend types.ts, and keep the extensions additive."
+      - "Add golden fixtures under .agents/reports/interface-contracts/golden/ (world, intent request and response per kind, each SSE event)."
+      - "Add a Go contract test that unmarshals and re-marshals every golden, byte-stable, and a TS test that type-checks and validates them."
+      - "Retire or alias contracts/*.ts per D-1. Delete the unused dialect so it cannot drift back."
+    gate:
+      - "cd apps/godspeed-casework-go && go test ./internal/contract/..."
+      - "cd apps/godspeed-cognitive-ui && bun test src/ports"
+    teeth:
+      - attack: "Rename visible_objects to objects in the Go struct tag."
+        expected: "The Go golden test fails."
+      - attack: "Add an intent kind in TS only."
+        expected: "The Go exhaustive-kind test fails."
+    redesign_trigger: "The spec-04 shape cannot represent the plan-item DAG or the sentry reasons without a breaking change."
+
+  T02:
+    title: "Delegated actor identity for the gateway principal (resolves GAP-B)"
+    initial_status: blocked
+    depends_on: [T00]
+    proof_level: P2
+    confirmation: independent
+    settles: [GAP-B]
+    changes: >-
+      Implements D-2 in sea-forge-server. The gateway uid binds to a gateway principal. Protected verbs
+      accept an optional on_behalf_of that is honoured only for the gateway principal and only for
+      allowlisted actors. Every resulting ledger or trace record carries both principals. SoD
+      comparisons use the end-user actor. identity.get reports the effective actor.
+    proves: "Two end users behind one gateway are attributed distinctly, SoD holds between them, and a non-gateway uid sending on_behalf_of is refused."
+    does_not_prove: "That the browser authenticates the user correctly (that is T07)."
+    hot_context:
+      - "crates/sea-forge-server/src/identity.rs:14-27,56-75"
+      - "crates/sea-forge-server/src/config.rs:32 (identity section)"
+      - "crates/sea-forge-server/src/lib.rs:2623-2698 (approval.decide passes actor through to the CLI)"
+    preregistration:
+      required: true
+      artifact: .agents/evidence/casework-live-wiring/prereg/T02.yaml
+      claim: "on_behalf_of is honoured only from the gateway principal and never widens roles beyond the target actor's bindings."
+      falsifier: "Any accepted request whose effective actor is not in the allowlist, or whose role exceeds that actor's binding."
+      known_confounds: ["tests running as the same uid as both the gateway and the operator"]
+      confirmation_condition: "An independent agent's negative tests pass on a fresh cell."
+    steps:
+      - "Write the ADR amending the identity model, including threat model, revocation and audit fields."
+      - "Add the server.yaml schema for the gateway principal and the delegable actors. Default: none (fail-closed)."
+      - "Thread the effective actor through every protected verb, including the run_cli --actor path."
+      - "Add integration tests: the gateway acts for A and then B, B cannot approve A's proposal (SoD), and a non-gateway uid is refused."
+    gate:
+      - "cargo test -p sea-forge-server identity"
+      - "cargo test -p sea-forge-server --test '*delegat*'"
+    teeth:
+      - attack: "Send on_behalf_of from a uid bound as operator."
+        expected: "Refused with identity_not_bound or a new class identity_delegation_refused. No ledger write."
+      - attack: "Omit the gateway section from server.yaml."
+        expected: "All on_behalf_of requests are refused."
+    redesign_trigger: "SoD or approval records store the socket uid in places that cannot carry a second principal additively."
+
+  T03:
+    title: "Real plan templates and seeded E2E cell (resolves GAP-D)"
+    initial_status: blocked
+    depends_on: [T00]
+    proof_level: P2
+    confirmation: builder
+    settles: [GAP-D]
+    changes: >-
+      Adds real PlanTemplate YAMLs that load through sea-forge-planner/src/templates.rs. At minimum:
+      one template with a two-item sentry chain (SandboxedTask, then a dependent item), one human-task
+      or sign-off gate that triggers an approval, a required milestone, and parameters. Adds a
+      reproducible E2E cell seed (casework-cell-init) that installs the templates, the identity
+      bindings (operator, security officer, lifecycle custodian, gateway) and the policy.
+    proves: "case.entry_options returns the templates. case.preflight passes and fails as designed. case.commit creates case-<id> with CaseCreated and PlanCreated."
+    does_not_prove: "Browser-driven commit."
+    hot_context:
+      - "crates/sea-forge-server/src/sfwp/case.rs:70-105 (entry_options reads <root>/templates/*.yaml), :184 (preflight)"
+      - "crates/sea-forge-planner/src/templates.rs (PlanTemplate)"
+      - "crates/sea-forge-core/src/types.rs:53 (ItemKind::SandboxedTask), :92-93 (ArtifactExists, SettlementStatus)"
+    steps:
+      - "Author templates under a checked-in dir, for example fixtures/cells/e2e/templates/, and copy them in during cell init."
+      - "Add a server integration test covering entry_options -> preflight (valid and invalid) -> commit -> overview -> horizon."
+    gate:
+      - "cargo test -p sea-forge-server --test case_templates_live"
+    teeth:
+      - attack: "A template with a cyclic sentry dependency."
+        expected: "Preflight refuses with a cycle reason. Commit is never reached."
+    redesign_trigger: "The template schema cannot express a sign-off gate that routes to approval.list."
+
+  T04:
+    title: "SFWP case mutation and execution verbs (resolves GAP-C, D-3)"
+    initial_status: blocked
+    depends_on: [T00]
+    proof_level: P2
+    confirmation: independent
+    settles: [GAP-C]
+    changes: >-
+      Adds these additive verb-tagged Request variants, each registered in IMPLEMENTED_METHODS and in
+      system.describe/get_schema: case.add_item (discretionary; wraps the propose_item logic, keeps
+      proposed_by, validate_proposal and cycle checks, emits PlanMutated), case.reopen (emits
+      CaseReopened), case.terminate (emits CaseTerminated), case.advance / item.execute (runs
+      CaseRunner in-process and emits ItemActivated, CommandStarted, CommandFinished, ArtifactCaptured,
+      then ItemCompleted or ItemFailed), human_task.complete (emits HumanTaskCompleted), and
+      artifact.get (content-addressed fetch by digest, bounded size). Every mutation goes through the
+      same authority and SoD checks as the CLI. Moves the shared logic out of crates/sea-forge-cli into
+      a library crate (sea-forge-case-runner, or a new case-ops module), so that the CLI and the
+      server call one implementation. approval.decide moves off run_cli onto the same library path.
+      Every trace append publishes an EventFrame on the event bus so that events.subscribe carries
+      case progress. Adds an optional supervisor that auto-advances enabled SandboxedTask items
+      (config flag, default off).
+    proves: "Each verb produces exactly the documented TraceKinds in case-events.jsonl. Unauthorized or SoD-violating calls are refused with no writes. Subscribers receive the frames in cursor order."
+    does_not_prove: "Gauntlet execution (T13)."
+    hot_context:
+      - "crates/sea-forge-server/src/sfwp/mod.rs:1-13 (ADR-003 additive rule), :107-249 (IMPLEMENTED_METHODS)"
+      - "crates/sea-forge-server/src/lib.rs:592-760 (Request enum), :195-222 (event bus publish), :1229 (EventsSubscribe), :2995 (run_cli)"
+      - "crates/sea-forge-cli/src/commands/case.rs:36 (append_case_event), :75 (reopen), :129 (propose_item)"
+      - "crates/sea-forge-case-runner (CaseRunner: next_ready_actions, run_sandboxed_episode, apply_episode_completion; run_stage_case ~L372)"
+      - "crates/sea-forge-planner/src/case_engine.rs:11,34,100,434,452"
+      - "crates/sea-forge-core/src/types.rs:501 (real TraceKind list)"
+    steps:
+      - "Extract the case mutation functions from the CLI into a library. Keep the CLI as a thin caller. CLI tests stay green."
+      - "Add the verbs one per commit, each with an integration test on a temp cell that asserts the jsonl deltas."
+      - "Route approval.decide through the library, then delete the run_cli path for it."
+      - "Publish the trace appends to event_bus, and prove replay/resume via events.subscribe(from_cursor)."
+      - "Add the supervisor behind config, with a bounded concurrency Semaphore and a sandbox-class selection test."
+    gate:
+      - "cargo test -p sea-forge-cli -p sea-forge-case-runner -p sea-forge-server"
+      - "cargo test -p sea-forge-server --test sfwp_case_mutations"
+    teeth:
+      - attack: "case.add_item that creates a cycle."
+        expected: "Refused. plan.json is unchanged and no PlanMutated is emitted."
+      - attack: "The proposer approves their own discretionary item."
+        expected: "Refused as an SoD violation. approvals.jsonl is unchanged."
+      - attack: "Kill the subscriber mid-stream, then resubscribe from_cursor."
+        expected: "No gaps and no duplicates beyond the at-least-once boundary. Cursors are monotonic."
+    redesign_trigger: "CaseRunner execution cannot run inside the async server without blocking the runtime or breaking sandbox isolation."
+
+  T05:
+    title: "Go SFWP client and live AuthorityPort (resolves SEAM-4)"
+    initial_status: blocked
+    depends_on: [T02, T03, T04]
+    proof_level: P2
+    confirmation: independent
+    settles: [SEAM-4]
+    changes: >-
+      Adds internal/adapters/sfwp. It is a Unix-socket NDJSON client that speaks the verb-tagged
+      wire, and mirrors bridge.rs: request_id correlation, request.get_status recovery after
+      reconnect, identity-error classes mapped to typed apperr, per-request deadlines, a bounded
+      connection pool, and a dedicated long-lived events.subscribe connection with cursor resume and
+      backoff. Extends the Go ports for the live verbs, or adds a CaseAuthorityPort, following
+      existing port style. Config selects adapter=sfwp with socket path taken from config or
+      SEA_FORGE_SOCKET. Preflight probes system.hello, readiness.get and identity.get.
+    proves: "Against a real server on a temp cell, every verb used by the UI round-trips, and restarting the server mid-session recovers without losing correlated outcomes."
+    does_not_prove: "Projection correctness (T06)."
+    hot_context:
+      - "workbench/apps/desktop/src-tauri/src/bridge.rs:306-525 (reference client)"
+      - "apps/godspeed-casework-go/internal/ports/ports.go:40,103-129"
+      - "apps/godspeed-casework-go/internal/adapters/fakeauthority (shape to replace)"
+      - "apps/godspeed-casework-go/internal/preflight, internal/config"
+    steps:
+      - "Write the frame codec with table tests driven by recorded server frames (capture them from the T04 integration tests)."
+      - "Write the client with correlation, deadlines and reconnect. Integration tests start sea-forge-server via go test TestMain on a temp cell."
+      - "Write the subscription goroutine that feeds an internal event channel. Resume from the last cursor on reconnect."
+      - "Wire it into config and preflight. fakeauthority remains test-only."
+    gate:
+      - "cd apps/godspeed-casework-go && go test -race ./internal/adapters/sfwp/... -tags live"
+    teeth:
+      - attack: "The server returns an unknown verb error (old server)."
+        expected: "A typed unavailable refusal surfaces. No panic and no retry storm."
+      - attack: "Kill the server during case.commit, then restart it."
+        expected: "The client resolves the outcome through request.get_status and never double-commits."
+    redesign_trigger: "The wire frames are not stable enough to decode without importing Rust-generated schemas (then use system.get_schema codegen)."
+
+  T06:
+    title: "Live projection builder and intent translation in the gateway"
+    initial_status: blocked
+    depends_on: [T01, T05]
+    proof_level: P2
+    confirmation: independent
+    settles: [SEAM-1, SEAM-2, SEAM-3, SEAM-6, SEAM-7]
+    changes: >-
+      Replaces the compiled-in Northstar projection with a builder that folds case.list,
+      case.get_overview, case.get_horizon, approval.list and run.list into the canonical
+      CognitiveWorldSnapshot (T01). The builder produces per-object ActionDescriptors filtered by the
+      effective actor and role, sentry reasons in plain language, and disjoint execution and
+      settlement standing. Adds a revision store keyed by the kernel event cursor, so that /api/world
+      ?cursor=... serves true history. Maps each intent kind to one SFWP verb with the effective actor
+      (on_behalf_of per T02). Adds template endpoints GET /api/templates (entry_options) and POST
+      /api/templates/preflight. Replays kernel frames to SSE as revision events with id=kernel cursor.
+      The SSE route honours Last-Event-ID as well as ?last=. Staleness: every mutating intent carries
+      the projection cursor, and the gateway refuses with STALE_PROJECTION when the kernel has moved
+      past it in a way that affects the target.
+    proves: "For each mapped intent, POST /api/intents produces the expected kernel TraceKinds, followed by an SSE revision whose snapshot reflects them."
+    does_not_prove: "Browser rendering."
+    hot_context:
+      - "apps/godspeed-casework-go/internal/server/server.go:57-68 (mux), :99-131 (world, intents), :202-256 (events)"
+      - "apps/godspeed-casework-go/internal/coordinator/coordinator.go (validation, idempotency, leases)"
+      - "apps/godspeed-casework-go/internal/projection (fixture builder to replace)"
+      - "crates/sea-forge-server/src/sfwp/case_views.rs:53-139 (ExecutionStanding, SettlementStanding, HorizonItem, list)"
+    steps:
+      - "Write the projection builder as pure functions from SFWP DTOs to the contract, with golden tests from T01."
+      - "Write the intent translator table. Every kind gets explicit tests for accepted, each refusal class, and idempotent replay."
+      - "Write the revision store with a bounded retention policy and a documented 404 for evicted cursors."
+      - "Add the template endpoints."
+      - "Remove the fixture path from the production build. Keep it behind a test build tag."
+    gate:
+      - "cd apps/godspeed-casework-go && go test -race ./... && go test -race -tags live ./internal/..."
+    teeth:
+      - attack: "An operator-role actor posts APPROVE_HUMAN_TASK."
+        expected: "UNAUTHORIZED_ROLE. The kernel receives no call, or refuses it. The UI action list for that role never offered it."
+      - attack: "Post an intent with a cursor older than the item's last PlanMutated."
+        expected: "STALE_PROJECTION, and no kernel write."
+    redesign_trigger: "The horizon/overview DTOs lack the data needed for relationships or sentry reasons, and need a new server view verb."
+
+  T07:
+    title: "Gateway production posture: auth, sessions, static serving, config"
+    initial_status: blocked
+    depends_on: [T04, T05]
+    proof_level: P2
+    confirmation: independent
+    settles: [PROD-SEC]
+    changes: >-
+      Adds browser authentication. Recommended: OIDC or a local user store with argon2 behind a
+      pluggable authenticator, and a dev-only static-token mode that is refused in production config.
+      Adds a session cookie (HttpOnly, Secure, SameSite=Strict), CSRF protection for POSTs, and a
+      mapping from the authenticated user to the kernel actor (the allowlist from T02). The gateway
+      serves the built UI (dist/) with correct cache headers and a CSP. Makes the listener address,
+      TLS termination (or reverse-proxy guidance) and trusted origins configurable. Keeps the
+      loopback-only CORS default. Adds rate limits on intents, structured logs with a
+      correlation_id that flows through to the SFWP request_id, and /api/healthz vs /api/readyz
+      (readiness includes kernel readiness.get).
+    proves: "An unauthenticated request cannot read /api/world or post intents. A user cannot act as another actor. The production config refuses dev auth."
+    does_not_prove: "The UI login experience (T09)."
+    hot_context:
+      - "apps/godspeed-casework-go/cmd/godspeed-casework/main.go"
+      - "apps/godspeed-casework-go/internal/server (CORS loopback logic)"
+      - "apps/godspeed-casework-go/internal/config"
+    steps:
+      - "Write the authenticator interface, the session store and middleware ordering tests."
+      - "Add static UI serving with SPA fallback, CSP and immutable asset caching."
+      - "Write config validation that fails closed in production mode."
+    gate:
+      - "cd apps/godspeed-casework-go && go test -race ./internal/server/... ./internal/auth/..."
+    teeth:
+      - attack: "A cross-origin POST /api/intents with a valid cookie but no CSRF token."
+        expected: "403, and no kernel call."
+      - attack: "Production config with auth.mode=dev."
+        expected: "The process refuses to start."
+    redesign_trigger: "The deployment target requires the gateway to be stateless across replicas (then move sessions, leases and idempotency to shared storage)."
+
+  T08:
+    title: "UI HttpCaseworkAdapter and source selection"
+    initial_status: blocked
+    depends_on: [T01, T06, T07]
+    proof_level: P2
+    confirmation: independent
+    settles: [UI-LIVE-PORT]
+    changes: >-
+      Adds src/adapters/http/HttpCaseworkAdapter implementing CaseworkPort: getSnapshot,
+      getSnapshotAt, dispatchIntent, resolveArtifact, subscribeEvents via EventSource with
+      Last-Event-ID resume and backoff, and queryTemporalTrajectory. Also adds new methods for
+      templates and preflight. Actor and role come from the authenticated session (GET /api/session),
+      not from UI parameters. Adapter selection: the production build is HTTP-only
+      (VITE_CASEWORK_SOURCE=live, and the local adapter is tree-shaken out). Dev and tests may select
+      local. The current hardcoded LocalContractAdapter in src/main.tsx:21 is replaced. Connection
+      state (live, reconnecting, interrupted) is surfaced to the UI store.
+    proves: "Run against the live gateway, the adapter passes the same port-conformance test suite that the local adapter passes."
+    does_not_prove: "That the new journey UI exists (T09)."
+    hot_context:
+      - "apps/godspeed-cognitive-ui/src/ports/contract.ts:147-169"
+      - "apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.ts (+ .test.ts as the conformance baseline)"
+      - "apps/godspeed-cognitive-ui/src/main.tsx:2,21"
+    steps:
+      - "Extract a shared port-conformance suite from localAdapter.test.ts, and run it against both adapters (the live run uses the stack from T00)."
+      - "Implement the adapter and the source switch, with a bundle check that the prod build contains no local adapter."
+    gate:
+      - "cd apps/godspeed-cognitive-ui && bun test && bun run build && ! grep -q LocalContractAdapter dist/assets/*.js"
+    teeth:
+      - attack: "The gateway returns 409 STALE_PROJECTION."
+        expected: "The adapter surfaces a typed refusal. The UI refetches and shows it honestly. It does not retry the intent silently."
+    redesign_trigger: "EventSource cannot carry the auth cookie in the deployment topology (then switch to fetch streaming)."
+
+  T09:
+    title: "UI journey wiring for CJ01-CJ09"
+    initial_status: blocked
+    depends_on: [T03, T06, T08]
+    proof_level: P2
+    confirmation: independent
+    settles: [SEAM-1, SEAM-2, SEAM-3, SEAM-5, SEAM-6, SEAM-7]
+    changes: >-
+      Case design: the template picker (from /api/templates) and a parameter form, followed by
+      preflight (showing the digest) and commit (PROPOSE_CASE). The submit button is enabled only
+      after preflight passes, and focus moves to the new case. Discretionary add: a drawer on a stage
+      that dispatches ADD_DISCRETIONARY_WORK and shows the proposer badge. Execute: an item action
+      that dispatches EXECUTE_ITEM, and an ExecutionPill driven by real SSE progress and command
+      frames. Human task: complete and approve/reject in JudgmentPanel, with mandatory justification
+      and SoD and role refusals shown. Lifecycle: Reopen and Terminate actions with a reason, shown
+      only when the snapshot offers them. Sentry transparency: downstream items unlock through SSE
+      without a reload. Artifact dock: resolveArtifact through artifact.get, with digest verification
+      and a localized error card. The 9 renderers become lazy (React.lazy + dynamic import) so that
+      the E2E VAR-006 chunk assertion is true. Adds a login/session screen and a perspective badge
+      from the session. CJ10-CJ12 actions render as honest "unavailable in this deployment"
+      descriptors until T13.
+    proves: "Every journey step can be driven with mouse and keyboard against the live stack. The existing local ladder stays green."
+    does_not_prove: "The full integrated run (T11)."
+    hot_context:
+      - "apps/godspeed-cognitive-ui/src/ui/CaseDesignPanel.tsx:36,180-201"
+      - "apps/godspeed-cognitive-ui/src/ui/JudgmentPanel.tsx, ExecutionPill.tsx, ArtifactDock.tsx"
+      - "apps/godspeed-cognitive-ui/src/app/commands.ts"
+      - "apps/godspeed-cognitive-ui/src/model/types.ts:160 (SurfaceId)"
+      - "the impeccable skill for UI polish; the building-sea-forge-workbench skill for SFWP/AG-UI conventions"
+    steps:
+      - "Wire one journey per commit, each with component tests and an update to the local fixture so the local ladder still covers it."
+      - "Convert the renderers to lazy loading, and add a bundle test that asserts the separate chunks."
+    gate:
+      - "cd apps/godspeed-cognitive-ui && bun run typecheck && bun test && bun e2e/run.ts"
+    teeth:
+      - attack: "The UI shows an action that the snapshot did not offer."
+        expected: "A component test fails. Actions come only from ActionDescriptors."
+      - attack: "The SSE connection drops during execution."
+        expected: "The pill shows Reconnecting and then resumes from the cursor. It never shows fake progress."
+    redesign_trigger: "Journeys need data that the contract does not carry (return to T01)."
+
+  T10:
+    title: "Live agent-browser ladder L0-L9 + L-RECOV"
+    initial_status: blocked
+    depends_on: [T08, T09]
+    proof_level: P3
+    confirmation: independent
+    settles: [E2E-LIVE]
+    changes: >-
+      Extends the existing agent-browser harness (apps/godspeed-cognitive-ui/e2e/browser.ts,
+      ladder.ts, run.ts, journeys/) with a live mode, e.g. `bun e2e/run.ts --live` driving
+      e2e/journeys-live/. There is no Playwright and no new dependency. A setup hook runs
+      `just casework-cell-init` and brings up the stack (server, gateway serving the production UI
+      build). The ladder mirrors report §5, corrected per errata §0.2: L0 readiness (readiness.get,
+      identity); L1 template -> preflight -> commit (assert CaseCreated and PlanCreated in
+      cases/case-*/case-events.jsonl); L2 horizon standing; L3 discretionary add (PlanMutated,
+      proposed_by); L4 execute (ItemActivated, CommandStarted, CommandFinished, ArtifactCaptured,
+      ItemCompleted, then downstream ItemEnabled pushed through SSE with no reload); L5 sign-off
+      approval, where the operator is denied and a second authenticated user in a separate
+      agent-browser `--session` (the R-SO) approves, and approvals.jsonl shows both principals;
+      L6 settlement (SettlementRecorded) and the evidence dock, with `agent-browser network requests`
+      or `network har` proving that only the needed lazy renderer chunks loaded; L7 completion
+      (CaseClosed) then reopen (CaseReopened), and terminate (CaseTerminated) on a second case;
+      L8 thoth.ask narration with interrupt and resume; L9 L0-L8 in one session with
+      `agent-browser errors` and `console` empty; L-RECOV covers a corrupt artifact, killing and
+      restarting the gateway, killing and restarting the server, and SSE resync with no duplicates.
+      Assertions read the durable files directly. Evidence per run comes from `agent-browser
+      screenshot`, `record start/stop` (video), `trace start/stop` and HAR under the evidence root.
+      The existing fixture ladder (`bun e2e/run.ts`) stays unchanged as the local regression.
+    proves: "CJ01-CJ09 work end to end in a real browser against real kernel state."
+    does_not_prove: "Multi-replica or remote deployment."
+    hot_context:
+      - "apps/godspeed-cognitive-ui/e2e/browser.ts (agent-browser wrapper), ladder.ts (Journey/Ctx, dependency blocking), run.ts, journeys/index.ts"
+      - "agent-browser --help: network requests|har, console, errors, cookies, --session, record, trace"
+      - "report §5 (use the TraceKinds from errata §0.2, not the body)"
+    preregistration:
+      required: true
+      artifact: .agents/evidence/casework-live-wiring/prereg/T10.yaml
+      claim: "Each ladder step's UI assertion and its durable-state assertion both pass, with no fixture adapter loaded."
+      falsifier: "Any step passes while the durable delta is missing, or the served bundle contains LocalContractAdapter."
+      known_confounds: ["stale cell from a prior run", "timing-dependent SSE assertions", "agent-browser session reuse leaking cookies between users"]
+      confirmation_condition: "Three consecutive green runs on fresh cells, confirmed by an independent agent."
+    steps:
+      - "Add live-mode plumbing to browser.ts: a session name per user, cookie isolation, and network, errors and console helpers."
+      - "Write a helper that tails case-events.jsonl and approvals.jsonl and waits for named TraceKinds with a timeout."
+      - "Implement L0-L9 and L-RECOV as live journeys, reusing the ladder's depends_on blocking."
+      - "Add the justfile recipe casework-e2e-live (stack up, then `bun e2e/run.ts --live`, then stack down, preserving evidence)."
+    gate:
+      - "just casework-e2e-live"
+    teeth:
+      - attack: "Stub the gateway to accept intents without calling the kernel."
+        expected: "The durable-state assertions fail at L1."
+      - attack: "Run L5 with both users in the same agent-browser session."
+        expected: "The ladder detects the shared session identity and fails. It never passes by accident."
+    redesign_trigger: "agent-browser cannot observe a required signal (for example per-request network timing, or EventSource frames). Record this in the decision log and ask the operator before introducing any other browser driver."
+
+  T11:
+    title: "Operational hardening and packaging"
+    initial_status: blocked
+    depends_on: [T10]
+    proof_level: P2
+    confirmation: independent
+    settles: [PROD-OPS]
+    changes: >-
+      Adds systemd units (or container images) for sea-forge-server and the gateway, with ordered
+      startup, socket permissions (0600 + group) and restart policies. Adds a documented config
+      reference. Adds metrics (request latency, SFWP errors by class, SSE clients, subscription lag).
+      Adds log correlation from browser to gateway to SFWP request_id to ledger. Adds a
+      backup/restore runbook for the cell. Adds a load test (N concurrent SSE clients plus an intent
+      burst) with budgets, and a security review (/security-review) of the gateway and the identity
+      delegation. Adds CI jobs for the Go live tests and the live agent-browser ladder.
+    proves: "The stack survives restarts, load at the budgeted level, and the security review, with no open high findings."
+    does_not_prove: "Federation and memory journeys."
+    steps:
+      - "Write the packaging and the runbooks at .agents/reports/casework-live-wiring/runbook.md."
+      - "Run the load test and record the budgets."
+      - "Run the security review and fix high findings."
+      - "Wire CI."
+    gate:
+      - "just casework-e2e-live && just casework-load"
+    teeth:
+      - attack: "Restart the server under 50 SSE clients."
+        expected: "All clients resync. There are no duplicate revisions and gateway memory stays bounded."
+    redesign_trigger: "Subscription lag exceeds budget because of the per-client projection rebuild (then share projections per cursor)."
+
+  T12:
+    title: "Final acceptance and independent confirmation"
+    initial_status: blocked
+    depends_on: [T11]
+    proof_level: P3
+    confirmation: independent
+    settles: [TARGET]
+    changes: "No code changes. An independent agent re-runs all gates on a fresh clone and a fresh cell, and audits the evidence against target_settlement."
+    proves: "target_settlement."
+    does_not_prove: "CJ10-CJ12 live (T13)."
+    steps:
+      - "Run the fresh-clone gate run."
+      - "Audit the evidence: every ladder step has UI plus durable proof."
+      - "Update CURRENT_STATUS and the Go/UI READMEs (remove the 'fixture only' language)."
+    gate:
+      - "just casework-e2e-live   # x3, on fresh cells"
+
+  T13:
+    title: "Extended journeys CJ10-CJ12 and external engines (post-production increment)"
+    initial_status: blocked
+    depends_on: [T12]
+    proof_level: P2
+    confirmation: independent
+    settles: [CJ10, CJ11, CJ12, SEAM-8]
+    changes: >-
+      Adds SFWP verbs and gateway intents for federation export and import (wrapping the CLI
+      export/import logic in a library), case memory query, artifact maturation stages, the Gauntlet
+      ExecutionPort adapter (observations only, never settlement), and an SXR discrepancy feed into the
+      Trace renderer. Each item lands with its own ladder step. Each "unavailable" descriptor from T09
+      is removed only when its journey is proven live.
+    proves: "Each added journey is live and ladder-proven."
+    does_not_prove: "n/a"
+    steps:
+      - "Break this into separate tasks before starting. Each engine gets its own ADR."
+
+final_acceptance:
+  criteria:
+    - "No production code path can load LocalContractAdapter, fakeauthority or the Northstar fixtures."
+    - "L0-L9 + L-RECOV pass three times on fresh cells, with durable-state proof."
+    - "Two authenticated users with distinct roles are ledgered distinctly. SoD holds between them."
+    - "The report's §0 errata and this plan's decision log are consistent with the code."
+  evidence_and_confirmation: ".agents/evidence/casework-live-wiring/ holds the gate logs, agent-browser screenshots, videos, traces and HARs, preregistrations and independent-confirmation notes."
+
+guardrails:
+  - "Do not modify sea-forge-server's identity trust model outside T02 and its ADR."
+  - "Pre-approved dependencies (2026-09-23): one maintained Go OIDC library (e.g. github.com/coreos/go-oidc/v3 + golang.org/x/oauth2) and golang.org/x/crypto/argon2. Playwright is NOT approved; E2E uses agent-browser. Any other new dependency is ask-first."
+  - "Do not delete the local adapter or the fixtures. Confine them to tests and dev."
+  - "Never mark settlement from process completion. Execution observations are not settlement."
+  - "Preserve git history. No force operations."
+
+handoff_contract:
+  must_report:
+    - "Task id, gates run with results, and evidence paths"
+    - "Any divergence from report §0 facts"
+    - "Open operator decisions"
+  settled_next_action_rule: "The next ready task is the lowest-numbered task whose depends_on are all settled."
+
+traceability:
+  requirement_to_tasks:
+    GAP-A: [T01]
+    GAP-B: [T02, T07]
+    GAP-C: [T04]
+    GAP-D: [T03]
+    GAP-E: [T05]
+    SEAM-1_discretionary: [T04, T06, T09]
+    SEAM-2_approvals: [T02, T04, T06, T09]
+    SEAM-3_lifecycle: [T04, T06, T09]
+    SEAM-4_socket_bridge: [T05]
+    SEAM-5_exec_streaming: [T04, T06, T09]
+    SEAM-6_template_authoring: [T03, T06, T09]
+    SEAM-7_sentry_unlocking: [T04, T06, T09]
+    SEAM-8_sxr: [T13]
+    CJ01-CJ09: [T10]
+    CJ10-CJ12: [T09, T13]
+  coverage_rule: "Every GAP and SEAM maps to at least one task whose gate exercises it."

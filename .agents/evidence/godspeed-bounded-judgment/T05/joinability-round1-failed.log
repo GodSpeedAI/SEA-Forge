@@ -1,0 +1,9 @@
+[core_join_by_causal_refs_only] behaved_as_specified=True 2 loops joined; run_ids=run_20260918T035113Z_02e…/run_20260918T035113Z_303… (never used for joining)
+[similar_id_collision_no_false_join] behaved_as_specified=False shared prefix len>=22: run_20260918T035113Z_0; decision sets disjoint
+[duplicate_external_id_no_wrong_join] behaved_as_specified=True labels collide ({'auth_01', 'auth_02'}), ULIDs do not
+[restart_artifacts_still_joinable] behaved_as_specified=True separate invocations joined by one mechanism
+[missing_hop_named_not_tolerated] behaved_as_specified=True missing hop: settlement cites absent entry 01M2SA7JDN95QTMX6NK42BAVMC
+[stale_mapping_rejected] behaved_as_specified=True missing hop: settlement cites absent entry 01M2SA7J49WJKJHQ3NW1SSGH0N
+[mismatched_pair_rejected] behaved_as_specified=True mismatched pair: decision 01M2SA7J49WJKJHQ3NW1SSGH0N does not belong to the settlement's run
+[var008_contradiction_leaves_judgment_immutable] behaved_as_specified=True original entries byte-identical; contradiction appended, never rewritten
+joinability: FAIL (8 cases)

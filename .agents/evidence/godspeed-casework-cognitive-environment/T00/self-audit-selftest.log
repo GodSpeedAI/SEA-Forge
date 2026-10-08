@@ -1,0 +1,14 @@
+--- control: unmodified mirror must PASS ---
+    ok: control PASS (the audit is not red for environmental reasons)
+--- injections: each must be detected ---
+    ok: detected (mirror changed by injector) -> punctuation-variant withdrawn wording
+    ok: detected (mirror changed by injector) -> line-wrapped withdrawn wording
+    ok: detected (mirror changed by injector) -> broken .csv citation
+    ok: detected (mirror changed by injector) -> extensionless citation
+    ok: detected (mirror changed by injector) -> arithmetic mismatch in a GiB/kB pair
+    ok: detected (mirror changed by injector) -> stale applied-correction-round claim
+    ok: detected (mirror changed by injector) -> emptied decision log (existence != content)
+    ok: detected (mirror changed by injector) -> deleted preflight raw log
+    ok: detected (mirror changed by injector) -> deleted round-4 verification record
+
+SELF-TEST: PASS (every injected defect class was detected)

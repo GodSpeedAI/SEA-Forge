@@ -1,0 +1,8 @@
+VERIFY-BREADTH: FAIL (7 findings, 189 checks)
+  - frozen input hash mismatch: godspeed-bounded-judgment-T29.prereg.yaml
+  - frozen input hash mismatch: godspeed-bounded-judgment-T21.prereg.addendum-1.yaml
+  - T29 evidence-manifest.yml missing
+  - probe-i1-cand-fabricated: no state database at the pinned path: '/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/teeth/t1-fabricated/no-such/gauntlet-state.db'
+  - probe-i1-cand-fabricated: up-evaluation on a probe whose provenance is broken: ['missing db']
+  - route_state.probed count != probe-observations count
+  - payment probes_run != recorded observations

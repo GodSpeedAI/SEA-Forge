@@ -1,0 +1,2 @@
+{"kind": "command_started", "argv": ["bash", "-lc", "echo 'hello, operator'"]}
+{"kind": "command_exited", "exit_code": 0}

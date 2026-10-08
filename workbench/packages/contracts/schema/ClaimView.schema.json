@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaimView",
+  "description": "One grounded claim, with the records that back it.",
+  "type": "object",
+  "properties": {
+    "capability_record_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "claim_class": {
+      "description": "Wire spelling, e.g. `demonstrated_capability`.",
+      "type": "string"
+    },
+    "claim_id": {
+      "type": "string"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "settlement_refs": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "snapshot_ref": {
+      "type": "string"
+    },
+    "statement": {
+      "description": "Template-generated from typed fields. Never free-form model output —\nwhich is why it is safe to render as prose.",
+      "type": "string"
+    },
+    "status": {
+      "description": "Wire spelling of the capability ladder position, e.g. `demonstrated`.",
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "claim_id",
+    "claim_class",
+    "subject",
+    "status",
+    "statement",
+    "snapshot_ref"
+  ]
+}

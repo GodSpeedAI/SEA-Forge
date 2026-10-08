@@ -1,0 +1,1 @@
+{"intent_id":"critic2-stale-exec-1","kind":"CONSEQUENTIAL_CASE","action_name":"EXECUTE_ITEM","target_object_id":"task_publish","case_id":"case_20260926T014412Z_1b967f","client_cursor":"01M3DP4QQFK8BEB1SQRCT4DX8K","actor":{"actor_id":"operator_local","role":"operator"},"parameters":{"item_id":"task_publish"}}

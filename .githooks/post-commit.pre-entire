@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Post-commit hook. Keeps the Understand-Anything knowledge graph (.ua/) fresh
+# after each commit. The graph has two layers:
+#   - structural (deterministic, zero token): file inventory, fingerprints, meta
+#   - semantic (LLM): summaries, tags, tour
+# This hook owns the deterministic layer and signals the in-session agent for the
+# semantic layer — mirroring the plugin's own auto-update design.
+#
+# Behavior:
+#   - autoUpdate disabled/absent/malformed, or no baseline graph -> no-op.
+#   - non-source changes only                     -> bump meta.json commit hash (zero token).
+#   - source changes                              -> emit a trigger the in-session agent
+#                                                   picks up to run the incremental update.
+set -euo pipefail
+
+# Resolve the main repo root (worktree-aware): .ua/ lives at the main checkout so
+# commits from a linked worktree still find the graph.
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+COMMON_DIR="$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null || true)"
+if [ -n "$COMMON_DIR" ]; then
+  # Resolve COMMON_DIR to an absolute path. Empty result (cd failure) means
+  # "not a worktree" and falls through to the normal-checkout path below.
+  COMMON_ABS=""
+  if cd "$ROOT" 2>/dev/null && cd "$COMMON_DIR" 2>/dev/null; then
+    COMMON_ABS="$(pwd -P)"
+  fi
+  # Resolve the git dir to an absolute path in its own step, never by chaining
+  # command substitutions (that would concatenate their stdout into one string).
+  git_dir_rel="$(git -C "$ROOT" rev-parse --git-dir 2>/dev/null || true)"
+  GIT_ABS=""
+  if [ -n "$git_dir_rel" ] && cd "$ROOT" 2>/dev/null && cd "$git_dir_rel" 2>/dev/null; then
+    GIT_ABS="$(pwd -P)"
+  fi
+  if [ -n "$COMMON_ABS" ] && [ -n "$GIT_ABS" ] && [ "$COMMON_ABS" != "$GIT_ABS" ]; then
+    MAIN_ROOT="$(dirname "$COMMON_ABS")"
+    [ -d "$MAIN_ROOT/.ua" ] || MAIN_ROOT="$(dirname "$GIT_ABS")"
+    ROOT="$MAIN_ROOT"
+  fi
+fi
+
+UA_DIR="$ROOT/.ua"
+[ -d "$ROOT/.understand-anything" ] && UA_DIR="$ROOT/.understand-anything"
+CONFIG="$UA_DIR/config.json"
+GRAPH="$UA_DIR/knowledge-graph.json"
+META="$UA_DIR/meta.json"
+
+# Need autoUpdate enabled (parsed as JSON, not grep) + an existing baseline.
+# Exit 0 when CONFIG is missing, malformed, or autoUpdate is absent/not true.
+if [ ! -f "$CONFIG" ]; then
+  exit 0
+fi
+if ! node -e "process.exit(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).autoUpdate===true?0:1)" "$CONFIG" 2>/dev/null; then
+  exit 0
+fi
+[ -f "$GRAPH" ] && [ -f "$META" ] || exit 0
+
+HEAD="$(git rev-parse HEAD)"
+# Read LAST from META via argv, never by interpolating the path into the script.
+LAST="$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).gitCommitHash||''" "$META" 2>/dev/null || echo "")"
+[ -n "$LAST" ] || exit 0
+[ "$HEAD" = "$LAST" ] && exit 0
+
+# Files changed since the last analyzed commit. A failed diff (e.g. an invalid
+# LAST ref after a history rewrite) must NOT be confused with a valid empty diff
+# — bail out leaving META untouched rather than bumping it on bad information.
+if ! CHANGED="$(git diff --name-only "${LAST}..HEAD" 2>/dev/null)"; then
+  echo "post-commit: could not diff ${LAST}..HEAD; leaving .ua/meta.json unchanged." >&2
+  exit 0
+fi
+
+# Source extensions the graph fingerprints (tree-sitter languages).
+SOURCE_RE='\.(rs|ts|tsx|js|jsx|mjs|cjs|py|go|java|kt|rb|php|cpp|cc|c|h|hpp|cs|swift|scala)$'
+SOURCE_CHANGED=0
+if printf '%s\n' "$CHANGED" | grep -Eq "$SOURCE_RE"; then
+  SOURCE_CHANGED=1
+fi
+
+if [ "$SOURCE_CHANGED" = "0" ]; then
+  # Non-source only: deterministic freshness bump, zero LLM tokens. Atomic write
+  # (temp file in META's dir, then rename) so an interrupted run cannot leave a
+  # truncated META. Paths passed as argv; no path interpolation into the script.
+  node -e "const fs=require('fs');const p=process.argv[1],head=process.argv[2];const m=JSON.parse(fs.readFileSync(p,'utf8'));m.gitCommitHash=head;m.lastAnalyzedAt=new Date().toISOString();const tmp=p+'.tmp.'+process.pid;fs.writeFileSync(tmp,JSON.stringify(m,null,2));fs.renameSync(tmp,p);" "$META" "$HEAD"
+  echo "post-commit: .ua graph metadata refreshed (non-source changes only, zero token)." >&2
+  exit 0
+fi
+
+# Source changes: the semantic incremental update is LLM-driven. Resolve the
+# bundled auto-update prompt so the in-session agent can execute it.
+PROMPT=""
+for c in \
+  "${CLAUDE_PLUGIN_ROOT:-}" \
+  "$HOME/.understand-anything/repo/understand-anything-plugin" \
+  "$HOME/.understand-anything-plugin"; do
+  if [ -n "$c" ] && [ -f "$c/hooks/auto-update-prompt.md" ]; then
+    PROMPT="$c/hooks/auto-update-prompt.md"
+    break
+  fi
+done
+
+echo "[understand-anything] commit $HEAD changed source files; the .ua knowledge graph is now stale." >&2
+if [ -n "$PROMPT" ]; then
+  cat >&2 <<EOF
+[understand-anything] You MUST read $PROMPT and execute its instructions to incrementally
+update the graph at $UA_DIR. Do not ask the user for confirmation — just do it. (autoUpdate enabled.)
+EOF
+else
+  echo "[understand-anything] Re-run the understand skill (incremental mode) to refresh $UA_DIR." >&2
+fi
+
+exit 0

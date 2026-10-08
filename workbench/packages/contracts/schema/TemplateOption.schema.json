@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TemplateOption",
+  "description": "One template an operator may instantiate a case from — projected from the\nreal on-disk `PlanTemplate`, never fabricated.",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "parameters": {
+      "description": "Parameter name -> definition, copied from the template.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/TemplateParameter"
+      }
+    },
+    "template_ref": {
+      "description": "`name@version`, the same form `case.preflight`/`case.commit` accept.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "template_ref",
+    "description",
+    "parameters"
+  ],
+  "$defs": {
+    "TemplateParameter": {
+      "description": "A template parameter definition, projected from\n`sea_forge_planner::templates::ParameterDef` (which has no `JsonSchema`\nderive of its own — this SFWP-local shape is the frontend-facing contract,\nmirroring the `readiness.rs` pattern of never handing raw core/planner\ntypes straight to `schemars`).",
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "param_type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "param_type",
+        "required"
+      ]
+    }
+  }
+}

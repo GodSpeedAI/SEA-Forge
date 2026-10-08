@@ -1,0 +1,15 @@
+schema: godspeed-bounded-judgment.t29-generation-record
+route_id: t29-route-001
+iteration: 2
+correlation_id: t29-route-001-iter2
+provider_path: deepseek-clinepass
+generator_identity: deepseek-clinepass
+attempts:
+- attempt: primary
+  provider: deepseek-clinepass
+  model: cline-pass/cline-pass/deepseek-v4.1-flash
+  outcome: ok
+  raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/route/provider-raw/t29-route-001-iter2-generation-primary.raw.txt
+  prompt_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/route/provider-raw/t29-route-001-iter2-generation-primary.prompt.txt
+validation_rule: route_contracts.candidate_move + correlation_id echo + family-2 scenario restriction + distinct
+  max_rounds + filesystem-safe unique candidate_id

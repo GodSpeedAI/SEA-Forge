@@ -1,0 +1,752 @@
+catalog: sea-forge-workbench-api
+status: target-unmapped
+protocol: sea-forge.workbench
+protocol_version: 1.0-draft
+generated_at: '2026-07-24'
+notes:
+- Method names and semantic boundaries are target contracts.
+- A repository-grounding pass must map, merge, rename, or reject methods against existing server types and request
+  enums.
+- No method may weaken authority, disclosure-before-retrieval, settlement, evidence, or ledger invariants.
+methods:
+- name: system.hello
+  cls: inspect
+  purpose: Negotiate protocol compatibility and discover the server's supported contract surface.
+  authority: connection
+  mutation: none
+  response: HelloView
+- name: system.describe
+  cls: inspect
+  purpose: Return the self-describing method catalog, schema references, lifecycle meanings, and availability.
+  authority: connection
+  mutation: none
+  response: ApiDescriptionView
+- name: system.get_schema
+  cls: inspect
+  purpose: Return one versioned JSON Schema or equivalent generated contract by schema reference.
+  authority: connection
+  mutation: none
+  response: SchemaDocument
+- name: request.get_status
+  cls: inspect
+  purpose: Resolve the authoritative result of a previously submitted request after transport ambiguity.
+  authority: same_actor_or_auditor
+  mutation: none
+  response: RequestStatusView
+- name: operation.get
+  cls: inspect
+  purpose: Inspect a durable asynchronous operation and its current authoritative state.
+  authority: resource_visibility
+  mutation: none
+  response: OperationView
+- name: events.subscribe
+  cls: subscribe
+  purpose: Open a resumable, disclosure-scoped event subscription from an opaque durable cursor.
+  authority: event_scope_visibility
+  mutation: none
+  response: SubscriptionAccepted
+- name: events.unsubscribe
+  cls: subscribe
+  purpose: Close a client subscription without affecting governed work.
+  authority: subscription_owner
+  mutation: none
+  response: SubscriptionClosed
+- name: events.get_range
+  cls: inspect
+  purpose: Retrieve an authorized event range for deterministic gap recovery.
+  authority: event_scope_visibility
+  mutation: none
+  response: EventPage
+- name: cell.list
+  cls: inspect
+  purpose: List cells visible to the current actor with readiness and integrity summaries.
+  authority: cell_visibility
+  mutation: none
+  response: CellPage
+- name: cell.inspect_candidate
+  cls: inspect
+  purpose: Inspect a path or connection target before opening, creating, or migrating a cell.
+  authority: host_path_access
+  mutation: none
+  response: CellCandidateView
+- name: cell.create
+  cls: command
+  purpose: Create a new governed cell and its initial identity and ledger genesis records.
+  authority: cell_administration
+  mutation: append
+  response: CellCreated
+- name: cell.preview_migration
+  cls: evaluate
+  purpose: Produce a non-mutating migration plan, compatibility report, and expected consequences.
+  authority: cell_administration
+  mutation: audit_append
+  response: MigrationPreview
+- name: cell.migrate
+  cls: command
+  purpose: Append a verified migration into a new or existing cell without rewriting prior history.
+  authority: cell_administration
+  mutation: append
+  response: MigrationAccepted
+- name: context.get
+  cls: inspect
+  purpose: Resolve the active cell, actor, role, sponsor, policy, and integrity context.
+  authority: self_context
+  mutation: none
+  response: ContextView
+- name: context.list_roles
+  cls: inspect
+  purpose: List roles the actor may select in the current cell and explain unavailable roles.
+  authority: self_context
+  mutation: none
+  response: RolePage
+- name: sponsorship.request
+  cls: propose
+  purpose: Request an accountable sponsor binding for an automated actor or protected operation.
+  authority: sponsorship_request
+  mutation: append
+  response: SponsorshipRequestCreated
+- name: authority.preflight
+  cls: evaluate
+  purpose: Evaluate a proposed action and exact boundaries without conferring execution authority.
+  authority: authority_preflight
+  mutation: audit_append
+  response: AuthorityPreflightView
+- name: authority.get_decision
+  cls: inspect
+  purpose: Inspect one authority decision, its inputs, boundaries, and deterministic basis.
+  authority: decision_visibility
+  mutation: none
+  response: AuthorityDecisionView
+- name: authority.search
+  cls: inspect
+  purpose: Search authority, disclosure, approval, and permission history using typed filters.
+  authority: audit_visibility
+  mutation: none
+  response: AuthorityDecisionPage
+- name: readiness.get
+  cls: inspect
+  purpose: Get operation-sensitive readiness, limitations, blockers, and currently spendable action paths.
+  authority: cell_visibility
+  mutation: none
+  response: ReadinessView
+- name: readiness.check
+  cls: verify
+  purpose: Run selected readiness checks and probes as a durable, evidenced operation.
+  authority: readiness_check
+  mutation: append
+  response: OperationAccepted
+- name: self_model.validate
+  cls: verify
+  purpose: Verify the current self-model source, realization, and projection integrity.
+  authority: self_model_maintenance
+  mutation: append
+  response: SelfModelValidationResult
+- name: self_model.rebuild
+  cls: command
+  purpose: Build a new verified self-model snapshot while preserving the prior last-known-good snapshot.
+  authority: self_model_maintenance
+  mutation: append_and_projection
+  response: OperationAccepted
+- name: thoth.list_question_kinds
+  cls: inspect
+  purpose: List supported typed question kinds and their required inputs without exposing raw graph access.
+  authority: self_disclosure
+  mutation: none
+  response: ThothQuestionKindPage
+- name: thoth.ask
+  cls: evaluate
+  purpose: Submit one typed, disclosure-gated question and receive a grounded answer or governed denial.
+  authority: self_disclosure
+  mutation: append
+  response: ThothAnswerResult
+- name: thoth.get_answer
+  cls: inspect
+  purpose: Inspect a prior answer or denial with claims, omissions, source snapshot, and evidence.
+  authority: self_disclosure
+  mutation: none
+  response: ThothAnswerView
+- name: thoth.replay_answer
+  cls: verify
+  purpose: Replay an answer against the same snapshot and policy inputs and record the comparison.
+  authority: self_disclosure_replay
+  mutation: append
+  response: ReplayResult
+- name: asset.list
+  cls: inspect
+  purpose: List visible templates, environments, endpoints, extensions, capabilities, and projections with actual
+    availability.
+  authority: asset_visibility
+  mutation: none
+  response: AssetPage
+- name: asset.get
+  cls: inspect
+  purpose: Inspect one pinned asset version, dependencies, limitations, evidence, and usable contexts.
+  authority: asset_visibility
+  mutation: none
+  response: AssetView
+- name: asset.compare
+  cls: inspect
+  purpose: Compare two pinned asset versions without silently selecting or activating either.
+  authority: asset_visibility
+  mutation: none
+  response: AssetComparisonView
+- name: domain_model.list
+  cls: inspect
+  purpose: List visible domain model versions with validation, import, projection, and freshness state.
+  authority: model_visibility
+  mutation: none
+  response: DomainModelPage
+- name: domain_model.get
+  cls: inspect
+  purpose: Inspect one domain model version and its source, imports, concepts, validation, and projections.
+  authority: model_visibility
+  mutation: none
+  response: DomainModelView
+- name: domain_model.validate
+  cls: verify
+  purpose: Parse and semantically validate supplied domain source without replacing an existing model.
+  authority: model_validation
+  mutation: append
+  response: DomainModelValidationResult
+- name: domain_model.register
+  cls: command
+  purpose: Register a validated, version-pinned domain model as a new authoritative model record.
+  authority: model_administration
+  mutation: append
+  response: DomainModelRegistered
+- name: domain_model.compare
+  cls: inspect
+  purpose: Compare source, graph, concept, and compatibility drift between model versions.
+  authority: model_visibility
+  mutation: none
+  response: DomainModelComparisonView
+- name: projection.preview
+  cls: evaluate
+  purpose: Preview adapter compatibility, limitations, and expected outputs before projection.
+  authority: projection_preview
+  mutation: audit_append
+  response: ProjectionPreview
+- name: projection.create
+  cls: command
+  purpose: Run one deterministic, authority-gated projection from a pinned source and adapter.
+  authority: projection_execute
+  mutation: append_and_artifact
+  response: OperationAccepted
+- name: projection.get
+  cls: inspect
+  purpose: Inspect projection inputs, adapter version, output hashes, validation, and acceptance state.
+  authority: projection_visibility
+  mutation: none
+  response: ProjectionView
+- name: projection.rebuild
+  cls: verify
+  purpose: Rebuild a projection from identical pinned inputs and compare deterministic outputs.
+  authority: projection_execute
+  mutation: append_and_projection
+  response: OperationAccepted
+- name: case.list
+  cls: inspect
+  purpose: List visible cases with source-derived state, attention, settlement, and owner summaries.
+  authority: case_visibility
+  mutation: none
+  response: CasePage
+- name: case.get_entry_options
+  cls: inspect
+  purpose: Return currently usable case-entry paths and explain unavailable paths for the actor and cell.
+  authority: case_create
+  mutation: none
+  response: CaseEntryOptionsView
+- name: case.validate_draft
+  cls: evaluate
+  purpose: Validate a draft's semantics, references, compatibility, criteria, and topology without committing it.
+  authority: case_create
+  mutation: audit_append_optional
+  response: CaseDraftValidationResult
+- name: case.preflight
+  cls: evaluate
+  purpose: Produce the exact immutable contract, burden, authority, settlement, and drift checks before commit.
+  authority: case_create
+  mutation: audit_append
+  response: CasePreflightView
+- name: case.commit
+  cls: command
+  purpose: Atomically commit a preflighted case, plan, criteria, origins, and initial events.
+  authority: case_create
+  mutation: append
+  response: CaseCommitted
+- name: case.get_overview
+  cls: inspect
+  purpose: Get the case identity, current consequence, attention items, milestones, and latest settlement effects.
+  authority: case_visibility
+  mutation: none
+  response: CaseOverviewView
+- name: case.get_horizon
+  cls: inspect
+  purpose: Get source-derived spendable, active, awaiting, blocked, future, and settled plan items.
+  authority: case_visibility
+  mutation: none
+  response: CaseHorizonView
+- name: case.get_timeline
+  cls: inspect
+  purpose: Get causally linked case events ordered by authoritative append order.
+  authority: case_visibility
+  mutation: none
+  response: CaseTimelinePage
+- name: case.get_plan
+  cls: inspect
+  purpose: Inspect one immutable plan version, sentries, criteria, origins, and current drift.
+  authority: case_visibility
+  mutation: none
+  response: CasePlanView
+- name: case.start_item
+  cls: command
+  purpose: Request activation or execution of one currently eligible plan item after fresh sentry and authority
+    evaluation.
+  authority: plan_item_start
+  mutation: append
+  response: OperationAccepted
+- name: case.add_discretionary_item
+  cls: propose
+  purpose: Propose one bounded, provenance-linked discretionary plan item through the normal planner path.
+  authority: plan_mutation
+  mutation: append
+  response: PlanMutationProposal
+- name: case.propose_replan
+  cls: propose
+  purpose: Create a new plan-version proposal while preserving the active and historical plan versions.
+  authority: plan_mutation
+  mutation: append
+  response: ReplanProposalCreated
+- name: case.commit_replan
+  cls: command
+  purpose: Commit an approved, freshly preflighted replan as a new active plan version.
+  authority: plan_mutation
+  mutation: append
+  response: ReplanCommitted
+- name: case.reopen
+  cls: command
+  purpose: Reopen an eligible completed or terminated case through a new governed event.
+  authority: case_control
+  mutation: append
+  response: CaseReopened
+- name: case.terminate
+  cls: command
+  purpose: Terminate one case with explicit basis while preserving active run and evidence semantics.
+  authority: case_control
+  mutation: append
+  response: CaseTerminationAccepted
+- name: approval.list
+  cls: inspect
+  purpose: List approvals visible to the actor, including expiry, impact, and blocked origin.
+  authority: approval_visibility
+  mutation: none
+  response: ApprovalPage
+- name: approval.get
+  cls: inspect
+  purpose: Inspect one exact approval request, boundaries, evidence, policy basis, and downstream consequence.
+  authority: approval_visibility
+  mutation: none
+  response: ApprovalView
+- name: approval.decide
+  cls: decide
+  purpose: Approve or reject one unchanged, unexpired request after standing and separation-of-duty checks.
+  authority: approval_decision
+  mutation: append
+  response: ApprovalDecisionResult
+- name: human_task.list
+  cls: inspect
+  purpose: List enabled, active, completed, rejected, or expired human tasks visible to the actor.
+  authority: human_task_visibility
+  mutation: none
+  response: HumanTaskPage
+- name: human_task.get
+  cls: inspect
+  purpose: Inspect one human task's instructions, criteria, evidence requirements, and authority context.
+  authority: human_task_visibility
+  mutation: none
+  response: HumanTaskView
+- name: human_task.complete
+  cls: decide
+  purpose: Submit required evidence and complete one human task against its declared criteria.
+  authority: human_task_complete
+  mutation: append
+  response: HumanTaskCompletionResult
+- name: human_task.reject
+  cls: decide
+  purpose: Reject or escalate one human task when the task contract permits that judgment.
+  authority: human_task_decision
+  mutation: append
+  response: HumanTaskDecisionResult
+- name: run.list
+  cls: inspect
+  purpose: List command and agent runs with execution, settlement, sandbox, and attention summaries.
+  authority: run_visibility
+  mutation: none
+  response: RunPage
+- name: run.get
+  cls: inspect
+  purpose: Inspect one command run's execution state, boundaries, trace, evidence, and settlement handoff.
+  authority: run_visibility
+  mutation: none
+  response: RunDetailView
+- name: run.get_output
+  cls: inspect
+  purpose: Retrieve or stream one authorized output channel by content reference and byte range.
+  authority: run_output_visibility
+  mutation: none
+  response: ContentStream
+- name: run.get_trace
+  cls: inspect
+  purpose: Retrieve a typed, paginated run trace ordered by authoritative event ordinal.
+  authority: run_visibility
+  mutation: none
+  response: TracePage
+- name: run.cancel
+  cls: command
+  purpose: Request cancellation of one run episode only; preserve partial evidence and await a terminal event.
+  authority: run_cancel
+  mutation: append
+  response: CancellationRequested
+- name: run.retry
+  cls: command
+  purpose: Create a new linked run episode after a terminal result; never rewrite or resume the old episode implicitly.
+  authority: run_retry
+  mutation: append
+  response: OperationAccepted
+- name: agent_run.get
+  cls: inspect
+  purpose: Inspect one agent delegation's dialogue, termination, budgets, permissions, proof, transcript, and settlement.
+  authority: agent_run_visibility
+  mutation: none
+  response: AgentRunDetailView
+- name: agent_run.get_transcript_summary
+  cls: inspect
+  purpose: Retrieve an authorized structured transcript summary without broad transcript access.
+  authority: transcript_summary_visibility
+  mutation: none
+  response: TranscriptSummaryView
+- name: agent_run.request_transcript_access
+  cls: propose
+  purpose: Request access to a sealed or restricted canonical transcript under disclosure policy.
+  authority: transcript_access
+  mutation: append
+  response: TranscriptAccessRequest
+- name: agent_run.get_transcript
+  cls: inspect
+  purpose: Retrieve an authorized transcript or bounded range after disclosure is granted.
+  authority: transcript_access
+  mutation: none
+  response: ContentStream
+- name: agent_run.cancel
+  cls: command
+  purpose: Request scoped cancellation of one agent episode without cancelling sibling work.
+  authority: run_cancel
+  mutation: append
+  response: CancellationRequested
+- name: agent_run.retry
+  cls: command
+  purpose: Create a new linked agent episode using explicit continuation policy and current authority.
+  authority: run_retry
+  mutation: append
+  response: OperationAccepted
+- name: operations.get_overview
+  cls: inspect
+  purpose: Get live active, parked, capacity-waiting, approval-waiting, and interrupted work summaries.
+  authority: operations_visibility
+  mutation: none
+  response: OperationsOverviewView
+- name: evidence.search
+  cls: inspect
+  purpose: Search authorized evidence by case, run, criterion, type, producer, digest, and verification state.
+  authority: evidence_visibility
+  mutation: none
+  response: EvidencePage
+- name: evidence.get
+  cls: inspect
+  purpose: Inspect one evidence record, content descriptor, producer, criterion links, and verification.
+  authority: evidence_visibility
+  mutation: none
+  response: EvidenceView
+- name: evidence.get_content
+  cls: inspect
+  purpose: Retrieve authorized evidence content or a bounded range through an explicit content reference.
+  authority: evidence_content_visibility
+  mutation: none
+  response: ContentStream
+- name: evidence.verify
+  cls: verify
+  purpose: Recalculate and record verification of one evidence or artifact descriptor.
+  authority: evidence_verify
+  mutation: append
+  response: EvidenceVerificationResult
+- name: settlement.list
+  cls: inspect
+  purpose: List pending and terminal settlements with basis, consequence, and required judgment summaries.
+  authority: settlement_visibility
+  mutation: none
+  response: SettlementPage
+- name: settlement.get
+  cls: inspect
+  purpose: Inspect expected versus observed outcome, criterion matrix, evidence, declarations, standing, and consequence.
+  authority: settlement_visibility
+  mutation: none
+  response: SettlementDetailView
+- name: settlement.declare
+  cls: decide
+  purpose: Submit one scoped settlement declaration when the actor has standing and separation of duty permits.
+  authority: settlement_declaration
+  mutation: append
+  response: SettlementDeclarationResult
+- name: audit.search
+  cls: inspect
+  purpose: Search typed authority, approval, disclosure, mutation, configuration, and lifecycle audit records.
+  authority: audit_visibility
+  mutation: none
+  response: AuditPage
+- name: audit.get
+  cls: inspect
+  purpose: Inspect one audit record and its linked request, decision, evidence, and configuration digests.
+  authority: audit_visibility
+  mutation: none
+  response: AuditRecordView
+- name: integrity.get_status
+  cls: inspect
+  purpose: Get assurance state, invalid streams, checkpoints, witnesses, and affected operations.
+  authority: integrity_visibility
+  mutation: none
+  response: IntegrityStatusView
+- name: integrity.verify
+  cls: verify
+  purpose: Verify one declared ledger scope without rewriting history.
+  authority: integrity_verify
+  mutation: append
+  response: IntegrityVerificationResult
+- name: integrity.prove_inclusion
+  cls: verify
+  purpose: Generate an inclusion proof for one authorized record and checkpoint.
+  authority: integrity_proof
+  mutation: append_optional
+  response: InclusionProofResult
+- name: integrity.compare_checkpoints
+  cls: verify
+  purpose: Generate or verify a consistency proof between two checkpoints.
+  authority: integrity_proof
+  mutation: append_optional
+  response: ConsistencyProofResult
+- name: memory.recall
+  cls: evaluate
+  purpose: Perform disclosure-scoped memory recall and record which source memories were returned or denied.
+  authority: memory_recall
+  mutation: append
+  response: MemoryRecallResult
+- name: memory.get
+  cls: inspect
+  purpose: Inspect one memory item, provenance, influence links, freshness, and source records.
+  authority: memory_visibility
+  mutation: none
+  response: MemoryItemView
+- name: memory.rebuild_index
+  cls: verify
+  purpose: Rebuild the derived memory index from authoritative source records.
+  authority: memory_maintenance
+  mutation: derived_rebuild
+  response: OperationAccepted
+- name: capability.list
+  cls: inspect
+  purpose: List evidence-backed capability states with variation, recovery, regressions, and freshness.
+  authority: capability_visibility
+  mutation: none
+  response: CapabilityPage
+- name: capability.get
+  cls: inspect
+  purpose: Inspect one capability's ladder, source settlements, promotion policy, gaps, and proof paths.
+  authority: capability_visibility
+  mutation: none
+  response: CapabilityDetailView
+- name: capability.assess_routing
+  cls: evaluate
+  purpose: Assess whether one capability supports a proposed context without granting execution authority.
+  authority: capability_routing
+  mutation: audit_append
+  response: CapabilityRoutingAssessment
+- name: capability.rebuild_projection
+  cls: verify
+  purpose: Rebuild capability projections from qualifying source records and compare the result.
+  authority: capability_maintenance
+  mutation: derived_rebuild
+  response: OperationAccepted
+- name: pipeline.get
+  cls: inspect
+  purpose: Inspect a specification pipeline's stages, inputs, outputs, proofs, quarantine, and settlement.
+  authority: pipeline_visibility
+  mutation: none
+  response: PipelineView
+- name: pipeline.start_stage
+  cls: command
+  purpose: Request activation of one currently eligible pipeline stage through normal case controls.
+  authority: plan_item_start
+  mutation: append
+  response: OperationAccepted
+- name: pipeline.rework_stage
+  cls: propose
+  purpose: Propose a bounded rework path for a rejected or quarantined stage.
+  authority: plan_mutation
+  mutation: append
+  response: PlanMutationProposal
+- name: artifact.list
+  cls: inspect
+  purpose: List artifacts with identity, lineage, lifecycle, maturity, review, license, and attestation facets.
+  authority: artifact_visibility
+  mutation: none
+  response: ArtifactPage
+- name: artifact.get
+  cls: inspect
+  purpose: Inspect one artifact version, content hash, lineage, evidence, maturity, and eligible transitions.
+  authority: artifact_visibility
+  mutation: none
+  response: ArtifactView
+- name: artifact.verify
+  cls: verify
+  purpose: Verify artifact bytes and descriptor identity without changing maturity.
+  authority: artifact_verify
+  mutation: append
+  response: ArtifactVerificationResult
+- name: artifact.preview_transition
+  cls: evaluate
+  purpose: Preview a derive or promote transition, required gates, standing, and missing evidence.
+  authority: artifact_transition
+  mutation: audit_append
+  response: ArtifactTransitionPreview
+- name: artifact.request_transition
+  cls: command
+  purpose: Submit one valid artifact transition request and create the target or approval path when allowed.
+  authority: artifact_transition
+  mutation: append
+  response: ArtifactTransitionResult
+- name: federation.preview_export
+  cls: evaluate
+  purpose: Preview an export bundle, dependency closure, exclusions, and secret-reference handling.
+  authority: federation_export
+  mutation: audit_append
+  response: FederationExportPreview
+- name: federation.export
+  cls: command
+  purpose: Create a signed, hash-linked export bundle without exporting secret values.
+  authority: federation_export
+  mutation: append_and_artifact
+  response: FederationExportResult
+- name: federation.verify_import
+  cls: verify
+  purpose: Verify a bundle atomically before any local records are appended.
+  authority: federation_import
+  mutation: append_optional
+  response: FederationImportVerification
+- name: federation.import
+  cls: command
+  purpose: Import a fully verified bundle into isolated local history and assets without activation.
+  authority: federation_import
+  mutation: append
+  response: FederationImportResult
+- name: federation.request_adoption
+  cls: propose
+  purpose: Request local adoption of selected imported assets or records under current authority.
+  authority: federation_adoption
+  mutation: append
+  response: AdoptionRequestCreated
+- name: extension.list
+  cls: inspect
+  purpose: List extension descriptors, compatibility, registry state, and affected capabilities.
+  authority: admin_visibility
+  mutation: none
+  response: ExtensionPage
+- name: extension.get
+  cls: inspect
+  purpose: Inspect one extension's descriptor, version, configuration digest, status, and evidence.
+  authority: admin_visibility
+  mutation: none
+  response: ExtensionView
+- name: extension.register
+  cls: command
+  purpose: Register a validated extension descriptor without silently activating it.
+  authority: extension_admin
+  mutation: append
+  response: ExtensionRegistered
+- name: extension.activate
+  cls: command
+  purpose: Activate one compatible extension version and invalidate affected projections explicitly.
+  authority: extension_admin
+  mutation: append
+  response: ExtensionActivationResult
+- name: extension.disable
+  cls: command
+  purpose: Disable one extension version while preserving history and impact visibility.
+  authority: extension_admin
+  mutation: append
+  response: ExtensionDisableResult
+- name: endpoint.list
+  cls: inspect
+  purpose: List configured agent and external endpoints without returning credential values.
+  authority: endpoint_visibility
+  mutation: none
+  response: EndpointPage
+- name: endpoint.get
+  cls: inspect
+  purpose: Inspect one endpoint snapshot, protocol, model metadata, probe state, boundaries, and credential reference
+    status.
+  authority: endpoint_visibility
+  mutation: none
+  response: EndpointView
+- name: endpoint.probe
+  cls: verify
+  purpose: Run one governed endpoint probe with exact network and credential boundaries.
+  authority: endpoint_probe
+  mutation: append
+  response: OperationAccepted
+- name: environment.list
+  cls: inspect
+  purpose: List execution environments, supplied tools/evaluators, compatibility, and validation state.
+  authority: environment_visibility
+  mutation: none
+  response: EnvironmentPage
+- name: environment.get
+  cls: inspect
+  purpose: Inspect one environment contract, tools, evaluators, versions, and limitations.
+  authority: environment_visibility
+  mutation: none
+  response: EnvironmentView
+- name: environment.validate
+  cls: verify
+  purpose: Validate one environment contract and its actual tool availability.
+  authority: environment_admin
+  mutation: append
+  response: EnvironmentValidationResult
+- name: policy.get_active
+  cls: inspect
+  purpose: Inspect the active hash-addressed policy bundle and declared surfaces without exposing secrets.
+  authority: policy_visibility
+  mutation: none
+  response: PolicyBundleView
+- name: policy.reload
+  cls: command
+  purpose: Validate and activate a new policy bundle while retaining the last-known-good bundle on failure.
+  authority: policy_admin
+  mutation: append
+  response: PolicyReloadResult
+- name: maintenance.list_debt
+  cls: inspect
+  purpose: List stale projections, failed probes, interrupted work, expired approvals, quarantine, and version skew.
+  authority: maintenance_visibility
+  mutation: none
+  response: MaintenanceDebtPage
+- name: maintenance.get
+  cls: inspect
+  purpose: Inspect one debt item's affected invariants, evidence, and bounded repair paths.
+  authority: maintenance_visibility
+  mutation: none
+  response: MaintenanceDebtView
+- name: maintenance.repair
+  cls: command
+  purpose: Execute one explicit bounded repair or derived-state rebuild without rewriting authoritative failures.
+  authority: maintenance_repair
+  mutation: append_or_rebuild
+  response: OperationAccepted

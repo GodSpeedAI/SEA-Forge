@@ -1,0 +1,74 @@
+[
+ {
+  "cursor": "1.0000000001",
+  "timestamp": "2026-09-17T09:00:00Z",
+  "event_type": "case_opened",
+  "summary": "Pilot scoped",
+  "actor_id": "usr-sam",
+  "actor_role": "case_architect",
+  "consequential": false,
+  "active_stage_id": "northstar",
+  "completed_plan_items_count": 0,
+  "total_plan_items_count": 5
+ },
+ {
+  "cursor": "1.0000000002",
+  "timestamp": "2026-09-17T14:40:00Z",
+  "event_type": "plan_revised",
+  "summary": "Before secondary coverage was identified",
+  "actor_id": "usr-sam",
+  "actor_role": "case_architect",
+  "consequential": false,
+  "active_stage_id": "northstar",
+  "completed_plan_items_count": 0,
+  "total_plan_items_count": 5
+ },
+ {
+  "cursor": "1.0000000003",
+  "timestamp": "2026-09-18T09:15:00Z",
+  "event_type": "observation_recorded",
+  "summary": "Customer record examined",
+  "actor_id": "usr-sam",
+  "actor_role": "case_architect",
+  "consequential": false,
+  "active_stage_id": "northstar",
+  "completed_plan_items_count": 0,
+  "total_plan_items_count": 6
+ },
+ {
+  "cursor": "1.0000000004",
+  "timestamp": "2026-09-18T16:30:00Z",
+  "event_type": "discrepancy_confirmed",
+  "summary": "Coverage gap confirmed",
+  "actor_id": "usr-sam",
+  "actor_role": "case_architect",
+  "consequential": false,
+  "active_stage_id": "northstar",
+  "completed_plan_items_count": 1,
+  "total_plan_items_count": 7
+ },
+ {
+  "cursor": "1.0000000005",
+  "timestamp": "2026-09-19T08:05:00Z",
+  "event_type": "change_proposed",
+  "summary": "PR #491 opened",
+  "actor_id": "usr-sam",
+  "actor_role": "case_architect",
+  "consequential": false,
+  "active_stage_id": "northstar",
+  "completed_plan_items_count": 1,
+  "total_plan_items_count": 8
+ },
+ {
+  "cursor": "1.0000000006",
+  "timestamp": "2026-09-19T10:24:00Z",
+  "event_type": "review_requested",
+  "summary": "Latest",
+  "actor_id": "usr-sam",
+  "actor_role": "case_architect",
+  "consequential": false,
+  "active_stage_id": "northstar",
+  "completed_plan_items_count": 1,
+  "total_plan_items_count": 9
+ }
+]

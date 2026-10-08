@@ -1,0 +1,15 @@
+$ just casework-go-up  # start the FIXTURE gateway on 4179 first
+casework-go-up: building server binary
+casework-go-up: starting (fixture-labeled provider) on 127.0.0.1:4179
+casework-go-up: answering at http://127.0.0.1:4179/api/healthz (pid 828284, log: .sea-forge/casework-go/server.log)
+exit=0
+
+$ just casework-live-go-up  # TEETH: must refuse (foreign process answers healthz, our pidfile absent)
+casework-live-go-up: a foreign process is answering /api/healthz at 127.0.0.1:4179 (possibly the fixture casework-go-up); stop it first (just casework-go-down)
+error: recipe `casework-live-go-up` failed with exit code 1
+exit=1 (want 1)
+FOREIGN-HEALTHZ TEETH PASS
+
+$ just casework-go-down  # clean up the fixture gateway
+casework-go-down: stopped 828284
+exit=0

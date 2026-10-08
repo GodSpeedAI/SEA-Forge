@@ -1,0 +1,176 @@
+{
+  "journey_id": "CJ08",
+  "canonical_journey_name": "Monitor, Intervene, and Recover",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "9.7",
+    "10.5",
+    "11.1",
+    "11.2",
+    "11.3",
+    "11.4",
+    "11.5",
+    "11.6",
+    "11.7",
+    "11.8",
+    "16.6",
+    "16.7"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 7,
+    "variant": 0,
+    "composition": 4
+  },
+  "implementation_maturity": {
+    "specified": 1,
+    "implemented": 1,
+    "exercised": 9,
+    "evidenced": 1
+  },
+  "actor_and_role": {
+    "primary_actor": "operator",
+    "primary_role": "operator",
+    "allowed_roles": [
+      "operator",
+      "case owner"
+    ]
+  },
+  "starting_state": "Work is running concurrently, emits a committed event, needs cancellation, parks, exhausts a bound, survives a restart or upgrade, fails, or accumulates unresolved operational debt.",
+  "preconditions": [
+    "Committed case and run identities",
+    "ordered source records and cursors",
+    "scoped control authority",
+    "preserved launch snapshots",
+    "typed failure or blocking evidence."
+  ],
+  "intention": "Keep concurrent and interrupted work visible, controllable, and recoverable without changing committed meaning or affecting unrelated work.",
+  "job": "Observe source-backed operational state, intervene at the right scope, resume committed work, and construct a lawful path after failure or change.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "Delegation listing",
+    "`events.subscribe`",
+    "`events.get_range`",
+    "concurrency and capacity projection",
+    "scoped cancellation",
+    "case resume",
+    "restart reconciliation",
+    "ADLC reactivation",
+    "failure diagnosis",
+    "lifecycle-snapshot preservation",
+    "and maintenance-debt inspection."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_delegation_route",
+      "workbench_case_routes",
+      "workbench_operations_route",
+      "workbench_evidence_and_run_routes",
+      "workbench_administration_route"
+    ],
+    "api": [
+      "sfwp_request_correlation_family",
+      "sfwp_event_family",
+      "sfwp_case_navigation_family",
+      "sfwp_run_record_family",
+      "sfwp_delegation_family"
+    ],
+    "cli": [
+      "cli_execution_family",
+      "cli_run_inspection_family",
+      "cli_case_and_human_family",
+      "cli_agent_family"
+    ],
+    "agent": [
+      "agent_thoth_manager_surface",
+      "agent_delegation_control_surface",
+      "spec-minimum.md",
+      "spec-full.md"
+    ]
+  },
+  "expected_consequential_state_transitions": [
+    "Running work becomes cancelled, completed, failed, interrupted, orphaned, or unsettled",
+    "parked work returns to active after resolution",
+    "failed developmental work reactivates an earlier stage",
+    "bounded manager work stops, parks, or escalates",
+    "upgrades preserve launch meaning."
+  ],
+  "required_artifacts_and_evidence": [
+    "Ordered events and cursors",
+    "delegation and capacity views",
+    "linked notifications",
+    "cancellation and settlement records",
+    "preserved launch snapshots",
+    "recovery decisions",
+    "typed failure details",
+    "reactivation events",
+    "and maintenance debt items."
+  ],
+  "settlement_condition": "The operator sees the authoritative operational standing and either completes a scoped intervention or reaches an explicit resume, retry, replan, repair, endpoint, environment, escalation, or terminal decision.",
+  "expected_next_decisions_and_affordances": [
+    "Continue",
+    "cancel one run",
+    "resolve approval",
+    "resume",
+    "settle interruption",
+    "retry as a successor",
+    "replan",
+    "reactivate an earlier stage",
+    "change endpoint or environment",
+    "repair debt",
+    "escalate",
+    "or stop."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Catch up from cursors after event gaps",
+    "preserve sibling work",
+    "resume committed state",
+    "identify orphaned and unsettled runs after restart",
+    "retain launch snapshots across reloads",
+    "localize failure before choosing a new path."
+  ],
+  "expected_unavailable_states": [
+    "actionable notifications center is preview-only"
+  ]
+}

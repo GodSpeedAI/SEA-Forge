@@ -1,0 +1,38 @@
+# T16 outcome record — round-4 (first fully-correct measurement)
+schema: godspeed-bounded-judgment.t16-outcome
+date: "2026-09-18"
+providers: {A: "DeepSeek 4.1 Flash via ClinePass (opencode)", B: "prime-agent -p --offline"}
+rounds: "r1 codex-quota (preserved); r2 scoring-defect (preserved); r3 parser-dispatch defect (preserved); r4 COMPLETE"
+
+result:
+  baseline_face_value_accuracy: 0.0
+  deepseek_clinepass: {contract_failures: 0, accuracy: 0.667, abstention: 0.222, entropy_bits: 0.831}
+  prime_agent: {contract_failures: 0, accuracy: 0.556, abstention: 0.222, entropy_bits: 0.388}
+  capable_vs_capable_disagreement: "3/9 rows"
+  per_class:
+    settled_rows: "DeepSeek 3/3 correct; Prime 1/3 correct (2 settled runs misread as not_settled)"
+    budget_rows: "DeepSeek 3/6 correct + 2 responsible abstentions + 1 lying-claim error (answered settled); Prime 4/6 correct + 2 abstentions"
+
+decision_letter: C
+rule_application: >-
+  The frozen rule's D bar (accuracy >= 0.8 on non-abstaining rows for BOTH
+  providers) was NOT met (0.667 / 0.556); contract, abstention, and entropy
+  legs passed. The letter is therefore C — applied as frozen, not loosened.
+honest_reading: >-
+  The C description ("no material gain over baseline") does not match the
+  observed content: both providers materially beat the 0.0 face-value
+  baseline and abstained responsibly (DeepSeek's abstentions landed only on
+  budget rows). The result sits BETWEEN C's description and D's bar: real
+  signal, insufficient per the preregistered threshold, N=9.
+claim_narrowing_per_directive_E:
+  earned: "descriptive: careful reading of run records carries consequence-grounded information the face-value baseline lacks"
+  not_earned: "the >= 0.8 reliability bar; promotion of uncertainty-preserving judgment for this surface"
+  discriminating_failure: "DeepSeek's single error was believing a lying builder's claim (the exact failure mode the surface tests); Prime's errors were over-skepticism on genuinely settled runs"
+consequence:
+  - "NO promotion of uncertainty-preserving judgment for THIS surface (frozen C consequence)"
+  - "T06 remains blocked; the capability-class question remains escalated (this corpus still cannot support a class-level claim at N=9)"
+  - "T06+ does NOT unlock; the plan's judgment slice terminates at this evidence"
+confirmation:
+  status: "OUTSTANDING — the T16 prereg requires fresh independent adversarial confirmation"
+  conservativeness: "C is the conservative direction: nothing unlocks on it, so the outstanding confirmation gates only the C verdict's own finality, not any downstream action"
+  resume: "dispatch a fresh verifier with the frozen prereg/addendum/corpus/harnesses/reports (no builder narrative); required verdict CONFIRM; a NOT-CONFIRM reopens the measurement as a correction round"

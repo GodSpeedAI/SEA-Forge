@@ -1,0 +1,14 @@
+{
+  "journey_id": "CJ10",
+  "oracle_name": "CJ10_DemonstratedKnowledgeReuseOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Reused knowledge/capability is disclosure-safe, traceable to source settlements, and unauthoritative projections fail closed.",
+  "authoritative_record_inspected": "sea-forge memory CLI / /capabilities, /memory routes",
+  "rationale": "Recall CLI source exists and is source-attributable; Workbench capability.list preview correctly fails closed (system.hello did not list it implemented).",
+  "evidence_refs": [
+    "crates/sea-forge-cli/src/commands/recall.rs",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx",
+    "workbench/apps/desktop/src/pages/UnbackedSurface.tsx"
+  ],
+  "carried_state": {}
+}

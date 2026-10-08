@@ -1,0 +1,122 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling ring v0.17.14
+   Compiling rustls v0.23.42
+   Compiling rustls-webpki v0.103.13
+   Compiling tokio-rustls v0.26.4
+   Compiling hyper-rustls v0.27.9
+   Compiling reqwest v0.12.28
+   Compiling sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `test` profile [unoptimized] target(s) in 35.37s
+     Running tests/conformance_sfwp.rs (target/debug/deps/conformance_sfwp-5e9e607bc1c100e5)
+
+running 19 tests
+test durable_mutation_without_request_id_fails_closed_before_admission ... ok
+test a_retried_request_replays_its_outcome_instead_of_mutating_twice ... ok
+test oversized_precondition_records_fail_with_typed_error_before_any_side_effect ... FAILED
+test precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint ... FAILED
+test live_subscriber_receives_pushed_event ... ok
+test a_reused_request_id_with_a_changed_payload_is_refused_with_no_mutation ... ok
+test readiness_get_is_listed_as_inspect ... ok
+test a_terminal_outcome_and_its_dedupe_key_survive_a_restart ... ok
+test end_to_end_correlation_reconnect_and_gap_recovery ... ok
+test stale_precondition_on_approve_is_rejected_with_no_side_effect ... FAILED
+test system_describe_lists_classes ... ok
+test system_hello_returns_protocol_version_and_implemented_methods ... ok
+test unknown_events_cursor_errors_instead_of_replaying_from_start ... ok
+test unknown_verb_still_rejected_cleanly ... ok
+test readiness_get_endpoint_configuration_is_not_readiness_evidence ... ok
+test readiness_get_no_committed_sources_is_unknown ... ok
+test readiness_get_intended_operation_foregrounds_relevant_capability ... ok
+test request_admission_refuses_overflow_and_cancels_waiters_without_effects ... ok
+wrote 57 SFWP schema files to /tmp/.tmpgwy9Eg
+test generated_schemas_are_committed_and_current ... ok
+
+failures:
+
+---- oversized_precondition_records_fail_with_typed_error_before_any_side_effect stdout ----
+
+thread 'oversized_precondition_records_fail_with_typed_error_before_any_side_effect' (2337474) panicked at crates/sea-forge-server/tests/conformance_sfwp.rs:1131:5:
+assertion `left == right` failed: {"error":"this durable mutation requires a non-empty request_id before admission","error_class":"durable_locator_required","no_side_effect":true}
+  left: String("durable_locator_required")
+ right: "input_error"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint stdout ----
+
+thread 'precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint' (2337475) panicked at crates/sea-forge-server/tests/conformance_sfwp.rs:405:5:
+assertion `left == right` failed
+  left: Null
+ right: "rejected_as_stale"
+
+---- stale_precondition_on_approve_is_rejected_with_no_side_effect stdout ----
+
+thread 'stale_precondition_on_approve_is_rejected_with_no_side_effect' (2337496) panicked at crates/sea-forge-server/tests/conformance_sfwp.rs:354:5:
+assertion `left == right` failed
+  left: Null
+ right: "rejected_as_stale"
+
+
+failures:
+    oversized_precondition_records_fail_with_typed_error_before_any_side_effect
+    precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint
+    stale_precondition_on_approve_is_rejected_with_no_side_effect
+
+test result: FAILED. 16 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.78s
+
+error: test failed, to rerun pass `-p sea-forge-server --test conformance_sfwp`

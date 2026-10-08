@@ -1,0 +1,27 @@
+{
+  "version": "1",
+  "cell_root": "/tmp/gdsp/fixture-cell",
+  "evidence_root": "/tmp/gdsp/fixture-evidence",
+  "capabilities": [
+    {
+      "name": "authority",
+      "kind": "authority",
+      "required": true,
+      "endpoint": "unix:///tmp/gdsp/fixture-cell/server.sock",
+      "credential": "env:GODSPEED_FIXTURE_AUTHORITY_TOKEN"
+    },
+    {
+      "name": "repository",
+      "kind": "repository",
+      "required": true,
+      "endpoint": "https://api.example.invalid",
+      "credential": "env:GODSPEED_FIXTURE_REPO_TOKEN"
+    },
+    {
+      "name": "artifact",
+      "kind": "artifact",
+      "required": false,
+      "endpoint": "file:///tmp/gdsp/fixture-artifacts"
+    }
+  ]
+}

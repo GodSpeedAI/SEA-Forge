@@ -1,0 +1,39 @@
+$ just casework-stack-down
+casework-live-go-down: stopped 825512
+casework-server-down: stopped (pid 824476)
+casework-stack-down: casework-live-go-down ok
+casework-stack-down: casework-server-down ok
+casework-stack-down: cell data preserved at .sea-forge/casework-live/cell (teardown is processes-only, never data)
+exit=0
+
+$ ls .sea-forge/casework-live/  # pidfiles must be gone
+total 10344
+drwxr-xr-x 3 sprime01 sprime01     4096 Sep 23 22:05 .
+drwxr-xr-x 7 sprime01 sprime01     4096 Sep 23 22:03 ..
+drwxr-xr-x 4 sprime01 sprime01     4096 Sep 23 22:05 cell
+-rwxr-xr-x 1 sprime01 sprime01 10570340 Sep 23 22:05 go-bin
+-rw-r--r-- 1 sprime01 sprime01      742 Sep 23 22:05 go.log
+-rw-r--r-- 1 sprime01 sprime01      434 Sep 23 22:05 server.log
+
+$ ls .sea-forge/casework-live/cell/  # cell data must be preserved
+total 20
+drwxr-xr-x 4 sprime01 sprime01 4096 Sep 23 22:05 .
+drwxr-xr-x 3 sprime01 sprime01 4096 Sep 23 22:05 ..
+-rw-r--r-- 1 sprime01 sprime01    0 Sep 23 22:05 .server.lock
+drwxr-xr-x 4 sprime01 sprime01 4096 Sep 23 22:05 ledgers
+drwxr-xr-x 2 sprime01 sprime01 4096 Sep 23 22:05 requests
+srw------- 1 sprime01 sprime01    0 Sep 23 22:05 server.sock
+-rw-r--r-- 1 sprime01 sprime01    0 Sep 23 22:05 server.sock.lock
+-rw-r--r-- 1 sprime01 sprime01  150 Sep 23 22:03 server.yaml
+
+process check (argv0 scan):
+sea-forge-server processes: 0 (want 0)
+casework-live go-bin processes: 0 (want 0)
+TEARDOWN PASS: both processes gone
+
+curl must no longer answer:
+curl: (28) Connection timed out after 2002 milliseconds
+nothing answers on 4179 (expected)
+
+socket state after server shutdown:
+srw------- 1 sprime01 sprime01 0 Sep 23 22:05 .sea-forge/casework-live/cell/server.sock

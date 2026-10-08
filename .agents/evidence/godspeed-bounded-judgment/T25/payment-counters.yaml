@@ -1,0 +1,13 @@
+schema: godspeed-bounded-judgment.t25-payment-counters
+task: T25
+stage: matched-negative
+wall_clock_seconds: 0.303
+provider_calls:
+  count: 0
+  by_identity: []
+tool_executions: 1
+failed_executions: 0
+note: 'the negative is a mechanical single-factor mutation: no provider calls; 1 real gauntlet execution'
+tokens_and_cost: 'n/a: no provider calls in this stage'
+operator_decisions: 0
+negative_data_root: /home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1

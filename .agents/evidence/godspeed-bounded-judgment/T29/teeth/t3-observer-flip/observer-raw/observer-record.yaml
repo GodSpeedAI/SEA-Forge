@@ -1,0 +1,64 @@
+schema: godspeed-bounded-judgment.t29-observer-record
+route_id: t29-route-001
+scale: exactly one deepseek-clinepass call per retained move (prereg learned_observer_optional; prereg scale 'exactly
+  4' anticipated 4 retained moves)
+surface_rule: arm2-style enriched surface; the T23 round-2 surface builder imported UNMODIFIED (build_surfaces.build_surface)
+labels:
+- settled_accepted
+- settled_accepted
+authority_rule: 'OBSERVATIONAL EVIDENCE ONLY: the label never alters route retention, the d* determination, or any
+  settlement; verify_breadth.py recomputes the route goal with observer files excluded'
+inertness_self_check:
+  route_record_sha256_before: 27dd9d8964a1ef41d1554bc77de64c719adc0434e7271cf9e888d88c2c220cf6
+  route_record_sha256_after: 27dd9d8964a1ef41d1554bc77de64c719adc0434e7271cf9e888d88c2c220cf6
+  unchanged: true
+calls:
+- call: 1
+  probe_id: probe-i1-cand-2
+  candidate_id: cand-2
+  correlation_id: t29-route-001-iter1
+  bounded_input:
+    scenario: e2e-forged-report
+    max_rounds: 2
+  provider: deepseek-clinepass
+  model: cline-pass/cline-pass/deepseek-v4.1-flash
+  outcome: ok
+  label: settled_accepted
+  surface_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/observer-raw/probe-i1-cand-2.surface.json
+  prompt_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/observer-raw/probe-i1-cand-2.prompt.txt
+  raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/observer-raw/probe-i1-cand-2.raw.txt
+  started_at_utc: null
+  duration_seconds: null
+  authority_rule: observational only; never enters retention, the d* determination, or any settlement
+- call: 2
+  probe_id: probe-i2-cand-2-1
+  candidate_id: cand-2-1
+  correlation_id: t29-route-001-iter2
+  bounded_input:
+    scenario: e2e-forged-report
+    max_rounds: 1
+  provider: deepseek-clinepass
+  model: cline-pass/cline-pass/deepseek-v4.1-flash
+  outcome: ok
+  label: settled_accepted
+  surface_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/observer-raw/probe-i2-cand-2-1.surface.json
+  prompt_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/observer-raw/probe-i2-cand-2-1.prompt.txt
+  raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/observer-raw/probe-i2-cand-2-1.raw.txt
+  started_at_utc: null
+  duration_seconds: null
+  authority_rule: observational only; never enters retention, the d* determination, or any settlement
+provider_calls:
+- seq: 1
+  purpose: learned_observer:probe-i1-cand-2
+  provider: deepseek-clinepass
+  model: cline-pass/cline-pass/deepseek-v4.1-flash
+  outcome: responded
+  started_at_utc: '2026-09-19T15:23:29.560244+00:00'
+  duration_seconds: 16.802
+- seq: 2
+  purpose: learned_observer:probe-i2-cand-2-1
+  provider: deepseek-clinepass
+  model: cline-pass/cline-pass/deepseek-v4.1-flash
+  outcome: responded
+  started_at_utc: '2026-09-19T15:23:46.365880+00:00'
+  duration_seconds: 11.767

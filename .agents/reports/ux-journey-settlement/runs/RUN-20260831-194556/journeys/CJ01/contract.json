@@ -1,0 +1,151 @@
+{
+  "journey_id": "CJ01",
+  "canonical_journey_name": "Establish Trusted Cell Context",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "1.1",
+    "1.2",
+    "1.3",
+    "1.4",
+    "1.5",
+    "1.6",
+    "1.7",
+    "2.1",
+    "2.2",
+    "2.3",
+    "2.4",
+    "16.1",
+    "16.2",
+    "16.3",
+    "16.5"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 8,
+    "variant": 3,
+    "composition": 3
+  },
+  "implementation_maturity": {
+    "specified": 1,
+    "implemented": 2,
+    "exercised": 5,
+    "evidenced": 7
+  },
+  "actor_and_role": {
+    "primary_actor": "operator",
+    "primary_role": "operator",
+    "allowed_roles": [
+      "operator",
+      "cell administrator",
+      "automated actor"
+    ]
+  },
+  "starting_state": "A user opens or creates a cell, returns to existing or legacy history, starts the service, enters protected work, or changes the release or execution substrate.",
+  "preconditions": [
+    "A selected cell root",
+    "readable existing records when present",
+    "configured identity, policy, ledger, model, extension, environment, endpoint, and server inputs appropriate to the intended operation."
+  ],
+  "intention": "Enter a cell whose identity, configuration, integrity, semantic self-model, and operation-specific readiness are explicit.",
+  "job": "Establish a trustworthy starting context for a human or automated actor without overwriting history or treating stale state as current.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "Cell initialization and bundle-aware migration",
+    "startup validation",
+    "`identity.get`",
+    "`readiness.get`",
+    "policy inspection",
+    "self-model validation or rebuild",
+    "lifecycle inspection",
+    "and version-skew detection."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_readiness_routes",
+      "workbench_administration_route"
+    ],
+    "api": [
+      "sfwp_system_family",
+      "sfwp_context_family"
+    ],
+    "cli": [
+      "cli_cell_and_self_model_family"
+    ],
+    "agent": []
+  },
+  "expected_consequential_state_transitions": [
+    "Unknown, legacy, or changed context becomes validated current context, explicitly stale but verifiable context, degraded context, or blocked context",
+    "invalid identity and configuration fail closed",
+    "lifecycle changes preserve in-flight snapshots."
+  ],
+  "required_artifacts_and_evidence": [
+    "Cell identity",
+    "existing case and ledger history",
+    "migration records",
+    "policy and configuration digests",
+    "release-and-cell self-model snapshots",
+    "readiness items",
+    "assurance labels",
+    "and compatibility findings."
+  ],
+  "settlement_condition": "The actor is attributable, the governing snapshots and integrity state are explicit, and the cell states whether the intended operation is ready, degraded, stale, or blocked with evidence.",
+  "expected_next_decisions_and_affordances": [
+    "Discover current lawful affordances",
+    "form a governed case",
+    "repair or revalidate a failed foundation",
+    "hold an incompatible operation",
+    "or stop."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Preserve prior verifiable snapshots",
+    "refuse protected work on identity conflict",
+    "rebuild or reprobe changed foundations",
+    "migrate compatible history without re-keying it",
+    "follow the readiness item to a bounded repair path."
+  ],
+  "expected_unavailable_states": [
+    "sponsorship.request method is not implemented in SFWP",
+    "extension and endpoint full lifecycle partly unrendered"
+  ]
+}

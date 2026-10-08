@@ -1,0 +1,125 @@
+{
+  "run_id": "RUN-20260831-194241",
+  "timestamp": "2026-08-31T19:43:20.355890+00:00",
+  "journey_id": "CJ02",
+  "journey_name": "Discover Lawful Affordances",
+  "source_story_ids": [
+    "2.5",
+    "2.6",
+    "3.1",
+    "3.2",
+    "3.3",
+    "3.4",
+    "3.5",
+    "3.6",
+    "3.9",
+    "4.1",
+    "4.2",
+    "4.3",
+    "4.4",
+    "4.5",
+    "4.6",
+    "4.8"
+  ],
+  "canonical_source_hashes": {
+    ".sea/interaction/canonicalization-matrix.csv": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4",
+    ".sea/interaction/canonical-journey-catalog.md": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af",
+    ".sea/interaction/journey-grammar.md": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb",
+    ".sea/interaction/interaction-model.sea": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc",
+    ".sea/interaction/journey-capability-map.md": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37",
+    ".sea/interaction/coverage-report.md": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687",
+    ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9",
+    ".agents/specs/spec-minimum.md": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3",
+    ".agents/specs/spec-full.md": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+  },
+  "implementation_revision": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "harness_revision": "v2.0.0",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "actor_and_role": {
+    "actor": "operator",
+    "role": "operator"
+  },
+  "starting_state": "A user asks what SEA Forge can do, previews a proposal's authority burden, browses an operating asset, probes an endpoint, or encounters denial, escalation, or unusable state.",
+  "actor_visible_observations": [],
+  "browser_actions": [],
+  "screenshot_references": [
+    {
+      "sequence": 1,
+      "name": "CJ02-001-entry-thoth.png",
+      "relative_path": "screenshots/CJ02/CJ02-001-entry-thoth.png",
+      "moment_kind": "entry",
+      "description": "Thoth discovery route"
+    },
+    {
+      "sequence": 2,
+      "name": "CJ02-002-affordance-assets-catalog.png",
+      "relative_path": "screenshots/CJ02/CJ02-002-affordance-assets-catalog.png",
+      "moment_kind": "affordance_discovery",
+      "description": "Operating assets, templates, and agent endpoints"
+    },
+    {
+      "sequence": 3,
+      "name": "CJ02-003-authority-denial-explanation.png",
+      "relative_path": "screenshots/CJ02/CJ02-003-authority-denial-explanation.png",
+      "moment_kind": "authority_boundary",
+      "description": "Governed denial surface explaining blocked authority"
+    }
+  ],
+  "snapshot_references": [],
+  "interface_projections_encountered": [
+    "workbench_readiness_routes",
+    "workbench_thoth_route",
+    "workbench_assets_route",
+    "workbench_delegation_route",
+    "workbench_administration_route"
+  ],
+  "capability_bindings_invoked": [
+    "`thoth.ask`",
+    "asset and endpoint inspection",
+    "endpoint probe",
+    "capability projection",
+    "environment and adapter inspection",
+    "authority preflight",
+    "and denial explanation."
+  ],
+  "execution_identifiers": {
+    "asset_count": 2
+  },
+  "evidence_references": [
+    "crates/sea-forge-server/src/sfwp/assets.rs"
+  ],
+  "settlement_oracle_result": {
+    "journey_id": "CJ02",
+    "oracle_name": "CJ02_LawfulAffordanceDiscoveryOracle",
+    "status": "ACCEPTED",
+    "completion_condition_evaluated": "Source-backed affordances discovered with explicit boundaries and limitations.",
+    "authoritative_record_inspected": "asset.list (captured invoke response)",
+    "rationale": "asset.list returned 2 source-backed asset(s); guard denial surface rendered an explicit blocker for G9.",
+    "evidence_refs": [
+      "crates/sea-forge-server/src/sfwp/assets.rs"
+    ],
+    "carried_state": {
+      "asset_count": 2
+    }
+  },
+  "gate_results": {
+    "ENTRY": "PASS",
+    "VISIBILITY": "PASS",
+    "REACHABILITY": "PASS",
+    "BINDING": "FAIL",
+    "AUTHORITY": "PASS",
+    "EXECUTION": "PASS",
+    "EVIDENCE": "PASS",
+    "SETTLEMENT": "PASS",
+    "CONTINUITY": "PASS",
+    "RECOVERY": "PASS"
+  },
+  "final_status": "FAIL",
+  "failure_diagnosis": {
+    "failure_code": "INTERFACE_BINDING_GAP",
+    "failure_locus": "BINDING",
+    "expected": "PASS",
+    "observed": "FAIL",
+    "reproducible_path": "python3 gauntlet_runner.py  # re-run the full gauntlet; CJ02 gate BINDING failed"
+  }
+}

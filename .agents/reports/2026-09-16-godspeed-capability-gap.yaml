@@ -1,0 +1,394 @@
+# =============================================================================
+# GODSPEED CAPABILITY GAP — machine-readable companion to the adversarial review
+# =============================================================================
+schema: godspeed.capability_gap
+schema_version: "1.0"
+created: "2026-09-16"
+status: review_artifact   # evidence, not a plan; no implementation is authorised by this file
+source_review: "2026-09-16-godspeed-judgment-plane-adversarial-review.md"
+source_spec_reviewed: ".agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml"
+template_respected: ".agents/specs/AGENT_SPEC_TEMPLATE.yaml"
+
+evidence_discipline:
+  legend:
+    FACT: "repository or machine evidence directly establishes it (path or path:line cited)"
+    INFERENCE: "evidence strongly suggests it; competing explanations named"
+    ASSUMPTION: "required but not established; recorded as a gap"
+    ROADMAP: "intentionally future work"
+  non_claims:
+    - "production readiness is not claimed from unit tests"
+    - "provider replaceability is not claimed from the existence of a port trait"
+    - "learning is not claimed while no weights, policy, or model behaviour change"
+    - "settlement is not claimed merely because downstream code consumed a value"
+
+target_machine:
+  role: deployment_target
+  identity: "NVIDIA Jetson AGX Orin 64 GB (SM87), unified CPU/GPU memory"
+  evidence: "FACT edgeai/AGENTS.md:7"
+  inference_stack:
+    - "FACT llama.cpp GGUF SM87 — edgeai/README.md"
+    - "FACT vLLM AWQ; default Qwen3.6-35B-A3B-AWQ-4bit — edgeai/README.md:140"
+    - "FACT launcher OpenAI-compatible 127.0.0.1:18001, memory-aware admission — edgeai/README.md:83-90"
+  optional_services:
+    - "FACT nats:2.10-alpine + sea-bridge — edgeai/deploy/jetson/docker-compose.yml:331,348"
+    - "FACT ruvector-postgres:arm64-local — edgeai/deploy/jetson/docker-compose.knowledge.yml:6"
+  developer_host_separate:
+    note: "development host has NO inference and NO database; its capacity does not constrain the design"
+    evidence: "FACT ss -tlnp; which ollama psql nats-server; no GGUF/safetensors model on disk"
+
+capabilities:
+  - id: CAP-001
+    capability: "bounded typed question with a declared answer domain"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "CEP Question requires only question_id + question_form; question_type is an unconstrained string; no answer-domain, scale, or probability field exists"
+    evidence:
+      - "FACT cep/schemas/cep-semantic-envelope.schema.json:1385"
+      - "FACT cep/spec/CEP-0005-question-model.md:178-207"
+      - "FACT cep/spec/CEP-0005-question-model.md:336-352 (17-value enum exists in prose only)"
+      - "FACT sxr-core/src/record_kinds.csv: question.declared, authority_class='declared evaluation context'"
+    cheapest_valid_solution: "additive AnswerDomain field in the existing CEP Question envelope section"
+    value: critical
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-002
+    capability: "uncertainty-preserving judgment output (distribution / abstention)"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "every judgment collapses to a decision at the moment of recording"
+    evidence:
+      - "FACT gauntlet-domain/src/verification.rs:26-33 — VerificationRecord.outcome is a 3-valued Outcome"
+      - "FACT live DB sample: verification_record@v1 payload has no probability field"
+      - "FACT sea-forge-core/src/types.rs:1101 — confidence is a String"
+      - "FACT sea-forge-capability/src/promotion.rs:345,363 — confidence is a deterministic weighted product"
+      - "FACT cross-repo grep for probability|likelihood|posterior found no typed probability in non-test code"
+    cheapest_valid_solution: "additive distribution map plus an explicit abstention arm on verification_record@v1"
+    value: critical
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+  - id: CAP-003
+    capability: "loop correlation identity"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "no shared value survives the round trip meaning -> judgment -> authority -> execution -> settlement; correlation is by run_id string convention across four systems"
+    evidence:
+      - "FACT sea-forge-core/src/types.rs:394-397 Determinism{policy_bundle_hash, action_request_hash, identity_binding_hash}"
+      - "FACT gauntlet-ports/src/agent_runner.rs:240-258 ContextEnvelope{body,digest}"
+      - "FACT sxr-core/src/types.rs:21-36 LedgerPosition"
+      - "FACT no shared correlation type found in any of the 11 repositories"
+    cheapest_valid_solution: "one field bound at case admission, echoed by sea-rs run_id, Gauntlet run_id, sxr snapshot/run refs, CEP envelope scope"
+    value: critical
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-004
+    capability: "HTTP model provider on the judgment path"
+    current_state: PARTIALLY_EXISTS
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "Gauntlet (owner of the judgment contract) can invoke providers only as OS processes; SEA-Forge (owner of the HTTP provider) has no judgment contract"
+    evidence:
+      - "FACT gauntlet-adapter-agent-cli/src/config.rs:4-15,39-44 — command template, GAUNTLET_CLI_AGENT_CMD, no default, no fallback"
+      - "FACT sea-forge-agent/src/provider.rs:118-184 — OpenAiCompatibleProvider POSTs /v1/chat/completions"
+      - "FACT sea-forge-agent/tests/provider_contract.rs — drives the provider against a real in-process HTTP server"
+      - "FACT sea-forge-agent/src/network.rs:35-48 — loopback HTTP via allow_loopback_test; production requires HTTPS"
+      - "FACT provider.rs is consumed only by delegation.rs and sea-forge-server/src/agent_probe.rs"
+    cheapest_valid_solution: "one HTTP AgentRunner adapter under gauntlet/crates/adapters, reusing the existing transport shape"
+    value: high
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-005
+    capability: "model identity and surface hash on judgment records"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "historical judgments cannot be attributed to a model; no decision-surface hash exists"
+    evidence:
+      - "FACT live DB sample: role_invocation payload carries model: null"
+      - "FACT live DB sample: verification_record@v1 carries instrument{name,version,deterministic} but no provider/model identity"
+      - "FACT gauntlet-domain/src/role_invocation.rs:110-131 has context_envelope_digest but no decision-surface hash"
+    cheapest_valid_solution: "populate forward-only; mark historical rows unattributed rather than fabricating attribution"
+    value: high
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: moderate
+
+  - id: CAP-006
+    capability: "versioned, inspectable composition thresholds"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "REQ-COMP-002 is violated today: thresholds are code constants"
+    evidence:
+      - "FACT sea-forge-settlement/src/lib.rs:373 — score >= 0.5"
+      - "FACT sea-forge-capability/src/promotion.rs:73,80,89 — compute_policy_hash, save_policy, load_policy already implement this pattern"
+    cheapest_valid_solution: "versioned rule file consumed by the existing settlement path; reuse the CapabilityPromotionPolicy save/load/hash pattern"
+    value: high
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-007
+    capability: "explicit contradiction / uncertainty path in composition"
+    current_state: ABSENT
+    production_requirement: SHOULD_HAVE_SOON
+    gap: "REQ-COMP-003 has no code counterpart"
+    evidence:
+      - "FACT no contradiction branch found in sea-forge-settlement or gauntlet-app aggregate/residual"
+    cheapest_valid_solution: "one explicit enum arm in the composition outcome"
+    value: high
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-008
+    capability: "calibration artifact measured against consequence"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "no Brier / ECE / reliability output exists anywhere"
+    evidence:
+      - "FACT no calibration code in any of the 11 repositories"
+      - "FACT corpus size across 16 run DBs: 17 settlements, 29 observation_bindings, 17 verification_record, 37 role_invocation, 28 correction_selection"
+    cheapest_valid_solution: "read-only replay harness over targets/.runs/*/state/*.db emitting a calibration report"
+    value: high
+    implementation_cost: medium
+    migration_cost: low
+    uncertainty: medium
+    reversibility: easy
+
+  - id: CAP-009
+    capability: "consequence-grounded judgment evaluation"
+    current_state: PARTIALLY_EXISTS
+    production_requirement: SHOULD_HAVE_SOON
+    gap: "the controlled-evaluation machinery exists for capability promotion but is not pointed at judgment"
+    evidence:
+      - "FACT Gauntlet promote/gate.rs PromotionGate; revision_evaluations(held_out_control, held_out_treatment, regression_control, regression_treatment)"
+      - "FACT gauntlet-app/src/memory/promotion.rs PromotionService / PromotionDecision"
+    cheapest_valid_solution: "reuse the control/treatment shape; do not build a second evaluation methodology"
+    value: high
+    implementation_cost: medium
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-010
+    capability: "CI on the judgment-corpus owner"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "Gauntlet has no .github/workflows directory"
+    evidence:
+      - "FACT find gauntlet/.github -type f -> empty"
+      - "FACT Gauntlet owns Execution Environment in docs/explanations-and-references/goodspeed-loop.md and hosts the consequence corpus"
+    cheapest_valid_solution: "CI invoking existing just recipes; no new tooling"
+    value: critical
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-011
+    capability: "green full-suite gate on the authority crate"
+    current_state: PARTIAL
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "just crate-test sea-forge-server reaches an unrelated failing test"
+    evidence:
+      - "FACT .agents/CURRENT_STATUS.md (2026-08-31): conformance_run_locator::both_layouts_still_resolve_after_a_restart fails because a second server cannot start while the first holds the cell lock"
+    cheapest_valid_solution: "fix cell-lock test isolation (lock is per-cell; the test assumes per-process)"
+    value: high
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: medium
+    reversibility: easy
+
+  - id: CAP-012
+    capability: "provider-substitution proof across ports"
+    current_state: PARTIAL
+    production_requirement: SHOULD_HAVE_SOON
+    gap: "each port has its own contract suite; no test proves that swapping providers preserves semantic meaning"
+    evidence:
+      - "FACT gauntlet-adapter-agent-cli/src/lib.rs:59 and gauntlet-adapter-agent-prime/src/lib.rs:31 — shared AgentRunner contract suite per adapter"
+      - "FACT sea-forge-agent/tests/provider_contract.rs — per-provider contract test"
+      - "FACT no cross-port substitution test found"
+    cheapest_valid_solution: "one test answering the same bounded question through both adapters and comparing semantics, not bytes"
+    value: high
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-013
+    capability: "authority non-bypass test for model output"
+    current_state: ABSENT
+    production_requirement: MUST_HAVE_BEFORE_PRODUCTION
+    gap: "authority-before-model is true by construction but unproven by any test"
+    evidence:
+      - "FACT sea-forge-server/src/agent_probe.rs:221 — verdict checked before dispatch"
+      - "FACT sea-forge-authority/tests/conformance_m0_authority.rs:146 m12_agent_probe_requires_exact_endpoint_policy_and_grant_binding covers policy binding, not adversarial model output"
+      - "FACT no adversarial provider test asserting DENY despite an allow-shaped provider answer"
+    cheapest_valid_solution: "adversarial test: provider returns an allow-shaped answer; authority must still DENY"
+    value: critical
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-014
+    capability: "judgment idempotency and retry accounting"
+    current_state: PARTIAL
+    production_requirement: SHOULD_HAVE_SOON
+    gap: "idempotent cancel exists; no retry policy with attempt provenance for judgment"
+    evidence:
+      - "FACT gauntlet-ports/src/agent_runner.rs:458-465 — cancel is idempotent; handles and status are typed"
+      - "FACT external reference /home/sprime01/src/typesafe-ai/system-one-adapter-python/src/system_one_adapter/_response.py:15-22 Usage{input_tokens_total, output_tokens_total, n_retries, n_retries_malformed_structure, latency}"
+    cheapest_valid_solution: "one retry-policy config; persist attempt count and malformed-structure retries"
+    value: high
+    implementation_cost: low
+    migration_cost: low
+    uncertainty: medium
+    reversibility: easy
+
+  - id: CAP-015
+    capability: "consequence-chain export off the appliance"
+    current_state: ABSENT
+    production_requirement: SHOULD_HAVE_SOON
+    gap: "no export path for the run-consequence corpus"
+    evidence:
+      - "FACT Gauntlet writes .gauntlet/ and targets/.runs/ locally; no exporter found"
+    cheapest_valid_solution: "read-only export (also the calibration substrate)"
+    value: medium
+    implementation_cost: medium
+    migration_cost: low
+    uncertainty: low
+    reversibility: easy
+
+  - id: CAP-016
+    capability: "judgment observability"
+    current_state: ABSENT
+    production_requirement: SHOULD_HAVE_SOON
+    gap: "tracing exists in sea-rs; GAUNTLET_OTEL_ENDPOINT env exists but no OTel dependency was found; no Prometheus anywhere; the four metrics that matter are undeclared"
+    evidence:
+      - "FACT sea-rs/Cargo.toml:56 tracing-subscriber with env-filter + json"
+      - "FACT gauntlet/.env.example GAUNTLET_OTEL_ENDPOINT; UNVERIFIED as a dependency"
+    cheapest_valid_solution: "declare judgment latency, abstention rate, provider disagreement, calibration drift; then either wire OTel or delete the unused env surface"
+    value: medium
+    implementation_cost: medium
+    migration_cost: low
+    uncertainty: medium
+    reversibility: easy
+
+  - id: CAP-017
+    capability: "tenant isolation / authorization for judgment"
+    current_state: ABSENT
+    production_requirement: NOT_RELEVANT
+    gap: "no tenancy model exists; the target appliance is loopback-only"
+    evidence:
+      - "FACT no tenancy type in any repository"
+      - "FACT sea-forge-agent/src/network.rs:35-48 — HTTPS required for non-loopback production endpoints"
+    cheapest_valid_solution: "none now; revisit only on an off-box exposure decision"
+    value: low
+    implementation_cost: high
+    migration_cost: high
+    uncertainty: high
+    reversibility: moderate
+
+  - id: CAP-018
+    capability: "model weight update / training"
+    current_state: ABSENT
+    production_requirement: NOT_RELEVANT
+    gap: "nothing anywhere changes weights, policy, or model behaviour"
+    evidence:
+      - "FACT no training dependency, weight artifact, or update path in any of the 11 repositories"
+      - "FACT SWE_SEED learning artifacts are written (learning_cli.rs:42-48,107-110) and never read"
+    cheapest_valid_solution: "do not build; record as an explicit non-goal"
+    value: low
+    implementation_cost: high
+    migration_cost: high
+    uncertainty: high
+    reversibility: hard
+
+unresolved_requiring_evidence:
+  - id: U1
+    question: "can an additive distribution field coexist with the CEP envelope schema pin (sha256 4b42bfdd...) without a CEP amendment?"
+    class: ASSUMPTION
+    close_by: "read sxr-core/src/envelope.rs:195 validate_record_kind_conformance and trace whether one run emits both"
+  - id: U2
+    question: "does any of the 16 run DBs contain records of kind observation, comparison, residual, or promotion_decision?"
+    class: FACT_PARTIAL
+    close_by: "one read-only query across all 16 DBs"
+  - id: U3
+    question: "is agent_probe SettlementStatus::Accepted an operational settlement or a probe-local result?"
+    class: INFERENCE
+    close_by: "read sea-forge-server/src/agent_probe.rs:340-450 plus its caller"
+  - id: U4
+    question: "is the residual / correction_selection corpus large enough to support a second decision surface?"
+    class: FACT_PARTIAL
+    close_by: "per-run count in the harness"
+  - id: U5
+    question: "what is the real bounded-question latency and model-swap cost on the Jetson?"
+    class: ASSUMPTION
+    close_by: "read edgeai benchmark artifacts under artifacts/ and profiles/"
+  - id: U6
+    question: "can gauntlet depend on sea-forge-agent, or must the HTTP transport be reimplemented?"
+    class: ASSUMPTION
+    close_by: "read gauntlet/deny.toml, gauntlet/Cargo.toml, and one existing async adapter"
+  - id: U7
+    question: "are SWE_SEED learning artifacts intended to be consumed, or are they inert?"
+    class: INFERENCE
+    close_by: "operator confirmation"
+  - id: U8
+    question: "do NeatCode and project-topology-architect belong in stack scope?"
+    class: INFERENCE
+    close_by: "operator confirmation (review recommends leaving both independent)"
+
+not_built:
+  rationale: "explicit architectural refusals, each with a reason"
+  items:
+    - what: "a judgment runtime, service, or daemon"
+      why: "the judgment path is a library call inside an existing process; a service adds deployment, auth, tenancy and failure modes for zero capability on a single-box appliance"
+    - what: "a third provider port"
+      why: "two ports already exist with typed failures, cancellation, budgets and per-port contract suites"
+    - what: "CaseAssessment / JudgmentComposer / JudgmentObservation as new types"
+      why: "SettlementClaim+SettlementEvent, sea-forge-settlement, and VerificationRecord already carry these distinctions; new nouns create a second truth"
+    - what: ".sea grammar changes"
+      why: "ApplicationContract + ReferenceDefinition are sufficient to materialise a surface; the spec itself defers compilation to roadmap (spec:1410-1416)"
+    - what: "a new event schema or CEP version bump for the first slice"
+      why: "sxr pins the CEP envelope schema by sha256 (sxr-core/src/embedded_schema.rs:15); a bump breaks a hash-pinned conformance contract for no slice-1 gain"
+    - what: "a new database or message broker on the judgment path"
+      why: "Gauntlet SQLite already holds the consequence chain; Postgres/NATS/PGMQ/ruVector are absent from the judgment path today"
+    - what: "a training pipeline or weight updates"
+      why: "no mechanism exists and none is needed to prove bounded judgment; claiming learning today would be false"
+    - what: "a sixth Agent Memory Ledger service"
+      why: "five ledger implementations already exist; the correct action is one ownership decision, not another store"
+    - what: "deleting, rewriting, or re-languaging any repository"
+      why: "every repository inspected is internally coherent; this is a wiring problem, not a code problem"
+    - what: "DomainForge DecisionSurface compilation"
+      why: "roadmap; requires evidence that a derived artifact is insufficient first"
+
+next_action:
+  id: PROOF-1
+  action: "Build a read-only, replayable measurement harness over Gauntlet's 16 existing run databases"
+  question_answered: "does a bounded question with a declared answer domain, answered by two materially independent providers, carry information about the recorded settlement that the existing 3-valued deterministic rung does not?"
+  writes_production_code: false
+  changes_schema: false
+  adds_service: false
+  modifies_persisted_data: false
+  required_evidence:
+    - "machine-readable dataset: one row per recoverable historical judgment"
+    - "coverage report: reconstructibility per run and per missing field"
+    - "calibration report: Brier, reliability by label, abstention rate, provider disagreement rate, deterministic-rung baseline"
+    - "explicit falsification statement if the distribution carries no information"
+  decisions_unlocked:
+    informative_distribution: "build the HTTP adapter and the AnswerDomain field"
+    no_information_gain: "reject the uncertainty requirement and redirect effort to CAP-010/011/013"
+    corpus_not_reconstructible: "fix provenance (CAP-005) and export (CAP-015) first; judgment is premature"
+    providers_disagree_completely: "the first decision surface is wrong; choose one from residual rows instead"

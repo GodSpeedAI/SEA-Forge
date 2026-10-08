@@ -1,0 +1,1350 @@
+# =============================================================================
+# AGENT-FACING DEVELOPMENT PLAN: WORKBENCH FRONTEND REMEDIATION
+# =============================================================================
+# Standard: AGENT_PLAN_TEMPLATE.yaml v1.0
+# Target Specification: .agents/specs/spec-workbench-frontend-remediation.yaml
+# Scope: SEA Forge Workbench Desktop Frontend (`workbench/apps/desktop`, `workbench/packages`)
+# Purpose: Executable dependency settlement graph to remediate frontend deltas.
+# =============================================================================
+
+schema: agent.development_plan
+schema_version: "1.0"
+
+metadata:
+  id: "plan-workbench-frontend-remediation"
+  title: "SEA Forge Workbench Frontend Remediation Plan"
+  status: "ready"
+  version: "0.2.0"
+  created: "2026-09-04"
+  revised: "2026-09-04"
+  revision_note: >-
+    Re-projected onto spec v0.2.0 after verifying every task against the repository. Corrected: the
+    T01 token edit (it would have failed its own contracts gate and breached the copy-projection rule
+    in `workbench/AGENTS.md`), every per-suite test command (a filter passed at the workspace root
+    reaches only the ui-components leg), the T06 ribbon algorithm (route steps and lifecycle steps are
+    disjoint), the T08 retry link (`/cases/new` has no `validateSearch`, `cancelled` is not an
+    execution standing, and no kernel method backs item control), the T07 dispatch payload (a
+    `Delegate` without `request_id` is refused before admission), the T05 keyboard handler (one already
+    exists and must be modified, not duplicated), the `gate-no-alert` command (`git grep` cannot see
+    the untracked file the task creates), and the artifact paths (they named directories that do not
+    exist). Work already present in the tree is now marked verify-only so it is not "fixed" again.
+
+  purpose: >-
+    Project the normative specification `spec-workbench-frontend-remediation.yaml` into an
+    executable, dependency-ordered development settlement graph. Systematically resolves confirmed
+    frontend bugs, removes blocking `alert()` calls, repairs preflight stale detection, enforces
+    duty separation, wires delegation dispatch, and proves end-to-end operational capability.
+
+# -----------------------------------------------------------------------------
+# SOURCE AUTHORITY
+# -----------------------------------------------------------------------------
+source:
+  spec:
+    intended_repository_path: ".agents/specs/spec-workbench-frontend-remediation.yaml"
+    artifact_name: "spec-workbench-frontend-remediation.yaml"
+    spec_id: "spec-workbench-frontend-remediation"
+    spec_version: "0.2.0"
+    sha256: "8bc4ff44899bb1737da62d0c98c591f4e2095de8f7426561c680a7336c0b904c"
+    authority: normative
+
+  implementation_brief:
+    intended_repository_path: ".agents/reports/frontend-audit-workbench-2026-09-04.md"
+    authority: non_normative_execution_context
+    conflict_rule: >-
+      The normative specification governs. Any conflict MUST be surfaced as a
+      blocked decision rather than silently resolved by the implementing agent.
+    known_brief_errors:
+      - >-
+        Audit §4.15 states `--surface-panel` is `#0B1220`; it is `#111827` (`#0B1220` is
+        `--surface-workspace`). The error is inherited from DESIGN.md:148. Measured ratios for
+        `--fg-tertiary` are 3.93 / 3.73 / 3.08 on workspace / panel / elevated.
+      - >-
+        Audit §4.15 proposes retuning `--fg-tertiary` to `#7E8FA6`. That value measures 4.45:1 on
+        `--surface-panel-elevated` — under AA — and the token sheet is a gated byte-copy that
+        `workbench/AGENTS.md` forbids hand-editing. Spec v0.2.0 remediates at the usage site instead.
+      - >-
+        Audit §4.6 proposes dispatching via `agent_run.start`. No such verb exists. The bridge verb is
+        `delegate`; `agent_run.delegate` is its ledger method name.
+      - "Audit §4.6 names the hook `hooks/useDelegation.ts`; the file is `hooks/useDelegations.ts`."
+      - >-
+        Audit §4.5 proposes `case.dispatch_item` and `case.intervene`. Neither exists in the SFWP
+        catalog. Item control is deferred (spec `roadmap_boundaries.case_item_control`).
+
+  supporting_sources:
+    - path: ".agents/specs/frontend/DESIGN.md"
+      role: "Visual design grammar, color tokens, and state vocabularies"
+    - path: ".agents/specs/frontend/sea-forge-primary-path-screen-wireframe-interaction-spec-v0.1.md"
+      role: "Screen layouts, wireframes, and interaction flows P1–P35"
+    - path: ".agents/specs/frontend/sea-forge-workbench-frontend-architecture-component-contract-v0.1.md"
+      role: "Component layering boundaries and state ownership contracts"
+
+# -----------------------------------------------------------------------------
+# TARGET SETTLEMENT
+# -----------------------------------------------------------------------------
+target_settlement: >-
+  The desktop workbench is fully operational, non-blocking, and evidence-faithful. An operator can
+  navigate all surfaces via keyboard command search (`/`) without browser halts; preflight states
+  truthfully report 'Rejected as stale' on template changes; the sidebar inbox badge reflects real
+  pending counts; separation of duty prevents self-approval in the UI; delegation contracts can be
+  dispatched into live execution; case plan items support proof inspection in the drawer; the status
+  system differentiates stale from degraded states; and all text satisfies WCAG AA contrast.
+
+# -----------------------------------------------------------------------------
+# OPERATING CONTRACT
+# -----------------------------------------------------------------------------
+operating_contract:
+  core_principle: >-
+    Ports and Adapters / Governed Client Architecture: The desktop renderer is a governed client
+    communicating strictly through typed Tauri IPC. It must never mutate server records optimistically,
+    must never collapse distinct lifecycle states, and must never present unverified data as truth.
+
+  rules:
+    - "Execute tasks by dependency, not by narrative order."
+    - "Independent tasks MAY run in parallel only after all declared dependencies are settled."
+    - "Every task MUST leave the repository in a coherent state with all applicable global gates green."
+    - "A task is not complete because code exists, a process starts once, or a happy-path test passes."
+    - "A passing gate proves only what that gate actually observes."
+    - "High-risk P3 work requires fresh independent/adversarial confirmation."
+    - "Zero `alert()` or `confirm()` calls are permitted anywhere in the frontend codebase."
+    - "Filter a single suite from its package directory, never from the workspace root — see `verification.command_conventions`."
+    - "A value the client has not read renders as unknown, never as zero, absent, or failed."
+    - "Where a task step says `verify only`, confirm the behaviour already holds and add the regression test; do not rewrite working code."
+    - "Do not modify backend Rust crates (`crates/`) or SFWP protocol schemas as part of this plan."
+    - "Preserve failed evidence and correction history."
+
+  claim_states:
+    - OBSERVED
+    - INFERRED
+    - DECIDED
+    - ASSUMED
+    - UNKNOWN
+
+  correction_protocol:
+    - "Preserve the failed evidence."
+    - "Classify the failure: implementation, test oracle, representation, or environment."
+    - "Correct the smallest falsified layer."
+    - "Rerun the original teeth/falsification check."
+    - "Rerun the original confirmation path."
+    - "Append the correction round; do not erase the failed round."
+    - "Do not weaken acceptance merely because the implementation repeatedly fails it."
+
+  scope_control: >-
+    Issues entering this plan must directly settle requirements in `spec-workbench-frontend-remediation.yaml`.
+    Backend SFWP projection expansions (e.g. implementing `domain.list_models` in `sea-forge-server`)
+    remain roadmapped and are strictly out of scope for this frontend remediation plan.
+
+# -----------------------------------------------------------------------------
+# PLAN-STATE AND EVIDENCE ARTIFACTS
+# -----------------------------------------------------------------------------
+artifacts:
+  current_status: ".agents/current_status.yml"
+  decision_log: ".agents/OPEN_QUESTIONS.md"
+  evidence_root: ".agents/evidence/frontend-remediation"
+  reports_root: ".agents/reports"
+  preregistration_root: ".agents/evidence/frontend-remediation/preregistrations"
+
+  path_note: >-
+    Corrected against the tree: `.agents/evidence/` is the established evidence root (it already holds
+    `bootstrap-config-remediation/` and `e2e/`), `.agents/reports/evidence/` and `.agents/research/`
+    do not exist, and `.agents/decisions.md` does not exist and is referenced by nothing else.
+    Task T00 creates `.agents/evidence/frontend-remediation/preregistrations/`.
+
+  status_rule: >-
+    Mutable current status is an operational projection and MUST NOT become a
+    source of desired-state or normative authority.
+
+# -----------------------------------------------------------------------------
+# VERIFICATION MODEL
+# -----------------------------------------------------------------------------
+verification:
+  global_gates:
+    - id: "gate-contracts"
+      command: "just workbench-contracts-gate"
+
+    - id: "gate-typecheck-lint"
+      command: "cd workbench && bun run check"
+
+    - id: "gate-test"
+      command: "cd workbench && bun run test"
+
+    - id: "gate-no-alert"
+      command: "grep -rn 'alert(' workbench/apps/desktop/src/ ; test $? -eq 1"
+      note: >-
+        Plain `grep`, not `git grep`. `git grep` reads tracked files only, and `CommandPalette.tsx` is
+        a new untracked file until it is committed — precisely the file T05 creates. The gate would
+        have reported clean on the one source most likely to reintroduce the call.
+
+  command_conventions:
+    whole_suite: "cd workbench && bun run test"
+    single_desktop_suite: "cd workbench/apps/desktop && bun run test <Filter>"
+    ui_components_suite: "cd workbench/packages/sea-forge-ui-components && bun run test"
+    warning: >-
+      `cd workbench && bun run test <Filter>` fails silently in the worst way: the root `test` script is
+      `bun run --cwd apps/desktop test && bun run --cwd packages/sea-forge-ui-components test`, so the
+      filter is appended to the ui-components leg only — the desktop suite runs unfiltered and the
+      suite you meant to filter is never selected. `bun test` (without `run`) invokes Bun's own runner;
+      both packages define `test` as `vitest run`.
+
+  gate_binding_rule: >-
+    Every task must pass `gate-typecheck-lint` and `gate-test`. Tasks touching tokens, contracts, or
+    any CSS under a gated copy-projection must pass `gate-contracts`. Tasks modifying `AppShell.tsx` or
+    adding shell components must pass `gate-no-alert`.
+
+  proof_levels:
+    P0: "Mechanical/deterministic change. Requires a narrow direct gate plus applicable global gates."
+    P1: "Normal behavioral work. Requires positive behavior, a meaningful teeth/falsification check, and global gates."
+    P2: "Invariant-sensitive work. Requires an explicit claim, meaningful adversarial/negative evidence, and global gates."
+    P3: "Settlement-critical work. Requires frozen preregistration, builder evidence, adversarial attacks, and independent confirmation."
+
+# -----------------------------------------------------------------------------
+# DEPENDENCY GRAPH
+# -----------------------------------------------------------------------------
+dependency_graph:
+  edges:
+    - ["T00", "T01"]
+    - ["T01", "T02"]
+    - ["T00", "T03"]
+    - ["T00", "T04"]
+    - ["T00", "T05"]
+    - ["T05", "T06"]
+    - ["T00", "T07"]
+    - ["T00", "T08"]
+    - ["T02", "T09"]
+    - ["T03", "T09"]
+    - ["T04", "T09"]
+    - ["T06", "T09"]
+    - ["T07", "T09"]
+    - ["T08", "T09"]
+
+  critical_path:
+    - "T00"
+    - "T05"
+    - "T06"
+    - "T09"
+
+  parallel_tracks:
+    - name: "Status and Theme Pipeline"
+      after: "T00"
+      tasks: ["T01", "T02"]
+
+    - name: "Core Workflow Remediation"
+      after: "T00"
+      tasks: ["T03", "T04", "T07", "T08"]
+
+    - name: "Shell & Navigation Pipeline"
+      after: "T00"
+      tasks: ["T05", "T06"]
+
+  settlement_sequence:
+    - "Stage 0: Baseline verification and gate sanity (T00)"
+    - "Stage 1: Tokens, Status Pill Variants, and Readiness Preservation (T01, T02)"
+    - "Stage 2: Core Governed Interactions: Preflight, Inbox Duty Separation, Delegation, Horizon (T03, T04, T07, T08)"
+    - "Stage 3: Command Palette, Alert Elimination, and Shell Awareness (T05, T06)"
+    - "Stage 4: Final Whole-System Conformance & Fresh Browser Probe (T09)"
+
+# -----------------------------------------------------------------------------
+# INITIAL EXECUTION STATE
+# -----------------------------------------------------------------------------
+initial_state:
+  current_task: "T00"
+  last_settled_task: null
+
+  ready:
+    - "T00"
+
+  blocked:
+    T01: ["T00"]
+    T02: ["T01"]
+    T03: ["T00"]
+    T04: ["T00"]
+    T05: ["T00"]
+    T06: ["T05"]
+    T07: ["T00"]
+    T08: ["T00"]
+    T09: ["T02", "T03", "T04", "T06", "T07", "T08"]
+
+# =============================================================================
+# TASK CONTRACTS
+# =============================================================================
+
+tasks:
+
+  # ---------------------------------------------------------------------------
+  # TASK 0: Baseline Verification & Environment Sanity
+  # ---------------------------------------------------------------------------
+  T00:
+    title: "Verify Baseline Green State and Test Harness Gates"
+    initial_status: ready
+    depends_on: []
+    proof_level: P1
+    confirmation: builder
+
+    settles: []
+
+    changes: >-
+      No application code changes. Establishes the clean baseline by running all existing
+      static, contract, and unit test suites, recording baseline test counts.
+
+    proves: >-
+      The working tree is uncorrupted, the Tauri contracts gate passes, and the existing
+      152 desktop tests + 17 UI component tests execute cleanly without pre-existing errors.
+
+    does_not_prove: >-
+      Does not prove any remediation of the audit findings.
+
+    hot_context:
+      - "workbench/apps/desktop/package.json"
+      - "justfile (recipe: workbench-contracts-gate)"
+
+    steps:
+      - "Run `just workbench-contracts-gate` to confirm zero schema drift."
+      - "Run `cd workbench && bun run check` to confirm zero lint and typecheck errors."
+      - "Run `cd workbench && bun run test` to capture the baseline. Measured 2026-09-04: 22 desktop files / 152 tests, 1 ui-components file / 17 tests, 169 total, all passing."
+      - "Create `.agents/evidence/frontend-remediation/preregistrations/`; the evidence and preregistration roots do not exist yet."
+
+    gate:
+      - "just workbench-contracts-gate"
+      - "cd workbench && bun run check"
+      - "cd workbench && bun run test"
+
+    teeth:
+      - attack: "Simulate a broken contract by adding an invalid field in contracts; ensure gate fails."
+        expected: "`just workbench-contracts-gate` exits nonzero on schema discrepancy."
+
+    redesign_trigger: >-
+      Any pre-existing failure in the baseline test suite or contract gate. If broken,
+      the baseline must be repaired before starting remediation tasks.
+
+    evidence: ".agents/evidence/frontend-remediation/T00_baseline.txt"
+
+    done_when:
+      - "All 3 baseline gate commands exit 0."
+      - "Zero errors reported by TypeScript compiler and oxlint."
+      - "Baseline counts recorded in the evidence file; any deviation from 152/17 is reported before remediation begins."
+      - "`.agents/evidence/frontend-remediation/preregistrations/` exists."
+
+  # ---------------------------------------------------------------------------
+  # TASK 1: Token Contrast & GovernedStatusPill Stale Variant
+  # ---------------------------------------------------------------------------
+  T01:
+    title: "Add 'stale' Variant to GovernedStatusPill and Remediate Contrast at the Usage Site"
+    initial_status: blocked
+    depends_on: ["T00"]
+    proof_level: P2
+    confirmation: builder_with_teeth
+
+    settles:
+      - "REQ-GOAL-007"
+      - "REQ-GOAL-010"
+      - "REQ-READINESS-001"
+      - "REQ-READINESS-003"
+      - "REQ-A11Y-001"
+      - "REQ-A11Y-002"
+      - "REQ-A11Y-003"
+      - "REQ-CONFIG-003"
+      - "REQ-OUT-004"
+      - "REQ-OUT-005"
+
+    changes: >-
+      1. `workbench/packages/sea-forge-ui-components/src/GovernedStatusPill.tsx`: add `'stale'` to the
+         `GovernedStatusVariant` union and to `KNOWN_VARIANTS` (both lists must be edited — an entry
+         missing from the set falls back to `'unknown'` even when the type admits it).
+      2. `workbench/packages/sea-forge-ui-components/src/GovernedStatusPill.module.css`: add a `.stale`
+         class, amber dot (`var(--color-authority-escalated)`), distinct from `.degraded`.
+      3. Contrast, at the usage site only: in `workbench/apps/desktop/src/**/*.module.css` and
+         `workbench/packages/sea-forge-ui-components/src/**/*.module.css`, replace `var(--fg-tertiary)`
+         with `var(--fg-secondary)` on every rule whose text is essential and whose computed size is
+         below 18px (below 14px bold). Leave decorative and >= AA-large uses alone (REQ-A11Y-003).
+      4. Add tests to `GovernedStatusPill.test.tsx` (in `components.test.tsx`, the package's single
+         suite) for the `stale` variant.
+
+    changes_explicitly_forbidden: >-
+      NO token file is edited. `workbench/packages/sea-forge-ui-tokens/sea-forge.tokens.css` is a
+      byte-for-byte copy-projection of `.agents/specs/frontend/colors_and_type.css`, enforced by
+      `packages/sea-forge-ui-tokens/scripts/check-drift.mjs` inside `just workbench-contracts-gate`,
+      and `workbench/AGENTS.md` states "Never hand-edit it directly". The v0.1.0 plan changed
+      `--fg-tertiary` to `#7E8FA6` in that file, which would have failed this task's own contracts
+      gate; and `#7E8FA6` measures only 4.45:1 against `--surface-panel-elevated` (`#1F2937`), so it
+      would not have met AA everywhere the token is used even if it had been permitted.
+
+    proves: >-
+      `GovernedStatusPill` renders `'stale'` with dedicated styling rather than collapsing to
+      `'unknown'`; essential small text meets WCAG AA on every surface it is drawn on; and the token
+      copy-projection is still byte-identical to its design-system source.
+
+    does_not_prove: >-
+      Does not prove that `ReadinessPage` surfaces the stale variant (settled in T02). Does not settle
+      whether `--fg-tertiary` should change value — that is a design-system decision recorded under
+      `roadmap_boundaries.design_token_value_revision`.
+
+    hot_context:
+      - "workbench/packages/sea-forge-ui-components/src/GovernedStatusPill.tsx:3-36"
+      - "workbench/packages/sea-forge-ui-components/src/GovernedStatusPill.module.css"
+      - "workbench/packages/sea-forge-ui-tokens/scripts/check-drift.mjs"
+      - "workbench/AGENTS.md:67-70"
+      - ".agents/specs/frontend/DESIGN.md:148"
+
+    steps:
+      - "In `GovernedStatusPill.tsx`: add `| \"stale\"` to `GovernedStatusVariant` AND `\"stale\"` to `KNOWN_VARIANTS`."
+      - "In `GovernedStatusPill.module.css`: create `.stale` referencing `--color-authority-escalated`, visually distinct from `.degraded`."
+      - "Enumerate candidates: `grep -rn 'fg-tertiary' workbench/apps/desktop/src workbench/packages/sea-forge-ui-components/src --include=*.css`."
+      - "For each hit, read the rule's font-size and role; convert only essential text below 18px (below 14px bold) to `var(--fg-secondary)`. Record the kept/converted decision per rule in the evidence file."
+      - "In `workbench/packages/sea-forge-ui-components/src/components.test.tsx`: assert `<GovernedStatusPill variant='stale' />` renders `status-pill--stale` and not `status-pill--unknown`."
+      - "Run `just workbench-contracts-gate` and confirm `check-drift.mjs` prints `sea-forge.tokens.css matches spec source.`"
+
+    gate:
+      - "cd workbench/packages/sea-forge-ui-components && bun run test"
+      - "just workbench-contracts-gate"
+      - "cd workbench && bun run check"
+      - "git diff --exit-code -- workbench/packages/sea-forge-ui-tokens .agents/specs/frontend/colors_and_type.css"
+
+    teeth:
+      - attack: "Add `'stale'` to the type union only, leaving `KNOWN_VARIANTS` untouched."
+        expected: "The pill falls back to `unknown` and the new assertion fails — proving the test observes the set, not just the type."
+      - attack: "Change one token value in `sea-forge.tokens.css` and re-run the gate."
+        expected: "`check-drift.mjs` fails, confirming the gate genuinely observes the copy-projection this task must not break."
+      - attack: "Re-measure the converted rules against `--surface-panel-elevated` (#1F2937), the darkest-contrast surface, not just `--surface-workspace`."
+        expected: "`--fg-secondary` gives 5.72:1 there; any rule left on `--fg-tertiary` (3.08:1) is decorative or >= AA-large and is justified in the evidence file."
+
+    redesign_trigger: >-
+      A rule carrying essential small text cannot use `--fg-secondary` without breaking the design
+      system's three-level text hierarchy. Then stop and raise the token-value decision as a blocked
+      decision under `roadmap_boundaries.design_token_value_revision` rather than editing the token.
+
+    evidence: ".agents/evidence/frontend-remediation/T01_pill_and_contrast.txt"
+
+    done_when:
+      - "`GovernedStatusPill` resolves `stale` to `status-pill--stale`, proven by a test that fails if `KNOWN_VARIANTS` is unchanged."
+      - "No essential text below 18px (below 14px bold) uses `var(--fg-tertiary)`; every retained use is justified in the evidence file."
+      - "`git diff` over the token package and `colors_and_type.css` is empty."
+      - "`just workbench-contracts-gate` and `bun run check` exit 0."
+
+  # ---------------------------------------------------------------------------
+  # TASK 2: Readiness Page Stale State Preservation & Source Inspection
+  # ---------------------------------------------------------------------------
+  T02:
+    title: "Preserve 'stale' Readiness in ReadinessPage and Wire Source Record Drawer"
+    initial_status: blocked
+    depends_on: ["T01"]
+    proof_level: P1
+    confirmation: builder
+
+    settles:
+      - "REQ-READINESS-002"
+      - "REQ-READINESS-004"
+
+    changes: >-
+      1. `workbench/apps/desktop/src/pages/ReadinessPage.tsx`: split the compound condition in
+         `overallVariant()` so `overall === "stale"` returns `"stale"` and only
+         `"ready_with_limitations"` returns `"degraded"`.
+      2. VERIFY ONLY — `overallLabel()` already returns `"Readiness stale"` for `overall: "stale"`.
+         Confirm and leave it; do not rewrite it.
+      3. `inspectSource()`: present the `SourceRecordRef` as labelled record coordinates — `digest`,
+         `entry_id`, `ledger_id`, `record_id`, `freshness`, `rebuild_standing` — instead of a raw
+         `JSON.stringify` dump, and word the drawer so it does not imply the record body is shown.
+         Reading the body needs a records query that does not exist; that stays roadmapped.
+      4. Update `ReadinessPage.test.tsx` to assert that `overall: 'stale'` yields the `'stale'` variant
+         and that the source drawer renders the digest and entry id as labelled fields.
+
+    proves: >-
+      Readiness console visually differentiates a stale cell evaluation from a degraded evaluation,
+      preserving the temporal invalidation invariant.
+
+    does_not_prove: >-
+      Does not prove case authoring preflight stale detection (settled in T03).
+
+    hot_context:
+      - "workbench/apps/desktop/src/pages/ReadinessPage.tsx:53-70"
+      - "workbench/apps/desktop/src/pages/ReadinessPage.test.tsx"
+
+    steps:
+      - "In `ReadinessPage.tsx:53-58`: replace `if (overall === \"ready_with_limitations\" || overall === \"stale\") return \"degraded\";` with two separate branches returning `\"stale\"` and `\"degraded\"` respectively."
+      - "Confirm (do not change) that `overallLabel` already maps `stale` to `\"Readiness stale\"`."
+      - "Rework `inspectSource` to emit labelled record coordinates rather than a stringified struct."
+      - "In `ReadinessPage.test.tsx`: add tests for the `stale` variant and the labelled source fields."
+      - "Run `cd workbench/apps/desktop && bun run test ReadinessPage`."
+
+    gate:
+      - "cd workbench/apps/desktop && bun run test ReadinessPage"
+      - "cd workbench && bun run check"
+
+    teeth:
+      - attack: "Mock `overall: 'stale'`. If `overallVariant` collapses it, test asserting `data-variant='stale'` must fail."
+        expected: "Test fails if `overallVariant` returns 'degraded'."
+
+    redesign_trigger: >-
+      `ReadinessView["overall"]` no longer admits `'stale'`. Verified 2026-09-04 against
+      `workbench/packages/contracts/generated/ReadinessView.ts:32` — it does admit it, so this trigger
+      is defensive only. Note that `T01` must land first: returning `'stale'` before
+      `KNOWN_VARIANTS` contains it silently renders `unknown`.
+
+    evidence: ".agents/evidence/frontend-remediation/T02_readiness_stale.txt"
+
+    done_when:
+      - "`ReadinessPage.test.tsx` passes with new stale variant assertions."
+      - "All desktop tests remain green."
+
+  # ---------------------------------------------------------------------------
+  # TASK 3: Preflight Stale Shadowing Inversion in Case Creation
+  # ---------------------------------------------------------------------------
+  T03:
+    title: "Invert Preflight Stale Ternary Shadowing in CaseCreationWorkbench"
+    initial_status: blocked
+    depends_on: ["T00"]
+    proof_level: P2
+    confirmation: builder_with_teeth
+
+    settles:
+      - "REQ-GOAL-002"
+      - "REQ-PREFLIGHT-001"
+      - "REQ-PREFLIGHT-002"
+      - "REQ-PREFLIGHT-003"
+      - "REQ-PREFLIGHT-004"
+      - "REQ-SAFE-001"
+      - "REQ-OUT-003"
+
+    changes: >-
+      1. `workbench/apps/desktop/src/pages/CaseCreationWorkbench.tsx:138-155`: replace the two nested
+         ternaries feeding `GovernedStatusPill`'s `variant` and `label` with Algorithm 1
+         (`resolve_preflight_pill_state`) from the spec, evaluated in order:
+         `rejected_as_stale` -> `ok === true` -> `ok === false` -> no response.
+      2. The same change settles REQ-PREFLIGHT-004: a preflight that ran and refused
+         (`preflight.ok === false`) currently falls through to `"Not yet run"`, reporting a performed
+         check as an unperformed one. It must read `"Preflight failed"` (variant `blocked`).
+      3. VERIFY ONLY — line 163 already renders `"Re-run preflight"` when
+         `state === "rejected_as_stale"`. Confirm; do not rewrite.
+      4. VERIFY ONLY — `canCommit = state === "preflight_ok" && commitAction.isAllowed` (line 53)
+         already disables commit on stale. Confirm and add the regression assertion; do not rewrite.
+      5. In `CaseCreationWorkbench.test.tsx`: add one test for `preflight.ok === true` with
+         `state === "rejected_as_stale"` (pill = `Rejected as stale`, variant `blocked`, commit
+         disabled) and one for `preflight.ok === false` (pill = `Preflight failed`).
+
+    proves: >-
+      A preflighted case draft that becomes stale due to modified templates or digests immediately
+      displays 'Rejected as stale' (blocked) and disables commit, preventing false-green authorizations.
+
+    does_not_prove: >-
+      Does not prove server-side digest hashing algorithm in Rust kernel.
+
+    hot_context:
+      - "workbench/apps/desktop/src/pages/CaseCreationWorkbench.tsx:140-165"
+      - "scripts/workbench-e2e-case-authoring.sh:31-34"
+      - "workbench/apps/desktop/src/pages/CaseCreationWorkbench.test.tsx"
+
+    steps:
+      - "In `CaseCreationWorkbench.tsx`, replace the pill's `variant`/`label` ternaries with Algorithm 1 — ideally as one named helper returning `{ variant, label }`, so the ordering cannot be re-broken by a later edit to only one of the two expressions."
+      - "Verify (no edit) line 163: `{state === 'rejected_as_stale' ? 'Re-run preflight' : 'Run preflight'}`."
+      - "Verify (no edit) line 53: `canCommit = state === 'preflight_ok' && commitAction.isAllowed`."
+      - "In `CaseCreationWorkbench.test.tsx`, add the stale test and the failed-preflight test."
+      - "Run `cd workbench/apps/desktop && bun run test CaseCreationWorkbench`."
+
+    gate:
+      - "cd workbench/apps/desktop && bun run test CaseCreationWorkbench"
+      - "cd workbench && bun run check"
+
+    teeth:
+      - attack: "Set `preflight = { ok: true }` and `state = 'rejected_as_stale'`. Assert label is 'Rejected as stale'."
+        expected: "The pre-fix code returns 'Preflight passed' and the assertion fails."
+      - attack: "Set `preflight = { ok: false, errors: ['...'] }` with `state = 'draft'`. Assert label is 'Preflight failed'."
+        expected: "The pre-fix code returns 'Not yet run' and the assertion fails."
+      - attack: "Re-run the two tests with only the `variant` ternary reordered and the `label` ternary left alone."
+        expected: "The label assertion still fails — proving the tests observe both expressions, not just the colour."
+
+    redesign_trigger: >-
+      `caseAuthoringMachine` stops exposing `rejected_as_stale` as a state value. Verified 2026-09-04:
+      it is an explicit state (`machines/caseAuthoringMachine.ts:273`), entered from the commit
+      response and from status recovery — not from preflight — so the stale pill is reached after a
+      refused commit, which is what the test must simulate.
+
+    evidence: ".agents/evidence/frontend-remediation/T03_preflight_stale.txt"
+
+    done_when:
+      - "`CaseCreationWorkbench.test.tsx` passes with stale preflight test."
+      - "Commit button is disabled on stale state."
+      - "`cd workbench && bun run check` passes."
+
+  # ---------------------------------------------------------------------------
+  # TASK 4: Approval Inbox Duty Separation & Dynamic Sidebar Badge
+  # ---------------------------------------------------------------------------
+  T04:
+    title: "Enforce Separation of Duty in ApprovalInboxPage and Bind Sidebar Inbox Badge"
+    initial_status: blocked
+    depends_on: ["T00"]
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "REQ-GOAL-003"
+      - "REQ-GOAL-004"
+      - "REQ-INBOX-001"
+      - "REQ-INBOX-002"
+      - "REQ-INBOX-003"
+      - "REQ-INBOX-004"
+      - "REQ-INBOX-005"
+      - "REQ-INBOX-006"
+      - "REQ-INBOX-007"
+      - "REQ-SAFE-002"
+      - "REQ-SEC-002"
+
+    changes: >-
+      1. `workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx`: `ApprovalRow` currently takes only
+         `{ approval, busy, action, onDecide }` — thread the active actor id in (the page already
+         calls `useIdentity()`), then apply Algorithm 2 (`evaluate_approval_duty_separation`) to
+         produce a three-valued standing:
+         - `self_approval` when `identity.actor.actorId === approval.governance.requester`;
+         - `unverifiable` when `approval.governance` is absent, so no requester can be read;
+         - `permitted` otherwise.
+         Approve is disabled unless `permitted`; Reject stays enabled in all three (REQ-INBOX-007).
+         Each non-permitted standing renders its own notice, distinctly worded.
+      2. The comparison uses `governance.requester` and MUST NOT use `governance.eligible_actors`
+         (REQ-INBOX-006): `sfwp/approvals.rs:197` always returns it empty and
+         `conformance_case_episode.rs:583` pins it empty, so gating on it disables every row.
+      3. `workbench/apps/desktop/src/pages/ApprovalInboxPage.module.css`: style `.dutyNotice`.
+      4. `workbench/apps/desktop/src/shell/Sidebar.tsx`: the component currently takes no props at all
+         (`export function Sidebar()`), so introduce `SidebarProps { inboxCount?: number }` and move
+         `OPERATE_NAV`'s hardcoded `badge: 1` (line 19) to a value derived inside the component:
+         `badge: inboxCount && inboxCount > 0 ? inboxCount : undefined`. The existing render already
+         omits the badge when `item.badge === undefined`.
+      5. `workbench/apps/desktop/src/shell/AppShell.tsx`: pass `inboxCount` to `<Sidebar />`.
+         VERIFY ONLY — AppShell already computes it with the correct three-state semantics
+         (`undefined` while loading, errored, or unreadable; a number only once read) and already
+         passes it to `GlobalHeader`. Reuse that expression; do not recompute it.
+      6. Add tests in `ApprovalInboxPage.test.tsx` and a new `Sidebar.test.tsx`.
+
+    proves: >-
+      1. The UI's approve affordance mirrors the kernel's own predicate: `sea-forge-server` refuses a
+         self-approval with `IdentityRefusal::SelfApproval` by comparing `identity::approval_submitter`
+         (the `authority_decision.identity_binding.principal`) against the acting actor, and
+         `governance.requester` is that same value — so the button and the kernel agree rather than
+         the client inventing a rule.
+      2. An approval whose governance cannot be read is shown as unverifiable rather than permitted,
+         matching the kernel's `separation_of_duty_unverifiable` refusal.
+      3. The sidebar badge reflects the real pending queue and disappears when zero.
+
+    does_not_prove: >-
+      Does not prove kernel-side enforcement, which is independent and authoritative — this is an
+      honest affordance, not a security boundary. Does not prove behaviour for a cell whose bindings
+      resolve more than one actor to the same uid, where the header actor switcher can change the
+      acting identity between render and decision.
+
+    preregistration:
+      required: true
+      artifact: ".agents/evidence/frontend-remediation/preregistrations/plan-workbench-frontend-remediation-T04.prereg.yaml"
+      claims:
+        - "Approve is disabled when the active actor equals `governance.requester`."
+        - "Approve is disabled when `governance` is absent, because the requester cannot be read."
+        - "Reject remains enabled in both of those cases."
+        - "Sidebar inbox badge is omitted when inboxCount is 0 or undefined."
+      falsifiers:
+        - "Approve is enabled or clickable when actorId === governance.requester."
+        - "Approve is enabled when `governance` is null."
+        - "Reject is disabled by the duty check."
+        - "Sidebar inbox badge renders '1' when the queue is empty or unread."
+      known_confounds:
+        - "Actor id or requester id undefined or empty string — an empty-string match must not count as self-approval."
+        - "`governance.eligible_actors` is always empty; a check written against it would disable every row and could be mistaken for correct behaviour on a single-row fixture."
+        - "`useIdentity` resolves asynchronously; before it resolves the actor id is undefined, which must read as unverifiable rather than permitted."
+      confirmation_condition: >-
+        Vitest verifies all three standings — self, unverifiable, and permitted — and asserts Reject
+        stays enabled in the first two.
+
+    hot_context:
+      - "workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx:145-165"
+      - "workbench/apps/desktop/src/shell/Sidebar.tsx:19"
+      - "workbench/apps/desktop/src/shell/AppShell.tsx:135-145"
+
+    steps:
+      - "In `ApprovalInboxPage.tsx`, add an exported pure helper implementing Algorithm 2 so it can be unit-tested apart from the DOM, and pass the acting actor id into `ApprovalRow`."
+      - "Wire Approve's `disabled` to `busy || !action.isAllowed || standing !== 'permitted'`; leave Reject on `busy || !action.isAllowed`."
+      - "Render the standing-specific notice; do not reuse one string for both non-permitted standings."
+      - "In `Sidebar.tsx`, introduce `SidebarProps` (none exist today) and derive the Inbox badge from `inboxCount`, removing the hardcoded `badge: 1`."
+      - "In `AppShell.tsx`, pass the existing `inboxCount` expression into `<Sidebar />`."
+      - "Write tests in `ApprovalInboxPage.test.tsx` and a new `Sidebar.test.tsx`."
+      - "Run `cd workbench/apps/desktop && bun run test ApprovalInboxPage` then `... bun run test Sidebar`."
+
+    gate:
+      - "cd workbench/apps/desktop && bun run test ApprovalInboxPage"
+      - "cd workbench/apps/desktop && bun run test Sidebar"
+      - "cd workbench && bun run check"
+
+    teeth:
+      - attack: "Mount with `actor.actorId = 'alice'` and `governance.requester = 'alice'`; click Approve."
+        expected: "Button carries `disabled`; `onDecide` is never called."
+      - attack: "Mount with `governance: null`; click Approve."
+        expected: "Button carries `disabled` with the unverifiable notice; Reject is still clickable."
+      - attack: "Mount with `actor.actorId = ''` and `governance.requester = ''`."
+        expected: "Treated as unverifiable, not as a self-approval match and not as permitted."
+      - attack: "Rewrite the check against `governance.eligible_actors` and re-run the suite."
+        expected: "The permitted-case test fails, proving the suite would catch that substitution."
+      - attack: "Mount `Sidebar` with `inboxCount = 0`, then `undefined`, then `3`."
+        expected: "No badge, no badge, badge '3'."
+
+    independent_confirmation:
+      verifier_receives:
+        - "REQ-INBOX-003 and REQ-INBOX-004"
+        - "ApprovalInboxPage.tsx diff and test execution output"
+      required_verdict: "CONFIRMED_COMPLIANT"
+
+    redesign_trigger: >-
+      `ApprovalGovernanceContext` stops carrying `requester`, or the kernel's `approval_submitter`
+      stops reading `authority_decision.identity_binding.principal`, breaking the correspondence the
+      UI predicate depends on. Verified 2026-09-04:
+      `workbench/packages/contracts/generated/PendingApproval.ts` declares `requester: string` inside
+      `ApprovalGovernanceContext`, `sfwp/approvals.rs:190` populates it from
+      `decision.identity_binding.principal`, and `identity.rs:407-443` reads the same field.
+
+    evidence: ".agents/evidence/frontend-remediation/T04_inbox_duty_separation.txt"
+
+    done_when:
+      - "Approve button is verified disabled for self-approval in unit tests."
+      - "Sidebar badge is verified dynamic in unit tests."
+      - "Global test suite remains green."
+
+  # ---------------------------------------------------------------------------
+  # TASK 5: Command Palette Modal & Alert Elimination
+  # ---------------------------------------------------------------------------
+  T05:
+    title: "Implement CommandPalette Component and Eliminate native alert() in AppShell"
+    initial_status: blocked
+    depends_on: ["T00"]
+    proof_level: P2
+    confirmation: builder_with_teeth
+
+    settles:
+      - "REQ-GOAL-001"
+      - "REQ-PALETTE-001"
+      - "REQ-PALETTE-002"
+      - "REQ-PALETTE-003"
+      - "REQ-PALETTE-004"
+      - "REQ-PALETTE-005"
+      - "REQ-PALETTE-006"
+      - "REQ-PALETTE-007"
+      - "REQ-SAFE-003"
+      - "REQ-OUT-001"
+
+    changes: >-
+      1. Create `workbench/apps/desktop/src/shell/CommandPalette.tsx`:
+         - Modal overlay with search input (auto-focus).
+         - Real-time substring filtering across catalog items (Readiness, Cases, New Case, Inbox, Operations, Delegation, Thoth, Assets, Admin).
+         - Keyboard navigation: `ArrowDown`/`ArrowUp` to change selection, `Enter` to navigate, `Escape` to close.
+         - Click outside backdrop to close.
+      2. Create `workbench/apps/desktop/src/shell/CommandPalette.module.css`: Dense dark Astryx styling.
+      3. `workbench/apps/desktop/src/shell/AppShell.tsx`:
+         - Add `isSearchOpen` state.
+         - Replace line 140: `onOpenSearch={() => alert("Search command palette (Press /)")}` with
+           `onOpenSearch={() => setIsSearchOpen(true)}`.
+         - MODIFY the existing `keydown` effect at lines 79-99 — do NOT add a second listener. That
+           effect already guards INPUT / TEXTAREA / contentEditable and already binds `/`, currently to
+           focusing `#searchButton`; change that branch to open the palette and extend the guard to
+           `SELECT`. Two listeners would both call `preventDefault` and the shortcut's behaviour would
+           depend on registration order.
+         - Render `<CommandPalette isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />`.
+      4. Add `CommandPalette.test.tsx`. There is no `AppShell.test.tsx` today; the nearest existing
+         suite is `shell/shellKeyboard.test.tsx` — extend it for the `/` behaviour rather than
+         inventing a second shell suite.
+
+    proves: >-
+      Zero `alert()` calls remain; operators can press `/` to open command palette and navigate
+      smoothly with keyboard without UI halting.
+
+    does_not_prove: >-
+      Does not prove deep full-text indexing of ledger event payloads (roadmapped).
+
+    hot_context:
+      - "workbench/apps/desktop/src/shell/AppShell.tsx:140"
+      - "workbench/apps/desktop/src/shell/GlobalHeader.tsx:120-130"
+      - "workbench/apps/desktop/src/router.tsx"
+
+    steps:
+      - "Implement `CommandPalette.tsx` according to Algorithm 3 (`filter_and_select_command_palette`) in the spec."
+      - "Implement `CommandPalette.module.css` using theme variables (`--surface-overlay`, `--surface-panel`, `--fg-primary`); use `--fg-secondary` for any essential text below 18px, per REQ-A11Y-001."
+      - "In `AppShell.tsx`: replace the `alert()` call and modify the existing keydown effect's `/` branch; extend its guard to `SELECT`."
+      - "Write `CommandPalette.test.tsx` covering open, filter, arrow selection, Enter navigation, Escape, and focus restoration."
+      - "Extend `shell/shellKeyboard.test.tsx` for `/` opening the palette and for `/` inside a text field NOT opening it."
+      - "Run `grep -rn 'alert(' workbench/apps/desktop/src/` and confirm no match (grep exits 1)."
+
+    gate:
+      - "grep -rn 'alert(' workbench/apps/desktop/src/ ; test $? -eq 1"
+      - "cd workbench/apps/desktop && bun run test CommandPalette"
+      - "cd workbench/apps/desktop && bun run test shellKeyboard"
+      - "cd workbench && bun run check"
+
+    teeth:
+      - attack: "Simulate pressing '/' while focused inside an `<input>`, a `<textarea>`, and a contentEditable node."
+        expected: "The palette does not open in any of the three; typing is not hijacked."
+      - attack: "Simulate clicking `#searchButton` in `GlobalHeader` with `window.alert` replaced by a spy."
+        expected: "The dialog opens and the spy is never called."
+      - attack: "Mount and unmount `AppShell` repeatedly, counting `window.addEventListener('keydown')` against `removeEventListener`."
+        expected: "Counts match — the existing effect was modified, not duplicated, and its cleanup still runs."
+      - attack: "Run the `gate-no-alert` command with `CommandPalette.tsx` written but not yet `git add`ed."
+        expected: "`grep` still reads the untracked file. (`git grep` would not, which is why the gate was changed.)"
+
+    redesign_trigger: >-
+      Command palette requires external native window. (Spec mandates in-webview modal).
+
+    evidence: ".agents/evidence/frontend-remediation/T05_command_palette.txt"
+
+    done_when:
+      - "`grep -rn 'alert(' workbench/apps/desktop/src/` returns zero matches over tracked and untracked files."
+      - "`CommandPalette.test.tsx` passes, including Escape and focus restoration."
+      - "`shellKeyboard.test.tsx` passes, including the negative case for `/` inside a text field."
+      - "Exactly one window keydown listener is registered by `AppShell`."
+
+  # ---------------------------------------------------------------------------
+  # TASK 6: Shell Indicators & Journey Ribbon Lifecycle Progression
+  # ---------------------------------------------------------------------------
+  T06:
+    title: "Wire Header Active Work, Context Chip Handlers, and Journey Ribbon Progression"
+    initial_status: blocked
+    depends_on: ["T05"]
+    proof_level: P1
+    confirmation: builder
+
+    settles:
+      - "REQ-GOAL-008"
+      - "REQ-GOAL-009"
+      - "REQ-SHELL-001"
+      - "REQ-SHELL-002"
+      - "REQ-SHELL-003"
+      - "REQ-SHELL-004"
+      - "REQ-SHELL-005"
+      - "REQ-CONFIG-001"
+      - "REQ-CONFIG-002"
+
+    changes: >-
+      1. `workbench/apps/desktop/src/shell/JourneyRibbon.tsx`: implement Algorithm 4 from the spec,
+         INCLUDING its `ROUTE_LIFECYCLE_PHASE` map. This is the substance of the task, not a detail:
+         the values the router actually emits are `Readiness, Thoth, Assets, Domain, Cases, Inbox,
+         Operations` (`pages/operateRoutes.ts`, `AppShell.tsx:31`), while `GOVERNED_STEPS` are
+         `Authority, Domain, Draft, Preflight, Execution, Evidence, Settlement`. Only `Domain` is
+         common to both, so matching the incoming step against the canonical list resolves nothing for
+         six of seven routes. Mapping first, then indexing, is what makes the ribbon work.
+         Also remove the duplicate render: the component currently emits `currentStep` in a `<strong>`
+         and then the entire canonical list, so the active step appears twice.
+         An unmapped step renders every step as `stepFuture` with no active step.
+      2. `workbench/apps/desktop/src/shell/JourneyRibbon.module.css`: add `.stepDone` and `.stepFuture`.
+      3. `workbench/apps/desktop/src/shell/GlobalHeader.tsx`:
+         - Accept `activeWorkCount?: number` and render it three-valued, exactly as the component
+           already renders `inboxCount`: `undefined` -> `Unknown`, `0` -> `None running`,
+           `n` -> `n running`. `activeWorkCount && activeWorkCount > 0 ? ... : 'None running'` is
+           wrong — it prints `None running` for `undefined`, which is the false-zero the file's own
+           header comment ("There are no defaults now. An absent value renders as absent") forbids,
+           and which `GlobalHeader.test.tsx` already tests for on the inbox pill.
+         - Accept `onInspectContext?: (kind: 'actor' | 'cell' | 'integrity') => void` and attach it to
+           the three context chips, which are `<button>` elements with no handler today.
+      4. `workbench/apps/desktop/src/shell/AppShell.tsx`:
+         - Derive `activeWorkCount` from `useRunList()`: `undefined` while `isLoading`, on `error`, or
+           when `unreadable` is non-empty; otherwise the count of `runs` with `execution === "active"`.
+           (`ExecutionStanding` is `pending | enabled | active | completed | failed | terminated`.)
+         - Connect `onInspectContext` to the existing `setSelectedEvidence` / `setIsEvidenceOpen` pair.
+      5. Add `JourneyRibbon.test.tsx` (new) and extend `GlobalHeader.test.tsx` (exists).
+
+    proves: >-
+      Journey ribbon accurately visualizes progress through the governed lifecycle;
+      header context chips afford inspection; active work pill accurately reflects live activity.
+
+    does_not_prove: >-
+      Does not prove server event emission frequency.
+
+    hot_context:
+      - "workbench/apps/desktop/src/shell/JourneyRibbon.tsx:1-29"
+      - "workbench/apps/desktop/src/shell/GlobalHeader.tsx:73-150"
+      - "workbench/apps/desktop/src/shell/AppShell.tsx:123-150"
+
+    steps:
+      - "Export `ROUTE_LIFECYCLE_PHASE` from `JourneyRibbon.tsx` (or a sibling module) so its totality can be asserted in a test."
+      - "Rewrite the ribbon body: map route step to phase, index the phase in `GOVERNED_STEPS`, render each canonical step exactly once with `.stepDone` / `.stepActive` / `.stepFuture`."
+      - "Add `.stepDone` and `.stepFuture` to `JourneyRibbon.module.css`."
+      - "Update `GlobalHeader.tsx` for three-valued `activeWorkCount` and chip `onClick` handlers."
+      - "Update `AppShell.tsx` to derive `activeWorkCount` from `useRunList()` and to pass an `onInspectContext` handler."
+      - "Run `cd workbench/apps/desktop && bun run test JourneyRibbon` then `... bun run test GlobalHeader`."
+
+    gate:
+      - "cd workbench/apps/desktop && bun run test JourneyRibbon"
+      - "cd workbench/apps/desktop && bun run test GlobalHeader"
+      - "cd workbench && bun run check"
+
+    teeth:
+      - attack: "Drive `JourneyRibbon` with the real route value `'Cases'` — not with a canonical name."
+        expected: "'Authority' and 'Domain' carry `stepDone`, 'Draft' carries `stepActive`, the rest `stepFuture`. An implementation that only name-matches the canonical list renders no active step and fails here, while a test written with `currentStep='Preflight'` would have passed it."
+      - attack: "Drive it with a step absent from `ROUTE_LIFECYCLE_PHASE`."
+        expected: "All seven render `stepFuture`; none carries `stepActive`. No step is silently treated as position zero."
+      - attack: "Assert every `journeyStep` literal in `pages/operateRoutes.ts` and `AppShell.tsx` has a `ROUTE_LIFECYCLE_PHASE` entry."
+        expected: "Passes now, and fails the day a new route adds an unmapped step."
+      - attack: "Count occurrences of each canonical step name in the rendered ribbon."
+        expected: "Exactly one each — the pre-fix duplicate render is gone."
+      - attack: "Render `GlobalHeader` with `activeWorkCount={undefined}`."
+        expected: "'Unknown'. A `count && count > 0` expression prints 'None running' here and fails."
+
+    redesign_trigger: >-
+      `operateRoutes.ts` adopts the canonical lifecycle vocabulary directly, making
+      `ROUTE_LIFECYCLE_PHASE` an identity map — then delete the map rather than keeping a
+      pass-through. Alternatively, the wireframe spec revises the seven canonical steps, in which case
+      both `GOVERNED_STEPS` and the map change together.
+
+    evidence: ".agents/evidence/frontend-remediation/T06_shell_ribbon.txt"
+
+    done_when:
+      - "`JourneyRibbon.test.tsx` and `GlobalHeader.test.tsx` pass, including the real-route-value and unmapped-step cases."
+      - "`ROUTE_LIFECYCLE_PHASE` is total over the journey steps the router emits, proven by a test."
+      - "`GlobalHeader` renders Unknown / None running / N running for undefined / 0 / n."
+      - "All desktop tests remain green."
+
+  # ---------------------------------------------------------------------------
+  # TASK 7: Delegation Workbench Active Dispatch Flow
+  # ---------------------------------------------------------------------------
+  T07:
+    title: "Implement Active Delegation Dispatch via Tauri Bridge in DelegationWorkbench"
+    initial_status: blocked
+    depends_on: ["T00"]
+    proof_level: P2
+    confirmation: builder_with_teeth
+
+    settles:
+      - "REQ-GOAL-005"
+      - "REQ-DELEGATE-001"
+      - "REQ-DELEGATE-002"
+      - "REQ-DELEGATE-003"
+      - "REQ-DELEGATE-004"
+      - "REQ-DELEGATE-005"
+      - "REQ-SEC-001"
+
+    changes: >-
+      1. `workbench/apps/desktop/src/hooks/useDelegations.ts`: add `dispatchDelegation`, following the
+         shape of the `cancel` callback already in that file:
+         `invoke('sfwp_command', { command: { verb: 'delegate', endpoint, instruction, max_turns,
+         request_id, ...(model ? { model } : {}), ...(token_budget ? { token_budget } : {}) },
+         ...(selectedActorId() ? { actAs: selectedActorId() } : {}) })`.
+         `request_id` is MANDATORY and must be non-empty: `Request::Delegate` is listed in
+         `sea-forge-server`'s `requires_durable_locator`, so a dispatch without one is refused before
+         admission with `error_class: durable_locator_required` and `no_side_effect: true` — the
+         button would appear to work and nothing would ever run. Generate it in the shape
+         `machines/caseAuthoringMachine.ts:94` uses (`req-agent-run-delegate-<random>-<epoch_ms>`).
+         `max_turns` is a required `u32` on the bridge enum; `model` and `token_budget` are optional
+         and must be omitted rather than sent empty.
+         Invalidate `DELEGATIONS_QUERY_KEY` afterwards either way, as `cancel` does — the roster is the
+         authority on what happened, including when the command was refused.
+      2. `workbench/apps/desktop/src/pages/DelegationWorkbench.tsx`:
+         - Render a `ProtectedActionButton` (already exported from `@sea-forge/ui-components` and used
+           in `DelegationRoster.tsx` and `CaseCreationWorkbench.tsx`) labelled "Dispatch delegation"
+           when `preview.contract` exists and `preview.eligible` is true.
+         - Disable it while `stale === true`, the flag the page already computes when the form has
+           changed since the contract was read (REQ-DELEGATE-005). Dispatching under a contract the
+           operator did not read submits a request nobody reviewed.
+         - Preserve the page's existing distinction between eligible and authorized: the button's copy
+           must not imply a decision that only the kernel makes, and the surrounding prose about
+           `required_authority` stays.
+         - On a response carrying `run_id`, navigate to `/runs/$runId`; on an `error`, render the
+           existing alert treatment. Do not update the roster optimistically.
+      3. Do NOT gate the button on SFWP catalog membership (REQ-DELEGATE-004): `system.describe`
+         publishes `delegation.preview` and `delegation.list` but no delegate method — `delegate` is a
+         pre-catalog protected verb reachable through the bridge, and a catalog check would hide it.
+      4. Add tests in `DelegationWorkbench.test.tsx` (exists) and `useDelegations.test.ts` (new).
+
+    proves: >-
+      Operators can configure, preview, and actively dispatch an agent delegation task into the kernel,
+      converting the workbench from inspect-only to an operational control surface.
+
+    does_not_prove: >-
+      Does not prove external LLM provider API response latency or model tokens.
+
+    hot_context:
+      - "workbench/apps/desktop/src/pages/DelegationWorkbench.tsx (form state, `stale`, contract render)"
+      - "workbench/apps/desktop/src/hooks/useDelegations.ts (the `cancel` callback is the pattern to copy)"
+      - "workbench/apps/desktop/src-tauri/src/bridge.rs:211-229 (SfwpCommand::Delegate field list)"
+      - "crates/sea-forge-server/src/lib.rs:1316-1336 (requires_durable_locator / durable_locator_refusal)"
+      - "workbench/apps/desktop/src/machines/caseAuthoringMachine.ts:94 (request_id generator shape)"
+
+    steps:
+      - "Add `dispatchDelegation` to `useDelegations.ts`, mirroring `cancel`: busy state, outcome record, query invalidation in `finally`, and a generated non-empty `request_id`."
+      - "In `DelegationWorkbench.tsx`, render `ProtectedActionButton` labelled 'Dispatch delegation', enabled only when the contract is present, eligible, and not stale."
+      - "On success, navigate to `/runs/$runId`; on refusal, surface `error` and `next_lawful_action` inline."
+      - "Write `useDelegations.test.ts` asserting the exact command payload, and extend `DelegationWorkbench.test.tsx` for the disabled cases."
+      - "Run `cd workbench/apps/desktop && bun run test DelegationWorkbench` then `... bun run test useDelegations`."
+
+    gate:
+      - "cd workbench/apps/desktop && bun run test DelegationWorkbench"
+      - "cd workbench/apps/desktop && bun run test useDelegations"
+      - "cd workbench && bun run check"
+
+    teeth:
+      - attack: "Dispatch with a mocked `invoke`; read the `command` argument."
+        expected: "`verb === 'delegate'`, `endpoint`/`instruction`/`max_turns` present, and `request_id` a non-empty string. A payload without `request_id` fails — the server would refuse it with `durable_locator_required` and the UI would show a button that never runs anything."
+      - attack: "Edit the instruction after reading the contract, then click Dispatch."
+        expected: "Disabled while `stale` is true; the operator cannot dispatch a contract they did not read."
+      - attack: "Dispatch with `model` and `token_budget` left blank."
+        expected: "Both keys are absent from the payload, not sent as empty string or 0. A zero token budget would instruct the kernel to spend nothing, which is not what a blank field means."
+      - attack: "Mock the response as `{ error: '...' }`."
+        expected: "The roster is still invalidated, no navigation occurs, and the error is shown."
+
+    redesign_trigger: >-
+      `SfwpCommand::Delegate` leaves the bridge, or `Request::Delegate` leaves
+      `requires_durable_locator`. Verified 2026-09-04: the variant exists at `bridge.rs:211` with
+      fields `endpoint, instruction, run_id?, model?, max_turns, token_budget?, policy?, entity?,
+      process?, request_id?`, and `lib.rs:1323` lists it under `requires_durable_locator`.
+
+    evidence: ".agents/evidence/frontend-remediation/T07_delegation_dispatch.txt"
+
+    done_when:
+      - "`DelegationWorkbench.test.tsx` passes with dispatch execution assertions."
+      - "`cd workbench && bun run check` passes."
+
+  # ---------------------------------------------------------------------------
+  # TASK 8: Case Horizon Plan Item Inspection & Retry Links
+  # ---------------------------------------------------------------------------
+  T08:
+    title: "Implement Plan Item Inspection in EvidenceDrawer and Retry Links in CaseHorizonPage"
+    initial_status: blocked
+    depends_on: ["T00"]
+    proof_level: P1
+    confirmation: builder
+
+    settles:
+      - "REQ-GOAL-006"
+      - "REQ-HORIZON-001"
+      - "REQ-HORIZON-002"
+      - "REQ-HORIZON-003"
+
+    changes: >-
+      1. `workbench/apps/desktop/src/pages/CaseHorizonPage.tsx`:
+         - In `HorizonRow`, call `useEvidenceContext()` and add an "Inspect" button passing the plan
+           item — id, kind, both standings, `depends_on`, `last_event_at`, `run_ids` — to
+           `inspectEvidence`.
+         - When `item.execution` is `'failed'` or `'terminated'`, render a link to `/runs/$runId` for
+           each entry in `item.run_ids`, so the operator reaches the episode that explains the
+           standing. `ExecutionStanding` is `pending | enabled | active | completed | failed |
+           terminated`; there is no `'cancelled'` member, and referring to one would not compile.
+      2. Add NO retry, dispatch, park, or cancel control (REQ-HORIZON-003). The v0.1.0 plan proposed
+         `<Link to='/cases/new' search={{ retryItem }}>`; `/cases/new` declares no `validateSearch`,
+         so a typed search parameter does not compile, and no SFWP method backs item-level control in
+         any case. Authoring a new case is not retrying a plan item, and a control that cannot reach
+         the kernel would be a button that lies. This is deferred under
+         `roadmap_boundaries.case_item_control`.
+      3. Update `CaseHorizonPage.test.tsx` to verify the inspect payload and the run links.
+
+    proves: >-
+      Operators can inspect an individual plan item's evidence in the drawer and reach the run records
+      behind a failed or terminated item without leaving the board.
+
+    does_not_prove: >-
+      Does not prove item-level control of any kind — no dispatch, park, cancel, or retry exists, here
+      or in the kernel. Does not prove automatic recovery.
+
+    hot_context:
+      - "workbench/apps/desktop/src/pages/CaseHorizonPage.tsx:55-115"
+      - "workbench/apps/desktop/src/pages/CaseHorizonPage.test.tsx"
+
+    steps:
+      - "In `CaseHorizonPage.tsx:HorizonRow`, add `useEvidenceContext()` and an 'Inspect' button that passes the plan item to `inspectEvidence`."
+      - "For `item.execution === 'failed' || item.execution === 'terminated'`, render one `<Link to='/runs/$runId' params={{ runId }}>` per entry in `item.run_ids ?? []`."
+      - "When such an item has no `run_ids`, say so explicitly rather than rendering nothing — an item that failed with no episode is a fact, not an empty cell."
+      - "Update `CaseHorizonPage.test.tsx`."
+      - "Run `cd workbench/apps/desktop && bun run test CaseHorizonPage`."
+
+    gate:
+      - "cd workbench/apps/desktop && bun run test CaseHorizonPage"
+      - "cd workbench && bun run check"
+
+    teeth:
+      - attack: "Click 'Inspect' on a HorizonRow with a mocked `inspectEvidence`."
+        expected: "Receives the plan item id and both standings, not a summary string."
+      - attack: "Render a `terminated` item carrying two `run_ids`."
+        expected: "Two run links render. An implementation that only handles `failed` renders none and fails."
+      - attack: "Render a `failed` item with `run_ids` absent."
+        expected: "An explicit 'no episode recorded' statement, not an empty region."
+      - attack: "Search the diff for any dispatch, park, cancel, or retry control."
+        expected: "None — REQ-HORIZON-003 holds."
+
+    redesign_trigger: >-
+      `HorizonItem` stops carrying `plan_item_id` or `run_ids`, or an SFWP item-control method appears
+      in `system.describe` — the latter reopens `roadmap_boundaries.case_item_control` as real work
+      rather than a deferral. Verified 2026-09-04: `CaseHorizon.ts` declares `plan_item_id: string`
+      and `run_ids?: string[]`, and the catalog publishes no item-control method.
+
+    evidence: ".agents/evidence/frontend-remediation/T08_horizon_inspect.txt"
+
+    done_when:
+      - "`CaseHorizonPage.test.tsx` passes."
+      - "All desktop tests remain green."
+
+  # ---------------------------------------------------------------------------
+  # TASK 9: Final Full-System Conformance & Fresh Browser Confirmation
+  # ---------------------------------------------------------------------------
+  T09:
+    title: "Execute Whole-System Conformance Gates and Live Browser Confirmation"
+    initial_status: blocked
+    depends_on: ["T02", "T03", "T04", "T06", "T07", "T08"]
+    proof_level: P3
+    confirmation: independent_adversarial
+
+    settles:
+      - "REQ-VERIFY-001"
+      - "REQ-VERIFY-002"
+      - "REQ-VERIFY-003"
+      - "REQ-VERIFY-004"
+      - "REQ-VERIFY-005"
+      - "REQ-CONFIG-010"
+      - "REQ-CONFIG-011"
+      - "REQ-CONFIG-012"
+      - "REQ-SEC-003"
+      - "REQ-OUT-002"
+
+    confirms:
+      - "REQ-PALETTE-001"
+      - "REQ-PREFLIGHT-001"
+      - "REQ-INBOX-003"
+      - "REQ-INBOX-005"
+      - "REQ-DELEGATE-001"
+      - "REQ-DELEGATE-002"
+      - "REQ-SHELL-004"
+      - "REQ-A11Y-002"
+
+    changes: >-
+      Final end-to-end integration and proof verification across all remediated components.
+      Updates status records in `.agents/current_status.yml`.
+
+    proves: >-
+      The whole desktop frontend fulfills all normative requirements of `spec-workbench-frontend-remediation.yaml`,
+      passes all 4 global gates, and operates smoothly live in the target environment.
+
+    does_not_prove: >-
+      Does not prove roadmap features (unbacked surfaces `/models`, `/memory`, etc. remain honestly unbacked).
+
+    preregistration:
+      required: true
+      artifact: ".agents/evidence/frontend-remediation/preregistrations/plan-workbench-frontend-remediation-T09.prereg.yaml"
+      claims:
+        - "Zero occurrences of `alert(` exist across `workbench/apps/desktop/src/`, tracked and untracked."
+        - "Total passing Vitest tests exceed the measured baseline of 169, and every `validation_matrix.core_conformance` row is covered by at least one new passing test."
+        - "`sea-forge.tokens.css` and `.agents/specs/frontend/colors_and_type.css` are byte-identical and unmodified."
+        - "Live Vite dev server launches without console errors."
+      falsifiers:
+        - "Any lingering `alert(` invocation, including in a file not yet committed."
+        - "Any failing unit or component test."
+        - "Any diff in the token package or in `colors_and_type.css`."
+        - "A `validation_matrix.core_conformance` row with no corresponding new test."
+      known_confounds:
+        - "Orphaned dev server process holding port 1420."
+        - "`git grep` reading tracked files only, so a newly added file appears clean — the gate uses plain `grep` for this reason."
+        - "`bun run test <Filter>` from the workspace root, which filters only the ui-components leg and can make a suite look green that never ran."
+        - "The renderer fails closed with 'Cell unreachable' outside a Tauri host, so a browser probe cannot confirm any behaviour that needs live IPC; those confirmations need `just workbench-tauri-dev`."
+      confirmation_condition: >-
+        Fresh probe verifies `just workbench-contracts-gate`, `bun run check`, `bun run test`, the
+        `grep` gate, the token no-diff check, and a live browser interaction report that states
+        explicitly which behaviours it could and could not observe without native IPC.
+
+    hot_context:
+      - "workbench/apps/desktop/src/"
+      - "justfile"
+
+    steps:
+      - "Run `just workbench-contracts-gate`."
+      - "Run `cd workbench && bun run check`."
+      - "Run `cd workbench && bun run test` and record both suite counts."
+      - "Run `grep -rn 'alert(' workbench/apps/desktop/src/ ; test $? -eq 1`."
+      - "Run `git diff --exit-code -- workbench/packages/sea-forge-ui-tokens .agents/specs/frontend/colors_and_type.css`."
+      - "Cross-check every `validation_matrix.core_conformance` row against a named passing test."
+      - "Launch dev server with `just workbench-dev-up`, probe live routes, clean up with `just workbench-dev-down`, and record which behaviours could not be observed without native Tauri IPC."
+      - "Update `.agents/current_status.yml` to reflect settled plan."
+
+    gate:
+      - "just workbench-contracts-gate"
+      - "cd workbench && bun run check"
+      - "cd workbench && bun run test"
+      - "grep -rn 'alert(' workbench/apps/desktop/src/ ; test $? -eq 1"
+      - "git diff --exit-code -- workbench/packages/sea-forge-ui-tokens .agents/specs/frontend/colors_and_type.css"
+
+    teeth:
+      - attack: "Run the grep gate with a deliberately reintroduced `alert(` in an uncommitted file."
+        expected: "The gate fails. (`git grep` would have passed, which is why the command was changed.)"
+      - attack: "Compare the final test count against the recorded baseline of 169."
+        expected: >-
+          Strictly greater than 169, and each `validation_matrix.core_conformance` row names a passing
+          test. The count is derived from that coverage; no fixed target is asserted, because a fixed
+          number can be met by tests that prove nothing the matrix asked for.
+      - attack: "Re-run `check-drift.mjs` directly."
+        expected: "`sea-forge.tokens.css matches spec source.` — the contrast work stayed at the usage site."
+
+    independent_confirmation:
+      verifier_receives:
+        - "All 10 goals in spec-workbench-frontend-remediation.yaml"
+        - "Full test run transcript and git diff stat"
+      required_verdict: "SETTLED_CONFORMANT"
+
+    redesign_trigger: >-
+      Any regression in contracts, types, or baseline test suites.
+
+    evidence: ".agents/evidence/frontend-remediation/T09_final_settlement.txt"
+
+    done_when:
+      - "All global gates exit 0, including the token no-diff check."
+      - "Test count strictly exceeds 169 and every `validation_matrix.core_conformance` row names a passing test."
+      - "Live verification confirms search, stale preflight, and inbox duty separation, and states plainly which behaviours native IPC was required for."
+      - "Handoff status updated in `.agents/current_status.yml`."
+
+# -----------------------------------------------------------------------------
+# FINAL ACCEPTANCE
+# -----------------------------------------------------------------------------
+final_acceptance:
+
+  navigation_and_shell:
+    - "Zero `alert()` or `confirm()` calls exist in `workbench/apps/desktop/src/`, tracked or untracked."
+    - "Pressing `/` opens the CommandPalette modal across all routes, and does not fire inside text fields."
+    - "CommandPalette filters all primary routes and executes navigation on Enter."
+    - "JourneyRibbon differentiates completed, active, and upcoming steps when driven by real route values, renders each canonical step once, and marks none active for an unmapped route."
+    - "GlobalHeader active work pill is three-valued: Unknown, None running, N running."
+
+  governed_workflows:
+    - "Case preflight stale state displays 'Rejected as stale' (blocked) and disables commit."
+    - "A failed preflight displays 'Preflight failed', never 'Not yet run'."
+    - "Sidebar inbox badge displays real pending count and hides when zero."
+    - "Approval inbox resolves three duty standings; neither self-approval nor an unverifiable one presents as permitted, and Reject stays available in both."
+    - "Delegation workbench dispatches agent tasks into the kernel with a non-empty `request_id`, and refuses to dispatch a contract the operator has not read."
+    - "Case horizon items allow evidence inspection in EvidenceDrawer and link failed or terminated items to their run records; no kernel-less control is offered."
+
+  tokens_and_accessibility:
+    - "'stale' status variant is supported across GovernedStatusPill and ReadinessPage."
+    - "No essential text below 18px (below 14px bold) uses `var(--fg-tertiary)`; retained uses are justified in the T01 evidence file."
+    - "`sea-forge.tokens.css` is byte-identical to `.agents/specs/frontend/colors_and_type.css`, both unmodified."
+
+  evidence_and_confirmation:
+    - "Every REQUIRED normative spec requirement maps to at least one settled task."
+    - "All P3 tasks have independent adversarial confirmation."
+    - "Global gates `workbench-contracts-gate`, `bun run check`, `bun run test`, the `grep` alert gate, and the token no-diff check exit 0."
+    - "Total test count strictly exceeds the measured baseline of 169, and every `validation_matrix.core_conformance` row names a passing test."
+    - "Every deferral in `roadmap_boundaries` is restated in the handoff, so nothing that was scoped out reads as done."
+
+# -----------------------------------------------------------------------------
+# GUARDRAILS
+# -----------------------------------------------------------------------------
+guardrails:
+  - "Do NOT alter SFWP protocol contracts or Rust kernel crates during this frontend remediation."
+  - "Do NOT fabricate mock responses on unbacked surfaces (`/models`, `/memory`, `/capabilities`, etc.); preserve honest UnbackedSurface standing."
+  - "Do NOT weaken or disable any unit or integration tests to achieve green."
+  - "Do NOT use `alert()`, `confirm()`, or unhandled promise rejections."
+  - "Do NOT mutate canonical server records directly; all state transitions flow through Tauri IPC commands."
+  - "Do NOT edit `workbench/packages/sea-forge-ui-tokens/sea-forge.tokens.css` or any token value in `.agents/specs/frontend/colors_and_type.css`."
+  - "Do NOT add Case Horizon item controls (dispatch, park, cancel, retry); no SFWP method backs them."
+  - "Do NOT filter a test suite from the workspace root; the filter reaches only the ui-components leg."
+  - "Do NOT send a protected command without a non-empty `request_id`; the server refuses it before admission."
+  - "Do NOT render an unread value as zero, absent, or failed."
+
+# -----------------------------------------------------------------------------
+# HANDOFF CONTRACT
+# -----------------------------------------------------------------------------
+handoff_contract:
+  must_report:
+    - "Settled capabilities (CommandPalette, Stale and Failed Preflight, Duty Separation, Delegation Dispatch, Dynamic Badges, Journey Phase Resolution, Contrast Remediation)"
+    - "Confirmed test counts against the 169 baseline, and static check results"
+    - "Requirement-to-task settlement matrix"
+    - >-
+      Deferrals, restated so nothing scoped out reads as done: unbacked kernel surfaces; Case Horizon
+      item control; the fourteen-item sidebar (audit 4.10, awaiting the product decision in audit open
+      question 3); route guards G3-G8 and G10 (audit 4.11, no backing SFWP method); readiness source
+      record body content; and any `--fg-tertiary` token value revision.
+    - "Verification commands used"
+    - "Exact next executable action or 'none — plan settled'"
+
+  settled_next_action_rule: >-
+    The next executable action MUST be set to `none — plan settled` only after
+    Task T09 succeeds with full verification evidence recorded.
+
+# -----------------------------------------------------------------------------
+# TRACEABILITY
+# -----------------------------------------------------------------------------
+traceability:
+  spec_requirement_count: 70
+  mapped_requirement_count: 70
+
+  unmapped_requirements: []
+  unknown_plan_requirement_ids: []
+
+  requirement_to_tasks:
+    "REQ-GOAL-001": ["T05"]
+    "REQ-GOAL-002": ["T03"]
+    "REQ-GOAL-003": ["T04"]
+    "REQ-GOAL-004": ["T04"]
+    "REQ-GOAL-005": ["T07"]
+    "REQ-GOAL-006": ["T08"]
+    "REQ-GOAL-007": ["T01"]
+    "REQ-GOAL-008": ["T06"]
+    "REQ-GOAL-009": ["T06"]
+    "REQ-GOAL-010": ["T01"]
+
+    "REQ-OUT-001": ["T05"]
+    "REQ-OUT-002": ["T09"]
+    "REQ-OUT-003": ["T03"]
+    "REQ-OUT-004": ["T01"]
+    "REQ-OUT-005": ["T01"]
+
+    "REQ-VERIFY-001": ["T09"]
+    "REQ-VERIFY-002": ["T09"]
+    "REQ-VERIFY-003": ["T09"]
+    "REQ-VERIFY-004": ["T09"]
+    "REQ-VERIFY-005": ["T09"]
+
+    "REQ-CONFIG-001": ["T06"]
+    "REQ-CONFIG-002": ["T06"]
+    "REQ-CONFIG-003": ["T01"]
+    "REQ-CONFIG-010": ["T09"]
+    "REQ-CONFIG-011": ["T09"]
+    "REQ-CONFIG-012": ["T09"]
+
+    "REQ-SAFE-001": ["T03"]
+    "REQ-SAFE-002": ["T04"]
+    "REQ-SAFE-003": ["T05"]
+
+    "REQ-SEC-001": ["T07"]
+    "REQ-SEC-002": ["T04"]
+    "REQ-SEC-003": ["T09"]
+
+    "REQ-PALETTE-001": ["T05", "T09"]
+    "REQ-PALETTE-002": ["T05"]
+    "REQ-PALETTE-003": ["T05"]
+    "REQ-PALETTE-004": ["T05"]
+    "REQ-PALETTE-005": ["T05"]
+    "REQ-PALETTE-006": ["T05"]
+    "REQ-PALETTE-007": ["T05"]
+
+    "REQ-PREFLIGHT-001": ["T03", "T09"]
+    "REQ-PREFLIGHT-002": ["T03"]
+    "REQ-PREFLIGHT-003": ["T03"]
+    "REQ-PREFLIGHT-004": ["T03"]
+
+    "REQ-INBOX-001": ["T04"]
+    "REQ-INBOX-002": ["T04"]
+    "REQ-INBOX-003": ["T04", "T09"]
+    "REQ-INBOX-004": ["T04"]
+    "REQ-INBOX-005": ["T04", "T09"]
+    "REQ-INBOX-006": ["T04"]
+    "REQ-INBOX-007": ["T04"]
+
+    "REQ-DELEGATE-001": ["T07", "T09"]
+    "REQ-DELEGATE-002": ["T07"]
+    "REQ-DELEGATE-003": ["T07"]
+    "REQ-DELEGATE-004": ["T07"]
+    "REQ-DELEGATE-005": ["T07"]
+
+    "REQ-HORIZON-001": ["T08"]
+    "REQ-HORIZON-002": ["T08"]
+    "REQ-HORIZON-003": ["T08"]
+
+    "REQ-READINESS-001": ["T01"]
+    "REQ-READINESS-002": ["T02"]
+    "REQ-READINESS-003": ["T01"]
+    "REQ-READINESS-004": ["T02"]
+
+    "REQ-SHELL-001": ["T06"]
+    "REQ-SHELL-002": ["T06"]
+    "REQ-SHELL-003": ["T06"]
+    "REQ-SHELL-004": ["T06", "T09"]
+    "REQ-SHELL-005": ["T06"]
+
+    "REQ-A11Y-001": ["T01"]
+    "REQ-A11Y-002": ["T01", "T09"]
+    "REQ-A11Y-003": ["T01"]
+
+  coverage_rule: >-
+    Every REQUIRED normative requirement in the source specification MUST map to
+    at least one settlement task. High-risk requirements additionally require the
+    confirmation mode defined by the specification and this plan.

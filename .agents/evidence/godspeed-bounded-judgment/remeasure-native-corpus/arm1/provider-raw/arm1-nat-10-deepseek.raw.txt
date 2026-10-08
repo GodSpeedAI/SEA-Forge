@@ -1,0 +1,1 @@
+{"answer": "not_settled", "confidence": 0.62, "distribution": {"settled": 0.18, "not_settled": 0.62, "insufficient_evidence": 0.2}, "reason": "Six admitted builder iterations with 6 corrections and no produced evidence or verification records suggests repeated rejection, pointing toward budget exhaustion rather than settlement."}

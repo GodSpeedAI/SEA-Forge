@@ -1,0 +1,16 @@
+# Kebab-dialect import search before deletion (2026-09-23, T01)
+# Q: does anything import apps/godspeed-cognitive-ui/contracts/*.ts ?
+
+$ rg -n --no-ignore -g '!node_modules' -g '!dist' -g '!*.log' "contracts" src e2e scripts tests
+rg-exit=2 (2 = no such dirs / no matches beyond those shown)
+
+$ rg -ln "from ['\"][^'\"]*contracts/(world|interaction|temporal|artifact|agent|index)|import\\(['\"][^'\"]*contracts/(world|interaction|temporal|artifact|agent|index)" -g '!node_modules' -g '!dist' (repo-wide)
+(no output = zero importers; exit 1)
+
+Only references found repo-wide (docs/config, not imports):
+  apps/godspeed-cognitive-ui/README.md (mentions src/ports contract port)
+  apps/godspeed-cognitive-ui/tsconfig.json include list (removed in this task)
+  apps/godspeed-cognitive-ui/reference/WIRE.md (fixture-stage wire doc, superseded by the ADR)
+  apps/godspeed-cognitive-ui/src/ports/contract.ts (canonical interface-contracts import)
+
+Conclusion: no live importer; deleted via git rm.

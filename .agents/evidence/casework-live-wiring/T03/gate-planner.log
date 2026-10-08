@@ -1,0 +1,190 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling syn v3.0.3
+   Compiling serde_derive v1.0.229
+   Compiling serde v1.0.229
+   Compiling num-traits v0.2.19
+   Compiling indexmap v2.14.0
+   Compiling memchr v2.8.3
+   Compiling serde_yaml v0.9.34+deprecated
+   Compiling serde_json v1.0.151
+   Compiling chrono v0.4.45
+   Compiling ed25519 v2.2.3
+   Compiling sea-forge-core v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-core)
+   Compiling ed25519-dalek v2.2.0
+   Compiling sea-forge-ledger v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-ledger)
+   Compiling sea-forge-domain v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-domain)
+   Compiling once_cell v1.21.4
+   Compiling tempfile v3.27.0
+   Compiling sea-forge-planner v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-planner)
+    Finished `test` profile [unoptimized] target(s) in 39.30s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_planner-adb9b119c43ee5e9)
+
+running 2 tests
+test criteria::tests::criteria_hash_is_deterministic ... ok
+test criteria::tests::derived_record_hashes_to_itself ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m10.rs (target/debug/deps/conformance_m10-bafa9d5ac5fc31e3)
+
+running 6 tests
+test t10_2_simulation_rejection_reactivates_design ... ok
+test t10_1_adlc_case_instantiation_is_byte_deterministic ... ok
+test t10_3_odi_adlc_case_carries_desired_outcome_refs ... ok
+test v3_simulation_rejected_twice_then_accepted ... ok
+test t10_5_discretionary_item_is_manual_activation ... ok
+test t10_4_unresolvable_desired_outcome_is_criteria_provenance_error ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m13.rs (target/debug/deps/conformance_m13-49e24ac333772a81)
+
+running 3 tests
+test t13_1_agent_task_item_rejects_empty_instruction ... ok
+test t13_1_agent_task_item_rejects_alien_operation ... ok
+test t13_1_agent_task_plan_accepted_and_downstream_sentry_gates_on_settlement ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m14.rs (target/debug/deps/conformance_m14-3cd2b96dda4a800a)
+
+running 12 tests
+test t14_0_agent_task_endpoint_ref_forbids_substitution ... ok
+test t14_0_any_of_legacy_behavior_unchanged ... ok
+test t14_0_repeated_item_expands_to_deterministic_ids ... ok
+test t14_0_duplicate_entry_keys_reject ... ok
+test t14_1_sequential_agents_instantiation_is_deterministic_and_settles_in_order ... ok
+test t14_0_all_of_waits_for_every_named_source ... ok
+test t14_2_concurrent_agents_rollup_fires_only_when_all_n_branches_settle ... ok
+test t17_0_topology_builtins_bind_the_caller_supplied_endpoint_ref ... ok
+test t14_3_one_branch_rejected_plus_unrelated_rejection_rollup_never_fires ... ok
+test t17_0_topology_builtins_reject_colon_endpoint_ref ... ok
+test t14_0_expansion_over_hard_max_rejects ... ok
+test t17_0_topology_builtins_reject_empty_and_oversized_endpoint_ref ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m2.rs (target/debug/deps/conformance_m2-a44c533a2262ee1b)
+
+running 13 tests
+test conformance_m2_empty_entry_criteria_activates_immediately ... ok
+test conformance_m2_parked_case_is_not_failure ... ok
+test conformance_m2_required_item_failure_terminates_case ... ok
+test conformance_m2_proposal_validation_compiles_depends_on_and_rejects_bad_paths ... ok
+test conformance_m2_sentry_scenario_a_b_rep_c_m ... ok
+test conformance_m2_unsatisfiable_sentry_rejected ... ok
+test m10_or_of_sentries_behavior_unchanged ... ok
+test conformance_m2_reducer_retries_then_terminates_required_item ... ok
+test m10_rejection_from_a_cannot_activate_sentry_bound_to_b ... ok
+test conformance_m2_ledger_replay_reproduces_activations ... ok
+test sandboxed_task_without_operations_is_rejected ... ok
+test m10_repeated_rejection_reactivates_only_intended_successor ... ok
+test deep_linear_dependency_chain_validates_without_stack_overflow ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+     Running tests/criteria_provenance.rs (target/debug/deps/criteria_provenance-1809581e9867be45)
+
+running 24 tests
+test changing_criteria_changes_hash ... ok
+test criteria_hash_is_deterministic ... ok
+test built_in_demo_does_not_create_redundant_job_contract ... ok
+test intent_origin_reuses_existing_substrate_no_job_contract ... ok
+test derived_record_hashes_to_itself ... ok
+test m10_desired_outcome_resolves_with_valid_resolver ... ok
+test m10_desired_outcome_without_domain_model_ref_is_rejected ... ok
+test m10_desired_outcome_hash_changes_when_ref_or_model_changes ... ok
+test m10_seed_resolver_accepts_valid_desired_outcome ... ok
+test criteria_record_commits_to_ledger_and_resolves ... ok
+test m10_desired_outcome_without_resolver_is_rejected ... ok
+test m10_seed_resolver_rejects_missing_domain_model_ref ... ok
+test m10_seed_resolver_rejects_unrecognized_domain_model_ref ... ok
+test m10_seed_resolver_rejects_model_hash_drift ... ok
+test post_execution_declaration_time_is_caught_by_validation ... ok
+test m10_seed_resolver_rejects_wrong_class_concept ... ok
+test m10_unresolved_desired_outcome_ref_is_criteria_provenance_error ... ok
+test m10_seed_resolver_rejects_unknown_concept ... ok
+test verify_item_criteria_fails_when_snapshot_hash_mismatches ... ok
+test verify_plan_criteria_skips_legacy_items ... ok
+test verify_item_criteria_resolves_and_matches_snapshot ... ok
+test verify_item_criteria_fails_when_ref_missing ... ok
+test template_instantiation_criteria_is_deterministic_ignoring_id ... ok
+test template_origin_reuses_intent_and_template ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/template_conformance.rs (target/debug/deps/template_conformance-80b0847f05d45fd7)
+
+running 8 tests
+test control_flow_fields_project_byte_for_byte ... ok
+test old_template_without_control_flow_fields_still_deserializes ... ok
+test template_missing_required_param_is_input_error ... ok
+test template_forbidden_argv0_substitution_is_schema_error_at_load ... ok
+test sentry_source_param_substitution_is_forbidden ... ok
+test template_instantiation_is_byte_deterministic_and_records_provenance ... ok
+test template_path_param_rejects_parent_escape ... ok
+test template_pin_rejects_same_version_with_changed_bytes ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sea_forge_planner
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

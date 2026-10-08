@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PlanItemSummary",
+  "description": "Non-authoritative summary of one instantiated plan item — a projection for\ndisplay, never source truth (`derived view ≠ source truth`).",
+  "type": "object",
+  "properties": {
+    "item_kind": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "plan_item_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "plan_item_id",
+    "name",
+    "item_kind"
+  ]
+}

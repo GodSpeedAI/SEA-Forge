@@ -1,0 +1,1 @@
+{"answer": "not_settled", "confidence": 0.68, "distribution": {"settled": 0.15, "not_settled": 0.7, "insufficient_evidence": 0.15}, "reason": "The mock-e2e-lying session shows four admitted builder claims each met with a correction and no produced evidence, indicating repeated unverified claims that will exhaust iteration budget without settlement."}

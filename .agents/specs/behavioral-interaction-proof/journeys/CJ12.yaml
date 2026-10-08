@@ -1,0 +1,166 @@
+# Behavioral IR: CJ12 Transfer and Adopt Governed Assets
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ12"
+  slug: "transfer_and_adopt_governed_assets"
+  title: "Transfer and Adopt Governed Assets"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - commitment
+  - execution
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - export_boundary_selected
+    - external_bundle_received
+    - inert_asset_pending_adoption
+    - transfer_rejection_initiated
+  actor_roles:
+    - CellAdministrator
+    - Operator
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - source_cell_identity
+      - destination_cell_identity
+      - transfer_boundary_specification
+      - local_administrator_authority
+    context_scope: "Manifest items, size bounds, external provenance, isolation tags"
+
+  IS2_preflight:
+    checks:
+      - bundle_manifest_checksum_verified
+      - total_bundle_size_strictly_within_cell_bound
+      - cryptographic_signatures_of_source_cell_valid
+      - no_tampering_or_path_traversal_in_archive
+    readiness_classification:
+      expected: "ready | manifest_mismatch | size_exceeded | signature_invalid | tampered"
+      failure_action: "reject_bundle_atomically_without_destination_side_effects"
+
+  IS3_authority_resolution:
+    required_role: "CellAdministrator"
+    alternate_role: "Operator"
+    grant_scope: "bundle_transfer_and_asset_adoption"
+    separation_of_duty: "Importing administrator cannot self-adopt external executable capabilities without local policy check"
+    approval:
+      status: "implemented"
+      note: "Explicit adoption policy gate required before any inert asset becomes locally usable"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "federation.transfer_and_adopt"
+      invoked_capabilities:
+        - "bundle_export_and_verification"
+        - "atomic_import"
+        - "imported_history_isolation"
+        - "inactive_asset_enforcement"
+        - "manifest_inspection"
+        - "compatibility_checks"
+        - "governed_asset_adoption"
+        - "bounded_rejection"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-cell / bundle"
+    bounds:
+      isolation_rule: "imported_history_marked_external_assets_remain_inert_until_adoption"
+      atomic_rollback: "enabled"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "external_bundle_or_local_selection"
+      to: "bundle_admitted_or_adopted"
+      alternative_states:
+        - "export_bundle_created"
+        - "imported_isolated_history_and_inert_assets"
+        - "inert_asset_locally_adopted"
+        - "transfer_rejected_atomically"
+    artifacts:
+      - "bundle_manifest"
+      - "signed_transfer_bundle"
+      - "imported_history_receipt"
+      - "inert_asset_descriptors"
+      - "governed_adoption_record"
+      - "rejection_evidence_packet"
+    mutation_rule: "Atomic transaction; if verification fails, destination cell remains completely unchanged"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "manifest_hash_and_bundle_signature"
+        evidence_class: "observed"
+      - item: "atomic_admission_receipt"
+        evidence_class: "observed"
+      - item: "inert_status_attestation"
+        evidence_class: "observed"
+      - item: "local_adoption_decision_record"
+        evidence_class: "observed"
+    integrity_verification:
+      external_history_not_counted_as_local_proof: true
+      inert_enforcement_verified: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "The transfer is either rejected atomically or admitted with provenance intact and assets inert; a separately authorized adoption is required before local usability."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "transfer_admitted_assets_inert"
+        - "asset_adopted_locally_usable"
+        - "transfer_rejected_atomically"
+    settlement_vs_termination: "Unpacking archive files is not admission; assets must be marked inert and proven isolated."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "adopt_inert_asset"
+        action: "authorize_governed_adoption"
+        condition: "outcome == transfer_admitted_assets_inert && asset_compatible"
+      - id: "keep_inert_and_inspect"
+        action: "inspect_imported_history"
+        condition: "outcome == transfer_admitted_assets_inert"
+      - id: "use_locally_adopted_asset"
+        target_journey: "CJ04"
+        condition: "outcome == asset_adopted_locally_usable"
+      - id: "export_additional_bundle"
+        action: "create_new_export_selection"
+        condition: "outcome == transfer_admitted_assets_inert || outcome == asset_adopted_locally_usable"
+    blocked_affordances:
+      - id: "execute_inert_unadopted_template"
+        target_journey: "CJ07"
+        reason: "policy_prohibited"
+        explanation: "Imported assets remain inert and forbidden from execution until explicit local adoption"
+
+recovery_paths:
+  - condition: "bundle_tampered_or_size_exceeded"
+    remedy: "Reject atomically; leave cell unchanged; emit rejection evidence"
+  - condition: "incompatible_asset_version"
+    remedy: "Keep asset inert; repair environment or reject adoption without deleting history"
+  - condition: "signature_verification_failure"
+    remedy: "Quarantine bundle; notify administrator; fail closed"
+
+unresolved_bindings:
+  - component: "workbench_federation_surface"
+    status: "unresolved_in_source"
+    impact: "Federation UI in Workbench is preview-only; transfer and atomic admission are kernel/CLI backed"

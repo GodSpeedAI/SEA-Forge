@@ -1,0 +1,52 @@
+/* SurfaceRail: sparse vertical arrangement switcher. Information positioned
+ * around CORE rather than over it; generous negative space; no nav-bar chrome. */
+
+.rail {
+  position: fixed;
+  left: 38px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: rgba(200, 214, 229, 0.55);
+  padding: 6px 2px;
+  border-left: 1px solid transparent;
+  padding-left: 12px;
+  position: relative;
+}
+
+.item:hover {
+  color: rgba(233, 240, 248, 0.92);
+}
+
+.active {
+  color: rgba(233, 240, 248, 0.92);
+  border-left-color: #ffb35c;
+  text-shadow: 0 0 18px rgba(255, 179, 92, 0.35);
+}
+
+.badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(233, 240, 248, 0.92);
+}
+
+@media (max-width: 760px) {
+  .rail {
+    display: none;
+  }
+}

@@ -1,0 +1,20 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/core/purity.test.ts:
+(pass) the UI core is free of renderer, transport and backend authority > the scan itself is non-vacuous [0.06ms]
+(pass) the UI core is free of renderer, transport and backend authority > no forbidden import appears in any core file [0.33ms]
+(pass) the UI core is free of renderer, transport and backend authority > no provider, transport or renderer-library identifier appears in any core file [0.15ms]
+
+src/core/narration.test.ts:
+(pass) narration is interruptible by construction > interrupt stops the stream and records the interruption [36.61ms]
+
+src/core/scenario.test.ts:
+(pass) tooth 2 — the same interaction grammar under two structurally different providers > fixture world provider [0.89ms]
+(pass) tooth 2 — the same interaction grammar under two structurally different providers > alt (adjacency-map) provider [0.84ms]
+(pass) tooth 1 — the core runs with scene and agent replaced by no-op/test adapters > recording scene adapter observes state transitions driven purely by actions [0.12ms]
+(pass) tooth 1 — the core runs with scene and agent replaced by no-op/test adapters > world-adapter push updates the store without any action [0.10ms]
+
+ 8 pass
+ 0 fail
+ 226 expect() calls
+Ran 8 tests across 3 files. [51.00ms]

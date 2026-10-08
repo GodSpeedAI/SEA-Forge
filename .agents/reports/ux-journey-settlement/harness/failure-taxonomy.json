@@ -1,0 +1,71 @@
+{
+  "title": "SEA-Forge Failure Taxonomy",
+  "version": "1.0.0",
+  "taxonomy": [
+    {
+      "code": "ENTRY_GAP",
+      "description": "The journey could not be entered from the declared initiating condition or starting state.",
+      "earliest_locus": "Journey Entry / Route Initialization"
+    },
+    {
+      "code": "AFFORDANCE_VISIBILITY_GAP",
+      "description": "The required affordance or action control was invisible, unrendered, occluded, or missing from the user-facing interface.",
+      "earliest_locus": "Interface Projection / Surface Layout"
+    },
+    {
+      "code": "PROJECTION_GAP",
+      "description": "The interface projected false, unvalidated, or distorted state compared to the underlying kernel/cell truth.",
+      "earliest_locus": "View Model / SFWP Projection"
+    },
+    {
+      "code": "INTERFACE_BINDING_GAP",
+      "description": "The user action dispatched to an incorrect, unbound, or bypass transport instead of the declared SFWP/CLI capability binding.",
+      "earliest_locus": "Desktop Bridge / Transport Dispatch"
+    },
+    {
+      "code": "CAPABILITY_GAP",
+      "description": "The targeted kernel/server capability is unimplemented, rejected as unknown, or failed before governance evaluation.",
+      "earliest_locus": "Kernel Capability Dispatch"
+    },
+    {
+      "code": "AUTHORITY_GAP",
+      "description": "Side effects occurred without prior authority decision, or policy grants/denials/approvals failed to enforce canonical rules.",
+      "earliest_locus": "Authority Evaluation / Policy Engine"
+    },
+    {
+      "code": "STATE_TRANSITION_GAP",
+      "description": "The expected state change failed to materialize in authoritative cell/case/run records.",
+      "earliest_locus": "Execution Engine / State Mutation"
+    },
+    {
+      "code": "EVIDENCE_GAP",
+      "description": "Execution produced incomplete, unhashable, unlinked, or unattributable evidence (trace, evidence.jsonl, digests missing).",
+      "earliest_locus": "Evidence Pipeline / Ledger Recording"
+    },
+    {
+      "code": "SETTLEMENT_GAP",
+      "description": "Process terminated but independent settlement oracle rejected completion, or execution falsely claimed success without settlement.",
+      "earliest_locus": "Settlement Oracle / Completion Evaluator"
+    },
+    {
+      "code": "NEXT_AFFORDANCE_GAP",
+      "description": "The journey settled successfully, but the resulting next lawful decision or affordance was absent, disabled, or unreachable.",
+      "earliest_locus": "Journey Boundary / Next Affordance Surface"
+    },
+    {
+      "code": "RECOVERY_GAP",
+      "description": "When an error, denial, or interruption occurred, the system failed to offer or execute a lawful recovery path.",
+      "earliest_locus": "Recovery Handler / Exception Flow"
+    },
+    {
+      "code": "CANONICAL_DRIFT",
+      "description": "The implementation drifted in semantics, schemas, ID grammar, or vocabulary away from the canonical specifications.",
+      "earliest_locus": "Specification Conformance Boundary"
+    },
+    {
+      "code": "UNAVAILABLE_AFFORDANCE_LEAK",
+      "description": "An interface binding canonically marked unavailable or preview-only was falsely presented as active or spendable.",
+      "earliest_locus": "Route Guard / Availability Ladder"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DelegationRow",
+  "description": "One delegation in the roster.",
+  "type": "object",
+  "properties": {
+    "cancellable": {
+      "description": "True only when this exact run can be cancelled *now*: the server holds a\nlive handle and no cancellation has already been recorded. Per-run by\nconstruction — cancelling one delegation cannot reach a sibling, because\nthe cancel flag lives on that run's own handle (epic 9.7).",
+      "type": "boolean"
+    },
+    "case_id": {
+      "description": "The case that claims this run, from the same index `run.list` uses.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "endpoint_ref": {
+      "description": "The endpoint the plan named. Absent only when `plan.json` is unreadable.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "max_turns": {
+      "description": "The turn cap the plan bound this episode to, so a turn count can be read\nagainst its bound rather than as a bare number.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "settled_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "settlement": {
+      "description": "The settlement's own word (`accepted`/`rejected`/…), present only once a\nsettlement exists. Absent means unsettled, never \"not accepted\".",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "standing": {
+      "$ref": "#/$defs/DelegationStanding"
+    },
+    "termination": {
+      "description": "How the dialogue ended, from the transcript evidence.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "token_budget": {
+      "description": "Token budget from the plan, if one was set. Absent means no token cap.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0
+    },
+    "tool_calls": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "transcript_sha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "turns_used": {
+      "description": "Turns actually taken. Absent while the delegation is still running — the\nkernel publishes no per-turn state, and `0` would be a false claim.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "run_id",
+    "standing",
+    "cancellable"
+  ],
+  "$defs": {
+    "DelegationStanding": {
+      "description": "Where a delegation sits in its lifecycle.\n\nClosed on purpose, and *not* an execution or settlement vocabulary — those\nalready exist in `run_views` and mean different things. A fifth variant here\nwould mean the kernel grew a fifth genuinely distinguishable state, not that\nthe UI wanted a new label.",
+      "oneOf": [
+        {
+          "description": "The server holds a live handle and no cancellation has been requested.",
+          "type": "string",
+          "const": "active"
+        },
+        {
+          "description": "A cancellation has been recorded; the episode has not yet settled. This\nis a *request*, not an outcome — the episode terminates on its own terms\nand its settlement records what actually happened.",
+          "type": "string",
+          "const": "cancellation_requested"
+        },
+        {
+          "description": "A settlement record exists on disk. Whether it was accepted is a\nseparate question, answered by `settlement`.",
+          "type": "string",
+          "const": "settled"
+        },
+        {
+          "description": "A delegation run exists with no settlement and no live handle. The\nserver cannot say what happened to it — typically it was in flight when\nthe server stopped. Never to be rendered as cancelled or failed.",
+          "type": "string",
+          "const": "unresolved"
+        }
+      ]
+    }
+  }
+}

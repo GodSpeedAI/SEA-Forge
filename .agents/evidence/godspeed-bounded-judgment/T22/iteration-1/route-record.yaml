@@ -1,0 +1,42 @@
+schema: godspeed-bounded-judgment.t22-route-record
+note: stop_condition records THIS task-scoped run's bound of exactly one advance (see deviations in b1-result.json);
+  the route itself stays open for T23 under the frozen 6-iteration bound; settled is false because a probe terminal
+  is a probe consequence, never route settlement
+route_state:
+  route_id: t22-route-001
+  created_at_utc: '2026-09-19T01:35:55.336751+00:00'
+  probes_remaining: 9
+  retained_moves: []
+  probed:
+  - candidate_id: cand-1
+    correlation_id: t22-route-001-iter1
+    scenario: e2e-happy
+    max_rounds: 8
+    terminal_class: run_error
+    judgment_label: execution_failed
+  - candidate_id: cand-2
+    correlation_id: t22-route-001-iter1
+    scenario: e2e-lying
+    max_rounds: 8
+    terminal_class: run_error
+    judgment_label: execution_failed
+  - candidate_id: cand-3
+    correlation_id: t22-route-001-iter1
+    scenario: e2e-happy
+    max_rounds: 7
+    terminal_class: run_error
+    judgment_label: execution_failed
+  denied_keys: []
+route_record:
+  route_id: t22-route-001
+  correlation_id: t22-route-001-iter1
+  settled: false
+  stop_condition: iteration_limit_reached
+  moves: []
+  fingerprint: ''
+  correlation_ids:
+  - t22-route-001-iter1
+  policy_version: selection-policy-v1
+  prereg_sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+  opened_at_utc: '2026-09-19T01:35:55.336751+00:00'
+  closed_at_utc: '2026-09-19T01:36:44.178431+00:00'

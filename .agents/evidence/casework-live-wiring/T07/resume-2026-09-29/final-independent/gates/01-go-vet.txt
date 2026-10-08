@@ -1,0 +1,5 @@
+Command: GOMAXPROCS=2 GOFLAGS=-p=1 go vet ./...
+Working directory: apps/godspeed-casework-go
+Default sandbox attempt: EXIT 1, blocked by read-only /home/sprime01/.cache/go-build access (environment restriction, not a source diagnostic).
+Approved local execution retry: EXIT 0, no diagnostics.
+RAM/process precheck before vet: 3.8 GiB available; no Go/Cargo compiler processes.

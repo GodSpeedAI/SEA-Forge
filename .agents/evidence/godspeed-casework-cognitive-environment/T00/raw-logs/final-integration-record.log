@@ -1,0 +1,21 @@
+# Final integration record - 2026-09-20 (operator-ordered merge + worktree removal)
+$ ultracode tip before: 6ce518fcd9b01bc5a7037f80f5d8986a33cd2924
+$ casework branch tip:  118761affeeac93e20303ee10fc5aed3940f8c90
+$ merge base: 6ce518fcd9b01bc5a7037f80f5d8986a33cd2924 (fast-forward)
+$ operator git status --porcelain BEFORE (T28 agent in-flight work, preserved byte-for-byte):
+   M .agents/CURRENT_STATUS.md
+   M .agents/current_status.yml
+   M .agents/evidence/godspeed-bounded-judgment/T27/t27-paired-report.yml
+   M .agents/evidence/godspeed-bounded-judgment/T28/verify_disposition.py
+   M .agents/evidence/godspeed-bounded-judgment/decisions.yml
+   M .jolli/jollimemory/debug.log
+  ?? .agents/evidence/godspeed-bounded-judgment/T28/t28-disposition-report.md
+  ?? .agents/evidence/godspeed-bounded-judgment/T28/t28-independent-recompute.json
+  ?? .agents/evidence/godspeed-bounded-judgment/T28/t28-independent-recompute.py
+  ?? .agents/evidence/godspeed-bounded-judgment/T28/t28-verifier-independent-confirmation.md
+$ sha256 of the two dirty status files BEFORE:
+  cdd71089a9572db92aa10a0b810b74934b46ed76fda9fa77fb2f71c533b32c28  /home/sprime01/projects/sea-rs/.agents/CURRENT_STATUS.md
+  3d25b3115c5fc11acd7f5a08df233e7986bad0c7f6d930ec91b3537cb43f2b22  /home/sprime01/projects/sea-rs/.agents/current_status.yml
+$ operator dirty files changed by the casework branch (the merge must not touch these):
+  .agents/CURRENT_STATUS.md
+  .agents/current_status.yml
