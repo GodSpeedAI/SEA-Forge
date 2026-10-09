@@ -81,6 +81,8 @@ type runObservationPoller struct {
 type runObservationLease struct {
 	manager     *runObservationManager
 	pollers     map[runObservationPollerKey]*runObservationPoller
+	listState   contract.RunTraceListState
+	watermarks  map[runObservationPollerKey]runObservationWatermark
 	caller      runObservationCaller
 	asOfCursor  string
 	draining    bool
@@ -120,7 +122,8 @@ func (m *runObservationManager) beginPrepareOperation(caller runObservationCalle
 	}
 	lease := &runObservationLease{
 		manager: m, pollers: make(map[runObservationPollerKey]*runObservationPoller),
-		caller: caller, asOfCursor: asOfCursor,
+		watermarks: make(map[runObservationPollerKey]runObservationWatermark),
+		caller:     caller, asOfCursor: asOfCursor,
 		creatorDone: make(chan struct{}), leaseDone: make(chan struct{}), drainDone: make(chan struct{}),
 	}
 	m.cohorts[lease] = struct{}{}
@@ -392,11 +395,20 @@ func (m *runObservationManager) prepare(
 		return failPrepare(runObservationUnavailable("present case context or authorization changed during observation prepare"))
 	}
 	if listErr != nil {
+		listState := contract.RunTraceListState("unavailable")
+		m.mu.Lock()
+		_, active := m.cohorts[lease]
+		if m.stopping || lease.draining || !active {
+			m.mu.Unlock()
+			return failPrepare(runObservationUnavailable("run observation prepare was stopped"))
+		}
+		lease.listState = listState
+		m.mu.Unlock()
 		if !m.leaseCanPrepare(lease, prepareDone) {
 			return failPrepare(runObservationUnavailable("run observation prepare was stopped"))
 		}
 		observedAt := m.now().UTC().Format(time.RFC3339Nano)
-		unavailable, buildErr := m.initialObservationEvent(caseID, present.cursor, observedAt, nil, "unavailable", 0, 0, 0, 0, 0, 0, 0, false)
+		unavailable, buildErr := m.initialObservationEvent(caseID, present.cursor, observedAt, nil, string(listState), 0, 0, 0, 0, 0, 0, 0, false)
 		if buildErr != nil {
 			return failPrepare(buildErr)
 		}
@@ -413,6 +425,15 @@ func (m *runObservationManager) prepare(
 	if prepareCtx.Err() != nil {
 		return failPrepare(runObservationUnavailable("run observation prepare was canceled"))
 	}
+	listState := contract.RunTraceListState("complete")
+	m.mu.Lock()
+	_, active := m.cohorts[lease]
+	if m.stopping || lease.draining || !active {
+		m.mu.Unlock()
+		return failPrepare(runObservationUnavailable("run observation prepare was stopped"))
+	}
+	lease.listState = listState
+	m.mu.Unlock()
 	selected, err := selectObservationRuns(list.Runs)
 	if err != nil {
 		return failPrepare(runObservationUnavailable("run list contained an unavailable candidate"))
@@ -514,12 +535,21 @@ func (m *runObservationManager) prepare(
 			continue
 		}
 		m.mu.Lock()
-		if m.stopping || lease.draining || lease.pollers[selected.key] != entry {
+		_, cohortActive := m.cohorts[lease]
+		if m.stopping || lease.draining || !cohortActive ||
+			m.pollers[selected.key] != entry || lease.pollers[selected.key] != entry {
+			m.mu.Unlock()
+			return failPrepare(runObservationUnavailable("run observation prepare was stopped"))
+		}
+		if _, referenced := entry.refs[lease]; !referenced {
 			m.mu.Unlock()
 			return failPrepare(runObservationUnavailable("run observation prepare was stopped"))
 		}
 		state := entry.current
 		valid := entry.phase == runObservationPollerPhaseRunning && state != nil && state.Key == selected.key && state.Availability == retainedCurrent
+		if valid {
+			lease.watermarks[selected.key] = initialRunObservationWatermark(state)
+		}
 		m.mu.Unlock()
 		if !valid {
 			unavailableCount++
@@ -546,7 +576,7 @@ func (m *runObservationManager) prepare(
 	}
 	observedAt := m.now().UTC().Format(time.RFC3339Nano)
 	event, err := m.initialObservationEvent(
-		caseID, present.cursor, observedAt, validatedRuns, "complete",
+		caseID, present.cursor, observedAt, validatedRuns, string(listState),
 		readableCount, selectedCount, len(validatedRuns), len(list.UnreadableIDs),
 		unavailableCount, omittedCount, readsAttempted, readsAttempted == observationRunLimit && readableCount > observationRunLimit,
 	)
@@ -643,6 +673,24 @@ func (m *runObservationManager) leaseCanDisclose(
 		}
 	}
 	return true
+}
+
+func initialRunObservationWatermark(state *runObservationRetainedState) runObservationWatermark {
+	retained := len(state.Frames)
+	omitted := state.TotalFrameCount - retained
+	return runObservationWatermark{
+		highestObservedOrdinal: state.HighestOrdinal,
+		execution:              contract.RunExecutionStanding(state.Execution),
+		settlement:             contract.RunSettlementStanding(state.Settlement),
+		observationState:       contract.RunTraceRunObservationState(state.ObservationState),
+		window: runObservationDeltaWindow{
+			generation:         state.Generation,
+			totalFrameCount:    state.TotalFrameCount,
+			retainedFrameCount: retained,
+			omittedFrameCount:  omitted,
+			truncated:          omitted > 0,
+		},
+	}
 }
 
 func runObservationInitialRun(state *runObservationRetainedState) contract.RunTraceRunObservation {

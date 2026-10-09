@@ -10,22 +10,13 @@ Durable operational memory and working context for coding agents in SEA Forge. T
 * **`reports/`**: Read-only audits, investigations, and analysis summaries.
 * **`skills/`**: Procedural workflows and harness cheatsheets.
 
-## 2. Handoff Contract (`just context-check`)
+## 2. Handoff Contract (`just status` / `just status-check`)
 
-Every agent session ending with project changes must update the handoff state before completing. Verified by `just context-check` (`scripts/check-agent-context.sh`):
+The acting agent updates this workbench when repository reality changes. `CURRENT_STATUS.yaml` is the agent-facing, append-only status history. Read only its last line (`just status` or `tail -n 1 .agents/CURRENT_STATUS.yaml`) for the latest complete snapshot; read earlier records only when history matters. Each update appends exactly two lines: `---` and one JSON-compatible YAML object with a higher `revision`, `recorded_at`, `stage`, `summary`, `verified`, `limits`, `next`, `evidence`, `spec`, and `ledger`. Carry forward facts that remain true; an entry is a complete snapshot, not a delta. Never edit previous entries.
 
-* **`CURRENT_STATUS.md`** is the primary handoff file. It MUST contain:
-  1. An `Updated: YYYY-MM-DD` line near the top.
-  2. The 8 required section headers:
-     - `## Objective`
-     - `## Worktree State`
-     - `## Changed Files`
-     - `## Completed`
-     - `## Verification`
-     - `## Remaining`
-     - `## Blockers`
-     - `## Decisions`
-* **`current_status.yml`** is the structured machine-readable companion for cold agent resumption: objective, worktree state, changed files, completed work, verification, remaining steps, blockers, and decisions.
+`CURRENT_STATUS.md` is the human-facing view of only the latest snapshot. Update it in place in the same change, with matching status revision and summary; do not append history there.
+
+Handoff validity and coupling are verified by `just status-check` (`scripts/check-agent-context.sh`).
 
 ## 3. Workbench Memory Ledgers
 
@@ -39,4 +30,7 @@ Every agent session ending with project changes must update the handoff state be
 * **Never fabricate evidence**: Only record commands that were actually executed and results that were observed.
 * **No conversational transcripts**: Keep memory files concise, structured, and free of chat transcripts or machine-specific absolute paths.
 
-**Any debt you encounter while woriking that is out of scope or doesn't block your work must be recorded in .agents/DEBT.md**
+
+
+
+

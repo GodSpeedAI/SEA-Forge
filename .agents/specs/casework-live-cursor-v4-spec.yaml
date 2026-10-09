@@ -20,6 +20,11 @@ metadata:
     scope: six recommendation-level architecture and public-contract areas approved
     exact_candidate_hash_read_or_approved: false
     implementation_status: held
+  additional_policy_approval:
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-additional-policy-operator-approval-oct08.md
+    scope: four bounded-reader policy decisions approved for normative incorporation
+    exact_candidate_hash_read_or_approved: false
+    implementation_status: held
   candidate_basis:
     path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision7-oct08.md
     sha256: ad82478fbe008358841b3be2ff0e29139f0327f1dd7cbbcbaf798a2795bd09b6
@@ -44,6 +49,12 @@ sources:
   legacy_and_ordinal_clarification:
     role: legacy bounded-read and full-u64 TypeScript rules
     path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-legacy-bounds-and-u64-root-clarification-oct08.md
+  bounded_reader_policy_approval:
+    role: additional bounded-reader policies approved for normative incorporation; not implementation authorization
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-additional-policy-operator-approval-oct08.md
+  bounded_reader_proposal:
+    role: independently reviewed proposal basis for reader requirements; not runtime evidence
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-bounded-ledger-reader-proposal-revision4-correction-oct08.md
 
 authority:
   applies_to: C2 live cursor V4 only
@@ -52,8 +63,9 @@ authority:
     - After independent review accepts this supplement, it is normative for V4 cursor, capture, bootstrap, journal, frontier, history, Store, SSE, error, and proof requirements.
     - If a V4 detail conflicts with a general projection statement in the parent, this supplement controls only that V4 detail; SEA Forge authority, D-2, settlement, and migration rules remain unchanged.
   change_rule: >-
-    The operator approved six recommendation-level change areas. Do not request
-    those same approvals again. A material design choice beyond those areas
+    The operator approved six recommendation-level change areas and the four
+    bounded-reader policy choices recorded in the additional policy approval.
+    Do not request those same approvals again. Any other material design choice
     requires a specific decision before implementation. Public schemas and
     authored contracts must be updated together after independent review.
   no_authority_change: >-
@@ -98,6 +110,10 @@ limits:
     emitted_frames: 500
     serialized_response_bytes: 1048576
     ledger_lock_wait_ms: 50
+    continuation_token_bytes: 4096
+    continuation_payload_bytes: 2048
+    raw_ledger_row_bytes_including_lf: 2097152
+    raw_page_input_bytes_including_non_events_and_lookahead: 4194304
     reconciliation_per_turn:
       pages: 2
       elapsed_ms: 500
@@ -206,18 +222,27 @@ requirements:
       Unknown versions fail typed. V2 pages MUST carry exact cursor and decimal
       ordinal per frame, real pinned head pair, scanned_through_ordinal,
       continuation, completion state, and optional case_state_stamp. Continuation
-      binds stream, pinned head, last fully validated row cursor/ordinal, byte
-      position, and checksum; resumed reads verify the preceding row before
-      seeking. Limits are those in limits.event_page.
+      binds the exact stream, pinned head, last fully validated row cursor,
+      ordinal, entry hash, byte boundaries and raw-row checksum, plus exact
+      request-filter bindings and nullable resolved filter ordinals. Resumed
+      reads verify the preceding row before seeking. V2 uses separate DTOs and
+      MUST NOT reshape the legacy EventFrame or add a kernel verb. A fresh scan
+      MUST acquire a real pinned head under the cooperative stream lock within
+      the configured wait and release that lock before scanning the page.
+      Limits are those in limits.event_page.
     verify: [V-C2-RANGE-01, V-C2-RANGE-02, V-C2-RANGE-03]
   - id: REQ-C2-RANGE-002
     text: >-
       An omitted range_version MUST preserve the existing vector response shape.
+      Unknown cursor values retain the existing typed input-error classification.
       It may return a successful requested frame prefix only after a bounded scan
-      validates coverage through the real pinned head. If row, byte, lock-wait,
-      or time limits prevent proof, return typed unavailable with no success
-      vector and no partial frames. Callers MUST surface that failure. Large
-      histories require v2 paging; no unbounded compatibility fallback is allowed.
+      validates coverage through the real pinned head. If row, input-byte,
+      response-byte, or lock-wait limits prevent proof, return typed unavailable
+      with no success vector and no partial frames. Callers MUST surface that
+      failure. Large histories require v2 paging; no unbounded compatibility
+      fallback is allowed. The reader has no per-page elapsed-time guarantee;
+      an outer scheduling deadline MUST NOT acknowledge an unfinished scan or
+      convert it to successful partial output.
     verify: [V-C2-LEGACY-01, V-C2-LEGACY-02, V-C2-LEGACY-03]
   - id: REQ-C2-RANGE-003
     text: >-
@@ -226,9 +251,82 @@ requirements:
       before filtering event frames. It MUST validate checked successive global
       ordinals, exact row cursor identity, prior continuation row/checksum, and
       head identity. Non-event rows advance global progress but never become
-      fabricated event frames. An empty filtered page may advance global progress.
-      A filtered count, partial row, or failed page never proves completion.
+      fabricated event frames. Preserve the existing typed hash protocol:
+      payload_hash covers the complete payload Value and entry_hash uses the
+      typed LedgerEntry helper. Unknown top-level LedgerEntry fields remain
+      tolerated and are ignored by typed deserialization/reserialization;
+      unknown payload fields remain in the Value and are hashed. Validate known
+      required fields and types. For sfwp_event, kind MUST be a string and
+      detail MUST be present but MAY be null; case_id and run_id MAY be absent
+      or null, otherwise they MUST be strings. Do not add a kind grammar or
+      reject extra payload fields. An empty filtered page may advance global
+      progress. A partial row, lookahead row not delivered, filtered count, or
+      failed page never proves completion or advances the acknowledged frontier.
     verify: [V-C2-RANGE-02, V-C2-GLOBAL-01, V-C2-GLOBAL-02, V-C2-GLOBAL-03]
+  - id: REQ-C2-RANGE-004
+    text: >-
+      Continuations MUST use a fresh process-memory Ed25519 key generated at
+      server startup with the existing getrandom::fill entropy source; entropy
+      failure MUST fail startup before the service accepts requests. The local
+      seed MUST be zeroized with the existing zeroize support immediately after
+      signing-key construction. The key MUST NOT be persisted or logged. A
+      process restart
+      invalidates old tokens; a trusted global owner MUST treat its failed
+      continuation as no acknowledgement, remain unavailable/drain as required
+      by REQ-C2-FRONTIER-002, and rebuild boundedly from actual origin. Token
+      issuance occurs only after validating the acknowledged prefix. The signed
+      continuation MUST carry a field-specific domain-separated SHA-256 digest
+      of the exact registered stream identity, not its raw value. Compute the
+      digest from a distinct fixed ASCII domain tag, a presence byte, the
+      checked UTF-8 byte length as unsigned 64-bit big-endian, and the exact
+      UTF-8 bytes when present; absent uses the absent tag and zero length.
+      Recompute and compare this digest against the requested registered stream
+      identity before any seek. Binding digests are integrity inputs, never
+      authority or identity normalization. Before
+      splitting or allocating variable decoded state, the reader MUST enforce
+      the 4,096-byte encoded-token limit, 2,048-byte payload limit, and fixed
+      existing ed25519: signature representation (96 ASCII bytes encoding
+      exactly 64 decoded bytes). It MUST verify the signature over the exact
+      payload bytes before parsing payload fields or using seek data.
+      Invalid or oversized tokens fail typed unavailable without fallback.
+      The 2 MiB raw-row cap includes LF; the 4 MiB page input cap includes every
+      row, non-event rows, and lookahead bytes. These limits supplement, and do
+      not increase, the 500-row, 500-frame, 1 MiB complete serialized-response,
+      and 50 ms lock-wait limits. Byte limits are not RSS/heap guarantees or
+      OS-read latency bounds. A malformed direct request cannot mutate the
+      trusted Go owner's expected continuation or readiness. No new dependency,
+      persisted key, or authority is added.
+    verify: [V-C2-RANGE-01, V-C2-RANGE-03, V-C2-GLOBAL-03]
+  - id: REQ-C2-RANGE-005
+    text: >-
+      V2 from_cursor and to_cursor MUST retain exact opaque UTF-8 identity and
+      exclusive-from/inclusive-to semantics. Each signed filter binding MUST be
+      a field-specific domain-separated SHA-256 digest computed from a distinct
+      fixed ASCII domain tag, a presence byte, the checked UTF-8 byte length as
+      unsigned 64-bit big-endian, and the exact UTF-8 bytes when present; absent
+      uses the absent tag and zero length. The token carries these digests, not
+      raw stream or filter strings. On resume, recompute each requested filter's
+      digest and require exact equality before using its resolved state or any
+      seek data. No normalization, parsing, or cursor ordering is allowed. The
+      signed token MUST distinguish an
+      absent filter from a present but unresolved filter and carry nullable
+      canonical-decimal resolved_from_ordinal and resolved_to_ordinal. Resolve
+      a filter only when its exact cursor row lies in the acknowledged validated
+      prefix, and validate any carried ordinal as canonical checked u64 no later
+      than that frontier. Ordinal zero is "0", never a null sentinel. An
+      undelivered lookahead row MUST advance neither resolved filter state nor
+      the acknowledged frontier. Until a requested from_cursor is found, emit
+      no matching frames. On a nonempty stream, any requested bound still
+      unresolved at the pinned head fails with the existing unknown-cursor
+      input error and no complete-success page; incomplete earlier pages remain
+      page prefixes only. Only an actually registered stream whose registered
+      path is proven absent or zero-byte by a successful check under the
+      cooperative lock returns v2 complete-empty with complete=true, null
+      pinned-head and scanned-through values, no frames, and no continuation;
+      it has no synthetic cursor. A requested cursor on that stream is
+      unknown-cursor input error. Corrupt, unreadable, nonempty-whitespace, or
+      torn history is unavailable, never empty success.
+    verify: [V-C2-RANGE-01, V-C2-RANGE-02, V-C2-RANGE-03, V-C2-LEGACY-01]
   - id: REQ-C2-FRONTIER-001
     text: >-
       The Go owner MUST maintain one validated global scan frontier separately
@@ -443,16 +541,15 @@ requirements:
     verify: [V-C2-BOOT-02, V-C2-BOOT-03, V-C2-HISTORY-02, V-C2-SSE-02]
   - id: REQ-C2-APPROVAL-001
     text: >-
-      The operator-approved scope is exactly the six recommendation-level
-      areas recorded in the approval source: shared journal and writer
-      participation; versioned bounded reader with legacy shape preservation;
-      global versus proven case-local failures; cursor plus digest for history,
-      SSE, and mutation preconditions; actual case/world IDs and strict
-      bootstrap/create contract; and bounded retention/stream budgets,
-      deadlines, and explicit resync. Do not claim the exact V7 candidate hash
-      was operator-read. A material expansion beyond these areas requires a
-      specific decision. The approval does not establish implementation
-      readiness.
+      The operator-approved scope includes the six recommendation-level areas
+      recorded in the original approval source and the four bounded-reader
+      policy choices recorded in the additional approval source: process-memory
+      Ed25519 key lifecycle; token, payload, raw-row, and raw-page byte limits;
+      verified-empty v2 representation; and acknowledged-prefix resolved cursor
+      filters. These approvals do not mean the operator read or approved the
+      exact V7 or reader-proposal hash. A material expansion beyond the two
+      recorded approvals requires a specific decision. Neither approval
+      establishes implementation readiness.
     verify: [V-C2-SCOPE-01]
   - id: REQ-C2-READY-001
     text: >-
@@ -483,8 +580,9 @@ verification_contract:
       proof: >-
         Independent architecture review compares every proposed schema,
         persisted field, dependency, authority, route, and error change to the
-        six approved recommendations. Any expansion is held for a specific
-        decision; exact candidate-hash approval is not fabricated.
+        six recommendation-level areas and four bounded-reader policies in
+        their respective approval records. Any other expansion is held for a
+        specific decision; exact candidate-hash approval is not fabricated.
     - id: V-C2-ID-01
       requirements: [REQ-C2-ID-001]
       proof: >-
@@ -525,22 +623,48 @@ verification_contract:
         exception; accepted create is not repeated and explicit case selection
         never redirects.
     - id: V-C2-RANGE-01
-      requirements: [REQ-C2-RANGE-001]
+      requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-004, REQ-C2-RANGE-005]
       proof: >-
         V2 schema and adapter tests verify exact request/page field types,
         canonical ordinal strings, continuation binding, typed unknown-version
-        errors, and bounded scan/frame/byte/lock behavior.
+        errors, and bounded token and payload validation before decode/seek use.
+        Digest vectors pin distinct stream/from/to domain tags and the exact
+        presence, checked-length, and UTF-8-byte encoding; changed identity bytes
+        fail comparison before seek and token fields contain digests, not raw
+        stream/filter strings.
+        Key acceptance vectors verify that entropy failure prevents startup from
+        accepting requests and that the local seed is zeroized immediately after
+        signing-key construction; a fresh process key rejects tokens after
+        restart.
     - id: V-C2-RANGE-02
-      requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-003]
+      requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-003, REQ-C2-RANGE-005]
       proof: >-
         Interleaved cases and non-event rows retain global ordinal order;
-        empty filtered page advances only scanned-through global row. Continuation
-        validates preceding row, cursor, ordinal, checksum, and pinned head.
+        empty filtered page advances only scanned-through global row. Exact
+        from/to filters remain bound over several pages, resolved ordinals come
+        only from the acknowledged prefix, zero is distinct from unresolved,
+        and lookahead cannot advance a filter or frontier. Continuation validates
+        preceding row, cursor, ordinal, checksum, and pinned head. Complete-empty
+        is accepted only for an actually registered stream whose registered path
+        is successfully checked as absent or zero-byte under the cooperative
+        lock; unregistered, unreadable, or corrupt history is unavailable. Empty
+        history returns only the approved null-head form; requested bounds are
+        unknown.
     - id: V-C2-RANGE-03
-      requirements: [REQ-C2-RANGE-001]
+      requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-004, REQ-C2-RANGE-005]
       proof: >-
-        Torn/oversized row, bad token, stale head, lock timeout, and each cap
-        return typed unavailable without a partial-complete marker.
+        Exact-cap and cap-plus-one boundaries are tested for token, payload,
+        raw-row, and aggregate raw-page byte limits. Oversized token, payload,
+        or single row is typed unavailable; reaching the page input budget
+        returns only prior acknowledged progress or typed unavailable, never a
+        skipped partial/lookahead row. The 500-row and 500-frame boundaries
+        return incomplete progress with a continuation when more data remains;
+        the next row/frame is not acknowledged if undelivered. The full 1 MiB
+        response envelope and 50 ms lock wait are tested at their boundaries;
+        bad signature, stale head, unresolved cursor at pin, corrupt/torn input,
+        and lock timeout fail typed without a partial-complete marker. No
+        per-page elapsed guarantee or RSS/I/O-latency bound is asserted; outer
+        scheduling expiry cannot acknowledge or convert an unfinished scan.
     - id: V-C2-LEGACY-01
       requirements: [REQ-C2-RANGE-002]
       proof: >-
@@ -556,8 +680,9 @@ verification_contract:
     - id: V-C2-LEGACY-03
       requirements: [REQ-C2-RANGE-002]
       proof: >-
-        Byte, lock-wait, and elapsed-time limits before head proof fail closed;
-        no hidden unbounded retry or compatibility fallback occurs.
+        Input/response-byte and lock-wait limits before head proof fail closed;
+        outer scheduling expiry never yields partial success. No per-page elapsed
+        bound, unbounded retry, or compatibility fallback is introduced.
     - id: V-C2-GLOBAL-01
       requirements: [REQ-C2-RANGE-003, REQ-C2-FRONTIER-001, REQ-C2-STORE-001]
       proof: >-
@@ -707,7 +832,7 @@ release:
     - incomplete writer participation or possible active unsupported writer
     - cap, deadline, or aggregate resource guarantee cannot be enforced
     - any test, authority check, or independent review fails
-    - any material design choice outside the six approved recommendation areas lacks a specific decision
+    - any material design choice outside the six approved recommendation areas and four approved bounded-reader policies lacks a specific decision
   evidence_rule: >-
     This specification authors requirements and verification targets only. It
     does not claim that code, schemas, tests, writer migration, runtime gates,

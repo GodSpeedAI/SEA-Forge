@@ -98,24 +98,33 @@ check-fast:
     cargo fmt --all -- --check
     cargo check --workspace --all-targets --locked
 
-# Developer quality sweep (Shell-SPEC §10.3): context + fmt + clippy + check
+# Developer quality sweep (Shell-SPEC §10.3): status + fmt + clippy + check
 # + deny + gitleaks. Delegates to granular recipes so local and CI share one
 # implementation per category.
 [group('quality')]
 check:
     #!/usr/bin/env bash
     {{set}}
-    just context-check
+    just status-check
     just fmt-check
     just lint
     just typecheck
     just security
     echo "[check] all gates green"
 
-# Validate agent handoff structure and freshness without vendor-specific tooling.
+# Show the latest complete agent status without reading its history
 [group('quality')]
-context-check:
+status:
+    @tail -n 1 .agents/CURRENT_STATUS.yaml
+
+# Validate agent handoff structure and freshness without reading full history.
+[group('quality')]
+status-check:
     scripts/check-agent-context.sh
+
+# Validate agent handoff structure and freshness without vendor-specific tooling (alias for status-check).
+[group('quality')]
+context-check: status-check
 
 # Verify the frozen E2E convergence preregistration (.agents/specs/
 # e2e-preregistration.yml) still matches the hash bound under
@@ -840,7 +849,7 @@ alias storybook-down := workbench-storybook-down
 ci:
     #!/usr/bin/env bash
     {{set}}
-    just context-check
+    just status-check
     just fmt-check
     just lint
     just typecheck

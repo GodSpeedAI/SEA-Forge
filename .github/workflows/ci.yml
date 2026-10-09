@@ -46,8 +46,8 @@ jobs:
       - name: Doctor (environment check)
         run: devbox run -- just doctor
 
-      - name: Context check
-        run: devbox run -- just context-check
+      - name: Status check
+        run: devbox run -- just status-check
 
       - name: fmt-check
         run: devbox run -- just fmt-check

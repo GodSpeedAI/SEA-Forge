@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -306,6 +307,7 @@ func TestRunObservationManagerPrepareReturnsExactEmptyInitialEventAndLease(t *te
 	})
 	caller := runObservationManagerCaller("session-A")
 	manager := newRunObservationManagerFixture(list, traces, runObservationManagerCurrent(caller.Identity.Claim()), &runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, cursor, "item-A"))
+	cleanupRunObservationManager(t, manager, nil)
 
 	event, lease, err := manager.prepare(context.Background(), caseID, caller)
 	if err != nil {
@@ -313,6 +315,17 @@ func TestRunObservationManagerPrepareReturnsExactEmptyInitialEventAndLease(t *te
 	}
 	if lease == nil {
 		t.Fatal("Prepare() returned a nil lease for a successful empty cohort")
+	}
+	manager.mu.Lock()
+	listState := lease.listState
+	watermarks := lease.watermarks
+	watermarkCount := len(watermarks)
+	manager.mu.Unlock()
+	if listState != contract.RunTraceListState("complete") {
+		t.Fatalf("empty-list lease listState = %q, want complete", listState)
+	}
+	if watermarks == nil || watermarkCount != 0 {
+		t.Fatalf("empty-list lease watermarks = %#v, want initialized empty map", watermarks)
 	}
 	want := contract.RunTraceObservationEvent{
 		EventType: contract.RunTraceObservationEventType,
@@ -339,6 +352,157 @@ func TestRunObservationManagerPrepareReturnsExactEmptyInitialEventAndLease(t *te
 	}
 	if err := lease.detachAndDrain(context.Background()); err != nil {
 		t.Fatalf("second Detach() was not idempotent: %v", err)
+	}
+}
+
+func TestRunObservationManagerPrepareSeedsInitialWatermarksBeforeHydrationAndKeepsLeaseMapsSeparate(t *testing.T) {
+	const caseID = "case_1"
+	const runCount = 8
+	const frameCount = runObservationRetainedFrameLimit
+	longEventID := "-event-" + strings.Repeat("x", 128)
+	var listCalls, traceCalls atomic.Int32
+	rows := make([]ports.RunSummary, 0, runCount)
+	snapshots := make(map[string]ports.RunTraceSnapshot, runCount+1)
+	parents := make([]string, 0, runCount+1)
+	for runIndex := 0; runIndex < runCount; runIndex++ {
+		runID := "run-hydration-" + strconv.Itoa(runIndex)
+		itemID := "item-hydration-" + strconv.Itoa(runIndex)
+		rows = append(rows, ports.RunSummary{
+			RunID: runID, CaseID: caseID, PlanItemID: itemID,
+			Execution: "active", Settlement: "unsettled",
+		})
+		parents = append(parents, itemID)
+		frames := make([]ports.RunTraceFrame, 0, frameCount)
+		for frameIndex := 0; frameIndex < frameCount; frameIndex++ {
+			frames = append(frames, retainedTestFrame(runID+longEventID+strconv.Itoa(frameIndex), "2026-10-06T12:00:00Z"))
+		}
+		snapshots[runID] = ports.RunTraceSnapshot{
+			CaseID: caseID, RunID: runID, PlanItemID: itemID,
+			Execution: "completed", Settlement: "accepted",
+			Frames: frames, TotalFrameCount: frameCount,
+		}
+	}
+	const laterRunID, laterItemID = "run-hydration-later", "item-hydration-later"
+	parents = append(parents, laterItemID)
+	laterKey := runObservationPollerKey{caseID: caseID, runID: laterRunID, planItemID: laterItemID}
+	snapshots[laterRunID] = ports.RunTraceSnapshot{
+		CaseID: caseID, RunID: laterRunID, PlanItemID: laterItemID,
+		Execution: "completed", Settlement: "accepted",
+		Frames:          []ports.RunTraceFrame{retainedTestFrame("later-event", "2026-10-06T12:00:00Z")},
+		TotalFrameCount: 1,
+	}
+	list := runObservationManagerListFunc(func(context.Context, ports.CaseRef) (ports.RunListResult, error) {
+		if listCalls.Add(1) == 1 {
+			return ports.RunListResult{Runs: rows, UnreadableIDs: []string{}}, nil
+		}
+		return ports.RunListResult{Runs: []ports.RunSummary{{
+			RunID: laterRunID, CaseID: caseID, PlanItemID: laterItemID,
+			Execution: "active", Settlement: "unsettled",
+		}}, UnreadableIDs: []string{}}, nil
+	})
+	traces := runObservationManagerTraceFunc(func(_ context.Context, gotCase, runID, itemID string) (ports.RunTraceSnapshot, error) {
+		traceCalls.Add(1)
+		if gotCase != caseID {
+			return ports.RunTraceSnapshot{}, errors.New("unexpected case in retained fixture read")
+		}
+		snapshot, ok := snapshots[runID]
+		if !ok || snapshot.PlanItemID != itemID {
+			return ports.RunTraceSnapshot{}, errors.New("unexpected key in retained fixture read")
+		}
+		return snapshot, nil
+	})
+	caller := runObservationManagerCaller("session-hydration")
+	manager := newRunObservationManagerFixture(
+		list, traces, runObservationManagerCurrent(caller.Identity.Claim()),
+		&runObservationManagerPerspectiveFake{}, runObservationManagerContext(caseID, "cursor-hydration", parents...),
+	)
+	cleanupRunObservationManager(t, manager, nil)
+
+	event, firstLease, err := manager.prepare(context.Background(), caseID, caller)
+	if err != nil || firstLease == nil {
+		t.Fatalf("first Prepare() = (lease=%v, err=%v), want accepted retained captures", firstLease, err)
+	}
+	if len(event.Payload.Runs) != runCount || event.Payload.ValidatedRunCount == nil || *event.Payload.ValidatedRunCount != runCount {
+		t.Fatalf("first Prepare validated runs = %d/%v, want %d", len(event.Payload.Runs), event.Payload.ValidatedRunCount, runCount)
+	}
+	if traceCalls.Load() != runCount {
+		t.Fatalf("first Prepare trace reads = %d, want exactly one accepted terminal read per run (%d)", traceCalls.Load(), runCount)
+	}
+	totalDTOFrames := 0
+	for _, run := range event.Payload.Runs {
+		totalDTOFrames += len(run.Frames)
+	}
+	if totalDTOFrames >= runCount*frameCount {
+		t.Fatalf("initial hydration retained %d frames, want aggregate pruning below %d", totalDTOFrames, runCount*frameCount)
+	}
+
+	manager.mu.Lock()
+	firstListState := firstLease.listState
+	firstWatermarks := make(map[runObservationPollerKey]runObservationWatermark, len(firstLease.watermarks))
+	for key, watermark := range firstLease.watermarks {
+		firstWatermarks[key] = watermark
+	}
+	manager.mu.Unlock()
+	if firstListState != contract.RunTraceListState("complete") {
+		t.Fatalf("accepted-list lease listState = %q, want complete", firstListState)
+	}
+	if len(firstWatermarks) != runCount {
+		t.Fatalf("accepted-list watermark count = %d, want %d", len(firstWatermarks), runCount)
+	}
+	for runIndex := 0; runIndex < runCount; runIndex++ {
+		runID := "run-hydration-" + strconv.Itoa(runIndex)
+		itemID := "item-hydration-" + strconv.Itoa(runIndex)
+		key := runObservationPollerKey{caseID: caseID, runID: runID, planItemID: itemID}
+		got, ok := firstWatermarks[key]
+		if !ok {
+			t.Fatalf("accepted-list lease has no watermark for exact key %+v", key)
+		}
+		want := runObservationWatermark{
+			highestObservedOrdinal: frameCount,
+			execution:              contract.RunExecutionStanding("completed"),
+			settlement:             contract.RunSettlementStanding("accepted"),
+			observationState:       contract.RunTraceRunObservationState("validated"),
+			window: runObservationDeltaWindow{
+				generation: 1, totalFrameCount: frameCount,
+				retainedFrameCount: frameCount, omittedFrameCount: 0, truncated: false,
+			},
+		}
+		if got != want {
+			t.Fatalf("pre-hydration watermark for %+v = %+v, want %+v", key, got, want)
+		}
+	}
+
+	secondEvent, secondLease, err := manager.prepare(context.Background(), caseID, caller)
+	if err != nil || secondLease == nil {
+		t.Fatalf("second Prepare() = (lease=%v, err=%v), want accepted independent lease", secondLease, err)
+	}
+	if len(secondEvent.Payload.Runs) != 1 || secondEvent.Payload.Runs[0].RunID != laterRunID {
+		t.Fatalf("second Prepare runs = %+v, want only %q", secondEvent.Payload.Runs, laterRunID)
+	}
+	if traceCalls.Load() != runCount+1 {
+		t.Fatalf("trace reads after second Prepare = %d, want one additional accepted terminal read", traceCalls.Load())
+	}
+	manager.mu.Lock()
+	firstAfterSecondCount := len(firstLease.watermarks)
+	secondWatermarks := make(map[runObservationPollerKey]runObservationWatermark, len(secondLease.watermarks))
+	for key, watermark := range secondLease.watermarks {
+		secondWatermarks[key] = watermark
+	}
+	manager.mu.Unlock()
+	if firstAfterSecondCount != runCount {
+		t.Fatalf("first lease watermark count after second Prepare = %d, want unchanged %d", firstAfterSecondCount, runCount)
+	}
+	if len(secondWatermarks) != 1 {
+		t.Fatalf("second lease watermark count = %d, want one independent key", len(secondWatermarks))
+	}
+	if _, ok := secondWatermarks[laterKey]; !ok {
+		t.Fatalf("second lease does not own later watermark key %+v", laterKey)
+	}
+	if err := firstLease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach first hydration lease: %v", err)
+	}
+	if err := secondLease.detachAndDrain(context.Background()); err != nil {
+		t.Fatalf("Detach second hydration lease: %v", err)
 	}
 }
 
@@ -1020,6 +1184,17 @@ func TestRunObservationManagerRefusedListReturnsUnavailableDTOAndEmptyLease(t *t
 	}
 	if len(lease.pollers) != 0 {
 		t.Fatalf("refused-list lease owns %d pollers, want completed empty lease", len(lease.pollers))
+	}
+	manager.mu.Lock()
+	listState := lease.listState
+	watermarks := lease.watermarks
+	watermarkCount := len(watermarks)
+	manager.mu.Unlock()
+	if listState != contract.RunTraceListState("unavailable") {
+		t.Fatalf("refused-list lease listState = %q, want unavailable", listState)
+	}
+	if watermarks == nil || watermarkCount != 0 {
+		t.Fatalf("refused-list lease watermarks = %#v, want initialized empty map", watermarks)
 	}
 	stamp := "2026-10-06T12:00:00Z"
 	want := contract.RunTraceObservationEvent{

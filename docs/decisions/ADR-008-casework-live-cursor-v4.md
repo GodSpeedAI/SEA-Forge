@@ -11,6 +11,10 @@ The operator approved the six recommendation areas recorded in
 That approval does not claim the operator read or approved one exact candidate
 hash. It does not authorize source, generated schema, or runtime release by
 itself.
+The operator separately approved four bounded-reader policy choices in
+.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-additional-policy-operator-approval-oct08.md
+for incorporation into the normative spec and this ADR. This remains
+proposal-level approval; runtime proof and readiness are not established.
 
 ## Date
 
@@ -90,11 +94,83 @@ the case. An unexplained global discontinuity has unknown impact: make dependent
 projection/bootstrap unavailable and drain dependent streams cell-wide. Do not
 infer missing-case identity from a per-case ordinal gap or latest-head index.
 
+#### Bounded reader, continuation, and cursor filters
+
+The existing `events.get_range` verb gains only the approved optional
+`range_version=2`; no kernel verb is added. Omitted version retains its exact
+legacy vector wrapper and frame shape. V2 uses distinct page/frame DTOs. The
+reader validates the global prefix from actual origin or a verified continuation
+through a real pinned head before filtering. Non-event rows advance only global
+progress. A page that cannot prove completion returns typed unavailable rather
+than a successful partial legacy vector.
+
+Each server start creates a fresh in-memory Ed25519 signing key using the
+existing `getrandom::fill` entropy source. Startup fails before accepting
+requests if entropy is unavailable. The local seed is zeroized with existing
+`zeroize` support immediately after signing-key construction. The key is never
+persisted or logged; restart invalidates outstanding tokens. A continuation is
+issued only for an acknowledged validated prefix and binds the exact stream,
+pinned head, last acknowledged row and byte boundary/checksum, and exact
+request-filter bindings. The stream binding is a field-specific
+domain-separated SHA-256 digest, not a raw string in the token. Compute it from
+a distinct fixed ASCII domain tag, a presence byte, the checked UTF-8 byte
+length as unsigned 64-bit big-endian, and exact UTF-8 bytes when present; absent
+uses the absent tag and zero length. Recompute it for the requested registered
+stream and require equality before any seek. The reader enforces the
+4,096-byte encoded
+token and 2,048-byte payload caps and fixed signature representation/length
+before decoding or trusting seek fields. Invalid or oversized tokens fail
+unavailable. A trusted Go owner that loses its expected continuation
+acknowledges nothing from that failed page and follows the existing cell-wide
+unavailable/drain and bounded-rebuild rule. An arbitrary SFWP request cannot
+mutate that owner's state.
+
+Cursor filters remain exact opaque UTF-8 values: `from_cursor` is exclusive
+and `to_cursor` inclusive. Each signed filter binding is a field-specific
+domain-separated SHA-256 digest computed from a distinct fixed ASCII domain
+tag, a presence byte, the checked UTF-8 byte length as unsigned 64-bit
+big-endian, and exact UTF-8 bytes when present; absent uses the absent tag and
+zero length. The token carries the digests, not raw filter strings. On resume,
+recompute and compare both bindings against the exact requested values before
+using resolved state or seek data. The continuation carries nullable resolved ordinals,
+with an absent filter distinct from a present-but-undiscovered filter; a cursor
+resolves only when found inside the acknowledged validated prefix. Ordinal zero
+is the real string `"0"`. Undelivered lookahead cannot advance either resolved
+filter state or the acknowledged frontier. An unresolved requested bound fails
+with the existing unknown-cursor input error at the pinned head; earlier
+incomplete v2 pages are only validated prefixes. Only an actually registered
+stream whose registered path is successfully checked as absent or zero-byte
+under the cooperative lock returns the v2 complete-empty arm with
+`complete=true`, null head/frontier, no frames, and no continuation. It has no
+synthetic cursor. A requested bound on that stream is unknown; unregistered,
+corrupt, or unreadable history is unavailable.
+
+Acceptance vectors require entropy-source failure to prevent startup from
+accepting requests and require the local seed to be zeroized immediately after
+signing-key construction. Complete-empty vectors distinguish a registered
+absent/zero-byte stream from an unregistered identity, unreadable stream, and
+corrupt history; only the registered, successfully checked case succeeds.
+Digest vectors pin the distinct stream/from/to domain tags and exact
+presence/checked-length/UTF-8-byte encoding; changed identity bytes fail before
+seek and token fields contain digests rather than raw stream/filter strings.
+
+Row integrity retains the established Rust hash protocol: `payload_hash` covers
+the complete payload `Value`, and `entry_hash` uses the typed `LedgerEntry`
+helper. Unknown top-level row fields remain tolerated and are ignored by typed
+deserialization/reserialization; unknown payload fields remain in the value
+and are hashed. Known fields and types are validated. Event payloads require a
+string `kind` and present `detail` (including explicit null); optional case/run
+IDs may be absent/null or strings. No new kind grammar or rejection of extra
+payload fields is introduced.
+
 The legacy unversioned vector shape remains available only after a bounded scan
-validates coverage to the real pinned head. If row, byte, lock-wait, or time
-ceilings prevent proof, return typed unavailable and no successful vector or
-partial frames. Callers surface the unavailable result; large histories use
-version 2. Do not provide an unbounded compatibility fallback.
+validates coverage to the real pinned head. If row, input-byte, response-byte,
+or lock-wait ceilings prevent proof, return typed unavailable and no successful
+vector or partial frames. Callers surface the unavailable result; large
+histories use version 2. There is no per-page elapsed-time guarantee. The
+two-page/500 ms reconciliation scheduling bound does not preempt or certify a
+blocking OS read and cannot acknowledge an unfinished scan or convert it to
+partial success. Do not provide an unbounded compatibility fallback.
 
 ### Identity, capture, and history
 
@@ -130,8 +206,11 @@ historical resync is pre-body 404; SSE resync is pre-header 409. Errors never
 become empty success.
 
 The V4 limits are serialized-payload and availability bounds, not process RSS
-guarantees: 500 ledger rows, 500 frames, and 1 MiB per page; 50 ms ledger-lock
-wait; at most two pages or 500 ms per reconciliation turn; 4,096 cases/8 MiB
+guarantees: 500 ledger rows, 500 frames, and 1 MiB for the complete serialized
+page response; a 2 MiB raw row including LF and 4 MiB raw input per page
+including non-events and lookahead; 4,096 encoded token bytes and 2,048 payload
+bytes; 50 ms ledger-lock wait; at most two pages or 500 ms per reconciliation
+turn; 4,096 cases/8 MiB
 for the derived head index; rebuild ceiling of 1,000,000 rows or 10 active-work
 minutes per detected lineage with no automatic reset; 4,096 cases/4 MiB strict
 inventory; journal records of 32 KiB, 256 records/8 MiB and 50 ms lock wait;
@@ -140,7 +219,9 @@ heads; 32 streams; two live frames/2 MiB per queue; 64 revisions/4 MiB replay;
 64 MiB aggregate subscriptions including replay, queues, and in-flight writes;
 five seconds per response header/frame; at most one already-permitted
 post-invalidation write. Never truncate/drop while claiming continuity. If a
-limit or deadline cannot be enforced, remain held.
+limit cannot be enforced, remain held. Raw and serialized byte caps do not
+guarantee RSS, heap use, or I/O latency; no per-page elapsed-time bound is
+introduced.
 
 ### Writer migration and unsupported writers
 
@@ -169,6 +250,8 @@ coordination claim is permitted.
 - The parent GodSpeed casework specification remains authoritative outside
   V4 live cursor scope. The supplemental spec is normative for V4 after its
   required independent review.
+- The four approved bounded-reader choices are for normative incorporation
+  only; they do not authorize implementation or readiness.
 - Authored Rust/Go/TypeScript contracts and schemas must be updated together
   after review; generated contracts remain generator-owned.
 - Complete writer participation is a readiness prerequisite, not an assumption
@@ -198,3 +281,5 @@ coordination claim is permitted.
 - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision7-oct08.md
 - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision7-independent-review-oct08.md
 - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-six-recommendations-operator-approval-oct08.md
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-additional-policy-operator-approval-oct08.md
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-bounded-ledger-reader-proposal-revision4-correction-oct08.md

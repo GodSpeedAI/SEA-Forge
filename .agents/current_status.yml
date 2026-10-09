@@ -1,3 +1,6 @@
+# DEPRECATED: Current status has migrated to .agents/CURRENT_STATUS.yaml (append-only history)
+# and .agents/CURRENT_STATUS.md (human mirror).
+# Historical pre-migration status archived to: .agents/status-archive/casework-live-wiring-20261008-pre-migration.yml
 schema: agent.current_status
 schema_version: '1.0'
 
@@ -11,149 +14,16 @@ metadata:
   initialized: true
   last_updated: '2026-10-08'
   updated_by: >-
-    AUTHORITATIVE: separateprivatepolicy explicitlyoperatorAPPROVED; receipt
-    run-observation-private-policy-operator-approval-oct08.md/CW36closed.
-    Pureprojection independent24c7f2c5 rootfullreadaccepted, canonical/focused/
-    correctedfullraceGREEN. GraftrefreshPASS/root6cmp. Commitverifiedunit then
-    boundedNextintegrationTDDgrant; noT09closure.
-    LATEST: correctedfullrace02 actualchild0/738pass5skip0fail rootALL6cmp
-    d1a6fce0; finalpureprojectionindependentreviewpending, integratedNextheld.
-    RootsoleheavyGraftrefresh; publicreadercontinuationtrustdesignopen and
-    writerenumerationindependentreviewactive. Privatepolicyquestionpending.
-    LATESTVERIFICATION: canonicalGo02GREEN10tested+5notests/root6cmp4fb8b0f4.
-    Fullrace01JSON738pass5skip0fail butnegated-shell childexitUNRESOLVED;
-    REJECTexitproof/preserveactual6/repeatdirectchildreturncode beforeapproval.
-    AUTHORIZATIONGAP: private16cohorts/128attachments/1MiB explicitlyheld in
-    governingproposal, NOTpublic6areaapproval. Rootomittedit fromsummary;
-    exactprivatepolicy approvalquestion pending, noNEWleaseintegrationsource.
-    Pureprojectionverification/publicC2continue. Security05PASS524commits91.42MB
-    noleaks/root6cmp; canonicalGo retry criticsoleheavy.
-    CURRENTGATES: canonicalGo01 format-onlyRED beforetests root6cmp2df9448e;
-    freshrenderer exactgofmt whitespace tests48c6d28e/preimage92be57b9 +count
-    erratum6789538f, independentformatreviewpending. Security05 rootsoleheavy;
-    Nextcanonretry held untilJOIN/rootcmp. Nextintegrationrootdecisions under
-    architecturecritic; C2normative4f24a5a2 accepted scopedprep/writerauditopen.
-    VERIFIEDMILESTONE: independentfocusedrace8top+12sub GREEN20pass root6cmp
-    archive2e2d8330; canonicalGo solecriticheavy next. C2specADR independently
-    approved4f24a5a2 rootreview/readinessnotclaimed. d100configreview01af5627
-    +scope2dad194d accepted; canonicalsecurityretrypending.
-    LATESTUNIT: overcapRED nilerr expected/root6cmp, freshFORMAT onlycapguard
-    release; independentruntime pending. d1002prose classified11050e19,
-    freshNextcritic configbuilder7b2b7ed6/rendererindependentreviewpending.
-    C2v7 normative specADR builderactive, no newapproval requirement.
-    AUTHORITATIVE: C2v7ad82478f designAPPROVED04d21470 rootfullreview/delta;
-    operator6areaapproval applies, normative spec/ADR builderactive. d100diag
-    identifies2copiedprose findings, independentclassificationactive. Overcap
-    fixture66e368ff SOURCE-READYdbecbfbc; rootfocusedRED soleheavy, guardheld.
-    LATEST: push02 FAILED2newfindings/root6actualcmp, remotenotadvanced;
-    redacteddiagnostic01 soleheavy. NextalgorithmREJECT missing1024framecap;
-    freshFORMATadditive1025fixture testfirst/noalgorithmguardyet. C2v7ad82478f
-    independentreview active/operator6recommendationsapproved.
-    CHECKPOINTd100b9b normalhooksPASS45explicitpaths root6capturecmp;
-    pushretry next/contextpostcommittouch. Nextassemblerbuilder resultpending,
-    independentactualruntime follows. C2v6REJECT legacycompletion/u64client;
-    rootclarification +freshv7builder active withinapprovedrecommendations.
-    CURRENTVERIFIED: security04 PASS523commits91.37MB noleaks/root6cmp.
-    Nextsource99dccce4 accepted; actualRED sixexpectedstubfailures no build
-    errors/root6cmp. Freshrenderer builds ONLYdelta.go; independentruntime
-    follows. Userexplicitly approves ALLsixC2recommendations; approvalrecord
-    c2-six-recommendations-operator-approval-oct08.md. Candidate7e9009c5 fresh
-    independentdesignreview active; specs/audit/runtime stillrequired.
-    CURRENT: Next revisedsource99dccce4 SOURCE-READY only, fullreview/diff
-    rootread. NoactualRED/algorithmyet. Security03 advisory-db lock sandbox
-    readonly failure archived6cmp. Authorizedsecurity04 normalpermissions,
-    documented JUST_TEMPDIR=/tmp samecanonicalgate soleheavy. No bypass.
-    OPERATORBASELINE: ff15744 committed taskartifacts/foreignstage/hooks/Next
-    tests+stub; preserve newbaseline, old11indexassertions historical. Next
-    sourceREJECT invalidsettledfixtures, freshbuilder accepted-onlyrepair,
-    independentrevisedreview pending. Securityignore2exact reviewed03bb2e57;
-    security02 runtime-tempdir IO failure archived6cmp; security03 documented
-    JUST_TEMPDIR=/tmp soleheavy. C2v6 DOC-only builderactive/publicheld.
-    RESUME2026-10-08: HEAD58f4c34 checkpoints committed, publicationpending.
-    Diagnostic JOIN/root5originals exact, preflight exit inline. Renderer
-    independently proves both prose/checksum falsepositives; freshLuna builder
-    twoEXACTfingerprints only, critic/security beforepush. FreshNextsourcecritic
-    active; tests/stub frozen, noRED/algorithm/compiler. Earlierusageerrors
-    remain historical; renderer resumed. C2v6 unwritten/publicapprovalheld.
-    ACTIVE: normalcheckpointpush01 FAILED2Gitleaksfindings522commits91MB;
-    root6actualcaptures exact. Renderer soleheavy redacteddiagnostic; FORMAT
-    privateNexttests/stub SOURCEONLY, noalgorithm/compiler. C2globalfrontier
-    DOC clarification recorded, publicheld. Userrequestedcommits done.
-    AUTHORITATIVE: completed work checkpointed f56fc17/36bcd1b/58f4c34;
-    normalhooks PASS, final67paths/fullworktreeDEBT/foreign11 exact; root6last
-    actualcaptures verified. Publish then release private Next test-first source.
-    CURRENT checkpoint f56fc17+36bcd1b normalhooks PASS; root12actual
-    capture comparisons. Evidence originals56exact; secondcommit454/455exact,
-    oneGitCRLFnormalization delegatedadditivearchive/erratum. Final heldC2
-    drafts/report/task-onlyDEBT checkpoint next, no newsource yet.
-    CHECKPOINT CURRENT: f56fc17 preserves56original evidence files plus
-    inventory/handoff; normalhooks PASS/root6actualcapturecomparisons/foreign11
-    exact. Commit remaining observation history then held C2/task-only debt.
-    CURRENT Oct08: lifecycle a8c9ad6 normal push02 PASS; exact remote SHA
-    verified. Root six lossless original push capture comparisons complete.
-    Operator requests all completed task work checkpointed before continuing;
-    Luna inventory recon/independent review active. Root heavy idle; Next held
-    until checkpoints; C2 revision5 independently REJECTED for global versus
-    per-case ordinal gap ambiguity. Root accepts rejection; exact approval held.
-    CURRENT: bounded lifecycle03be81b6+scopeerrata rootaccepted; canonical
-    Go andfullmodule race GREEN; Graft708cards root6exactcaptures verified.
-    Normal scoped checkpoint/push next, then private Next. C2 remainsheld.
-    Historical entries follow.
-    LATEST Oct08: focused race53top+22nested GREEN; canonical Go format/vet/tests
-    and fullmodule race both GREEN10tested packages/5no-tests. Root12actual
-    archive comparisons/11source identities exact. Final bounded lifecycle
-    criticism pending; recon soleheavy Graft refresh then checkpoint/push.
-    Next test-first source held until checkpoint; public C2 held/new DOC candidate.
-    Historical checkpoint evidence follows.
-    Oct07: T09 remains partial. Renderer checkpoint74f86f0 committed and pushed
-    with normal hooks; exact remote SHA verified. CI125 summaries/1110 passed/
-    zero failed/4 ignored. All3 actual push captures archived cmp0; full237536
-    byte output SHA98d6504f. Eleven foreign staged blobs unchanged after push.
-    Renderer focused13/0, typecheck/build/canonical299/0/1674 accepted; root
-    verified18 actual capture pairs and9 emitted JS hashes. Helper2157583f
-    exact gofmt-only, independent source/race PASS and root3capturecmp0.
-    Managerab9f1/fixtureaf remains unwired. Core combined encoder design retained;
-    encoder3dba/fixturecf501 independently APPROVED focused GREEN7top/3nested,
-    formatting clean. Root eight actual/archive cmp0; inaccurate oldoutput
-    excluded, exact809720a6 preserved; duplicate native archive write recordedCW18.
-    Key extractiona6f0114 independently sourceREADY; manager onlydeclmove nowab9f1.
-    Exact six-file closure copied/independently READY in isolatedHEAD74 worktree.
-    Canonical firstattempt stopped at policy formatting, vet/tests notrun. Four
-    policy alignmenthunks repaired e156 bothcopies; exactformatter bytes/preimage
-    and8captures independently READY, onepreflight-exit archive explicitlylate.
-    Sandboxcanonical socketEPERM preserved; normal listenerpermission retry
-    canonical/fullmodule-race bothPASS. Root8actualcapturescmp0 and6sourcepairs
-    exact; result215524db, root boundedapproval. GraftPASS705/7801/15250,
-    all3actualcapturescmp0. Normal scopedcommit617 passed, push01 failed. Lifecyclecore
-    approved, supplement4752 independently APPROVED a3b591. Luna PhaseA bounded
-    lifecycle PhaseA frozen managerf932/workerf90/fixture3b0; sourcecriticism
-    undefinedcaller compileblock/forbiddencancelspy, noRED yet. Publicheld;
-    T09 partial. Primitivecheckpoint617dac3 committed normalhooks, all3captures
-    rootcmp0 and11foreignindex unchanged. Normalpush01 failed security scanner
-    onefinding; all3actualcapturescmp0. Diagnosticfinished one generic-api-key
-    at evidencepolicyformat:83, proved exact committedkeyfileSHA reference.
-    Root4diagarchivescmp0; CPwriterdeviation and CR-normalized badcopies excluded.
-    ROOTsoleheavy; onefingerprint+doc repair independently APPROVED3ef3,
-    canonicalsecurityPASS/noleaks516commits/84.29MB, root3actualcapturescmp0;
-    securitycheckpoint7c65be7 committed normalhooks/root3capturescmp0,
-    normalpush02PASS/remote7c65be7 exact, CI125summaries/1110pass/0fail/4ignored,
-    all3actualcapturescmp0/output237347B SHA544ba602, foreign11index unchanged;
-    no hook/gate bypass. CW30specificfindingclosed/residualmetadataopen.
-    FocusedPhaseA attemptcompileFAILED unusedcaller:323, no testsran;
-    result54b5/root4actualarchivesexact. Reconrepair7d changed WRONGheld-read
-    binding notGlobalStop: rootdecoded4ff2preimage/diffcaughtscope+false resultclaim.
-    Rejected d59c; freshcorrectivefixturee63e sourceREADY0ec6. ActualREDretry02
-    compiledninecases/0pass/9expectedstubFAIL; rootfiveactualdecodedcapturescmp0,
-    boundedREDaccepted. Reverse-refclarification013d independentlyAPPROVED7a43:
-    eligibleforwardmap clearsatdetach, noneligible reverseownerretainsuntilJOIN;
-    allsurvivor/cancel/readdecisionsuseexactforwardmembership+notdraining.
-    Oct08 creator/list correction6526+cc4d independentlyapproved315b;
-    boundedTDDsource rejected38e4 for4staticerrors, differentbuilder4c27
-    sourceREADYea9228. Actual12caseRED joinedexit1/0pass/12expectedFAIL,
-    rootreadfull5actualcaptures/decodedcmp0; boundedacceptanceoct08.
-    Sourcegrant e5fc releases manager/workeralgorithm ONLY toLunaFORMAT,
-    fixturesef58/af+6primitives frozen. Critic mustreviewfrozenresult thenGREEN.
-    ROOTsoleheavy idle, otherssource-only; T09 remains partial/public held.
+    Root orchestration with Luna builders and independent critics. Commit e33bf30
+    contains the verified pure observer projection, approved C2 spec/ADR and exact
+    scanner remedy. Normal commit hooks passed; canonical Go, focused race,
+    corrected full-module race, Graft and context gates passed with root comparison
+    of actual captures. Private observer limits are explicitly operator approved.
+    Exact e33bf30 publication passed normal hooks and remote SHA is verified.
+    The earlier approval rejection is resolved. Lease bookkeeping is TDD source-only;
+    Root rejected initial lease TDD for two static compile defects; a fresh
+    builder is fixing only those test lines before independent review/RED.
+    C2 reader proposal repair is doc-only. T09 remains partial.
   previous_status:
     archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
     note: >-
@@ -358,288 +228,19 @@ operator_decisions:
 next_action:
   task: T09
   action: >-
-    AUTHORITATIVE: pureprojection24c7f2c5 accepted/canonicalGo02/focusedrace/
-    fullrace02GREEN root6cmpd1a6fce0; GraftPASS root6cmp, context01PASSroot6cmp.
-    Commit reviewedunit/specADR/exactscannerfix usingexplicitpaths/normalhooks,
-    thennormalpush and verifyremote. Privatepolicy nowexplicitlyapproved
-    (separatereceipt), releaseboundedNextintegrationTDD aftercheckpoint.
-    C2reader signedcontinuation/input-budget proposal underindependentreview;
-    newkeylifecycle/limits requiretargetedapproval. Writermapping correction
-    underfreshindependentreview, no runtimeparticipation claim.
-    CURRENT: JOIN/archive/rootcmp canonicalGo retry thenfullmodule race and
-    finalindependentpureassemblerconfirmation. Commit reviewednormativeC2
-    specADR+exactscannerfix/receipts normally at nextcompilerhandoff. Private
-    lease integration source awaits exact16/128/1MiB/overflowpolicy answer;
-    approvedpublic C2 boundedreaderrecon continues. Never inferthatapproval.
-    AUTHORITATIVE: JOIN/archive/cmp overcapRED beforefreshFORMATguardrelease;
-    independentNextfocusedrace/canonicalgate token serialized. Prove2d100
-    copiedprose findings, fresh exactfingerprint builder+critic thennormalpush.
-    C2v7 designapproved+operator6areasapproved: independently author/review
-    normative spec/ADR, thencompletewriterenumeration beforemigration/code.
-    CURRENTVERIFIED: checkpoint independentlyreviewed scanner2fingerprints
-    and validNextfixture repair with explicitpendingalgorithmconfirmation.
-    Contextgate/normalhooks required, thennormalpush. Freshrendereronlydelta
-    algorithm source, tests/old11frozen; freshcritic actualfocusedrace/canonical
-    verification serialized. C2sixrecommendations explicitlyapproved; fresh
-    review candidate7e9009c5 before authoredspec/schema/ADR +migrationaudit.
-    CURRENT: wait serialized security03; archive actualsix originals before
-    nextgate. Newbaseline ff15744 supersedes formerforeignindexassertions.
-    RevisedNextsourcecritic must approve fixture-onlyrepair beforeactualRED,
-    then freshalgorithmgrant. C2v6completeDOC builderactive; freshcritic and
-    exactoperatorapproval beforepublicimplementation. Checkpointmeaningful
-    verifiedfixes withnormalhooks/push, preserveoperatorchanges.
-    RESUME: review exactly two scanner fingerprint additions independently,
-    run canonical security serially with actual lossless captures, then normal
-    scoped checkpoint and push retry. Independently review Next tests/stub,
-    then actual expected RED before any fresh algorithm builder. C2 complete
-    revision6 remains unwritten; public approval held. Preserve foreign11
-    stage0 blobs and full operator DEBT/worktree. No task settlement claimed.
-    ACTIVE: classify two actualGitleaksfindings via Luna redacteddiagnostic,
-    freshbuilder narrowfix and independentreview before normalpushretry.
-    Root6pushcapturecomparisons complete; normalhooksenabled. Completedwork
-    alreadycommitted. FORMAT privateNext2newfiles TDDtests+stub SOURCEONLY;
-    independentfullassignment sourcecritic thenserialized expectedRED before
-    algorithmrelease. C2globalfrontier rootclarification DOCONLY/publicheld.
-    AUTHORITATIVE: completed taskwork committed f56fc17/36bcd1b/58f4c34,
-    allnormalhooks PASS. Root final67paths/fullworktreeDEBT/foreign11 exact;
-    sixfinalcommitcapturearchives local fornextmilestone. Publish normally,
-    verifyexactremoteSHA, then release private Next TDD projection. Root sole
-    heavy owner duringpush; allsourcefrozen. C2revision5 REJECT/approvalheld.
-    IMMEDIATE: complete final DOC checkpoint using reviewed losslesswrapper
-    a7667b2a+erratum1e9e982a and task-ownedDEBTrevision2 durable snapshot
-    46a26628. Preserve fullworktree DEBT and originalforeign8eda realindex;
-    independent extraction review precedes normal alternate-index commit.
-    Foreign staged baseline will intentionally remain older than committed
-    task-onlyDEBT; retain complete task entries during later operator integration.
-    CURRENT checkpoint f56fc17+36bcd1b complete. Native additive archive and
-    independent review must preserve one GitCRLF-normalized historical raw.
-    Commit held C2/report corrections and task-only DEBT via alternate index,
-    keeping original full worktree DEBT and all eleven real-index blobs exact.
-    Then normal push/verification and release private Next test-first unit.
-    CHECKPOINT CURRENT: f56fc17 committed normalhooks; root six actual
-    capture comparisons and eleven foreign staged identities exact. Finish
-    observation history checkpoint, then held C2/report/debt DOC checkpoint
-    with alternate-index task-only DEBT preserving foreign8eda/worktree.
-    All new source held until requested checkpoint completes.
-    CURRENT Oct08: normal push02 PASS; remote branch exactly
-    a8c9ad6a81f50919a7691aba00b20102c9a1039e; root six archived original
-    captures decoded and compared. Checkpoint remaining completed task work
-    in explicit-path groups after Luna scope recon/independent inventory review,
-    preserving eleven foreign staged blobs and all unrelated hook/Jolli work.
-    Then release private Next test-first projection; root heavy idle.
-    C2 revision5 independently REJECTED465d8ac8 for global versus per-case
-    ordinal gap ambiguity; root accepts rejection. Public source held.
-    Older entries below are historical and superseded by this paragraph.
-    CURRENT: checkpointa8c9ad6 committed normalhooks/129explicitpaths; root
-    sixcommit actualcaptures/five committedsources/11foreignstagedOIDs exact.
-    Push01 failed context-check frompreservedotherdirtyprojectfiles withno
-    postcommitSTATUSupdate; all6push actualcaptures rootcompared. Status now
-    refreshed, rerun justcontext-check then SAME normalpush (no hookbypass).
-    ROOT soleheavy owner; Nextsourcehelduntilpush completes. PublicC2held,
-    freshrevision5 DOCrepair undercriticfindings inprogress, no sourceapproval.
-    AUTHORITATIVE: bounded Prepare/sharedpoller/Stop independentlyAPPROVED
-    03be81b6+scopeerrata11398558/7a8f682e, root fullread/accepted. Canonical
-    Go andfullmodule race GREEN10tested/5no-tests, focused53+22 GREEN.
-    Graft GREEN708cards/7882nodes/15581edges; root6actualpairs/11hashes exact,
-    malformedpreflightcopies preserved/excluded andcorrectedfinalcopy accepted.
-    Root ownssoleheavy token fornormal scopedcheckpoint/push; independent
-    manifestrevision2 proposes5sources/2status/118lineage artifacts andrecords
-    elevenforeignstagedOIDs. Rootverifies scope, refreshesstatusattestation,
-    preserves allforeignindexblobs andoperator work; no wholeDEBT staging.
-    Aftercheckpoint/push release private Next tests+stub ONLYtwo newfiles
-    under fullprojectiongrant+rootclarification, independentreview/actualRED
-    beforealgorithm. C2revision4 candidate3cbf9e42 has rootgaps; freshLuna
-    independentDOCreview pending; public/persisted/writer changes remainheld.
-    Historical paragraphs below do not supersede this nextmove.
-    LATEST: canonical01e47029 and fullmodule race2a4cd19d both GREEN,
-    each10tested packages/5no-tests. Root12actual capture comparisons and11
-    source identities exact; no race/failure. Renderer final bounded independent
-    Prepare/poller/Stop review pending; excludes Next/public/T09 settlement.
-    Recon owns soleheavy token for explicit Graft refresh, immediate6capture
-    native archives/original comparisons. After review/root acceptance/Graft,
-    normal scoped checkpoint/push preserving eleven foreign staged blobs.
-    Then release ONLY two new Next projection files under FULL original
-    run-observation-next-projection-assignment-oct08.md: tests+nonworking seam,
-    independent source review/expected RED before algorithm. C2 DOC-only
-    revision3 candidate incorporates root concrete choices/shared writer journal;
-    all public/architecture/persisted changes require exact reviewed approval.
-    Historical next_action sequence below is superseded by this paragraph.
-    CURRENT: focused retry02 result7d321d11 GREEN53/53top+22/22nested;
-    root independently decoded/compared all six captures and eleven sources.
-    Canonical Go resultf8af234c exited1 before vet/tests: ONLY failure fixture
-    gofmt required. Root six exact capture comparisons and eleven hashes verified.
-    Luna retained_helper_format_builder owns formatting-only failure-fixture
-    repair from cc bbe234 /47657 bytes: native exact preimage first, stdout-only
-    formatter with actual original-path captures, immediate native archive/cmp,
-    native exact output application. Ten other sources frozen; no behavior edit.
-    Independent renderer critic receives FULL original instructions plus preimage,
-    actual output and diff; root verifies then canonical retry/fullmodule race.
-    Canonical listener retry03 GREEN format/vet/tests, receipt01e47029,
-    root six comparisons and11source identities exact. Fullmodule race next,
-    only one compiler and frozen source. Actual retry02
-    c263dbcd failed sandbox Unix/TCP listeners, root six comparisons/11hashes
-    exact. Lossless Base64 instead of raw strings disclosed and accepted.
-    Formatter review740ff1e8
-    accepted by root after five actual capture comparisons/ten frozen hashes.
-    Failure fixture now8c71197a/47658B, exact one-space alignment only.
-    Next projection test-first grant written, edits held until gate JOIN.
-    No new commit/push; T09 partial, C2 public contract held.
-    HISTORICAL REPAIR: focusedrace dab62acb joinedexit1, 50/53topPASS,
-    22/22nestedPASS, sevenauthority-terminal groupsPASS. Root6archivecmp0
-    and elevenactualpreflight/currentidentities exact. Threeexistingfixture
-    oracle defects: falselystale agreeingcursors, outdatedone-auth count,
-    unsynchronizedfirstread beforecancel. FreshdifferentLunaFORMAT owns
-    FULL run-observation-existing-fixture-correction-assignment-oct08.md
-    SHA75cd9bfd5f49ab11dce02f759543ea1e2c20d6f490ee3b10e983463ccbacd982.
-    ONLY3namedtests inoriginalmanagerfixtureaf; nativeexactpreimagefirst,
-    preservezeroDTO/nillease/guardrefusal/JOIN/2eachcounts; required4authchecks.
-    Allproduction/otherfixtures frozen. Independentfullgrant/diff/source
-    review thenfreshfocusedrace, canonicalGo/fullrace beforeacceptance.
-    RootSOLEcompiler IDLE. No lifecycleGREEN or newcommit/push.
-    C2 revision2f0d76117 independentlyREJECTe85135de; rootreadfullreview and
-    writerrecon152870db. Unresolvedrootpolicy/staleintentdigest/inventory
-    membership and disprovedfacts-to-global-eventcoverage remainPUBLICHOLD.
-    HISTORICAL EXECUTION: root accepted fullsource425909+identityerratum843dc54f
-    after independentlydecoded3preimages/currenthashes and8frozenchecks.
-    Renderer SOLEcompiler token for ONE focusedrace under fullgrant5cc99e87
-    run-observation-watcher-terminal-focused-green-assignment-oct08.md.
-    Freshsource/memory/processpreflight then actualJOIN/immediate5lossless
-    rawarchives/originalcmp before nextgate. Root/otheragents SOURCE/DOCONLY.
-    No actualGREEN yet. Formatter/referee draft overwrite gaps remainCW18;
-    sourceapproval scoped actual220/b0/889; no lifecycle/T09 settlement.
-    CURRENT FREEZE: manager22005e5c/29377B workerb0fde3fe/13217B
-    fixture889f9648/41286B resultb1c7e713 under fullgranta886842c.
-    Renderer independent fullsemantic source review completed as above. Root
-    fresh manager/fixture formatting regeneration and
-    worker format-clean verified, fifteen actual raw comparisons true.
-    Historical formatter temp-path loss/worker-input chronology remainCW18.
-    C2 fullcandidateffdfbdb3 exists, rootarchitecture review precedes different
-    independent critic and exactoperatorapproval; public remainsheld.
-    RESUME2026-10-08T12:19Z: HEAD7c65 unchanged; eleven foreign staged blobs
-    byte-identical to saved baseline. Interrupted Luna RECON resumed own
-    partial manager2caff199/workerff451845; original native preimages intact,
-    fixtureea181 unchanged/no result receipt. Renderer read-only overlap audit
-    precedes full independent final source review. FORMAT parallel DOCONLY
-    complete C2 V4 candidate resumed; public held pending review/exactapproval.
-    Root flagged final DTO caller-cancel linearization for bounded repair.
-    Root compiler IDLE, no compile started; single owner/RAM gates remain.
-    T09 completed bounded units: canonical contract/caps, protected Ask,
-    run-child projection, private cursor handling, retained-image primitives
-    and lazy renderer output. Remaining critical path: this manager lifecycle
-    repair/review/GREEN, Next/authenticated observationSSE/UI integration,
-    reviewed/operator-approved publicC2 correction, livejourneys/globalgates
-    and independent T09 settlement; then T10-T12. Historical notes below
-    are evidence history rather than additional current tasks.
-    CURRENT algorithm repair now released to fresh different Luna RECON under
-    FULL run-observation-watcher-terminal-algorithm-assignment-oct08.md
-    SHAa886842c0d7d7ba4673916862a6bd56d1b2d2b336fd6342a983cda697e714ab2.
-    Root accepted actual focused RED after full output/command/exits and complete
-    preflight analysis; all5 decoded archive-original bytecomparisons true.
-    Seven top-level FAIL; nested5FAIL/1PASS(cursor-invalid-empty). No compile/
-    setup/panic/race issue. Output10789B SHA7a4c8a38; actualpkg4.767s, exit1.
-    RAM3489MiB/swap2864MiB; captured processes onlysandboxown launcher/bash/
-    ps/awk; no globalhostabsence claim. Receiptc13f/additivecitation3b15 govern,
-    root acceptance run-observation-watcher-terminal-focused-red-root-acceptance-oct08.md.
-    ONLY manager47/worker843 behavior repair, exact native3preimages first.
-    Fixtureea181 maychange ONLY exact standardgofmt stdout with witness/native
-    patch; eightotherfixtures/primitives frozen. Nonmutatinggofmt3filesallowed
-    after rootserialization notification, actualJOIN immediate losslesscaptures/
-    comparisons before nextfmt. No compiler/test/vet/scanner/build/Git.
-    All originalcontracts and newmembers-authority retry note apply, nofields/
-    tokens/controlcodes/public/authpolicy changes. Independent fullsemantic
-    renderer review of FULL instructions+actualimplementation then GREEN/gates.
-    Root solecompiler token IDLE; others SOURCEONLY except serialized cheapfmt.
-    HISTORICAL EXECUTION (focused RED now completed): tiny fixtureea181a2f/41237B/result6a280314 independently
-    SOURCE READY97f1e524, root fullreview/preimage/diff/tenfrozenhashes verified.
-    Root transfers SOLE heavy/compiler token to renderer critic for ONEfocused
-    raceRED under FULL archived run-observation-watcher-terminal-focused-red-assignment-oct08.md
-    SHA74e82cb6a6b7bb0c141459ea7127c486856cb994a523ea394ec9a9d78a031aa0.
-    Fresh actualresource/process preflight first; exactseven top/sixnested
-    gate, noformatter/canonical/otherheavywork. ActualJOIN then immediate
-    native lossless fivecapture archives/decodedcomparisons before nextgate.
-    Compiler/setup/panic/race failure is not behavioralRED. Root waits for
-    actual originals/fullreceipt and independentlycompares before acceptance.
-    Otheragents/root do no heavywork; token returns onlyafterJOIN+archives.
-    LATEST frozen fixture51f73f94/41008B, result12fe9a50. Independent review
-    a830e313 plus additive3b0aabe8/46359773 REJECTS only missing pre-port
-    exact manager.pollers[key]==entry/current.Key==key assertions. Root read
-    all records/verified ten unchanged hashes and exact native4934 preimage.
-    Fresh different Luna RECON now owns ONLY those pre-port assertions under
-    FULL archived run-observation-watcher-terminal-exact-registry-assignment-oct08.md
-    e2ff3c1b1901e7199fca6d67d353729d5ccc50beab89912a4516e4bb44213c7c.
-    Exact native51 preimage first; preserve held-read sibling and allothercode.
-    Independent renderer SOURCE review then separatelyauthorized focusedRED.
-    Worker-context gate clarificationdde752 applies; auth-call ordinal alone
-    is insufficient. Formatting is unverified; no compiler/RED performed yet.
-    Resume bounded watcher-terminal TDD fixture repair, not lifecycle approval.
-    Current HEAD/verified remote7c65be70ecf14c77df1a7749e9fa5526e28eabc1;
-    local casework/live-wiring, remote casework/live-wiring-resume-2026-10-05.
-    T00-T08 settled/T09partial/T10-T12 pending. Public C2 remains held.
-    FULL current fresh Luna FORMAT grant is
-    .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-fixture-repair-assignment-oct08.md
-    SHA61d5bf6d435b73696b8b9adba7718b70b51a7f650a5a8ac40c013a301b65da6f.
-    Original TDD grantbfcfa5cd; resultb1705384; independent SOURCE REJECT87aec112
-    read/hashverified byroot. Root clarifications2f9b/532c/7fe1 are binding.
-    Edit ONLY NEW run_observation_manager_authority_terminal_test.go,
-    frozen preimage4934e9c5/29548B natively archived first. Preserve seven groups/
-    four handoff cells; add group6 pre-port invalidinitiator-validsurvivor
-    subcase alongside during-read scenario. Gate actual injected Current/auth,
-    attach validwatcher, invalidatecreator, release, prove authorized sharedread.
-    No hook/private lifecycle field mutation/sleep/cancelspy. On current source,
-    premature actual trace call exposes missing pre-read reauth boundary.
-    Repair cap oracle: actual accepted inner fits, raw json.Marshal existing
-    wrapper succeeds and length>unchanged cap; canonical bounded encoder returns
-    nil/exactsentinel intentionally. Generic error alone is not cap proof.
-    Groups3-5 immediatelyfailedreturn beforeteardown: cohorts/pollers0;
-    groups4/5 actualworkerDone alreadyclosed. Both group6 cases invalidlease
-    absentcohort/forward/reverse refs; survivor registered/eligible/current.
-    Freeze ten otherfiles: manager47c95f3ba90abb4355f02d626e664a49027f602e9ac47771c40eda0ba8f22780,
-    failurefixtureccbbe234785365a266cd7ea10737158ca3eea2d4a8a88a9f28c24b7260b190f4,
-    worker84382ffd plus originalfixtureaf and six published primitives.
-    Root decoded original manager/failure preimages byte-exact and reviewed
-    four metadata hunks/four setup adaptations/full newfixture. All twelve
-    existing failure assertions unchanged; original fixture/primitives frozen.
-    Seven tests now require corrected proof before SOURCE READY. No compile/
-    RED on these new tests yet. Earlier twelve-case stub RED accepted with
-    exact five actual captures; do not confuse it with current lifecycleGREEN.
-    Algorithm source ecf2REJECTED: acceptedterminal polling, missedpostfallback
-    terminaldrain, absent perwatcher pre-read/publication/finalhandoff checks,
-    missing finaloutside-mutex ctx check immediatelybeforeactualport.
-    Two immutable lease caller/asOfCursor fields restore originalrev6 identity
-    requirement; no new auth policy/public change. Creator6526+cc4d approved315b,
-    reverse drainownership013d approved7a43. Retain those protocols exactly.
-    Different independent renderer critic receives FULL original/fullrepair
-    instructions+actualfrozenimplementation, cites code/diffs/directevidence
-    and everymaterialdeviation. Insufficientevidence meansREJECT; freshdifferent
-    builder then independentreview repeat. Root owns semantic/integrationchecks.
-    After SOURCE READY, soleowner freshRAM preflight focused race RED on
-    TestRunObservationManagerAuthorityTerminal; report real top/nested outcomes
-    separately, cursor-invalid-empty maypass. Actual JOIN immediatelyfollowed
-    native lossless preflight/command/output/exit archives; root decode/compare
-    original bytes before nextgate. Identitytables derived/verified, no invention.
-    Then freshdifferent builder ONLY manager/worker algorithm repair under
-    concretefullgrant; independentsemantic sourcecritic and focusedGREEN,
-    canonical just casework-go-check/fullmodule race/applicable gates before
-    boundedlifecycle acceptance. Explicit Graft build after indexingchanges.
-    Root owns soleheavy IDLE after joined focusedRED; others SOURCEONLY.
-    AvailableRAM>=1200MiB,
-    SwapFree>=512MiB/jobs1, Go memorylimits256MiB/GOGC50/GOMAXPROCS2/-p1,
-    count1/parallel1; no competing compiler including hooks. Preserve eleven
-    exact foreign staged blobs/operatorchanges and unstaged DEBT additions.
-    Native apply_patch is sole persistentwriter; immutable historical evidence.
-    Normal meaningful independentlyverified checkpoint/push authorized; explicit
-    paths/normalhooks/no fetch/pull/reset/clean/rebase/merge/force/bypass.
-    No newcommit thisturn because current source is unapproved; published7c65
-    scanner exactfingerprint fix is accepted, CW30metadata harnessdebt remains.
-    Record encountered debt per project in DEBT.md; CW28proof/lifecycle gaps,
-    CW18identity/evidence process, CW31fixture size remaintracked.
-    Public C2: bootstrap revision3 DOCONLYcomponent; no complete approvedV4.
-    Exact realfrontier/appendorder/restart, identitygrammar/worldID, complete
-    inventory, percaseStore/replay/dedup/gap and atomicSSEreadiness need reviewed
-    concretefullV4 plus exactoperatorapproval before affectedpublicwork.
-    Continue privateunit then Next/authSSE/UI/livejourneys/T09 gates and
-    independentsettlement, T10-T12; splitT13 and stop. Update bothstatusfiles
-    after eachunit; just context-check before handoff/commit.
+    Keep T09 active. Checkpoint e33bf30 was pushed with normal hooks and verified
+    on GodSpeedAI/SEA-Forge branch casework/live-wiring-resume-2026-10-05.
+    The private initial lease bookkeeping builder may change only manager fields
+    and tests under its full assignment; require independent source review and
+    actual focused RED with lossless six-file archives/root comparisons before
+    a fresh implementation grant. Then independently verify the bounded unit,
+    commit at the next milestone, and continue Next capture/commit and wake/drain.
+    Separately repair/review the C2 bounded-reader proposal against root
+    clarification and frontier addendum. Obtain targeted signer/new token/input
+    limits/verified-empty wire approval and update spec/ADR before reader code.
+    Complete exhaustive writer participation audit before migration readiness.
+    Serialize every compiler/heavy gate with RAM/swap checks; preserve unrelated
+    Jolli work, actual evidence, existing authority and all required global gates.
 agent_protocol:
   read_order:
     - .agents/current_status.yml (this file)
@@ -699,38 +300,23 @@ baseline_warnings:
 handoff:
   session: 4
   latest_resume: >-
-    LATEST2026-10-08: privatepolicyexplicitoperatorAPPROVED receipt recorded,
-    CW36closed. Pureprojectionfinal24c7f2c5 rootaccepted: focusedrace/canonical02/
-    correctedfullrace02 actualchild0/rootALL6cmpd1a6fce0. Fullrace01wrongexit
-    preserved+erratuma11f3845, nevercountasproof. Graft/context01PASS/root6cmp.
-    Exactscannerremedy reviewed01af5627+2dad194d/security05GREEN524history;
-    commit+normalpushpending newhistoryscan. C2normative4f24a5a2 accepted,
-    readernewcontinuation-integrity/inputboundsdecisionopen, writerinventory
-    knownpathcorrectionreviewpending; T09stillpartial/T10-T12unstarted.
-    AUTHORITATIVE2026-10-08: operatorff15744 newbaseline, owncheckpointd100b9b;
-    publication blocked2newcopiedprosefindings notoldreviewedfingerprints.
-    C2v7design04d21470 and sixoperatorrecommendationsapproved; specADRpending.
-    Nextalgorithm3c81aa06 rejectedcap; additivefixture66e368ff approveddbecbfbc;
-    actualRED/guard/integratedNext pending. Rootserialheavyprotocol maintained.
-    LATEST2026-10-08: canonical01e47029/fullmodule race2a4cd19d GREEN;
-    root12exactcapturepairs/11hashes. Final boundedreview/Graft/checkpoint next,
-    then private Next projection. C2new concrete proposal pending review/approval.
-    LATEST2026-10-08: focused race GREEN53+22; canonical formatting-only failure
-    preserved, repair delegated to Luna. All actual captures independently
-    compared. Private Next and integration pending; exact public C2 approval held.
-    Historical record follows.
-    2026-10-01: T00-T08 settled, T08 checkpoint af362f5. T09 canonical unit b608771 and
-    cap/mirror units b4092bd independently approved. Ask fixtures approved with actual expected
-    RED and capture errata. Ask runtime builder completes source/tests; independent critic
-    first runtime check rejected compile collision and two source gaps. Fresh repair passed
-    focused server/adapter race, live kernel proof, canonical Go and full-module race. Portable
-    live test rename passed twice. Final archive/review native patch initially rejected by automatic
-    approval review usage limit, then same native retry succeeded. Ask independently approved;
-    root matched15source identities and13new exact raw copies. Graft refreshed successfully;
-    foreign Bun is server.ts with no compiler children, not a compile blocker.
-    Ask checkpoint0b55022 complete; run-child fixture writes released to bounded builder,
-    fixture frozen68511dc; no compiler token. Independent source review/expectedRED must
-    precede runtime implementation. Whole-focus equality corrected before any critic verdict.
+    HEAD e33bf30ee33d882c29595c31190dc899efbadc2a, branch casework/live-wiring.
+    Normal commit hooks passed and all six checkpoint02 captures were root
+    compared. Exact operator approval resolved the initial review rejection;
+    normal push04 passed CI1110 Rust tests/0 failures/4 ignored and525 history
+    scan/no leaks. Root six-file push comparison and exact remote verification
+    confirm e33bf30. Initial source builder resumed only after both comparisons.
+    Pure projection source5241e656/tests48c6d28e approved24c7f2c5; focused race,
+    canonical Go02 and corrected fullrace02 pass, root six-file comparison
+    d1a6fce0. Fullrace01 wrong exit remains rejected with immutable erratum.
+    Private16 cohorts/128 attachments/1MiB policy separately approved; CW36 closed.
+    Initial lease bookkeeping TDD was root-rejected for nonconstant const and
+    unused local; fresh two-line repair is active before independent source
+    review/actual RED. No implementation/compiler grant yet. C2 spec/ADR accepted4f24a5a2;
+    bounded-reader options HOLD b3a832dc, fresh corrected doc proposal active.
+    Writer inventory correction db4874f2 accepted only as bounded documentation,
+    complete participation/runtime proof remain open. T00-T08 settled; T09 partial;
+    T10-T12 unstarted. Follow agent_protocol and stop for T13 split/operator review.
   state_summary: >-
     LATEST2026-10-08 canonical andfullmodule Go race GREEN10tested/5no-tests
     packages; root12actualarchivepairs and11sources exact. Graft soleheavy

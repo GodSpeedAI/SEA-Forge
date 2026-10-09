@@ -1025,6 +1025,19 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 - **Status:** open process debt; actual source versions and runtime outputs
   remain preserved, with narrower provenance claims.
+- **Oct08 recurrence:** the bounded-reader normative repair result preceded
+  its final digest-vector traceability edit. Automatic review rejected rewriting
+  that immutable result; an additive identity correction and fresh independent
+  review identify the final bytes. Initial lease formatter evidence contains
+  reversible preimage lines, but no historical raw formatter captures. Fresh
+  independent byte-equivalence checks approve only the source, not the missing
+  historical process record. Freeze source before results; preserve original
+  records and explicitly distinguish fresh reproduction from earlier execution.
+- **Recon record recurrence:** continuation-signing recon was edited after its
+  initial native ADD to update accepted-policy references. A separate provenance
+  note transcribes the first ADD input and records both identities; its original
+  preimage was not separately archived. The recon is now frozen. Future updates
+  must be additive rather than rewriting an already written record.
 - **Evidence:** `local-cursor-focused-attempt01-test-fixture-repair-result-oct07.md`
   discloses that the new bounded assignment record was not written before
   edits. Exact three preimage wrappers were preserved before editing;
@@ -1182,6 +1195,11 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 ### CW-30 Pre-push Gitleaks finding in source-hash evidence
 
+- **2026-10-08 publication closure:** normal push04 for exact approved e33bf30
+  passed all CI hooks and525-commit scanner history with no leaks. Root compared
+  six actual push captures and verified the exact remote SHA via read-only
+  lookup/six further originals. Both d100 prose findings are closed by reviewed
+  exact fingerprints; future occurrences require their own evidence.
 - **2026-10-08 restored for d100 history:** exact repair independently reviewed
   01af5627 plus unchanged rule/hook scope verification2dad194d. Canonical
   security05 passed524 commits/91.42MB with no leaks; root compared all six
@@ -1414,19 +1432,64 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 ### CW-37 Bounded reader continuation trust and input allocation need decisions
 
-- **Status:** architectural clarification in progress; no reader implementation.
+- **Status:** revised proposal independently approved and additional policies
+  operator approved; repaired normative amendments independently approved,
+  no reader implementation or runtime proof yet.
 - **Evidence:** `run-observation-bounded-ledger-reader-recon-oct08.md` and
   `run-observation-bounded-ledger-reader-design-options-oct08.md` show there is
   no drop-in authenticated continuation. Predecessor checksum alone cannot
   prove a client offset follows a server-validated prefix. Existing full-ledger
   readers and checkpoint proof materialize history; response byte limits do
-  not bound raw JSONL row allocation.
+  not bound raw JSONL row allocation. The repaired normative package is
+  approved by `c2-bounded-reader-normative-repair-independent-review-oct08.md`;
+  approval covers normative fidelity only.
 - **Impact:** trusting offsets or rereading the entire prefix per page defeats
   integrity or boundedness. Checking row size after unbounded allocation also
-  defeats the intended budget. The proposed1MiB raw row may omit valid1MiB
-  event payloads once the ledger envelope is included.
-- **Next:** independently review a process-lifetime signer using existing
-  Ed25519/getrandom with no persisted key and explicit row/page input budgets;
-  obtain targeted approval for that key lifecycle and new limits, then update
-  the normative spec/ADR before a bounded TDD implementation grant. Preserve
-  existing authority checks and the legacy response wrapper.
+  defeats the intended budget. The approved2MiB raw-row limit includes LF and
+  the4MiB page-input limit includes non-events and lookahead; both are distinct
+  from the1MiB complete serialized-response limit.
+- **Next:** proceed only under a separate bounded reader implementation/TDD
+  grant, then establish runtime and migration proofs. Normative approval does
+  not close those gates. Preserve existing typed entry hashes, complete-Value
+  payload hashes, authority checks and the legacy wrapper.
+
+### CW-38 Initial lease bookkeeping bounded unit
+
+- **Status:** bounded initial lease bookkeeping approved and closed. All three
+  independent gates passed; this does not close Next integration or T09.
+  Canonical03's earlier formatting failure remains immutable history.
+- **Evidence:** root source diff review identified a strings.Repeat call in a
+  const initializer and an unused key local in the new hydration fixture. The
+  builder confirmed both and froze source. The first result's test identity
+  preceded final trace-call assertions; its additive correction records actual
+  frozen testeb14a7b5 and manager e2b77094 without rewriting the result. Final
+  bounded approval is recorded in
+  `run-observation-initial-lease-bookkeeping-final-independent-review-oct09.md`
+  and its wording erratum. The focused race, canonical Go, and full-module race
+  gates passed; full-module race reported 729 cases, 0 failures. Root and critic
+  compared all 18 captured files losslessly. The review confirms its final
+  source identities. Formatting provenance remains limited: the historical
+  formatter stdout/exit captures are absent, while independent byte-equivalence
+  and canonical formatting checks passed.
+- **Impact:** the compile-fixture and lease-watermark defects are resolved for
+  this bounded Prepare unit. This approval proves no Next/wake/drain behavior,
+  C2 reader runtime, public live wiring, T09 settlement, or task completion.
+- **Next:** continue Next integration and remaining T09 work as separate units.
+  RED01 failed setup on read-only Go cache and RED02 was held by the actual
+  unrelated compiler preflight; neither establishes behavioral RED. RED03 is
+  the accepted behavioral RED. Preserve all earlier attempts and the
+  formatter/original-provenance limitation stated above.
+
+### CW-39 Compiler coordination across concurrent projects
+
+- **Status:** active operational constraint; no foreign process was interrupted.
+- **Evidence:** initial-lease-red02 and canonical01/02/04 actual preflight
+  archives record active Gauntlet Cargo owners; these gates did not execute.
+  Subsequent read-only checks also found other Cargo owners. SEA-Forge's own
+  builder and critics remained source-only while root held the compiler token.
+- **Impact:** repository-local serialization cannot reserve a compiler-free
+  window across concurrent projects. Overlapping builds could exhaust memory;
+  retaining the guard delays canonical/race gates and verified checkpoints.
+- **Next:** continue actual process/RAM/swap preflight and serialize this
+  project. Coordinate a shared workstation build reservation across active
+  project owners when available; do not kill or modify another project's work.

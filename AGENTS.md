@@ -9,7 +9,7 @@ SEA Forge is a governed capability-execution kernel: authorize every side effect
 Before substantial work:
 
 1. Read this file.
-2. Read `.agents/CURRENT_STATUS.md` and `.agents/current_status.yml`.
+2. Read `.agents/CURRENT_STATUS.yaml` (`just status`) and `.agents/CURRENT_STATUS.md`.
 3. Read the governing spec under `.agents/specs/`.
 4. Inspect affected code, tests, and configuration.
 5. Load additional docs only when needed.
@@ -32,7 +32,7 @@ Instructions live at the narrowest scope that completely governs them:
 
 * **`crates/` (`crates/AGENTS.md`)**: Governs all 22 Rust workspace crates. Owns the synchronous kernel boundary (19 synchronous kernel crates vs 2 async edge crates: `sea-forge-server` and `sea-forge-agent`), the package-scoped feedback loop (`just crate-check`, `just crate-test`), domain invariants, SFWP contract synchronization, and Rust build/toolchain discipline.
 * **`workbench/` (`workbench/AGENTS.md`)**: Governs the desktop frontend (Bun workspace + Tauri 2 host + React 19 renderer). Owns renderer/host boundaries, generated schemas/tokens, and E2E testing evidence rules (`workbench-e2e-*`).
-* **`.agents/` (`.agents/AGENTS.md`)**: Governs the durable agent workbench. Owns normative specs vs tactical plans, status handoff contracts verified by `just context-check` (`scripts/check-agent-context.sh`), and memory ledgers (`OBSERVED_DEBT.md`, `LESSONS.md`, `OPEN_QUESTIONS.md`).
+* **`.agents/` (`.agents/AGENTS.md`)**: Governs the durable agent workbench. Owns normative specs vs tactical plans, status handoff contracts verified by `just status-check` (`scripts/check-agent-context.sh`), and memory ledgers (`OBSERVED_DEBT.md`, `LESSONS.md`, `OPEN_QUESTIONS.md`).
 
 ## 3. Investigation and Retrieval
 
@@ -86,7 +86,7 @@ Run `just` from the repository root; it is the canonical human/agent command sur
 
 Required gates by claim:
 
-* handoff -> `just context-check`
+* handoff -> `just status-check` (read via `just status`)
 * Rust quality -> `just check`
 * Rust tests -> `just test`
 * current-platform CI union -> `just ci`
@@ -117,7 +117,7 @@ Global workstation tools are capabilities, not project policy. Repository toolch
 
 Use conventional commits: `type(scope): imperative summary`. Before committing, inspect the diff and run blast-radius-appropriate verification. Do not drive-by format/cleanup/rename/refactor, or overwrite/discard unrelated working-tree changes.
 
-Follow `.agents/AGENTS.md` for handoff state requirements (`CURRENT_STATUS.md`, `current_status.yml`) and memory ledgers (`OBSERVED_DEBT.md`, `LESSONS.md`, `OPEN_QUESTIONS.md`).
+Follow `.agents/AGENTS.md` for handoff state requirements (`CURRENT_STATUS.yaml`, `CURRENT_STATUS.md`) and memory ledgers (`OBSERVED_DEBT.md`, `LESSONS.md`, `OPEN_QUESTIONS.md`).
 
 Before declaring completion:
 
@@ -125,8 +125,8 @@ Before declaring completion:
 2. Run proof commands proportional to the claim.
 3. Confirm no required gate, assertion, authority path, or sandbox was weakened/bypassed.
 4. Record unresolved failures, debt, or uncertainty in `.agents/`.
-5. Update `.agents/CURRENT_STATUS.md` and `.agents/current_status.yml`.
-6. Run `just context-check` before handoff.
+5. Append to `.agents/CURRENT_STATUS.yaml` and mirror to `.agents/CURRENT_STATUS.md`.
+6. Run `just status-check` before handoff.
 7. Run `graft build` after code changes that affect indexing.
 8. Leave the next move explicit if the case remains open.
 
