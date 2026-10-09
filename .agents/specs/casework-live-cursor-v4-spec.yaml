@@ -4,10 +4,10 @@ schema_version: "1.0"
 metadata:
   id: casework.live-cursor-v4
   title: GodSpeed Casework Live Cursor V4
-  status: review
+  status: approved
   version: "0.1.0"
   created: "2026-10-08"
-  revised: "2026-10-08"
+  revised: "2026-10-09"
   owner: GodSpeed casework
   normative_language: RFC 2119
   purpose: >-
@@ -55,6 +55,12 @@ sources:
   bounded_reader_proposal:
     role: independently reviewed proposal basis for reader requirements; not runtime evidence
     path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-bounded-ledger-reader-proposal-revision4-correction-oct08.md
+  reader_input_accounting_clarification:
+    role: approved registration and total raw-page-input accounting clarification; no source release
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-registration-input-accounting-root-decisions-oct09.md
+  reader_input_accounting_review:
+    role: independent approval of that clarification only; normative traceability remains a reader-grant prerequisite
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-registration-input-accounting-independent-review-oct09.md
 
 authority:
   applies_to: C2 live cursor V4 only
@@ -289,8 +295,17 @@ requirements:
       exactly 64 decoded bytes). It MUST verify the signature over the exact
       payload bytes before parsing payload fields or using seek data.
       Invalid or oversized tokens fail typed unavailable without fallback.
-      The 2 MiB raw-row cap includes LF; the 4 MiB page input cap includes every
-      row, non-event rows, and lookahead bytes. These limits supplement, and do
+      The 2 MiB raw-row cap includes LF. For each page, the 4 MiB raw-input
+      budget MUST include every actual raw ledger byte read: pinned-head/tail
+      reads, continuation-predecessor revalidation, forward scanning,
+      non-event rows, and lookahead. Every repeated read counts again;
+      metadata checks and seeks consume no raw-input bytes. The reader MUST
+      limit each read request and row-buffer growth to the remaining page budget
+      before reading or allocating. If the remaining budget cannot establish
+      the next complete validated row, the page may return only prior
+      acknowledged progress or typed unavailable; it MUST NOT acknowledge a
+      partial row, undelivered lookahead, or incomplete validation. These
+      limits supplement, and do
       not increase, the 500-row, 500-frame, 1 MiB complete serialized-response,
       and 50 ms lock-wait limits. Byte limits are not RSS/heap guarantees or
       OS-read latency bounds. A malformed direct request cannot mutate the
@@ -654,10 +669,16 @@ verification_contract:
       requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-004, REQ-C2-RANGE-005]
       proof: >-
         Exact-cap and cap-plus-one boundaries are tested for token, payload,
-        raw-row, and aggregate raw-page byte limits. Oversized token, payload,
-        or single row is typed unavailable; reaching the page input budget
-        returns only prior acknowledged progress or typed unavailable, never a
-        skipped partial/lookahead row. The 500-row and 500-frame boundaries
+        raw-row, and aggregate raw-page byte limits. Aggregate page vectors
+        combine auxiliary bytes read for pinned-head/tail checks and continuation
+        predecessor revalidation with forward-scan bytes; every repeated read
+        is charged again, while metadata checks and seeks are not charged.
+        Oversized token, payload, or single row is typed unavailable. At the
+        aggregate exact cap, progress is acknowledged only through complete
+        validated rows; at cap-plus-one, no read exceeds the remaining budget
+        and the request returns only previously acknowledged progress or typed
+        unavailable, never acknowledging a failed page, partial row, or
+        undelivered lookahead. The 500-row and 500-frame boundaries
         return incomplete progress with a continuation when more data remains;
         the next row/frame is not acknowledged if undelivered. The full 1 MiB
         response envelope and 50 ms lock wait are tested at their boundaries;

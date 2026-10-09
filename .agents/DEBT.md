@@ -1432,9 +1432,13 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 ### CW-37 Bounded reader continuation trust and input allocation need decisions
 
-- **Status:** revised proposal independently approved and additional policies
-  operator approved; repaired normative amendments independently approved,
-  no reader implementation or runtime proof yet.
+- **Status:** the bounded ledger-reader source slice is independently approved
+  and root-verified. Server integration and T09 remain incomplete. For CW-42,
+  the operator approved the privacy correction and publication-worktree
+  preparation; the 18 archives are corrected, but independent privacy review
+  remains pending and does not release a local commit or publication. The design
+  grant, earlier policy approvals, and repaired normative amendments remain
+  approved.
 - **Evidence:** `run-observation-bounded-ledger-reader-recon-oct08.md` and
   `run-observation-bounded-ledger-reader-design-options-oct08.md` show there is
   no drop-in authenticated continuation. Predecessor checksum alone cannot
@@ -1448,10 +1452,134 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
   defeats the intended budget. The approved2MiB raw-row limit includes LF and
   the4MiB page-input limit includes non-events and lookahead; both are distinct
   from the1MiB complete serialized-response limit.
-- **Next:** proceed only under a separate bounded reader implementation/TDD
-  grant, then establish runtime and migration proofs. Normative approval does
-  not close those gates. Preserve existing typed entry hashes, complete-Value
-  payload hashes, authority checks and the legacy wrapper.
+- **Additional observed gap:** current server projection
+  `crates/sea-forge-server/src/sfwp/events.rs:92-107` converts missing or
+  non-string `kind` to `""` and missing `detail` to JSON `null`; non-string
+  `case_id`/`run_id` become absent. For future C2 integration, the server/caller
+  must validate the exact `REQ-C2-RANGE-003` shape before filtering, ACK/global
+  frontier advancement, or frame emission, including event rows later filtered
+  out. A malformed event in the candidate page must fail the page without ACK.
+  The ACK-boundary addendum
+  `c2-bounded-reader-ledger-slice-ack-boundary-addendum-oct09.md` and its
+  independent re-review
+  `c2-bounded-reader-ledger-slice-ack-boundary-independent-rereview-oct09.md`
+  establish this requirement (SHA-256 `1d7f60e575be7035849214bee029d692091df4a1ebb90b601a19a4e93818fa6e`)
+  and approve the design grant only (re-review SHA-256
+  `8fdc7dfea99cf9e16985e33ec25db894b524cfa5fdbbcddd2a76df42d3e9753e`;
+  root grant SHA-256
+  `f1e242fdf6e22d61036348ef90d9addd7fa7249fb636dbd8e68d0c3d17a02e7c`). The
+  governing anchor is `REQ-C2-RANGE-003` in
+  `.agents/specs/casework-live-cursor-v4-spec.yaml:253-270`. The re-review
+  confirms current `get_range` does not yet implement it; no reader
+  implementation is claimed and the gap is not closed.
+- **Next:** keep the local checkpoint held for independent CW-42 privacy/copy
+  review and the required gates. The operator has authorized local meaningful
+  commits; additional exact-commit approval is not required for a local
+  milestone commit. For publication, obtain approval for the exact new safe
+  SHA only if automatic review requires it. Implement the private
+  continuation codec test-first
+  only after explicit root release under grant
+  `19be806076544b1f06323c6186bf8aa1484eef4831d907b6827a213c62f16906` and
+  cap/input addendum `3989626f5569cdc50289695a8396550aeb62a9a8b4a9df7b10f06630a5e9d559`.
+  Server event validation and DTO/dispatch integration come later under
+  separate authorization.
+- **Fixture repair progress (2026-10-09):** the initial test scaffold at
+  `types.rs` SHA-256
+  `40ac4fa2f04bef5f5b43940a134a2d99189787daf1f0375405f3fbac617ee2f8` was
+  rejected by `c2-bounded-reader-ledger-tdd-independent-source-review-oct09.md`
+  (SHA-256
+  `72511d706b21e7869c5235eb3bfeb63fe1155502dedbb28aeffc98eac9e9bd3c`). A
+  fresh test-only repair is recorded in
+  `c2-bounded-reader-ledger-tdd-fixture-repair-builder-oct09.md`; repaired
+  `types.rs` SHA-256 is
+  `587619ce307c1ee8ed996e0cad0106691c1bb798ec75c880c68d4c848a7f8619`.
+  Its source retains the explicit reader/helper stubs and has not been
+  compiled or run. Root expected RED and independent source review remain
+  pending. The path-I/O test covers a directory at the entries path and a
+  missing parent; it does not claim permission-denied regular-file coverage.
+  No fixture or reader behavior is accepted by this progress note.
+  The independent fixture review
+  `c2-bounded-reader-ledger-tdd-fixture-repair-independent-review-oct09.md`
+  rejected its 1-second lock-wait ceiling. A fresh test-only repair now uses a
+  150 ms ceiling while retaining the 40 ms lower bound and cleanup ordering;
+  this is scheduler tolerance, not proof of exact 50 ms runtime latency. Its
+  source-only receipt is
+  `c2-bounded-reader-ledger-lock-fixture-fresh-repair-builder-oct09.md`.
+  Independent review and root's expected behavioral RED remain pending.
+  Root accepted `ledger-reader-red01` as expected unimplemented RED: preflight
+  exited 0; the Rust test child exited 101 after compiling in 14.82 s; and the
+  focused result was 0 passed, 18 failed, 14 filtered. Stdout contains 18
+  `not yet implemented` messages. Seventeen test failures directly surfaced a
+  held-`todo!` panic. The lock test caught its worker's TODO panic, then failed
+  its own `failed == Some(true)` assertion (`None` versus `Some(true)`). There
+  was no compiler error or timeout. The six command, preflight, preflight-exit,
+  stdout, stderr, and exit captures were independently compared byte-for-byte
+  with the archived captures; exact sizes and hashes are in
+  `c2-bounded-reader-ledger-red01-failure-class-correction-oct09.md`. This is
+  compiled scaffold with expected unimplemented RED only: no test passed and
+  it proves neither acceptance behavior nor reader correctness. The exact
+  source `6a22fbd14cafb5312cf81f2b2b694cb2413fbe21afaf35dcc4263a27d25e0c33`
+  was source-reviewed and accepted for RED by review
+  `c2-bounded-reader-ledger-lock-fixture-independent-review-oct09.md`
+  (SHA-256 `99a644b2f0a5b8b9bf876f624a28e4e124806c98bbd04a9d264305a2daada418`)
+  with grant-identity erratum
+  `c2-bounded-reader-ledger-lock-fixture-independent-review-erratum-oct09.md`
+  (SHA-256 `e2db66855b1a9ededc6202e40c88cbb04412b4392aec38d238f9031402b7400b`);
+  root read and accepted both. The unused test constant
+  `READER_PAGE_BYTES` warning is recorded. After accepting RED, root released
+  the full bounded-reader implementation assignment, including removal of
+  only that unused declaration while preserving all 18 tests' assertions.
+  There was no separate earlier cleanup-only production release; the current
+  chronology is recorded in `.agents/CURRENT_STATUS.yaml` revision 35.
+  Implementation and independent GREEN review remain pending; RED is not
+  runtime approval. See
+  the immutable progress receipt
+  `c2-bounded-reader-ledger-red01-progress-oct09.md` and failure-class
+  correction
+  `c2-bounded-reader-ledger-red01-failure-class-correction-oct09.md`, with
+  chronology clarified by
+  `c2-bounded-reader-ledger-red01-authorization-chronology-addendum-oct09.md`.
+
+- **Production review follow-up (2026-10-09):** the frozen implementation at
+  `types.rs` SHA-256
+  `3045c6d3b089e119ac2ddf9cb186249d726fa3e543da1ed8766223584b8e4425` was
+  rejected by `c2-bounded-reader-ledger-production-independent-source-review-followup-oct09.md`
+  (SHA-256 `0eea00a7edc4cdf77a4bef2b16261818892319a6c4a38b5357d51d46fdd90608`).
+  Three findings remain open: resume must prove the boundary probe and full
+  row fit the shared raw-byte budget before allocation; resume must reject an
+  interior LF in a claimed physical row; and every `next_step` error must
+  make later calls terminal. The two Phase A regression tests staged in
+  `types.rs` exercise pretty-JSON resume and repeated calls after a malformed
+  physical row. They do not test allocation ordering. No tests or compiler
+  were run for this staging; root's focused expected RED and independent
+  source review are pending. The immutable phase receipt records exact source
+  and diff hashes. No defect is closed and runtime approval remains pending.
+
+- **Phase B production repair staged (2026-10-09):** root accepted the
+  `ledger-reader-regression-red02` focused RED (0 passed, 2 expected behavioral
+  failures, 32 filtered; compile completed in 10.64 s and the test command
+  exited 101). Independent fixture review
+  `c2-bounded-reader-ledger-phase-a-regression-independent-review-oct09.md`
+  (SHA-256
+  `f5f9cf1c29055a0ded11e00d0d0734a2708cfcef9aba04b74575810cca57368f`)
+  approved only those regressions for RED. The released Phase B source change
+  preflights the resume boundary byte plus entire claimed row against the
+  remaining u64 page budget before the probe/read or allocation; rejects
+  interior LF while preserving escaped `\\n`; and poisons a session after any
+  `next_step` error so later calls return errors. The 20 existing test cases
+  and their assertions are byte-identical to the Phase A frozen module. The
+  implementation has not been compiled or run; independent source review and
+  all runtime approval remain pending. No finding is closed by this progress
+  entry.
+
+- **Final bounded-reader approval (2026-10-09):** independent review
+  `c2-bounded-reader-ledger-final-runtime-independent-review-oct09.md` (SHA-256
+  `c41dfc37f5cdaf60dac899dedd306ebf2eb14407bf6d227fee2962356b1242e6`)
+  approved the final ledger-reader slice. Root's final full 60, crate check,
+  and workspace `just check` completed with actual exit 0; the independent
+  full 60 also completed with actual exit 0. This closes only the bounded
+  reader source slice. It does not close server integration or T09 settlement,
+  and does not resolve the separate evidence-privacy hold in CW-42.
 
 ### CW-38 Initial lease bookkeeping bounded unit
 
@@ -1482,7 +1610,8 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 ### CW-39 Compiler coordination across concurrent projects
 
-- **Status:** active operational constraint; no foreign process was interrupted.
+- **Status:** active operational constraint; critic runtime preflight is not yet
+  adequate for final independent confirmation. No foreign process was interrupted.
 - **Evidence:** initial-lease-red02 and canonical01/02/04 actual preflight
   archives record active Gauntlet Cargo owners; these gates did not execute.
   Subsequent read-only checks also found other Cargo owners. SEA-Forge's own
@@ -1493,3 +1622,175 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 - **Next:** continue actual process/RAM/swap preflight and serialize this
   project. Coordinate a shared workstation build reservation across active
   project owners when available; do not kill or modify another project's work.
+- **Private Next critic gate follow-up:** critic `next-private-critic-focused01`
+  exited 0, but its preflight only saw sandbox PIDs 1, 2, and 11 and did not
+  provide sufficient host process visibility; retain the six root-compared
+  captures without treating this as adequate independent process preflight.
+  Critic `next-private-critic-go01` exited before the recipe because
+  `/run/user/1000/just` was read-only, so no Go checks ran. Its six captures
+  were also retained and root-compared. Future critic gates require an
+  escalated preflight with actual host process visibility and a normal writable
+  cache, with an explicit one-gate compiler grant. Root's focused, canonical,
+  and full-race gates were host-escalated; this does not prove the critic's
+  blocked preflight/retry requirement. Host-guarded critic retries remain open.
+
+### CW-40 Generated `.ua` graph freshness is separate from Graft freshness
+
+- **Status:** generated `.ua` graph stale after source changes; refresh deferred.
+- **Evidence:** normal commit hook for `9efd039e47ee095c1e6ac4a7b9d0f99fcb89beaa`
+  reported `.ua` stale in `initial-lease-checkpoint01-stderr-oct08.raw.json`
+  and requested incremental understand refresh. Graft refresh separately
+  succeeded with 7,901 nodes, 15,655 edges, and 710 cards.
+- **Impact:** `.ua`-based understanding may describe pre-change source even
+  though Graft is current; the successful Graft refresh does not refresh `.ua`.
+- **Next:** refresh `.ua` through the supported Understand workflow when in
+  scope or needed; do not hand-edit generated graph files or infer freshness
+  from Graft.
+
+### CW-41 Private Next TDD fixtures rejected before compilation
+- **Status:** closed for the bounded private Next fixture/lifecycle unit.
+  Original rejection and absent-preimage limitations remain historical evidence.
+  Root accepted repaired source after independent final-source host-guarded
+  focused, canonical Go and full-module race verification. This closure does
+  not settle T09 or establish public readiness.
+- **Evidence:** independent review
+  `private-next-tdd-independent-source-review-oct09.md` rejected the source
+  (`bd85b3de...`). It found two static compile-defect classes across ten sites:
+  four list callbacks omit the required error return, and six tests treat a
+  struct-valued cohort map value as a boolean instead of checking membership.
+  The hydration no-replay fixture does not reach the 1 MiB aggregate cap it
+  claims to test; the all-or-nothing fixture seeds the candidate at its
+  existing terminal watermark and retries without a later publication; required
+  pre-wait, post-wake and final-disclosure auth sequencing and callback
+  ownership are not established; multi-run window-gap byte ordering has no
+  non-empty oracle; and projector/notifier barriers lack failure-safe release
+  cleanup. Finding 4's missing initial-no-current recovery fixture remains a
+  historical description of the rejected source, but its requested same-lease
+  recovery setup is superseded by the approved correction
+  `private-next-initial-unavailable-fixture-correction-oct09.md`, independently
+  approved in
+  `private-next-initial-unavailable-correction-independent-review-oct09.md`
+  (SHA-256 `060a5349b1e3538b98ba9c9581f19ca5a6cfdb931edf5c2c68d1898d94146842`).
+  The actual initial-read-error fixture must prove absent initial watermark,
+  no attached poller refs, and actual worker JOIN; it must not claim
+  same-entry recovery after that worker is detached. Real transient-read and
+  nonterminal-retention recovery remains required after an accepted
+  `retainedCurrent` attachment, with later fitting worker publication and
+  unchanged prior watermarks. The builder record
+  `private-next-tdd-builder-result-oct09.md` is source-preparation evidence
+  only and reports no compiler, test, gate or runtime result.
+- **Repair-1 source-review follow-up (review `b5693180`):** review SHA-256
+  `b569318089fdcc18c29e4070b31edb5511a614a0736bf2984458d4c10f1eff4d`
+  rejected fresh repair 1 at test snapshot SHA-256
+  `72c379991b6256ac38c77602e33127c9ac7a8671657a89d97406eee7e14b9620`.
+  The blocked first authorization-callback test lacked an assertion that the
+  Prepare-seeded wake remained unconsumed during the block; the separate
+  post-wake test asserted `len(lease.wake)==0` only after `nextWithProjector`
+  returned with the failed second authorization check. The two recovery
+  fixtures allowed a fitting third read to overwrite
+  the unavailable marker before the failed Next's zero result, unchanged
+  watermarks, retained references, and capacity were checked. The terminal
+  hydration fixture did not wait for actual worker JOIN before Next. The
+  root-reported read-only format probe 1 exited 1 with one alignment-only diff
+  (`runObservationNextControlledRun` fields), no stderr, and exact comparison
+  of all six archived captures. No compiler, test, or behavioral RED ran.
+  Original untracked test preimage `c8e8253539ed7d72f61b417f99e2849bcc711fb8401cd395c6c35094ba216261`
+  is absent; the root-saved `72c379...` repair-1 snapshot is a current snapshot,
+  not that original. Automatic review rejected an initial ambiguous snapshot
+  attempt labeled `preimage`; the later explicitly labeled current-snapshot
+  capture was accepted. Do not claim byte-exact predecessor comparison or
+  assertion preservation against the absent original. These are source-review
+  limits, not compile/runtime evidence.
+- **Historical impact (original rejected fixture):** that fixture snapshot was
+  statically invalid, and its then-current oracles could not establish the
+  assigned pruning, atomicity/recovery, authorization, ordering or teardown
+  behavior. It had no valid expected behavioral RED and was not a basis to
+  accept or implement Next. This does not describe the later repair-3 fixture.
+- **Current next:** complete the independent critic's separate final-source
+  gates with adequate host process visibility and normal cache access, then
+  obtain its evidence-based verdict. Keep the bounded Next unit open until
+  then. Preserve the distinction between unit approval and T09 closure; do not
+  claim public readiness or settlement from these private gates.
+
+- **Repair-2 source review:** `private-next-tdd-repair2-independent-source-review-oct09.md` rejected test source `1f23ab0e55e30fe95a38fc67733a5d961209dd3874f82ce4966e444ccc8c7112` because both recovery fixtures still allowed their second read to publish before initial Next and baseline capture. A fresh builder must gate those second reads as well as the existing third reads, preserving cleanup and all other assertions. No compiler, test or behavioral RED result follows from that static review.
+- **Production fresh-repair follow-up (review `c9bf15996eb1aacb5881e4b6953afee714e47f93a3f19c0034a8c4278434a445`; historical at that stage):** independently rejected the production builder's source for four bounded issues: Prepare seeded wakes under `manager.mu`; final commit context/token/cohort/exact-entry/reverse-reference failures could skip terminal drain; a visible cancellation could be returned as a recoverable read/retention marker; and the wake initializer had a local alignment defect. The fresh source-only repair is recorded in `private-next-production-fresh-repair-builder-oct09.md`: both Prepare sends now follow unlock while the creator remains registered; all final validation failures unlock and invoke idempotent `terminalFailure`; marker capture checks context before its recoverable return and unlocks before draining; and only the wake initializer's exact line is aligned. Frozen Next tests remain byte-identical (`36dab5455a24521a6715f5ca8f9597a2cad28a070f7c5f09df56598c28386780`), and the worker remains byte-identical (`fdd84ca4d5ef891baee20a88992f34b95bee1e0d28abe2242c309a4e399bb8f7`). Root's earlier focused result reported all 50 checks passing; this was historical runtime evidence and did not resolve that source rejection. At this source-only stage, independent review and runtime confirmation were pending; no compiler, test, formatter, or gate ran for that repair.
+- **Accepted repair 3 and expected RED:** repair-3 fixture source review approved bounded source readiness in `private-next-tdd-repair3-independent-source-review-oct09.md` (SHA-256 `65b04a33c518c85d532bedfce94247ba98eba4a1a15e556e0ee24c4069a16a71`). The final test source remains SHA-256 `36dab5455a24521a6715f5ca8f9597a2cad28a070f7c5f09df56598c28386780`. Root accepted `next-private-red01`: two explicit intended stub failures and the existing initial-unavailable fixture passed; no compiler failure was reported. This accepted RED is after fixture repair and does not retroactively validate the earlier rejected snapshots.
+- **Production format correction:** the separate one-space correction is recorded in `private-next-production-format-fresh-builder-oct09.md` (SHA-256 `08da66f3dff51b7cac479935f061c170eb90343ba79e83745d7077b9898aad31`). Final manager source SHA-256 is `6a9fa1faede158fab40102089ca7a1997d87009f4c3083e77c39894dec30cf46`; Next remains `6ed10dec3ea33e660dad5ea59f92764210592f56c7a9cb9dc7034a2238a9b3f5`; worker remains `fdd84ca4d5ef891baee20a88992f34b95bee1e0d28abe2242c309a4e399bb8f7`; test remains the frozen identity above. The initial production fresh-repair review's four findings and subsequent source repair remain preserved in their original records.
+- **Root runtime evidence after repair:** `next-private-focused02` passed all 50 checks with actual exit 0 before the whitespace-only correction. Final-source `next-private-go02` (`just casework-go-check`) exited 0; final-source `next-private-race01` full-module race exited 0 with 752 tests passed, zero failed, 10 tested packages and 5 packages without tests. Root archived and compared all six actual captures for each gate. The capture bundles are `next-private-focused02-{command,preflight,preflight-exit,stdout,stderr,exit}-oct09.raw.json`, `next-private-go02-{command,preflight,preflight-exit,stdout,stderr,exit}-oct09.raw.json`, and `next-private-race01-{command,preflight,preflight-exit,stdout,stderr,exit}-oct09.raw.json`. These are root runtime results, not independent critic approval.
+- **Current independent review:** critic `next-private-critic-focused01` and `next-private-critic-go01` do not establish final independent gate approval: the former's actual exit 0 had inadequate host process visibility at preflight, and the latter did not execute its recipe because the configured Just directory was read-only. CW-39 records the exact limitations and required retry conditions. Independent critic confirmation and its final verdict remain pending. Bounded-unit closure remains pending that review; this record establishes neither T09 settlement nor public readiness.
+- **Progress record:** full original grant/source evidence references, exact grant and source identities, accepted RED, root gate outcomes, and review limits are recorded in `private-next-debt-progress-builder-oct09.md`.
+- **Final bounded closure (root, 2026-10-09):** root read the complete final independent review `private-next-production-final-independent-review-oct09.md` (SHA-256 `2842acee4b5f35e2730cae9bc2600f7862ea1c5a22dc30f7082026a13f8b24b9`) and verified all six actual captures for each host-visible critic retry: `next-private-critic-focused02` (62 JSON test-pass records including nested tests, zero failures), `next-private-critic-go02` (format/vet/tests green), and `next-private-critic-race01` (752 passing test records, zero failures, 10 tested packages, 5 no-test packages). The earlier pending-review paragraphs are historical progress, superseded by this verdict. Root accepted the source unit; current status governs its Git checkpoint. The original absent `c8e825...` preimage is still absent. CW-39 process-coordination discipline and CW-40 generated `.ua` freshness remain separate; no broader closure is claimed.
+
+### CW-42 Historical preflight captures contain credential-bearing process arguments
+
+- **Status:** open; operator approval for the privacy correction and
+  publication-worktree preparation was granted 2026-10-09. The 18 listed
+  archives have been corrected. Independent privacy/copy review and required
+  gates remain pending, so the local checkpoint remains held; meaningful local
+  commits are authorized. Publication remains held pending independent privacy
+  review and exact new safe-SHA approval only if automatic review requires it.
+  The existing local branch remains private; no history rewrite or publication
+  is claimed.
+- **Evidence:** root's privacy audit covered 18 older October 9 preflight
+  archives under
+  `.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/` and found a
+  process argument with a CSRF/session credential. Of these 18 observed
+  artifacts, 8 are present in local HEAD `cb90` (next-private preflights), and
+  0 are present in last published commit
+  `9efd039e47ee095c1e6ac4a7b9d0f99fcb89beaa`. This is a scoped count, not a
+  claim that the broader repository or published history is credential-free;
+  no argument or credential value is reproduced. The six new independent
+  full-gate capture originals were under
+  `/tmp/ledger-reader-independent-full01-sxyqiqy5`; their immutable JSON
+  archives are in the repository evidence directory with the
+  `ledger-reader-independent-full01-*-oct09.raw.json` prefix. Root confirmed
+  byte-for-byte decode comparison (exit 0). Those new preflights record only
+  PID/command name; root gate helpers now use that form. The final bounded
+  reader approval and runtime outcomes are recorded under CW-37; this privacy
+  issue is separate from that source-slice approval and does not establish
+  server integration or T09 completion.
+- **Correction and worktree preparation (2026-10-09):** the operator approved
+  this scoped correction. All 18 listed archives now store sanitized
+  preflight projections; the correction manifest
+  `c2-preflight-privacy-corrections-oct09.json` and note
+  `c2-preflight-privacy-correction-oct09.md` record the original and corrected
+  hashes, lengths, and provenance. Root's mechanical proof confirmed 18
+  projections and 2,427 retained PID/process-name rows, with the pre-listing
+  prefix and post-HEAD suffix unchanged bytewise. The corrected data is derived
+  and is not the original lossless capture. The eight archives present in
+  private local history remain there; history was not rewritten.
+  `/tmp/sea-rs-casework-publication-oct09` is based on
+  `9efd039e47ee095c1e6ac4a7b9d0f99fcb89beaa` and contains ten exact
+  source/document copies. It contains no evidence copies, and no new commit or
+  push was made. The independent privacy critic is pending; this preparation
+  does not establish safe publication.
+- **Manifest review provenance (2026-10-09):** while review was underway, the
+  mutable draft manifest changed. The exact reviewer-cited 134,928-byte version
+  was recovered by reversing only its two metadata substitutions and is
+  preserved as `c2-clean-publication-reviewed-manifest-24765dc5-oct09.json`
+  (SHA-256 `24765dc564ba0449ea778d5f20ac4eb870b9db0de9ae2b3d4926ccff3d769553`).
+  The provenance record is
+  `c2-clean-publication-manifest-provenance-oct09.md`; this byte-hash proof is
+  not a new runtime capture or publication clearance. The mutable draft remains
+  unchanged, and any final manifest will be a separate artifact. The cited
+  copy, candidate-privacy, and credential-form reviews remain attached to the
+  recovered version; CW-42 stays open pending their disposition and required
+  gates.
+- **Manifest metadata attribution correction (2026-10-09):** the original
+  provenance note incorrectly attributed the two inverse metadata values to the
+  review. The values came from the separately observed bounded DEBT
+  repair/recovery proof. See
+  `c2-clean-publication-manifest-provenance-attribution-addendum-oct09.md`;
+  the complete hash identifies recovered bytes only, not a runtime capture or
+  publication claim. CW-42 remains open.
+- **Impact:** the corrected working-tree archives no longer retain process
+  arguments, but the eight pre-correction archives remain in private local
+  history. The exact 608 push request is superseded and unsafe. The local
+  milestone commit remains held pending independent privacy/copy review and
+  required gates. Publication remains held pending independent privacy review
+  and any exact new safe-SHA approval automatically required for publication.
+- **Next:** retain the existing local branch as private. Await the independent
+  privacy critic, copy review, and required gates. The operator's authorization
+  covers meaningful local commits; exact new safe-SHA approval applies only to
+  publication if automatic review requires it. Do not publish, rewrite the
+  existing history, or treat the prepared worktree as approved for release.

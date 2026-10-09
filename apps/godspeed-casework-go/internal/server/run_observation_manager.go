@@ -79,16 +79,23 @@ type runObservationPoller struct {
 }
 
 type runObservationLease struct {
-	manager     *runObservationManager
-	pollers     map[runObservationPollerKey]*runObservationPoller
-	listState   contract.RunTraceListState
-	watermarks  map[runObservationPollerKey]runObservationWatermark
-	caller      runObservationCaller
-	asOfCursor  string
-	draining    bool
-	creatorDone chan struct{}
-	leaseDone   chan struct{}
-	drainDone   chan struct{}
+	manager    *runObservationManager
+	caseID     string
+	pollers    map[runObservationPollerKey]*runObservationPoller
+	listState  contract.RunTraceListState
+	watermarks map[runObservationPollerKey]runObservationWatermark
+	caller     runObservationCaller
+	asOfCursor string
+	draining   bool
+	// Next lifecycle ownership is introduced by the private Next transaction.
+	wake         chan struct{}
+	operations   sync.WaitGroup
+	notifyWG     sync.WaitGroup
+	nextInFlight bool
+	nextToken    *struct{ marker byte }
+	creatorDone  chan struct{}
+	leaseDone    chan struct{}
+	drainDone    chan struct{}
 }
 
 func newRunObservationManager(
@@ -124,6 +131,7 @@ func (m *runObservationManager) beginPrepareOperation(caller runObservationCalle
 		manager: m, pollers: make(map[runObservationPollerKey]*runObservationPoller),
 		watermarks: make(map[runObservationPollerKey]runObservationWatermark),
 		caller:     caller, asOfCursor: asOfCursor,
+		wake:        make(chan struct{}, 1),
 		creatorDone: make(chan struct{}), leaseDone: make(chan struct{}), drainDone: make(chan struct{}),
 	}
 	m.cohorts[lease] = struct{}{}
@@ -350,6 +358,9 @@ func (m *runObservationManager) prepare(
 	if err != nil {
 		return contract.RunTraceObservationEvent{}, nil, err
 	}
+	m.mu.Lock()
+	lease.caseID = caseID
+	m.mu.Unlock()
 	prepareCtx, cancelPrepare := context.WithCancel(ctx)
 	prepareDone := prepareCtx.Done()
 	bridgeDone := make(chan struct{})
@@ -404,6 +415,10 @@ func (m *runObservationManager) prepare(
 		}
 		lease.listState = listState
 		m.mu.Unlock()
+		select {
+		case lease.wake <- struct{}{}:
+		default:
+		}
 		if !m.leaseCanPrepare(lease, prepareDone) {
 			return failPrepare(runObservationUnavailable("run observation prepare was stopped"))
 		}
@@ -434,6 +449,10 @@ func (m *runObservationManager) prepare(
 	}
 	lease.listState = listState
 	m.mu.Unlock()
+	select {
+	case lease.wake <- struct{}{}:
+	default:
+	}
 	selected, err := selectObservationRuns(list.Runs)
 	if err != nil {
 		return failPrepare(runObservationUnavailable("run list contained an unavailable candidate"))
@@ -833,6 +852,8 @@ func closedRunObservationSignal() <-chan struct{} {
 func (m *runObservationManager) finishLeaseDrain(work runObservationDrainWork) {
 	lease := work.lease
 	<-lease.creatorDone
+	lease.operations.Wait()
+	lease.notifyWG.Wait()
 	for _, entry := range work.entries {
 		if entry.workerDone != nil {
 			<-entry.workerDone
@@ -933,6 +954,8 @@ func (m *runObservationManager) finishManagerStop(leases []*runObservationLease,
 	m.prepareOperations.Wait()
 	for _, lease := range leases {
 		<-lease.drainDone
+		lease.operations.Wait()
+		lease.notifyWG.Wait()
 	}
 	for _, entry := range entries {
 		if entry.workerDone != nil {

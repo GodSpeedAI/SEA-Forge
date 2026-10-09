@@ -18,7 +18,7 @@ authority:
   supplemental_specifications:
     - path: .agents/specs/casework-live-cursor-v4-spec.yaml
       decision: docs/decisions/ADR-008-casework-live-cursor-v4.md
-      status: review
+      status: approved
       scope: C2 live cursor V4 only
   precedence:
     - Repository AGENTS.md and scoped instructions govern implementation procedure.

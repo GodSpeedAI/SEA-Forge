@@ -6,6 +6,42 @@ import (
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 )
 
+type runObservationNotifierTarget struct {
+	lease *runObservationLease
+	wake  chan struct{}
+}
+
+// acquirePollerNotifierTargetsLocked registers notification ownership while
+// the manager lock prevents drain from beginning.
+func (m *runObservationManager) acquirePollerNotifierTargetsLocked(entry *runObservationPoller) []runObservationNotifierTarget {
+	if m == nil || entry == nil || m.pollers[entry.key] != entry {
+		return nil
+	}
+	targets := make([]runObservationNotifierTarget, 0, len(entry.refs))
+	for lease := range entry.refs {
+		if lease == nil || lease.draining || lease.manager != m || lease.pollers[entry.key] != entry || lease.wake == nil {
+			continue
+		}
+		lease.notifyWG.Add(1)
+		targets = append(targets, runObservationNotifierTarget{lease: lease, wake: lease.wake})
+	}
+	return targets
+}
+
+// sendPollerNotifierTargets coalesces wakes and always releases each target.
+func (m *runObservationManager) sendPollerNotifierTargets(targets []runObservationNotifierTarget) {
+	for _, target := range targets {
+		if target.lease == nil {
+			continue
+		}
+		select {
+		case target.wake <- struct{}{}:
+		default:
+		}
+		target.lease.notifyWG.Done()
+	}
+}
+
 // launchPollerBatch starts every reserved entry once, outside mu and before
 // the creator performs any readiness wait.
 func (m *runObservationManager) launchPollerBatch(entries []*runObservationPoller) {
@@ -365,6 +401,7 @@ func (m *runObservationManager) finishPollerRead(
 		(state.Availability == retainedTerminalRetentionFailure || state.Availability == retainedStopScheduling)
 
 	closeReady := false
+	var notifierTargets []runObservationNotifierTarget
 	for {
 		watchers, authorized := m.authorizePollerWatchers(entry, previous, initial)
 		if !authorized || entry.ctx.Err() != nil {
@@ -400,6 +437,9 @@ func (m *runObservationManager) finishPollerRead(
 		}
 		entry.current = state
 		entry.phase = phase
+		if state != nil {
+			notifierTargets = m.acquirePollerNotifierTargetsLocked(entry)
+		}
 		if terminalStop {
 			cancelTerminal = true
 			for lease := range entry.refs {
@@ -420,6 +460,7 @@ func (m *runObservationManager) finishPollerRead(
 	if closeReady {
 		close(entry.ready)
 	}
+	m.sendPollerNotifierTargets(notifierTargets)
 	if cancelTerminal && entry.cancel != nil {
 		entry.cancel()
 	}
