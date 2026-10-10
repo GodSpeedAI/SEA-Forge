@@ -70,6 +70,9 @@ pub struct ServerState {
     /// (see `docs/CELL_CONTRACT.md`). Keeping it out of the reloadable snapshot
     /// makes that unrepresentable rather than merely documented.
     pub root: PathBuf,
+    /// Fresh process-memory key for continuation tokens; reader integration follows later.
+    #[allow(dead_code)]
+    continuation_signing_key: sea_forge_ledger::signing::SigningKey,
     /// Live configuration snapshot (§8.4). `reload_config` swaps the whole
     /// `Arc`; a dispatch that already took one keeps it to completion, so new
     /// configuration reaches future dispatches only.
@@ -149,7 +152,24 @@ struct RecoveredAcpSession<'a> {
 
 impl ServerState {
     pub fn new(config: ServerConfig) -> Result<Self, ForgeError> {
+        Self::new_with_continuation_entropy(config, |seed| getrandom::fill(seed).map_err(|_| ()))
+    }
+
+    fn new_with_continuation_entropy<F>(
+        config: ServerConfig,
+        fill_entropy: F,
+    ) -> Result<Self, ForgeError>
+    where
+        F: FnOnce(&mut [u8; 32]) -> Result<(), ()>,
+    {
         config.validate().map_err(ForgeError::Input)?;
+        let mut seed = zeroize::Zeroizing::new([0u8; 32]);
+        fill_entropy(&mut seed).map_err(|_| {
+            ForgeError::Internal("continuation signing key entropy unavailable".into())
+        })?;
+        // `seed` is zeroized on drop; the key zeroizes itself likewise.
+        let continuation_signing_key = sea_forge_ledger::signing::SigningKey::from_bytes(&seed);
+        drop(seed);
         recover_cancelled_delegations(&config)?;
         // A SWE_SEED declaration may have been appended directly (out of
         // process) while the server was absent; join it against any
@@ -184,6 +204,7 @@ impl ServerState {
         }
         Ok(Self {
             root: config.root.clone(),
+            continuation_signing_key,
             config: std::sync::RwLock::new(Arc::new(config)),
             cases: Mutex::new(cases),
             delegations: Mutex::new(HashMap::new()),
@@ -3766,5 +3787,103 @@ mod status_rebuild_tests {
             response.get("error").is_none(),
             "status must not report case not found after restart: {response}"
         );
+    }
+}
+
+#[cfg(test)]
+mod continuation_key_tests {
+    use super::*;
+    use std::cell::Cell;
+
+    fn config_in(root: &std::path::Path) -> ServerConfig {
+        ServerConfig {
+            root: root.to_path_buf(),
+            ..ServerConfig::default()
+        }
+    }
+
+    fn inventory(root: &std::path::Path) -> Vec<std::path::PathBuf> {
+        let mut found: Vec<_> = walkdir_paths(root);
+        found.sort();
+        found
+    }
+
+    fn walkdir_paths(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+        let mut out = Vec::new();
+        for entry in std::fs::read_dir(dir).unwrap().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                out.extend(walkdir_paths(&path));
+            }
+            out.push(path);
+        }
+        out
+    }
+
+    fn fill_with(byte: u8) -> impl FnOnce(&mut [u8; 32]) -> Result<(), ()> {
+        move |seed| {
+            seed.fill(byte);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn key_is_derived_from_the_entropy_seed() {
+        let root = tempfile::tempdir().unwrap();
+        let state =
+            ServerState::new_with_continuation_entropy(config_in(root.path()), fill_with(7))
+                .unwrap();
+        let expected = sea_forge_ledger::signing::SigningKey::from_bytes(&[7u8; 32]);
+        let msg = b"continuation";
+        let a = sea_forge_ledger::signing::sign_bytes(&state.continuation_signing_key, msg);
+        let b = sea_forge_ledger::signing::sign_bytes(&expected, msg);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn distinct_seeds_yield_distinct_signatures() {
+        let (r1, r2) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        let s1 =
+            ServerState::new_with_continuation_entropy(config_in(r1.path()), fill_with(1)).unwrap();
+        let s2 =
+            ServerState::new_with_continuation_entropy(config_in(r2.path()), fill_with(2)).unwrap();
+        let msg = b"continuation";
+        assert_ne!(
+            sea_forge_ledger::signing::sign_bytes(&s1.continuation_signing_key, msg),
+            sea_forge_ledger::signing::sign_bytes(&s2.continuation_signing_key, msg),
+        );
+    }
+
+    #[test]
+    fn entropy_failure_after_partial_fill_fails_before_durable_work() {
+        let root = tempfile::tempdir().unwrap();
+        let before = inventory(root.path());
+        let err = ServerState::new_with_continuation_entropy(config_in(root.path()), |seed| {
+            seed[..16].fill(0xAA);
+            Err(())
+        })
+        .err()
+        .expect("entropy failure must fail construction");
+        match err {
+            ForgeError::Internal(m) => {
+                assert_eq!(m, "continuation signing key entropy unavailable")
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+        assert_eq!(inventory(root.path()), before, "no durable work on failure");
+    }
+
+    #[test]
+    fn invalid_configuration_fails_before_requesting_entropy() {
+        let root = tempfile::tempdir().unwrap();
+        let mut config = config_in(root.path());
+        config.max_concurrent_runs = 0;
+        let asked = Cell::new(false);
+        let result = ServerState::new_with_continuation_entropy(config, |_| {
+            asked.set(true);
+            Ok(())
+        });
+        assert!(matches!(result, Err(ForgeError::Input(_))));
+        assert!(!asked.get(), "entropy must not be requested for bad config");
     }
 }
