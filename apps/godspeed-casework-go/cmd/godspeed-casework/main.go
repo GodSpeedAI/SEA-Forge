@@ -250,7 +250,7 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 	dispatcher := intents.NewHandler(authority, relay, authority, intents.Options{
 		Gateway:             ports.ActorClaim{ActorID: serve.GatewayActorID, Role: serve.GatewayRole},
 		PolicyRef:           serve.PolicyRef,
-		ExecutionTimeoutSec: 60,
+		ExecutionTimeoutSec: serve.ExecutionTimeoutSec,
 	})
 	ask := sfwp.NewAskAdapter(client, ports.ActorClaim{ActorID: serve.GatewayActorID, Role: serve.GatewayRole})
 

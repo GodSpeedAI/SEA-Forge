@@ -3,7 +3,7 @@ import { buildNorthstarHistory } from '../adapters/local/northstarData'
 import { createStore, initialState, nowRevision } from '../model/store'
 import { projectHistory } from '../ports/project'
 import type { CaseworkPort, StreamEvent, XSnapshot } from '../ports/contract'
-import { connectLive } from './live'
+import { connectLive, executionStateOf } from './live'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const unexpectedCall = (method: string): never => {
@@ -109,5 +109,57 @@ describe('connectLive connection recovery', () => {
     expect(store.getState().history.snapshots[later.cursor]).toBeDefined()
     expect(store.getState().history.revisions.at(-1)?.id).toBe(later.cursor)
     disconnect()
+  })
+})
+
+describe('connectLive initial execution standing', () => {
+  const noop = () => () => undefined
+  // The northstar fixture holds no runs; give its head one, the way the live gateway projects a run.
+  const withRun = (raw: XSnapshot[]): XSnapshot[] => {
+    const head = raw.at(-1)!
+    const parent = head.visible_objects[0]!.id
+    const run = { id: 'run_live_1', kind: 'execution_trace', name: 'run_live_1', status: 'WAITING_ON_OTHERS', badge: 'Executed', salience: 0.3, parent_id: parent, actions: [] }
+    return [...raw.slice(0, -1), { ...head, visible_objects: [...head.visible_objects, run as unknown as XSnapshot['visible_objects'][number]] }]
+  }
+  it('shows the runs a live world already holds on connect, with no stream event', () => {
+    const raw = withRun(buildNorthstarHistory({ actor_id: 'operator-1', role: 'case_architect' }))
+    const live = projectHistory(raw, {}, 'go', { withCore: true })
+    const store = createStore(initialState(live))
+    expect(Object.keys(store.getState().executions)).toHaveLength(0)
+    const disconnect = connectLive(liveTestPort(noop), store, live.caseId, raw, {})
+    const runs = Object.values(live.snapshots[live.revisions.at(-1)!.id]!.objects).filter((o) => o.kind === 'run' && o.parent)
+    expect(runs.length).toBeGreaterThan(0)
+    expect(Object.keys(store.getState().executions).length).toBe(new Set(runs.map((r) => r.parent)).size)
+    expect(Object.values(store.getState().executions)[0]!.state).toBe('executed')
+    disconnect()
+  })
+  it('leaves the local fixture event-driven: nothing is shown until a stream event arrives', () => {
+    const raw = withRun(buildNorthstarHistory({ actor_id: 'operator-1', role: 'case_architect' }))
+    const local = projectHistory(raw, {}, 'local-contract', { withCore: true })
+    const store = createStore(initialState(local))
+    const disconnect = connectLive(liveTestPort(noop), store, local.caseId, raw, {})
+    expect(Object.keys(store.getState().executions)).toHaveLength(0)
+    disconnect()
+  })
+})
+
+describe('executionStateOf', () => {
+  it('lets an authoritative settlement decide, in any provenance', () => {
+    expect(executionStateOf('WAITING', { decision: 'ACCEPTED' }, 'local-contract')).toBe('settled')
+    expect(executionStateOf('COMPLETED', { decision: 'REJECTED' }, 'go')).toBe('rejected')
+  })
+  it('keeps the fixture rule: completed without a settlement is executed, never settled', () => {
+    expect(executionStateOf('COMPLETED', undefined, 'local-contract')).toBe('executed')
+    expect(executionStateOf('IN_PROGRESS', undefined, 'local-contract')).toBe('running')
+  })
+  it('reads a live run by its typed status: executed-unsettled is not settled', () => {
+    expect(executionStateOf('IN_PROGRESS', undefined, 'go')).toBe('running')
+    expect(executionStateOf('WAITING_ON_OTHERS', undefined, 'go')).toBe('executed')
+    expect(executionStateOf('ACTION_REQUIRED', undefined, 'go')).toBe('executed')
+    expect(executionStateOf('COMPLETED', undefined, 'go')).toBe('settled')
+    expect(executionStateOf('REJECTED', undefined, 'go')).toBe('rejected')
+  })
+  it('never shows a failed or terminated live run as running', () => {
+    expect(executionStateOf('FAILED', undefined, 'go')).toBe('failed')
   })
 })

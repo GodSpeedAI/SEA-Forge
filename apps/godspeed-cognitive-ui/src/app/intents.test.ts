@@ -4,7 +4,7 @@ import { createStore, focusOf, initialState, nowRevision, snapshotOf } from '../
 import { projectHistory } from '../ports/project'
 import type { Actor, ObjectAction } from '../model/types'
 import type { CaseworkPort, IntentResponse, XSnapshot } from '../ports/contract'
-import { createIntentPath } from './intents'
+import { createIntentPath, judgmentChoices } from './intents'
 
 const ACTOR: Actor = { id: 'operator-1', role: 'case_architect', name: 'Operator', kind: 'human' }
 
@@ -260,5 +260,17 @@ describe('createIntentPath stale projection recovery', () => {
     expect(result.note).toContain('This projection is stale.')
     expect(result.note).toContain('Current projection refresh failed: snapshot refresh returned case')
     expect(store.getState().history.snapshots[malformed.cursor]).toBeUndefined()
+  })
+})
+
+describe('judgmentChoices', () => {
+  it('offers consequential decisions but never discretionary work (that has its own drawer)', () => {
+    const mk = (id: string, intent: ObjectAction['intent'], consequential: boolean): ObjectAction => ({ id, label: id, intent, consequential })
+    const choices = judgmentChoices([
+      mk('exec', 'EXECUTE_ITEM', true),
+      mk('add', 'ADD_DISCRETIONARY_WORK', true),
+      mk('open', 'OPEN_ARTIFACT', false),
+    ])
+    expect(choices.map((c) => c.id)).toEqual(['exec'])
   })
 })

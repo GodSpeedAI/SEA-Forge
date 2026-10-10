@@ -256,3 +256,22 @@ func TestLoadResolvesAuthSecretsAndRefusesBareValues(t *testing.T) {
 		t.Fatalf("a missing static token must be fatal naming the variable, got: %v", problemMessages(problems))
 	}
 }
+
+func TestServeExecutionTimeoutDefaultsAndBounds(t *testing.T) {
+	doc := baseDoc()
+	if got := ServeDefaults(doc.Serve).ExecutionTimeoutSec; got != DefaultExecutionTimeoutSec {
+		t.Fatalf("unset execution_timeout_sec must default to %d, got %d", DefaultExecutionTimeoutSec, got)
+	}
+	assertNoProblems(t, doc)
+
+	doc.Serve.ExecutionTimeoutSec = 900
+	if got := ServeDefaults(doc.Serve).ExecutionTimeoutSec; got != 900 {
+		t.Fatalf("an explicit execution_timeout_sec must be kept, got %d", got)
+	}
+	assertNoProblems(t, doc)
+
+	doc.Serve.ExecutionTimeoutSec = -1
+	assertFatal(t, doc, "serve.execution_timeout_sec must be between")
+	doc.Serve.ExecutionTimeoutSec = MaxExecutionTimeoutSec + 1
+	assertFatal(t, doc, "serve.execution_timeout_sec must be between")
+}

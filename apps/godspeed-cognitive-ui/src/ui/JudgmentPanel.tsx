@@ -28,13 +28,39 @@ export interface JudgmentPanelProps {
   onClose(): void;
 }
 
+/**
+ * The reason typed into the panel belongs to ONE decision. The panel stays mounted between
+ * decisions, so the text is stored with the decision it was typed for and read back only for that
+ * decision: a reason written for one judgment is never sent with the next (a governed record would
+ * carry the wrong justification).
+ */
+export interface ReasonDraft {
+  key: string;
+  text: string;
+}
+
+export const decisionKeyOf = (question: string, options: readonly { id: string }[]): string =>
+  `${question}\u0000${options.map((o) => o.id).join(',')}`;
+
+export const reasonFor = (draft: ReasonDraft | null, key: string): string => (draft && draft.key === key ? draft.text : '');
+
 export function JudgmentPanel(p: JudgmentPanelProps): JSX.Element {
   const panelRef = useRef<HTMLElement>(null);
-  const [justification, setJustification] = useState('');
-  const [validationError, setValidationError] = useState('');
+  const decisionKey = decisionKeyOf(p.question, p.options);
+  const [draft, setDraft] = useState<ReasonDraft | null>(null);
+  const [errorFor, setErrorFor] = useState<ReasonDraft | null>(null);
+  const justification = reasonFor(draft, decisionKey);
+  const validationError = reasonFor(errorFor, decisionKey);
+  const setJustification = (text: string) => setDraft({ key: decisionKey, text });
+  const setValidationError = (text: string) => setErrorFor({ key: decisionKey, text });
 
   useEffect(() => {
     if (p.visible) panelRef.current?.focus();
+    // A closed panel holds no reason: reopening the same decision starts from a blank page.
+    else {
+      setDraft(null);
+      setErrorFor(null);
+    }
   }, [p.visible]);
 
   const iconMap: Record<string, () => JSX.Element> = {

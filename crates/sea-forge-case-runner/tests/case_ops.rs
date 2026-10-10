@@ -313,6 +313,58 @@ fn reopen_reactivates_a_closed_case_and_records_the_event() {
     );
 }
 
+/// The reopen reason the requester gave is part of the durable record (it was being dropped on the
+/// way to the kernel); a blank reason is recorded as absent, never as an empty string.
+#[test]
+fn reopen_records_the_requesters_reason_on_the_event() {
+    let root = temp_root("reopen-reason");
+    let policy = write_policy(
+        root.path(),
+        "  - name: allow-reopen\n    verdict: allow\n    actor_role: operator\n    operation_kind: case_reopen\n",
+    );
+    for (case_id, reason, expected) in [
+        (
+            "case_reopen_r1",
+            Some("  late evidence arrived  "),
+            Some("late evidence arrived"),
+        ),
+        ("case_reopen_r2", Some("   "), None),
+        ("case_reopen_r3", None, None),
+    ] {
+        let mut case = case_record(case_id, CaseState::Completed);
+        case.close_reason = Some("done".into());
+        write_case_state(
+            root.path(),
+            case_id,
+            &case,
+            &plan(case_id, vec![item("a", vec![])]),
+        );
+        case_ops::reopen_with_reason(
+            root.path(),
+            &policy,
+            "operator_local",
+            case_id,
+            reason,
+            &mut |_| {},
+        )
+        .unwrap();
+        let events = case_events(root.path(), case_id);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["kind"], "case_reopened");
+        match expected {
+            Some(expected) => {
+                assert_eq!(events[0]["payload"]["reason"], expected);
+                assert_eq!(events[0]["payload"]["requested_by"], "operator_local");
+            }
+            None => assert!(
+                events[0]["payload"].get("reason").is_none(),
+                "no reason must be recorded as absent: {}",
+                events[0]["payload"]
+            ),
+        }
+    }
+}
+
 /// An open case is not reopenable — the guard moved with the mutation.
 #[test]
 fn reopen_refuses_a_case_that_is_not_closed() {

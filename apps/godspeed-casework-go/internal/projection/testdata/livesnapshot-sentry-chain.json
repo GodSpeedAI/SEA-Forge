@@ -18,6 +18,22 @@
     },
     {
       "consequential": true,
+      "id": "act-add_discretionary_work-task_prepare",
+      "intent": "ADD_DISCRETIONARY_WORK",
+      "label": "Add discretionary work",
+      "requires_justification": true,
+      "variant": "SECONDARY"
+    },
+    {
+      "consequential": true,
+      "id": "act-add_discretionary_work-task_publish",
+      "intent": "ADD_DISCRETIONARY_WORK",
+      "label": "Add discretionary work",
+      "requires_justification": true,
+      "variant": "SECONDARY"
+    },
+    {
+      "consequential": true,
       "id": "act-terminate_case-\u003cCASE_ID\u003e",
       "intent": "TERMINATE_CASE",
       "label": "Terminate case",
@@ -47,6 +63,14 @@
           "intent": "EXECUTE_ITEM",
           "label": "Execute",
           "variant": "PRIMARY"
+        },
+        {
+          "consequential": true,
+          "id": "act-add_discretionary_work-task_prepare",
+          "intent": "ADD_DISCRETIONARY_WORK",
+          "label": "Add discretionary work",
+          "requires_justification": true,
+          "variant": "SECONDARY"
         }
       ],
       "badge": "Ready",
@@ -58,7 +82,16 @@
       "status": "READY_TO_BEGIN"
     },
     {
-      "actions": [],
+      "actions": [
+        {
+          "consequential": true,
+          "id": "act-add_discretionary_work-task_publish",
+          "intent": "ADD_DISCRETIONARY_WORK",
+          "label": "Add discretionary work",
+          "requires_justification": true,
+          "variant": "SECONDARY"
+        }
+      ],
       "badge": "Waiting",
       "explanation": "No work has been recorded for this item yet: its entry sentries have not fired.",
       "id": "task_publish",

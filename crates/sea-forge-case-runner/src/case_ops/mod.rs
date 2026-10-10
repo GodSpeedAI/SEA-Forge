@@ -141,6 +141,20 @@ pub fn reopen_with(
     case_id: &str,
     notify: CaseEventNotifier<'_>,
 ) -> Result<u8, ForgeError> {
+    reopen_with_reason(root, policy, actor, case_id, None, notify)
+}
+
+/// [`reopen_with`], recording the requester's reason on the `CaseReopened` event. A blank reason
+/// is recorded as absent (the event payload stays `{}`), never as an empty string.
+pub fn reopen_with_reason(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    reason: Option<&str>,
+    notify: CaseEventNotifier<'_>,
+) -> Result<u8, ForgeError> {
+    let reason = reason.map(str::trim).filter(|r| !r.is_empty());
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
@@ -167,7 +181,10 @@ pub fn reopen_with(
         actor,
         TraceKind::CaseReopened,
         None,
-        json!({}),
+        match reason {
+            Some(reason) => json!({"reason": reason, "requested_by": actor}),
+            None => json!({}),
+        },
         notify,
     )?;
     case.state = CaseState::Active;

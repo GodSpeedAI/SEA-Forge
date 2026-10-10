@@ -1280,6 +1280,35 @@ casework-ui-down:
     rm -f "$pidfile"
     echo "casework-ui-down: stopped (pid $pid)"
 
+# Live-stack browser ladder (plan T10): the harness owns the stack end to end. It builds the
+# production UI, scans the bundle for fixture adapters, seeds a FRESH temp cell (never the shared
+# .sea-forge/casework-live cell), starts kernel + gateway (gateway serves dist), runs L0.. through
+# agent-browser asserting UI AND durable files, then stops both and preserves evidence under
+# .agents/evidence/casework-live-wiring/T10/run-<timestamp>/ (latest -> that run). Needs ports 4179
+# (and 4180 for the stub-gateway tooth) free, a built kernel (cargo build -p sea-forge-server) and
+# go. Pass extra flags through, e.g. `just casework-e2e-live --only L0,L1` or
+# `just casework-e2e-live --tooth stub-gateway` (negative self-check; passes only if L1 fails
+# at its durable assertion).
+[group('casework')]
+casework-e2e-live *args:
+    #!/usr/bin/env bash
+    {{set}}
+    app="apps/godspeed-cognitive-ui"
+    if ! command -v bun >/dev/null 2>&1; then
+      echo "casework-e2e-live: bun is required (mise declares it in mise.toml)" >&2
+      exit 1
+    fi
+    if ! command -v agent-browser >/dev/null 2>&1; then
+      echo "casework-e2e-live: agent-browser is required" >&2
+      exit 1
+    fi
+    if [ ! -d "$app/node_modules" ]; then
+      echo "casework-e2e-live: installing dependencies (frozen lockfile)"
+      (cd "$app" && bun install --frozen-lockfile)
+    fi
+    cd "$app"
+    bun e2e/run.ts --live {{args}}
+
 # Report up/down, the URL, the pid, and the last log lines — the first thing to run when the UI
 # looks wrong.
 [group('casework')]

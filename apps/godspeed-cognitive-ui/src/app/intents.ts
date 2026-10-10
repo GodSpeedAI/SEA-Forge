@@ -132,3 +132,13 @@ export function createIntentPath(store: Store, port: Pick<CaseworkPort, 'dispatc
     },
   }
 }
+
+/**
+ * The decisions the judgment panel offers for an object: its consequential actions, except
+ * discretionary work, which is a typed add-work surface (the drawer), never a choice.
+ */
+export function judgmentChoices(actions: readonly ObjectAction[]) {
+  return actions
+    .filter((a) => a.consequential && a.intent !== 'ADD_DISCRETIONARY_WORK')
+    .map((a) => ({ id: a.id, label: a.label, variant: a.variant, requiresJustification: a.requiresJustification }))
+}

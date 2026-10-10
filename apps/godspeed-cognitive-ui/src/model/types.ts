@@ -403,7 +403,7 @@ export interface ExecutionState {
   /** 0..1 when the stream reported progress; null when only snapshot standing is known (never guessed). */
   progress: number | null
   log: string[]
-  state: 'running' | 'executed' | 'settled' | 'rejected'
+  state: 'running' | 'executed' | 'settled' | 'rejected' | 'failed'
 }
 
 /** Case design from templates (T09): picker → parameters → preflight → commit. */

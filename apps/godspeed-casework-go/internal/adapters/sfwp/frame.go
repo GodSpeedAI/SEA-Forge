@@ -344,14 +344,18 @@ func NewCaseAddItem(caseID string, item map[string]any, policy, requestID string
 	return r, nil
 }
 
-// NewCaseReopen reopens a terminated or completed case.
-func NewCaseReopen(caseID, policy, requestID string, g Governance) (*Request, error) {
+// NewCaseReopen reopens a terminated or completed case; a non-blank reason is recorded on the
+// kernel's CaseReopened event.
+func NewCaseReopen(caseID, reason, policy, requestID string, g Governance) (*Request, error) {
 	if requestID == "" {
 		return nil, apperr.New(apperr.KindInvalid, "", "case_reopen",
 			"a durable case reopen requires a non-empty request_id before it can be sent")
 	}
 	r := newRequest("case_reopen")
 	r.body["case_id"] = caseID
+	if strings.TrimSpace(reason) != "" {
+		r.body["reason"] = reason
+	}
 	if policy != "" {
 		r.body["policy"] = policy
 	}

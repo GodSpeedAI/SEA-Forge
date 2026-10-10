@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
@@ -29,13 +30,66 @@ type LiveSource struct {
 	gateway ports.ActorClaim
 	// now stamps rendered snapshots; nil means time.Now.
 	now func() time.Time
+
+	// artifacts lists the artifacts a run captured when the authority can (optional capability).
+	artifacts ports.RunArtifactLister
+	// artifactCache remembers a run's artifact list per evidence count: a run's evidence journal
+	// only grows, so the same count is the same list and costs no further authority read.
+	artifactMu    sync.Mutex
+	artifactCache map[string]cachedRunArtifacts
+}
+
+type cachedRunArtifacts struct {
+	evidence int
+	refs     []ports.RunArtifactRef
 }
 
 // NewLiveSource builds a source over the given authority port. gateway is the gateway
 // principal's claim (config serve.gateway_actor_id/gateway_role in production); it must match
 // the kernel's configured gateway principal or every delegated call is refused.
 func NewLiveSource(auth ports.CaseAuthorityPort, gateway ports.ActorClaim) *LiveSource {
-	return &LiveSource{auth: auth, gateway: gateway}
+	src := &LiveSource{auth: auth, gateway: gateway, artifactCache: map[string]cachedRunArtifacts{}}
+	if lister, ok := auth.(ports.RunArtifactLister); ok {
+		src.artifacts = lister
+	}
+	return src
+}
+
+// runArtifacts returns the artifacts each evidence-bearing run captured. A run whose list cannot
+// be read contributes nothing (its artifacts are simply not bound); the world never fails over an
+// artifact it could not list, and nothing is guessed in its place.
+func (s *LiveSource) runArtifacts(ctx context.Context, runs []ports.RunSummary) map[string][]ports.RunArtifactRef {
+	if s.artifacts == nil {
+		return nil
+	}
+	var out map[string][]ports.RunArtifactRef
+	for _, run := range runs {
+		if run.EvidenceCount <= 0 {
+			continue
+		}
+		s.artifactMu.Lock()
+		cached, hit := s.artifactCache[run.RunID]
+		s.artifactMu.Unlock()
+		refs := cached.refs
+		if !hit || cached.evidence != run.EvidenceCount {
+			listed, err := s.artifacts.RunArtifacts(ctx, run.RunID)
+			if err != nil {
+				continue
+			}
+			refs = listed
+			s.artifactMu.Lock()
+			s.artifactCache[run.RunID] = cachedRunArtifacts{evidence: run.EvidenceCount, refs: refs}
+			s.artifactMu.Unlock()
+		}
+		if len(refs) == 0 {
+			continue
+		}
+		if out == nil {
+			out = map[string][]ports.RunArtifactRef{}
+		}
+		out[run.RunID] = refs
+	}
+	return out
 }
 
 // Facts fetches one case's views. The case record comes from case.list (the list is the only
@@ -127,6 +181,7 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
 		Horizon:          horizon,
 		Approvals:        approvals,
 		Runs:             runList.Runs,
+		RunArtifacts:     s.runArtifacts(ctx, runList.Runs),
 		UnreadableRunIDs: runList.UnreadableIDs,
 		Actor:            actor,
 		Cursor:           cursor,

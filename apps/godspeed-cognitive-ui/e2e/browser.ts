@@ -13,6 +13,16 @@ export class Browser {
     this.session = session;
   }
 
+  /** The agent-browser --session name this Browser drives (identity isolation is per session). */
+  get sessionName(): string {
+    return this.session;
+  }
+
+  /** Raw agent-browser invocation for commands this wrapper has no method for. */
+  run(args: string[]): SpawnResult {
+    return this.spawn(args);
+  }
+
   private spawn(args: string[]): SpawnResult {
     const result = spawnSync("agent-browser", [
       ...args,
@@ -168,6 +178,61 @@ export class Browser {
   async clearRequests(): Promise<void> {
     // Network clear handled by calling network requests after this
     // agent-browser doesn't have explicit request clearing
+  }
+
+  /** Cookies visible to this session, as agent-browser prints them (raw text). */
+  async cookiesGet(): Promise<string> {
+    const r = this.spawn(["cookies", "get"]);
+    if (r.status !== 0) throw new Error(`cookies get failed: ${r.stderr}`);
+    return r.stdout;
+  }
+
+  async cookiesClear(): Promise<void> {
+    const r = this.spawn(["cookies", "clear"]);
+    if (r.status !== 0) throw new Error(`cookies clear failed: ${r.stderr}`);
+  }
+
+  /** Console log lines (all levels). */
+  async consoleLogs(clear = false): Promise<string[]> {
+    const r = this.spawn(clear ? ["console", "--clear"] : ["console"]);
+    if (r.status !== 0) throw new Error(`console failed: ${r.stderr}`);
+    return r.stdout.split("\n").filter((l) => l.trim() && !l.includes("✓"));
+  }
+
+  /** Discards page errors captured so far (so a later errors check starts from a known point). */
+  async clearErrors(): Promise<void> {
+    const r = this.spawn(["errors", "--clear"]);
+    if (r.status !== 0) throw new Error(`errors --clear failed: ${r.stderr}`);
+  }
+
+  async harStart(): Promise<void> {
+    const r = this.spawn(["network", "har", "start"]);
+    if (r.status !== 0) throw new Error(`network har start failed: ${r.stderr}`);
+  }
+
+  async harStop(path: string): Promise<void> {
+    const r = this.spawn(["network", "har", "stop", path]);
+    if (r.status !== 0) throw new Error(`network har stop failed: ${r.stderr}`);
+  }
+
+  async recordStart(path: string, url?: string): Promise<void> {
+    const r = this.spawn(url ? ["record", "start", path, url] : ["record", "start", path]);
+    if (r.status !== 0) throw new Error(`record start failed: ${r.stderr}`);
+  }
+
+  async recordStop(): Promise<void> {
+    const r = this.spawn(["record", "stop"]);
+    if (r.status !== 0) throw new Error(`record stop failed: ${r.stderr}`);
+  }
+
+  async traceStart(): Promise<void> {
+    const r = this.spawn(["trace", "start"]);
+    if (r.status !== 0) throw new Error(`trace start failed: ${r.stderr}`);
+  }
+
+  async traceStop(path: string): Promise<void> {
+    const r = this.spawn(["trace", "stop", path]);
+    if (r.status !== 0) throw new Error(`trace stop failed: ${r.stderr}`);
   }
 
   async close(): Promise<void> {

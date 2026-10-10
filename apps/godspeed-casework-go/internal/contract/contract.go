@@ -45,6 +45,26 @@ type CognitiveObject struct {
 	DependsOn     []string           `json:"depends_on,omitempty"`
 	SpatialLayout *SpatialLayout     `json:"spatial_layout,omitempty"`
 	Actions       []ActionDescriptor `json:"actions"`
+	// X carries the optional spec-04 object extensions this gateway populates (artifact bindings).
+	X *ObjectExtensions `json:"x,omitempty"`
+}
+
+// CognitiveArtifact is an artifact bound to an object (spec-04 §7); its bytes come from
+// GET /api/artifacts/{digest}, never from the snapshot.
+type CognitiveArtifact struct {
+	Ref              string `json:"ref"`
+	Kind             string `json:"kind"`
+	Title            string `json:"title"`
+	BoundObject      string `json:"boundObject"`
+	CurrentLevel     string `json:"currentLevel"`
+	MediaType        string `json:"mediaType"`
+	SourceProvenance string `json:"sourceProvenance"`
+}
+
+// ObjectExtensions is the subset of the UI's object extensions (src/ports/contract.ts
+// ObjectExtensions) the gateway projects.
+type ObjectExtensions struct {
+	Artifacts []CognitiveArtifact `json:"artifacts,omitempty"`
 }
 
 // ActorPerspective is the snapshot's acting view point.

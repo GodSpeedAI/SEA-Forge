@@ -932,6 +932,9 @@ pub enum Request {
         case_id: String,
         #[serde(default = "default_policy")]
         policy: String,
+        /// Why the case is being reopened; recorded on the `CaseReopened` event when present.
+        #[serde(default)]
+        reason: Option<String>,
         #[serde(default)]
         request_id: Option<String>,
     },
@@ -2595,17 +2598,25 @@ pub async fn handle_request_as(
         Request::CaseReopen {
             case_id,
             policy,
+            reason,
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "case.reopen");
             let actor = actor_id.unwrap_or("operator_local").to_string();
-            let response =
-                match sfwp::case_mutations::reopen(state, &actor, &case_id, &policy).await {
-                    Ok(result) => serde_json::to_value(result).unwrap_or_else(
-                        |_| serde_json::json!({"error": "reopen serialization failed"}),
-                    ),
-                    Err(error) => forge_error_response(&error),
-                };
+            let response = match sfwp::case_mutations::reopen(
+                state,
+                &actor,
+                &case_id,
+                &policy,
+                reason.as_deref(),
+            )
+            .await
+            {
+                Ok(result) => serde_json::to_value(result).unwrap_or_else(
+                    |_| serde_json::json!({"error": "reopen serialization failed"}),
+                ),
+                Err(error) => forge_error_response(&error),
+            };
             record_outcome(state, request_id.as_deref(), "case.reopen", &response);
             response
         }

@@ -6,7 +6,7 @@ export interface ExecutionPanelProps {
   phase: string;
   /** 0..1 when the stream reported progress; null when only snapshot standing is known. */
   progress: number | null;
-  state: 'running' | 'executed' | 'settled' | 'rejected';
+  state: 'running' | 'executed' | 'settled' | 'rejected' | 'failed';
   connection?: 'live' | 'reconnecting' | 'interrupted';
   log: string[];
   evidence: { ref: string; title: string }[];
@@ -100,6 +100,9 @@ export function ExecutionPanel(p: ExecutionPanelProps): JSX.Element {
             <div className="exec-settlement-summary">{p.settlement.summary}</div>
             <div className="exec-settlement-time">{p.settlement.at}</div>
           </div>
+        )}
+        {p.state === 'failed' && (
+          <div className="exec-status-rejected">Stopped before completion</div>
         )}
         {p.state === 'rejected' && (
           <div className="exec-status-rejected">Settlement rejected</div>

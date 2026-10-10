@@ -507,6 +507,7 @@ async fn case_reopen_appends_case_reopened_only_after_closure() {
         .call(json!({
             "verb": "case_reopen",
             "case_id": case_id,
+            "reason": "late evidence arrived",
             "policy": policy,
             "request_id": format!("req-reopen-{}", line_nonce()),
             "actor": actor_block("operator_local"),
@@ -528,6 +529,10 @@ async fn case_reopen_appends_case_reopened_only_after_closure() {
         "full case history must be exactly the documented kinds"
     );
     assert_eq!(case_state(root.path(), &case_id), "active");
+    // The requester's reason is part of the durable record, not just of the request.
+    let reopened = events.last().unwrap();
+    assert_eq!(reopened["payload"]["reason"], "late evidence arrived");
+    assert_eq!(reopened["payload"]["requested_by"], "operator_local");
 
     // Reopening an already-active case is refused with no new event.
     let refused = client

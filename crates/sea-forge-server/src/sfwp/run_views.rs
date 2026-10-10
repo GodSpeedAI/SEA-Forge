@@ -590,6 +590,58 @@ fn fold_trace(events: &[TraceEvent]) -> TraceFold {
     fold
 }
 
+/// Overlay the case engine's item lifecycle onto a case-owned run's folded standing.
+///
+/// A run's own `trace.jsonl` carries only the episode's governed work (authority, workspace,
+/// commands, artifacts). The engine records the item's lifecycle (`item_activated`,
+/// `item_completed`, `item_failed`, `item_terminated`) in the owning case's
+/// `case-events.jsonl`, so folding the run trace alone leaves every case-dispatched run at
+/// `pending` (write-only items) or `active` (command items) after it has completed. The episode is
+/// matched to its lifecycle events exactly: `item_activated` names the run id and the instance, and
+/// the terminal events for the same item and instance close it. Anything the run trace already
+/// settled (a terminal standing) is left alone.
+fn overlay_case_lifecycle(root: &Path, case_id: &str, run_id: &str, fold: &mut TraceFold) {
+    let Some(item) = fold.plan_item_id.clone() else {
+        return;
+    };
+    let events: Vec<TraceEvent> =
+        read_jsonl(&root.join("cases").join(case_id).join("case-events.jsonl"));
+    let Some(activated) = events.iter().position(|e| {
+        e.kind == TraceKind::ItemActivated
+            && e.plan_item_id.as_deref() == Some(item.as_str())
+            && e.payload.get("run_id").and_then(serde_json::Value::as_str) == Some(run_id)
+    }) else {
+        return;
+    };
+    let instance = events[activated].payload.get("instance");
+    let mut standing = ExecutionStanding::Active;
+    let mut finished_at = None;
+    for event in &events[activated + 1..] {
+        if event.plan_item_id.as_deref() != Some(item.as_str())
+            || event.payload.get("instance") != instance
+        {
+            continue;
+        }
+        standing = match event.kind {
+            TraceKind::ItemCompleted => ExecutionStanding::Completed,
+            TraceKind::ItemFailed => ExecutionStanding::Failed,
+            TraceKind::ItemTerminated => ExecutionStanding::Terminated,
+            _ => continue,
+        };
+        finished_at = Some(event.timestamp.clone());
+        break;
+    }
+    if matches!(
+        fold.execution,
+        ExecutionStanding::Pending | ExecutionStanding::Enabled | ExecutionStanding::Active
+    ) {
+        fold.execution = standing;
+        if fold.finished_at.is_none() {
+            fold.finished_at = finished_at;
+        }
+    }
+}
+
 fn settlement_standing(event: &SettlementEvent) -> SettlementStanding {
     use sea_forge_core::types::SettlementStatus;
     match event.status {
@@ -801,7 +853,10 @@ pub fn list(root: &Path, case_id: Option<&str>) -> RunListResult {
             continue;
         }
 
-        let fold = fold_trace(&events);
+        let mut fold = fold_trace(&events);
+        if let Some(owner) = owner.as_deref() {
+            overlay_case_lifecycle(root, owner, &run_id, &mut fold);
+        }
         let evidence_count = read_jsonl::<EvidenceRecord>(&dir.join("evidence.jsonl")).len();
 
         runs.push(RunSummary {
@@ -854,7 +909,11 @@ pub fn get(root: &Path, run_id: &str) -> Result<RunRecord, RunViewError> {
         )));
     }
 
-    let fold = fold_trace(&events);
+    let owner = case_index(root).get(run_id).cloned();
+    let mut fold = fold_trace(&events);
+    if let Some(owner) = owner.as_deref() {
+        overlay_case_lifecycle(root, owner, run_id, &mut fold);
+    }
     let item = plan
         .as_ref()
         .and_then(|p| plan_item(p, fold.plan_item_id.as_deref()));
@@ -881,7 +940,7 @@ pub fn get(root: &Path, run_id: &str) -> Result<RunRecord, RunViewError> {
 
     Ok(RunRecord {
         run_id: run_id.to_string(),
-        case_id: case_index(root).get(run_id).cloned(),
+        case_id: owner,
         plan_item_id: fold.plan_item_id.clone(),
         plan_item_name: item.map(|i| i.name.clone()),
         item_kind: item.map(|i| enum_str(&i.item_kind)),

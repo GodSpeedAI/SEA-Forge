@@ -226,7 +226,7 @@ func TestLiveVerbRoundTrip(t *testing.T) {
 		t.Fatalf("case.terminate: %v", err)
 	}
 	reopenReqID := cl.NewRequestID("case_reopen")
-	if err := authority.ReopenCase(ctx, refOf(third.CaseID), governedOpts(reopenReqID)); err != nil {
+	if err := authority.ReopenCase(ctx, refOf(third.CaseID), "t05 reopen round-trip", governedOpts(reopenReqID)); err != nil {
 		t.Fatalf("case.reopen: %v", err)
 	}
 	term2ReqID := cl.NewRequestID("case_terminate")

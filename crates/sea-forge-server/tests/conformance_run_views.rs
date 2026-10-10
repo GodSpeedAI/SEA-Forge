@@ -504,3 +504,104 @@ async fn an_oversized_trace_journal_folds_to_nothing_rather_than_reading_it() {
     assert_eq!(runs[0]["execution"], "pending", "{list}");
     assert!(runs[0].get("started_at").is_none(), "{list}");
 }
+
+/// The case engine records item lifecycle in the case's `case-events.jsonl`, not in the run's own
+/// trace. A case-dispatched run whose trace holds only governed work (no `item_*` events) must
+/// still report the episode's real execution standing, matched by run id and instance.
+#[tokio::test]
+async fn a_case_run_reports_the_item_lifecycle_the_engine_recorded_in_case_events() {
+    let (root, socket) = boot().await;
+    let case_id = "case-life";
+    let case_dir = root.path().join("cases").join(case_id);
+    let (done, running, other) = ("run-done", "run-running", "run-other-instance");
+    write_json(
+        &case_dir.join("case.json"),
+        &json!({
+            "version": "0.1", "case_id": case_id,
+            "intent": {"intent_id": "int-1", "summary": "s", "actor_id": "operator_local", "process_id": "t", "created_at": "2026-01-01T00:00:00Z"},
+            "state": "active", "plan_ref": "plan-1", "run_ids": [done, running, other],
+            "stages": [], "close_reason": null, "created_at": "2026-01-01T00:00:00Z", "closed_at": null,
+        }),
+    );
+    // Run traces carry authority/workspace/artifact only: the shape the engine really writes.
+    for (run, item) in [(done, "item-a"), (running, "item-b"), (other, "item-a")] {
+        let mut ev = trace_event(
+            run,
+            "tev_0001",
+            "authority_evaluated",
+            "2026-01-01T00:00:01Z",
+            json!({"verdict": "allow"}),
+        );
+        ev["plan_item_id"] = json!(item);
+        write_jsonl(&case_dir.join("runs").join(run).join("trace.jsonl"), &[ev]);
+    }
+    let case_event = |n: u32, kind: &str, item: &str, payload: Value| {
+        json!({
+            "version": "0.1", "event_id": format!("cev_{n:06}"), "run_id": "case", "plan_item_id": item,
+            "kind": kind, "actor_id": "case_engine", "timestamp": format!("2026-01-01T00:00:{:02}Z", 10 + n), "payload": payload,
+        })
+    };
+    write_jsonl(
+        &case_dir.join("case-events.jsonl"),
+        &[
+            case_event(
+                1,
+                "item_activated",
+                "item-a",
+                json!({"instance": 1, "run_id": done}),
+            ),
+            case_event(
+                2,
+                "settlement_recorded",
+                "item-a",
+                json!({"instance": 1, "run_id": done, "status": "accepted"}),
+            ),
+            case_event(
+                3,
+                "item_completed",
+                "item-a",
+                json!({"instance": 1, "settlement": "accepted"}),
+            ),
+            case_event(
+                4,
+                "item_activated",
+                "item-b",
+                json!({"instance": 1, "run_id": running}),
+            ),
+            // A later instance of item-a completes; it must not complete run-other-instance (instance 2, never activated).
+            case_event(
+                5,
+                "item_completed",
+                "item-a",
+                json!({"instance": 2, "settlement": "accepted"}),
+            ),
+        ],
+    );
+
+    let mut client = Client::connect(&socket).await;
+    let record = |run: &'static str| json!({"verb": "run_get", "run_id": run});
+    let got = client.call(record(done)).await;
+    assert_eq!(got["execution"], "completed", "{got}");
+    assert!(
+        got["finished_at"].is_string(),
+        "a completed episode names when it finished: {got}"
+    );
+    assert_eq!(client.call(record(running)).await["execution"], "active");
+    assert_eq!(client.call(record(other)).await["execution"], "pending");
+
+    let list = client
+        .call(json!({"verb": "run_list", "case_id": case_id}))
+        .await;
+    let standing = |run: &str| {
+        list["runs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["run_id"] == run)
+            .map(|r| r["execution"].clone())
+            .unwrap()
+    };
+    assert_eq!(standing(done), "completed", "{list}");
+    assert_eq!(standing(running), "active");
+    assert_eq!(standing(other), "pending");
+}

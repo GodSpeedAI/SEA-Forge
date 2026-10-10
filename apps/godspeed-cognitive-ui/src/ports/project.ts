@@ -34,6 +34,20 @@ function presentationOfX(xPresentation: string | undefined, kind: string): Objec
   return (xPresentation && byX[xPresentation]) || presentationOf(kind)
 }
 
+function projectAction(a: XObject['actions'][number]) {
+  return {
+    id: a.id,
+    label: a.label,
+    intent: a.intent,
+    consequential: a.consequential,
+    variant: a.variant,
+    requiresJustification: a.requires_justification,
+  }
+}
+
+/** Case-level lifecycle intents ride in the snapshot's available_actions (they target the case, not an object). */
+const CASE_LIFECYCLE_INTENTS: ReadonlySet<string> = new Set(['REOPEN_CASE', 'TERMINATE_CASE'])
+
 export function projectObject(o: XObject, parentFallback: string | null): WorldObject {
   const x = o.x ?? {}
   const status: Status = { label: o.badge || statusPhrase(o.status), tone: toneOf(o) }
@@ -49,14 +63,7 @@ export function projectObject(o: XObject, parentFallback: string | null): WorldO
     salience: o.salience,
     ghost: x.ghost,
     dormant: x.dormant,
-    actions: o.actions.map((a) => ({
-      id: a.id,
-      label: a.label,
-      intent: a.intent,
-      consequential: a.consequential,
-      variant: a.variant,
-      requiresJustification: a.requires_justification,
-    })),
+    actions: o.actions.map(projectAction),
     artifacts: x.artifacts?.map((a) => a.ref),
     residue: x.residue ? { label: x.residue.label, tone: x.residue.tone } : undefined,
     icon: x.design?.icon,
@@ -89,6 +96,13 @@ export function projectSnapshot(snap: XSnapshot, opts: ProjectOptions): WorldSna
   const objects: Record<string, WorldObject> = {}
   if (opts.withCore) {
     objects[CORE_ID] = { id: CORE_ID, kind: 'core', parent: null, title: 'Core', salience: 1 }
+  }
+  // The Core is where the case itself is present in the world: the lifecycle actions the backend
+  // offers for the case (and only those) are carried on it, so they reach the UI only as
+  // ActionDescriptors and only while the snapshot offers them.
+  if (opts.withCore) {
+    const lifecycle = (snap.available_actions ?? []).filter((a) => CASE_LIFECYCLE_INTENTS.has(a.intent)).map(projectAction)
+    if (lifecycle.length) objects[CORE_ID] = { ...objects[CORE_ID]!, actions: lifecycle }
   }
   const artifacts: WorldSnapshot['artifacts'] = {}
   for (const o of snap.visible_objects) {

@@ -6,7 +6,7 @@ export interface ExecutionPillProps {
   label: string;
   /** 0..1 when the stream reported progress; null when only snapshot standing is known (never guessed). */
   progress: number | null;
-  state: 'running' | 'executed' | 'settled' | 'rejected';
+  state: 'running' | 'executed' | 'settled' | 'rejected' | 'failed';
   /** True while the event stream is interrupted: the pill shows Reconnecting, not progress. */
   reconnecting?: boolean;
   connection?: 'live' | 'reconnecting' | 'interrupted';
@@ -29,7 +29,9 @@ export function ExecutionPill(p: ExecutionPillProps): JSX.Element {
         ? `${p.label} · executed · awaiting settlement`
         : p.state === 'settled'
           ? `${p.label} · settled`
-          : `${p.label} · settlement rejected`;
+          : p.state === 'failed'
+            ? `${p.label} · stopped before completion`
+            : `${p.label} · settlement rejected`;
 
   return (
     <div

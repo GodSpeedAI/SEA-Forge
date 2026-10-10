@@ -650,8 +650,8 @@ func settlementWire(item ports.CaseItemProposal) map[string]any {
 }
 
 // ReopenCase implements ports.CaseAuthorityPort.
-func (a *Authority) ReopenCase(ctx context.Context, ref ports.CaseRef, opts ports.GovernedOptions) error {
-	req, err := NewCaseReopen(string(ref), opts.Policy,
+func (a *Authority) ReopenCase(ctx context.Context, ref ports.CaseRef, reason string, opts ports.GovernedOptions) error {
+	req, err := NewCaseReopen(string(ref), reason, opts.Policy,
 		optsRequestID(opts, a.client, "case_reopen"), governance(opts.Governance))
 	if err != nil {
 		return err

@@ -346,7 +346,7 @@ func TestMutationRequiresRequestID(t *testing.T) {
 			return NewApprovalDecide("c", "a", "approve", "", "", g)
 		},
 		"case_add_item":  func() (*Request, error) { return NewCaseAddItem("c", nil, "", "", g) },
-		"case_reopen":    func() (*Request, error) { return NewCaseReopen("c", "", "", g) },
+		"case_reopen":    func() (*Request, error) { return NewCaseReopen("c", "", "", "", g) },
 		"case_terminate": func() (*Request, error) { return NewCaseTerminate("c", "r", "", "", g) },
 		"case_advance":   func() (*Request, error) { return NewCaseAdvance("c", "", 0, "", g) },
 		"item_execute": func() (*Request, error) {

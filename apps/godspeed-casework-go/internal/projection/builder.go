@@ -39,6 +39,9 @@ type CaseFacts struct {
 	Horizon   ports.CaseHorizon  // from case.get_horizon (per-item standing, depends_on)
 	Approvals []ports.ApprovalRecord
 	Runs      []ports.RunSummary
+	// RunArtifacts are the artifacts each run captured, by run id (run.get evidence). Absent when
+	// the authority cannot list them; the snapshot then binds no artifacts.
+	RunArtifacts map[string][]ports.RunArtifactRef
 	// UnreadableRunIDs are run IDs the scoped authority query reported but could not read.
 	UnreadableRunIDs []string
 	// Actor is the perspective the snapshot is rendered for (actor_id + kernel role spelling).
@@ -95,6 +98,7 @@ func Build(facts CaseFacts) contract.CognitiveWorldSnapshot {
 	}
 	focus := attentionFor(objects, string(facts.Overview.Ref))
 	objects = append(objects, runChildren(facts, objects)...)
+	objects = append(objects, evidenceChildren(facts, objects)...)
 
 	snapshot := contract.CognitiveWorldSnapshot{
 		WorldID:          "world-" + string(facts.Overview.Ref),
@@ -158,6 +162,12 @@ func runChildren(facts CaseFacts, parentObjects []contract.CognitiveObject) []co
 		standing.Execution = run.Execution
 		standing.Settlement = run.Settlement
 		status, badge := cognitiveStatus(standing)
+		if status == "COMPLETED" && run.Settlement == "unsettled" {
+			// The episode ran but its settlement is not recorded: the run is waiting on the
+			// settlement authority. Contract status COMPLETED is reserved for an accepted
+			// settlement, so a client reading the typed status never reads executed as settled.
+			status = "WAITING_ON_OTHERS"
+		}
 		parentID := run.PlanItemID
 		explanation := "Execution: " + run.Execution + "; settlement: " + run.Settlement + "."
 		children = append(children, contract.CognitiveObject{
@@ -173,6 +183,78 @@ func runChildren(facts CaseFacts, parentObjects []contract.CognitiveObject) []co
 		})
 	}
 	return children
+}
+
+// evidenceChildren binds each artifact a run captured to the plan item that ran it, as an
+// evidence_record object carrying the artifact descriptor. The ref is the content digest: the UI
+// resolves it through GET /api/artifacts/{digest} and verifies what comes back against it. The
+// descriptor says nothing about the bytes; it only says where they can be fetched from.
+func evidenceChildren(facts CaseFacts, existing []contract.CognitiveObject) []contract.CognitiveObject {
+	if len(facts.RunArtifacts) == 0 {
+		return nil
+	}
+	taken := make(map[string]int, len(existing))
+	for _, o := range existing {
+		taken[o.ID]++
+	}
+	parents := make(map[string]bool, len(facts.Horizon.Items))
+	for _, it := range facts.Horizon.Items {
+		parents[it.ItemID] = true
+	}
+	var out []contract.CognitiveObject
+	for _, run := range facts.Runs {
+		if !parents[run.PlanItemID] {
+			continue
+		}
+		for _, ref := range facts.RunArtifacts[run.RunID] {
+			if taken[ref.EvidenceID] != 0 || ref.EvidenceID == "" || ref.Digest == "" {
+				continue
+			}
+			taken[ref.EvidenceID]++
+			name := ref.URI
+			if i := strings.LastIndex(name, "/"); i >= 0 {
+				name = name[i+1:]
+			}
+			if name == "" {
+				name = ref.EvidenceID
+			}
+			parent := run.PlanItemID
+			explanation := "Captured by " + run.RunID + "; content-addressed " + ref.Digest[:19] + "."
+			out = append(out, contract.CognitiveObject{
+				ID:          ref.EvidenceID,
+				Kind:        "evidence_record",
+				Name:        name,
+				Status:      "COMPLETED",
+				Badge:       "Captured artifact",
+				Explanation: &explanation,
+				Salience:    0.3,
+				ParentID:    &parent,
+				Actions:     []contract.ActionDescriptor{actionFor(ref.EvidenceID, "OPEN_ARTIFACT", "Open evidence", "SECONDARY", false, false)},
+				X: &contract.ObjectExtensions{Artifacts: []contract.CognitiveArtifact{{
+					Ref:              ref.Digest,
+					Kind:             "document",
+					Title:            name,
+					BoundObject:      ref.EvidenceID,
+					CurrentLevel:     "source",
+					MediaType:        artifactMediaType(name),
+					SourceProvenance: "kernel evidence " + ref.EvidenceID + " of run " + run.RunID,
+				}}},
+			})
+		}
+	}
+	return out
+}
+
+func artifactMediaType(name string) string {
+	switch strings.ToLower(name[strings.LastIndex(name, ".")+1:]) {
+	case "md", "markdown":
+		return "text/markdown"
+	case "json":
+		return "application/json"
+	case "diff", "patch":
+		return "text/x-diff"
+	}
+	return "text/plain"
 }
 
 // itemBuilder renders one horizon item as a cognitive object: status, badge, plain-language
@@ -280,6 +362,14 @@ func actionsFor(item ports.HorizonItem, hasPendingApproval bool, role string) []
 		if MayExecute(role) {
 			out = append(out, actionFor(item.ItemID, "COMPLETE_HUMAN_TASK", "Complete", "PRIMARY", true, true))
 		}
+	}
+	// Discretionary work anchors to live work: a proposer role may add optional work after any
+	// item that is still in play (pending, enabled or active), never after finished or failed
+	// work and never while an approval decision is open on the item. The proposal rides the same
+	// roleWouldOffer guard as every other consequential intent (MayPropose).
+	if !hasPendingApproval && item.Kind != "milestone" && MayPropose(role) &&
+		(item.Execution == "pending" || item.Execution == "enabled" || item.Execution == "active") {
+		out = append(out, actionFor(item.ItemID, "ADD_DISCRETIONARY_WORK", "Add discretionary work", "SECONDARY", true, true))
 	}
 	return out
 }

@@ -92,6 +92,8 @@ export function OutlineView(p: OutlineViewProps): JSX.Element {
           <li
             key={item.id}
             className="outline-item"
+            data-testid="outline-item"
+            data-id={item.id}
             role="treeitem"
             aria-level={item.depth + 1}
             style={{ paddingLeft: `${item.depth * 16}px` }}
@@ -127,6 +129,9 @@ export function OutlineView(p: OutlineViewProps): JSX.Element {
                   <button
                     key={action.id}
                     className="outline-action-button"
+                    data-testid="outline-action"
+                    data-item={item.id}
+                    data-action={action.id}
                     onClick={() => p.onAction(item.id, action.id)}
                   >
                     {action.label}

@@ -179,7 +179,7 @@ export function ArtifactDock(p: ArtifactDockProps): JSX.Element {
             <div className="artifact-dock__provenance-field">
               <span className="artifact-dock__provenance-key">Digest:</span>
               <span className="artifact-dock__provenance-value">
-                <code>{p.state.payload.digest.slice(0, 19)}</code>
+                <code data-testid="dock-digest" data-digest={p.state.payload.digest}>{p.state.payload.digest.slice(0, 19)}</code>
               </span>
             </div>
             <div className="artifact-dock__provenance-field">

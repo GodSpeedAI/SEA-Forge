@@ -88,7 +88,19 @@ type ServeSection struct {
 	// RateLimit bounds POST /api/intents (token bucket per session and per remote IP). Nil/zero
 	// fields take the documented defaults (60/minute, burst 20).
 	RateLimit *RateLimitSection `json:"rate_limit,omitempty"`
+	// ExecutionTimeoutSec bounds the kernel-side execution of advance/execute verbs AND is the
+	// lifetime of any approval those verbs open (the kernel expires an approval that long after
+	// requesting it). Zero takes DefaultExecutionTimeoutSec; the kernel clamps it to seven days.
+	ExecutionTimeoutSec int `json:"execution_timeout_sec,omitempty"`
 }
+
+// DefaultExecutionTimeoutSec is the historical fixed bound (60s) applied when the serve section
+// does not set execution_timeout_sec.
+const DefaultExecutionTimeoutSec = 60
+
+// MaxExecutionTimeoutSec mirrors the kernel's clamp (seven days); larger values are refused at
+// load so a typo cannot silently become a different lifetime.
+const MaxExecutionTimeoutSec = 7 * 24 * 60 * 60
 
 // Document is the on-disk configuration schema.
 type Document struct {
@@ -120,6 +132,9 @@ func ServeDefaults(section *ServeSection) ServeSection {
 	}
 	if out.PolicyRef == "" {
 		out.PolicyRef = "authority/active-policy.json"
+	}
+	if out.ExecutionTimeoutSec == 0 {
+		out.ExecutionTimeoutSec = DefaultExecutionTimeoutSec
 	}
 	if out.PerspectiveActorID == "" {
 		out.PerspectiveActorID = out.GatewayActorID

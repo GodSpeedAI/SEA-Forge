@@ -47,6 +47,8 @@ type fakeAuth struct {
 	calls     []string
 	mutations []string // only the kernel-writing calls, in order
 	lastOpts  ports.GovernedOptions
+	// lastReopenReason is the reason the last ReopenCase call carried to the authority.
+	lastReopenReason string
 
 	listCases []ports.CaseRecord
 	approvals []ports.ApprovalRecord
@@ -93,7 +95,8 @@ func (f *fakeAuth) AddCaseItem(ctx context.Context, ref ports.CaseRef, item port
 	return "item-disc-1", nil
 }
 
-func (f *fakeAuth) ReopenCase(ctx context.Context, ref ports.CaseRef, opts ports.GovernedOptions) error {
+func (f *fakeAuth) ReopenCase(ctx context.Context, ref ports.CaseRef, reason string, opts ports.GovernedOptions) error {
+	f.lastReopenReason = reason
 	f.calls = append(f.calls, "case_reopen")
 	f.mutations = append(f.mutations, "case_reopen")
 	f.lastOpts = opts
@@ -600,5 +603,19 @@ func TestRefusalMessageNamesTheKernelClassVerbatim(t *testing.T) {
 	resp := h.Handle(context.Background(), operatorIntent("i-verb", "EXECUTE_ITEM", map[string]any{"item_id": "x"}))
 	if !strings.Contains(resp.Refusal.Message, "cell_dark") || !strings.Contains(resp.Refusal.Message, "mystery refusal") {
 		t.Fatalf("the kernel's own class and message must ride verbatim: %q", resp.Refusal.Message)
+	}
+}
+
+// The reopen reason the operator typed reaches the authority (it used to be validated and dropped,
+// so the kernel's CaseReopened event could never say why).
+func TestReopenCaseForwardsItsReasonToTheAuthority(t *testing.T) {
+	auth := &fakeAuth{listCases: []ports.CaseRecord{{Ref: "case_1", State: "completed"}}}
+	h := newHandler(auth, map[string]string{"case_1": "01CURSOR"})
+	resp := h.Handle(context.Background(), operatorIntent("i-reopen-reason", "REOPEN_CASE", map[string]any{"case_id": "case_1", "reason": "late evidence arrived"}))
+	if !resp.Success {
+		t.Fatalf("refused: %+v", resp.Refusal)
+	}
+	if auth.lastReopenReason != "late evidence arrived" {
+		t.Fatalf("authority received reason %q", auth.lastReopenReason)
 	}
 }

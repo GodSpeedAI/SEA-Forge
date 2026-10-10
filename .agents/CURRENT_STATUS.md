@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 61
+**Status revision:** 62
 
-**Stage:** Casework live wiring: T09 partial; private codec committed (037ac2c); startup continuation key implemented and committed locally; publication held
+**Stage:** Casework live wiring: T09 UI gate green; T10 live ladder L0-L7 implemented and green (single run); L8, L9, L-RECOV and 3-run confirmation pending
 
-**Summary:** Private codec is committed locally as 037ac2c. The startup continuation signing key now derives from zeroized process entropy in ServerState::new via new_with_continuation_entropy (lib.rs only), with four tests; the operator asked to complete T09 and the held startup-key grant was treated as released.
+**Summary:** Plan T09 UI gate passes (typecheck, 347 UI tests, 11-journey fixture ladder). T10 live agent-browser ladder L0-L7 plus both teeth now run via just casework-e2e-live against fresh cells, with durable-file assertions; seven product defects found by the live ladder were fixed (gateway discretionary/evidence/lifecycle actions, kernel run-view lifecycle overlay, reopen reason, approval lifetime, stale justification, pill states). Not settled: independent confirmation, L8/L9/L-RECOV, three consecutive green fresh-cell runs.
 
 **Verified:**
 
@@ -20,6 +20,8 @@
 - Shared ledger decoder compatibility debt CW-43 remains open; private mitigation does not establish that the shared decoder is fixed.
 - Scoped 18-artifact privacy correction remains unchanged; immutable local history is preserved and no universal secret-free claim is made.
 - Startup key: cargo test -p sea-forge-server passed (135 unit tests plus integration suites); clippy --all-targets and fmt clean; four continuation_key_tests cover seed derivation, seed isolation, entropy failure before durable work, and config failure before entropy.
+- T09 UI: bun run typecheck clean; bun test 347 pass; bun e2e/run.ts fixture ladder J0-J9 + RECOVERY all PASS (a first run showed one J8 failure that did not recur in two later runs; cause unproven).
+- T10: just casework-e2e-live --only L0..L7 passed in one run (L5 9/9, L6 5/5, L7 8/8); tooth stub-gateway and tooth shared-session both PASS and the shared-session guard was mutation-checked; go test -p 1 ./... and cargo test -p sea-forge-server -p sea-forge-case-runner reported passing by the implementing agent.
 
 **Limits:**
 
@@ -29,9 +31,12 @@
 - Serialize compiler and heavy gates under root's process, RAM, and swap guard.
 - Preserve user .jolli deletions and unrelated .gemini changes; do not alter old private history or scoped privacy correction.
 - Startup key unit skipped the grant's RED-first step and ran gates outside root serialization; independent critic review is still required.
-- Key field is dead code until the bounded page reader is integrated; no codec or dispatch wiring. T09 UI journeys (apps/godspeed-cognitive-ui) are unstarted and T03/T06/T08 status is unconfirmed by this session.
+- T10 is one green run, not the preregistered three consecutive fresh-cell runs with independent confirmation; L8, L9, L-RECOV not implemented.
+- Kernel does not resume an escalated item after approval over SFWP; L5 asserts the approval record and ledger, not downstream effects. The operator's denial is the absence of Approve plus a typed UNAUTHORIZED_ROLE refusal, not a panel-shown refusal.
+- Live gateway emits no execution_progress and no typed settlement object; pill progress is never shown.
+- Independent critic review of the startup key unit found no failures (Haiku critic); T09/T10 independent confirmation not done.
 
-**Next:** Run the independent critic review of the startup key unit, then integrate the separately granted bounded page reader. Keep T09 partial, T10-T12 unstarted, stop before T13, and do not publish until the exact request for 552bd655ba53b2c46d15e0c61624a57c58143b5d is resolved.
+**Next:** Implement T10 phase 4 (L8 thoth.ask, L9 single-session run with empty errors/console, L-RECOV), then three consecutive green runs on fresh cells and independent confirmation; then T11 (packaging, load, security review, CI) and T12. Cursor v4 spec server work remains unimplemented and is not on the T10 path so far.
 
 **Evidence:**
 

@@ -289,3 +289,21 @@ func hasLabelledStanding(text, label, value string) bool {
 	}
 	return false
 }
+
+func TestRunChildStatusReservesCompletedForAcceptedSettlement(t *testing.T) {
+	facts := baseFacts()
+	facts.Horizon.Items = []ports.HorizonItem{
+		{ItemID: "item_build", Name: "build", Kind: "sandboxed_task", Execution: "completed", Settlement: "unsettled"},
+	}
+	for settlement, want := range map[string]string{
+		"unsettled": "WAITING_ON_OTHERS",
+		"accepted":  "COMPLETED",
+		"rejected":  "REJECTED",
+		"escalated": "ACTION_REQUIRED",
+	} {
+		facts.Runs = []ports.RunSummary{{RunID: "run_1", CaseID: string(facts.Overview.Ref), PlanItemID: "item_build", Execution: "completed", Settlement: settlement}}
+		if got := objectByID(t, Build(facts), "run_1").Status; got != want {
+			t.Errorf("completed run, settlement %s: status = %q, want %q", settlement, got, want)
+		}
+	}
+}

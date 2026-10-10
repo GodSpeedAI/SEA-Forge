@@ -235,18 +235,21 @@ pub(crate) async fn reopen(
     actor: &str,
     case_id: &str,
     policy: &str,
+    reason: Option<&str>,
 ) -> Result<CaseReopenResult, ForgeError> {
     let policy_path = crate::agent_probe::resolve_policy_path(&state.root, policy)?;
     let root = state.root.clone();
     let actor = actor.to_string();
     let case_id = case_id.to_string();
     let case_id_for_task = case_id.clone();
+    let reason = reason.map(str::to_string);
     run_case_mutation(state, &case_id, move |notify| {
-        sea_forge_case_runner::case_ops::reopen_with(
+        sea_forge_case_runner::case_ops::reopen_with_reason(
             &root,
             &policy_path,
             &actor,
             &case_id_for_task,
+            reason.as_deref(),
             notify,
         )
     })

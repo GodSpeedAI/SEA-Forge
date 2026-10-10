@@ -1,10 +1,51 @@
 package sfwp
 
 import (
+	"context"
+	"regexp"
 	"strings"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 )
+
+var runArtifactDigestPattern = regexp.MustCompile(`^(?:sha256:)?([0-9a-f]{64})$`)
+
+// RunArtifacts implements ports.RunArtifactLister: the artifacts the run captured, from its own
+// run.get evidence journal. Only artifact-kind rows that carry a SHA-256 digest and name the trace
+// event that captured them are returned; a run that names a different run id is refused.
+func (a *Authority) RunArtifacts(ctx context.Context, runID string) ([]ports.RunArtifactRef, error) {
+	if strings.TrimSpace(runID) == "" {
+		return nil, apperr.New(apperr.KindInvalid, "", "run_artifacts", "run id must not be blank")
+	}
+	resp, err := a.client.Do(ctx, NewRunGet(runID))
+	if err != nil {
+		return nil, err
+	}
+	var run RunArtifactProvenanceView
+	if err := resp.Into(&run); err != nil {
+		return nil, apperr.Wrap(apperr.KindUnavailable, "", "run_artifacts", "the authority returned a malformed run record", err)
+	}
+	return runArtifactRefs(runID, run)
+}
+
+func runArtifactRefs(runID string, run RunArtifactProvenanceView) ([]ports.RunArtifactRef, error) {
+	if run.RunID != runID {
+		return nil, ownershipUnavailable("the run record did not match the requested run")
+	}
+	out := make([]ports.RunArtifactRef, 0, len(run.Evidence))
+	for _, row := range run.Evidence {
+		if row.Kind != "artifact" || row.SHA256 == nil || row.EvidenceID == "" || row.SourceEventID == "" {
+			continue
+		}
+		m := runArtifactDigestPattern.FindStringSubmatch(*row.SHA256)
+		if m == nil {
+			continue
+		}
+		out = append(out, ports.RunArtifactRef{EvidenceID: row.EvidenceID, URI: row.URI, Digest: "sha256:" + m[1]})
+	}
+	return out, nil
+}
 
 // artifactProvenanceOf joins artifact.get to the owning run.get records without inferring missing
 // case, item, or capture-event links.

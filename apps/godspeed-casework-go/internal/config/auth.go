@@ -258,6 +258,10 @@ func validateServe(doc Document) []*apperr.Error {
 		problems = append(problems, apperr.New(apperr.KindConfig, "", "serve",
 			"serve.rate_limit values must be positive"))
 	}
+	if serve.ExecutionTimeoutSec < 1 || serve.ExecutionTimeoutSec > MaxExecutionTimeoutSec {
+		problems = append(problems, apperr.New(apperr.KindConfig, "", "serve",
+			fmt.Sprintf("serve.execution_timeout_sec must be between 1 and %d", MaxExecutionTimeoutSec)))
+	}
 	seenOrigins := make(map[string]bool, len(serve.TrustedOrigins))
 	for _, origin := range serve.TrustedOrigins {
 		if err := validateTrustedOrigin(origin, serve.Production); err != nil {

@@ -386,7 +386,7 @@ func (h *Handler) execute(ctx context.Context, in contract.InteractionIntent) (s
 		var p contract.CaseLifecyclePayload
 		_ = decodePayload(in, &p)
 		before, _ := h.cursors.CursorForCase(p.CaseID)
-		if err := h.auth.ReopenCase(ctx, ports.CaseRef(p.CaseID), opts); err != nil {
+		if err := h.auth.ReopenCase(ctx, ports.CaseRef(p.CaseID), p.Reason, opts); err != nil {
 			return "", nil, err
 		}
 		return h.postMutationCursor(ctx, p.CaseID, before), nil, nil

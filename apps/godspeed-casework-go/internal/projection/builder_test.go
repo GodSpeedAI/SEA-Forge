@@ -299,3 +299,32 @@ func TestPreflightResultCarriesDigestExactlyWhenPassed(t *testing.T) {
 		t.Fatalf("failing preflight mapping: %+v", failed)
 	}
 }
+
+func TestBuilderOffersDiscretionaryWorkOnlyOnLiveWorkToProposerRoles(t *testing.T) {
+	facts := baseFacts()
+	facts.Horizon.Items = []ports.HorizonItem{
+		{ItemID: "task_prepare", Name: "prepare", Kind: "sandboxed_task", Execution: "enabled", Settlement: "unsettled"},
+		{ItemID: "task_publish", Name: "publish", Kind: "sandboxed_task", Execution: "pending", Settlement: "unsettled"},
+		{ItemID: "item_done", Name: "done", Kind: "sandboxed_task", Execution: "completed", Settlement: "accepted"},
+		{ItemID: "item_failed", Name: "failed", Kind: "sandboxed_task", Execution: "failed", Settlement: "unsettled"},
+		{ItemID: "ms_chain", Name: "chain", Kind: "milestone", Execution: "pending", Settlement: "unsettled"},
+	}
+	snap := Build(facts)
+	for id, want := range map[string]bool{"task_prepare": true, "task_publish": true, "item_done": false, "item_failed": false, "ms_chain": false} {
+		if got := hasAction(objectByID(t, snap, id), "ADD_DISCRETIONARY_WORK"); got != want {
+			t.Fatalf("%s offers ADD_DISCRETIONARY_WORK = %v, want %v", id, got, want)
+		}
+	}
+	if !snapshotHasAction(snap, "ADD_DISCRETIONARY_WORK") {
+		t.Fatal("the offer must also ride the snapshot's available_actions")
+	}
+	// The offer is exactly what the intent guard allows: a non-proposer role never sees it.
+	for _, role := range []string{"R-SO", "service", "system"} {
+		facts.Actor = ports.ActorClaim{ActorID: "x", Role: role}
+		for _, o := range Build(facts).VisibleObjects {
+			if hasAction(o, "ADD_DISCRETIONARY_WORK") {
+				t.Fatalf("role %s must not be offered ADD_DISCRETIONARY_WORK", role)
+			}
+		}
+	}
+}

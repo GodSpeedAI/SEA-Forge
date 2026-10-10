@@ -13,6 +13,36 @@ export interface LiveConnectionOptions {
 // is executed or settled is read from the snapshots only: a `settlement_recorded` event is
 // shown only once the snapshot that carries the settlement arrives.
 
+/**
+ * Where an execution stands. An authoritative settlement object (the local fixture carries one)
+ * decides. A live snapshot carries none, so its typed run status decides: the gateway reserves
+ * COMPLETED for an accepted settlement and reports an executed-but-unsettled run as
+ * WAITING_ON_OTHERS (ACTION_REQUIRED when escalated), so executed never reads as settled.
+ */
+export function executionStateOf(
+  runStatus: string | undefined,
+  settlement: { decision: string } | undefined,
+  provenance: string,
+): ExecutionState['state'] {
+  if (settlement) return settlement.decision === 'ACCEPTED' ? 'settled' : 'rejected'
+  if (provenance === 'local-contract') return runStatus === 'COMPLETED' ? 'executed' : 'running'
+  switch (runStatus) {
+    case 'COMPLETED':
+      return 'settled'
+    case 'REJECTED':
+      return 'rejected'
+    case 'FAILED':
+      // The run failed or was terminated (an escalated run is terminated by the kernel): it is not
+      // running, and it must never read as a run still in progress.
+      return 'failed'
+    case 'WAITING_ON_OTHERS':
+    case 'ACTION_REQUIRED':
+      return 'executed'
+    default:
+      return 'running'
+  }
+}
+
 export function connectLive(
   port: CaseworkPort,
   store: Store,
@@ -48,9 +78,7 @@ export function connectLive(
       if (run.kind !== 'run' || !run.parent) continue
       const target = now.objects[run.parent]
       const ev = logs.get(run.id)
-      const state: ExecutionState['state'] = target?.settlement
-        ? target.settlement.decision === 'ACCEPTED' ? 'settled' : 'rejected'
-        : run.contractStatus === 'COMPLETED' ? 'executed' : 'running'
+      const state = executionStateOf(run.contractStatus, target?.settlement, store.getState().history.provenance)
       // Progress is shown only when the stream reported it. Snapshot standing alone never
       // produces a percentage: an honest pill shows the phase, not a guessed number (T09).
       const progress: number | null = state === 'settled' ? 1 : ev?.progress ?? null
@@ -131,6 +159,10 @@ export function connectLive(
       console.warn('[event stream]', err)
     },
   )
+  // A live world opened after the work happened (a fresh login, a reload) carries the runs'
+  // standing in its snapshots already; show it now instead of waiting for the next stream event.
+  // The local fixture's history is narrative, not standing: its execution UI stays event-driven.
+  if (store.getState().history.provenance !== 'local-contract') refreshExecutions()
   return () => {
     disposed = true
     if (outageTimer !== undefined) clearTimeout(outageTimer)

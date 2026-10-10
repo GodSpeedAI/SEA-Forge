@@ -370,6 +370,21 @@ type ArtifactContent struct {
 	Data       []byte
 }
 
+// RunArtifactRef is one artifact a run captured: the evidence row the authority recorded and the
+// content digest the artifact is addressed by (artifact.get).
+type RunArtifactRef struct {
+	EvidenceID string
+	URI        string
+	Digest     string // "sha256:" + 64 hex
+}
+
+// RunArtifactLister is an OPTIONAL capability of an authority adapter: the artifacts one run
+// captured, read from the authority's own run record. A snapshot builder that does not find it
+// projects no artifact bindings (an honest absence), never invented ones.
+type RunArtifactLister interface {
+	RunArtifacts(ctx context.Context, runID string) ([]RunArtifactRef, error)
+}
+
 // AvailableActor is one principal the authority says the calling connection may act as.
 type AvailableActor struct {
 	ActorID string
@@ -463,7 +478,7 @@ type CaseAuthorityPort interface {
 	CommitCase(ctx context.Context, draft CaseDraft, pin PreconditionDigest, opts GovernedOptions) (CommitReceipt, error)
 	DecideApproval(ctx context.Context, approvalID string, approve bool, note string, opts GovernedOptions) error
 	AddCaseItem(ctx context.Context, ref CaseRef, item CaseItemProposal, opts GovernedOptions) (string, error)
-	ReopenCase(ctx context.Context, ref CaseRef, opts GovernedOptions) error
+	ReopenCase(ctx context.Context, ref CaseRef, reason string, opts GovernedOptions) error
 	TerminateCase(ctx context.Context, ref CaseRef, reason string, opts GovernedOptions) error
 	AdvanceCase(ctx context.Context, ref CaseRef, opts GovernedOptions) (AdvanceReport, error)
 	ExecuteItem(ctx context.Context, ref CaseRef, itemID string, opts GovernedOptions) (AdvanceReport, error)

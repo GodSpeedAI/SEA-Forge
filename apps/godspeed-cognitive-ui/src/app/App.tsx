@@ -28,9 +28,9 @@ import { UnavailableActions } from '../ui/UnavailableActions'
 import { WorkbenchChrome } from '../ui/WorkbenchChrome'
 import { runCommand } from './commands'
 import { designModel, isDirty, moveItem, toggleRequired } from './design'
-import { createIntentPath, type IntentPath } from './intents'
+import { createIntentPath, judgmentChoices, type IntentPath } from './intents'
 import { connectLive } from './live'
-import { createProposalFlow, loadAndFocusCase } from './proposals'
+import { createProposalFlow, emptyWorldOffersDesign, loadAndFocusCase } from './proposals'
 
 export interface AppProps {
   port: CaseworkPort
@@ -238,6 +238,9 @@ export function App(p: AppProps) {
     centerActions(s) {
       const v = worldView(s)
       const f = focusOf(s)
+      if (!f && s.mode === 'world' && !s.judgment && templateSource && emptyWorldOffersDesign(v.snap.objects)) {
+        return [{ id: 'design', label: 'Design case', onClick: () => void proposalFlow.open() }]
+      }
       if (!f || s.mode !== 'world' || s.judgment || expandedArtifact(s)) return []
       const obj = v.snap.objects[f]
       const out: ReturnType<SceneServices['centerActions']> = []
@@ -483,7 +486,7 @@ export function App(p: AppProps) {
         status={
           state.mode === 'case-design'
             ? { label: design?.draft ? 'Local draft' : 'Published', tone: design?.draft ? 'attention' : 'ok' }
-            : { label: exec?.state === 'settled' ? 'Settled' : exec?.state === 'executed' ? 'Awaiting settlement' : 'In progress', tone: exec?.state === 'settled' ? 'ok' : 'progress' }
+            : { label: exec?.state === 'settled' ? 'Settled' : exec?.state === 'executed' ? 'Awaiting settlement' : exec?.state === 'failed' ? 'Stopped' : 'In progress', tone: exec?.state === 'settled' ? 'ok' : exec?.state === 'failed' ? 'attention' : 'progress' }
         }
         rail={[
           { id: 'home', label: 'Home', onSelect: () => store.dispatch({ type: 'home' }) },
@@ -571,9 +574,7 @@ export function App(p: AppProps) {
         question={judgedObj && judgment ? `${judgment.action.label}: ${judgedObj.title}${judgedObj.subtitle ? ` ${judgedObj.subtitle}` : ''}?` : ''}
         description={judgedObj?.status?.label ?? ''}
         reference={judgedObj?.subtitle}
-        options={(judgedObj?.actions ?? [])
-          .filter((a) => a.consequential)
-          .map((a) => ({ id: a.id, label: a.label, variant: a.variant, requiresJustification: a.requiresJustification }))}
+        options={judgmentChoices(judgedObj?.actions ?? [])}
         context={judgmentContext}
         pending={!!judgment?.pending}
         outcome={judgment?.outcome ? { state: judgment.outcome.state, note: judgment.outcome.note, code: judgment.outcome.code, by: judgment.outcome.by.name } : undefined}

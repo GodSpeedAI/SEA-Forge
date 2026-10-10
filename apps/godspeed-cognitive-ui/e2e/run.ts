@@ -4,17 +4,22 @@ import { mkdir } from "fs/promises";
 import { runLadder } from "./ladder";
 import { journeys } from "./journeys/index";
 
-async function parseArgs(): Promise<{
+interface Opts {
   base: string;
   out: string;
   only?: string[];
-}> {
+  live: boolean;
+  tooth?: string;
+  skipBuild: boolean;
+  outGiven: boolean;
+}
+
+async function parseArgs(): Promise<Opts> {
   const args = process.argv.slice(2);
-  const opts: {
-    base: string;
-    out: string;
-    only?: string[];
-  } = {
+  const opts: Opts = {
+    live: false,
+    skipBuild: false,
+    outGiven: false,
     base: "http://127.0.0.1:4178",
     out: resolve(
       dirname(import.meta.dir),
@@ -27,6 +32,13 @@ async function parseArgs(): Promise<{
       opts.base = args[++i];
     } else if (args[i] === "--out") {
       opts.out = args[++i];
+      opts.outGiven = true;
+    } else if (args[i] === "--live") {
+      opts.live = true;
+    } else if (args[i] === "--tooth") {
+      opts.tooth = args[++i];
+    } else if (args[i] === "--skip-build") {
+      opts.skipBuild = true;
     } else if (args[i] === "--only") {
       opts.only = args[++i].split(",");
     }
@@ -49,6 +61,11 @@ async function checkServerRunning(url: string): Promise<boolean> {
 
 async function main() {
   const opts = await parseArgs();
+  if (opts.live) {
+    const { runLive } = await import("./live/run");
+    await runLive(opts);
+    return;
+  }
 
   // Check if server is running
   console.log(`Checking if dev server is running at ${opts.base}`);

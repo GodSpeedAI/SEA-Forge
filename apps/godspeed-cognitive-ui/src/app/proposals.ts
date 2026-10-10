@@ -21,6 +21,15 @@ export interface ProposalFlowDeps {
 const templateSource = (port: CaseworkPort): TemplateSourcePort | null =>
   'getTemplates' in port && 'preflightTemplate' in port ? (port as CaseworkPort & TemplateSourcePort) : null
 
+/**
+ * Home with nothing to focus (a fresh live cell holds no case yet): the core is the only object,
+ * so starting a case from a template is the one meaningful act and must be reachable from there.
+ * Worlds that already offer something to focus (the local fixture, a cell with cases) keep their
+ * existing entry: focus an object, then "Design case".
+ */
+export const emptyWorldOffersDesign = (objects: Record<string, { kind: string }>): boolean =>
+  Object.values(objects).every((o) => o.kind === 'core' || o.kind === 'category')
+
 export function createProposalFlow(deps: ProposalFlowDeps) {
   const { store, port } = deps
   const source = templateSource(port)

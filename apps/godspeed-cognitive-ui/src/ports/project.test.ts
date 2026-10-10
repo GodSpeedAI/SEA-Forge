@@ -44,6 +44,23 @@ describe('projectSnapshot', () => {
     expect(result.objects['child']?.parent).toBe(CORE_ID)
   })
 
+  test('carries the case lifecycle actions the snapshot offers on the core, and nothing else', () => {
+    const act = (intent: string, objectId: string) => ({ id: `act-${intent.toLowerCase()}-${objectId}`, label: intent, intent, consequential: true, requires_justification: true })
+    const testSnap = snap({
+      visible_objects: [{ id: 'item_a', kind: 'work_item', name: 'A', status: 'READY_TO_BEGIN', badge: 'Ready', salience: 0.5, actions: [act('EXECUTE_ITEM', 'item_a')] } as unknown as XObject],
+      available_actions: [act('EXECUTE_ITEM', 'item_a'), act('TERMINATE_CASE', 'case-test'), act('REOPEN_CASE', 'case-test')] as any,
+    })
+    const withCore = projectSnapshot(testSnap as any, { withCore: true })
+    expect(withCore.objects[CORE_ID]?.actions?.map((a) => a.intent)).toEqual(['TERMINATE_CASE', 'REOPEN_CASE'])
+    expect(withCore.objects[CORE_ID]?.actions?.every((a) => a.consequential && a.requiresJustification)).toBe(true)
+    expect(withCore.objects['item_a']?.actions?.map((a) => a.intent)).toEqual(['EXECUTE_ITEM'])
+    // Not offered => not shown: a snapshot without lifecycle offers leaves the core without actions.
+    const quiet = projectSnapshot(snap({ visible_objects: testSnap.visible_objects }) as any, { withCore: true })
+    expect(quiet.objects[CORE_ID]?.actions).toBeUndefined()
+    // Without a core there is nowhere to carry them.
+    expect(projectSnapshot(testSnap as any, { withCore: false }).objects[CORE_ID]).toBeUndefined()
+  })
+
   test('does not add core when withCore is false', () => {
     const testSnap = snap({
       visible_objects: [

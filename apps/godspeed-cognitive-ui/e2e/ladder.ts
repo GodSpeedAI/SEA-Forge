@@ -1,6 +1,6 @@
 import { Browser } from "./browser";
 import { mkdir } from "fs/promises";
-import { writeFileSync } from "fs";
+import { appendFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
 export type Step = {
@@ -25,8 +25,21 @@ export type Ctx = {
   base: string;
   step(name: string, fn: () => void | Promise<void>): Promise<void>;
   expect(cond: unknown, msg: string): void;
-  shot(name: string): Promise<void>;
+  /** Screenshot into out/screenshots; `b` selects another session's page (default: the journey's own browser). */
+  shot(name: string, b?: Browser): Promise<void>;
   out: string;
+  /**
+   * A named, run-wide browser session (separate agent-browser --session, so separate cookies and
+   * identity). Created on first use, shared by every journey of the run, closed when the ladder
+   * ends. Used by the live ladder (one session per user); fixture journeys never call it.
+   */
+  session(name: string): Browser;
+  /** Cross-journey scratch (e.g. the case id L1 created for L2+). */
+  shared: Record<string, unknown>;
+  /** Append one line to out/durable-delta.jsonl: what durable state a step observed. */
+  delta(entry: Record<string, unknown>): void;
+  /** Live stack handle (cell path etc.); absent for the fixture ladder. */
+  live?: unknown;
 };
 
 interface JourneyResult {
@@ -48,9 +61,31 @@ export async function runLadder(
     base: string;
     out: string;
     only?: string[];
+    /** agent-browser session-name prefix; sessions are `${prefix}-${journey id}` (default gs-e2e). */
+    sessionPrefix?: string;
+    /** Exit the process non-zero on failure (default true; the live harness must tear down first). */
+    exitOnFailure?: boolean;
+    live?: unknown;
+    /**
+     * Self-check only (live tooth 2): every ctx.session(name) returns the SAME browser, i.e. all
+     * users share one agent-browser session. The two-principal journeys must detect this and fail.
+     */
+    sharedSession?: boolean;
   }
-): Promise<void> {
+): Promise<boolean> {
   const { base, out, only } = opts;
+  const prefix = opts.sessionPrefix ?? "gs-e2e";
+  const sessions = new Map<string, Browser>();
+  const shared: Record<string, unknown> = {};
+  const session = (requested: string): Browser => {
+    const name = opts.sharedSession ? "shared" : requested;
+    let s = sessions.get(name);
+    if (!s) {
+      s = new Browser(`${prefix}-${name}`, 30000);
+      sessions.set(name, s);
+    }
+    return s;
+  };
 
   // Ensure output directory exists
   await mkdir(join(out, "screenshots"), { recursive: true });
@@ -77,11 +112,17 @@ export async function runLadder(
       blockedBy = blockedDep;
     } else {
       // Run the journey
-      const browser = new Browser(`gs-e2e-${journey.id}`, 30000);
+      const browser = new Browser(`${prefix}-${journey.id}`, 30000);
       const ctx: Ctx = {
         b: browser,
         base,
         out,
+        session,
+        shared,
+        live: opts.live,
+        delta: (entry: Record<string, unknown>) => {
+          appendFileSync(join(out, "durable-delta.jsonl"), JSON.stringify({ journey: journey.id, at: new Date().toISOString(), ...entry }) + "\n");
+        },
         step: async (name: string, fn: () => void | Promise<void>) => {
           const stepStart = Date.now();
           try {
@@ -109,13 +150,13 @@ export async function runLadder(
             throw new Error(msg);
           }
         },
-        shot: (name: string) => {
+        shot: (name: string, target?: Browser) => {
           const path = join(
             out,
             "screenshots",
             `${journey.id}-${name}.png`
           );
-          return browser.screenshot(path).catch((e) => {
+          return (target ?? browser).screenshot(path).catch((e) => {
             console.error(
               `Failed to save screenshot ${path}: ${e instanceof Error ? e.message : e}`
             );
@@ -127,6 +168,11 @@ export async function runLadder(
         await journey.run(ctx);
         // Check for console errors after journey completes
         const consoleErrors = await browser.consoleErrors();
+        // Named sessions are checked too (empty set for the fixture ladder).
+        for (const [name, sb] of sessions) {
+          for (const line of await sb.consoleErrors()) consoleErrors.push(`[${name}] ${line}`);
+          await sb.clearErrors().catch(() => {});
+        }
         if (consoleErrors.length > 0) {
           status = "FAIL";
           error = `Console errors: ${consoleErrors.join(", ")}`;
@@ -174,6 +220,14 @@ export async function runLadder(
     }
   }
 
+  for (const sb of sessions.values()) {
+    try {
+      await sb.close();
+    } catch {
+      // Ignore close errors
+    }
+  }
+
   // Write results.json
   writeFileSync(
     join(out, "results.json"),
@@ -206,7 +260,8 @@ export async function runLadder(
 
   // Exit with error if any journey failed
   const anyFailed = journeyResults.some((r) => r.status !== "PASS");
-  if (anyFailed) {
+  if (anyFailed && opts.exitOnFailure !== false) {
     process.exit(1);
   }
+  return !anyFailed;
 }
