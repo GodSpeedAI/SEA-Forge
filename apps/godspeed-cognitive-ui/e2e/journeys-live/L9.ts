@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Browser } from "../browser";
-import type { Ctx, Journey } from "../ladder";
+import type { Ctx, Journey, RunFinding } from "../ladder";
 import { kindsOf, readAskLedger, readTrace } from "../live/durable";
 import { digestOf, sessionCookieValue } from "../live/sessions";
 import { caseAOf, sessionOf, sleep, stackOf } from "./helpers";
@@ -17,11 +17,24 @@ interface Finding {
 }
 
 /** All error-level console output and uncaught page errors the session has produced, ever. */
-export async function strictFindings(name: string, b: Browser): Promise<{ findings: Finding[]; entries: { level: string; text: string }[] }> {
+export async function strictFindings(name: string, b: Browser, accumulated: RunFinding[] = []): Promise<{ findings: Finding[]; entries: { level: string; text: string }[] }> {
   const entries = await b.consoleEntries();
   const findings: Finding[] = entries.filter((e) => isError(e.level)).map((e) => ({ session: name, where: "console" as const, text: e.text }));
   for (const e of await b.pageErrors()) findings.push({ session: name, where: "pageerror", text: e.text });
+  // Page errors are cleared after every journey, so also count what earlier journeys harvested for
+  // this session (deduplicated: console entries are cumulative and show up in both).
+  const seen = new Set(findings.map((f) => `${f.where}|${f.text}`));
+  for (const a of accumulated) {
+    if (a.session !== name || seen.has(`${a.where}|${a.text}`)) continue;
+    seen.add(`${a.where}|${a.text}`);
+    findings.push({ session: name, where: a.where as Finding["where"], text: `${a.text} (harvested after ${a.journey})` });
+  }
   return { findings, entries };
+}
+
+/** Findings the ladder harvested from sessions that are not part of the strict step's list (e.g. each journey's own browser). */
+export function otherSessionFindings(all: RunFinding[], strictNames: string[]): RunFinding[] {
+  return all.filter((f) => !strictNames.includes(f.session));
 }
 
 // L9: L0-L8 as ONE continuous journey. Every journey from L0 to L8 ran in the same two named
@@ -90,17 +103,31 @@ export const L9: Journey = {
   },
 };
 
-async function strictSteps(ctx: Ctx, sessions: (readonly [string, Browser])[]): Promise<void> {
+/**
+ * Strict, run-wide: for every session, the live console/errors PLUS everything the ladder harvested
+ * after earlier journeys. `allow` lists exact messages that are expected (never a pattern).
+ */
+export async function strictSteps(ctx: Ctx, sessions: (readonly [string, Browser])[], allow: readonly string[] = [], label = "strict"): Promise<void> {
   const outDir = join(ctx.out, "console");
   mkdirSync(outDir, { recursive: true });
   for (const [name, b] of sessions) {
-    await ctx.step(`strict: ${name} session, agent-browser console and errors are empty of errors for the whole run`, async () => {
-      const { findings, entries } = await strictFindings(name, b);
-      writeFileSync(join(outDir, `${name}-console.json`), JSON.stringify({ session: b.sessionName, entries, page_errors: findings.filter((f) => f.where === "pageerror") }, null, 2));
-      ctx.delta({ step: `strict-${name}`, console_entries: entries.length, levels: Object.fromEntries([...new Set(entries.map((e) => e.level))].map((l) => [l, entries.filter((e) => e.level === l).length])), errors: findings.length });
+    await ctx.step(`${label}: ${name} session, agent-browser console and errors are empty of errors for the whole run`, async () => {
+      const all = await strictFindings(name, b, ctx.runFindings());
+      const entries = all.entries;
+      const allowed = all.findings.filter((f) => allow.includes(f.text.replace(/ \(harvested after [^)]*\)$/, "")));
+      const findings = all.findings.filter((f) => !allowed.includes(f));
+      if (allowed.length) ctx.delta({ step: `${label}-${name}-allowed`, allowed: allowed.map((f) => f.text) });
+      writeFileSync(join(outDir, `${name}-${label}-console.json`), JSON.stringify({ session: b.sessionName, entries, page_errors: findings.filter((f) => f.where === "pageerror") }, null, 2));
+      ctx.delta({ step: `${label}-${name}`, console_entries: entries.length, levels: Object.fromEntries([...new Set(entries.map((e) => e.level))].map((l) => [l, entries.filter((e) => e.level === l).length])), errors: findings.length });
       ctx.expect(findings.length === 0, `${findings.length} error(s) in the ${name} session: ${findings.map((f) => `[${f.where}] ${f.text}`).join(" | ").slice(0, 1500)}`);
     });
   }
+  // Every other browser the run used (second operator session, each journey's own browser, ...).
+  await ctx.step(`${label}: every other session of the run, as harvested after each journey, holds no error`, async () => {
+    const others = otherSessionFindings(ctx.runFindings(), sessions.map(([n]) => n)).filter((f) => !allow.includes(f.text));
+    ctx.delta({ step: `${label}-other-sessions`, errors: others.length });
+    ctx.expect(others.length === 0, `${others.length} error(s) in other sessions: ${others.map((f) => `[${f.session}/${f.where} after ${f.journey}] ${f.text}`).join(" | ").slice(0, 1500)}`);
+  });
 }
 
 /**

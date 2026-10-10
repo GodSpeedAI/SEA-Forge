@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 63
+**Status revision:** 64
 
-**Stage:** Casework live wiring: T10 ladder L0-L9 + L-RECOV implemented; three-run fresh-cell confirmation and independent confirmation pending
+**Stage:** Casework live wiring: T10 confirmed with conditions (conditions addressed); T11 and T12 pending
 
-**Summary:** T10 live ladder is complete in code: L8 (grounded Thoth narration, newly wired in the UI), L9 (strict zero console/page errors with a positive control) and L-RECOV (corrupt artifact, SSE drop via severable proxy, kernel and gateway kill/restart) pass in one full fresh-cell run. Defects fixed: artifact integrity surfaced as integrity_mismatch, pill recovery after an idle SSE outage, harness kernel restart race. The preregistered three consecutive green fresh-cell runs and independent confirmation have not yet been done.
+**Summary:** T10 live ladder L0-L9 + L-RECOV passed three consecutive full fresh-cell runs at 447d9a9, and teeth stub-gateway, shared-session and console-error failed for the intended reasons. An independent audit returned CONFIRM WITH CONDITIONS; the fixable conditions were addressed (run-wide console/page-error accumulation, shared-cookie tooth, stub-gateway no-new-case judge, kernel requester-SoD test with a mutation check, wording fix) and the accepted deviations are logged in the decision log (T10-DEV-1..7) and DEBT (CW-44..46). No video/trace evidence exists because agent-browser record/trace is unreliable on this host.
 
 **Verified:**
 
@@ -23,6 +23,7 @@
 - T09 UI: bun run typecheck clean; bun test 347 pass; bun e2e/run.ts fixture ladder J0-J9 + RECOVERY all PASS (a first run showed one J8 failure that did not recur in two later runs; cause unproven).
 - T10: just casework-e2e-live --only L0..L7 passed in one run (L5 9/9, L6 5/5, L7 8/8); tooth stub-gateway and tooth shared-session both PASS and the shared-session guard was mutation-checked; go test -p 1 ./... and cargo test -p sea-forge-server -p sea-forge-case-runner reported passing by the implementing agent.
 - T10 phase 4: just casework-e2e-live (fresh build, all journeys) exit 0 per implementing agent; UI 362 tests pass; go test -p 1 ./... ok; tooth console-error PASS.
+- T10 prereg confirmation: three consecutive green fresh-cell runs of just casework-e2e-live at 447d9a9 (11/11 journeys each); independent audit verdict CONFIRM WITH CONDITIONS; after fixes bun test 373 pass and a further full live run passed (reported by the fixing agent); new Rust SoD test fails when the check is disabled (mutation-checked) and passes restored.
 
 **Limits:**
 
@@ -35,10 +36,11 @@
 - Kernel does not resume an escalated item after approval over SFWP; L5 asserts the approval record and ledger, not downstream effects. The operator's denial is the absence of Approve plus a typed UNAUTHORIZED_ROLE refusal, not a panel-shown refusal.
 - Live gateway emits no execution_progress and no typed settlement object; pill progress is never shown.
 - Independent critic review of the startup key unit found no failures (Haiku critic); T09/T10 independent confirmation not done.
-- T10 prereg requires three consecutive green fresh-cell runs plus independent confirmation: not yet done.
 - After a gateway restart the live page stays Reconnecting until reload (no re-login prompt); ArtifactService caches an error per ref until reload; Thoth policy grant and self-model rebuild are applied in the e2e harness, not in casework-cell-init.
+- T10 independent re-confirmation of the post-audit fixes has not been run; the three-run proof predates them.
+- Kernel gap CW-45: no resume after approval over SFWP; live harness uses dev auth, hand-built server.yaml, harness-applied policy grant and self-model rebuild (T10-DEV-5); no video/trace evidence (T10-DEV-6).
 
-**Next:** Run just casework-e2e-live three times consecutively on fresh cells and re-run both teeth against the committed SHA; request independent confirmation; then T11 (packaging, metrics, load test, security review, CI) and T12.
+**Next:** Re-run three consecutive fresh-cell live runs against the final commit for the record, then T11 (packaging, config reference, metrics, log correlation, backup runbook, load test, /security-review, CI) and T12 independent acceptance.
 
 **Evidence:**
 
@@ -56,6 +58,8 @@
 - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-graft02-exit-oct09.raw.json
 - .agents/DEBT.md
 - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-startup-continuation-key-root-grant-oct09.md
+- .agents/reports/casework-live-wiring/decision-log.yaml
+- .agents/evidence/casework-live-wiring/T10/latest
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

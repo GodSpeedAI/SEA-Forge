@@ -1,6 +1,7 @@
 import { Browser } from "./browser";
+import { CookieLeakBrowser } from "./live/leak";
 import { mkdir } from "fs/promises";
-import { appendFileSync, writeFileSync } from "fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
 export type Step = {
@@ -18,6 +19,14 @@ export type Journey = {
   settles: string;
   unlocks: string[];
   run(ctx: Ctx): Promise<void>;
+};
+
+/** One error-level console entry or uncaught page error seen by some session during some journey. */
+export type RunFinding = {
+  session: string;
+  journey: string;
+  where: "console" | "pageerror" | "harvest";
+  text: string;
 };
 
 export type Ctx = {
@@ -38,6 +47,12 @@ export type Ctx = {
   shared: Record<string, unknown>;
   /** Append one line to out/durable-delta.jsonl: what durable state a step observed. */
   delta(entry: Record<string, unknown>): void;
+  /**
+   * Live ladder only: every error-level console entry and uncaught page error harvested from every
+   * session (including the journeys' own browsers) after each journey so far, BEFORE page errors are
+   * cleared. Empty for the fixture ladder. Run-wide strict checks read this plus the live sessions.
+   */
+  runFindings(): RunFinding[];
   /** Live stack handle (cell path etc.); absent for the fixture ladder. */
   live?: unknown;
 };
@@ -71,6 +86,11 @@ export async function runLadder(
      * users share one agent-browser session. The two-principal journeys must detect this and fail.
      */
     sharedSession?: boolean;
+    /**
+     * Self-check only (live tooth shared-cookie): sessions keep DISTINCT agent-browser names, but the
+     * "rso" session is handed the "operator" session's cookie once the guard inspects it.
+     */
+    cookieLeak?: boolean;
   }
 ): Promise<boolean> {
   const { base, out, only } = opts;
@@ -81,7 +101,9 @@ export async function runLadder(
     const name = opts.sharedSession ? "shared" : requested;
     let s = sessions.get(name);
     if (!s) {
-      s = new Browser(`${prefix}-${name}`, 30000);
+      s = opts.cookieLeak && name === "rso"
+        ? new CookieLeakBrowser(`${prefix}-${name}`, () => sessions.get("operator"), base)
+        : new Browser(`${prefix}-${name}`, 30000);
       sessions.set(name, s);
     }
     return s;
@@ -89,6 +111,47 @@ export async function runLadder(
 
   // Ensure output directory exists
   await mkdir(join(out, "screenshots"), { recursive: true });
+
+  // Live ladder: accumulate per-session errors across journeys (page errors are cleared after each
+  // journey, so without this a run-wide "no errors" claim would only cover the tail of the run).
+  const findings = new Map<string, RunFinding>();
+  const harvestLog: { journey: string; session: string; page_errors: number; console_errors: number; console_total: number; error?: string }[] = [];
+  const persistHarvest = () => {
+    mkdirSync(join(out, "console"), { recursive: true });
+    writeFileSync(
+      join(out, "console", "accumulated-errors.json"),
+      JSON.stringify({ findings: [...findings.values()], harvests: harvestLog }, null, 2)
+    );
+  };
+  const harvest = async (journeyId: string, own: [string, Browser][]) => {
+    if (!opts.live) return;
+    for (const [name, sb] of [...own, ...sessions]) {
+      const log = { journey: journeyId, session: name, page_errors: 0, console_errors: 0, console_total: 0 } as (typeof harvestLog)[number];
+      const add = (where: RunFinding["where"], text: string) => {
+        const key = `${name}|${where}|${text}`;
+        if (!findings.has(key)) findings.set(key, { session: name, journey: journeyId, where, text });
+      };
+      try {
+        const pe = await sb.pageErrors();
+        log.page_errors = pe.length;
+        for (const e of pe) add("pageerror", e.text);
+        const entries = await sb.consoleEntries();
+        log.console_total = entries.length;
+        for (const e of entries) {
+          if (e.level === "error" || e.level === "assert") {
+            log.console_errors++;
+            add("console", e.text);
+          }
+        }
+      } catch (e) {
+        // A session that cannot be read is a gap in the evidence, never silently "clean".
+        log.error = e instanceof Error ? e.message : String(e);
+        add("harvest", `could not read ${name} after ${journeyId}: ${log.error}`);
+      }
+      harvestLog.push(log);
+    }
+    persistHarvest();
+  };
 
   const journeyResults: JourneyResult[] = [];
   const passedIds = new Set<string>();
@@ -120,6 +183,7 @@ export async function runLadder(
         session,
         shared,
         live: opts.live,
+        runFindings: () => [...findings.values()],
         delta: (entry: Record<string, unknown>) => {
           appendFileSync(join(out, "durable-delta.jsonl"), JSON.stringify({ journey: journey.id, at: new Date().toISOString(), ...entry }) + "\n");
         },
@@ -166,6 +230,7 @@ export async function runLadder(
 
       try {
         await journey.run(ctx);
+        await harvest(journey.id, [[`journey-${journey.id}`, browser]]);
         // Check for console errors after journey completes
         const consoleErrors = await browser.consoleErrors();
         // Named sessions are checked too (empty set for the fixture ladder).
@@ -180,6 +245,7 @@ export async function runLadder(
       } catch (e) {
         status = "FAIL";
         error = e instanceof Error ? e.message : String(e);
+        await harvest(journey.id, [[`journey-${journey.id}`, browser]]).catch(() => {});
       } finally {
         try {
           await browser.close();
@@ -219,6 +285,8 @@ export async function runLadder(
       console.log(`  Error: ${error}`);
     }
   }
+
+  await harvest("end-of-run", []).catch(() => {});
 
   for (const sb of sessions.values()) {
     try {

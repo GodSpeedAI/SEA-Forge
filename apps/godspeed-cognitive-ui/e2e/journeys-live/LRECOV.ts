@@ -4,7 +4,15 @@ import type { Browser } from "../browser";
 import type { Ctx, Journey } from "../ladder";
 import { click, waitVisible } from "../journeys/helpers";
 import { kindsOf, readJsonl, readTrace, waitUntil } from "../live/durable";
+import { strictSteps } from "./L9";
 import { closeOutline, designCaseViaUi, ensureLoggedIn, jsEval, loginThroughUi, openOutlineAtHome, outlineAction, sleep, stackOf, uiCtx } from "./helpers";
+
+/**
+ * Console errors this journey is EXPECTED to provoke by cutting the network and killing the
+ * processes under the page. Exact message text only, never a pattern. Anything else, in any session,
+ * from the first journey to the last, fails the final strict step.
+ */
+export const EXPECTED_DEGRADED_ERRORS: readonly string[] = [];
 
 const TEMPLATE = "e2e-sentry-chain@0.1.0";
 const PREPARE = "task_prepare";
@@ -267,5 +275,10 @@ export const LRECOV: Journey = {
       ctx.delta({ step: "gateway-kill", revisions: rec.revs, standing: ui2 });
       await closeOutline(b);
     });
+
+    // L9 ran before this journey, so its whole-run check cannot see the crashes provoked here. Same
+    // strict standard again, now covering L0..L-RECOV in full (harvested + live), with only the exact
+    // messages in EXPECTED_DEGRADED_ERRORS allowed.
+    await strictSteps(ctx, [["operator", ctx.session("operator")], ["rso", ctx.session("rso")], ["operator-b", ctx.session("operator-b")]], EXPECTED_DEGRADED_ERRORS, "strict-final");
   },
 };

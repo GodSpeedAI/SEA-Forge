@@ -68,3 +68,43 @@ describe('cookie helpers', () => {
     expect(digestOf(null)).toBeNull()
   })
 })
+
+import { POST_LOGIN_GUARD_STEP, cookieSetArgs, sharedCookieToothProblem } from './sessions'
+
+describe('shared-cookie tooth', () => {
+  const guardMsg = 'shared session identity: "operator" and "rso" present the same casework_session cookie; shared session identity: "operator" and "rso" are both signed in as operator_local'
+  const l5 = (steps: { name: string; ok: boolean; error?: string }[]) => [{ journey_id: 'L5', status: 'FAIL', steps }]
+  const good = [
+    { name: 'guard: the operator and the R-SO drive distinct agent-browser sessions', ok: true },
+    { name: 'operator designs', ok: true },
+    { name: `${POST_LOGIN_GUARD_STEP}, the two sessions hold different cookies and different principals`, ok: false, error: guardMsg },
+  ]
+
+  test('distinct names but the same cookie and actor: the guard is the right and only failure', () => {
+    expect(sharedCookieToothProblem(l5(good))).toBeNull()
+  })
+  test('same cookie digest under different session names is a finding even before an actor is known', () => {
+    const a = fp({ agentSession: 'x-operator', cookieDigest: 'aa' })
+    const b = fp({ label: 'rso', agentSession: 'x-rso', cookieDigest: 'aa' })
+    expect(sharedSessionFindings(a, b)).toEqual(['shared session identity: "operator" and "rso" present the same casework_session cookie'])
+  })
+  test('failing at the name-equality guard is the other tooth, not this one', () => {
+    const steps = [{ name: 'guard: the operator and the R-SO drive distinct agent-browser sessions', ok: false, error: 'shared session identity: ... drive the same agent-browser session "x"' }]
+    expect(sharedCookieToothProblem(l5(steps))).toMatch(/not at the post-login guard/)
+  })
+  test('failing at the guard for a different message does not count', () => {
+    const steps = [...good.slice(0, 2), { ...good[2]!, error: 'principals a / b' }]
+    expect(sharedCookieToothProblem(l5(steps))).toMatch(/lacks "shared session identity"/)
+    const onlyCookie = [...good.slice(0, 2), { ...good[2]!, error: 'shared session identity: "operator" and "rso" present the same casework_session cookie' }]
+    expect(sharedCookieToothProblem(l5(onlyCookie))).toMatch(/shared actor/)
+  })
+  test('steps after the failure, a pass, or a missing L5 are not a bite', () => {
+    expect(sharedCookieToothProblem(l5([...good, { name: 'later', ok: true }]))).toMatch(/after the guard/)
+    expect(sharedCookieToothProblem([{ journey_id: 'L5', status: 'PASS', steps: [] }])).toMatch(/no failed step/)
+    expect(sharedCookieToothProblem([])).toMatch(/did not run/)
+  })
+  test('cookie set args carry the value only as an argument and scope it to the base url', () => {
+    expect(cookieSetArgs('v'.repeat(12), 'http://127.0.0.1:4179').slice(0, 4)).toEqual(['cookies', 'set', 'casework_session', 'v'.repeat(12)])
+    expect(cookieSetArgs('v'.repeat(12), 'http://127.0.0.1:4179')).toContain('http://127.0.0.1:4179')
+  })
+})

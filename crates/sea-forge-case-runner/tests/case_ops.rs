@@ -477,6 +477,50 @@ fn the_proposer_cannot_resolve_its_own_items_approval() {
     );
 }
 
+/// Kernel-level separation of duties for the REQUESTER: the actor whose action opened the
+/// escalated authority decision (no proposer involved: a template item) cannot resolve the approval
+/// over it. The refusal leaves no resolution in the ledger and no line in the approvals journal.
+#[test]
+fn the_requester_cannot_resolve_the_approval_their_own_action_opened() {
+    let root = temp_root("approval-requester-sod");
+    let case_id = "case_requester_sod_1";
+    // `item` carries no proposed_by, so only the requester rule can refuse.
+    let (approval_id, policy) = approval_fixture(root.path(), case_id, item("item-1", vec![]));
+
+    // The fixture's escalated action_request names `operator_runner` as the actor.
+    let error = case_ops::resolve_approval(
+        root.path(),
+        &policy,
+        case_id,
+        &approval_id,
+        "operator_runner",
+        Some("approving my own request"),
+        true,
+    )
+    .unwrap_err();
+    match error {
+        ForgeError::Input(message) => {
+            assert!(
+                message.contains("approval resolver must differ from requester"),
+                "wrong refusal: {message}"
+            );
+        }
+        other => panic!("expected the requester SoD refusal, got: {other}"),
+    }
+
+    let payloads = ledger_payloads(root.path(), case_id);
+    assert!(
+        payloads
+            .iter()
+            .all(|(kind, _)| kind != "approval_resolution"),
+        "a refused resolution must not be committed"
+    );
+    assert!(
+        !root.path().join("approvals.jsonl").exists(),
+        "a refused resolution must not write the approvals journal"
+    );
+}
+
 /// The grant-minting half: an uninvolved actor resolves the approval, the
 /// authority engine commits a fresh Allow decision for the resolution, and the
 /// journal records who resolved it.

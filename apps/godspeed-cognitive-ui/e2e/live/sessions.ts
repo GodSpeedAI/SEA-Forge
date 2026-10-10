@@ -47,3 +47,44 @@ export function sessionCookieValue(raw: string): string | null {
 export function digestOf(value: string | null): string | null {
   return value === null ? null : createHash('sha256').update(value).digest('hex').slice(0, 16)
 }
+
+/** Arguments for `agent-browser cookies set` that put a session cookie into another session (tooth only). */
+export function cookieSetArgs(value: string, base: string): string[] {
+  return ['cookies', 'set', 'casework_session', value, '--url', base, '--httpOnly', '--sameSite', 'Lax']
+}
+
+interface StepLike {
+  name: string
+  ok: boolean
+  error?: string
+}
+interface ResultLike {
+  journey_id: string
+  status: string
+  steps: StepLike[]
+}
+
+/** The post-login guard step in L5; the shared-cookie tooth must fail exactly here. */
+export const POST_LOGIN_GUARD_STEP = 'guard: after both sign in'
+
+/**
+ * Tooth (2b), judged on results.json: distinct agent-browser session names, but the R-SO session was
+ * handed the operator's cookie. L5 MUST fail at the post-login guard step (the last recorded step,
+ * every earlier step green), and the message must name BOTH collapse signals the guard computes from
+ * what the browsers hold (same casework_session cookie digest, same actor_id), proving it failed for
+ * the right reason and not at a login or a timeout. Returns null when the tooth bit, else why not.
+ */
+export function sharedCookieToothProblem(results: ResultLike[]): string | null {
+  const l5 = results.find((r) => r.journey_id === 'L5')
+  if (!l5) return 'L5 did not run'
+  const failed = l5.steps.find((s) => !s.ok)
+  if (l5.status !== 'FAIL' || !failed) return `L5 status=${l5.status} with no failed step`
+  if (!failed.name.startsWith(POST_LOGIN_GUARD_STEP)) return `L5 failed at "${failed.name}" (${failed.error}), not at the post-login guard`
+  if (l5.steps[l5.steps.length - 1] !== failed || l5.steps.filter((s) => !s.ok).length !== 1) return 'L5 recorded steps after the guard failure or more than one failure'
+  const err = failed.error ?? ''
+  if (!/shared session identity/.test(err)) return `guard message lacks "shared session identity": ${err}`
+  if (!/present the same casework_session cookie/.test(err)) return `guard message does not name the shared cookie: ${err}`
+  if (!/both signed in as operator_local/.test(err)) return `guard message does not name the shared actor: ${err}`
+  if (/drive the same agent-browser session/.test(err)) return `the sessions were not distinct (name equality fired): ${err}`
+  return null
+}

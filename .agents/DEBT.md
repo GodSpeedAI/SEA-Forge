@@ -1865,3 +1865,39 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
   callers and compatibility before proposing any shared behavior change; the
   shared helper remains open. Do not claim the full T09 is complete, that the
   global decoder is fixed, forgery, or authority bypass.
+
+### CW-44 T10 live harness is not a production cell and records no video
+
+- **Status:** open, accepted deviation (decision log T10-DEV-5, T10-DEV-6).
+- **Evidence:** `apps/godspeed-cognitive-ui/e2e/live/stack.ts` builds a fresh temp cell with
+  auth.mode=dev, production:false, a hand-written server.yaml, and applies the e2e policy grant and
+  self-model rebuild itself instead of using `casework-cell-init`. Per-run evidence is screenshots,
+  console captures, the L6 HAR and `durable-delta.jsonl`. `agent-browser record stop` fails in ffmpeg
+  on this host and leaves an empty .webm (no video); a run-long `agent-browser trace` per session
+  timed out on `trace stop` (30s) after a ~15 minute run, so it was not shipped.
+- **Impact:** T10 proves the wiring on a production UI build and a real kernel and gateway, not the
+  production deployment path or production auth. Plan wording "video" is not met.
+- **Next:** teach `casework-cell-init` to produce the e2e-capable cell (policy grant, self-model,
+  rso_local binding) so the harness can use it; revisit video and trace when agent-browser's recorder and long-session trace stop work.
+
+### CW-45 Kernel does not resume a case after an approval over SFWP
+
+- **Status:** open kernel gap for the kernel owners; not changed by T10.
+- **Evidence:** live ladder L5/L7: approving the escalated draft writes a second `approvals.jsonl`
+  record and `approval_resolution`/`authority_decision` ledger entries, emits no case event, the
+  escalated settlement stays escalated and the case stays `awaiting_approval`. L7 completes the human
+  gate by hand to drive the lifecycle on.
+- **Impact:** an approved escalation never continues by itself; a user sees the case stuck after a
+  successful approval.
+- **Next:** decide the kernel resume contract (re-run the item or settle it on resolution) and add a
+  conformance test; then remove the manual completion from L7.
+
+### CW-46 UI stays Reconnecting after a gateway restart; artifact errors are cached per ref
+
+- **Status:** open UI defects, accepted for T10 and asserted as-is by L-RECOV.
+- **Evidence:** after killing and restarting the gateway the page stays Reconnecting until reload;
+  `ArtifactService` keeps an error result per artifact ref until the page is reloaded, so a corrupt
+  artifact that has been restored still shows the error card until reload.
+- **Impact:** recovery needs a manual reload; stale artifact errors outlive their cause.
+- **Next:** re-establish the event stream after sign-in without a reload and expire cached artifact
+  errors (retry on open).

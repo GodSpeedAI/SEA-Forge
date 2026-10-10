@@ -264,3 +264,68 @@ redesign_reviews:
       the scoped T01 amendment only after T07/T08 settlement; implementation and integration
       require independent verification. T07/T08 independent work continues.
       Preserve current identity model, existing kernel verbs and dependency set.
+
+t10_accepted_deviations:
+  recorded: '2026-10-10'
+  scope: T10 live ladder (apps/godspeed-cognitive-ui/e2e), recorded after an independent audit. Appended; nothing above was rewritten.
+  status: accepted_deviations_not_defects_unless_marked
+  items:
+    - id: T10-DEV-1
+      title: No PlanCreated trace on case.commit
+      deviation: >-
+        The kernel's case.commit appends case_created then item_enabled; it emits no PlanCreated
+        trace kind. L1 asserts case_created + item_enabled in case-events.jsonl and the plan itself
+        in cases/<id>/plan.json instead.
+    - id: T10-DEV-2
+      title: Write-only items emit no CommandStarted/CommandFinished
+      deviation: >-
+        Template items that write a file settle on the write_only basis (D-3-followups): their run
+        trace holds authority_evaluated, workspace_created, artifact_captured and settlement_recorded
+        and no command_started/command_finished (no command ran). L4 asserts per item kind.
+    - id: T10-DEV-3
+      title: Operator denial is a gateway-level typed refusal, kernel SoD cited separately
+      deviation: >-
+        The operator who executed the escalated draft is never offered Approve/Reject, and an
+        APPROVE_HUMAN_TASK intent posted anyway is refused by the gateway with typed UNAUTHORIZED_ROLE
+        before the kernel is touched (no delegated request is recorded; approvals.jsonl and the case
+        trace are unchanged). The kernel-level rule that a requester cannot resolve their own approval
+        is proven separately: crates/sea-forge-case-runner/tests/case_ops.rs
+        (the_requester_cannot_resolve_the_approval_their_own_action_opened, added by this audit fix;
+        the_proposer_cannot_resolve_its_own_items_approval), crates/sea-forge-server/tests/
+        conformance_identity.rs (a_submitter_cannot_approve_their_own_work_but_another_actor_can) and
+        sfwp_delegated_identity.rs (separation_of_duty_holds_between_end_users_behind_one_gateway).
+    - id: T10-DEV-4
+      title: Kernel provides no resume after approval over SFWP (OPEN KERNEL GAP)
+      deviation: >-
+        Approving the escalated settlement writes a second approvals.jsonl record and
+        approval_resolution/authority_decision ledger entries, but no case event is emitted, the
+        escalated settlement stays escalated and the case stays awaiting_approval; nothing re-runs the
+        item. L7 completes the human gate by hand to continue the lifecycle. This is a real product
+        gap for the kernel owners, tracked as DEBT CW-45, not closed by T10.
+    - id: T10-DEV-5
+      title: Harness stack differs from a production cell
+      deviation: >-
+        The harness runs the gateway with auth.mode=dev and production:false, a hand-built
+        server.yaml instead of casework-cell-init, and applies the e2e policy grant and the self-model
+        rebuild in the harness rather than in cell-init (the shared persistent cell is avoided on
+        purpose: stale-cell confound; its identity bindings also use security_officer, not rso_local).
+        Tracked as DEBT CW-44.
+    - id: T10-DEV-6
+      title: Per-run evidence is screenshots + console captures + HAR(L6); no video, no trace
+      deviation: >-
+        browser.ts has record/trace/har helpers, but the journeys use only the HAR (L6). Tried and
+        rejected on this host: `agent-browser record stop` fails inside ffmpeg and leaves a 0-byte
+        .webm (and record start creates a fresh browser context, which would drop the in-page state
+        the journeys rely on); a run-long `agent-browser trace` per session was wired and the live run
+        passed, but `trace stop` timed out after 30s on all three sessions after a ~15 minute run, so
+        no trace was produced and the wiring was removed rather than shipped as evidence that does
+        not exist. Per-run evidence is therefore screenshots, console/ captures (including the
+        accumulated per-journey error harvest), the L6 HAR, durable-delta.jsonl and results.json.
+        Tracked as DEBT CW-44.
+    - id: T10-DEV-7
+      title: UI does not self-heal after a gateway restart; artifact errors are cached per ref
+      deviation: >-
+        After a gateway restart the page stays Reconnecting until reloaded (the user signs in again by
+        design: sessions are in-memory), and ArtifactService caches an error per artifact ref until the
+        page is reloaded (L-RECOV restores the bytes, then reloads to prove the digest verifies again).
+        L-RECOV asserts the behavior as it is. Tracked as DEBT CW-46.

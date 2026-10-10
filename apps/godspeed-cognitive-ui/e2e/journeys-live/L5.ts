@@ -129,17 +129,27 @@ export const L5: Journey = {
       ctx.expect(digestOfRecords(after.approvals) === digestOfRecords(beforeDenied.approvals), "approvals.jsonl changed after the denied attempt");
       ctx.expect(after.kinds.join(",") === beforeDenied.kinds.join(","), `case trace changed after the denied attempt: ${after.kinds.join(",")}`);
       ctx.expect(after.approvals.every((a) => a.status === "pending"), "the approval is still pending");
-      ctx.expect(delegatedRequests(cell).length === delegatedBefore, "the denied attempt reached the kernel (a delegated request was recorded)");
+      ctx.expect(delegatedRequests(cell).length === delegatedBefore, "the refused attempt never reached the kernel: no delegated request was recorded for it");
+      // This step asserts the GATEWAY's refusal (UNAUTHORIZED_ROLE, before the kernel). Kernel-level SoD,
+      // that the requester of an approval cannot resolve it themselves, is proven independently by:
+      //  - crates/sea-forge-case-runner/tests/case_ops.rs
+      //      the_requester_cannot_resolve_the_approval_their_own_action_opened (requester rule, case_ops::resolve_approval)
+      //      the_proposer_cannot_resolve_its_own_items_approval (proposer rule)
+      //  - crates/sea-forge-server/tests/conformance_identity.rs
+      //      a_submitter_cannot_approve_their_own_work_but_another_actor_can (separation_of_duty over the socket)
+      //  - crates/sea-forge-server/tests/sfwp_delegated_identity.rs
+      //      separation_of_duty_holds_between_end_users_behind_one_gateway (SoD behind one gateway principal)
       ctx.delta({ step: "operator-denied", refusal, approvals_unchanged: true });
     });
 
     await ctx.step("guard: after both sign in, the two sessions hold different cookies and different principals", async () => {
       const rso = await ensureLoggedIn(ctx, "rso");
       const [a, b] = [await fingerprint("operator", op), await fingerprint("rso", rso)];
-      ctx.expect(a.actorId === "operator_local" && b.actorId === "rso_local", `principals ${a.actorId} / ${b.actorId}`);
-      ctx.expect(a.cookieDigest !== null && b.cookieDigest !== null, `session cookies were not observable (${a.cookieDigest}, ${b.cookieDigest})`);
+      // Identity collapse first (it is the root cause), then the expected principals.
       const findings = sharedSessionFindings(a, b);
       ctx.expect(findings.length === 0, findings.join("; "));
+      ctx.expect(a.cookieDigest !== null && b.cookieDigest !== null, `session cookies were not observable (${a.cookieDigest}, ${b.cookieDigest})`);
+      ctx.expect(a.actorId === "operator_local" && b.actorId === "rso_local", `principals ${a.actorId} / ${b.actorId}`);
       const sess = await sessionOf(rso);
       ctx.expect(sess.role === "R-SO", `rso role ${String(sess.role)}`);
       ctx.delta({ step: "sessions-distinct", operator: a, rso: b });
