@@ -17,6 +17,7 @@ pub mod assets;
 pub mod case;
 pub mod case_mutations;
 pub mod case_views;
+mod continuation_codec;
 pub mod correlation;
 pub mod delegation_preview;
 pub mod delegations;

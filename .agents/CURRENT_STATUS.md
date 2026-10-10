@@ -1,211 +1,52 @@
 # Current status
 
-**Status revision:** 56
+**Status revision:** 60
 
-**Stage:** Casework live wiring: T09 partial; final clean snapshot frozen at revision 56
+**Stage:** Casework live wiring: T09 partial; private codec approved and workspace checked; local commit pending; publication held
 
-**Summary:** Clean code gates are green and the 534-file evidence copy is independently approved. Manifest provenance drift was corrected by preserving the exact reviewed version at hash24765 in a separate artifact; an immutable attribution addendum resolves the critic's wording hold. Root accepted the corrected provenance review. Source status56 and debt are now frozen for final synchronization and a separate final manifest. Final complete-copy review, clean status gate, normal checkpoint commit and publication are pending. No new commit or push.
+**Summary:** Safe checkpoint 552bd655ba53b2c46d15e0c61624a57c58143b5d remains the clean publication checkpoint; unsafe 608 history stays excluded and old cb90 remains private. Approved private codec source is b23cedb3e86681d06750f0012479af4c3ef124b8fdf04f81ae008c73d1de1d26 after the single-expression clippy repair; module declaration 11302429bfdb29634c8d780546c42de2bd10e0fdc7d49ce6bc37980a7e12f876 is unchanged. GREEN04 passed 18 tests, just check passed all gates, and Graft02 passed (8,059 nodes, 16,073 edges, 713 cards); captures were archived and independently confirmed. Earlier full-server result (449 passed, 0 failed, 2 ignored) was on pre-repair source b69338947dca0a35f4a08f96c57d37163ac282d0902cfc2454e4f776901b6bbb. A normal local codec commit is pending. No push occurred; codec remains private and unwired. T09 remains partial; T10-T12 unstarted; stop before T13.
 
 **Verified:**
 
-- T00-T08 settled; T09 partial; T10-T12 unstarted. T13 requires separate operator review before starting.
-- Current local HEAD cb90b6fc6b06ff24516b3e528d7bd8f1fd006153 on casework/live-wiring; last published branch casework/live-wiring-resume-2026-10-05 at 9efd039e47ee095c1e6ac4a7b9d0f99fcb89beaa. No new commit or push this continuation.
-- Private Next608309f implementation previously approved; current source/history remain local and that commit must not be pushed because it contains affected compressed preflight evidence.
-- Ledger final types.rs source SHA bba4e2afedb20d600c00941eaa4c84615d995f11d25fe2745513a6d158892ff5; independent final review c41dfc37f5cdaf60dac899dedd306ebf2eb14407bf6d227fee2962356b1242e6 FULLread/rootaccepted.
-- Root found three initial production defects despite prior critic source-ready: allocation-before-budget proof, multiline resume row, and nonterminal session error. Fresh builder added regressions; actual compiling RED02 produced exactly2 expected behavioral failures; fresh repairs and canonical formatting independently source-reviewed.
-- Root final formatted full ledger60/0, crate-check0, workspace justcheck0; independent fullledger60/0. All actual6 captures aftereach gate archived and decoded/compared bytewise. Workspace528historycommits scan reported noleaks, but compressed preflight privacy finding independently discovered afterward; scanner PASS is not a secret-free artifact claim.
-- Independent finalrun /tmp/ledger-reader-independent-full01-sxyqiqy5 safely archived as ledger-reader-independent-full01-*-oct09.raw.json; rootall6cmp0. Its preflight has PID/commandname only and no credential-word matches; initial automaticreview rejection for thissafe bundle resolved by directproof.
-- Graft build actual0,7994nodes/16002edges/712cards; sixactualcaptures archived/rootcmp0, preflightprocessnamesonly.
-- Value-free privacy inventory c2-preflight-privacy-inventory-oct09.json verifies18affected olderOct09preflights,8presentlocalHEAD and0presentlastpublished9efd; scope limitedto observed18artifacts, not wholepublishedhistoryaudit.
-- Future gate preflights capture PID and process names only. Operator-approved exception corrected only the 18 inventoried preflights; immutable local Git history remains untouched and private. Corrected archives explicitly describe sanitized projections, not lossless original captures.
-- Privatecodec designgrant19be806076544b1f06323c6186bf8aa1484eef4831d907b6827a213c62f16906 pluscap/inputaddendum3989626f5569cdc50289695a8396550aeb62a9a8b4a9df7b10f06630a5e9d559 independentlyaccepted/rootFULLreadaccepted docs-only. Fixed JSONpayload+96ASCIIsignature suffix,2048payload/4096outercaps; implementationnotreleased.
-- Original and intermediate snapshots/evidence/rejections remain preserved. Current .jolli userdeletions/changes and unrelated .gemini/settings.json preserved and unstaged.
-- Correction manifest c2-preflight-privacy-corrections-oct09.json SHA015b39b44768e615890afa36fc0698929a30ea7ab6382aaececa3246fe044a6c; root checked all18 original/sanitized hashes, exact retained prefix/suffix and2427 PID/process-name rows.
-- Ten source/docs paths copied by Luna using native patch to clean branch at9efd; root byte comparison passed all10. Source-copy approval and latest status/debt resync remain required.
-- Independent privacy correction receipt019ac60b2322bcff43efe97c0cb38878c40002cd645f6052d868d60a05c0a4e7 FULLread/rootaccepted, approval limited to18 corrected projections.
-- Candidate privacy receiptaa5df3042013c81462dde55f1e02b4a4f6422bd40f02efaa3c6d2eccce328f5a verifies exact544 current-file hashes and447 nested XZ decoded payloads, zero known CSRF-argument matches; original18positive controls. This is a scoped detector result, not comprehensive secret-free assurance.
-- Root clean-worktree ancestry check: HEAD equals published9efd; unsafe608 is not its ancestor; ten changed source/docs paths only before local evidence copy. Root released bounded local copy534evidence files; no publication release.
-- Root FULLread/accepted independent534copy receipt089638354105589c0274beb84802e8e6d8d35720f7817b7f468b09b7565fff7c: all534source/destination/hash/length match,1231421bytes, zero missing/extra. Unsafe608 not ancestor of cleanHEAD9efd.
-- Root FULLread/accepted broader scoped credential-form receipt638d947d36104028f0ccc5a7ae779f7905021cdc013b19b90275d318e656d940. Five broadmarkers classified as prose/source/spec/test; focused01/02 auth diagnostics fixture-marked, not token-like. Bounded pattern coverage only, no universal secret-free assurance.
-- Root ten-source-path byte comparison passed after status54/debt resync; YAML9649d44d5d74131067204f983f36bb5959ba878f08ca0993422ac7fe3835dc2e, MD314f45b51184e5785aeb4c7cabb80aa256c59dddd8ebd57e94674a118ee9a8b2, DEBTb174a5cae98b19db985702c0079eaddb7922d8c9929f2d5de89e1a6358d7ad47. Latest55 resync remains pending.
-- Clean worktree actual gates: clean-ledger-full01 exit0/60pass; clean-go-canonical01 exit0 format/vet/tests; clean-go-fullrace01 exit0/752testpass/0fail/10tested/5no-tests; clean-workspace-check01 exit0; clean-graft01 exit0/7994nodes/16002edges/712cards. All six actual capture files for each gate archived and decoded/compared before next gate. Actual compiler guard serialized builds; observed host memory3412MiB available/swap4750MiB free during workspace check, no competing heavy process.
-- CW37/CW42 wording repaired to recognize standing local commit authorization; checkpoint still requires independent review/gates, exact safe-SHA approval applies only to publication if automatic review requires it.
-- Manifest provenance recovery: current draft d39c8fd74a3b275670493dbca186e70287ad6ccbab8655b87ad6647c9cfbbbed retained unchanged; exact reviewed24765dc564ba0449ea778d5f20ac4eb870b9db0de9ae2b3d4926ccff3d769553 preserved in c2-clean-publication-reviewed-manifest-24765dc5-oct09.json. Root independently reproduced exact inverse metadata transformation and hash. This is artifact recovery, not a new runtime capture.
-- Root FULLread/accepted c2-clean-publication-manifest-attribution-correction-independent-review-oct09.md. Addendum eacd47588dc80df355cb0a2dfade45f01ea53922513a562385b7d878574d275d corrects unsupported attribution while preserving old note/reviews/manifests. CW42 remains open; final debt d71157000ece5693b5ec69c5474eaa5bcb2a82653a46c387c430bf6b608a63e2. Final manifest must be a new artifact, never rewrite cited versions.
+- T00-T08 settled; T09 remains partial; T10-T12 unstarted; stop before T13 unless separately reviewed.
+- Safe checkpoint 552bd655ba53b2c46d15e0c61624a57c58143b5d remains the clean publication checkpoint; unsafe 608 history and old cb90 branch remain local.
+- Exact publication request for 552bd655ba53b2c46d15e0c61624a57c58143b5d remains held; no push was attempted.
+- Private codec source b23cedb3e86681d06750f0012479af4c3ef124b8fdf04f81ae008c73d1de1d26 and unchanged module declaration 11302429bfdb29634c8d780546c42de2bd10e0fdc7d49ce6bc37980a7e12f876 retain independent bounded approval.
+- Initial just check failed with exit 101 on clippy sliced_string_as_bytes; the sole source repair changed token[..separator].as_bytes() to &token.as_bytes()[..separator].
+- Post-repair GREEN04 passed 18 tests, 0 failures; just check passed all gates; Graft02 exited 0 with 8,059 nodes, 16,073 edges, 713 cards.
+- Six post-repair gate captures were archived, root-compared, and independently confirmed.
+- The 449/0/2 full-server result was on pre-repair source b69338947dca0a35f4a08f96c57d37163ac282d0902cfc2454e4f776901b6bbb; it is not a post-repair server run.
+- Private codec remains unwired; startup signer lifecycle, ledger reader, filter resolution, DTO/dispatch, and T09 settlement are not approved by this slice.
+- Shared ledger decoder compatibility debt CW-43 remains open; private mitigation does not establish that the shared decoder is fixed.
+- Scoped 18-artifact privacy correction remains unchanged; immutable local history is preserved and no universal secret-free claim is made.
 
 **Limits:**
 
-- Operator explicitly approved privacycorrections and cleanpublicationbranch preparation. Historicalevidenceexception scoped ONLY18inventorypreflights pluscorrectionrecords; no unrelatedhistoryrewrite. Existinglocalbranch staysprivate.
-- Exact608 push approval request is superseded; do not publish608/history even if a reply to that earlier request arrives. New safe publication must exclude affected commits and obtain exactegressapproval ifrequired.
-- Ledger-only source approval does not approve server event validation/filter ACK/frontier handling, token/startup signer/DTO integration, supported-writer migration, or T09 settlement. T09-specific finalCI/proof/Workbench gates remain outstanding.
-- Only one compiler/heavy gate at a time; actualhost MemAvailable>=1200MiB/SwapFree>=512MiB and no competing Cargo/rustc/go/gitleaks/cargo-deny. Compilerlease currently free; rootcontrols anygrant.
-- Historical provenance limitations CW26/CW39 and generated.ua debtCW40 remain; no original missingcapture/provenance claim repaired by fabrication. Debt canonical .agents/DEBT.md peroperatorinstruction.
-- No fetch/pull/reset/clean/rebase/merge/force/publish or historicalevidence mutation without applicableoperatorintent. Preserveuserworkingchanges and neverrecreate.jolli.
+- Unsafe 608 history and old private casework/live-wiring branch cb90 remain local; do not publish them.
+- Exact 552bd655ba53b2c46d15e0c61624a57c58143b5d publication request remains held; no push or push capture is claimed.
+- Authorized normal local codec commit is pending; do not claim T09 completion or public readiness.
+- Codec remains private and unwired. Startup, ledger reader, filter/ACK/frontier, public DTO/dispatch, and supported-writer integration remain outside this slice.
+- Serialize compiler and heavy gates under root's process, RAM, and swap guard.
+- Preserve user .jolli deletions and unrelated .gemini changes; do not alter old private history or scoped privacy correction.
 
-**Next:**
-
-Synchronize source revision56/debt and explicit supplemental evidence into clean worktree; create a separate immutable final manifest of exact current approved paths. Independently verify full snapshot, decoded privacy patterns, reviewed source hashes, append-only status history, clean ancestry, actual green gate captures and no foreign files. Run clean status gate and normal-hook checkpoint commit. Then assess normal branch return to original path using exact task staging/index-tree proof, preserving old private branch and user changes without force/reset/restore/clean/history rewrite. Publish only safe new SHA with exact approval if required. Resume private codec TDD after checkpoint; continue T09-T12, stop beforeT13.
+**Next:** Make the authorized normal local codec commit. Then proceed under the existing held startup-continuation-key grant; next scoped implementation is the bounded reader and dispatch. Keep T09 partial, T10-T12 unstarted, stop before T13, and do not publish until the fresh exact request for 552bd655ba53b2c46d15e0c61624a57c58143b5d is resolved.
 
 **Evidence:**
 
 - .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml
-- .agents/current_status.yml
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-initial-lease-bookkeeping-assignment-oct08.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-critic-green03-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-canonical05-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-fullrace02-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-normative-repair-independent-review-oct08.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-initial-lease-bookkeeping-final-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-initial-lease-bookkeeping-final-review-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-critic-canonical06-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-critic-fullrace06-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-graft01-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/status-migration-independent-review-oct08.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-status02-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/status-migration-tests01-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-checkpoint01-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-push01-stderr-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-next-assignment-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/debt-initial-lease-normative-repair-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-push02-exit-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/initial-lease-remote01-stdout-oct08.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-next-assignment-addendum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-next-assignment-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-tdd-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-next-projection-failure-addendum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/CW40-generated-ua-freshness-repair-review-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-registration-input-accounting-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-projection-failure-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-initial-unavailable-fixture-correction-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-initial-unavailable-correction-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status11-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-static-debt-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status12-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-static-debt-fresh-repair-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-tdd-fresh-repair-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-tdd-fresh-repair-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-current-repair1-72c37999-source-snapshot-oct09.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-fixture-format-probe01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status13-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-tdd-repair2-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-tdd-repair2-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-current-repair2-1f23ab0e-source-snapshot-oct09.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-fixture-format-probe02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status14-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-static-debt-repair2-timing-correction-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-tdd-repair3-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-static-debt-repair3-followup-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-static-debt-repair3-followup-independent-review-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-red01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-red01-stdout-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-production-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-focused01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-focused01-stdout-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status17-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-production-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-input-accounting-traceability-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-input-accounting-traceability-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-normative-lifecycle-root-acceptance-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status18-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-production-fresh-repair-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-production-fresh-repair-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-production-format-fresh-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-focused02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-go01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-format01-stdout-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-go02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-race01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status19-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-debt-progress-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-production-final-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-critic-focused01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-critic-go01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-critic-focused02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-critic-go02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-critic-race01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-graft01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status20-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-next-production-final-review-evidence-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-checkpoint01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-checkpoint01-stderr-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status21-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status22-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status23-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-slice-root-grant-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-slice-grant-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-slice-ack-boundary-addendum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-slice-ack-boundary-independent-rereview-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ack-debt-update-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-cw37-debt-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/reader-grant-checkpoint01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-tdd-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-ledger-tdd-initial-frozen-source-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-tdd-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-tdd-independent-source-review-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-server-integration-seams-recon-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-tdd-fixture-repair-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-ledger-tdd-repair1-frozen-source-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-tdd-fixture-repair-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-lock-fixture-fresh-repair-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-lock-fixture-builder-receipt-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-lock-fixture-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-lock-fixture-independent-review-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-red01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-ledger-tdd-red-frozen-source-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-red01-progress-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-red01-progress-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-production-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-ledger-production-initial-frozen-source-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-production-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-production-independent-source-review-followup-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-red01-failure-class-correction-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-red01-correction-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-red01-authorization-chronology-addendum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-red01-chronology-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-phase-a-regression-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-phase-a-regression-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-ledger-phase-a-frozen-source-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-regression-red02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-red02-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-phase-b-production-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-ledger-phase-b-frozen-source-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-phase-b-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-green01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-full01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-check01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-workspace-check01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-formatting-builder-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-ledger-formatted-frozen-source-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-formatting-independent-source-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-formatted-full02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-formatted-check02-exit-oct09.raw.json
+- .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-final-independent-review-oct09.md
 - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-private-continuation-codec-root-grant-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-workspace-check02-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-private-continuation-codec-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-private-continuation-codec-cap-input-addendum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-private-continuation-codec-cap-input-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-ledger-final-runtime-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-independent-full01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-graft01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-preflight-privacy-inventory-oct09.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-handoff-debt-privacy-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-resume-status49-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/casework-clean-worktree01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-preflight-privacy-corrections-oct09.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-preflight-privacy-correction-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-preflight-privacy-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-copy-manifest-oct09.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-candidate-privacy-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-credential-form-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-copy-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/clean-ledger-full01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/clean-go-canonical01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/clean-go-fullrace01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/clean-workspace-check01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/clean-graft01-exit-oct09.raw.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-status-debt-resync-independent-review-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-status-debt-resync-review-erratum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-reviewed-manifest-24765dc5-oct09.json
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-manifest-provenance-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-manifest-provenance-attribution-addendum-oct09.md
-- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-clean-publication-manifest-attribution-correction-independent-review-oct09.md
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-green03-exit-oct09.raw.json
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-green04-exit-oct09.raw.json
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-check01-exit-oct09.raw.json
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-check02-exit-oct09.raw.json
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-server-full01-exit-oct09.raw.json
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-fmt02-exit-oct09.raw.json
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-graft01-exit-oct09.raw.json
+- .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/private-codec-graft02-exit-oct09.raw.json
+- .agents/DEBT.md
+
+**Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+
+**Ledger:** .agents/DEBT.md

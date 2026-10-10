@@ -1435,10 +1435,11 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 - **Status:** the bounded ledger-reader source slice is independently approved
   and root-verified. Server integration and T09 remain incomplete. For CW-42,
   the operator approved the privacy correction and publication-worktree
-  preparation; the 18 archives are corrected, but independent privacy review
-  remains pending and does not release a local commit or publication. The design
-  grant, earlier policy approvals, and repaired normative amendments remain
-  approved.
+  preparation; all 18 archives are corrected and the independent privacy review
+  approved those projections. The local checkpoint is complete; publication
+  remains held after automatic review rejected its exact SHA before process
+  start. The design grant, earlier policy approvals, and repaired normative
+  amendments remain approved.
 - **Evidence:** `run-observation-bounded-ledger-reader-recon-oct08.md` and
   `run-observation-bounded-ledger-reader-design-options-oct08.md` show there is
   no drop-in authenticated continuation. Predecessor checksum alone cannot
@@ -1472,17 +1473,13 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
   `.agents/specs/casework-live-cursor-v4-spec.yaml:253-270`. The re-review
   confirms current `get_range` does not yet implement it; no reader
   implementation is claimed and the gap is not closed.
-- **Next:** keep the local checkpoint held for independent CW-42 privacy/copy
-  review and the required gates. The operator has authorized local meaningful
-  commits; additional exact-commit approval is not required for a local
-  milestone commit. For publication, obtain approval for the exact new safe
-  SHA only if automatic review requires it. Implement the private
-  continuation codec test-first
-  only after explicit root release under grant
-  `19be806076544b1f06323c6186bf8aa1484eef4831d907b6827a213c62f16906` and
-  cap/input addendum `3989626f5569cdc50289695a8396550aeb62a9a8b4a9df7b10f06630a5e9d559`.
-  Server event validation and DTO/dispatch integration come later under
-  separate authorization.
+- **Next:** the local checkpoint is complete; publication remains held because
+  automatic review rejected its exact SHA before process start, and a fresh
+  exact request is pending. Continue the private codec test/stub correction
+  through fresh independent source review, actual compiling expected RED, a
+  fresh production builder, and independent GREEN review. Keep the codec
+  private and unwired. Server event validation and DTO/dispatch integration
+  come later under separate authorization.
 - **Fixture repair progress (2026-10-09):** the initial test scaffold at
   `types.rs` SHA-256
   `40ac4fa2f04bef5f5b43940a134a2d99189787daf1f0375405f3fbac617ee2f8` was
@@ -1581,6 +1578,21 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
   reader source slice. It does not close server integration or T09 settlement,
   and does not resolve the separate evidence-privacy hold in CW-42.
 
+- **Private continuation codec Phase A progress (2026-10-09):** GREEN01 exposed a bad hardcoded absent-to digest in the fixture: the correct SHA-256 for the exact `sea-forge/casework/continuation/to/v1` tag, absent presence byte, and zero u64-BE length is `272da02c07a4e6d4beab0343b73837407144fa87a6cfde4333570c9d92a37a38`; the earlier fixture value `458a0e...` was wrong. GREEN01 compiled and reported 10 passing, 8 failing tests; the digest fixture was corrected. GREEN02 compiled and reported 16 passing, 2 failing tests. One remaining failure is an invalid ACK-boundary oracle: `acknowledged.end_offset == pinned_head.start_offset` (100) is allowed by the approved non-overlap rule `ack.end <= head.start`; change the invalid case to 101 and retain 100 as a positive boundary. The second remaining failure is a valid signed continuation whose signature text ends in `=` and whose final character was changed: the shared ledger verifier accepted it because its decoder stops at the first `=` and ignores trailing text. These are observed test/fixture gaps; codec GREEN and independent final review remain pending.
+
+- **Private continuation codec bounded result (2026-10-10):** exact source
+  SHA-256 `b69338947dca0a35f4a08f96c57d37163ac282d0902cfc2454e4f776901b6bbb`
+  and private module declaration SHA-256
+  `11302429bfdb29634c8d780546c42de2bd10e0fdc7d49ce6bc37980a7e12f876`
+  received independent bounded source approval. GREEN03 compiled and passed
+  all 18 codec tests; the full server suite passed 449, failed 0, ignored 2;
+  fmt02 and graft01 exited 0. Graft reported 8,059 nodes, 16,073 edges, and
+  713 cards. A fresh critic confirmed all six archived captures for each
+  full-server, formatting, and Graft run match the actual source capture
+  bytes, hashes, and lengths, with preflight and gate exits 0. These bounded
+  results do not substitute for remaining final workspace gates. The source
+  remains private and unwired; its commit is pending.
+
 ### CW-38 Initial lease bookkeeping bounded unit
 
 - **Status:** bounded initial lease bookkeeping approved and closed. All three
@@ -1636,7 +1648,7 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 
 ### CW-40 Generated `.ua` graph freshness is separate from Graft freshness
 
-- **Status:** generated `.ua` graph stale after source changes; refresh deferred.
+- **Status:** generated `.ua` graph remains stale after source changes; refresh deferred. Safe checkpoint 552bd655ba53b2c46d15e0c61624a57c58143b5d completed with normal hooks; freshness remains outstanding.
 - **Evidence:** normal commit hook for `9efd039e47ee095c1e6ac4a7b9d0f99fcb89beaa`
   reported `.ua` stale in `initial-lease-checkpoint01-stderr-oct08.raw.json`
   and requested incremental understand refresh. Graft refresh separately
@@ -1721,16 +1733,23 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 - **Progress record:** full original grant/source evidence references, exact grant and source identities, accepted RED, root gate outcomes, and review limits are recorded in `private-next-debt-progress-builder-oct09.md`.
 - **Final bounded closure (root, 2026-10-09):** root read the complete final independent review `private-next-production-final-independent-review-oct09.md` (SHA-256 `2842acee4b5f35e2730cae9bc2600f7862ea1c5a22dc30f7082026a13f8b24b9`) and verified all six actual captures for each host-visible critic retry: `next-private-critic-focused02` (62 JSON test-pass records including nested tests, zero failures), `next-private-critic-go02` (format/vet/tests green), and `next-private-critic-race01` (752 passing test records, zero failures, 10 tested packages, 5 no-test packages). The earlier pending-review paragraphs are historical progress, superseded by this verdict. Root accepted the source unit; current status governs its Git checkpoint. The original absent `c8e825...` preimage is still absent. CW-39 process-coordination discipline and CW-40 generated `.ua` freshness remain separate; no broader closure is claimed.
 
+
 ### CW-42 Historical preflight captures contain credential-bearing process arguments
 
 - **Status:** open; operator approval for the privacy correction and
   publication-worktree preparation was granted 2026-10-09. The 18 listed
-  archives have been corrected. Independent privacy/copy review and required
-  gates remain pending, so the local checkpoint remains held; meaningful local
-  commits are authorized. Publication remains held pending independent privacy
-  review and exact new safe-SHA approval only if automatic review requires it.
-  The existing local branch remains private; no history rewrite or publication
-  is claimed.
+  archives have been corrected and the clean snapshot passed independent copy
+  review. Safe local checkpoint
+  552bd655ba53b2c46d15e0c61624a57c58143b5d is committed on
+  `casework/live-wiring-clean-2026-10-09`, parent 9efd039e. The old private
+  branch remains at cb90 locally. Publication remains held after automatic
+  review rejected the exact safe SHA before process start; a fresh exact request
+  is pending. No push or push capture is claimed. The independent privacy
+  correction review approved the 18 projections; broader credential-form audit
+  and final publication approval remain pending. The safe clean branch remains
+  at checkpoint `552bd655ba53b2c46d15e0c61624a57c58143b5d`; the private codec
+  source is independently approved but its commit and remaining full-gate
+  verification are pending.
 - **Evidence:** root's privacy audit covered 18 older October 9 preflight
   archives under
   `.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/` and found a
@@ -1783,14 +1802,66 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
   `c2-clean-publication-manifest-provenance-attribution-addendum-oct09.md`;
   the complete hash identifies recovered bytes only, not a runtime capture or
   publication claim. CW-42 remains open.
-- **Impact:** the corrected working-tree archives no longer retain process
-  arguments, but the eight pre-correction archives remain in private local
-  history. The exact 608 push request is superseded and unsafe. The local
-  milestone commit remains held pending independent privacy/copy review and
-  required gates. Publication remains held pending independent privacy review
-  and any exact new safe-SHA approval automatically required for publication.
-- **Next:** retain the existing local branch as private. Await the independent
-  privacy critic, copy review, and required gates. The operator's authorization
-  covers meaningful local commits; exact new safe-SHA approval applies only to
-  publication if automatic review requires it. Do not publish, rewrite the
-  existing history, or treat the prepared worktree as approved for release.
+- **Checkpoint and publication disposition (2026-10-09):** the final independent
+  copy review passed for the frozen 605-path snapshot, its manifest self-copy,
+  and six supplemental captures. Receipt
+  `c2-clean-publication-final-independent-review-oct09.md` (SHA-256
+  `f7d9e0224737bb383e8da99885a0b2b62d3e9bcf9e99de4c64851315909c7aca`).
+  Normal checkpoint commit `552bd655ba53b2c46d15e0c61624a57c58143b5d`
+  excludes unsafe 608 and has parent 9efd039e. Checkpoint attempt 01 was
+  rejected by root's `git diff --cached --check` before any hook invocation.
+  Its diagnostic reported 62 advisory whitespace warnings across 13 immutable
+  evidence files; no required whitespace gate failed and the artifacts were
+  preserved. Attempt 02's
+  temporary-worktree Devbox bootstrap timed out at `cache.nixos.org`. Attempt
+  03 ran the normal hooks using the clean Git directory and original worktree;
+  actual result was 0 with matching task bytes and no hook bypass. Captures
+  clean-checkpoint01/02/03-oct09, clean-devbox-probe01, and
+  clean-branch-return01 are archived and root-compared. Return verification
+  matched 321 task paths/index tree to the safe commit; all 12 foreign status
+  paths remained unchanged and mismatch count was 0. Automatic review rejected
+  publication of the exact safe SHA before process start. Earlier SHA approval
+  is insufficient; the new exact request is pending. No publication is claimed;
+  CW-42 remains open.
+- **Impact:** corrected working-tree archives no longer retain process
+  arguments, while eight pre-correction archives remain in private local
+  history. The exact 608 push request is superseded and unsafe. The local safe
+  checkpoint is complete; publication remains paused pending resolution of the
+  fresh exact-SHA request.
+- **Next:** complete the independently approved private codec's remaining
+  full-gate verification and checkpoint only under root's authorization. Keep
+  T09 partial and T10-T12 unstarted; stop before T13. Do not publish checkpoint
+  `552bd655ba53b2c46d15e0c61624a57c58143b5d` until the fresh exact request is
+  resolved. Preserve the old private branch and history.
+
+### CW-43 Shared signature decoder accepts trailing padding aliases
+
+- **Status:** the shared ledger helper remains open; the private continuation
+  codec now validates its fixed signature text before calling that helper. The
+  bounded codec source is independently approved; GREEN03 and post-repair
+  GREEN04 passed, and `just check` passed after the one-expression clippy fix.
+  Broader compatibility remains separate.
+- **Evidence:** `crates/sea-forge-ledger/src/signing.rs:125-128` stops Base64
+  decoding at the first `=` and ignores subsequent text. Actual compiled
+  codec run `private-codec-green02` (`/tmp/private-codec-green02-mvk5nnb0`)
+  reported 16 passing and 2 failing tests; one failure showed that changing a
+  valid signature string's final padding `=` to `A` still verified the same
+  decoded 64-byte signature. All six run captures were archived and
+  root-compared. The private source now has SHA-256
+  `b23cedb3e86681d06750f0012479af4c3ef124b8fdf04f81ae008c73d1de1d26` after
+  the approved expression-only clippy repair; `just check` passed, GREEN04
+  passed 18 tests, and Graft02 passed. Their captures were archived and
+  independently confirmed. The earlier full-server result (449 passed, 0
+  failed, 2 ignored) was on pre-repair source SHA
+  `b69338947dca0a35f4a08f96c57d37163ac282d0902cfc2454e4f776901b6bbb`; it is
+  historical and does not claim a post-repair full-server run. No edit to the
+  shared helper has been made.
+- **Impact:** the shared decoder accepts noncanonical signature-text aliases.
+  No signature forgery, authority bypass, or ledger-integrity bypass has been
+  shown.
+- **Next:** the private codec's bounded signature grammar mitigation for the
+  existing 88-character Base64 suffix, including required `==` padding and
+  zero pad bits, is implemented and GREEN03/GREEN04 passed. Audit shared-helper
+  callers and compatibility before proposing any shared behavior change; the
+  shared helper remains open. Do not claim the full T09 is complete, that the
+  global decoder is fixed, forgery, or authority bypass.
