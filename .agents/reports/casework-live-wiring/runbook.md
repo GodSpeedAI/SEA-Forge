@@ -93,7 +93,39 @@ Rolling a stuck pair: `systemctl restart sea-forge-server` (restarts the gateway
 - Sessions are single-process in-memory; running two gateway replicas needs shared session storage
   (plan redesign trigger), not supported today.
 
-## 7. Not yet done in T11 (later parts)
+## 7. CI (`.github/workflows/casework-live.yml`)
 
-Load test with budgets (`just casework-load`), `/security-review` of the gateway and delegation, CI
-jobs, the 50-SSE-client kernel-restart tooth, and a real systemd runtime test of the units.
+Not part of the required `gate` in `ci.yml`; a separate, advisory-but-visible workflow
+(`permissions: contents: read`, SHA-pinned actions, devbox for rust/just like `ci.yml`).
+
+| Job | Runs | Timeout | Evidence artifact (14 days) |
+|-----|------|---------|-----------------------------|
+| `go-live` | build kernel, then `go test -p 1 ./...` and `go test -p 1 -tags live ./...` in `apps/godspeed-casework-go` | 45 min | none (test log only) |
+| `ladder` | `just casework-e2e-live`, then re-reads `results.json` and fails on any journey that is not PASS | 60 min | `casework-ladder-evidence` (`T10/run-*`: screenshots, results.json/md, HAR, console, durable-delta, logs) |
+| `load` | `just casework-load` (budgets and kill -9 restart teeth) | 45 min | `casework-load-evidence` (`T11/run-*`: JSON, RSS series, logs, go-test.log) |
+
+Triggers: `pull_request` to main with a paths filter (`apps/godspeed-casework-go`,
+`apps/godspeed-cognitive-ui`, `crates/sea-forge-*`, `deploy`, `Cargo.lock`, `justfile`, the workflow
+itself) runs `go-live` and `ladder`; the nightly schedule (02:43 UTC) and `workflow_dispatch` run all
+three. `load` is not run on PRs because its latency budgets are CPU-bound and shared runners are
+noisy; a PR-time run would give flaky failures. Concurrency: one run per PR (newer push cancels),
+scheduled and manual runs are never cancelled.
+
+Tooling installed in the job: Go via `GOTOOLCHAIN=go1.27.1` (the runner Go bootstraps, then fetches
+the pinned release), `bun@1.4.0` and `agent-browser@0.38.1` via `npm -g --prefix ~/.local`, and
+Chromium via `agent-browser install --with-deps`. `go-live` also needs agent-browser because
+`TestNativeEventSourceResyncRetryAndRetentionReplay` fails (not skips) without it.
+
+Reproduce locally: `cargo build -p sea-forge-server --bin sea-forge-server`, then
+`cd apps/godspeed-casework-go && go test -p 1 ./... && go test -p 1 -tags live ./...`,
+`just casework-e2e-live`, `just casework-load`.
+
+Not verifiable until it runs on GitHub: the workflow has never executed. In particular the Chromium
+download and `--with-deps` apt step on the runner, `npm -g --prefix` PATH handling, `GOTOOLCHAIN`
+download, whether ports 4179/4180 are free, cold cargo build time inside the timeouts (no cargo cache
+is configured), and whether the load budgets hold on a 2-4 vCPU shared runner. See CW-53 and CW-54.
+
+## 8. Not yet done in T11
+
+`/security-review` findings CW-45..CW-52 remain open, and there is no real systemd runtime test of the
+units.

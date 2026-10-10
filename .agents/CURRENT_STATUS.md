@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 67
+**Status revision:** 68
 
-**Stage:** Casework live wiring: T11 security review done (no open high findings); CI wiring pending; T12 pending
+**Stage:** Casework live wiring: T11 complete in code (packaging, metrics, load test, security review, CI workflow); T12 fresh-clone acceptance pending
 
-**Summary:** T11 security review of the gateway, identity delegation, recent kernel ledger changes, scripts and UI found one high and several medium issues, all fixed with tests: non-loopback bind now requires serve.production=true, login throttling, per-session SSE cap, slowloris bounds, OIDC state cap and mandatory nonce, generic error bodies, bounded reason/intent_id and replay cache, and a symlink-safe view temp file in the kernel ledger. Also fixed a racy subscription test (LastCursor lags delivery).
+**Summary:** T11 CI wiring adds .github/workflows/casework-live.yml with go-live, ladder and load jobs (PR path filters, nightly, workflow_dispatch; load excluded from PRs because its latency budgets are CPU-bound) and a CI section in the runbook. The workflow has never run on GitHub.
 
 **Verified:**
 
@@ -27,6 +27,7 @@
 - T11A: go test -p 1 ./... green (also -tags live); go vet clean in three tag modes; live correlation and backup-wipe-restore tests pass against the real kernel; just casework-e2e-live --skip-build exit 0 (L0-L9, L-RECOV); systemd-analyze verify clean only with ExecStart stubbed to /bin/true (units never run under real systemd).
 - T11B: just casework-load exit 0 three times on final code; negative controls fail as intended (removing the watermark fix gives 552 violations; a 1s p95 budget fails the recipe); go test -p 1 ./... and cargo test --no-fail-fast over the kernel crates pass; just casework-e2e-live --skip-build passes after the fixes (reported by the implementing agent).
 - T11C: go vet and go test -p 1 ./... green; cargo test -p sea-forge-ledger green; regression tests fail when fixes are reverted (OIDC nonce, OIDC state cap, readyz leak, symlink-safe view temp); just casework-e2e-live --skip-build and just casework-load both pass after the fixes (reported by the implementing agent). TestLiveSubscriptionResumeAcrossRestart: failed ~80% under saturated CPUs before the test fix, 15/15 with -race after.
+- T11D: workflow YAML parses and defines three jobs; referenced commands exist locally (just --dry-run casework-load renders, go vet and gofmt clean, agent-browser install --with-deps exists); not run on GitHub and actionlint is unavailable.
 
 **Limits:**
 
@@ -48,8 +49,9 @@
 - TestLiveSubscriptionResumeAcrossRestart failed once in about seven runs under load and passed on re-run; cause unproven.
 - Open operator decisions: CW-49 (OIDC state binding + PKCE), CW-51 (kernel-side bound on reopen/terminate reasons is protocol-visible, needs ask-first), CW-47 (login lockout keying behind a proxy). Lows CW-47..CW-52 are logged, not fixed.
 - TestT11IntentInputBounds is a weak regression proof (fails only by not compiling without the fix); restore script hardening F9 has no automated test.
+- casework-live.yml is unverified on GitHub (CW-53 asks for one manual workflow_dispatch before relying on it; CW-54 nightly load job may be flaky on shared runners).
 
-**Next:** Wire CI jobs for the Go live tests, the live agent-browser ladder and the load test; then T12 fresh-clone gate run x3 with independent audit; resolve operator decisions CW-47/49/51.
+**Next:** T12: independent fresh-clone run of just casework-e2e-live x3 on fresh cells plus audit against final_acceptance and target_settlement; update READMEs to remove 'fixture only' language; resolve operator decisions CW-47/49/51.
 
 **Evidence:**
 
@@ -76,6 +78,7 @@
 - .agents/reports/casework-live-wiring/load-budgets.md
 - .agents/evidence/casework-live-wiring/T11
 - .agents/reports/casework-live-wiring/security-review.md
+- .github/workflows/casework-live.yml
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

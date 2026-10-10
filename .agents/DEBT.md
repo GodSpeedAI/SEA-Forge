@@ -1929,3 +1929,13 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 ## CW-52: sea-forge-server unit is less hardened than the gateway unit (T11 security review, low)
 - **Where:** deploy/systemd/sea-forge-server.service (no SystemCallFilter, MemoryDenyWriteExecute; AF_INET allowed).
 - **Next:** add SystemCallFilter=@system-service and drop INET families once agents' network needs are confirmed.
+
+## CW-53: casework-live workflow has never run on GitHub (T11 CI)
+- **Where:** .github/workflows/casework-live.yml. Verified locally: YAML parses, every command and recipe it calls exists, `go vet` and the results.json PASS check run. No actionlint was available.
+- **Unverified:** Chromium install (`agent-browser install --with-deps`) on ubuntu-latest, `npm -g --prefix` PATH, `GOTOOLCHAIN=go1.27.1` fetch, bun@1.4.0 via npm, cold cargo build within timeouts (no cargo cache), port availability, artifact paths.
+- **Next:** dispatch it once manually and fix what breaks; consider a SHA-pinned setup-go/setup-bun and a cargo cache once SHAs can be verified.
+
+## CW-54: load budgets are uncalibrated for shared GitHub runners (T11 CI)
+- **Where:** `load` job; budgets in apps/godspeed-casework-go/internal/loadtest/budgets_test.go were calibrated locally.
+- **Impact:** nightly `load` may be flaky or red on 2-4 vCPU runners; it is deliberately not run on pull_request.
+- **Next:** read the first few nightly artifacts and either recalibrate per environment or move to a self-hosted runner.
