@@ -89,6 +89,16 @@ func TestHandlerMethodsAndMux(t *testing.T) {
 	}
 }
 
+func TestExpositionCarriesProcessGauges(t *testing.T) {
+	var sb strings.Builder
+	New().Write(&sb)
+	for _, want := range []string{"casework_go_goroutines ", "casework_go_heap_inuse_bytes "} {
+		if !strings.Contains(sb.String(), want) {
+			t.Fatalf("exposition lacks %q:\n%s", want, sb.String())
+		}
+	}
+}
+
 func TestValidateListenAddrRefusesNonLoopback(t *testing.T) {
 	for _, ok := range []string{"127.0.0.1:9100", "[::1]:9100", "localhost:9100"} {
 		if err := ValidateListenAddr(ok); err != nil {

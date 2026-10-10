@@ -1309,6 +1309,50 @@ casework-e2e-live *args:
     cd "$app"
     bun e2e/run.ts --live {{args}}
 
+# Load test and restart teeth (plan T11): a FRESH temp cell per test, the real kernel and the real
+# gateway binary as separate processes, N dev-auth users holding N concurrent SSE streams
+# (LOAD_CLIENTS, default 50) while a burst of intents (LOAD_INTENTS, default 100, spread over
+# LOAD_CASES, default 20, cases) runs. Measures intent latency, kernel-append -> client-receipt lag,
+# error rate and gateway RSS / goroutines / fds / CPU, and fails (exit 1) on any budget violation
+# (budgets: apps/godspeed-casework-go/internal/loadtest/budgets_test.go, documented in
+# .agents/reports/casework-live-wiring/load-budgets.md). Also kill -9s the kernel, and then the
+# gateway, mid-burst under 50 streams and asserts every client resyncs with no duplicate or
+# out-of-order revision ids, no lost acknowledged write and bounded memory. Evidence (JSON with the
+# RSS series, gateway and kernel logs, go test output) lands in
+# .agents/evidence/casework-live-wiring/T11/run-<timestamp>/ (latest -> that run). Needs ~1 GB free
+# RAM and no other heavy jobs (the latency numbers are CPU-bound by the kernel), a built kernel
+# (cargo build -p sea-forge-server --bin sea-forge-server) and go. Extra args go to `go test`, e.g.
+# `just casework-load -run TestLoadBudgets`.
+[group('casework')]
+casework-load *args:
+    #!/usr/bin/env bash
+    {{set}}
+    module="apps/godspeed-casework-go"
+    if ! command -v go >/dev/null 2>&1; then
+      echo "casework-load: the Go toolchain is required (mise declares it in mise.toml)" >&2
+      exit 1
+    fi
+    if [ ! -x target/debug/sea-forge-server ]; then
+      echo "casework-load: building the kernel (cargo build -p sea-forge-server --bin sea-forge-server)"
+      cargo build -p sea-forge-server --bin sea-forge-server
+    fi
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    evidence_root="$PWD/.agents/evidence/casework-live-wiring/T11"
+    evidence="$evidence_root/run-$stamp"
+    mkdir -p "$evidence"
+    echo "casework-load: evidence -> $evidence"
+    status=0
+    (cd "$module" && LOAD_RUN_LABEL="$stamp" LOAD_EVIDENCE_DIR="$evidence" \
+      go test -tags load -p 1 -count=1 -timeout 20m -v ./internal/loadtest/ {{args}}) \
+      2>&1 | grep -v '^livetest-relay: ' | tee "$evidence/go-test.log" || status=$?
+    # pipefail makes the pipeline status the test's, not tee's.
+    ln -sfn "run-$stamp" "$evidence_root/latest"
+    if [ "$status" -ne 0 ]; then
+      echo "casework-load: FAILED (budget or invariant violation; see $evidence/go-test.log)" >&2
+      exit 1
+    fi
+    echo "casework-load: all budgets and restart teeth passed"
+
 # Report up/down, the URL, the pid, and the last log lines — the first thing to run when the UI
 # looks wrong.
 [group('casework')]

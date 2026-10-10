@@ -62,6 +62,7 @@ type Store struct {
 	revisions []Revision // in kernel-cursor order, strictly advancing
 	byCursor  map[string]int
 	subs      map[int]chan Revision
+	subAfter  map[int]string // per-subscriber watermark: nothing at or before it is ever delivered
 	subSeq    int
 }
 
@@ -75,7 +76,7 @@ func NewStoreWithRetention(max int) *Store {
 	if max <= 0 {
 		max = DefaultRetention
 	}
-	return &Store{max: max, byCursor: map[string]int{}, subs: map[int]chan Revision{}}
+	return &Store{max: max, byCursor: map[string]int{}, subs: map[int]chan Revision{}, subAfter: map[int]string{}}
 }
 
 // Live returns the newest revision, or false when nothing has been recorded yet.
@@ -179,6 +180,12 @@ func (s *Store) Append(rev Revision) error {
 		}
 	}
 	for id, ch := range s.subs {
+		if rev.Cursor <= s.subAfter[id] {
+			// The subscriber resumed past this cursor (Last-Event-ID). A restarted gateway
+			// re-learns history from the kernel after the client has already reconnected, so
+			// appends at or before the client's position are re-delivery, never news.
+			continue
+		}
 		select {
 		case ch <- cloneRevision(rev):
 		default:
@@ -186,6 +193,7 @@ func (s *Store) Append(rev Revision) error {
 			// its stream; the client reconnects with Last-Event-ID and replays.
 			close(ch)
 			delete(s.subs, id)
+			delete(s.subAfter, id)
 		}
 	}
 	return nil
@@ -211,6 +219,7 @@ func (s *Store) Subscribe(after string) (<-chan Revision, func()) {
 	s.subSeq++
 	id := s.subSeq
 	s.subs[id] = ch
+	s.subAfter[id] = after
 	s.mu.Unlock()
 
 	var once sync.Once
@@ -219,6 +228,7 @@ func (s *Store) Subscribe(after string) (<-chan Revision, func()) {
 			s.mu.Lock()
 			if sub, ok := s.subs[id]; ok {
 				delete(s.subs, id)
+				delete(s.subAfter, id)
 				close(sub)
 			}
 			s.mu.Unlock()

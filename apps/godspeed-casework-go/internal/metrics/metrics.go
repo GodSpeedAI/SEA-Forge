@@ -14,6 +14,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -228,6 +229,17 @@ func (r *Registry) Write(w io.Writer) {
 		fmt.Fprintln(w, "# TYPE casework_sse_cursor_lag_max gauge")
 		fmt.Fprintf(w, "casework_sse_cursor_lag_max %d\n", maxBehind)
 	}
+
+	// Process gauges (T11 load budgets): goroutine count exposes a leaked per-client goroutine,
+	// heap in use exposes unbounded retention. Neither identifies a user or a case.
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+	fmt.Fprintln(w, "# HELP casework_go_goroutines Goroutines in the gateway process.")
+	fmt.Fprintln(w, "# TYPE casework_go_goroutines gauge")
+	fmt.Fprintf(w, "casework_go_goroutines %d\n", runtime.NumGoroutine())
+	fmt.Fprintln(w, "# HELP casework_go_heap_inuse_bytes Go heap spans in use by the gateway process.")
+	fmt.Fprintln(w, "# TYPE casework_go_heap_inuse_bytes gauge")
+	fmt.Fprintf(w, "casework_go_heap_inuse_bytes %d\n", mem.HeapInuse)
 }
 
 func sortedKeys[V any](m map[string]V) []string {

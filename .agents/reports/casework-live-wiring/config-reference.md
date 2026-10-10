@@ -145,12 +145,14 @@ put an authenticated, TLS-terminating proxy or an SSH tunnel in front of the loo
 | `casework_sse_clients` | gauge | open event streams |
 | `casework_sse_clients_opened_total` | counter | |
 | `casework_sse_cursor_lag_max` | gauge | most retained kernel revisions newer than the last cursor delivered to any open client (kernel cursor vs last delivered) |
+| `casework_go_goroutines` | gauge | goroutines in the gateway process (a steady climb with a constant client count is a leak) |
+| `casework_go_heap_inuse_bytes` | gauge | Go heap spans in use by the gateway process |
 | `casework_sse_queue_depth_max` | gauge | most revisions queued but not yet written for one client |
 | `casework_sse_delivery_lag_seconds` | histogram | gateway-recorded time to client write |
 
 Not exported: kernel-side counters (the Rust server has no metrics facility; adding one is a
 separate kernel change, skipped). Suggested alerts: `rate(casework_sfwp_errors_total{class="unavailable"}[5m]) > 0`
-for 5m, `casework_sse_cursor_lag_max` above the budget the T11 load test records.
+for 5m, `casework_sse_cursor_lag_max` above the budget the T11 load test records (`load-budgets.md`).
 
 ## 7. Log correlation
 

@@ -195,3 +195,34 @@ func TestStoreSubscribeReplayThenLive(t *testing.T) {
 		t.Fatalf("cancel must deregister the subscriber, count = %d", s.SubscriberCount())
 	}
 }
+
+// T11 restart tooth: a restarted gateway starts with an empty store and re-learns history from the
+// kernel AFTER a client has already reconnected with Last-Event-ID. The client must never be sent a
+// revision at or before the position it resumed from (that would be a duplicate revision id).
+func TestStoreSubscribeNeverRedeliversAtOrBeforeTheResumePoint(t *testing.T) {
+	s := NewStore()
+	ch, cancel := s.Subscribe("01CCC") // the client resumed at 01CCC; the store is still empty
+	defer cancel()
+	for _, c := range []string{"01AAA", "01BBB", "01CCC", "01DDD", "01EEE"} {
+		if err := s.Append(rev(c, "case_1")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var got []string
+	for len(got) < 2 {
+		select {
+		case r := <-ch:
+			got = append(got, r.Cursor)
+		case <-time.After(time.Second):
+			t.Fatalf("expected 01DDD and 01EEE, got %v", got)
+		}
+	}
+	if got[0] != "01DDD" || got[1] != "01EEE" {
+		t.Fatalf("only revisions strictly after the resume point may be delivered, got %v", got)
+	}
+	select {
+	case r := <-ch:
+		t.Fatalf("unexpected extra delivery %s", r.Cursor)
+	default:
+	}
+}

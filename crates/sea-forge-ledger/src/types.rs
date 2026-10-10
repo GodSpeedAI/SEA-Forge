@@ -1229,7 +1229,7 @@ impl LedgerStream {
         let expected_payload_hash = payload_hash(&payload)?;
 
         self.with_exclusive_lock(|| {
-            if let Some(entry) = self.read_entries()?.into_iter().find(|entry| {
+            if let Some(entry) = self.read_entries_unlocked()?.into_iter().find(|entry| {
                 entry.record_kind == record_kind
                     && entry.idempotency_key.as_deref() == Some(idempotency_key.as_str())
             }) {
@@ -1271,7 +1271,7 @@ impl LedgerStream {
         check_redaction(&payload)?;
 
         self.with_exclusive_lock(|| {
-            if self.read_entries()?.into_iter().any(|entry| {
+            if self.read_entries_unlocked()?.into_iter().any(|entry| {
                 entry.record_kind == record_kind
                     && entry.idempotency_key.as_deref() == Some(idempotency_key.as_str())
             }) {
@@ -1313,9 +1313,23 @@ impl LedgerStream {
                 .ok_or_else(|| ForgeError::Input("view path has no parent".into()))?;
             fs::create_dir_all(parent)
                 .map_err(|error| ForgeError::io("create view parent", error))?;
-            let temporary = path.with_extension("tmp");
+            // A unique temporary per writer: two concurrent materializations of the same view
+            // path (different cases refreshing one shared view) must not share a `.tmp`, or the
+            // second rename finds it already moved ("replace view: No such file", T11 load).
+            static VIEW_TMP_SEQ: std::sync::atomic::AtomicU64 =
+                std::sync::atomic::AtomicU64::new(0);
+            let seq = VIEW_TMP_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let mut temp_name = path
+                .file_name()
+                .map(|name| name.to_os_string())
+                .unwrap_or_default();
+            temp_name.push(format!(".{}.{seq}.tmp", std::process::id()));
+            let temporary = parent.join(temp_name);
             fs::write(&temporary, bytes).map_err(|error| ForgeError::io("write view", error))?;
-            fs::rename(&temporary, path).map_err(|error| ForgeError::io("replace view", error))?;
+            if let Err(error) = fs::rename(&temporary, path) {
+                let _ = fs::remove_file(&temporary);
+                return Err(ForgeError::io("replace view", error));
+            }
             Ok(())
         })();
         let state = CompatibilityViewState {
@@ -1388,6 +1402,43 @@ impl LedgerStream {
             .join("stream.lock")
     }
 
+    /// Hold the stream lock shared while reading, so a read never interleaves with an append
+    /// (an append holds the exclusive lock across `write_entry` and `save_mmr`). Without it a
+    /// reader can observe a half-written tail line or entries that are ahead of `mmr.json`,
+    /// which surfaced under concurrent load as spurious `serialization_error` denials (T11).
+    /// Never call this from inside `with_exclusive_lock`: flock would block on our own lock.
+    fn with_shared_lock<T>(
+        &self,
+        operation: impl FnOnce() -> Result<T, ForgeError>,
+    ) -> Result<T, ForgeError> {
+        // Open read-only: flock works on a read-only descriptor, and readers must keep working
+        // on a ledger they cannot write (a read-only mount, a restricted reader identity). When
+        // there is no lock file no appender has ever run here, so there is nothing to wait for.
+        let lock_file = match OpenOptions::new().read(true).open(self.lock_path()) {
+            Ok(file) => file,
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied
+                ) =>
+            {
+                return operation();
+            }
+            Err(error) => return Err(ForgeError::io("open ledger stream lock", error)),
+        };
+        lock_file
+            .lock_shared()
+            .map_err(|error| ForgeError::io("lock ledger stream (shared)", error))?;
+        let result = operation();
+        let unlock_result = lock_file
+            .unlock()
+            .map_err(|error| ForgeError::io("unlock ledger stream", error));
+        match result {
+            Ok(value) => unlock_result.map(|()| value),
+            Err(error) => Err(error),
+        }
+    }
+
     fn with_exclusive_lock<T>(
         &self,
         operation: impl FnOnce() -> Result<T, ForgeError>,
@@ -1444,12 +1495,20 @@ impl LedgerStream {
     /// `entries.jsonl` is the single source of truth; this repairs the crash
     /// state where `mmr.json` is ahead of (or behind) the surviving entries.
     fn rebuild_mmr(&self) -> Result<(), ForgeError> {
-        let entries = self.read_entries()?;
+        let entries = self.read_entries_unlocked()?;
         let mut mmr = MmrState::empty();
         for entry in &entries {
             mmr = mmr.append(&entry.entry_hash)?;
         }
         self.save_mmr(&mmr)
+    }
+
+    /// `read_last_entry` serialized with appenders, for callers outside the stream lock.
+    fn read_last_entry_shared(&self) -> Result<Option<LedgerEntry>, ForgeError> {
+        if !self.entries_path().exists() {
+            return Ok(None);
+        }
+        self.with_shared_lock(|| self.read_last_entry())
     }
 
     fn read_last_entry(&self) -> Result<Option<LedgerEntry>, ForgeError> {
@@ -1471,8 +1530,17 @@ impl LedgerStream {
         Ok(last)
     }
 
-    /// Read all entries from the stream.
+    /// Read all entries from the stream, serialized with appenders (shared stream lock).
     pub fn read_entries(&self) -> Result<Vec<LedgerEntry>, ForgeError> {
+        if !self.entries_path().exists() {
+            return Ok(Vec::new());
+        }
+        self.with_shared_lock(|| self.read_entries_unlocked())
+    }
+
+    /// `read_entries` without taking the stream lock: only for callers that already hold it
+    /// (or that run crash recovery on a stream no appender can reach).
+    fn read_entries_unlocked(&self) -> Result<Vec<LedgerEntry>, ForgeError> {
         let path = self.entries_path();
         if !path.exists() {
             return Ok(Vec::new());
@@ -1545,7 +1613,7 @@ impl LedgerStream {
         signing_key: &SigningKey,
         signing_key_id: impl Into<String>,
     ) -> Result<LedgerCheckpoint, ForgeError> {
-        let last = self.read_last_entry()?;
+        let last = self.read_last_entry_shared()?;
         let last_checkpoint = self.read_last_checkpoint()?;
         let mmr = self.load_mmr()?;
         let mmr_root = mmr.root()?;
@@ -1781,6 +1849,13 @@ impl LedgerStream {
 
     /// Verify the stream integrity: payload hashes, predecessor links, ordinals, ULID uniqueness, MMR.
     pub fn verify(&self) -> Result<(), ForgeError> {
+        if !self.entries_path().exists() {
+            return Ok(());
+        }
+        self.with_shared_lock(|| self.verify_unlocked())
+    }
+
+    fn verify_unlocked(&self) -> Result<(), ForgeError> {
         let path = self.entries_path();
         if !path.exists() {
             return Ok(());
@@ -1844,7 +1919,7 @@ impl LedgerStream {
     }
 
     fn verify_legacy_files(&self) -> Result<(), ForgeError> {
-        let entries = self.read_entries()?;
+        let entries = self.read_entries_unlocked()?;
         for entry in entries {
             if entry.record_kind != "legacy_import" {
                 continue;
@@ -2174,7 +2249,7 @@ impl LedgerManager {
             let stream = self.open_stream(&stream_id, "pre_action")?;
             stream.verify()?;
             stream.verify_checkpoints(&key.verifying_key())?;
-            let last_entry = stream.read_last_entry()?;
+            let last_entry = stream.read_last_entry_shared()?;
             let last_checkpoint = stream.read_last_checkpoint()?;
             if last_entry.as_ref().is_some_and(|entry| {
                 last_checkpoint
@@ -3244,6 +3319,88 @@ mod tests {
         );
         // A normal server-minted style id still works.
         LedgerStream::open(tmp.path(), "case-case_20260710T120000Z_ab12cd34", "audit").unwrap();
+    }
+
+    #[test]
+    fn verify_never_sees_a_half_written_append() {
+        // T11 load finding: verify() (run for every stream by create_pre_action_assurance) read
+        // entries.jsonl without the stream lock, so a concurrent append surfaced as a torn tail
+        // ("parse entry: EOF while parsing a string") or an entries-ahead-of-mmr mismatch and the
+        // unrelated request was denied. verify() must serialize with appenders.
+        let tmp = tempfile::tempdir().unwrap();
+        let writer = LedgerStream::open(tmp.path(), "case_race", "writer_01").unwrap();
+        let reader = LedgerStream::open(tmp.path(), "case_race", "reader_01").unwrap();
+        writer
+            .append("case_event", vec![], serde_json::json!({"n": 0}), vec![])
+            .unwrap();
+        let done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let flag = done.clone();
+        let appender = std::thread::spawn(move || {
+            for n in 1..1000 {
+                // Varied sizes so appends straddle page boundaries.
+                let pad = "x".repeat(37 * (n % 97));
+                writer
+                    .append(
+                        "case_event",
+                        vec![],
+                        serde_json::json!({"n": n, "pad": pad}),
+                        vec![],
+                    )
+                    .unwrap();
+            }
+            flag.store(true, std::sync::atomic::Ordering::SeqCst);
+        });
+        let mut verifications = 0usize;
+        while !done.load(std::sync::atomic::Ordering::SeqCst) {
+            reader.read_entries().unwrap_or_else(|e| {
+                panic!("read_entries raced an append after {verifications} passes: {e}")
+            });
+            if verifications % 16 == 0 {
+                reader.verify().unwrap_or_else(|e| {
+                    panic!("verify raced an append after {verifications} passes: {e}")
+                });
+            }
+            verifications += 1;
+        }
+        appender.join().unwrap();
+        reader.verify().unwrap();
+        assert!(verifications > 0);
+    }
+
+    #[test]
+    fn concurrent_view_materializations_of_one_path_all_succeed() {
+        // T11 load finding: the view temp path was derived from the view path, so concurrent
+        // materializations raced on one `.tmp` and the loser failed with "replace view: No such
+        // file or directory".
+        let tmp = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(tmp.path(), "case_views", "writer_01").unwrap();
+        let committed = stream
+            .commit_typed(
+                "case_event",
+                vec![],
+                &serde_json::json!({"state": "active"}),
+                vec![],
+            )
+            .unwrap();
+        let view = tmp.path().join("shared").join("view.json");
+        let mut handles = Vec::new();
+        for worker in 0..8 {
+            let stream = LedgerStream::open(tmp.path(), "case_views", "writer_01").unwrap();
+            let committed = committed.clone();
+            let view = view.clone();
+            handles.push(std::thread::spawn(move || {
+                for round in 0..200 {
+                    let body = format!("{{\"worker\":{worker},\"round\":{round}}}");
+                    stream
+                        .materialize_view(&committed, &view, body.as_bytes())
+                        .unwrap_or_else(|e| panic!("worker {worker} round {round}: {e}"));
+                }
+            }));
+        }
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        assert!(view.exists());
     }
 
     #[test]

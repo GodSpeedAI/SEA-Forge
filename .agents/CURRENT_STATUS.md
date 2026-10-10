@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 65
+**Status revision:** 66
 
-**Stage:** Casework live wiring: T10 confirmed with conditions; T11 part A (packaging, metrics, correlation, backup/restore) done; load test, security review, CI pending
+**Stage:** Casework live wiring: T11 parts A and B done (packaging, metrics, backup, load test with restart teeth); security review and CI pending
 
-**Summary:** T11 part A adds systemd units and env examples, a config reference, a Prometheus text metrics package on a loopback-only listener (latency, SFWP errors, SSE clients, subscription lag), a live test tracing one correlation id across browser, gateway, kernel request and ledger, and tested offline cell backup/restore scripts with a runbook.
+**Summary:** T11 part B adds a load harness (50 SSE clients, 100-intent burst over 20 cases, kernel and gateway kill -9 teeth) with budgets taken from 10 measured runs, and just casework-load passed three times. It found and fixed three real defects: duplicate/out-of-order SSE revisions after a gateway restart (per-subscriber watermark), kernel ledger readers racing appends (shared lock), and kernel view temp-file collisions.
 
 **Verified:**
 
@@ -25,6 +25,7 @@
 - T10 phase 4: just casework-e2e-live (fresh build, all journeys) exit 0 per implementing agent; UI 362 tests pass; go test -p 1 ./... ok; tooth console-error PASS.
 - T10 prereg confirmation: three consecutive green fresh-cell runs of just casework-e2e-live at 447d9a9 (11/11 journeys each); independent audit verdict CONFIRM WITH CONDITIONS; after fixes bun test 373 pass and a further full live run passed (reported by the fixing agent); new Rust SoD test fails when the check is disabled (mutation-checked) and passes restored.
 - T11A: go test -p 1 ./... green (also -tags live); go vet clean in three tag modes; live correlation and backup-wipe-restore tests pass against the real kernel; just casework-e2e-live --skip-build exit 0 (L0-L9, L-RECOV); systemd-analyze verify clean only with ExecStart stubbed to /bin/true (units never run under real systemd).
+- T11B: just casework-load exit 0 three times on final code; negative controls fail as intended (removing the watermark fix gives 552 violations; a 1s p95 budget fails the recipe); go test -p 1 ./... and cargo test --no-fail-fast over the kernel crates pass; just casework-e2e-live --skip-build passes after the fixes (reported by the implementing agent).
 
 **Limits:**
 
@@ -42,8 +43,10 @@
 - Kernel gap CW-45: no resume after approval over SFWP; live harness uses dev auth, hand-built server.yaml, harness-applied policy grant and self-model rebuild (T10-DEV-5); no video/trace evidence (T10-DEV-6).
 - T11 not complete: load test (just casework-load), /security-review with high findings fixed, and CI jobs still pending.
 - serve.production defaults to false so a production config omitting it is treated as dev auth; kernel socket is 0600 so gateway and kernel must share a uid; metrics endpoint unauthenticated (loopback-only); backup is offline only; continuation key is memory-only; no kernel-side metrics.
+- Budgets calibrated on one shared 6-CPU WSL2 host with no scale above 50 clients and no long soak; kernel throughput is bounded (~3-4 intents/s) because pre-action assurance verifies every ledger stream.
+- TestLiveSubscriptionResumeAcrossRestart failed once in about seven runs under load and passed on re-run; cause unproven.
 
-**Next:** T11 part B load test with budgets (N concurrent SSE clients plus intent burst; restart server under 50 SSE clients tooth), then /security-review of gateway and identity delegation with fixes, then CI wiring; then T12.
+**Next:** Investigate the TestLiveSubscriptionResumeAcrossRestart flake, then /security-review of the gateway and identity delegation (including the serve.production default, the ledger lock change and metrics listener) with high findings fixed, then CI wiring, then T12.
 
 **Evidence:**
 
@@ -67,6 +70,8 @@
 - scripts/casework-cell-backup.sh
 - .agents/reports/casework-live-wiring/config-reference.md
 - .agents/reports/casework-live-wiring/runbook.md
+- .agents/reports/casework-live-wiring/load-budgets.md
+- .agents/evidence/casework-live-wiring/T11
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

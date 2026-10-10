@@ -11,6 +11,7 @@ package livetest
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -231,7 +232,7 @@ func (c *Cell) start() {
 		c.mu.Unlock()
 		t.Fatal("start called while a server process is already running")
 	}
-	logFile, err := os.Create(filepath.Join(c.root, "server.log"))
+	logFile, err := os.OpenFile(filepath.Join(c.root, "server.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		c.mu.Unlock()
 		t.Fatal(err)
@@ -252,15 +253,52 @@ func (c *Cell) start() {
 	c.logFile = logFile
 	c.mu.Unlock()
 
+	// Wait for a connection to be ACCEPTED, not for the path to exist: after a kill -9 the old
+	// socket file is still on disk until the new kernel replaces it.
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
-		if _, err := os.Stat(c.socket); err == nil {
+		if conn, err := net.DialTimeout("unix", c.socket, time.Second); err == nil {
+			conn.Close()
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatal("server socket never appeared; log at " + c.root + "/server.log")
+	t.Fatal("server socket never accepted a connection; log at " + c.root + "/server.log")
 }
+
+// Kill9 sends SIGKILL (a crash, no cleanup) and leaves the stale socket file on disk, the way a
+// real kill -9 does. Restart brings a kernel back up on the same root.
+func (c *Cell) Kill9() {
+	c.mu.Lock()
+	proc := c.proc
+	c.proc = nil
+	if c.logFile != nil {
+		c.logFile.Close()
+		c.logFile = nil
+	}
+	c.mu.Unlock()
+	if proc == nil {
+		return
+	}
+	_ = proc.Kill()
+	_, _ = proc.Wait()
+}
+
+// Restart starts a kernel on the cell's existing durable state (after Kill9 or StopGraceful).
+func (c *Cell) Restart() { c.start() }
+
+// PID is the running kernel's process id (0 when stopped).
+func (c *Cell) PID() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.proc == nil {
+		return 0
+	}
+	return c.proc.Pid
+}
+
+// SocketPath is the kernel's unix socket.
+func (c *Cell) SocketPath() string { return c.socket }
 
 // Stop terminates the server (the cleanup path).
 func (c *Cell) Stop() {
