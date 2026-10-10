@@ -27,6 +27,20 @@ fi
 (cd "$(dirname "$archive")" && sha256sum --check --quiet "$(basename "$archive").sha256") \
   || { echo "casework-restore: archive digest mismatch" >&2; exit 1; }
 
+# The sha256/manifest files only detect corruption: whoever can forge the archive can forge them
+# too. So before extracting anything, refuse any member that could write outside the target or
+# plant a link: only regular files and directories, no absolute names, no ".." components
+# (T11 security review F9: a symlink member followed by a file beneath it escapes --directory).
+bad_types="$(tar --list --verbose --gzip --file "$archive" | cut -c1 | grep -v '^[-d]$' || true)"
+if [ -n "$bad_types" ]; then
+  echo "casework-restore: archive holds non-regular members (links/devices/fifos); refusing" >&2
+  exit 1
+fi
+if tar --list --gzip --file "$archive" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+  echo "casework-restore: archive holds an absolute or parent-relative member name; refusing" >&2
+  exit 1
+fi
+
 created=0
 [ -d "$target" ] || { mkdir -p "$target"; created=1; }
 cleanup() {

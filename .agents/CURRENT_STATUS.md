@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 68
+**Status revision:** 69
 
-**Stage:** Casework live wiring: T11 complete in code (packaging, metrics, load test, security review, CI workflow); T12 fresh-clone acceptance pending
+**Stage:** Casework live wiring: T11 complete in code; READMEs describe the live stack; T12 independent fresh-clone acceptance pending
 
-**Summary:** T11 CI wiring adds .github/workflows/casework-live.yml with go-live, ladder and load jobs (PR path filters, nightly, workflow_dispatch; load excluded from PRs because its latency budgets are CPU-bound) and a CI section in the runbook. The workflow has never run on GitHub.
+**Summary:** Go and UI READMEs and the e2e README now present the live stack as the production path (real kernel over SFWP, delegated identity, production UI build served by the gateway, ladders, load test, metrics, known limitations) and keep fixture mode documented as dev/test only; stale fixture-labeled text in the justfile was removed; the cell restore script archive validation was hardened.
 
 **Verified:**
 
@@ -28,6 +28,7 @@
 - T11B: just casework-load exit 0 three times on final code; negative controls fail as intended (removing the watermark fix gives 552 violations; a 1s p95 budget fails the recipe); go test -p 1 ./... and cargo test --no-fail-fast over the kernel crates pass; just casework-e2e-live --skip-build passes after the fixes (reported by the implementing agent).
 - T11C: go vet and go test -p 1 ./... green; cargo test -p sea-forge-ledger green; regression tests fail when fixes are reverted (OIDC nonce, OIDC state cap, readyz leak, symlink-safe view temp); just casework-e2e-live --skip-build and just casework-load both pass after the fixes (reported by the implementing agent). TestLiveSubscriptionResumeAcrossRestart: failed ~80% under saturated CPUs before the test fix, 15/15 with -race after.
 - T11D: workflow YAML parses and defines three jobs; referenced commands exist locally (just --dry-run casework-load renders, go vet and gofmt clean, agent-browser install --with-deps exists); not run on GitHub and actionlint is unavailable.
+- READMEs were checked against code, configs and reports by the editing agent; no recipe was run for the docs change.
 
 **Limits:**
 
@@ -50,8 +51,9 @@
 - Open operator decisions: CW-49 (OIDC state binding + PKCE), CW-51 (kernel-side bound on reopen/terminate reasons is protocol-visible, needs ask-first), CW-47 (login lockout keying behind a proxy). Lows CW-47..CW-52 are logged, not fixed.
 - TestT11IntentInputBounds is a weak regression proof (fails only by not compiling without the fix); restore script hardening F9 has no automated test.
 - casework-live.yml is unverified on GitHub (CW-53 asks for one manual workflow_dispatch before relying on it; CW-54 nightly load job may be flaky on shared runners).
+- UI dev recipe casework-ui-up shows the local adapter unless VITE_CASEWORK_SOURCE=live; configs/live-serve.json has no static_root, so the gateway serves the UI only with a config that sets it (documented, not changed).
 
-**Next:** T12: independent fresh-clone run of just casework-e2e-live x3 on fresh cells plus audit against final_acceptance and target_settlement; update READMEs to remove 'fixture only' language; resolve operator decisions CW-47/49/51.
+**Next:** T12: independent agent clones the repo fresh and runs just casework-e2e-live x3 on fresh cells plus the other gates, audits evidence against final_acceptance and target_settlement; then resolve operator decisions CW-47/49/51.
 
 **Evidence:**
 
@@ -79,6 +81,8 @@
 - .agents/evidence/casework-live-wiring/T11
 - .agents/reports/casework-live-wiring/security-review.md
 - .github/workflows/casework-live.yml
+- apps/godspeed-casework-go/README.md
+- apps/godspeed-cognitive-ui/README.md
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

@@ -15,7 +15,7 @@ bun e2e/run.ts --base http://localhost:5173
 bun e2e/run.ts --out /tmp/test-results
 
 # Run only specific journeys
-bun e2e/run.ts --only SMOKE,J0,J1
+bun e2e/run.ts --only J0,J1
 
 # Shortcut
 npm run e2e
@@ -101,13 +101,15 @@ bun e2e/run.ts [--base URL] [--out DIR] [--only J1,J2]
 - Runs all journeys, exits with code 1 if any fail
 - Default output: `.agents/evidence/godspeed-casework-cognitive-environment/ui-journeys/latest`
 
-## Smoke Test
+## Live ladder
 
-The `SMOKE` journey verifies the app boots and renders:
-1. Open app at `/?source=local`
-2. Wait for `#root` element to have children
-3. Take screenshot
-4. Assert `#root` exists
+`bun e2e/run.ts --live` (or `just casework-e2e-live`) runs the journeys in `e2e/journeys-live/`
+(L0-L9 and L-RECOV) against the real stack: a fresh temp cell, the real kernel and the Go
+gateway serving the production UI build. It does not use the dev server or the local adapter.
+Each step asserts both the UI and the durable cell files (`e2e/live/durable.ts`). Options:
+`--only L0,L1`, `--skip-build`, and `--tooth stub-gateway|shared-session|shared-cookie|console-error`
+(negative self-checks that must fail for the stated reason). Evidence goes to
+`.agents/evidence/casework-live-wiring/T10/run-<timestamp>/` (`latest` points at the newest run).
 
 ## Adding New Journeys
 
@@ -119,7 +121,7 @@ import { Journey, Ctx } from "../ladder.ts";
 export const myJourney: Journey = {
   id: "J0",
   title: "User can log in",
-  depends_on: ["SMOKE"],  // Requires SMOKE to pass first
+  depends_on: [],  // ids of journeys that must pass first
   settles: "user-logged-in",
   unlocks: ["J1"],
   async run(ctx: Ctx) {
@@ -156,7 +158,7 @@ Then add to `e2e/journeys/index.ts`:
 ```typescript
 import { myJourney } from "./your-journey.ts";
 
-export const journeys: Journey[] = [smoke, myJourney];
+export const journeys: Journey[] = [...existingJourneys, myJourney];
 ```
 
 ## agent-browser Integration
@@ -164,11 +166,11 @@ export const journeys: Journey[] = [smoke, myJourney];
 The harness calls `agent-browser` directly via `Bun.spawnSync()`. Each journey uses its own isolated session:
 
 ```bash
-agent-browser open URL --session gs-e2e-SMOKE
-agent-browser eval 'expression' --session gs-e2e-SMOKE
-agent-browser click selector --session gs-e2e-SMOKE
-agent-browser screenshot path --session gs-e2e-SMOKE
-agent-browser close --session gs-e2e-SMOKE
+agent-browser open URL --session gs-e2e-J0
+agent-browser eval 'expression' --session gs-e2e-J0
+agent-browser click selector --session gs-e2e-J0
+agent-browser screenshot path --session gs-e2e-J0
+agent-browser close --session gs-e2e-J0
 ```
 
 **Key outputs from agent-browser:**

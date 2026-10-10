@@ -63,26 +63,86 @@ problem rather than stopping at the first, `config.Fatal` selects the document-l
 prevent startup, and capability-scoped faults travel into preflight so unrelated capabilities keep
 their own honest states. The end-to-end behaviour is recorded in the T01 teeth.
 
-## Serve mode (fixture-labeled)
+## Serve mode (live, the production path)
 
-`-serve` starts the casework boundary's HTTP+SSE surface after preflight. It binds loopback
-(`-addr`, default `127.0.0.1:4179`), blocks on SIGINT/SIGTERM, and shuts down gracefully. Serve
-mode still requires a configuration file (the `-config` flow is unchanged; a missing or invalid
-config exits 2 exactly as in CLI mode); `configs/fixture-serve.json` is a minimal valid example:
+`-serve` starts the casework gateway's HTTP+SSE surface after preflight. It binds `-addr` (default
+loopback `127.0.0.1:4179`), blocks on SIGINT/SIGTERM and shuts down gracefully. A configuration file
+is always required (missing or invalid config exits 2). Live serve needs an `authority` capability
+with `adapter: "sfwp"` whose `endpoint` is the kernel's Unix socket (`unix://` prefix accepted).
+Preflight probes the real kernel (`system.hello`, `readiness.get`, `identity.get`); if the authority
+is not ready the gateway refuses to serve (exit 2). The gateway never serves a fixture world as
+governed truth: the live stack is `sfwp.Client` -> `sfwp.Authority` -> `projection.LiveSource` ->
+`server.Relay` (kernel frames, per-case cursors, revision store) -> `intents.Handler` -> `server.Server`,
+and `/api/healthz` reports provenance `go:live:sfwp`. Identity is delegated: the gateway is the
+kernel's service principal and speaks for the signed-in user with `on_behalf_of`; the kernel
+re-verifies each delegation against its allowlist.
+
+Flags: `-config` (or `$GODSPEED_CONFIG`), `-serve`, `-addr`, `-metrics-addr` (or
+`$GODSPEED_METRICS_ADDR`). `configs/live-serve.json` is the local-development example (dev auth,
+`production: false`, kernel socket under `.sea-forge/casework-live/cell`);
+`deploy/systemd/gateway.production.json.example` is the production shape (OIDC, `production: true`).
+
+### Run it locally (live)
+
+From the repository root (kernel is the Rust `sea-forge-server`; the live cell is gitignored):
 
 ```sh
-go run ./cmd/godspeed-casework -serve -config configs/fixture-serve.json
+just casework-cell-init     # idempotent: seed .sea-forge/casework-live/cell (identity bindings, templates, policy)
+just casework-server-up     # build and start the kernel on the cell's server.sock
+just casework-live-go-up    # build and start the live gateway on 127.0.0.1:4179 (configs/live-serve.json)
+just casework-ui-up         # UI dev server on :4178, proxies /api to :4179
+just casework-stack-down    # stop gateway and kernel; cell data is kept
 ```
 
-In serve mode every configured capability is answered by the FIXTURE-LABELED in-process provider,
-so preflight reports them `ready` instead of `unavailable`. The example config marks them all
-`required: false`; an operator may flip a capability to `required: true`, which additionally
-demands an `endpoint` and a credential indirection per the schema rules below — the fixture
-provider never reads the credential, but the configuration discipline still applies.
+`casework-ui-up` starts the Vite dev server, which defaults to the local contract adapter; run it with
+`VITE_CASEWORK_SOURCE=live` to use the gateway, or build the UI (`bun run build` in
+`apps/godspeed-cognitive-ui`) and set `serve.static_root` to its `dist` so the gateway serves it
+same-origin. `configs/live-serve.json` has no `static_root`. Sign in with a configured username
+(dev auth accepts any password, see below). Offline cell backup and restore: `just casework-cell-backup
+<archive>` and `just casework-cell-restore <archive> <target>` (the kernel must be stopped).
 
-### Endpoints
+### Live endpoints
 
-Wire contract: `apps/godspeed-cognitive-ui/src/adapters/go/WIRE.md` (authoritative for shapes).
+All routes below except healthz, readyz and the auth entry points require a session
+(`internal/server/server.go`).
+
+| Endpoint | Behaviour |
+|---|---|
+| `GET /api/healthz` | cheap, no kernel call: `{status, provenance: "go:live:sfwp", kernel_cursor}` |
+| `GET /api/readyz` | kernel `readiness.get` through SFWP; 503 when not ready |
+| `GET /api/auth/login`, `POST /api/auth/login`, `GET /api/auth/callback`, `POST /api/auth/logout`, `GET /api/session` | session lifecycle (see auth section) |
+| `GET /api/world` | snapshot for the session's kernel actor; `?cursor=` serves a stored kernel revision (404 if evicted or unknown) |
+| `GET /api/events` | SSE: revisions from the kernel cursor, resumable with `Last-Event-ID`; `resync_required` when a client's cursor was evicted; 15 s heartbeat; at most 8 streams per session |
+| `GET /api/templates`, `POST /api/templates/preflight` | case templates and preflight |
+| `GET /api/artifacts/{digest}` | governed artifact bytes (digest and size re-verified) |
+| `GET /api/trajectory` | case trajectory |
+| `POST /api/intents` | governed intents; refusals are typed outcomes; the intent id is the kernel `request_id` (idempotent replay) |
+| `POST /api/ask` | governed Thoth Ask (the live UI's narration) |
+
+Wire contract: `apps/godspeed-cognitive-ui/reference/WIRE.md`; live-wiring decisions are in
+`.agents/reports/casework-live-wiring/adr-wire-contract.md`. POST bodies are size-limited and
+decoded strictly.
+
+## Fixture mode (dev and tests only)
+
+The in-process Northstar fixture stack still exists for tests and development, but it compiles only
+with `-tags casework_fixture`. The default (production) build refuses `adapter: "fixture"`
+at configuration validation and refuses to serve without a live authority. `just casework-go-up`
+builds the tagged binary; by hand:
+
+```sh
+go run -tags casework_fixture ./cmd/godspeed-casework -serve -config configs/fixture-serve.json
+```
+
+Every capability is answered by the in-process provider (preflight `ready`), the server is
+`FixtureServer` (no sessions, no auth) and `/api/healthz` reports provenance `go:fixture:northstar`.
+The example config marks capabilities `required: false`; `required: true` additionally demands an
+`endpoint` and a credential indirection per the schema rules above, though the fixture provider
+never reads the credential.
+
+### Fixture endpoints
+
+These are the fixture routes (`FixtureServer`); shapes follow the same WIRE.md.
 
 | Endpoint | Behaviour |
 |---|---|
@@ -110,7 +170,7 @@ streams over SSE; the UI world reorganizes from these events alone. Intent ids a
 the same id with an identical body replays the recorded outcome; the same id with a different body
 is refused `invalid`.
 
-### FIXTURE labeling and limitations (stated, not hidden)
+### Fixture limitations (stated, not hidden)
 
 * **No governed authority.** The intent decision point is an allowlist over the Northstar fixture.
   `decide-approval` is refused `authority_denied` because the fixture has no review capability;
@@ -123,12 +183,11 @@ is refused `invalid`.
 * **Fixture dataset drift.** The embedded `internal/projection/fixturedata/northstar.world.json`
   must stay byte-equal to the canonical dataset in the cognitive-ui app; a test enforces this and
   skips only when the sibling app is absent from the checkout.
-* Real SEA-Forge/Gauntlet wiring is later milestone work; nothing served here is governed
-  integration.
+* Nothing served by the fixture stack is governed integration; use live mode for that.
 
 ## Authentication, sessions and production posture (T07)
 
-The live surface (`internal/server`) is session-gated. Every route except `GET /api/healthz`,
+The live surface (`internal/server`) is session-gated (the fixture server has no sessions). Every route except `GET /api/healthz`,
 `GET /api/readyz` and the auth entry points requires an authenticated session; unauthenticated
 reads are `401 {"error":{"kind":"unauthorized",…}}` and state-changing POSTs without a valid CSRF
 token are `403 {"error":{"kind":"csrf_refused",…}}` BEFORE any kernel call. Identity is
@@ -167,7 +226,8 @@ verifies each delegation against its own T02 allowlist.
   (`"static_token": "env:…"` + `"static_token_user"`; `Authorization: Bearer …` authenticates the
   named user per-request, which is why bearer POSTs skip CSRF — bearer credentials are explicit,
   not ambient). The production posture refuses this mode at configuration validation and the
-  process exits 2.
+  process exits 2. `configs/live-serve.json` and the live ladder and load harnesses use dev auth;
+  a production cell is not exercised by them (CW-44).
 
 Fail-closed defaults: a serve posture with NO `auth` section refuses to start; `serve.production`
 refuses `mode: dev` AND `insecure_cookie: true`; a `static_token` in any non-dev mode is refused.
@@ -210,7 +270,14 @@ T08/T09 follow-up with runtime verification, not a claimed impossibility.
 
 ### Deployment: TLS termination and reverse-proxy guidance
 
-The gateway speaks plain HTTP on `-addr` (default loopback 4179). In production, put it behind a
+The gateway speaks plain HTTP on `-addr` (default loopback 4179). Bind rule (fail closed): `-serve`
+refuses to start (exit 2) when `-addr` is not a loopback address (`127.0.0.1`, `::1`, `localhost`;
+`:4179` and `0.0.0.0` count as non-loopback) unless the config sets `serve.production = true`, which in
+turn forbids dev auth and insecure cookies. `serve.production` defaults to false. Units and example
+configs are in `/deploy/systemd` at the repository root (`sea-forge-server.service`,
+`godspeed-casework.service`, `*.env.example`, `gateway.production.json.example`); config keys are in
+`.agents/reports/casework-live-wiring/config-reference.md`. The units pass `systemd-analyze verify`
+but were never started under a real systemd instance. In production, put the gateway behind a
 TLS-terminating reverse proxy:
 
 * Terminate TLS at the proxy; set `serve.production = true` so the gateway enforces `Secure`
@@ -235,6 +302,47 @@ TLS-terminating reverse proxy:
   timeout for `/api/events` (the SSE stream holds connections open with 15 s heartbeats).
 * Rate limiting per IP uses the proxy's address (see above); per-session limits are unaffected.
 
+## Metrics
+
+`-metrics-addr` (or `$GODSPEED_METRICS_ADDR`; empty disables) starts a SEPARATE Prometheus-text
+listener serving only `GET /metrics`. The address must be loopback (otherwise the process exits 2), it is
+unauthenticated, and it is not on the browser-facing mux. Series: `casework_http_request_duration_seconds`,
+`casework_sfwp_errors_total`, `casework_sse_clients`, `casework_sse_clients_opened_total`,
+`casework_sse_cursor_lag_max`, `casework_sse_queue_depth_max`, `casework_sse_delivery_lag_seconds`,
+`casework_go_goroutines`, `casework_go_heap_inuse_bytes`. Labels come from closed sets; there are no
+kernel-side counters. See config-reference.md section 6.
+
+## Live ladder, load test and CI
+
+* **Gate:** `just casework-go-check` (below) runs the default build's tests; live tests carry `-tags live`
+  and need a built kernel (`cargo build -p sea-forge-server --bin sea-forge-server`):
+  `go test -p 1 ./... && go test -p 1 -tags live ./...`.
+* **Live UI ladder:** `just casework-e2e-live [--only L0,L1] [--tooth stub-gateway|shared-session|shared-cookie|console-error]`
+  boots a fresh temp cell, the real kernel, and this gateway serving the production UI build, then runs
+  journeys L0-L9 and L-RECOV (see `apps/godspeed-cognitive-ui/README.md`). Evidence:
+  `.agents/evidence/casework-live-wiring/T10/run-<timestamp>/` (`latest` points at the newest).
+* **Load and restart teeth:** `just casework-load` (50 SSE clients, 100 intents over 20 cases by default; `kill -9`
+  of kernel then gateway mid-burst). Exits 1 on any budget or invariant violation. Budgets and baselines:
+  `.agents/reports/casework-live-wiring/load-budgets.md`; evidence under
+  `.agents/evidence/casework-live-wiring/T11/`.
+* **CI:** `.github/workflows/casework-live.yml` (separate from the required `gate`). Per the runbook it
+  had not yet run on GitHub when written.
+* Operations: `.agents/reports/casework-live-wiring/runbook.md`; security review:
+  `.agents/reports/casework-live-wiring/security-review.md`.
+
+## Known limitations
+
+* **CW-45 (kernel gap):** approving an escalated settlement over SFWP records the approval but emits no
+  case event and nothing resumes the item; the case stays `awaiting_approval` until continued by hand.
+  "Approved" does not mean "continued".
+* **No `execution_progress` frames:** the live gateway emits none and no typed settlement object
+  (`.agents/CURRENT_STATUS.md`); the kernel run trace supplies no truthful progress.
+* **Dev auth in the harnesses** (CW-44), as above.
+* **Backup is offline only:** stop the kernel first; there is no hot backup.
+* **Sessions are in-memory and single-process:** a gateway restart signs everyone out; two replicas
+  are unsupported. After any restart the UI needs a reload (CW-46).
+* Open security-review debts CW-45..CW-52 remain (security-review.md, runbook section 8).
+
 ## Gate
 
 `just casework-go-check` (repository root) runs `gofmt -l`, `go vet ./...` and `go test ./...` in this
@@ -242,6 +350,7 @@ module. It is plan gate `GATE_GO`.
 
 ## Not implemented here (by design)
 
-No live adapters and no governed work acceptance: those are later tasks. Until an adapter is
-registered, a capability reports a typed `unavailable` error rather than pretending to be
-connected; the serve-mode surface above is fixture-labeled end to end.
+The Gauntlet execution and repository ports (`ExecutionPort`, `RepositoryPort`) have no live adapter;
+only the `authority` capability is live (`adapter: "sfwp"`). Until an adapter is registered, a
+capability reports a typed `unavailable` error rather than pretending to be connected. See Known
+limitations for open kernel and UI gaps.

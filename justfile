@@ -1487,10 +1487,9 @@ casework-demo-up: casework-go-up casework-ui-up
 # are untouched; the UI dev-server recipes (casework-ui-up/down/status) are shared by both
 # stacks (vite on :4178 proxies /api to the gateway addr).
 #
-# Honesty note: until plan task T05 lands, the live gateway still serves FIXTURE-LABELED
-# in-process providers (configs/live-serve.json endpoints are "fixture:in-process"); only the
-# cell/evidence roots are live. The `up` recipes have teeth: a second server or gateway start
-# exits non-zero instead of silently reusing or double-starting.
+# Note: the live gateway talks to the real kernel over the SFWP unix socket (provenance
+# go:live:sfwp). The `up` recipes have teeth: a second server or gateway start exits non-zero
+# instead of silently reusing or double-starting.
 casework_live_dir := ".sea-forge/casework-live"
 
 # Initialize the live cell (idempotent): create .sea-forge/casework-live/cell and, on first run,
