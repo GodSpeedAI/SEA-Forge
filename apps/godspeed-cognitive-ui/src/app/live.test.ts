@@ -163,3 +163,49 @@ describe('executionStateOf', () => {
     expect(executionStateOf('FAILED', undefined, 'go')).toBe('failed')
   })
 })
+
+describe('connectLive idle recovery', () => {
+  const setup = (getSnapshot: CaseworkPort['getSnapshot']) => {
+    const raw = buildNorthstarHistory({ actor_id: 'operator-1', role: 'case_architect' })
+    const history = projectHistory(raw, {}, 'local-contract', { withCore: true })
+    const store = createStore(initialState(history))
+    let onError: ((error: Error) => void) | undefined
+    let onOpen: (() => void) | undefined
+    let onEvent: ((event: StreamEvent) => void) | undefined
+    const port: CaseworkPort = {
+      ...liveTestPort((_c, _s, eventHandler, errorHandler, openHandler) => {
+        onEvent = eventHandler
+        onError = errorHandler
+        onOpen = openHandler
+        return () => undefined
+      }),
+      getSnapshot,
+    }
+    const disconnect = connectLive(port, store, history.caseId, raw, {}, { interruptedAfterMs: 1000 })
+    return { raw, store, disconnect, error: () => onError!(new Error('stream disconnected')), open: () => onOpen!(), event: (e: StreamEvent) => onEvent!(e) }
+  }
+
+  it('an outage in which nothing was missed recovers once the stream reopens and the source answers a read', async () => {
+    const t = setup(async () => t.raw.at(-1)!)
+    t.error()
+    expect(t.store.getState().connection).toBe('reconnecting')
+    const revisions = t.store.getState().history.revisions.length
+    t.open()
+    await wait(10)
+    expect(t.store.getState().connection).toBe('live')
+    expect(t.store.getState().history.revisions.length).toBe(revisions)
+    t.disconnect()
+  })
+
+  it('an opened stream alone does not recover while the source is unreachable; a control frame does not either', async () => {
+    const t = setup(async () => {
+      throw new Error('source unreachable')
+    })
+    t.error()
+    t.open()
+    t.event({ event_type: 'heartbeat', cursor: '', timestamp: '', payload: {} })
+    await wait(10)
+    expect(t.store.getState().connection).toBe('reconnecting')
+    t.disconnect()
+  })
+})

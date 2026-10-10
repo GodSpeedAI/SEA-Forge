@@ -212,6 +212,8 @@ export interface CaseworkPort {
     sinceCursor: string | undefined,
     onEvent: (event: StreamEvent) => void,
     onError: (err: Error) => void,
+    /** The stream (re)opened. An opened stream alone proves nothing about the source; see live.ts. */
+    onOpen?: () => void,
   ): () => void
 }
 

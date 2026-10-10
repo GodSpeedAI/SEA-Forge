@@ -10,6 +10,7 @@ import type {
   ObjectExtensions,
   OperationalSettlement,
   TemplateEntryOption,
+  ThothAnswerView,
 } from '../ports/contract'
 
 export type Id = string
@@ -319,6 +320,8 @@ export interface Beat {
   compare?: { a: string; b: string }
   /** Evidence refs the beat cites (spec 04 NarrationBeat.evidenceCitations). */
   citations?: string[]
+  /** Complete governed Thoth disclosure this beat was derived from (never an authority grant). */
+  grounded?: ThothAnswerView
 }
 
 export interface Narrative {

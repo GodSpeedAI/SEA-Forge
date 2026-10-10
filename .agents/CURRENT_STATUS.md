@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 62
+**Status revision:** 63
 
-**Stage:** Casework live wiring: T09 UI gate green; T10 live ladder L0-L7 implemented and green (single run); L8, L9, L-RECOV and 3-run confirmation pending
+**Stage:** Casework live wiring: T10 ladder L0-L9 + L-RECOV implemented; three-run fresh-cell confirmation and independent confirmation pending
 
-**Summary:** Plan T09 UI gate passes (typecheck, 347 UI tests, 11-journey fixture ladder). T10 live agent-browser ladder L0-L7 plus both teeth now run via just casework-e2e-live against fresh cells, with durable-file assertions; seven product defects found by the live ladder were fixed (gateway discretionary/evidence/lifecycle actions, kernel run-view lifecycle overlay, reopen reason, approval lifetime, stale justification, pill states). Not settled: independent confirmation, L8/L9/L-RECOV, three consecutive green fresh-cell runs.
+**Summary:** T10 live ladder is complete in code: L8 (grounded Thoth narration, newly wired in the UI), L9 (strict zero console/page errors with a positive control) and L-RECOV (corrupt artifact, SSE drop via severable proxy, kernel and gateway kill/restart) pass in one full fresh-cell run. Defects fixed: artifact integrity surfaced as integrity_mismatch, pill recovery after an idle SSE outage, harness kernel restart race. The preregistered three consecutive green fresh-cell runs and independent confirmation have not yet been done.
 
 **Verified:**
 
@@ -22,6 +22,7 @@
 - Startup key: cargo test -p sea-forge-server passed (135 unit tests plus integration suites); clippy --all-targets and fmt clean; four continuation_key_tests cover seed derivation, seed isolation, entropy failure before durable work, and config failure before entropy.
 - T09 UI: bun run typecheck clean; bun test 347 pass; bun e2e/run.ts fixture ladder J0-J9 + RECOVERY all PASS (a first run showed one J8 failure that did not recur in two later runs; cause unproven).
 - T10: just casework-e2e-live --only L0..L7 passed in one run (L5 9/9, L6 5/5, L7 8/8); tooth stub-gateway and tooth shared-session both PASS and the shared-session guard was mutation-checked; go test -p 1 ./... and cargo test -p sea-forge-server -p sea-forge-case-runner reported passing by the implementing agent.
+- T10 phase 4: just casework-e2e-live (fresh build, all journeys) exit 0 per implementing agent; UI 362 tests pass; go test -p 1 ./... ok; tooth console-error PASS.
 
 **Limits:**
 
@@ -31,12 +32,13 @@
 - Serialize compiler and heavy gates under root's process, RAM, and swap guard.
 - Preserve user .jolli deletions and unrelated .gemini changes; do not alter old private history or scoped privacy correction.
 - Startup key unit skipped the grant's RED-first step and ran gates outside root serialization; independent critic review is still required.
-- T10 is one green run, not the preregistered three consecutive fresh-cell runs with independent confirmation; L8, L9, L-RECOV not implemented.
 - Kernel does not resume an escalated item after approval over SFWP; L5 asserts the approval record and ledger, not downstream effects. The operator's denial is the absence of Approve plus a typed UNAUTHORIZED_ROLE refusal, not a panel-shown refusal.
 - Live gateway emits no execution_progress and no typed settlement object; pill progress is never shown.
 - Independent critic review of the startup key unit found no failures (Haiku critic); T09/T10 independent confirmation not done.
+- T10 prereg requires three consecutive green fresh-cell runs plus independent confirmation: not yet done.
+- After a gateway restart the live page stays Reconnecting until reload (no re-login prompt); ArtifactService caches an error per ref until reload; Thoth policy grant and self-model rebuild are applied in the e2e harness, not in casework-cell-init.
 
-**Next:** Implement T10 phase 4 (L8 thoth.ask, L9 single-session run with empty errors/console, L-RECOV), then three consecutive green runs on fresh cells and independent confirmation; then T11 (packaging, load, security review, CI) and T12. Cursor v4 spec server work remains unimplemented and is not on the T10 path so far.
+**Next:** Run just casework-e2e-live three times consecutively on fresh cells and re-run both teeth against the committed SHA; request independent confirmation; then T11 (packaging, metrics, load test, security review, CI) and T12.
 
 **Evidence:**
 

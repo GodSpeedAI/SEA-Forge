@@ -1,6 +1,6 @@
 import type { Store } from '../model/store'
 import type { ExecutionState } from '../model/types'
-import type { CaseworkPort, ExecutionProgressPayload, OperationalSettlement, XSnapshot } from '../ports/contract'
+import type { CaseworkPort, ExecutionProgressPayload, OperationalSettlement, StreamEvent, XSnapshot } from '../ports/contract'
 import { compareCursor, projectHistory } from '../ports/project'
 
 export interface LiveConnectionOptions {
@@ -117,46 +117,73 @@ export function connectLive(
     outageTimer = undefined
     if (!disposed && store.getState().connection !== 'live') store.dispatch({ type: 'connectionState', connection: 'live' })
   }
+  const onFrame = (e: StreamEvent) => {
+    // Only source-backed state frames prove recovery. Heartbeats and diagnostic/control
+    // frames cannot make an interrupted connection look live again.
+    if (e.event_type === 'snapshot' || e.event_type === 'patch' || e.event_type === 'execution_progress' || e.event_type === 'settlement_recorded' || e.event_type === 'lease_expired') markRecovered()
+    else if (e.event_type === 'interrupted') {
+      if (outageTimer !== undefined) clearTimeout(outageTimer)
+      outageTimer = undefined
+      if (!disposed && store.getState().connection !== 'interrupted') store.dispatch({ type: 'connectionState', connection: 'interrupted' })
+    } else if (e.event_type === 'error' || e.event_type === 'resync_required') markRecovering()
+    if (e.event_type === 'snapshot' || e.event_type === 'patch') {
+      const snap = e.payload as XSnapshot
+      if (!snaps.some((x) => x.cursor === snap.cursor)) {
+        snaps.push(snap)
+        summaries[snap.cursor] = snap.summary.phase
+        project()
+      }
+      refreshExecutions()
+    } else if (e.event_type === 'execution_progress') {
+      const p = e.payload as ExecutionProgressPayload
+      const cur = logs.get(p.run_id) ?? { phase: p.phase, progress: 0, log: [] }
+      logs.set(p.run_id, { phase: p.phase, progress: p.progress_percent, log: [...cur.log, p.log_line].slice(-40) })
+      refreshExecutions()
+    } else if (e.event_type === 'settlement_recorded') {
+      const st = e.payload as OperationalSettlement
+      const s = store.getState()
+      const now = s.history.snapshots[s.history.revisions.at(-1)!.id]!
+      for (const run of Object.values(now.objects)) {
+        const cur = run.kind === 'run' && run.parent === st.plan_item_id ? logs.get(run.id) : undefined
+        if (cur) cur.log = [...cur.log, `Settlement ${st.decision.toLowerCase()}: ${st.consequence_summary}`]
+      }
+      refreshExecutions()
+    }
+  }
+  /**
+   * The stream (re)opened. When nothing was missed the gateway sends no state frame, and control
+   * frames (hello, heartbeat) cannot prove the source is reachable, so an idle recovery would stay
+   * "Reconnecting" for ever. An opened stream plus a successful authoritative read of the world
+   * proves recovery; that read is delivered as the same source-backed snapshot frame a patch is
+   * (history dedupes by cursor, so it never duplicates a revision).
+   */
+  let probeTimer: ReturnType<typeof setTimeout> | undefined
+  const probeSource = () => {
+    probeTimer = undefined
+    if (disposed || store.getState().connection === 'live') return
+    const perspective = snaps.at(-1)?.perspective
+    if (!perspective) return
+    port.getSnapshot(caseId, perspective.actor_id, perspective.role as never).then(
+      (snap) => {
+        if (!disposed) onFrame({ event_type: 'snapshot', cursor: snap.cursor, timestamp: snap.timestamp, payload: snap })
+      },
+      () => {
+        // Still unreachable: stay in the degraded state and look again shortly.
+        if (!disposed && store.getState().connection !== 'live' && probeTimer === undefined) probeTimer = setTimeout(probeSource, 2000)
+      },
+    )
+  }
   const unsubscribe = port.subscribeEvents(
     caseId,
     raw.at(-1)?.cursor,
-    (e) => {
-      // Only source-backed state frames prove recovery. Heartbeats and diagnostic/control
-      // frames cannot make an interrupted connection look live again.
-      if (e.event_type === 'snapshot' || e.event_type === 'patch' || e.event_type === 'execution_progress' || e.event_type === 'settlement_recorded' || e.event_type === 'lease_expired') markRecovered()
-      else if (e.event_type === 'interrupted') {
-        if (outageTimer !== undefined) clearTimeout(outageTimer)
-        outageTimer = undefined
-        if (!disposed && store.getState().connection !== 'interrupted') store.dispatch({ type: 'connectionState', connection: 'interrupted' })
-      } else if (e.event_type === 'error' || e.event_type === 'resync_required') markRecovering()
-      if (e.event_type === 'snapshot' || e.event_type === 'patch') {
-        const snap = e.payload as XSnapshot
-        if (!snaps.some((x) => x.cursor === snap.cursor)) {
-          snaps.push(snap)
-          summaries[snap.cursor] = snap.summary.phase
-          project()
-        }
-        refreshExecutions()
-      } else if (e.event_type === 'execution_progress') {
-        const p = e.payload as ExecutionProgressPayload
-        const cur = logs.get(p.run_id) ?? { phase: p.phase, progress: 0, log: [] }
-        logs.set(p.run_id, { phase: p.phase, progress: p.progress_percent, log: [...cur.log, p.log_line].slice(-40) })
-        refreshExecutions()
-      } else if (e.event_type === 'settlement_recorded') {
-        const st = e.payload as OperationalSettlement
-        const s = store.getState()
-        const now = s.history.snapshots[s.history.revisions.at(-1)!.id]!
-        for (const run of Object.values(now.objects)) {
-          const cur = run.kind === 'run' && run.parent === st.plan_item_id ? logs.get(run.id) : undefined
-          if (cur) cur.log = [...cur.log, `Settlement ${st.decision.toLowerCase()}: ${st.consequence_summary}`]
-        }
-        refreshExecutions()
-      }
-    },
+    onFrame,
     (err) => {
       // Keep the last snapshot standing and report a bounded reconnect grace period.
       markRecovering()
       console.warn('[event stream]', err)
+    },
+    () => {
+      if (store.getState().connection !== 'live') probeSource()
     },
   )
   // A live world opened after the work happened (a fresh login, a reload) carries the runs'
@@ -165,6 +192,7 @@ export function connectLive(
   if (store.getState().history.provenance !== 'local-contract') refreshExecutions()
   return () => {
     disposed = true
+    if (probeTimer !== undefined) clearTimeout(probeTimer)
     if (outageTimer !== undefined) clearTimeout(outageTimer)
     outageTimer = undefined
     unsubscribe()

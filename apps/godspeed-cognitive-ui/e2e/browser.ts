@@ -199,6 +199,35 @@ export class Browser {
     return r.stdout.split("\n").filter((l) => l.trim() && !l.includes("✓"));
   }
 
+  /**
+   * Every console entry this session's pages have produced (all levels, across navigations), read
+   * with --json: the plain-text form prints no entries. Entries are {level, text}.
+   */
+  async consoleEntries(): Promise<{ level: string; text: string }[]> {
+    const r = this.spawn(["console", "--json"]);
+    if (r.status !== 0) throw new Error(`console --json failed: ${r.stderr}`);
+    const parsed = JSON.parse(r.stdout) as {
+      success?: boolean;
+      data?: { entries?: { level: string; text: string }[]; messages?: { type: string; text: string }[] };
+    };
+    if (!parsed.success) throw new Error(`console --json unsuccessful: ${r.stdout.slice(0, 200)}`);
+    // agent-browser has answered in two shapes depending on how it was launched: {entries:[{level}]}
+    // and {messages:[{type}]}. Reading only one would silently see an empty console under the other.
+    if (parsed.data?.entries) return parsed.data.entries;
+    if (parsed.data?.messages) return parsed.data.messages.map((m) => ({ level: m.type, text: m.text }));
+    throw new Error(`console --json carried neither entries nor messages: ${r.stdout.slice(0, 200)}`);
+  }
+
+  /** Uncaught page errors this session has seen (--json; the plain form prints no detail). */
+  async pageErrors(): Promise<{ text: string }[]> {
+    const r = this.spawn(["errors", "--json"]);
+    if (r.status !== 0) throw new Error(`errors --json failed: ${r.stderr}`);
+    const parsed = JSON.parse(r.stdout) as { success?: boolean; data?: { errors?: { text: string }[] } };
+    if (!parsed.success) throw new Error(`errors --json unsuccessful: ${r.stdout.slice(0, 200)}`);
+    if (!Array.isArray(parsed.data?.errors)) throw new Error(`errors --json carried no errors array: ${r.stdout.slice(0, 200)}`);
+    return parsed.data!.errors!;
+  }
+
   /** Discards page errors captured so far (so a later errors check starts from a known point). */
   async clearErrors(): Promise<void> {
     const r = this.spawn(["errors", "--clear"]);

@@ -114,6 +114,25 @@ func TestArtifactGetMapsKernelNotFoundToTyped404(t *testing.T) {
 	}
 }
 
+func TestArtifactGetMapsKernelIntegrityFailureToTypedIntegrityMismatch(t *testing.T) {
+	getter := &fakeArtifactGetter{err: apperr.Wrap(apperr.KindInternal, "", "artifact.get", "the stored artifact no longer matches its digest", ports.ErrArtifactIntegrity)}
+	h := newLiveHarness(t)
+	h.api.artifacts = getter
+	operator := h.login(t, "operator", "ignored-in-dev")
+	resp, err := operator.get("/api/artifacts/" + artifactTestDigest([]byte("corrupted")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var body errorBody
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusBadGateway || body.Error.Kind != "integrity_mismatch" {
+		t.Fatalf("a corrupted stored artifact must be a typed integrity_mismatch, got %d %+v", resp.StatusCode, body.Error)
+	}
+}
+
 func TestArtifactGetChecksBytesAgainstRequestedDigest(t *testing.T) {
 	wanted := []byte("expected")
 	digest := artifactTestDigest(wanted)

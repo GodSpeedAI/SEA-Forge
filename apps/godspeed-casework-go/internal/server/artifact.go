@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"path"
 	"regexp"
@@ -115,6 +116,10 @@ func normalizeSHA256Digest(digest string) (string, bool) {
 }
 
 func writeArtifactReadError(w http.ResponseWriter, err error) {
+	if errors.Is(err, ports.ErrArtifactIntegrity) {
+		writeTypedError(w, http.StatusBadGateway, "integrity_mismatch", "the stored artifact no longer matches its digest; it was not served")
+		return
+	}
 	switch apperr.KindOf(err) {
 	case apperr.KindInvalid:
 		writeTypedError(w, http.StatusNotFound, "not_found", "the requested artifact was not found")

@@ -10,6 +10,7 @@ import type { NarrationBeat, NarrationPort } from '../ports/contract'
 /** Translates one narration beat, given the history cursor the previous beat left the world at. */
 export function beatFromNarration(nb: NarrationBeat, s: UiState, fromCursor: string): { beat: Beat; cursor: string } {
   const beat: Beat = { caption: nb.thoughtText, citations: [...nb.evidenceCitations], holdMs: DEFAULT_BEAT_MS }
+  if (nb.grounded_answer) beat.grounded = nb.grounded_answer
   let cursor = fromCursor
   for (const d of nb.directives ?? []) {
     if (d.focus) beat.focus = d.focus

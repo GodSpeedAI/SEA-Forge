@@ -19,6 +19,7 @@ import { Composer } from '../ui/Composer'
 import { DiscretionaryDrawer } from '../ui/DiscretionaryDrawer'
 import { ExecutionPanel } from '../ui/ExecutionPanel'
 import { ExecutionPill } from '../ui/ExecutionPill'
+import { GroundedAnswer } from '../ui/GroundedAnswer'
 import { JudgmentPanel } from '../ui/JudgmentPanel'
 import { OutlineView, type OutlineItem } from '../ui/OutlineView'
 import { SessionBadge } from '../ui/SessionBadge'
@@ -354,6 +355,10 @@ export function App(p: AppProps) {
   const expDescriptor = exp ? findArtifact(state, exp.id) : null
   const paused = state.narrative?.status === 'paused'
   const narr = state.narrative
+  // The governed Thoth disclosure behind the explanation in view (once its first beat has played).
+  const groundedBeat = narr && narr.index >= 0 ? state.narratives[narr.id]?.beats[narr.index] : undefined
+  const grounded = groundedBeat?.grounded ?? null
+  const groundedClaim = grounded && groundedBeat ? grounded.claims.findIndex((c) => c.statement === groundedBeat.caption) : -1
   const judgment = state.judgment
   const judgedObj = judgment ? snapNow.objects[judgment.object] : undefined
   const liveSnap = state.history.snapshots[nowRevision(state.history)]!
@@ -604,6 +609,7 @@ export function App(p: AppProps) {
           onClose={() => proposalFlow.close()}
         />
       )}
+      {grounded && <GroundedAnswer answer={grounded} activeClaim={groundedClaim >= 0 ? groundedClaim : null} paused={paused} />}
       <ExecutionPill
         visible={(!!exec || state.connection !== 'live') && state.mode === 'world' && !judgment}
         label={execTarget?.title ?? 'Live updates'}

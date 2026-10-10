@@ -313,3 +313,15 @@ export function delegatedRequests(cell: string): { verb: string; actor: string; 
     .filter((e) => e.record_kind === 'delegated_request')
     .map((e) => ({ verb: String(e.payload.verb), actor: String(e.payload.effective_actor_id), role: String(e.payload.effective_role) }))
 }
+
+/** The Thoth ask ledger (ledgers/thoth-asks): each governed Ask commits a chain of entries. */
+export function readAskLedger(cell: string): LedgerEntry[] {
+  return readLedger(cell, 'thoth-asks')
+}
+
+/** Delegated `ask` requests recorded by the kernel: who the gateway acted for. */
+export function delegatedAsks(cell: string): { actor: string; role: string; gateway: string; requestId: unknown }[] {
+  return readLedger(cell, 'delegation-audit')
+    .filter((e) => e.record_kind === 'delegated_request' && e.payload.verb === 'ask')
+    .map((e) => ({ actor: String(e.payload.effective_actor_id), role: String(e.payload.effective_role), gateway: String(e.payload.gateway_actor_id), requestId: e.payload.request_id }))
+}

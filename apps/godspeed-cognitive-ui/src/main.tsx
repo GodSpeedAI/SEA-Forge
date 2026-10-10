@@ -53,7 +53,11 @@ if (import.meta.env.DEV && requestedSource !== 'live') {
   }
 } else {
   const { HttpCaseworkAdapter } = await import('./adapters/http/httpCaseworkAdapter')
-  portPromise = Promise.resolve(new HttpCaseworkAdapter())
+  const http = new HttpCaseworkAdapter()
+  portPromise = Promise.resolve(http)
+  // Live narration is governed Thoth Ask (POST /api/ask); there is no scripted local agent here.
+  const { createThothNarration } = await import('./narrative/thothNarration')
+  agent = createThothNarration(http)
 }
 const port = await portPromise
 

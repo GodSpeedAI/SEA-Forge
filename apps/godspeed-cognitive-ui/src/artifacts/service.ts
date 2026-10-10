@@ -48,7 +48,7 @@ export function createArtifactService(port: Pick<CaseworkPort, 'resolveArtifact'
           const parsed = parseArtifact(payload)
           set(ref, parsed.ok ? { status: 'ready', payload, model: parsed.model } : { status: 'error', error: parsed.error, payload })
         },
-        (e: unknown) => set(ref, { status: 'error', error: e instanceof Error ? e.message : String(e) }),
+        (e: unknown) => set(ref, { status: 'error', error: artifactErrorText(e) }),
       )
     },
     subscribe(fn) {
@@ -61,4 +61,16 @@ export function createArtifactService(port: Pick<CaseworkPort, 'resolveArtifact'
 export function useArtifact(service: ArtifactService, ref: string): ArtifactState {
   service.ensure(ref)
   return useSyncExternalStore(service.subscribe, () => service.get(ref))
+}
+
+/**
+ * A typed integrity refusal (the stored bytes no longer hash to their digest, from the kernel or
+ * the gateway) is shown as exactly that, in plain words; everything else keeps its own message.
+ */
+export function artifactErrorText(e: unknown): string {
+  const kind = String((e as { refusalKind?: unknown } | null)?.refusalKind ?? '')
+  if (/^integrity[_ ]?mismatch$/i.test(kind)) {
+    return 'The stored content of this artifact no longer matches its digest, so it was not opened. The evidence may have been altered or damaged.'
+  }
+  return e instanceof Error ? e.message : String(e)
 }

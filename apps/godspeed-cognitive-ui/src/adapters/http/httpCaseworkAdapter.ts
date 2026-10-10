@@ -27,6 +27,8 @@ import type {
   SessionIdentity,
   SessionPort,
   TemporalCheckpoint,
+  ThothAnswerView,
+  ThothAskRequest,
   TemplateEntryOption,
   TemplateSourcePort,
   IntentResponse,
@@ -299,12 +301,13 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
     sinceCursor: string | undefined,
     onEvent: (event: StreamEvent) => void,
     onError: (err: Error) => void,
+    onOpen?: () => void,
   ): () => void {
     if (typeof EventSource === 'undefined') {
       // Non-browser runtimes (bun/tests) ship no EventSource, and a fetch-based
       // stream is the deployment-flexible transport anyway (it carries the
       // session cookie explicitly). Parse SSE lines off the response body.
-      return this.subscribeEventsFetch(caseId, sinceCursor, onEvent, onError)
+      return this.subscribeEventsFetch(caseId, sinceCursor, onEvent, onError, onOpen)
     }
     let closed = false
     let lastCursor = sinceCursor
@@ -358,6 +361,10 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
       for (const kind of ['snapshot', 'execution_progress', 'settlement_recorded', 'resync_required']) {
         current.addEventListener(kind, route as EventListener)
       }
+      current.onopen = () => {
+        if (closed || source !== current) return
+        onOpen?.()
+      }
       current.onerror = () => {
         if (closed || source !== current) return
         current.close() // disable EventSource's unbounded native retry loop
@@ -382,6 +389,7 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
     sinceCursor: string | undefined,
     onEvent: (event: StreamEvent) => void,
     onError: (err: Error) => void,
+    onOpen?: () => void,
   ): () => void {
     let closed = false
     let lastCursor = sinceCursor
@@ -398,6 +406,7 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
             const detail = await res.text().catch(() => '')
             throw new Error(`event stream status ${res.status}: ${detail.slice(0, 200)}`)
           }
+          onOpen?.()
           const reader = res.body.getReader()
           const decoder = new TextDecoder()
           let buffer = ''
@@ -496,6 +505,29 @@ export class HttpCaseworkAdapter implements CaseworkPort, SessionPort, TemplateS
     this.harvestCookies(res)
     const body = await res.json().catch(() => ({}))
     return { ok: res.ok, status: res.status, body, json: async () => body }
+  }
+
+  /**
+   * Governed self-disclosure (POST /api/ask). The body carries no actor: the session is the
+   * identity. Governed `denied` and `partial` answers are successful bodies; transport and
+   * identity refusals are typed errors.
+   */
+  async ask(request: ThothAskRequest, signal?: AbortSignal): Promise<ThothAnswerView> {
+    const token = await this.ensureCsrf()
+    const res = await fetch(`${this.base}/api/ask`, {
+      method: 'POST',
+      credentials: this.credentials,
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token, ...this.extraHeaders() },
+      body: JSON.stringify(request),
+      signal,
+    })
+    this.harvestCookies(res)
+    if (!res.ok) throw await this.refusalFrom(res)
+    const body: unknown = await res.json().catch(() => null)
+    if (!isRecord(body) || typeof body.answer_id !== 'string' || !Array.isArray(body.claims) || typeof body.disposition !== 'string') {
+      throw new HttpRefusalError('UNAVAILABLE', 'the gateway returned a malformed Thoth answer')
+    }
+    return body as unknown as ThothAnswerView
   }
 
   private async rawPOST(path: string, body: unknown): Promise<Response> {

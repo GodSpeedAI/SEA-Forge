@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 )
 
 func TestGetArtifactResolvesCasePlanItemAndEvidenceThroughRunGet(t *testing.T) {
@@ -139,5 +140,36 @@ func TestArtifactOwnershipErrorPreservesAuthorityDenial(t *testing.T) {
 	denied := apperr.New(apperr.KindAuthorityDenied, "", "run_get", "denied")
 	if got := artifactOwnershipError(denied); !errors.Is(got, denied) || apperr.KindOf(got) != apperr.KindAuthorityDenied {
 		t.Fatalf("run.get authority refusal must remain attributable, got %v", got)
+	}
+}
+
+// A stored artifact whose bytes no longer hash to its digest is refused by the kernel with an
+// artifact_integrity_error. The adapter must type that as an integrity failure (never an outage,
+// never content) so the gateway can answer integrity_mismatch.
+func TestGetArtifactTypesKernelIntegrityErrorAsIntegrityFailure(t *testing.T) {
+	digest := "90999fcee4382f5d72e4ba9034d9427ad861c3202e483516003afa20aa7faa56"
+	clientSide, authoritySide := net.Pipe()
+	defer authoritySide.Close()
+	go func() {
+		reader := bufio.NewReader(authoritySide)
+		if _, err := reader.ReadBytes('\n'); err != nil {
+			return
+		}
+		_ = json.NewEncoder(authoritySide).Encode(map[string]any{
+			"error":       "internal error: artifact_integrity_error: content at artifacts/x.md hashes to abc, not " + digest,
+			"error_class": "internal",
+		})
+	}()
+	client, err := New(Config{SocketPath: "test-authority", MaxConns: 1, Dial: func(context.Context, string) (net.Conn, error) { return clientSide, nil }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	content, err := NewAuthority(client).GetArtifact(context.Background(), digest)
+	if !errors.Is(err, ports.ErrArtifactIntegrity) {
+		t.Fatalf("kernel artifact_integrity_error must map to ports.ErrArtifactIntegrity, got %v", err)
+	}
+	if len(content.Data) != 0 {
+		t.Fatalf("no content may accompany an integrity failure: %+v", content)
 	}
 }

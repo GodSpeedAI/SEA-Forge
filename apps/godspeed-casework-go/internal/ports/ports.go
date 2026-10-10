@@ -11,6 +11,7 @@ package ports
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -356,6 +357,11 @@ type AdvanceReport struct {
 	State    string
 	Episodes []EpisodeReport
 }
+
+// ErrArtifactIntegrity marks an artifact whose stored bytes no longer hash to the digest they are
+// addressed by. The authority refuses to serve such bytes; callers must show a typed integrity
+// failure rather than an outage, and must never render the content.
+var ErrArtifactIntegrity = errors.New("artifact integrity failure: stored content does not match its digest")
 
 // ArtifactContent is a content-addressed artifact the authority already committed, fetched back
 // with its integrity re-verified by the authority.

@@ -3,6 +3,7 @@
 // recovery journeys. Nothing here touches the shared persistent cell (.sea-forge/casework-live).
 
 import {
+  appendFileSync,
   closeSync,
   copyFileSync,
   cpSync,
@@ -25,6 +26,7 @@ export const repo = resolve(uiDir, '..', '..')
 export const distDir = join(uiDir, 'dist')
 export const kernelBin = join(repo, 'target', 'debug', 'sea-forge-server')
 export const ADDR = '127.0.0.1:4179'
+export const PROXY_ADDR = '127.0.0.1:4181' // recovery journey: severable network between browser and gateway
 export const UPSTREAM_ADDR = '127.0.0.1:4180' // real gateway when the stub-gateway tooth fronts it
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -44,6 +46,8 @@ export interface Stack {
   cell: string
   base: string
   evidenceDir: string
+  /** Rebuilds the cell's self-model (once) and returns a concept Thoth can be asked about. */
+  seedSelfModel(): string
   bundle: BundleScan
   servedBundle: BundleScan
   tooth?: Tooth
@@ -53,6 +57,10 @@ export interface Stack {
   killGateway(sig?: NodeJS.Signals): Promise<void>
   startGateway(): Promise<void>
   restartGateway(): Promise<void>
+  /** Base URL of a severable pass-through to the gateway (recovery journeys). */
+  proxyBase: string
+  startProxy(): Promise<void>
+  killProxy(): Promise<void>
   /** Stop processes, preserve logs + durable snapshot under evidenceDir, remove the temp cell on `clean`. */
   down(opts: { clean: boolean }): Promise<void>
 }
@@ -74,6 +82,16 @@ async function waitFor(what: string, probe: () => boolean | Promise<boolean>, bu
     await sleep(150)
   }
   throw new Error(`timed out waiting for ${what}`)
+}
+
+async function socketAccepts(path: string): Promise<boolean> {
+  try {
+    const s = await Bun.connect({ unix: path, socket: { data() {}, open() {}, close() {}, error() {} } })
+    s.end()
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function exitedWithin(proc: Bun.Subprocess, ms: number): Promise<boolean> {
@@ -189,10 +207,45 @@ gateway:
   delegable_actors: [operator_local, rso_local]
 `,
   )
+  // The e2e policy plus the self-disclosure grant the L8 Thoth Ask needs (deny-by-default otherwise:
+  // without a grant the kernel answers `denied`, which is a valid governed answer but has no claims).
   copyFileSync(join(repo, 'fixtures', 'cells', 'e2e', 'policy.yaml'), join(cell, 'authority', 'active-policy.json'))
+  appendFileSync(
+    join(cell, 'authority', 'active-policy.json'),
+    `
+policy_surfaces:
+  self_disclosure:
+    mode: deny-by-default
+    grants:
+      - name: live-ladder-ask-grant
+        actor_role: operator_local
+        claim_classes:
+          - declared_capability
+          - installed_capability
+          - demonstrated_capability
+`,
+  )
   mkdirSync(join(cell, 'templates'), { recursive: true })
   for (const tpl of ['e2e-sentry-chain@0.1.0.yaml', 'e2e-signoff-gate@0.1.0.yaml']) {
     copyFileSync(join(repo, 'fixtures', 'cells', 'e2e', 'templates', tpl), join(cell, 'templates', tpl))
+  }
+
+  // Thoth answers from the kernel's self-model snapshot; a fresh cell has none until the operator
+  // rebuilds it (the documented `sea-forge self-model rebuild`). That is done by L8, not at boot: on a
+  // cell with no extension registry the rebuilt snapshot is disclosed Stale and the kernel's own
+  // readiness verdict then reports not_ready, which would fail L0's readiness check.
+  const cliBin = join(repo, 'target', 'debug', 'sea-forge')
+  if (!existsSync(cliBin)) throw new Error('sea-forge CLI missing; run: cargo build -p sea-forge-cli')
+  let askSubject = ''
+  const seedSelfModel = (): string => {
+    if (askSubject) return askSubject
+    const seeded = Bun.spawnSync([cliBin, 'self-model', '--root', cell, 'rebuild'])
+    if (seeded.exitCode !== 0) throw new Error(`self-model rebuild failed:\n${new TextDecoder().decode(seeded.stderr)}`)
+    const shown = Bun.spawnSync([cliBin, 'self-model', '--root', cell, 'show', '--json'])
+    const subject = (JSON.parse(new TextDecoder().decode(shown.stdout)) as { system_model_ref?: { concept_refs?: string[] } }).system_model_ref?.concept_refs?.[0]
+    if (!subject) throw new Error('the rebuilt self-model exposed no concept to ask about')
+    askSubject = subject
+    return askSubject
   }
 
   const gatewayAddr = opts.tooth === 'stub-gateway' ? UPSTREAM_ADDR : ADDR
@@ -238,6 +291,7 @@ gateway:
   let gateway: Bun.Subprocess | null = null
   let kernel: Bun.Subprocess | null = null
   let stub: Bun.Subprocess | null = null
+  let proxy: Bun.Subprocess | null = null
   const openLog = (name: string) => openSync(join(logs, name), 'a')
 
   const startKernel = async () => {
@@ -248,7 +302,9 @@ gateway:
       stderr: fd,
     })
     closeSync(fd)
-    await waitFor('the kernel socket', () => existsSync(join(cell, 'server.sock')) && kernel!.exitCode === null)
+    // After a kill -9 the old socket file is still on disk; the new kernel replaces it. Wait for a
+    // connection to be ACCEPTED, not for the path to exist.
+    await waitFor('the kernel socket to accept connections', async () => kernel!.exitCode === null && (await socketAccepts(join(cell, 'server.sock'))))
   }
   const startGateway = async () => {
     const [h, p] = gatewayAddr.split(':')
@@ -291,6 +347,7 @@ gateway:
     cell,
     base: `http://${ADDR}`,
     evidenceDir: opts.evidenceDir,
+    seedSelfModel,
     bundle,
     servedBundle: bundle,
     tooth: opts.tooth,
@@ -310,9 +367,29 @@ gateway:
       await stack.killGateway('SIGTERM')
       await startGateway()
     },
+    proxyBase: `http://${PROXY_ADDR}`,
+    async startProxy() {
+      const [h, p] = PROXY_ADDR.split(':')
+      assertPortAvailable(h!, Number(p))
+      proxy = Bun.spawn(['bun', join(import.meta.dir, 'netproxy.ts')], {
+        env: { ...process.env, PROXY_LISTEN_PORT: p!, PROXY_UPSTREAM: gatewayAddr },
+        stdout: 'inherit',
+        stderr: 'inherit',
+      })
+      await waitFor('the network proxy', async () => {
+        try {
+          return (await fetch(`http://${PROXY_ADDR}/api/healthz`)).ok
+        } catch {
+          return false
+        }
+      })
+    },
+    async killProxy() {
+      if (proxy) await stopProc('proxy', proxy, 'SIGKILL')
+    },
     async down({ clean }) {
       const errs: string[] = []
-      for (const [label, p] of [['stub', stub], ['gateway', gateway], ['kernel', kernel]] as const) {
+      for (const [label, p] of [['proxy', proxy], ['stub', stub], ['gateway', gateway], ['kernel', kernel]] as const) {
         if (!p) continue
         try {
           await stopProc(label, p)

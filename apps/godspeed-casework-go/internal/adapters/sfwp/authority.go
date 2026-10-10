@@ -740,11 +740,20 @@ func (a *Authority) CompleteHumanTask(ctx context.Context, ref ports.CaseRef, it
 	return resp.Into(&view)
 }
 
+// artifactReadError types the kernel's artifact_integrity_error (it re-hashes the stored bytes before
+// serving them) as an integrity failure of the evidence rather than an outage of the authority.
+func artifactReadError(err error) error {
+	if strings.Contains(err.Error(), "artifact_integrity_error") {
+		return apperr.Wrap(apperr.KindInternal, "", "artifact.get", "the stored artifact no longer matches its digest", ports.ErrArtifactIntegrity)
+	}
+	return err
+}
+
 // GetArtifact implements ports.CaseAuthorityPort.
 func (a *Authority) GetArtifact(ctx context.Context, digest string) (ports.ArtifactContent, error) {
 	resp, err := a.client.Do(ctx, NewArtifactGet(digest))
 	if err != nil {
-		return ports.ArtifactContent{}, err
+		return ports.ArtifactContent{}, artifactReadError(err)
 	}
 	var view ArtifactView
 	if err := resp.Into(&view); err != nil {

@@ -126,6 +126,35 @@ describe('HttpCaseworkAdapter native EventSource recovery', () => {
     }
   })
 
+  test('reports each (re)open of the stream through onOpen and never fetches on its own', () => {
+    class FakeEventSource {
+      static instances: FakeEventSource[] = []
+      onerror: ((event: Event) => void) | null = null
+      onopen: ((event: Event) => void) | null = null
+      constructor(_url: string, _options?: { withCredentials?: boolean }) { FakeEventSource.instances.push(this) }
+      addEventListener(_type: string, _listener: EventListener) {}
+      close() {}
+    }
+    const timers = installManualTimers()
+    const originalSource = globalThis.EventSource
+    globalThis.EventSource = FakeEventSource as unknown as typeof EventSource
+    try {
+      let opens = 0
+      const adapter = new HttpCaseworkAdapter({ base: 'http://gw.test', reconnectBaseMs: 10, reconnectMaxMs: 25 })
+      const unsubscribe = adapter.subscribeEvents('case_a', undefined, () => {}, () => {}, () => { opens++ })
+      FakeEventSource.instances[0]!.onopen!(new Event('open'))
+      expect(opens).toBe(1)
+      FakeEventSource.instances[0]!.onerror!(new Event('error'))
+      timers.runNext()
+      FakeEventSource.instances[1]!.onopen!(new Event('open'))
+      expect(opens).toBe(2)
+      unsubscribe()
+    } finally {
+      globalThis.EventSource = originalSource
+      timers.restore()
+    }
+  })
+
   test('disposal closes the source and cancels a pending retry', () => {
     class FakeEventSource {
       static instances: FakeEventSource[] = []

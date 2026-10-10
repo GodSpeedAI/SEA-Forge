@@ -1,5 +1,6 @@
 import type { Journey } from "../ladder";
 import { FORBIDDEN_TOKENS } from "../live/bundle";
+import { digestOf, sessionCookieValue } from "../live/sessions";
 import { jsEval, sessionOf, stackOf, userBrowser, visible, loginThroughUi, W, H } from "./helpers";
 
 // L0 readiness and identity. The operator signs in through the real LoginScreen; the session the
@@ -49,6 +50,8 @@ export const L0: Journey = {
       ctx.expect(s.actor_id === "operator_local" && s.role === "operator", `session identity ${JSON.stringify({ actor_id: s.actor_id, role: s.role })}`);
       const badge = await jsEval<string>(b, `document.querySelector('[data-testid="session-badge"]').innerText`);
       ctx.expect(/operator_local/.test(badge) && /operator/i.test(badge), `badge shows "${badge.replace(/\n/g, " ")}"`);
+      // L9 proves this very session (same cookie, never re-issued) carried every journey up to L8.
+      ctx.shared.operatorCookieDigest = digestOf(sessionCookieValue(await b.cookiesGet()));
       ctx.delta({ step: "identity", actor_id: s.actor_id, role: s.role });
       await ctx.shot("operator-home", b);
     });

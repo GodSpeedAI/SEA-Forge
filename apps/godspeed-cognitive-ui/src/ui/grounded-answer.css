@@ -1,0 +1,31 @@
+.grounded-answer {
+  position: fixed;
+  right: 24px;
+  top: 96px;
+  width: 340px;
+  max-width: 90vw;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-soft);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  z-index: 35;
+}
+.grounded-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.grounded-title { font-weight: 600; flex: 1; }
+.grounded-pill { padding: 2px 8px; border-radius: 10px; border: 1px solid var(--surface-border); font-size: 12px; }
+.grounded-meta { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 8px; }
+.grounded-meta dt { opacity: 0.7; }
+.grounded-meta dd { margin: 0; overflow-wrap: anywhere; }
+.grounded-claims { margin: 0 0 8px; padding-left: 18px; }
+.grounded-claims li { margin-bottom: 8px; opacity: 0.75; }
+.grounded-claims li[data-active='true'] { opacity: 1; }
+.grounded-claim-head { display: flex; gap: 8px; font-size: 11px; opacity: 0.7; }
+.grounded-claims p { margin: 2px 0; }
+.grounded-claims code { display: block; font-size: 11px; overflow-wrap: anywhere; }
+.grounded-omitted, .grounded-notice { margin: 4px 0 0; font-size: 12px; }
+.grounded-limits { margin: 4px 0 0; padding-left: 18px; font-size: 12px; }

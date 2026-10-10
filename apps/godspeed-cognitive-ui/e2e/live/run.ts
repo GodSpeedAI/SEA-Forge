@@ -6,6 +6,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, symlinkSync } f
 import { dirname, join, resolve } from "node:path";
 import { runLadder } from "../ladder";
 import { liveJourneys } from "../journeys-live";
+import { L9Tooth } from "../journeys-live/L9";
 import { bootStack, repo, type Stack, type Tooth } from "./stack";
 
 interface LiveOpts {
@@ -38,8 +39,8 @@ function pointLatest(dir: string) {
 }
 
 export async function runLive(o: LiveOpts): Promise<void> {
-  if (o.tooth && o.tooth !== "stub-gateway" && o.tooth !== "shared-session") {
-    console.error(`unknown --tooth ${o.tooth} (known: stub-gateway, shared-session)`);
+  if (o.tooth && o.tooth !== "stub-gateway" && o.tooth !== "shared-session" && o.tooth !== "console-error") {
+    console.error(`unknown --tooth ${o.tooth} (known: stub-gateway, shared-session, console-error)`);
     process.exit(2);
   }
   // Only the stub-gateway tooth changes the stack; shared-session changes how the ladder hands out browsers.
@@ -68,8 +69,9 @@ export async function runLive(o: LiveOpts): Promise<void> {
     stack = await bootStack({ evidenceDir: out, tooth, skipBuild: o.skipBuild });
     console.log(`stack up: base=${stack.base} cell=${stack.cell}`);
     console.log(`bundle: ${stack.servedBundle.scanned.length} JS assets scanned (disk + HTTP), no fixture adapter`);
+    const consoleTooth = o.tooth === "console-error";
     const only = o.only ?? (tooth === "stub-gateway" ? ["L1"] : sharedSession ? ["L5"] : undefined);
-    ok = await runLadder(liveJourneys, {
+    ok = await runLadder(consoleTooth ? [L9Tooth] : liveJourneys, {
       base: stack.base,
       out,
       only,
@@ -80,6 +82,7 @@ export async function runLive(o: LiveOpts): Promise<void> {
     });
     if (tooth === "stub-gateway") ok = judgeStubGatewayTooth(out);
     if (sharedSession) ok = judgeSharedSessionTooth(out);
+    if (consoleTooth) ok = judgeConsoleTooth(out);
   } catch (e) {
     console.error("live ladder error:", e instanceof Error ? e.message : e);
     ok = false;
@@ -135,5 +138,26 @@ function judgeSharedSessionTooth(out: string): boolean {
     return true;
   }
   console.error(`TOOTH shared-session: FAIL - expected L5 to fail at the shared-session guard before doing anything else; got status=${l5?.status} steps=${l5?.steps.length} failedStep=${failed?.name} error=${failed?.error}`);
+  return false;
+}
+
+/**
+ * Tooth (L9): a session whose page logged a console error and threw an uncaught error MUST fail the
+ * strict console check, at the strict step, and the failure must name both injected messages.
+ */
+function judgeConsoleTooth(out: string): boolean {
+  const results = JSON.parse(readFileSync(join(out, "results.json"), "utf8")) as {
+    journey_id: string;
+    status: string;
+    steps: { name: string; ok: boolean; error?: string }[];
+  }[];
+  const l9 = results.find((r) => r.journey_id === "L9");
+  const failed = l9?.steps.find((s) => !s.ok);
+  const bit = !!failed && failed.name.startsWith("strict:") && /tooth-injected-console-error/.test(failed.error ?? "") && /tooth-injected-page-error/.test(failed.error ?? "");
+  if (l9?.status === "FAIL" && bit) {
+    console.log(`TOOTH console-error: PASS - the strict check failed at "${failed!.name}": ${(failed!.error ?? "").slice(0, 200)}`);
+    return true;
+  }
+  console.error(`TOOTH console-error: FAIL - expected the strict step to fail on both injected errors; got status=${l9?.status} failedStep=${failed?.name} error=${failed?.error}`);
   return false;
 }

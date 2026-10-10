@@ -1,3 +1,4 @@
+export {}
 // Tooth (1) fixture: a "gateway" that ACCEPTS intents without ever calling the kernel (it answers
 // success itself) and proxies every other request to the real gateway. Run as its own process
 // (the ladder drives the browser with spawnSync, which would starve an in-process server).
