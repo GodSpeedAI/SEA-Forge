@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 66
+**Status revision:** 67
 
-**Stage:** Casework live wiring: T11 parts A and B done (packaging, metrics, backup, load test with restart teeth); security review and CI pending
+**Stage:** Casework live wiring: T11 security review done (no open high findings); CI wiring pending; T12 pending
 
-**Summary:** T11 part B adds a load harness (50 SSE clients, 100-intent burst over 20 cases, kernel and gateway kill -9 teeth) with budgets taken from 10 measured runs, and just casework-load passed three times. It found and fixed three real defects: duplicate/out-of-order SSE revisions after a gateway restart (per-subscriber watermark), kernel ledger readers racing appends (shared lock), and kernel view temp-file collisions.
+**Summary:** T11 security review of the gateway, identity delegation, recent kernel ledger changes, scripts and UI found one high and several medium issues, all fixed with tests: non-loopback bind now requires serve.production=true, login throttling, per-session SSE cap, slowloris bounds, OIDC state cap and mandatory nonce, generic error bodies, bounded reason/intent_id and replay cache, and a symlink-safe view temp file in the kernel ledger. Also fixed a racy subscription test (LastCursor lags delivery).
 
 **Verified:**
 
@@ -26,6 +26,7 @@
 - T10 prereg confirmation: three consecutive green fresh-cell runs of just casework-e2e-live at 447d9a9 (11/11 journeys each); independent audit verdict CONFIRM WITH CONDITIONS; after fixes bun test 373 pass and a further full live run passed (reported by the fixing agent); new Rust SoD test fails when the check is disabled (mutation-checked) and passes restored.
 - T11A: go test -p 1 ./... green (also -tags live); go vet clean in three tag modes; live correlation and backup-wipe-restore tests pass against the real kernel; just casework-e2e-live --skip-build exit 0 (L0-L9, L-RECOV); systemd-analyze verify clean only with ExecStart stubbed to /bin/true (units never run under real systemd).
 - T11B: just casework-load exit 0 three times on final code; negative controls fail as intended (removing the watermark fix gives 552 violations; a 1s p95 budget fails the recipe); go test -p 1 ./... and cargo test --no-fail-fast over the kernel crates pass; just casework-e2e-live --skip-build passes after the fixes (reported by the implementing agent).
+- T11C: go vet and go test -p 1 ./... green; cargo test -p sea-forge-ledger green; regression tests fail when fixes are reverted (OIDC nonce, OIDC state cap, readyz leak, symlink-safe view temp); just casework-e2e-live --skip-build and just casework-load both pass after the fixes (reported by the implementing agent). TestLiveSubscriptionResumeAcrossRestart: failed ~80% under saturated CPUs before the test fix, 15/15 with -race after.
 
 **Limits:**
 
@@ -45,8 +46,10 @@
 - serve.production defaults to false so a production config omitting it is treated as dev auth; kernel socket is 0600 so gateway and kernel must share a uid; metrics endpoint unauthenticated (loopback-only); backup is offline only; continuation key is memory-only; no kernel-side metrics.
 - Budgets calibrated on one shared 6-CPU WSL2 host with no scale above 50 clients and no long soak; kernel throughput is bounded (~3-4 intents/s) because pre-action assurance verifies every ledger stream.
 - TestLiveSubscriptionResumeAcrossRestart failed once in about seven runs under load and passed on re-run; cause unproven.
+- Open operator decisions: CW-49 (OIDC state binding + PKCE), CW-51 (kernel-side bound on reopen/terminate reasons is protocol-visible, needs ask-first), CW-47 (login lockout keying behind a proxy). Lows CW-47..CW-52 are logged, not fixed.
+- TestT11IntentInputBounds is a weak regression proof (fails only by not compiling without the fix); restore script hardening F9 has no automated test.
 
-**Next:** Investigate the TestLiveSubscriptionResumeAcrossRestart flake, then /security-review of the gateway and identity delegation (including the serve.production default, the ledger lock change and metrics listener) with high findings fixed, then CI wiring, then T12.
+**Next:** Wire CI jobs for the Go live tests, the live agent-browser ladder and the load test; then T12 fresh-clone gate run x3 with independent audit; resolve operator decisions CW-47/49/51.
 
 **Evidence:**
 
@@ -72,6 +75,7 @@
 - .agents/reports/casework-live-wiring/runbook.md
 - .agents/reports/casework-live-wiring/load-budgets.md
 - .agents/evidence/casework-live-wiring/T11
+- .agents/reports/casework-live-wiring/security-review.md
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

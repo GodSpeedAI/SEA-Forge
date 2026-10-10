@@ -96,6 +96,23 @@ func (l *RateLimiter) Allow(key string) bool {
 	return true
 }
 
+// Blocked reports, without consuming a token, whether key has no budget left. An unknown key is
+// never blocked. Used by the login throttle, which charges only FAILED attempts.
+func (l *RateLimiter) Blocked(key string) bool {
+	now := l.now()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b, ok := l.buckets[key]
+	if !ok {
+		return false
+	}
+	tokens := b.tokens + now.Sub(b.lastSeen).Seconds()*l.perSecond
+	if tokens > l.burst {
+		tokens = l.burst
+	}
+	return tokens < 1
+}
+
 // Len reports the number of tracked buckets (diagnostics/tests).
 func (l *RateLimiter) Len() int {
 	l.mu.Lock()

@@ -57,6 +57,9 @@ func (w *recordingWriter) WriteHeader(status int) {
 	w.ResponseWriter.WriteHeader(status)
 }
 
+// Unwrap lets http.ResponseController reach the underlying writer (body read deadlines).
+func (w *recordingWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
 func (w *recordingWriter) setCorrelation(id string) {
 	w.correlation = id
 	// Echo the id so a browser (or curl) can quote it: for an intent it is the SFWP request_id.

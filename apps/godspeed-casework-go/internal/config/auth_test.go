@@ -275,3 +275,34 @@ func TestServeExecutionTimeoutDefaultsAndBounds(t *testing.T) {
 	doc.Serve.ExecutionTimeoutSec = MaxExecutionTimeoutSec + 1
 	assertFatal(t, doc, "serve.execution_timeout_sec must be between")
 }
+
+// T11 security review: a config that omits serve.production while binding a reachable interface
+// must refuse to start, whatever the auth mode (dev would otherwise accept any password).
+func TestValidateBindPostureRefusesReachableBindWithoutProduction(t *testing.T) {
+	dev := baseDoc()
+	dev.Auth.Mode = AuthModeDev
+	for _, addr := range []string{"0.0.0.0:4179", ":4179", "[::]:4179", "192.0.2.10:4179", "example.internal:4179"} {
+		if err := ValidateBindPosture(addr, dev); err == nil {
+			t.Fatalf("dev auth on %q must be refused", addr)
+		}
+		if err := ValidateBindPosture(addr, baseDoc()); err == nil {
+			t.Fatalf("a non-production serve posture on %q must be refused", addr)
+		}
+	}
+	prod := baseDoc()
+	prod.Serve.Production = true
+	if err := ValidateBindPosture("0.0.0.0:4179", prod); err != nil {
+		t.Fatalf("production on a reachable bind must be allowed: %v", err)
+	}
+	for _, addr := range []string{"127.0.0.1:4179", "localhost:4179", "[::1]:4179"} {
+		if err := ValidateBindPosture(addr, dev); err != nil {
+			t.Fatalf("loopback dev %q must keep working: %v", addr, err)
+		}
+	}
+	if err := ValidateBindPosture("garbage", dev); err == nil {
+		t.Fatal("a malformed address must be refused")
+	}
+	if err := ValidateBindPosture("0.0.0.0:1", Document{}); err != nil {
+		t.Fatalf("a non-serve document has no bind posture: %v", err)
+	}
+}

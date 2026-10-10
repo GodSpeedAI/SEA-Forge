@@ -123,11 +123,15 @@ Tests: `TestValidateProductionRefusesDevAuth_T07ToothB`, `TestValidateProduction
 `TestValidateProductionRefusesInsecureCookie`, and (T11) `TestDeployProductionExampleLoadsAndDevAuthIsRefused`,
 which also keeps the shipped production example loadable.
 
-**Residual risk, by design of the existing config:** the guard only fires when `serve.production`
-is `true`, and that key defaults to `false`. A production config that omits it is validated as a
-dev posture. Treat `"production": true` as mandatory in the deployed file (the shipped example sets
-it), and review it in change control. Making production the default would change behavior for the
-local ladder and was not done in T11; it is listed as a hardening proposal.
+**Bind posture (T11 security review, fail-closed):** `serve.production` still defaults to `false`,
+but `godspeed-casework -serve` now REFUSES to start when `-addr` is not a loopback address
+(`127.0.0.1`, `::1`, `localhost`) unless the config sets `serve.production=true` (which in turn
+forbids `auth.mode dev` and insecure cookies). An empty host (`:4179`) and `0.0.0.0`/`::` count as
+non-loopback. So a production config that omits the key can no longer expose the dev
+authentication surface (any password logs in) on a reachable interface; loopback binds, the local
+ladder and the live harness are unchanged. The shipped unit binds `127.0.0.1:4179` behind a TLS
+reverse proxy; note that behind a proxy `remote` is the proxy's address, so the per-IP login and
+intent limiters are shared by all users of that proxy (the per-session bucket stays per user).
 
 ## 6. Metrics (Prometheus text)
 

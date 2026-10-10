@@ -74,6 +74,12 @@ func main() {
 		}
 		os.Exit(exitBlocked)
 	}
+	if *serve {
+		if err := config.ValidateBindPosture(*addr, resolved.Document); err != nil {
+			report(err)
+			os.Exit(exitBlocked)
+		}
+	}
 	// Secret values are held here and passed only to the adapters that need them; they are never part
 	// of `resolved`, so they cannot be logged or serialised with the configuration by accident.
 	fmt.Printf("godspeed-casework: configuration loaded (version %s, cell_root %q, evidence_root %q, %d capability/ies, %d resolved secret(s))\n",
@@ -297,11 +303,7 @@ func serveLive(ctx context.Context, addr, metricsAddr string, registry *metrics.
 		defer metricsServer.Close()
 		fmt.Printf("godspeed-casework: metrics on http://%s/metrics (loopback only, unauthenticated)\n", metricsAddr)
 	}
-	httpServer := &http.Server{
-		Addr:              addr,
-		Handler:           api.Handler(),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	httpServer := newHTTPServer(addr, api.Handler())
 
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- httpServer.ListenAndServe() }()
@@ -324,6 +326,20 @@ func serveLive(ctx context.Context, addr, metricsAddr string, registry *metrics.
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		return httpServer.Shutdown(shutdownCtx)
+	}
+}
+
+// newHTTPServer builds the browser-facing listener with its slowloris bounds. There is
+// deliberately no ReadTimeout or WriteTimeout: both would cut the long-lived SSE stream. Header
+// reads are bounded here, POST bodies carry their own deadline (server.decodeStrict), and idle
+// keep-alive connections are reaped.
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    64 << 10,
 	}
 }
 

@@ -1325,7 +1325,25 @@ impl LedgerStream {
                 .unwrap_or_default();
             temp_name.push(format!(".{}.{seq}.tmp", std::process::id()));
             let temporary = parent.join(temp_name);
-            fs::write(&temporary, bytes).map_err(|error| ForgeError::io("write view", error))?;
+            // create_new: never write THROUGH a pre-existing path (a planted symlink at the
+            // predictable temp name would redirect the write, T11 review F8). A stale leftover from a
+            // crashed run with a recycled pid is removed (remove_file unlinks a symlink itself,
+            // not its target) and the create retried once.
+            let write_new = |path: &Path| -> std::io::Result<()> {
+                use std::io::Write as _;
+                let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
+                file.write_all(bytes)
+            };
+            if let Err(error) = write_new(&temporary) {
+                if error.kind() == std::io::ErrorKind::AlreadyExists {
+                    fs::remove_file(&temporary)
+                        .and_then(|()| write_new(&temporary))
+                        .map_err(|error| ForgeError::io("write view", error))?;
+                } else {
+                    let _ = fs::remove_file(&temporary);
+                    return Err(ForgeError::io("write view", error));
+                }
+            }
             if let Err(error) = fs::rename(&temporary, path) {
                 let _ = fs::remove_file(&temporary);
                 return Err(ForgeError::io("replace view", error));
@@ -3467,6 +3485,31 @@ mod tests {
         drop(file);
         let result = stream.verify();
         assert!(result.is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn view_temp_never_writes_through_a_planted_symlink() {
+        // T11 review F8: the temp name is predictable (pid + counter); a symlink planted there used
+        // to redirect the view write onto an arbitrary file. create_new refuses to follow it.
+        let tmp = tempfile::tempdir().unwrap();
+        let stream = LedgerStream::open(tmp.path(), "case_sym", "writer_01").unwrap();
+        let committed = stream
+            .commit_typed("demo", vec![], &serde_json::json!({"v": 1}), vec![])
+            .unwrap();
+        let victim = tmp.path().join("victim.txt");
+        fs::write(&victim, b"precious").unwrap();
+        let dir = tmp.path().join("shared");
+        fs::create_dir_all(&dir).unwrap();
+        for seq in 0..4000u32 {
+            let planted = dir.join(format!("view.json.{}.{seq}.tmp", std::process::id()));
+            std::os::unix::fs::symlink(&victim, planted).unwrap();
+        }
+        stream
+            .materialize_view(&committed, &dir.join("view.json"), b"new view")
+            .unwrap();
+        assert_eq!(fs::read(&victim).unwrap(), b"precious");
+        assert_eq!(fs::read(dir.join("view.json")).unwrap(), b"new view");
     }
 
     #[test]

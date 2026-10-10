@@ -7,6 +7,7 @@ package intents
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -617,5 +618,38 @@ func TestReopenCaseForwardsItsReasonToTheAuthority(t *testing.T) {
 	}
 	if auth.lastReopenReason != "late evidence arrived" {
 		t.Fatalf("authority received reason %q", auth.lastReopenReason)
+	}
+}
+
+// T11 review F7: the free-text reason lands in the kernel ledger and trace, and the intent id becomes
+// a header, a log field and the SFWP request_id: both are bounded and control-byte free, and the
+// replay cache is a bounded FIFO.
+func TestT11IntentInputBounds(t *testing.T) {
+	auth := &fakeAuth{listCases: []ports.CaseRecord{{Ref: "case_1", State: "completed"}}}
+	h := newHandler(auth, map[string]string{"case_1": "01CURSOR"})
+	for name, reason := range map[string]string{
+		"too long": strings.Repeat("x", maxReasonBytes+1),
+		"control":  "ok\x1b[31mred",
+		"nul":      "a\x00b",
+	} {
+		resp := h.Handle(context.Background(), operatorIntent("i-"+strings.ReplaceAll(name, " ", "-"), "REOPEN_CASE", map[string]any{"case_id": "case_1", "reason": reason}))
+		if resp.Success || resp.Refusal == nil || resp.Refusal.RefusalKind != RefInvalid {
+			t.Fatalf("%s reason must be INVALID, got %+v", name, resp)
+		}
+	}
+	if auth.lastReopenReason != "" {
+		t.Fatalf("a refused reason reached the authority: %q", auth.lastReopenReason)
+	}
+	for _, id := range []string{strings.Repeat("a", maxIntentIDLen+1), "has space", "line\nbreak", "café"} {
+		resp := h.Handle(context.Background(), operatorIntent(id, "REOPEN_CASE", map[string]any{"case_id": "case_1", "reason": "fine"}))
+		if resp.Success {
+			t.Fatalf("intent id %q must be refused", id)
+		}
+	}
+	for i := 0; i < maxReplayRecords+50; i++ {
+		h.record(fmt.Sprintf("r-%d", i), [32]byte{}, contract.IntentResponse{})
+	}
+	if len(h.outcomes) > maxReplayRecords || len(h.order) > maxReplayRecords {
+		t.Fatalf("replay cache unbounded: %d", len(h.outcomes))
 	}
 }

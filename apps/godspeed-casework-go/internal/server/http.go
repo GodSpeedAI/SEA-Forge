@@ -21,6 +21,9 @@ import (
 // maxBodyBytes bounds request bodies on the POST endpoints.
 const maxBodyBytes = 1 << 20 // 1 MiB
 
+// bodyReadTimeout is the time a client gets to deliver a POST body.
+const bodyReadTimeout = 30 * time.Second
+
 // Options tunes server behaviour; the zero value is the production default.
 type Options struct {
 	// Ask is the optional governed self-disclosure service used by POST /api/ask.
@@ -166,6 +169,10 @@ func requireJSON(w http.ResponseWriter, r *http.Request) bool {
 
 // decodeStrict reads one JSON value with unknown fields rejected and the body size bounded.
 func decodeStrict(w http.ResponseWriter, r *http.Request, v any) bool {
+	// Slow-body (slowloris) bound: the server has no whole-request ReadTimeout because that would
+	// also cut the long-lived SSE stream, so the body read carries its own deadline. Errors are
+	// ignored: a writer that cannot set deadlines (some test recorders) simply keeps none.
+	_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(bodyReadTimeout))
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {

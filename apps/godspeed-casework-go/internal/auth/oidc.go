@@ -13,6 +13,7 @@ package auth
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -56,6 +57,9 @@ const DefaultUsernameClaim = "preferred_username"
 
 // DefaultStateTTL bounds how long a minted login state may sit un-completed.
 const DefaultStateTTL = 10 * time.Minute
+
+// MaxPendingOIDCStates caps un-completed login states held in memory.
+const MaxPendingOIDCStates = 4096
 
 // OIDC implements Authenticator and OIDCFlow.
 type OIDC struct {
@@ -137,12 +141,18 @@ func (o *OIDC) LoginURL(_ context.Context) (string, string, error) {
 		return "", "", fmt.Errorf("cannot mint oidc nonce: %w", err)
 	}
 	o.mu.Lock()
-	// Bounded: drop expired states while we hold the lock.
+	// Bounded: drop expired states while we hold the lock, and refuse (never evict, which would
+	// let a flood cancel genuine pending logins) once the cap is reached. GET /api/auth/login is
+	// unauthenticated, so without the cap it is an unbounded-memory primitive (T11 review F5).
 	now := o.now()
 	for s, p := range o.states {
 		if now.After(p.expires) {
 			delete(o.states, s)
 		}
+	}
+	if len(o.states) >= MaxPendingOIDCStates {
+		o.mu.Unlock()
+		return "", "", fmt.Errorf("too many pending oidc logins; retry shortly")
 	}
 	o.states[state] = pendingLogin{nonce: nonce, expires: now.Add(o.stateTTL)}
 	o.mu.Unlock()
@@ -187,7 +197,9 @@ func (o *OIDC) Callback(ctx context.Context, state, code string) (Identity, erro
 	if err != nil {
 		return Identity{}, fmt.Errorf("%w: the id_token did not verify: %v", ErrInvalidCredentials, err)
 	}
-	if idToken.Nonce != "" && idToken.Nonce != pending.nonce {
+	// The nonce is REQUIRED (T11): an id_token without one could be replayed from another
+	// login, so an absent nonce is refused exactly like a wrong one.
+	if subtle.ConstantTimeCompare([]byte(idToken.Nonce), []byte(pending.nonce)) != 1 {
 		return Identity{}, fmt.Errorf("%w: the id_token nonce does not match the login request", ErrInvalidCredentials)
 	}
 	var claims map[string]any

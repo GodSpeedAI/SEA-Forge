@@ -77,6 +77,10 @@ func TestLiveSubscriptionResumeAcrossRestart(t *testing.T) {
 	frames := make(chan frame, 1024)
 	seen := map[string]bool{}
 	dupes := 0
+	// lastSeen is the newest cursor this consumer actually received. It is the consumer's own
+	// resume point: Subscription.LastCursor advances only after the event is handed over, so
+	// reading it right after the final frame races the subscription goroutine.
+	lastSeen := ""
 	go func() {
 		defer close(frames)
 		for ev := range sub.Events {
@@ -85,6 +89,9 @@ func TestLiveSubscriptionResumeAcrossRestart(t *testing.T) {
 				continue
 			}
 			seen[ev.Cursor] = true
+			if ev.Cursor > lastSeen {
+				lastSeen = ev.Cursor
+			}
 			frames <- frame{cursor: ev.Cursor, kind: ev.Kind, caseID: ev.CaseID}
 		}
 	}()
@@ -157,6 +164,9 @@ func TestLiveSubscriptionResumeAcrossRestart(t *testing.T) {
 	})
 
 	cancel() // stop the subscription
+	// Wait for the drain goroutine to finish so seen, dupes and lastSeen are read race-free.
+	for range frames {
+	}
 	if dupes != 0 {
 		t.Fatalf("the consumer observed %d duplicate cursors (dedupe failed)", dupes)
 	}
@@ -165,7 +175,7 @@ func TestLiveSubscriptionResumeAcrossRestart(t *testing.T) {
 	// newer frames, proving the cursor the client tracked is a real durable position.
 	rangeCtx, rangeCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer rangeCancel()
-	after, err := cl.EventsGetRange(rangeCtx, sub.LastCursor(), "", 10)
+	after, err := cl.EventsGetRange(rangeCtx, lastSeen, "", 10)
 	if err != nil {
 		t.Fatalf("events.get_range: %v", err)
 	}
@@ -174,7 +184,7 @@ func TestLiveSubscriptionResumeAcrossRestart(t *testing.T) {
 			t.Fatalf("events.get_range after the last cursor returned an already-delivered frame %s", ev.Cursor)
 		}
 	}
-	if len(after) == 0 && sub.LastCursor() != "" {
+	if len(after) == 0 && lastSeen != "" {
 		// Not fatal: nothing new was committed after the last delivered frame. But we did commit
 		// nothing after the trace frames, so expect exactly that.
 		t.Log("no frames after the last delivered cursor (expected: none were committed)")

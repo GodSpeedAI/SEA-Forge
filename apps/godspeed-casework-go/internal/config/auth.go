@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 
@@ -235,6 +236,41 @@ func validateAuth(doc Document, serve ServeSection) []*apperr.Error {
 			"(terminate TLS at the reverse proxy; loopback plain-HTTP dev is the only consumer of this switch)")
 	}
 	return problems
+}
+
+// ValidateBindPosture is the fail-closed bind rule (T11 security review): a gateway that listens
+// on anything other than a loopback address MUST declare serve.production=true. Production
+// posture is what makes validateAuth refuse auth.mode dev (any password logs in) and insecure
+// cookies, so a production config that merely omitted `production` can no longer silently run the
+// dev authentication surface on a reachable interface. An empty host (":4179"), 0.0.0.0 and :: are
+// all-interface binds and count as non-loopback. Loopback binds keep working in every posture so
+// the local ladder and live harness are unchanged.
+func ValidateBindPosture(addr string, doc Document) *apperr.Error {
+	if doc.Serve == nil {
+		return nil
+	}
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return apperr.New(apperr.KindConfig, "", "serve", fmt.Sprintf("listen address %q is not host:port", addr))
+	}
+	if isLoopbackHost(host) {
+		return nil
+	}
+	if !doc.Serve.Production {
+		return apperr.New(apperr.KindConfig, "", "serve", fmt.Sprintf(
+			"listen address %q is not loopback but serve.production is not true: refusing to start. "+
+				"Set serve.production=true with auth.mode local or oidc (the dev authentication surface "+
+				"must never listen on a reachable interface), or bind a loopback address", addr))
+	}
+	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // isIndirection reports whether the value follows the REQ-CONFIG-002 indirection grammar.

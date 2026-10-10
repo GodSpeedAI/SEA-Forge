@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
@@ -86,6 +87,39 @@ type Handler struct {
 
 	mu       sync.Mutex
 	outcomes map[string]replayRecord
+	order    []string // insertion order of outcomes, oldest first (bounded FIFO, T11 review F7)
+}
+
+const (
+	maxIntentIDLen   = 128
+	maxReasonBytes   = 2000
+	maxReplayRecords = 20000
+)
+
+func validIntentID(id string) bool {
+	if id == "" || len(id) > maxIntentIDLen {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		if id[i] < 0x21 || id[i] > 0x7e {
+			return false
+		}
+	}
+	return true
+}
+
+// validReason bounds the free-text reopen/terminate reason that is written to the kernel's
+// event ledger and trace: bounded size, valid UTF-8, no control characters other than newline/tab.
+func validReason(reason string) bool {
+	if len(reason) > maxReasonBytes || !utf8.ValidString(reason) {
+		return false
+	}
+	for _, r := range reason {
+		if r < 0x20 && r != '\n' && r != '\t' || r == 0x7f {
+			return false
+		}
+	}
+	return true
 }
 
 type replayRecord struct {
@@ -119,6 +153,12 @@ func (h *Handler) Handle(ctx context.Context, in contract.InteractionIntent) con
 	// 1. Envelope shape and idempotency key.
 	if in.IntentID == "" {
 		return refuse(in, RefInvalid, "intent_id is required")
+	}
+	// The intent id is the SFWP request_id, the response header and the log correlation id, and
+	// the replay-cache key: bound it and keep it free of control bytes (T11 review F7).
+	if !validIntentID(in.IntentID) {
+		return refuse(contract.InteractionIntent{}, RefInvalid,
+			fmt.Sprintf("intent_id must be 1-%d printable ASCII characters", maxIntentIDLen))
 	}
 	if in.Kind != "CONSEQUENTIAL_CASE" {
 		return refuse(in, RefInvalid,
@@ -249,6 +289,9 @@ func (h *Handler) validate(in contract.InteractionIntent) (bool, error) {
 		// The T01 golden pins a blank termination reason as INVALID.
 		if p.Reason == "" {
 			return false, invalid("A " + lowerKind(in.ActionName) + " reason is required and must not be blank.")
+		}
+		if !validReason(p.Reason) {
+			return false, invalid(fmt.Sprintf("A %s reason must be at most %d bytes of text without control characters.", lowerKind(in.ActionName), maxReasonBytes))
 		}
 		return true, nil
 	case "OPEN_ARTIFACT":
@@ -639,6 +682,13 @@ func (h *Handler) replay(id string, hash [sha256.Size]byte) (contract.IntentResp
 
 func (h *Handler) record(id string, hash [sha256.Size]byte, resp contract.IntentResponse) contract.IntentResponse {
 	h.mu.Lock()
+	if _, seen := h.outcomes[id]; !seen {
+		h.order = append(h.order, id)
+		if len(h.order) > maxReplayRecords {
+			delete(h.outcomes, h.order[0])
+			h.order = h.order[1:]
+		}
+	}
 	h.outcomes[id] = replayRecord{bodyHash: hash, response: resp}
 	h.mu.Unlock()
 	return resp

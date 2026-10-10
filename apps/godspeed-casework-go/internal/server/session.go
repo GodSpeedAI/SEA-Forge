@@ -32,6 +32,13 @@ import (
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 )
 
+// Login bounds (T11): field length and the number of concurrent argon2id verifications (each
+// costs ~19 MiB).
+const (
+	maxLoginFieldBytes  = 1024
+	maxConcurrentLogins = 8
+)
+
 // Cookie names. The session cookie is HttpOnly (never readable by JS); the CSRF cookie is
 // deliberately readable (the synchronizer token's mirror) and SameSite=Strict like the session.
 const (
@@ -313,13 +320,33 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if !decodeStrict(w, r, &creds) {
 		return
 	}
+	if len(creds.Username) > maxLoginFieldBytes || len(creds.Password) > maxLoginFieldBytes {
+		writeTypedError(w, http.StatusBadRequest, "invalid", "username or password is too long")
+		return
+	}
+	ipKey := "ip:" + remoteIP(r)
+	userKey := "user:" + strings.ToLower(strings.TrimSpace(creds.Username))
+	if s.loginFailIP.Blocked(ipKey) || s.loginFailUser.Blocked(userKey) {
+		s.writeRateLimited(w, "too many failed logins; retry after the refill window")
+		return
+	}
+	select {
+	case s.loginSlots <- struct{}{}:
+		defer func() { <-s.loginSlots }()
+	default:
+		s.writeRateLimited(w, "too many logins are being verified; retry shortly")
+		return
+	}
 	identity, err := login.Login(r.Context(), creds.Username, creds.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
+			s.loginFailIP.Allow(ipKey)
+			s.loginFailUser.Allow(userKey)
 			writeTypedError(w, http.StatusUnauthorized, "invalid_credentials", "the username or password did not verify")
 			return
 		}
-		writeTypedError(w, http.StatusBadGateway, "unavailable", "the credential check failed: "+err.Error())
+		s.logf("credential check failed: %v", err)
+		writeTypedError(w, http.StatusBadGateway, "unavailable", "the credential check failed")
 		return
 	}
 	sess := s.opts.Auth.Sessions.Start(identity)
@@ -344,9 +371,14 @@ func (s *Server) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 			"this gateway authenticates with credentials: POST /api/auth/login {username, password}")
 		return
 	}
+	if !s.loginStartIP.Allow("ip:" + remoteIP(r)) {
+		s.writeRateLimited(w, "too many login starts; retry after the refill window")
+		return
+	}
 	state, url, err := flow.LoginURL(r.Context())
 	if err != nil {
-		writeTypedError(w, http.StatusBadGateway, "unavailable", "the identity provider could not start the login: "+err.Error())
+		s.logf("oidc login start failed: %v", err)
+		writeTypedError(w, http.StatusBadGateway, "unavailable", "the identity provider could not start the login")
 		return
 	}
 	http.Redirect(w, r, url, http.StatusFound)
@@ -363,7 +395,8 @@ func (s *Server) handleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	identity, err := flow.Callback(r.Context(), r.URL.Query().Get("state"), r.URL.Query().Get("code"))
 	if err != nil {
-		writeTypedError(w, http.StatusUnauthorized, "invalid_credentials", "the login did not complete: "+err.Error())
+		s.logf("oidc callback refused: %v", err)
+		writeTypedError(w, http.StatusUnauthorized, "invalid_credentials", "the login did not complete")
 		return
 	}
 	sess := s.opts.Auth.Sessions.Start(identity)
@@ -415,9 +448,11 @@ func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	report, err := s.opts.Ready.Readiness(ctx)
 	if err != nil {
+		// Unauthenticated endpoint: the raw error (socket paths, internals) stays in the log (T11 review F6).
+		s.logf("readyz: kernel probe failed: %v", err)
 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{
 			"status": "not_ready",
-			"kernel": map[string]string{"error": err.Error()},
+			"kernel": map[string]string{"error": "the kernel readiness probe failed"},
 		})
 		return
 	}
@@ -441,4 +476,12 @@ func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
 		"status": status,
 		"kernel": map[string]any{"overall": report.Overall, "foundations": len(report.Foundations), "capabilities": len(report.Capabilities)},
 	})
+}
+
+// logf writes a diagnostic line to the request logger (no-op when logging is disabled). Callers
+// must never pass secrets: it exists so error detail stays server-side instead of in responses.
+func (s *Server) logf(format string, args ...any) {
+	if s.opts.Logger != nil {
+		s.opts.Logger.Printf(format, args...)
+	}
 }

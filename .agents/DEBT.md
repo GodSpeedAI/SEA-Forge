@@ -1901,3 +1901,31 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 - **Impact:** recovery needs a manual reload; stale artifact errors outlive their cause.
 - **Next:** re-establish the event stream after sign-in without a reload and expire cached artifact
   errors (retry on open).
+
+## CW-47: login throttle is a coarse lockout surface (T11 security review, low)
+- **Where:** apps/godspeed-casework-go/internal/server/session.go handleLogin.
+- **Impact:** anyone can exhaust the per-username failure bucket and lock that user out for the refill window; behind a TLS proxy the per-IP bucket is shared by every user of the proxy.
+- **Next:** key on (username, ip) plus a global ceiling, or trust a configured X-Forwarded-For hop.
+
+## CW-48: authenticated 502 bodies echo kernel error text (T11 security review, low)
+- **Where:** server.go handleWorld/handleTemplates/handlePreflight (`err.Error()`).
+- **Impact:** a logged-in user can read internal paths or kernel diagnostics.
+- **Next:** return a generic note plus the correlation id; keep detail in the log (as readyz and OIDC now do).
+
+## CW-49: OIDC state not bound to the initiating browser, no PKCE (T11 security review, low/medium)
+- **Where:** auth/oidc.go LoginURL/Callback, server/session.go handleLoginStart.
+- **Impact:** login CSRF: an attacker can complete a flow for their own account and lure a victim to the callback, signing the victim in as the attacker. Nonce (now required) and single-use state limit replay only.
+- **Next:** set an HttpOnly SameSite=Lax state cookie at login start, compare at callback; add PKCE S256.
+
+## CW-50: minor header and log hygiene (T11 security review, info)
+- **Where:** logging.go logs the first 12 hex chars of the session id; API JSON lacks `Cache-Control: no-store`, Referrer-Policy.
+- **Next:** log a hash of the session id; add no-store and Referrer-Policy: no-referrer in withSecurityHeaders.
+
+## CW-51: kernel does not bound reopen/terminate reasons (T11 security review, low)
+- **Where:** crates/sea-forge-case-runner/src/case_ops/mod.rs reopen_with_reason/terminate_with.
+- **Impact:** only the gateway bounds `reason` (2000 bytes); any SFWP client bound to a uid can write up to the 1 MiB line limit into the event ledger and close_reason.
+- **Next:** bound and control-char-check reason in the kernel (protocol-visible; ask first).
+
+## CW-52: sea-forge-server unit is less hardened than the gateway unit (T11 security review, low)
+- **Where:** deploy/systemd/sea-forge-server.service (no SystemCallFilter, MemoryDenyWriteExecute; AF_INET allowed).
+- **Next:** add SystemCallFilter=@system-service and drop INET families once agents' network needs are confirmed.

@@ -229,7 +229,7 @@ func TestOIDCStateIsSingleUseAndBounded(t *testing.T) {
 	a := newOIDCFor(t, p, []OIDCMapping{{Claim: "preferred_username", Equals: "alice", ActorID: "operator_local", Role: "operator"}})
 	ctx := context.Background()
 
-	state, _, err := a.LoginURL(ctx)
+	state, loginURL, err := a.LoginURL(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func TestOIDCStateIsSingleUseAndBounded(t *testing.T) {
 		t.Fatalf("forged state: %v", err)
 	}
 	// The real state exchanges and maps.
-	p.currentIDToken = p.signIDToken(t, "", map[string]any{"preferred_username": "alice"})
+	p.currentIDToken = p.signIDToken(t, loginURLNonce(t, loginURL), map[string]any{"preferred_username": "alice"})
 	id, err := a.Callback(ctx, state, p.pathCode)
 	if err != nil {
 		t.Fatal(err)
@@ -307,5 +307,36 @@ func TestOIDCConstructionRefusesIncompleteConfig(t *testing.T) {
 	if _, err := NewOIDC(context.Background(), OIDCOptions{Issuer: "http://127.0.0.1:1/dne", ClientID: "x", ClientSecret: "y",
 		Mappings: []OIDCMapping{{Claim: "a", Equals: "b", ActorID: "c", Role: "d"}}}); !errors.Is(err, ErrAuthUnavailable) {
 		t.Fatalf("unreachable issuer must fail construction: %v", err)
+	}
+}
+
+// T11 review F5: an id_token WITHOUT a nonce used to be accepted (only a present-but-wrong nonce was
+// refused), so a token minted for another login could be replayed. It is now refused.
+func TestT11OIDCMissingNonceIsRefused(t *testing.T) {
+	p := newTestOIDCProvider(t)
+	a := newOIDCFor(t, p, []OIDCMapping{{Claim: "preferred_username", Equals: "alice", ActorID: "operator_local", Role: "operator"}})
+	ctx := context.Background()
+	state, _, err := a.LoginURL(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.currentIDToken = p.signIDToken(t, "", map[string]any{"preferred_username": "alice"})
+	if _, err := a.Callback(ctx, state, p.pathCode); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("a nonce-less id_token must be refused: %v", err)
+	}
+}
+
+// T11 review F5: GET /api/auth/login is unauthenticated, so pending login states are capped.
+func TestT11OIDCPendingStatesAreCapped(t *testing.T) {
+	p := newTestOIDCProvider(t)
+	a := newOIDCFor(t, p, []OIDCMapping{{Claim: "preferred_username", Equals: "alice", ActorID: "operator_local", Role: "operator"}})
+	ctx := context.Background()
+	for i := 0; i < MaxPendingOIDCStates; i++ {
+		if _, _, err := a.LoginURL(ctx); err != nil {
+			t.Fatalf("state %d: %v", i, err)
+		}
+	}
+	if _, _, err := a.LoginURL(ctx); err == nil {
+		t.Fatal("the pending-state cap must refuse further login starts")
 	}
 }

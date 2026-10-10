@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
@@ -81,6 +82,15 @@ type Server struct {
 	intentsLimiter    *RateLimiter
 	askSessionLimiter *RateLimiter
 	askIPLimiter      *RateLimiter
+	// Login throttle (T11): only FAILED logins are charged, per remote IP and per username, and
+	// concurrent argon2id verifications are bounded so a login flood cannot exhaust memory.
+	loginFailIP   *RateLimiter
+	loginFailUser *RateLimiter
+	loginSlots    chan struct{}
+	loginStartIP  *RateLimiter
+	// Per-session SSE connection cap (T11).
+	sseMu   sync.Mutex
+	sseOpen map[string]int
 }
 
 // New builds the live server. Every dependency is injected.
@@ -104,6 +114,11 @@ func NewWithArtifacts(world WorldSource, dispatcher IntentDispatcher, tpl Templa
 		intentsLimiter:    NewRateLimiter(opts.RateLimit.PerMinute, opts.RateLimit.Burst, 0, nil),
 		askSessionLimiter: NewRateLimiter(6, 2, 0, nil),
 		askIPLimiter:      NewRateLimiter(20, 4, 0, nil),
+		loginFailIP:       NewRateLimiter(20, 20, 0, nil),
+		loginFailUser:     NewRateLimiter(10, 10, 0, nil),
+		loginSlots:        make(chan struct{}, maxConcurrentLogins),
+		loginStartIP:      NewRateLimiter(30, 10, 0, nil),
+		sseOpen:           map[string]int{},
 	}
 }
 
@@ -307,6 +322,12 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		writeTypedError(w, http.StatusInternalServerError, "internal", "streaming is not supported by this connection")
 		return
 	}
+	release, admitted := s.admitSSE(sseKey(r))
+	if !admitted {
+		s.writeRateLimited(w, "too many concurrent event streams for this session; close one and retry")
+		return
+	}
+	defer release()
 
 	last := r.URL.Query().Get("last")
 	if last == "" {
@@ -379,6 +400,41 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 			sseClient.Delivered(rev.Cursor, rev.At)
 		}
 	}
+}
+
+// maxSSEPerSession bounds concurrent /api/events streams per session (a browser needs one; the
+// headroom absorbs reconnects that race the teardown of the stream they replace).
+const maxSSEPerSession = 8
+
+func sseKey(r *http.Request) string {
+	ri := identityFrom(r)
+	switch {
+	case ri == nil:
+		return "anonymous"
+	case ri.Session != nil:
+		return "session:" + ri.Session.ID
+	default:
+		return "bearer:" + ri.Identity.Username
+	}
+}
+
+// admitSSE reserves one stream slot for key; release returns it.
+func (s *Server) admitSSE(key string) (release func(), ok bool) {
+	s.sseMu.Lock()
+	defer s.sseMu.Unlock()
+	if s.sseOpen[key] >= maxSSEPerSession {
+		return nil, false
+	}
+	s.sseOpen[key]++
+	return func() {
+		s.sseMu.Lock()
+		defer s.sseMu.Unlock()
+		if s.sseOpen[key] <= 1 {
+			delete(s.sseOpen, key)
+		} else {
+			s.sseOpen[key]--
+		}
+	}, true
 }
 
 func hasIdentityOverride(r *http.Request) bool {
