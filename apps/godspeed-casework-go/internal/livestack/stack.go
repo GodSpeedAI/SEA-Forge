@@ -25,6 +25,7 @@ import (
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/metrics"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server"
@@ -54,6 +55,18 @@ func AssembleStack(t *testing.T, cell *livetest.Cell) *Stack {
 // AssembleStackWithRetention wires the live stack with an explicit projection retention limit.
 // Live integration tests use small limits to exercise the real HTTP resync path.
 func AssembleStackWithRetention(t *testing.T, cell *livetest.Cell, retention int) *Stack {
+	t.Helper()
+	return assemble(t, cell, retention, nil, nil)
+}
+
+// AssembleStackObserved wires the live stack with the gateway's request logger and metrics
+// registry, the way the production binary does (T11 correlation and metrics proofs).
+func AssembleStackObserved(t *testing.T, cell *livetest.Cell, logger *log.Logger, reg *metrics.Registry) *Stack {
+	t.Helper()
+	return assemble(t, cell, 0, logger, reg)
+}
+
+func assemble(t *testing.T, cell *livetest.Cell, retention int, logger *log.Logger, reg *metrics.Registry) *Stack {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -85,6 +98,8 @@ func AssembleStackWithRetention(t *testing.T, cell *livetest.Cell, retention int
 		Auth:        TestAuthOptions(t),
 		Ready:       authority,
 		RateLimit:   server.RateLimitOptions{PerMinute: 600, Burst: 100},
+		Logger:      logger,
+		Metrics:     reg,
 	})
 
 	return &Stack{

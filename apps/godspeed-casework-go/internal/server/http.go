@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/metrics"
 	"log"
 	"mime"
 	"net/http"
@@ -47,6 +48,9 @@ type Options struct {
 	RateLimit RateLimitOptions
 	// Logger receives logfmt request lines (nil disables request logging).
 	Logger *log.Logger
+	// Metrics collects request latency and SSE accounting (nil disables). The exposition is NOT
+	// served by this server's mux: it belongs on a separate loopback listener (T11).
+	Metrics *metrics.Registry
 }
 
 func (o Options) heartbeat() time.Duration {

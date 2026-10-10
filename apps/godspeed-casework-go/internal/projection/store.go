@@ -15,6 +15,7 @@ package projection
 
 import (
 	"errors"
+	"sort"
 	"sync"
 	"time"
 
@@ -224,6 +225,15 @@ func (s *Store) Subscribe(after string) (<-chan Revision, func()) {
 		})
 	}
 	return ch, cancel
+}
+
+// CountAfter reports how many retained revisions have a cursor strictly after `cursor` (the
+// backlog an event-stream client positioned at `cursor` has not been sent). Used by metrics.
+func (s *Store) CountAfter(cursor string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := sort.Search(len(s.revisions), func(i int) bool { return s.revisions[i].Cursor > cursor })
+	return len(s.revisions) - i
 }
 
 // SubscriberCount reports the number of active subscriptions (tests and operational honesty).

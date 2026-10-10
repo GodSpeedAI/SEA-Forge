@@ -32,6 +32,7 @@ import (
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/metrics"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight"
 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection"
@@ -54,9 +55,18 @@ func main() {
 	configPath := flag.String("config", os.Getenv("GODSPEED_CONFIG"), "path to the configuration file")
 	serve := flag.Bool("serve", false, "after preflight, serve the live cognitive projection API over HTTP+SSE")
 	addr := flag.String("addr", "127.0.0.1:4179", "listen address in -serve mode (loopback by default)")
+	metricsAddr := flag.String("metrics-addr", os.Getenv("GODSPEED_METRICS_ADDR"),
+		"serve Prometheus metrics on this LOOPBACK address (empty disables); unauthenticated, never on the browser listener")
 	flag.Parse()
 
 	ctx := context.Background()
+	registry := metrics.New()
+	if *metricsAddr != "" {
+		if err := metrics.ValidateListenAddr(*metricsAddr); err != nil {
+			report(apperr.New(apperr.KindConfig, "", "metrics", err.Error()))
+			os.Exit(exitBlocked)
+		}
+	}
 	resolved, secrets, problems := config.Load(*configPath, config.Options{})
 	if fatal := config.Fatal(problems); len(fatal) > 0 {
 		for _, p := range fatal {
@@ -94,6 +104,7 @@ func main() {
 		client, err := sfwp.New(sfwp.Config{
 			SocketPath:      strings.TrimPrefix(c.Endpoint, "unix://"),
 			RunGetAdmission: runGetAdmission,
+			OnError:         registry.ObserveSFWPError,
 		})
 		if err != nil {
 			continue
@@ -166,7 +177,7 @@ func main() {
 		for _, s := range secrets {
 			secretValues[s.Capability] = s.Value
 		}
-		if err := serveLive(ctx, *addr, resolved, authority, liveClients[authorityName], secretValues); err != nil {
+		if err := serveLive(ctx, *addr, *metricsAddr, registry, resolved, authority, liveClients[authorityName], secretValues); err != nil {
 			report(apperr.Wrap(apperr.KindInternal, authorityName, "serve", "server stopped", err))
 			os.Exit(1)
 		}
@@ -217,7 +228,7 @@ func adapterOf(resolved config.Resolved, name string) string {
 // The authenticator is built from the config's auth section (mode local/dev/oidc) with its
 // secrets resolved from the Load-time indirections. Any assembly failure here is a typed refusal:
 // the gateway never serves unauthenticated because its authentication half-configured.
-func serveLive(ctx context.Context, addr string, resolved config.Resolved, authority *sfwp.Authority, client *sfwp.Client, secrets map[string]string) error {
+func serveLive(ctx context.Context, addr, metricsAddr string, registry *metrics.Registry, resolved config.Resolved, authority *sfwp.Authority, client *sfwp.Client, secrets map[string]string) error {
 	serve := config.ServeDefaults(resolved.Serve)
 	authCfg := resolved.AuthOrDefaults()
 	logger := log.New(os.Stderr, "", 0)
@@ -270,8 +281,22 @@ func serveLive(ctx context.Context, addr string, resolved config.Resolved, autho
 			PerMinute: serve.RateLimitOrDefaults().IntentsPerMinute,
 			Burst:     serve.RateLimitOrDefaults().Burst,
 		},
-		Logger: logger,
+		Logger:  logger,
+		Metrics: registry,
 	})
+	var metricsServer *http.Server
+	if metricsAddr != "" {
+		// A separate listener: the exposition is unauthenticated and must never share the
+		// browser-facing mux. ValidateListenAddr (main) already restricted it to loopback.
+		metricsServer = &http.Server{Addr: metricsAddr, Handler: registry.ServeMux(), ReadHeaderTimeout: 10 * time.Second}
+		go func() {
+			if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Printf("godspeed-casework: metrics listener stopped: %v", err)
+			}
+		}()
+		defer metricsServer.Close()
+		fmt.Printf("godspeed-casework: metrics on http://%s/metrics (loopback only, unauthenticated)\n", metricsAddr)
+	}
 	httpServer := &http.Server{
 		Addr:              addr,
 		Handler:           api.Handler(),

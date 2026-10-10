@@ -90,6 +90,9 @@ func New(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, sto
 
 // NewWithArtifacts builds the live server with its governed artifact reader.
 func NewWithArtifacts(world WorldSource, dispatcher IntentDispatcher, tpl TemplateSource, store RevisionHistory, relay RelayCursors, artifacts ArtifactGetter, opts Options) *Server {
+	if counter, ok := store.(interface{ CountAfter(string) int }); ok {
+		opts.Metrics.SetBehindSource(counter.CountAfter)
+	}
 	return &Server{
 		world:             world,
 		intents:           dispatcher,
@@ -154,7 +157,7 @@ func (s *Server) Handler() http.Handler {
 		mux.Handle("GET /", s.staticHandler())
 	}
 
-	var h http.Handler = http.Handler(mux)
+	var h http.Handler = s.withMetrics(mux)
 	h = withOriginCORS(h, s.opts.TrustedOrigins)
 	h = withSecurityHeaders(h)
 	h = s.withCorrelation(h)
@@ -316,6 +319,8 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	// while the hello is in flight is queued rather than missed.
 	revCh, cancel := s.store.Subscribe(last)
 	defer cancel()
+	sseClient := s.opts.Metrics.SSEOpen(last, func() int { return len(revCh) })
+	defer sseClient.Close()
 
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -371,6 +376,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 				Payload:   snap,
 			})
 			flusher.Flush()
+			sseClient.Delivered(rev.Cursor, rev.At)
 		}
 	}
 }

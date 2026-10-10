@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 64
+**Status revision:** 65
 
-**Stage:** Casework live wiring: T10 confirmed with conditions (conditions addressed); T11 and T12 pending
+**Stage:** Casework live wiring: T10 confirmed with conditions; T11 part A (packaging, metrics, correlation, backup/restore) done; load test, security review, CI pending
 
-**Summary:** T10 live ladder L0-L9 + L-RECOV passed three consecutive full fresh-cell runs at 447d9a9, and teeth stub-gateway, shared-session and console-error failed for the intended reasons. An independent audit returned CONFIRM WITH CONDITIONS; the fixable conditions were addressed (run-wide console/page-error accumulation, shared-cookie tooth, stub-gateway no-new-case judge, kernel requester-SoD test with a mutation check, wording fix) and the accepted deviations are logged in the decision log (T10-DEV-1..7) and DEBT (CW-44..46). No video/trace evidence exists because agent-browser record/trace is unreliable on this host.
+**Summary:** T11 part A adds systemd units and env examples, a config reference, a Prometheus text metrics package on a loopback-only listener (latency, SFWP errors, SSE clients, subscription lag), a live test tracing one correlation id across browser, gateway, kernel request and ledger, and tested offline cell backup/restore scripts with a runbook.
 
 **Verified:**
 
@@ -24,6 +24,7 @@
 - T10: just casework-e2e-live --only L0..L7 passed in one run (L5 9/9, L6 5/5, L7 8/8); tooth stub-gateway and tooth shared-session both PASS and the shared-session guard was mutation-checked; go test -p 1 ./... and cargo test -p sea-forge-server -p sea-forge-case-runner reported passing by the implementing agent.
 - T10 phase 4: just casework-e2e-live (fresh build, all journeys) exit 0 per implementing agent; UI 362 tests pass; go test -p 1 ./... ok; tooth console-error PASS.
 - T10 prereg confirmation: three consecutive green fresh-cell runs of just casework-e2e-live at 447d9a9 (11/11 journeys each); independent audit verdict CONFIRM WITH CONDITIONS; after fixes bun test 373 pass and a further full live run passed (reported by the fixing agent); new Rust SoD test fails when the check is disabled (mutation-checked) and passes restored.
+- T11A: go test -p 1 ./... green (also -tags live); go vet clean in three tag modes; live correlation and backup-wipe-restore tests pass against the real kernel; just casework-e2e-live --skip-build exit 0 (L0-L9, L-RECOV); systemd-analyze verify clean only with ExecStart stubbed to /bin/true (units never run under real systemd).
 
 **Limits:**
 
@@ -39,8 +40,10 @@
 - After a gateway restart the live page stays Reconnecting until reload (no re-login prompt); ArtifactService caches an error per ref until reload; Thoth policy grant and self-model rebuild are applied in the e2e harness, not in casework-cell-init.
 - T10 independent re-confirmation of the post-audit fixes has not been run; the three-run proof predates them.
 - Kernel gap CW-45: no resume after approval over SFWP; live harness uses dev auth, hand-built server.yaml, harness-applied policy grant and self-model rebuild (T10-DEV-5); no video/trace evidence (T10-DEV-6).
+- T11 not complete: load test (just casework-load), /security-review with high findings fixed, and CI jobs still pending.
+- serve.production defaults to false so a production config omitting it is treated as dev auth; kernel socket is 0600 so gateway and kernel must share a uid; metrics endpoint unauthenticated (loopback-only); backup is offline only; continuation key is memory-only; no kernel-side metrics.
 
-**Next:** Re-run three consecutive fresh-cell live runs against the final commit for the record, then T11 (packaging, config reference, metrics, log correlation, backup runbook, load test, /security-review, CI) and T12 independent acceptance.
+**Next:** T11 part B load test with budgets (N concurrent SSE clients plus intent burst; restart server under 50 SSE clients tooth), then /security-review of gateway and identity delegation with fixes, then CI wiring; then T12.
 
 **Evidence:**
 
@@ -60,6 +63,10 @@
 - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-startup-continuation-key-root-grant-oct09.md
 - .agents/reports/casework-live-wiring/decision-log.yaml
 - .agents/evidence/casework-live-wiring/T10/latest
+- deploy/systemd
+- scripts/casework-cell-backup.sh
+- .agents/reports/casework-live-wiring/config-reference.md
+- .agents/reports/casework-live-wiring/runbook.md
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

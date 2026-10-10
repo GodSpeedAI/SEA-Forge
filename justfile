@@ -1719,3 +1719,16 @@ casework-stack-down:
       exit 1
     fi
 
+
+# Consistent offline backup of the live cell (T11). The kernel must be stopped
+# (just casework-server-down): the script refuses a live cell and holds the cell lock while
+# copying. Usage: just casework-cell-backup /path/to/cell.tar.gz
+[group('casework')]
+casework-cell-backup archive:
+    scripts/casework-cell-backup.sh "{{casework_live_dir}}/cell" "{{archive}}"
+
+# Restore a backup into a NEW or empty directory (never deletes). Verifies the archive digest and
+# the per-file manifest. Usage: just casework-cell-restore /path/to/cell.tar.gz /path/to/new-cell
+[group('casework')]
+casework-cell-restore archive target:
+    scripts/casework-cell-restore.sh "{{archive}}" "{{target}}"

@@ -64,6 +64,9 @@ type Config struct {
 	IdleTTL time.Duration
 	// Logger receives reconnect/recovery diagnostics. Nil discards them.
 	Logger *log.Logger
+	// OnError, when set, is told about every failed Do with the wire verb and a stable error
+	// class (the apperr kind, or "canceled" when the caller's context ended). Metrics only.
+	OnError func(verb, class string)
 	// Dial replaces the Unix dialer (tests inject fakes here).
 	Dial func(ctx context.Context, socketPath string) (net.Conn, error)
 	// RunGetAdmission is the process-shared owner for physical run_get attempts.
@@ -415,6 +418,18 @@ func (c *Client) signalFree() {
 //     application's error kinds; unknown-verb parse failures from an older server are typed
 //     unavailable and are never retried.
 func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
+	resp, err := c.do(ctx, req)
+	if err != nil && c.cfg.OnError != nil {
+		class := string(apperr.KindOf(err))
+		if errors.Is(err, context.Canceled) {
+			class = "canceled"
+		}
+		c.cfg.OnError(req.verb, class)
+	}
+	return resp, err
+}
+
+func (c *Client) do(ctx context.Context, req *Request) (*Response, error) {
 	line, err := EncodeRequest(req)
 	if err != nil {
 		return nil, err

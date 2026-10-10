@@ -57,7 +57,12 @@ func (w *recordingWriter) WriteHeader(status int) {
 	w.ResponseWriter.WriteHeader(status)
 }
 
-func (w *recordingWriter) setCorrelation(id string) { w.correlation = id }
+func (w *recordingWriter) setCorrelation(id string) {
+	w.correlation = id
+	// Echo the id so a browser (or curl) can quote it: for an intent it is the SFWP request_id.
+	// Handlers call this before writing, so the header still reaches the wire.
+	w.Header().Set("X-Correlation-Id", id)
+}
 
 // Flush forwards to the wrapped writer: the SSE route asserts http.Flusher, and a wrapper that
 // hid it would break streaming for every client behind the logging middleware (found by the T08
@@ -77,6 +82,7 @@ func (s *Server) withCorrelation(next http.Handler) http.Handler {
 			return
 		}
 		rw := &recordingWriter{ResponseWriter: w, status: http.StatusOK, correlation: mintCorrelationID()}
+		w.Header().Set("X-Correlation-Id", rw.correlation)
 		r = r.WithContext(context.WithValue(r.Context(), correlationKey{}, rw.correlation))
 		start := time.Now()
 		next.ServeHTTP(rw, r)

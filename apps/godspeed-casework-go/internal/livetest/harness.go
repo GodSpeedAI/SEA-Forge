@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -112,6 +113,44 @@ func NewCell(t *testing.T) *Cell {
 	cell.start()
 	t.Cleanup(cell.Stop)
 	return cell
+}
+
+// NewCellAt boots a server on an EXISTING cell root (no seeding): used to prove a restored backup.
+func NewCellAt(t *testing.T, root string) *Cell {
+	t.Helper()
+	cell := &Cell{t: t, root: root, socket: filepath.Join(root, "server.sock"), bin: ServerBinary(t)}
+	cell.start()
+	t.Cleanup(cell.Stop)
+	return cell
+}
+
+// StopGraceful sends SIGTERM (the production stop), waits for the exit and fails the test when the
+// server does not exit in time. The kernel releases its cell lock on exit, so a backup may follow.
+func (c *Cell) StopGraceful() {
+	t := c.t
+	t.Helper()
+	c.mu.Lock()
+	proc := c.proc
+	c.proc = nil
+	if c.logFile != nil {
+		c.logFile.Close()
+		c.logFile = nil
+	}
+	c.mu.Unlock()
+	if proc == nil {
+		return
+	}
+	if err := proc.Signal(syscall.SIGTERM); err != nil {
+		t.Fatalf("SIGTERM: %v", err)
+	}
+	done := make(chan struct{})
+	go func() { _, _ = proc.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(20 * time.Second):
+		_ = proc.Kill()
+		t.Fatal("server did not exit within 20s of SIGTERM")
+	}
 }
 
 // Root is the cell root (durable kernel state lives under it).
