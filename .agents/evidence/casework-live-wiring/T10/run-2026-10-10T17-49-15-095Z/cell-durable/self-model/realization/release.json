@@ -1,0 +1,62 @@
+{
+  "release_id": "sea-forge@0.1.0",
+  "kernel_version": "0.1",
+  "record_versions": {
+    "core": "0.1",
+    "ledger": "0.2"
+  },
+  "crates": {
+    "sea-forge-artifact-ip": "0.1.0",
+    "sea-forge-authority": "0.1.0",
+    "sea-forge-capability": "0.1.0",
+    "sea-forge-cell": "0.1.0",
+    "sea-forge-cli": "0.1.0",
+    "sea-forge-core": "0.1.0",
+    "sea-forge-domainforge": "0.1.0",
+    "sea-forge-evidence": "0.1.0",
+    "sea-forge-extension": "0.1.0",
+    "sea-forge-ledger": "0.1.0",
+    "sea-forge-planner": "0.1.0",
+    "sea-forge-runtime": "0.1.0",
+    "sea-forge-sandbox": "0.1.0",
+    "sea-forge-self-model": "0.1.0",
+    "sea-forge-server": "0.1.0",
+    "sea-forge-settlement": "0.1.0",
+    "sea-forge-spec-pipeline": "0.1.0",
+    "sea-forge-trace": "0.1.0"
+  },
+  "built_in_extensions": [
+    "E11 Genesis Self-Model"
+  ],
+  "projection_targets": [
+    {
+      "target": "kg",
+      "adapter_ref": "sea-forge-domainforge",
+      "limitations": [
+        "knowledge-graph projection; rdf/turtle output"
+      ],
+      "required_toolchain": []
+    },
+    {
+      "target": "calm",
+      "adapter_ref": "sea-forge-domainforge",
+      "limitations": [],
+      "required_toolchain": []
+    }
+  ],
+  "bundled_templates": [],
+  "bundled_environments": [
+    "demo_env@0.1.0"
+  ],
+  "bundled_models": [
+    {
+      "uri": "models/seaforge-system@0.1.0.sea",
+      "sha256": "sha256:09ead9ac9514009d60de0da18d936b82aa6a94a86db94c00dde7f3da54b77cfa"
+    },
+    {
+      "uri": "models/adlc-odi-case@0.1.0.sea",
+      "sha256": "sha256:8c891cff33fe7bb012ebb0fda6232bc8e996d5a1af47e9c5a675f2cc7a143613"
+    }
+  ],
+  "generated_at": "2025-07-16T03:06:40+00:00"
+}

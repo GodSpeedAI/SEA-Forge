@@ -1,0 +1,15 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server [github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.test]
+internal/server/ask_test.go:115:6: askBody redeclared in this block
+	internal/server/ask.go:18:6: other declaration of askBody
+internal/server/ask_test.go:142:59: too many arguments in conversion to askBody
+internal/server/ask_test.go:151:59: too many arguments in conversion to askBody
+internal/server/ask_test.go:154:57: too many arguments in conversion to askBody
+internal/server/ask_test.go:187:25: too many arguments in conversion to askBody
+internal/server/ask_test.go:266:59: too many arguments in conversion to askBody
+internal/server/ask_test.go:294:36: too many arguments in conversion to askBody
+internal/server/ask_test.go:324:58: too many arguments in conversion to askBody
+internal/server/ask_test.go:337:58: too many arguments in conversion to askBody
+internal/server/ask_test.go:340:57: too many arguments in conversion to askBody
+internal/server/ask_test.go:340:57: too many errors
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server [build failed]
+FAIL

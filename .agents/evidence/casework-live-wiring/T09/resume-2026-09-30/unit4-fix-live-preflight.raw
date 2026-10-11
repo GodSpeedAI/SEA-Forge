@@ -1,0 +1,8 @@
+2026-10-01T20:51:35Z
+TMPDIR=/tmp/t09u4
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.7Gi       130Mi       775Mi       3.0Gi       2.0Gi
+Swap:           12Gi       6.8Gi       5.2Gi
+2109808 bun             bun /home/sprime01/projects/cognate/validation/reconstructions/deepseek-harness/cognate/src/server.ts
+server_binary=target/debug/sea-forge-server bytes=51456400 mode=-rwxr-xr-x
+c17b4c1458c019a7527305cd6313638c3143e1c06e95af37c13659b0cf4603fc  target/debug/sea-forge-server

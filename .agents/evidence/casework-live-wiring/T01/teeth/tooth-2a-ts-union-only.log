@@ -1,0 +1,18 @@
+=== TOOTH 2 (stage A): add bogus intent kind 'BOGUS_KIND' to the TS union (ConsequentialIntentName) only ===
+No TS list, fixture, or Go change. Expect: bun run typecheck FAILS (WireContractPins).
+
+$ bun run typecheck
+$ tsc --noEmit
+src/ports/wireContract.test.ts(163,10): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+src/ports/wireContract.test.ts(167,10): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+src/ports/wireContract.test.ts(168,10): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+src/ports/wireContract.test.ts(356,7): error TS2322: Type 'true' is not assignable to type 'false'.
+src/ports/wireContract.test.ts(360,7): error TS2322: Type 'true' is not assignable to type 'false'.
+src/ports/wireContract.test.ts(361,7): error TS2322: Type 'true' is not assignable to type 'false'.
+typecheck-exit=2
+
+$ bun test src/ports (runtime unaffected, shown for honesty)
+ 0 fail
+ 389 expect() calls
+Ran 22 tests across 2 files. [95.00ms]
+bun-test-exit=0

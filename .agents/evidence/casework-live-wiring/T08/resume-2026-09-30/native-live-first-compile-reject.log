@@ -1,0 +1,5 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server_test [github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.test]
+internal/server/native_events_live_test.go:22:2: "github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents" imported and not used
+internal/server/native_events_live_test.go:25:2: "github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection" imported and not used
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server [build failed]
+FAIL

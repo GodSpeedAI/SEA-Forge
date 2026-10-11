@@ -1,0 +1,7 @@
+--- FAIL: TestUncertainAskEOFIsUnavailableWithoutResendOrStatusLookup (0.00s)
+    ask_transport_test.go:87: uncertain Ask sent 2 times, want exactly once
+--- FAIL: TestUncertainAskResponseOverflowIsUnavailableWithoutResendOrStatusLookup (0.00s)
+    ask_transport_test.go:145: uncertain Ask overflow sent 2 times, want exactly once
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.058s
+FAIL

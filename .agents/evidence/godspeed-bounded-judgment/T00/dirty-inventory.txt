@@ -1,0 +1,106 @@
+ M .agents/CURRENT_STATUS.md
+ M .agents/current_status.yml
+ M .gitignore
+ M .jolli/jollimemory/debug.log
+ M .jolli/jollimemory/discovery-cursors.json
+ M .jolli/jollimemory/sessions.json
+ M AGENTS.md
+ M README.md
+ M crates/sea-forge-domainforge/src/lib.rs
+ M crates/sea-forge-domainforge/tests/conformance_m0_domainforge.rs
+ M crates/sea-forge-extension/src/cep0008.rs
+ M docs/subsystems/domainforge-boundary.md
+ M workbench/AGENTS.md
+ M workbench/apps/desktop/src/ProofPage.tsx
+ M workbench/apps/desktop/src/guards/GovernedDenialSurface.tsx
+ M workbench/apps/desktop/src/mockup.css
+ M workbench/apps/desktop/src/pages/ApprovalInboxPage.module.css
+ M workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx
+ M workbench/apps/desktop/src/pages/AssetCatalogPage.tsx
+ M workbench/apps/desktop/src/pages/CaseCreationWorkbench.module.css
+ M workbench/apps/desktop/src/pages/CaseHorizonPage.module.css
+ M workbench/apps/desktop/src/pages/CaseHorizonPage.test.tsx
+ M workbench/apps/desktop/src/pages/CaseHorizonPage.tsx
+ M workbench/apps/desktop/src/pages/DelegationRoster.tsx
+ M workbench/apps/desktop/src/pages/DelegationWorkbench.tsx
+ M workbench/apps/desktop/src/pages/EvidencePage.tsx
+ M workbench/apps/desktop/src/pages/OperationsPage.test.tsx
+ M workbench/apps/desktop/src/pages/OperationsPage.tsx
+ M workbench/apps/desktop/src/pages/ReadinessPage.module.css
+ M workbench/apps/desktop/src/pages/ReadinessPage.tsx
+ M workbench/apps/desktop/src/pages/RunRecordPage.module.css
+ M workbench/apps/desktop/src/pages/RunRecordPage.tsx
+ M workbench/apps/desktop/src/pages/SurfacesPages.tsx
+ M workbench/apps/desktop/src/pages/SystemContractPage.tsx
+ M workbench/apps/desktop/src/pages/ThothPage.tsx
+ M workbench/apps/desktop/src/pages/UnbackedSurface.tsx
+ M workbench/apps/desktop/src/shell/AppShell.module.css
+ M workbench/apps/desktop/src/shell/AppShell.tsx
+ M workbench/apps/desktop/src/shell/GlobalHeader.tsx
+ M workbench/apps/desktop/src/shell/JourneyRibbon.module.css
+ M workbench/apps/desktop/src/shell/Sidebar.module.css
+ M workbench/apps/desktop/src/shell/Sidebar.tsx
+ M workbench/apps/desktop/src/shell/shellKeyboard.test.tsx
+?? .agents/AGENTS.md
+?? .agents/evidence/godspeed-bounded-judgment/T00/dirty-inventory.txt
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-GAUNTLET_CHECK.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-GAUNTLET_CHECK.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-GAUNTLET_CI.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-GAUNTLET_CI.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-GAUNTLET_TEST.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-GAUNTLET_TEST.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_NO_ASYNC_KERNEL.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_NO_ASYNC_KERNEL.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_PROOF.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_PROOF.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_TEST-server-crate.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_TEST-server-crate.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_TEST.exit
+?? .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_TEST.log
+?? .agents/evidence/godspeed-bounded-judgment/T00/spec-required-ids.txt
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-1-hash-mismatch.stderr
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-1-hash-mismatch.stdout
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-2-missing-settles.stderr
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-2-missing-settles.stdout
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-3-fake-requirement.stderr
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-3-fake-requirement.stdout
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-4-cycle.round1.stderr
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-4-cycle.round1.stdout
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-4-cycle.round2.stderr
+?? .agents/evidence/godspeed-bounded-judgment/T00/teeth-4-cycle.round2.stdout
+?? .agents/evidence/godspeed-bounded-judgment/T00/validator-round1.stderr
+?? .agents/evidence/godspeed-bounded-judgment/T00/validator-round1.stdout
+?? ".agents/plans/AGENT_PLAN_TEMPLATE copy.yaml"
+?? .agents/plans/godspeed-bounded-judgment-brief.md
+?? .agents/plans/godspeed-bounded-judgment-kickoff.md
+?? .agents/plans/godspeed-bounded-judgment-plan.yaml
+?? .agents/plans/plan-workbench-frontend-remediation.yaml
+?? .agents/plans/validate-godspeed-bounded-judgment-plan.py
+?? .agents/reports/2026-09-16-godspeed-capability-gap.yaml
+?? .agents/reports/2026-09-16-godspeed-current-architecture.mmd
+?? .agents/reports/2026-09-16-godspeed-judgment-plane-adversarial-review.md
+?? .agents/reports/2026-09-16-godspeed-judgment-plane-spec-revised-v2.yaml
+?? .agents/reports/2026-09-16-godspeed-judgment-plane-spec-revised.yaml
+?? .agents/reports/2026-09-16-godspeed-spec-correction-note.md
+?? .agents/reports/2026-09-16-godspeed-spec-delta-v2.yaml
+?? .agents/reports/2026-09-16-godspeed-spec-delta.yaml
+?? .agents/reports/2026-09-16-godspeed-target-architecture-v2.mmd
+?? .agents/reports/2026-09-16-godspeed-target-architecture.mmd
+?? .agents/reports/2026-09-17-godspeed-bounded-judgment-plan-adversarial-inspection.md
+?? .agents/reports/2026-09-17-godspeed-bounded-judgment-plan-remediation-review.md
+?? .agents/reports/domainforge-sxr-sea-rs-cep-interface-investigation.md
+?? .agents/reports/frontend-audit-workbench-2026-09-04.md
+?? .agents/skills/graft/SKILL.md
+?? .agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml
+?? .agents/specs/archive/GODSPEED_JUDGMENT_PLANE_SPEC.v0.1.0-draft.yaml
+?? .agents/specs/spec-workbench-frontend-remediation.yaml
+?? .ignore
+?? PRODUCT.md
+?? clickhouse
+?? crates/AGENTS.md
+?? opencode.json

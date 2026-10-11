@@ -1,0 +1,112 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `test` profile [unoptimized] target(s) in 9.64s
+     Running tests/conformance_delegation_preview.rs (target/debug/deps/conformance_delegation_preview-e034bc2deb822fb0)
+
+running 14 tests
+test a_requested_model_is_distinguishable_from_an_endpoint_default ... ok
+test a_rejected_probe_blocks_the_preview_the_way_it_blocks_the_catalog ... ok
+test an_absent_token_budget_is_omitted_rather_than_zeroed ... ok
+test an_accepted_probe_carries_its_evidence_into_the_preview ... ok
+test an_over_long_instruction_is_blocked_against_the_endpoints_own_cap ... ok
+test an_unconfigured_endpoint_has_no_standing_and_no_contract ... ok
+test delegation_preview_is_advertised_as_an_inspect_method ... ok
+test preview_creates_no_run_case_or_ledger_entry ... ok
+test every_unmet_precondition_is_reported_not_only_the_first ... ok
+test preview_names_the_required_authority_without_deciding_it ... ok
+test preview_projects_the_contract_a_delegation_would_run_under ... ok
+test the_instruction_is_reported_by_hash_and_size_only ... ok
+test transcript_retention_is_resolved_through_the_endpoint_then_the_cell ... ok
+test the_contract_digest_moves_when_the_delegation_would_differ ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests/conformance_delegations.rs (target/debug/deps/conformance_delegations-6330b5bfdfe83199)
+
+running 12 tests
+test a_cancelled_delegation_settles_and_reports_cancellation_as_its_termination ... ok
+test a_delegation_is_attributed_to_the_case_that_claims_it ... ok
+test a_finished_delegation_reports_its_dialogue_against_its_bounds ... ok
+test a_delegation_with_no_settlement_and_no_handle_is_unresolved ... ok
+test a_fresh_cell_has_an_empty_roster_rather_than_an_error ... ok
+test an_absent_token_budget_is_omitted_rather_than_zeroed ... ok
+test cancelling_a_delegation_that_is_not_active_is_refused ... ok
+test delegation_list_is_advertised_as_an_inspect_method ... ok
+test listing_the_roster_creates_nothing ... ok
+test non_delegation_runs_are_not_in_the_roster ... ok
+test standing_and_settlement_are_separate_facts ... ok
+test unsettled_delegations_sort_ahead_of_settled_ones ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/sfwp_delegated_identity.rs (target/debug/deps/sfwp_delegated_identity-3ffd136f51e34914)
+
+running 9 tests
+test an_operator_bound_uid_cannot_send_on_behalf_of ... ok
+test an_ungoverned_cell_refuses_every_delegation ... ok
+test identity_get_reports_the_effective_actor ... ok
+test a_non_gateway_uid_cannot_send_on_behalf_of ... ok
+test delegation_may_not_widen_the_end_users_roles ... ok
+test the_gateway_cannot_speak_for_a_non_allowlisted_actor ... ok
+test two_end_users_behind_one_gateway_are_attributed_distinctly ... ok
+test separation_of_duty_holds_between_end_users_behind_one_gateway ... ok
+test user_b_may_approve_user_as_delegated_proposal_with_both_principals_ledgered ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+EXIT=0

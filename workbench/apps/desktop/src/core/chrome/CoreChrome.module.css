@@ -1,0 +1,174 @@
+/*
+ * White-labeled donor chrome stylesheet.
+ * Donor source: the `<style>` block of `public/reference/gargantua.html`
+ * (CSS variables, title, readout, hint, fatal card, veil/intro fade,
+ * responsive rule). Mechanically migrated to a CSS module; selectors renamed
+ * from ids (#title/#readout/#hint/#fatal) to classes. No demo copy remains in
+ * this file. The HUD panel treatment lives with `dev/CoreTuningPanel` (the
+ * donor `#hud` block), not here.
+ */
+
+.viewport {
+  --amber: #ffb35c;
+  --cyan: #7ad7ff;
+  --glass: rgba(10, 14, 22, 0.38);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --txt-dim: rgba(200, 214, 229, 0.55);
+  --txt: rgba(233, 240, 248, 0.92);
+}
+
+/* ---------- context identity (donor #title) ---------- */
+.title {
+  position: fixed;
+  top: 34px;
+  left: 38px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 1.6s ease 1.2s,
+    transform 1.6s ease 1.2s;
+}
+
+:global(body.core-ready) .title {
+  opacity: 1;
+  transform: none;
+}
+
+.title h1 {
+  font-family: "Michroma", sans-serif;
+  font-size: clamp(17px, 2vw, 24px);
+  letter-spacing: 0.42em;
+  font-weight: 400;
+  color: var(--txt);
+  text-shadow: 0 0 24px rgba(255, 179, 92, 0.35);
+}
+
+.sub {
+  margin-top: 9px;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--txt-dim);
+  text-transform: uppercase;
+}
+
+.rule {
+  margin-top: 14px;
+  width: 210px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--amber), transparent);
+  opacity: 0.6;
+}
+
+/* ---------- context readout (donor #readout) ---------- */
+.readout {
+  position: fixed;
+  top: 36px;
+  right: 38px;
+  z-index: 10;
+  text-align: right;
+  pointer-events: none;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  line-height: 2.05;
+  color: var(--txt-dim);
+  opacity: 0;
+  transition: opacity 1.6s ease 1.8s;
+}
+
+:global(body.core-ready) .readout {
+  opacity: 1;
+}
+
+.readout b {
+  color: var(--txt);
+  font-weight: 400;
+}
+
+.amber {
+  color: var(--amber);
+}
+
+/* ---------- interaction hints (donor #hint) ---------- */
+.hint {
+  position: fixed;
+  bottom: 38px;
+  left: 38px;
+  z-index: 10;
+  pointer-events: none;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--txt-dim);
+  opacity: 0;
+  transition: opacity 1.6s ease 2.8s;
+}
+
+:global(body.core-ready) .hint {
+  opacity: 0.85;
+}
+
+.key {
+  display: inline-block;
+  padding: 2px 7px;
+  margin: 0 3px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--txt);
+}
+
+/* ---------- failure surface (donor #fatal) ---------- */
+.fatal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #000;
+  text-align: center;
+}
+
+.fatalCard {
+  max-width: 520px;
+}
+
+.fatalCard h2 {
+  font-family: "Michroma", sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.3em;
+  color: var(--amber);
+  margin-bottom: 18px;
+  font-weight: 400;
+}
+
+.fatalCard p {
+  font-size: 12.5px;
+  line-height: 1.95;
+  color: var(--txt-dim);
+  letter-spacing: 0.04em;
+}
+
+.fatalCard code {
+  color: var(--cyan);
+  font-size: 11.5px;
+  word-break: break-word;
+  display: block;
+  margin-top: 16px;
+  opacity: 0.8;
+}
+
+@media (max-width: 760px) {
+  .title {
+    top: 20px;
+    left: 20px;
+  }
+
+  .readout,
+  .hint {
+    display: none;
+  }
+}

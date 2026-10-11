@@ -1,0 +1,22 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0006",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "REJECT_HUMAN_TASK",
+    "target_object_id": "item-patch-14",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000410",
+    "actor": {
+      "actor_id": "actor-rso-2",
+      "role": "security_officer"
+    },
+    "justification": "evidence-88 shows the flagged path is only partially covered; rework the patch first."
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0006",
+      "success": true,
+      "new_cursor": "1.0000000411"
+    }
+  ]
+}

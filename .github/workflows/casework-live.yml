@@ -1,0 +1,178 @@
+name: Casework live
+
+# Live-stack proof for the casework front end (plan task T11): the Go gateway
+# tests against the real kernel, the live agent-browser ladder (T10), and the
+# load/restart budgets. These jobs are heavy (the ladder alone is ~20 minutes),
+# so they are NOT part of the required `gate` in ci.yml and are NOT wired into
+# it. They are advisory-but-visible checks.
+#
+# Triggers:
+#   - pull_request: only when casework-relevant paths change. A path filter is
+#     acceptable here precisely because this workflow is not a required check
+#     (see the note at the top of ci.yml). `go-live` and `ladder` run on PRs.
+#   - schedule (nightly): all three jobs, including `load`.
+#   - workflow_dispatch: all three jobs.
+# `load` is deliberately NOT run on pull_request: its latency budgets are
+# CPU-bound and shared GitHub-hosted runners are noisy, so a PR-time run would
+# produce flaky red checks. It runs nightly and on demand, where a failure is
+# investigated rather than blocking a merge.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/godspeed-casework-go/**'
+      - 'apps/godspeed-cognitive-ui/**'
+      - 'crates/sea-forge-*/**'
+      - 'deploy/**'
+      - 'Cargo.lock'
+      - 'justfile'
+      - '.github/workflows/casework-live.yml'
+  schedule:
+    - cron: '43 2 * * *'  # nightly, 02:43 UTC (off-peak)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run per ref; a newer push to a PR cancels the obsolete run, scheduled and
+# manual runs are never cancelled by a PR.
+concurrency:
+  group: casework-live-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # apps/godspeed-casework-go/go.mod says `go 1.27`; mise.toml pins 1.27.1.
+  # The runner's preinstalled Go only acts as the bootstrap; GOTOOLCHAIN makes
+  # it fetch and verify (via the Go checksum database) exactly this release.
+  GOTOOLCHAIN: go1.27.1
+
+jobs:
+  # Go tests against the real kernel: default tags, then `-tags live`, one
+  # package at a time (-p 1) because the live tests share kernel/ports.
+  go-live:
+    name: go tests (default + live)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      # The native-events live test drives a real browser through agent-browser
+      # and fails (does not skip) when the CLI is missing. Version matches the
+      # e2e README ("CLI v0.38+").
+      - name: Install agent-browser and Chromium
+        run: |
+          npm install -g --prefix "$HOME/.local" agent-browser@0.38.1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/agent-browser" install --with-deps
+
+      - name: Build the kernel binary
+        run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server
+
+      - name: Go tests (default tags)
+        working-directory: apps/godspeed-casework-go
+        run: go test -p 1 -count=1 ./...
+
+      - name: Go tests (live tag)
+        working-directory: apps/godspeed-casework-go
+        run: go test -p 1 -count=1 -tags live ./...
+
+  # The live agent-browser ladder (L0..L9, L-RECOV). The harness owns the stack
+  # (kernel + gateway on ports 4179/4180, fresh temp cell). `bun e2e/run.ts
+  # --live` exits non-zero on any non-PASS journey; the verification step below
+  # re-reads results.json so a PASS cannot be reported by exit code alone.
+  ladder:
+    name: live ladder (agent-browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      # No existing job installs bun explicitly; the version follows
+      # workbench/package.json (packageManager bun@1.4.0).
+      - name: Install bun, agent-browser and Chromium
+        run: |
+          npm install -g --prefix "$HOME/.local" bun@1.4.0 agent-browser@0.38.1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/agent-browser" install --with-deps
+
+      - name: Build the kernel binary
+        run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server
+
+      - name: Live ladder
+        run: devbox run -- just casework-e2e-live
+
+      - name: Require every journey to be PASS
+        if: always()
+        run: |
+          set -euo pipefail
+          results="$(ls -d .agents/evidence/casework-live-wiring/T10/run-*/ | sort | tail -n 1)results.json"
+          echo "checking $results"
+          python3 - "$results" <<'PY'
+          import json, sys
+          rows = json.load(open(sys.argv[1]))
+          bad = [r["journey_id"] + "=" + r["status"] for r in rows if r["status"] != "PASS"]
+          print(len(rows), "journeys;", "non-PASS:", bad or "none")
+          sys.exit(1 if bad or not rows else 0)
+          PY
+
+      - name: Upload ladder evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: casework-ladder-evidence
+          path: .agents/evidence/casework-live-wiring/T10/run-*/
+          if-no-files-found: error
+          retention-days: 14
+
+  # Load budgets and kill -9 restart teeth (50 SSE clients, 100 intents).
+  # Nightly and manual only; see the header for why not on pull_request.
+  load:
+    name: load budgets and restart teeth
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Build the kernel binary
+        run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server
+
+      - name: Load test
+        run: devbox run -- just casework-load
+
+      - name: Upload load evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: casework-load-evidence
+          path: .agents/evidence/casework-live-wiring/T11/run-*/
+          if-no-files-found: error
+          retention-days: 14

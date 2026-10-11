@@ -1,0 +1,252 @@
+import { describe, expect, test } from 'bun:test'
+import type { CaseworkPort, InteractionIntent, StreamEvent, XObject, XSnapshot } from '../../ports/contract'
+import { LocalContractAdapter, NORTHSTAR_CASE_ID } from './localAdapter'
+import { NORTHSTAR_TRAJECTORY } from './northstarData'
+
+type ManualTimer = { callback: () => void; cancelled: boolean; fired: boolean }
+
+function installManualTimers() {
+  const pending: ManualTimer[] = []
+  const setTimeoutBefore = globalThis.setTimeout
+  const clearTimeoutBefore = globalThis.clearTimeout
+  let failNextSchedule = false
+  globalThis.setTimeout = ((callback: TimerHandler) => {
+    if (typeof callback !== 'function') throw new TypeError('manual timers require a callback')
+    if (failNextSchedule) {
+      failNextSchedule = false
+      throw new Error('fixture timer scheduling failure')
+    }
+    pending.push({ callback: () => callback(), cancelled: false, fired: false })
+    return pending.length as unknown as ReturnType<typeof setTimeout>
+  }) as unknown as typeof setTimeout
+  globalThis.clearTimeout = ((handle: ReturnType<typeof setTimeout>) => {
+    const timer = pending[Number(handle) - 1]
+    if (timer) timer.cancelled = true
+  }) as typeof clearTimeout
+  return {
+    runNext() {
+      const timer = pending.find((candidate) => !candidate.cancelled && !candidate.fired)
+      if (!timer) throw new Error('no pending timer')
+      timer.fired = true
+      timer.callback()
+    },
+    runAll() {
+      let count = 0
+      while (pending.some((timer) => !timer.cancelled && !timer.fired)) {
+        if (++count > 500) throw new Error('manual timer drain exceeded 500 callbacks')
+        this.runNext()
+      }
+    },
+    failNextSchedule() { failNextSchedule = true },
+    hasPending: () => pending.some((timer) => !timer.cancelled && !timer.fired),
+    restore() {
+      globalThis.setTimeout = setTimeoutBefore
+      globalThis.clearTimeout = clearTimeoutBefore
+    },
+  }
+}
+
+const actor = { actor_id: 'usr-sam', role: 'case_architect' as const }
+
+function appendFixture(adapter: LocalContractAdapter, summary: string): XSnapshot {
+  const subject = adapter as unknown as {
+    append(caseId: string, eventType: string, summary: string, intent: InteractionIntent | null, edit: (objects: XObject[]) => void): XSnapshot
+  }
+  return subject.append(NORTHSTAR_CASE_ID, 'fixture_revision', summary, null, () => undefined)
+}
+
+function subscribe(adapter: LocalContractAdapter, since: string | undefined, onEvent: (event: StreamEvent) => void, onError: (error: Error) => void) {
+  return (adapter as CaseworkPort).subscribeEvents(NORTHSTAR_CASE_ID, since, onEvent, onError)
+}
+
+describe('LocalContractAdapter cursor validation and bounded delivery', () => {
+  test('validates constructor seed against the final snapshot and trajectory cursor', () => {
+    const adapter = new LocalContractAdapter({ latency: 0 })
+    const internals = adapter as unknown as { cases: Map<string, { snaps: XSnapshot[]; points: Array<{ cursor: string }> }> }
+    const seeded = internals.cases.get(NORTHSTAR_CASE_ID)!
+    expect(seeded.snaps.at(-1)?.cursor).toBe(seeded.points.at(-1)?.cursor)
+
+    const finalPoint = NORTHSTAR_TRAJECTORY.at(-1)!
+    const originalCursor = finalPoint.cursor
+    try {
+      finalPoint.cursor = '1.9999999999'
+      expect(() => new LocalContractAdapter({ latency: 0 })).toThrow()
+    } finally {
+      finalPoint.cursor = originalCursor
+    }
+  })
+
+  test('accepts leading-zero decimal epoch and sequence by numeric equality', () => {
+    const timers = installManualTimers()
+    try {
+      const adapter = new LocalContractAdapter({ latency: 0 })
+      const beforeRegistration = appendFixture(adapter, 'allocated before numerically equivalent floor')
+      const received: StreamEvent[] = []
+      const errors: Error[] = []
+      const stop = subscribe(adapter, '0001.0000000007', (event) => received.push(event), (error) => errors.push(error))
+      timers.runNext()
+      expect(received.map((event) => event.cursor)).toEqual([])
+      const next = appendFixture(adapter, 'after numerically equivalent floor')
+      timers.runAll()
+      expect(errors).toEqual([])
+      expect(beforeRegistration.cursor).toBe('1.0000000007')
+      expect(received.map((event) => event.cursor)).toEqual([next.cursor])
+      stop()
+    } finally {
+      timers.restore()
+    }
+  })
+
+  test('rejects malformed, unsafe, wrong-epoch, and over-ceiling floors once without registering', () => {
+    const badFloors = [
+      '',
+      '1..6',
+      '1.-1',
+      '1.6x',
+      '9007199254740992.6',
+      '1.9007199254740992',
+      '2.6',
+      '1.10000000000',
+    ]
+    for (const floor of badFloors) {
+      const timers = installManualTimers()
+      try {
+        const adapter = new LocalContractAdapter({ latency: 0 })
+        const received: StreamEvent[] = []
+        const errors: Error[] = []
+        const stop = subscribe(adapter, floor, (event) => received.push(event), (error) => errors.push(error))
+        appendFixture(adapter, `after invalid floor ${floor}`)
+        timers.runAll()
+        expect(errors, floor).toHaveLength(1)
+        expect(received, floor).toEqual([])
+        expect(() => stop()).not.toThrow()
+      } finally {
+        timers.restore()
+      }
+    }
+  })
+
+  test('a future floor suppresses the exact boundary allocation and delivers the next real event', () => {
+    const timers = installManualTimers()
+    try {
+      const adapter = new LocalContractAdapter({ latency: 0 })
+      const received: StreamEvent[] = []
+      const errors: Error[] = []
+      const stop = subscribe(adapter, '1.0000000007', (event) => received.push(event), (error) => errors.push(error))
+      const boundary = appendFixture(adapter, 'at future floor')
+      timers.runAll()
+      expect(received).toEqual([])
+      const after = appendFixture(adapter, 'above future floor')
+      timers.runAll()
+      expect(errors).toEqual([])
+      expect(boundary.cursor).toBe('1.0000000007')
+      expect(after.cursor).toBe('1.0000000008')
+      expect(received.map((event) => event.cursor)).toEqual([after.cursor])
+      stop()
+    } finally {
+      timers.restore()
+    }
+  })
+
+  test('overflow at 65 pending events errors and disposes only that subscriber while a healthy one drains', () => {
+    const timers = installManualTimers()
+    try {
+      const adapter = new LocalContractAdapter({ latency: 0 })
+      const overflowEvents: string[] = []
+      const healthyEvents: string[] = []
+      const overflowErrors: Error[] = []
+      const healthyErrors: Error[] = []
+      const stopOverflow = subscribe(adapter, undefined, (event) => overflowEvents.push(event.cursor), (error) => overflowErrors.push(error))
+      const stopHealthy = subscribe(adapter, undefined, (event) => healthyEvents.push(event.cursor), (error) => healthyErrors.push(error))
+      const allocated: string[] = []
+      for (let index = 0; index < 65; index++) allocated.push(appendFixture(adapter, `queued ${index}`).cursor)
+      timers.runAll()
+
+      expect(overflowErrors).toHaveLength(1)
+      expect(overflowErrors[0]?.message).toMatch(/backlog.*64.*complete delivery unavailable/i)
+      expect(overflowEvents).toEqual([])
+      expect(healthyErrors).toEqual([])
+      expect(healthyEvents).toEqual(allocated)
+      appendFixture(adapter, 'after overflow disposal')
+      timers.runAll()
+      expect(overflowErrors).toHaveLength(1)
+      expect(overflowEvents).toEqual([])
+      expect(healthyEvents).toHaveLength(66)
+      stopOverflow()
+      stopHealthy()
+    } finally {
+      timers.restore()
+    }
+  })
+
+  test('reentrant enqueue remains FIFO, self-unsubscribe stops queued callbacks, and a throwing listener is isolated', () => {
+    const timers = installManualTimers()
+    try {
+      const adapter = new LocalContractAdapter({ latency: 0 })
+      const reentrant: string[] = []
+      let stopReentrant = () => {}
+      stopReentrant = subscribe(adapter, undefined, (event) => {
+        reentrant.push(event.cursor)
+        if (reentrant.length === 1) appendFixture(adapter, 'reentrant event')
+        if (reentrant.length === 2) stopReentrant()
+      }, () => {})
+      const healthy: string[] = []
+      const healthyErrors: Error[] = []
+      const stopHealthy = subscribe(adapter, undefined, (event) => healthy.push(event.cursor), (error) => healthyErrors.push(error))
+      const first = appendFixture(adapter, 'first queued event')
+      const second = appendFixture(adapter, 'second queued event')
+      timers.runAll()
+      expect(reentrant).toEqual([first.cursor, second.cursor])
+      expect(healthy).toHaveLength(3)
+      expect(healthyErrors).toEqual([])
+
+      const thrownErrors: Error[] = []
+      const stopThrowing = subscribe(adapter, undefined, () => { throw new Error('listener failed') }, (error) => { thrownErrors.push(error) })
+      const afterThrow: string[] = []
+      const stopAfterThrow = subscribe(adapter, undefined, (event) => afterThrow.push(event.cursor), () => {})
+      appendFixture(adapter, 'throwing listener case')
+      timers.runAll()
+      expect(thrownErrors).toHaveLength(1)
+      expect(thrownErrors[0]?.message).toBe('listener failed')
+      expect(afterThrow).toHaveLength(1)
+      stopThrowing()
+      stopAfterThrow()
+      stopHealthy()
+    } finally {
+      timers.restore()
+    }
+  })
+
+  test('unsubscription clears the pending drain and a timer scheduling failure is reported once after commit', () => {
+    const timers = installManualTimers()
+    try {
+      const adapter = new LocalContractAdapter({ latency: 0 })
+      const events: StreamEvent[] = []
+      const errors: Error[] = []
+      const stop = subscribe(adapter, undefined, (event) => events.push(event), (error) => errors.push(error))
+      const queued = appendFixture(adapter, 'queued before unsubscribe')
+      stop()
+      expect(timers.hasPending()).toBe(false)
+      timers.runAll()
+      expect(events).toEqual([])
+      expect(errors).toEqual([])
+
+      const secondErrors: Error[] = []
+      const secondEvents: StreamEvent[] = []
+      const stopSecond = subscribe(adapter, undefined, (event) => secondEvents.push(event), (error) => secondErrors.push(error))
+      timers.failNextSchedule()
+      let committed: XSnapshot | undefined
+      expect(() => { committed = appendFixture(adapter, 'timer scheduling fails after event commit') }).not.toThrow()
+      expect(committed?.cursor).not.toBe(queued.cursor)
+      expect(secondErrors).toHaveLength(1)
+      expect(secondEvents).toEqual([])
+      appendFixture(adapter, 'subscriber disposed after scheduling failure')
+      timers.runAll()
+      expect(secondErrors).toHaveLength(1)
+      expect(secondEvents).toEqual([])
+      stopSecond()
+    } finally {
+      timers.restore()
+    }
+  })
+})

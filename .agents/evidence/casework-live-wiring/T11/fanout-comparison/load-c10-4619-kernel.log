@@ -1,0 +1,5 @@
+{"timestamp":"2026-10-10T20:50:06.689672Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/TestLoadBudgets3518730267/001","socket":"/tmp/TestLoadBudgets3518730267/001/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T20:50:06.700353Z","level":"INFO","message":"server listening on /tmp/TestLoadBudgets3518730267/001/server.sock"}
+{"timestamp":"2026-10-10T20:50:17.573324Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T20:50:27.778997Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T20:50:38.184485Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}

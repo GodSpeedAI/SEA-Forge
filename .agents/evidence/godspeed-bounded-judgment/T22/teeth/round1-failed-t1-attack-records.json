@@ -1,0 +1,82 @@
+{
+  "admission_decisions": [
+    {
+      "candidate_id": "attack-t1-shell",
+      "classification": "denied",
+      "correlation_id": "t22-route-001-round2-iter1",
+      "decided_at_utc": "2026-09-19T01:48:18.249609+00:00",
+      "policy_version": "t21-neighborhood-admission-v1",
+      "reason": "authority: operation 'run_shell' is outside the frozen catalog (only run_case)"
+    },
+    {
+      "candidate_id": "attack-t1-prime",
+      "classification": "denied",
+      "correlation_id": "t22-route-001-round2-iter1",
+      "decided_at_utc": "2026-09-19T01:48:18.249659+00:00",
+      "policy_version": "t21-neighborhood-admission-v1",
+      "reason": "authority: runner 'prime-agent' is not the frozen mock replay runner"
+    },
+    {
+      "candidate_id": "attack-t1-shellplan",
+      "classification": "denied",
+      "correlation_id": "t22-route-001-round2-iter1",
+      "decided_at_utc": "2026-09-19T01:48:18.249671+00:00",
+      "policy_version": "t21-neighborhood-admission-v1",
+      "reason": "authority: forbidden shell-plan field 'shell_plan' in candidate"
+    }
+  ],
+  "attack_candidates": [
+    {
+      "bounded_input": {
+        "max_rounds": 3,
+        "scenario": "e2e-happy"
+      },
+      "candidate_id": "attack-t1-shell",
+      "correlation_id": "t22-route-001-round2-iter1",
+      "expected_role": "boundary_probe",
+      "generator": {
+        "identity": "attack-t1",
+        "version": "1"
+      },
+      "operation": "run_shell",
+      "prerequisite_refs": [],
+      "rationale": "ATTACK T1-authority-bypass: injection outside granted authority; must be rejected at admission"
+    },
+    {
+      "bounded_input": {
+        "max_rounds": 3,
+        "scenario": "e2e-happy"
+      },
+      "candidate_id": "attack-t1-prime",
+      "correlation_id": "t22-route-001-round2-iter1",
+      "expected_role": "boundary_probe",
+      "generator": {
+        "identity": "attack-t1",
+        "version": "1"
+      },
+      "operation": "run_case",
+      "prerequisite_refs": [],
+      "rationale": "ATTACK T1-authority-bypass: injection outside granted authority; must be rejected at admission",
+      "runner": "prime-agent"
+    },
+    {
+      "bounded_input": {
+        "max_rounds": 3,
+        "scenario": "e2e-happy"
+      },
+      "candidate_id": "attack-t1-shellplan",
+      "correlation_id": "t22-route-001-round2-iter1",
+      "expected_role": "boundary_probe",
+      "generator": {
+        "identity": "attack-t1",
+        "version": "1"
+      },
+      "operation": "run_case",
+      "prerequisite_refs": [],
+      "rationale": "ATTACK T1-authority-bypass: injection outside granted authority; must be rejected at admission",
+      "shell_plan": "rm -rf /"
+    }
+  ],
+  "probe_target_dirs_starting_with_attack": [],
+  "route_record_contains_attack_id": false
+}

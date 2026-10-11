@@ -1,0 +1,118 @@
+schema: agent.preregistration
+schema_version: '1.0'
+metadata:
+  plan_id: godspeed.casework-cognitive-environment.implementation
+  plan_version: 0.2.2
+  task: T00
+  title: Freeze source authority, repository topology, gate bindings, and execution context
+  frozen_at: '2026-09-19T17:57:30Z'
+  frozen_before: Any gate baseline, inventory command, or write under this plan.
+  plan_path: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml
+  spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+  spec_id: godspeed.casework-cognitive-environment
+  spec_version: 0.2.1
+  spec_sha256: 6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641
+  spec_authority: normative
+  amendment_rule: >-
+    Append-only. A defect found during execution is corrected by an addendum that
+    records the defect and preserves this frozen text; the base file is never
+    rewritten.
+claim: >-
+  The authoritative source spec and the repository execution context can be frozen
+  unambiguously before implementation, so that a cold agent can reproduce the spec
+  hash, locate both repositories, distinguish existing gates from planned gates,
+  enumerate all 86 requirements, and state exactly which SFWP methods and
+  integrations are absent.
+falsifier: >-
+  Two incompatible source specs claim equal authority, a required repository cannot
+  be located, or the required project gates cannot be identified without inventing
+  desired behavior.
+known_confounds:
+  - Stale copied docs or old repository clones can resemble current authority.
+  - A warm machine build cache can make an existing gate appear cheaper or greener
+    than a cold run at the frozen revision.
+  - A branch-local capability (e.g. a UI that exists on one branch and not the
+    default branch) can make an inventory look complete when it is revision-bound.
+measurements:
+  - id: M1-frozen-hash
+    command: sha256sum .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+    pass_condition: >-
+      The computed digest equals source.spec.sha256 in the bound plan, and
+      GATE_SPEC_TRACE (python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py)
+      exits 0 in this worktree.
+    blocks_on_failure: T00
+  - id: M2-requirement-trace
+    command: python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py
+    pass_condition: >-
+      Exactly 86 unique spec REQ-* records, 86 mapped, zero unknown plan requirement
+      IDs, zero unmapped requirements, and a 15-task DAG T00..T14.
+    blocks_on_failure: T00
+  - id: M3-seaforge-gate-baseline
+    command: CARGO_BUILD_JOBS=1 just check ; CARGO_BUILD_JOBS=1 just test ; CARGO_BUILD_JOBS=1 just ci ; CARGO_BUILD_JOBS=1 just proof
+    pass_condition: >-
+      Each of the four existing SEA Forge gates either exits 0 at the frozen
+      revision, exits non-zero with its exact failing assertion recorded, or is
+      recorded RESOURCE_DEFERRED with preflight readings and the exact command.
+    blocks_on_failure: >-
+      None for T00 settlement (these gates activate at T05). A red baseline must be
+      recorded exactly; it may not be recorded as a deferral.
+  - id: M4-gauntlet-gate-baseline
+    command: cd "$GAUNTLET_WORKTREE" && CARGO_BUILD_JOBS=1 just check ; CARGO_BUILD_JOBS=1 just test ; CARGO_BUILD_JOBS=1 just ci
+    pass_condition: >-
+      Each existing Gauntlet gate is recorded as passed, red-with-assertion, or
+      RESOURCE_DEFERRED with readings and the exact command, in the dedicated
+      Gauntlet worktree only.
+    blocks_on_failure: None for T00 settlement (activates at T05).
+  - id: M5-missing-seam-inventory
+    command: >-
+      Structural inspection of crates/sea-forge-server/src/sfwp, docs/reference/sfwp-protocol-reference.md,
+      workbench/ (Tauri GUI), $GAUNTLET_WORKTREE (executor + TUI), and the plan's
+      target paths apps/godspeed-casework-go and apps/godspeed-cognitive-ui.
+    pass_condition: >-
+      Every capability the source spec requires is marked PRESENT with an exact
+      interface reference (method name, file, symbol) or ABSENT with the dependent
+      task named; no capability is claimed present without a reproducible anchor.
+    blocks_on_failure: T00
+  - id: M6-teeth
+    command: .agents/evidence/godspeed-casework-cognitive-environment/T00/teeth/run-teeth.sh
+    pass_condition: >-
+      Tooth 1 (single-byte spec mutation) produces a detectable hash divergence and a
+      non-zero GATE_SPEC_TRACE exit; tooth 2 (claiming an absent capability exists)
+      is contradicted by the recorded inventory, which names the missing seam and the
+      blocked dependent task.
+    blocks_on_failure: T00
+resource_deferral_rule: >-
+  A gate may be recorded RESOURCE_DEFERRED only when (a) /proc/meminfo MemAvailable,
+  the cgroup memory limit/usage when finite, /proc/pressure/memory, swap usage, and
+  other active builds are recorded immediately before the attempt, (b) at most one
+  heavy build runs at a time and a narrow single-job observation preceded any broad
+  gate, and (c) the exact command to re-run later is recorded verbatim. A gate that
+  was attempted and failed is never a deferral: it is a red baseline, recorded with
+  its exact failing assertion, and repaired without weakening the gate or the task
+  is marked BLOCKED with a concrete prerequisite.
+confirmation_condition: >-
+  A peer reviewer independently reproduces the spec hash, the repository locations,
+  the gate bindings, and the 86/86 traceability count from the frozen revision,
+  without relying on this task's conclusions.
+post_freeze_amendments:
+  - at: '2026-09-19T17:58:06Z'
+    nature: typo_only
+    disclosure_source: 'independent verification round 2 (could not reconcile the file mtime with frozen_at); narrowed in verification round 3'
+    detail: >-
+      The file was written once more 36 seconds after its declared frozen_at (2026-09-19T17:57:30Z)
+      to correct a misspelled measurement identifier: measurement id "M3-seafoerge-gate-baseline"
+      became "M3-seaforge-gate-baseline". Scope of what is claimed: only that the six measurements,
+      the claim, the falsifier, the known confounds, the resource-deferral rule, and the
+      confirmation condition are semantically unchanged, and that the first gate baseline started
+      at 2026-09-19T17:59:48Z (evidence/T00/raw-logs/gate-status.txt), i.e. after the write.
+    not_established:
+      - >-
+        That no other (non-gate) command ran before the freeze: inventory commands carry no
+        timestamps in this handoff, so ordering against them is not establishable and is not claimed.
+      - >-
+        That the 17:58:06Z write had exactly the content described here: no pre-amendment snapshot
+        or self-hash was taken, and this amendment record is itself a later write, so the earlier
+        mtime cannot be re-examined. This is disclosed rather than presented as verified.
+    lesson: >-
+      A preregistration that is to be frozen should be hash-pinned (or copied) at freeze time;
+      a declared frozen_at without a self-hash cannot be audited later.

@@ -1,0 +1,8 @@
+tooth: shuffled_labels
+accuracy_real: null
+accuracy_shuffled: null
+expected: shuffling recorded outcomes collapses agreement toward/below the real pairing
+behaved_as_specified: false
+consequence_if_not: 'a high score surviving label shuffling means the harness computed nothing real: TASK FAILS'
+mode: shuffle-labels
+executed_at: '2026-09-18T00:09:41.205806+00:00'

@@ -1,0 +1,227 @@
+# =============================================================================
+# T23 round-3 mechanical labels — frozen addendum-3 discriminator rule applied
+# to the PRESERVED route t23-route-001 ledger (append-only; round-1/round-2
+# records untouched; NO probes re-run; NO provider calls this round).
+# =============================================================================
+schema: godspeed-bounded-judgment.t23-round3-mechanical-labels
+task: T23
+builder: B3
+correction_round: 3
+route_id: t23-route-001
+rule_source:
+  addendum3_path: .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.addendum-3.yaml
+  addendum3_sha256: 1c13889ae0c2a9621b7f0b803b327ee6dd76a16983c9ed72b00ff309f59c6ddb
+  rule_frozen: >-
+    A probe observation is mechanically classified
+    verification_failed_nonsettlement if and only if ALL hold, evaluated
+    deterministically from preserved records: (c1) the typed terminal is a
+    bounded non-settlement (not settled, not a run error); (c2) the run's
+    settlement_committed count is 0; (c3) at least one evidence_produced
+    artifact of the run, hash-verified at its pinned sha256, has content
+    recording a failing verification (failures > 0).
+evaluation_method: >-
+  Each row is evaluated mechanically from the preserved round-1
+  probe-observations record: the state DB sha256 pin was re-verified through
+  the frozen T23/provenance.py validator (import, unmodified), the terminal
+  and settlement_committed count were read from the DB event log read-only,
+  and every distinct evidence_produced sha256 ref was re-hashed at its
+  content-addressed object path and its JSON content parsed for a
+  numeric "failures" field. mechanical_label is
+  verification_failed_nonsettlement iff c1 AND c2 AND c3 hold, else the
+  probe's own typed terminal class.
+evaluated_at_utc: '2026-09-19T03:30:00+00:00'
+probe_count: 12
+probes_rerun: 0
+round3_provider_calls: 0
+labels:
+- probe_id: probe-i1-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter1
+  scenario: e2e-happy
+  max_rounds: 4
+  terminal: settled
+  settlements: 3
+  state_db_sha256: 87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: settled
+  rule_clauses: {c1: false, c2: false, c3: false}
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+- probe_id: probe-i1-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter1
+  scenario: e2e-happy
+  max_rounds: 3
+  terminal: budget_exhausted
+  settlements: 2
+  state_db_sha256: 468612b9fc06a7516e9fb85b0a41bd58691a8f9bc3c0dcd8bffbb99f1c675c18
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: budget_exhausted
+  rule_clauses: {c1: true, c2: false, c3: false}
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+- probe_id: probe-i1-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter1
+  scenario: e2e-lying
+  max_rounds: 4
+  terminal: budget_exhausted
+  settlements: 0
+  state_db_sha256: 28be5692bee0714a11e01a54f9be5cf5084651f9069a2038b809efc0ea2caf4f
+  failing_artifact_found: true
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+  mechanical_label: verification_failed_nonsettlement
+  rule_clauses: {c1: true, c2: true, c3: true}
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+- probe_id: probe-i2-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter2
+  scenario: e2e-happy
+  max_rounds: 5
+  terminal: settled
+  settlements: 3
+  state_db_sha256: 913d5fc12a5aa3435f2db2afbd83f26cfac3f7847306af7be16ee35c62ffffba
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: settled
+  rule_clauses: {c1: false, c2: false, c3: false}
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+- probe_id: probe-i2-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter2
+  scenario: e2e-lying
+  max_rounds: 5
+  terminal: budget_exhausted
+  settlements: 0
+  state_db_sha256: 0586e79455ea80360ffdeee64d9c8f6932c9d641cd7f9fc34eaddc97638ac010
+  failing_artifact_found: true
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+  mechanical_label: verification_failed_nonsettlement
+  rule_clauses: {c1: true, c2: true, c3: true}
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+- probe_id: probe-i2-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter2
+  scenario: e2e-happy
+  max_rounds: 6
+  terminal: settled
+  settlements: 3
+  state_db_sha256: 05747e4f7e463a1f6dae8979696109b911e47f414d2b13283262668f01f6c157
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: settled
+  rule_clauses: {c1: false, c2: false, c3: false}
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+- probe_id: probe-i3-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter3
+  scenario: e2e-happy
+  max_rounds: 2
+  terminal: budget_exhausted
+  settlements: 1
+  state_db_sha256: d587d0a1127fe855f89814a19cc637164dcba8627550f8e82f251d68e2ff2937
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: budget_exhausted
+  rule_clauses: {c1: true, c2: false, c3: false}
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+- probe_id: probe-i3-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter3
+  scenario: e2e-happy
+  max_rounds: 8
+  terminal: settled
+  settlements: 3
+  state_db_sha256: d9b0b43e9461c54996d11546febea0b43cfb33fc6e8d12acc4dbb575fe532f10
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: settled
+  rule_clauses: {c1: false, c2: false, c3: false}
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+- probe_id: probe-i3-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter3
+  scenario: e2e-lying
+  max_rounds: 2
+  terminal: budget_exhausted
+  settlements: 0
+  state_db_sha256: 292f60d43c4ef436ffbb7c4fec012b10634ddff72f987d94c21583336e88dde2
+  failing_artifact_found: true
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+  mechanical_label: verification_failed_nonsettlement
+  rule_clauses: {c1: true, c2: true, c3: true}
+  round1_label: budget_exhausted
+  round2_label: verification_failed_nonsettlement
+- probe_id: probe-i4-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter4
+  scenario: e2e-lying
+  max_rounds: 8
+  terminal: budget_exhausted
+  settlements: 0
+  state_db_sha256: 236f5e93b2f3a6ca470722ed547d31322f1e61641d427f10dab6115727141400
+  failing_artifact_found: true
+  failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+  mechanical_label: verification_failed_nonsettlement
+  rule_clauses: {c1: true, c2: true, c3: true}
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+- probe_id: probe-i4-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter4
+  scenario: e2e-happy
+  max_rounds: 1
+  terminal: budget_exhausted
+  settlements: 0
+  state_db_sha256: 678ffdd7bed7b375ac71f6c343de191a1d3bdd76d0a9d329840ea27c9c3cceb3
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: budget_exhausted
+  rule_clauses: {c1: true, c2: true, c3: false}
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+- probe_id: probe-i4-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter4
+  scenario: e2e-happy
+  max_rounds: 7
+  terminal: settled
+  settlements: 3
+  state_db_sha256: c56b7d5a14b5285d4cc34fdc26a40f9f24c8a4169850f4b2fe9ca84b6843218d
+  failing_artifact_found: false
+  failing_artifact_sha256: ''
+  mechanical_label: settled
+  rule_clauses: {c1: false, c2: false, c3: false}
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+separation:
+  requirement: >-
+    Frozen addendum-3 symmetry check: the 4 e2e-lying probes must ALL
+    mechanically classify verification_failed_nonsettlement; the 8 e2e-happy
+    probes must NONE of them do.
+  lying_probe_ids: [probe-i1-cand-3, probe-i2-cand-2, probe-i3-cand-3, probe-i4-cand-1]
+  lying_count: 4
+  lying_all_verification_failed_nonsettlement: true
+  lying_labeled_vfn_count: 4
+  honest_probe_ids: [probe-i1-cand-1, probe-i1-cand-2, probe-i2-cand-1, probe-i2-cand-3,
+    probe-i3-cand-1, probe-i3-cand-2, probe-i4-cand-2, probe-i4-cand-3]
+  honest_count: 8
+  honest_none_verification_failed_nonsettlement: true
+  honest_triggered_count: 0
+  verdict: separated
+  note: >-
+    Matches the frozen symmetry_property clause of addendum-3 exactly: the
+    single failing artifact family (sha256 08c3dff5…e5e0d2, content
+    {"tests": 1, "failures": 1}) is produced ONLY by the e2e-lying runs;
+    happy@1 has 0 dispatches and 0 artifacts (c3 false); happy@2/@3 have
+    settlements > 0 (c2 false); happy@4..@8 are settled (c1 false) with
+    failures: 0 artifacts.
+  evaluated_at_utc: '2026-09-19T03:30:00+00:00'

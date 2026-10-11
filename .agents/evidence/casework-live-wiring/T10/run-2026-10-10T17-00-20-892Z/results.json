@@ -1,0 +1,177 @@
+[
+  {
+    "journey_id": "L0",
+    "title": "Readiness and identity",
+    "status": "FAIL",
+    "depends_on": [],
+    "settles": "the stack is the real, non-fixture, authenticated one",
+    "unlocks": [
+      "L1"
+    ],
+    "steps": [
+      {
+        "journey": "L0",
+        "name": "served bundle has no fixture adapter (disk scan + HTTP scan)",
+        "ok": true,
+        "ms": 0
+      },
+      {
+        "journey": "L0",
+        "name": "gateway is the live non-fixture build and the kernel is ready",
+        "ok": false,
+        "ms": 309,
+        "error": "readyz status not_ready"
+      }
+    ],
+    "total_ms": 685,
+    "error": "readyz status not_ready"
+  },
+  {
+    "journey_id": "L1",
+    "title": "Template to preflight to commit",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L0"
+    ],
+    "settles": "a case exists in the kernel because the UI committed it",
+    "unlocks": [
+      "L2"
+    ],
+    "blocked_by": "L0",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L2",
+    "title": "Horizon standing",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L1"
+    ],
+    "settles": "the UI shows the case's real standing, not an invented one",
+    "unlocks": [
+      "L3",
+      "L4"
+    ],
+    "blocked_by": "L1",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L3",
+    "title": "Discretionary add",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L2"
+    ],
+    "settles": "an operator-proposed item is durably in the plan with its proposer, and the UI shows it",
+    "unlocks": [
+      "L4"
+    ],
+    "blocked_by": "L2",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L4",
+    "title": "Execute through the UI",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L2",
+      "L3"
+    ],
+    "settles": "an executed item is durably active, settled and completed, and its downstream unlocks over SSE without a reload",
+    "unlocks": [
+      "L5"
+    ],
+    "blocked_by": "L2",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L5",
+    "title": "Sign-off: operator denied, R-SO approves in a separate session",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L4"
+    ],
+    "settles": "an approval opened by the operator's execution is resolved only by a distinct R-SO principal, with both principals visible in the durable record",
+    "unlocks": [
+      "L6",
+      "L7"
+    ],
+    "blocked_by": "L4",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L6",
+    "title": "Settlement and the evidence dock",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L4"
+    ],
+    "settles": "a settled item's captured artifact opens in the dock with a verified digest, and only the needed renderer chunk is fetched",
+    "unlocks": [
+      "L7"
+    ],
+    "blocked_by": "L4",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L7",
+    "title": "Lifecycle: close, reopen, terminate",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L5",
+      "L6"
+    ],
+    "settles": "a case closes when its work completes, reopens with a reason, and a second case is terminated with a reason, all as durable kernel events offered only by the snapshot",
+    "unlocks": [],
+    "blocked_by": "L5",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L8",
+    "title": "Thoth ask narration: interrupt and resume",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L7"
+    ],
+    "settles": "a typed question is answered by the real kernel, narrated from the returned disclosure only, interruptible and resumable without a second ask",
+    "unlocks": [
+      "L9"
+    ],
+    "blocked_by": "L7",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L9",
+    "title": "L0-L8 in one session: console and errors stay empty",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L8"
+    ],
+    "settles": "the whole live ladder ran in one continuous session per user with no error-level console output and no page error",
+    "unlocks": [],
+    "blocked_by": "L8",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "L-RECOV",
+    "title": "Recovery: corrupt artifact, SSE drop, kernel and gateway kill -9",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L8"
+    ],
+    "settles": "the UI is honest and consistent with the durable files across a corrupt artifact, an SSE drop and kernel/gateway crashes",
+    "unlocks": [],
+    "blocked_by": "L8",
+    "steps": [],
+    "total_ms": 0
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "constraint_id": "opaque_827795b3f4100e3c",
+    "created_at": "2026-10-10T17:04:12.875742197+00:00",
+    "created_by_decision_id": "auth_01",
+    "expires_at": null,
+    "reason": "all configured evaluators escalated",
+    "target": {
+      "resource_id": "review/draft.md",
+      "resource_type": "file"
+    }
+  }
+]

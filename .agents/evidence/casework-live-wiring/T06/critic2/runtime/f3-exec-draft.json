@@ -1,0 +1,1 @@
+{"intent_id":"critic2-signoff-exec-draft-1","kind":"CONSEQUENTIAL_CASE","action_name":"EXECUTE_ITEM","target_object_id":"task_draft","case_id":"case_20260926T014907Z_f90434","client_cursor":"01M3DPDQJ6F1FW467E6YAXQ522","actor":{"actor_id":"operator_local","role":"operator"},"parameters":{"item_id":"task_draft"}}

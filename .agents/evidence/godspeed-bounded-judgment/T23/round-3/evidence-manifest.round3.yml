@@ -1,0 +1,30 @@
+schema: godspeed-bounded-judgment.t23-round3-evidence-manifest
+task: T23
+builder: B3
+correction_round: 3
+frozen_utc: '2026-09-19T03:37:49+00:00'
+note: >-
+  round-3 mechanical-evaluation evidence (addendum-3, sha256
+  1c13889ae0c2a9621b7f0b803b327ee6dd76a16983c9ed72b00ff309f59c6ddb). Pinned
+  BEFORE the official verify_route.round3.py gate run; every round-3 file is
+  pinned (the manifest cannot pin itself); the gate checks both directions,
+  fail-closed. No script is modified after its first execution (the gate
+  script received only pre-execution syntax/YAML validation, never an
+  execution run, before this freeze). Correction history, recorded honestly —
+  freeze v1 (03:36:08): the first gate run FAILED (exit 1, 12 findings) on a
+  layout mismatch — the route-record labels table carried top-level c1/c2/c3
+  while mechanical-labels.yaml uses the mandated rule_clauses nesting; the
+  gate script was correct and stayed byte-identical. freeze v2 (03:37:23):
+  route-record.round3.yaml normalized (a data edit, not a script overwrite)
+  and re-pinned; second gate run crashed parsing THIS manifest's plain-scalar
+  note (colons in prose) before any check — note rewritten as a block scalar,
+  no content change. freeze v3 (03:37:49): current; official gate run follows.
+files:
+- path: confirmation-packet.yaml
+  sha256: 4a2dddf47dd19957ab3db75f367d3e8a4ed9ab379122b1991fee260276633451
+- path: mechanical-labels.yaml
+  sha256: 4b0e1f1a2b13c1b3b6929bcc6587f8982ebf672f88a8afa4198320d497bcffd6
+- path: route-record.round3.yaml
+  sha256: c6b9ee9cff7c8f2047dd29e2eef5576f9b113d72d5f8618c6849ec618bb27097
+- path: verify_route.round3.py
+  sha256: 2a00efb76f2aacee48d1809c8ad1bedf1b328f8d2c62fe6ae8d5c5e230cf882f

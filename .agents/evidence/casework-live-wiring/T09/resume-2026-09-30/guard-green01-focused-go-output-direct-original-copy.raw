@@ -1,0 +1,62 @@
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/blank_case
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_history
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_relay
+=== RUN   TestCheckRunObservationPresentContextRejectsUnavailableInputs/empty_history
+--- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/blank_case (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_history (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/nil_relay (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsUnavailableInputs/empty_history (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/revision_case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_case
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_cursor
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/facts_cursor
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nonblank_revision_cursor
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/record_reference
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/overview_reference
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/horizon_reference
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_compared_cursors
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/missing_facts
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nil_horizon_items
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_parent_ID
+=== RUN   TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/duplicate_parent_ID
+--- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/revision_case (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_case (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/snapshot_cursor (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/facts_cursor (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nonblank_revision_cursor (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/record_reference (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/overview_reference (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/horizon_reference (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_compared_cursors (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/missing_facts (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/nil_horizon_items (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/blank_parent_ID (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsEachNewestIdentityDefect/duplicate_parent_ID (0.00s)
+=== RUN   TestCheckRunObservationPresentContextUsesOnlyNewestRevisionWithoutFallback
+--- PASS: TestCheckRunObservationPresentContextUsesOnlyNewestRevisionWithoutFallback (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/missing_observed_cursor
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/blank_observed_cursor
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/advanced_without_captured_revision
+=== RUN   TestCheckRunObservationPresentContextRejectsRelayCursorGaps/opaque_cursor_differs
+--- PASS: TestCheckRunObservationPresentContextRejectsRelayCursorGaps (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/missing_observed_cursor (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/blank_observed_cursor (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/advanced_without_captured_revision (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextRejectsRelayCursorGaps/opaque_cursor_differs (0.00s)
+=== RUN   TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons
+=== RUN   TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/complete_empty_horizon
+=== RUN   TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/opaque_populated_parents
+--- PASS: TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/complete_empty_horizon (0.00s)
+    --- PASS: TestCheckRunObservationPresentContextAcceptsAndCopiesEmptyAndPopulatedHorizons/opaque_populated_parents (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRechecksAdvancingHistoryAndDoesNotReuseOldParents
+--- PASS: TestCheckRunObservationPresentContextRechecksAdvancingHistoryAndDoesNotReuseOldParents (0.00s)
+=== RUN   TestCheckRunObservationPresentContextRejectsWrongCaseFromHistory
+--- PASS: TestCheckRunObservationPresentContextRejectsWrongCaseFromHistory (0.00s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	2.784s

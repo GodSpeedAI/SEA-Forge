@@ -1,0 +1,42 @@
+{
+ "deepseek-clinepass": {
+  "observed_accuracy": 0.6666666666666666,
+  "unique_class_preserving_permutations": 84,
+  "permuted_accuracy_distribution": {
+   "0.0": 1,
+   "0.111111": 6,
+   "0.222222": 15,
+   "0.333333": 24,
+   "0.444444": 22,
+   "0.555556": 12,
+   "0.666667": 4
+  },
+  "max_permuted_accuracy": 0.666667,
+  "n_permutations_ge_observed": 4,
+  "proportion_ge_observed": 0.047619047619047616,
+  "exact_one_sided_p_value": 0.047619047619047616,
+  "class_counts": {
+   "settled": 3,
+   "not_settled": 6
+  }
+ },
+ "prime-agent": {
+  "observed_accuracy": 0.5555555555555556,
+  "unique_class_preserving_permutations": 84,
+  "permuted_accuracy_distribution": {
+   "0.333333": 20,
+   "0.444444": 30,
+   "0.555556": 21,
+   "0.666667": 12,
+   "0.777778": 1
+  },
+  "max_permuted_accuracy": 0.777778,
+  "n_permutations_ge_observed": 34,
+  "proportion_ge_observed": 0.40476190476190477,
+  "exact_one_sided_p_value": 0.40476190476190477,
+  "class_counts": {
+   "settled": 3,
+   "not_settled": 6
+  }
+ }
+}

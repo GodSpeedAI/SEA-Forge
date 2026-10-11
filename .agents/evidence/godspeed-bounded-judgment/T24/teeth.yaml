@@ -1,0 +1,95 @@
+schema: godspeed-bounded-judgment.t24-teeth
+task: T24
+marked: ATTACK - every record in this directory is an attack artifact and never part of the developmental case set
+accepted_case_read: .agents/evidence/godspeed-bounded-judgment/T24/accepted-case.yaml
+teeth:
+- id: T7-invalid-inverse-case
+  marked: ATTACK - never part of the developmental set
+  construction: companion case derived from the ACCEPTED case t24-case-001 with EXACTLY ONE presentation factor
+    changed - max_rounds 4 -> 2, a known honest non-settlement budget on route t23-route-001's own ledger (probe-i3-cand-1)
+    - presented with the SAME legitimacy claim as the accepted case, then replayed through the REAL frozen mechanism
+    (fresh tests/fixtures/target copy, fresh seed t24-t7-attack-seed, timeout 240) and pushed through the SAME acceptance
+    path (provenance validator + frozen generated_case_record schema with accepted = replay settled)
+  expected: 'the replay does NOT settle (label read from the run_terminal, never assigned) and the acceptance path
+    REJECTS the case: accepted=false with a recorded invalid_reason; recorded invalid, NOT added as valid developmental
+    data'
+  observed: the replay ended typed terminal budget_exhausted with 1 settlement_committed events (exit 1, wall 0.204s);
+    the acceptance path produced accepted=false with invalid_reason; the rejected record is preserved under teeth/
+    only
+  expected_vs_observed: MATCH - non-settlement observed, rejection produced by the same acceptance rule, developmental
+    set untouched
+  attack_case:
+    schema: godspeed-bounded-judgment.t24-t7-attack-case
+    marked: ATTACK - never part of the developmental set
+    case_id: t24-case-t7-attack
+    correlation_id: t24-t7-attack
+    claimed:
+      claim: this case IS solvable by route t23-route-001 and should be accepted like t24-case-001 (FALSE claim
+        under test)
+      source_route_id: t23-route-001
+      source_route_fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+      generator:
+        identity: t7-attack-synthetic
+        version: '1'
+    bounded_input:
+      scenario: e2e-happy
+      max_rounds: 2
+    known_route_fact_attacked: the route's OWN ledger records e2e-happy@2 as budget_exhausted (probe-i3-cand-1,
+      1 honest settlement) - an honest non-settlement budget, so the case cannot legitimately settle
+    note: 'single-factor lookalike of t24-case-001: everything about the presentation is identical except max_rounds
+      4 -> 2'
+  attack_observation:
+    probe_id: probe-t24-t7-attack
+    candidate_id: t24-case-t7-attack
+    correlation_id: t24-t7-attack
+    operation: run_case
+    bounded_input:
+      scenario: e2e-happy
+      max_rounds: 2
+    terminal_class: budget_exhausted
+    settlement_committed_count: 1
+    state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T24/teeth-r1/runs/t7-attack/state/gauntlet-state.db
+    state_db_sha256: 7136ad9c9333586ceb2f0e8671ca77066f9fa9d6e0d9f59ca11ced1f8a99841d
+    mechanism: t15-frozen-case-execution
+    started_at_utc: '2026-09-19T04:10:59.648135+00:00'
+    finished_at_utc: '2026-09-19T04:10:59.851728+00:00'
+  raw_terminal_state: budget_exhausted
+  run_meta:
+    run_command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+      page
+    cwd: /home/sprime01/.local/share/godspeed-route-discovery/T24/teeth-r1/targets/t7-attack
+    gauntlet_id_seed: t24-t7-attack-seed
+    exit_code: 1
+    wall_seconds: 0.204
+    state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T24/teeth-r1/runs/t7-attack/state/gauntlet-state.db
+    state_db_sha256: 7136ad9c9333586ceb2f0e8671ca77066f9fa9d6e0d9f59ca11ced1f8a99841d
+    max_rounds_sed_applied: true
+    max_rounds_sed: 4 -> 2
+  acceptance_rejection:
+    rejected_record_path: .agents/evidence/godspeed-bounded-judgment/T24/teeth/t7-attack-rejected-case.yaml
+    accepted: false
+    invalid_reason: 'T7 ATTACK case REJECTED by the acceptance path: the independent replay ended budget_exhausted
+      with 1 settlement_committed events - NOT a settlement; the case is recorded invalid and is NOT added as valid
+      developmental data (preserved here as an attack artifact only)'
+    not_added_to_developmental_set: true
+    developmental_record_file: accepted-case.yaml (t24-case-001, unchanged)
+  validator: T23/provenance.py validate/recompute (imported unchanged) + frozen T21 route_contracts generated_case_record
+    cross rules
+immutability:
+  developmental_set_unchanged: true
+  accepted_case_sha256_before: 02927ee42a4bf1858083a9179b4d812c2313657fac6a503cae8578643010ed58
+  accepted_case_sha256_after: 02927ee42a4bf1858083a9179b4d812c2313657fac6a503cae8578643010ed58
+  candidate_case_sha256_before: 6bf2610c12a609cee98d48ad571baf2fc58d383232eb72bdb9275b245ea25977
+  candidate_case_sha256_after: 6bf2610c12a609cee98d48ad571baf2fc58d383232eb72bdb9275b245ea25977
+  attack_ids_absent_from_developmental_records: true
+  attack_ids:
+  - t7-attack
+  - t24-case-t7-attack
+  - probe-t24-t7-attack
+payment_counters:
+  wall_clock_seconds: 0.204
+  provider_calls: 0
+  tool_executions: 1
+  failed_executions: 0
+  note: T7 ran the only real gauntlet execution in the tooth battery (1); the T24 generation made none
+  teeth_data_root: /home/sprime01/.local/share/godspeed-route-discovery/T24/teeth-r1

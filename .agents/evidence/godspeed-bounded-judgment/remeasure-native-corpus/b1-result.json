@@ -1,0 +1,59 @@
+{
+ "task": "remeasure-native-corpus",
+ "builder": "B2-resume",
+ "status": "complete",
+ "corpus_manifest_sha256": "e2419c2ccd79cd84761354471a796141196a85b8ffe34322531339b74220be36",
+ "arms": {
+  "arm1": {
+   "accuracy": 0.6,
+   "ci": [
+    0.3228697662062817,
+    0.8366356761404865
+   ],
+   "baseline_acc": 0.6,
+   "mcnemar_p": 1.0
+  },
+  "arm2": {
+   "single_acc": 0.6923076923076923,
+   "majority_acc": 0.6923076923076923,
+   "agreement": 0.9743589743589743,
+   "vfn_separation": false,
+   "vfn_separation_evidence": "0/4 verification_failed_nonsettlement rows correct; all predicted budget_exhausted (4/4 confusion cells, 11/12 samples); the learned layer never produces verification_failed_nonsettlement as a majority label; honest rows 9/9",
+   "single_ci": [
+    0.3857383382492947,
+    0.9090796054279033
+   ]
+  },
+  "arm2b": {
+   "mae": 0.0,
+   "exact_hit": 1.0,
+   "note": "exploratory; deepseek slice 14/14 valid estimates all exactly equal actual_settled_units; the estimate restates the surface's own settlement_committed_count field (copy fidelity, not independent signal); nat-03 slot muse-substituted, excluded, never pooled"
+  }
+ },
+ "substitutions": 3,
+ "verification": [
+  "verify_remeasure.py exit 0 from the sea-rs repo root",
+  "R1: 15/15 pinned DBs re-hash to manifest pins (fail-closed)",
+  "R2: mechanical truth re-derivation matches every row; frozen class counts hold",
+  "R3/R4: every preserved arm1 raw re-parses to recorded labels; leakage assertions hold; prompts re-derive from DB + T16 PROMPT",
+  "R5/R6: round-2 template hashes reproduce; all surfaces re-build byte-identically; every arm2/arm2b prompt re-derives",
+  "R7: all accuracies, CP CIs, majority aggregation, stability, McNemar, comparison-7 error list and arm2b MAE/hit-rate recompute from the results file",
+  "R8: payment counters reproduce (78 learned-layer calls; mechanical layer 0)",
+  "R9: RM-02 records the exact manifest sha256; manifest freeze precedes the first provider call; decision append postdates manifest",
+  "R10: all 180 evidence-manifest entries hash to their recorded sha256"
+ ],
+ "deviations": [
+  "DV-1 (scope-reading)",
+  "DV-2 (most-restrictive-reading)",
+  "DV-3 (scope-reading)",
+  "DV-4 (execution-interruption-recovery)",
+  "DV-5 (execution-interruption-recovery)"
+ ],
+ "notes": "Resume of the interrupted round-2 pass via run_arms.round3.py: the 14 completed arm2 slots were re-validated from disk and reused verbatim (never re-rolled, including the completed nat-02-s2 muse substitution a naive re-run would have destroyed); nat-05 s3 through nat-15 and all of arm2b executed fresh. Majority aggregation does not materially change arm2 (accuracy identical at 9/13, zero label changes, 12/13 rows unanimous). Fresh majorities match the preserved T23 round-2 labels on 11/12 route rows (only nat-09 differs, the one non-unanimous row); no pooling. Substituted slices (arm2: nat-02, nat-14; arm2b: nat-03) are reported provider-qualified and never pooled; 3 provider timeouts, one substitution each. Learned-layer payment: 78 provider calls / 3217.753 s recorded wall (arm2 is a lower bound, DV-5); mechanical layer 0 calls. Unique learned-layer contribution: none demonstrated. Recommendation: remove-from-path (report section 17); exact next affordable move if vfn separation is ever wanted: the 12-call revise-surface variant-B probe. CURRENT_STATUS intentionally untouched (DV-3, orchestrator-owned).",
+ "artifacts": {
+  "results": ".agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/remeasure-results.json",
+  "report": ".agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/remeasure-report.md",
+  "gate": ".agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/verify_remeasure.py",
+  "evidence_manifest": ".agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/evidence-manifest.yml"
+ }
+}

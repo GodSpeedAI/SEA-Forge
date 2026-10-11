@@ -1,0 +1,12 @@
+command: bun run build
+cwd: apps/godspeed-cognitive-ui
+Wed Oct  7 04:53:12 UTC 2026
+               total        used        free      shared  buff/cache   available
+Mem:            7944        4261         540         149        3512        3683
+Swap:          12288        3294        8993
+19c767cee3da406f5729a29177f360638d2b6ac3830294126f564c5d857b4700  src/adapters/local/localAdapter.ts
+b2a8a22b123382fe6b0fd788c4f385de77ee58bccfee58cdf32af272af0ec552  src/adapters/local/localAdapter.cursorOrder.test.ts
+a5ca9298467460a32350e85dee1c412a0b4a636efbe8ca3786ce4ab0802390f5  src/adapters/local/localAdapter.cursorBounds.test.ts
+ef938f96e04a04198793fa65d1a1331b874873314a3cd07fddd7db30babe674c  src/adapters/local/localAdapter.settlementAtomicity.test.ts
+31f8a71c2fa550ef0ea6f22259e25c48742a836fea85e52616d6da3356913920  src/adapters/local/localAdapter.hostileThrownValues.test.ts
+edf8ed69fc9d4cf3c1ed2a136cc5f076ada72117497a92865cfdb19f3ef31c1c  ../godspeed-cognitive-ui/src/adapters/conformance/caseworkPortConformance.ts

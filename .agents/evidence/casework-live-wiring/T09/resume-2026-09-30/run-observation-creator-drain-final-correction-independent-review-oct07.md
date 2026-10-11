@@ -1,0 +1,29 @@
+# Independent review: final creator/drain correction — 2026-10-07
+
+**Verdict: APPROVE the bounded document proposal for TDD source preparation.** This approval is limited to the private lifecycle design and three proposed held-list tests. It does not approve implementation or behavior, and it does not release compiler/runtime work.
+
+## Evidence and changes from the rejected proposal
+
+Read the complete final-correction assignment, final supplement, and the previous rejected correction and its scope erratum. The exact file hashes are in the accompanying assignment record. The final supplement explicitly preserves the prior records and says Root's final choices supersede conflicting earlier wording. The previous caller-cancellation gap is repaired with a required `prepareDone <-chan struct{}` argument to `reservePollerBatch`.
+
+Material amendments are bounded and clearly enumerated:
+
+- Production obtains the creator-local derived context's `Done` channel outside `m.mu`; four manual direct-boundary fixtures pass the genuine exact lease `leaseDone` channel. There is no nil channel sentinel or test-only mode. Under `m.mu`, the helper performs a nonblocking receive-only check alongside stopping, draining, and exact cohort membership, before any attachment or reservation. It invokes no context method, callback, wait, or I/O while holding the mutex.
+- Cancellation after that admission linearization point is acknowledged as possible. The creator checks immediately after reservation and before waits/DTO construction, performs its owned rollback and makes the batch ineligible, but still launches every entry in the immutable reserved batch exactly once. Stop-marked workers follow the no-read code-4 path; the final context check prevents returning successful DTO after cancellation. The document does not claim wall-clock cancellation can never follow an accepted check.
+- A third held-list test cancels the caller context, holds the callback until cancellation is observed, then releases it with a successful readable candidate. It requires typed cancellation, zero DTO, nil lease, zero trace calls, no candidate attachment/reservation, and actual creator/bridge completion before capacity reuse. This is distinct from Stop/leaseDone cancellation and from successful unavailable-list A.
+- Four reservation call shapes are amended to pass the exact lease channel, and four finish closures continue to pass their exact lease. All nine existing assertions remain, with exactly three new held-list cases. The original manager fixture and six published primitives stay frozen.
+- The final supplement rejects a nil-channel completion sentinel. It assigns single drain ownership to the first `draining` transition and single global stop ownership to the first `stopping` transition under the mutex. Signals/cancellation happen outside the mutex and before waits. One background drain job per admitted lease (maximum 16) and one Stop job join actual creators/workers, remove exact reverse refs/capacity after completion, and close stable completion channels once. Caller timeouts return without canceling the owner or fabricating completion; retries wait on that same completion. Stop waits for creator launch registrations before lease drains, while a creator closes its exact completion before waiting on its own drain.
+
+These additions address the prior gap: a successful list result returned after caller cancellation cannot pass the specified pre-reservation context-channel check. The subsequent-cancellation race is handled separately by post-reservation rollback/ineligibility, mandatory immutable-batch launch, no-read worker phase, and final DTO cancellation check.
+
+## Semantic review and implementation constraints
+
+The design keeps the actual request context and manager-owned shared worker context separate. The bridge cancellation is local; lease drain owns `leaseDone`; successful active leases do not get canceled merely because a Prepare creator is finishing. Exact lease identity and the existing eligibility predicate keep surviving shared workers attached to eligible leases while watcherless refs remain only as drain ownership until actual JOIN. Each transition has one close/removal owner; later Detach/Stop callers wait on the stable completion rather than repeating cleanup. All channel close, cancellation, callback, I/O, and JOIN actions are outside `m.mu`.
+
+The sequencing resolves the known self-wait hazard: the creator finishes its exact `creatorDone`/WaitGroup registration before waiting for its own drain, and Stop signals/cancels owned work before it waits for creator registrations. Detach waits only on its exact lease. Timeout leaves capacity and reverse ownership intact until the actual list/worker return and JOIN. The design adds bounded control goroutines but no extra poller/read worker, state field, counter, enum, token, callback, public API, schema, or budget change.
+
+For TDD preparation, preserve the nine existing assertions and add exactly the three held-list cases described by the final supplement. Test callbacks must use real list contexts and explicit channel gates; no fake lifecycle hook or direct lifecycle-field mutation is authorized. Source review must check the producer's precise local-context handling, admission and post-reservation rollback, immutable-batch launch, code-4 no-read behavior, bridge JOIN-before-creatorDone, unique completion closure, exact reverse-ref removal, and actual JOIN-before-capacity release. These are future implementation checks, not facts proven by this document review.
+
+## Limits
+
+This is approval of the document proposal for the bounded TDD source-preparation step only. It makes no source correctness, test result, compilation, race, runtime, or milestone-completion claim. Root retains architecture and implementation authorization. No source/test changes, compiler, formatter, scanner, explicit Graft build, or Git operation was performed.

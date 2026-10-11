@@ -1,0 +1,37 @@
+{
+  "version": "1",
+  "evidence_root": "/var/lib/sea-forge/evidence",
+  "serve": {
+    "gateway_actor_id": "gateway",
+    "gateway_role": "service",
+    "policy_ref": "authority/active-policy.json",
+    "perspective_actor_id": "operator_local",
+    "perspective_role": "operator",
+    "production": true,
+    "trusted_origins": ["https://casework.example.org"],
+    "static_root": "/usr/share/sea-forge/casework-ui",
+    "rate_limit": {"intents_per_minute": 60, "burst": 20},
+    "execution_timeout_sec": 900
+  },
+  "auth": {
+    "mode": "oidc",
+    "session_idle_minutes": 30,
+    "session_absolute_hours": 12,
+    "users": [
+      {"username": "operator", "actor_id": "operator_local", "role": "operator"}
+    ],
+    "oidc": {
+      "issuer": "https://idp.example.org/realms/casework",
+      "client_id": "casework-gateway",
+      "client_secret": "env:OIDC_CLIENT_SECRET",
+      "redirect_url": "https://casework.example.org/api/auth/callback",
+      "username_claim": "preferred_username",
+      "mappings": [
+        {"claim": "preferred_username", "equals": "operator", "actor_id": "operator_local", "role": "operator"}
+      ]
+    }
+  },
+  "capabilities": [
+    {"name": "authority", "kind": "authority", "required": true, "adapter": "sfwp", "endpoint": "unix:///run/sea-forge/server.sock"}
+  ]
+}

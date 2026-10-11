@@ -1,0 +1,10 @@
+=== RUN   TestLiveKillMidCommitRecovery
+    live_recovery_test.go:25: warm-up case case_20260926T015922Z_b86a02 committed
+    live_recovery_test.go:59: server killed mid-commit; restarting
+    live_recovery_test.go:81: commit completed before the kill; outcome recovered for case case_20260926T015922Z_8782f3
+    live_recovery_test.go:126: durable truth: 2 CaseCreated in the cell, record status=completed - no double commit
+    live_recovery_test.go:135: commit outcome unresolved across the restart (unavailable: the authority has no record of request gw-41713-3-case_commit (it never crossed admission); it is safe to retry only with a NEW request id (recover)); retrying with a new request id
+    live_recovery_test.go:139: post-recovery case case_20260926T015922Z_9602dc committed
+--- PASS: TestLiveKillMidCommitRecovery (0.36s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.409s

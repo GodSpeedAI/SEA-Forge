@@ -1,0 +1,3 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server
+# [github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server]
+vet: internal/server/trajectory_test.go:6:2: "net/http/httptest" imported and not used

@@ -1,0 +1,427 @@
+schema: agent.current_status
+schema_version: '1.0'
+metadata:
+  plan_id: godspeed-bounded-judgment
+  plan_version: 1.7.0
+  plan_path: .agents/plans/godspeed-bounded-judgment-plan.yaml
+  brief_path: .agents/plans/godspeed-bounded-judgment-brief.md
+  spec_id: godspeed.judgment-plane
+  spec_version: 1.0.0
+  spec_path: .agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml
+  spec_sha256: 69b7d1baabd55ae61c73e615f04cf0fda43a4958a9fa3d50567035425baf6a82
+  spec_status: authoritative
+  initialized: true
+  last_updated: '2026-09-19'
+  updated_by: t28-claim-vs-observation-disposition
+execution:
+  last_settled_task: T28
+  settled_tasks:
+  - T00
+  - T01
+  - T02
+  - T03
+  - T04
+  - T05
+  - T17
+  - T16
+  - T15
+  - T21
+  - T22
+  - T18
+  - T23
+  - T24
+  - T25
+  - T26
+  - T29
+  - T27
+  - T28
+  in_flight_task: null
+  ready_tasks: []
+  branch_blockers:
+    T06: 'SETTLED-BLOCKED (D-2026-09-18-T16-17/18): T16 expanded-corpus measurement CONFIRMED at Outcome C (no promotion for this surface; DeepSeek showed real signal 0.833 non-abstaining p = 9.4e-6; Muse
+      at chance). T06 remains blocked because T16 did not earn promotion. The capability- class question remains ESCALATED per REQ-JUDG-023.'
+    T19: 'NOT AUTHORIZED (D-2026-09-18-T18-04): T18 Stage 1 did NOT improve judgment (H_REPRESENTATION weakened by McNemar analysis). T19 fresh-transfer is only authorized when a representation improvement
+      exists to transfer.'
+  blocked_tasks:
+    T06:
+    - T01
+    - T16
+    T07:
+    - T06
+    T08:
+    - T03
+    - T06
+    T09:
+    - T07
+    - T08
+    T10:
+    - T07
+    T11:
+    - T08
+    - T09
+    T12:
+    - T05
+    - T09
+    - T10
+    - T11
+    T13:
+    - T01
+    - T05
+    - T07
+    T14:
+    - T02
+    - T03
+    - T04
+    - T12
+    - T13
+    - T17
+    T19:
+    - T18
+    T20:
+    - T19
+  plan_blocked: false
+  plan_blocker: null
+  external_blockers:
+    T12: 'PHYSICAL: the deployment target (Jetson AGX Orin) is not reachable from this development host; target-machine-only gates (edgeai just health / jetson-check-ports) are recorded NOT_RUN_TARGET_ONLY
+      at T00. T12 cannot execute here even if its dependencies settled. Fresh target reproduction requires operator-provided target access.'
+    T14: 'Requires T12 (unsettled: physical blocker) and T13 (unsettled: depends on T07 behind the judgment-slice escalation). Cannot settle until the escalation is resolved with better evidence or an operator
+      decision AND target access exists.'
+active:
+  task: null
+  blocker: null
+latest_evidence:
+  t28:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T28/
+    disposition_report: .agents/evidence/godspeed-bounded-judgment/T28/t28-disposition-report.md
+    result: 'T28 SETTLED (P2, CONFIRMED WITH QUALIFICATION; fresh verifier VERDICT: CONFIRM). Two independent recomputations (fresh verifier shielded from builder narrative + orchestrator standalone script)
+      reproduce every T27 number exactly (A 9/14, B 8/14, b=0, c=1, p=1.0, guard clean, C5(boundary) mechanically required; C3 defeated by c_f=1, equally non-supporting). Integrity proven: 14/14 corpus
+      hashes, selection replay MATCH, 140/140 store keys bound to prereg bytes, 70/70 A prompt bytes + 14/14 B case hashes reproduced from frozen specs, freeze timing proven, harness hash matches, addendum
+      anti-self-serving. Behavior shift CONFIRMED (abstentions 18/70 -> 32/70) without judgment improvement; stable-wrong budget-C3 localizes the missing distinction to LOCAL POSITIVE EVIDENCE vs
+      SUFFICIENCY/COMPLETENESS OF THE WHOLE-CASE RECORD FOR SETTLEMENT. Branch pruned: claim-vs-observation typing is not sufficient here (with T18, the input-representation branch is closed on this
+      surface). Qualifications recorded (baseline fraction label 4/14 vs actual 6/14; prereg strict-YAML defect; teeth log rewrite artifact) — none verdict-changing. Plan is now fully settled or
+      evidence/physically blocked; readiness empty by design; next move is an operator decision (zero-cost budget-C3 deterministic inspection first; settlement-sufficiency probe only if authorized).'
+  t27:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T27/
+    settlement_report: .agents/evidence/godspeed-bounded-judgment/T27/t27-settlement-report.md
+    result: 'T27 SETTLED (P2, disposition C5 — mechanically inconclusive; no support for the treatment hypothesis). Prereg base 41af1921...74343 + addendum-1 a7fb31e2...7609 frozen before any call
+      (addendum = pre-execution binary-correctness McNemar correction). Corpus 14/14 hash-verified (frontier = stable-wrong budget-C3 + 9 unstable; controls = accepted-A1/A2, forge-D1, lying-B1 by frozen
+      stratified rule). 140/140 fresh DeepSeek-v4.1-Flash calls valid, interleaved A/B, persist-before-score; all four teeth PASS incl. simulated attacks rejected; --verify-only recomputation identical.
+      RESULT: A 9/14 (0.643) vs B 8/14 (0.571); corrections 0; regressions 1 (accepted-A4 abstention shift); c_ctrl = 0; McNemar exact p = 1.0; practical criterion unmet; target budget-C3 unchanged-wrong
+      in BOTH conditions; per-call abstentions 18/70 -> 32/70 (exploratory). CONSEQUENCE: claim-vs-observation typing did not improve case-level bounded judgment here; T18+T27 jointly indicate the
+      surface failure is not input-representation; T06 stays blocked; T28 (independent confirmation/disposition) is ready and receives this frozen evidence; no .sea grammar implication; nothing promoted.'
+  t05:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T05/
+    confirmation: .agents/evidence/godspeed-bounded-judgment/T05/t05-independent-confirmation.md
+    result: 'T05 SETTLED (P3, fresh independent adversarial confirmation CONFIRM — the verifier minted its own runs and authored its own joiner; no false join achieved; the runtime itself detects ledger
+      tampering). Mechanism BOUND per frozen prereg (sha256 a3699182…): the loop correlation identity is the admission intent entry''s ledger ULID and every hop joins by committed causal references; the
+      one broken hop (settlement cited per-run ''auth_NN'' labels) was repaired in the mainline pipeline (committed decision ULIDs now cited). Joinability harness 8/8 (collision, duplicate id, restart,
+      missing-hop, stale-mapping, mismatched-pair, VAR-008 immutability). Gates: core 0, joinability 0, proof 0; cli 101 solely on the recorded pre-existing t13_1. Residual debt filed: --plan pipeline settlement
+      still cites labels (sibling pipeline).'
+  t04:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T04/
+    confirmation: .agents/evidence/godspeed-bounded-judgment/T04/t04-independent-confirmation.md
+    result: 'T04 SETTLED (P3, fresh independent adversarial confirmation CONFIRM — verifier added seven new attacks incl. engine-level vocabulary minting and wall-clock ordering proof; no authority-widening
+      case found). Adversarial battery 8/8: strongest allow-shaped provider output under a denying policy produces Rejected with ZERO provider contact; timeout/unreachable/schema-invalid settle Rejected
+      with named typed classes; contradictory answers preserved and grant nothing; override directives inert; vacuity guard proves the deny policy denies; canonical vocabulary refuses unknown kinds. Gates:
+      authority 0; server 101 solely on the recorded pre-existing sfwp trio. Debt filed: allowed-but-unsettled grant.authorize strand.'
+  t03:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T03/
+    result: 'T03 SETTLED (builder confirmation, P1). DECIDED: the per-cell exclusive flock is correct production behavior; the restart test''s assumption was wrong. Smallest test-side correction (stop the
+      first server before booting the second; assertions untouched; no production change): the previously failing test passes, conformance_run_locator 6/6. Three conformance_sfwp failures recorded as PREEXISTING_BASELINE_FAILURE
+      (masked at T00, reproduce in isolation and at the T00 revision); workspace gate still red solely on the pre-existing cli t13_1.'
+  t02:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T02/
+    result: 'T02 SETTLED (builder confirmation, P1). Gauntlet had no CI; all six recipes verified green individually; authored ../gauntlet/.github/workflows/ci.yml invoking the existing `just ci` (uncommitted
+      — activation on operator commit+push). Tooth verified: lint fails (exit 101, clippy -D warnings) on a deliberate violation and passes restored.'
+  t01:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T01/
+    confirmation: .agents/evidence/godspeed-bounded-judgment/T01/t01-independent-confirmation.md
+    outcome: C (escalated after the preregistered second-surface evaluation also failed authorization)
+  t00-rebase:
+    report: .agents/reports/2026-09-17-godspeed-bounded-judgment-rebase-review.md
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T00/round-2/
+    spec_changed: false
+    plan_changed: true
+    plan_version_old: 1.1.0
+    plan_version_new: 1.2.0
+    validator_changed: true
+    t00_reconfirmed: true
+    inherited_gate_baseline: true
+    result: 'Controlled representational rebase, CASE 2 (plan-only). All ten corrected-logic items, the PROOF-1 governing question, and branch semantics A-E were verified ALREADY_ENCODED in the normative
+      spec (byte-identical; sha256 unchanged) and in plan v1.1.0 except one PARTIALLY_ENCODED item: T01''s preregistration freeze contract did not explicitly enumerate semantic basis, evaluation basis,
+      provider/config identities, deterministic baseline, and the exploratory pilot metric list. Plan corrected to v1.2.0 (T01 freeze_contract, two-stage F0/F1; no requirement id, task id, DAG edge, or
+      gate changed). Validator updated only as required: version pin 1.2.0 and execution-aware readiness derivation (pre-execution checks byte-identical). T00 reconfirmed against the corrected plan; all
+      heavy gate baselines explicitly INHERITED from the original T00 settlement (no governing repository changed; no heavy gate rerun). Readiness recomputed mechanically by the validator from the DAG:
+      ready T01-T05.'
+  t00:
+    evidence_dir: .agents/evidence/godspeed-bounded-judgment/T00/
+    decision_log: .agents/evidence/godspeed-bounded-judgment/decisions.yml
+    sea_rs_revision: 72348237412dc000533c05b6a36e01066ca3baed
+    commands:
+    - python3 .agents/plans/validate-godspeed-bounded-judgment-plan.py
+    - just check
+    - just test
+    - just ci
+    - just no-async-kernel
+    - just proof
+    - just crate-test sea-forge-server
+    - cd ../gauntlet && just check && just test && just ci
+    result: 'T00 SETTLED (builder confirmation, P1). Spec sha256 recomputed equal to the bound value; final_self_check 12/12; 11 corrections, zero reversals; validator PASS (90/90 mappings, 26-edge acyclic
+      DAG, 6/6 high-risk groups). All four teeth behaved as declared (teeth-4 needed round-2 after a round-1 attack-implementation error, preserved). Baselines: SEA_CHECK/SEA_CI PREEXISTING_BASELINE_FAILURE
+      (rustfmt drift, incl. two committed unmodified files); SEA_TEST PREEXISTING_BASELINE_FAILURE (sea-forge-cli conformance_m13 t13_1_agent_task_routed_through_server_ and_settles; KNOWN FACT CONFIRMED
+      via scoped run: sea-forge-server conformance_run_locator both_layouts_still_resolve_after_a_restart). SEA_NO_ASYNC_KERNEL, SEA_PROOF GREEN. GAUNTLET_CHECK/TEST/CI GREEN (1787 tests; ci includes boundaries
+      261 tests + ruler lock). EDGEAI_HEALTH/JETSON_PORTS recorded NOT_RUN_TARGET_ONLY (recipes resolved at ../edgeai/Justfile:495/782).'
+plan-authoring:
+  commands:
+  - python3 .agents/plans/validate-godspeed-bounded-judgment-plan.py
+  result: 'Plan validation 19/19: spec sha256 bound, spec v1.0.0 authoritative with 12/12 self-check and 11 corrections, 90/90 REQUIRED requirements mapped with zero unknown ids, DAG acyclic over 15 tasks
+    with T00 first.'
+  adversarial-inspection:
+    report: .agents/reports/2026-09-17-godspeed-bounded-judgment-plan-adversarial-inspection.md
+    result: 'Plan REJECTED pending remediation. Found: 5 physical grounding hallucinations (phantom crates, broken just recipes, unresolved placeholder <implementation-crate>, bash syntax error), high-risk
+      confirmation downgrades, 3 DAG schedulability flaws, and 3 evidence/corpus path errors. Follow-up vetting established that 5 of 6 high-risk groups—not 3—needed repair.'
+  plan-remediation:
+    commands:
+    - python3 .agents/plans/validate-godspeed-bounded-judgment-plan.py
+    result: 'PASS: authoritative spec hash unchanged; final self-check 12/12; 90/90 bidirectional requirement mappings; 15 complete tasks; 26-edge acyclic/state-equivalent DAG with T00 sole ready task;
+      all 6 high-risk groups have requirement-complete mandated confirmation.'
+    review: .agents/reports/2026-09-17-godspeed-bounded-judgment-plan-remediation-review.md
+observations:
+- status: T00_SETTLED_BASELINE_RECORDED
+  statement: Authority frozen; every global gate has a recorded baseline exit state and classification; the exact failing test ids of the red baselines are recorded with revisions and masking limitations.
+    Later failure attribution starts from these records, not from prose.
+  evidence: .agents/evidence/godspeed-bounded-judgment/T00/gate-baseline.yml
+next_action:
+  task: T18
+  action: 'Execute T18 (epistemic-role paired representation experiment, Stage 1 developmental): freeze the prereg, construct condition A (current T16 representation) and condition B (epistemically typed),
+    run both across the frozen 25-case corpus, compute paired deltas, run all teeth, apply the Stage 1 decision. If Stage 1 authorizes Stage 2, proceed to T19 (fresh transfer). T06 remains blocked pending
+    the experiment outcome. The plan can advance only through operator decisions: (1) JUDGMENT SLICE (T06-T12): procure a larger, varied Gauntlet corpus (runs with negative, mixed, and blocked outcomes
+    — the current 17-row corpus has single-class baselines on both preregistered surfaces) and re-run the frozen PROOF-1 harness family; a surface that then earns authorization re-opens T06 per the frozen
+    rules; or explicitly override the escalation (records it as a DECIDED operator override, not evidence). (2) T12/T14: provide target access (Jetson AGX Orin) for the target-machine-only gates. (3) Hygiene
+    available without decisions: commit/push the T02 Gauntlet CI workflow to activate hosted enforcement; the two OBSERVED_DEBT entries (plan_pipeline settlement refs; allowed-but-unsettled grant.authorize
+    strand); the pre-existing red gates (rustfmt drift, cli t13_1, sfwp trio).'
+  reason: 'The plan''s operating contract forbids building the judgment capability before measurement justifies it; the measurement escalated. Honest termination: 6 of 15 tasks settled, every one with recorded
+    evidence; the rest blocked by evidence or physics, not by silence.'
+handoff:
+  changed_files:
+  - .agents/evidence/godspeed-bounded-judgment/T00..T05/ (all evidence trees, decision log, confirmation records)
+  - .agents/preregistrations/godspeed-bounded-judgment-T0{1,4,5}* (frozen preregistrations + T01 corpus manifest)
+  - .agents/reports/2026-09-17-godspeed-bounded-judgment-rebase-review.md
+  - '.agents/OBSERVED_DEBT.md (four new entries: fmt drift, cli t13_1, plan_pipeline settlement refs, grant.authorize strand)'
+  - .agents/CURRENT_STATUS.md
+  - .agents/current_status.yml
+  - .agents/plans/godspeed-bounded-judgment-plan.yaml (v1.2.0 rebase), validate-godspeed-bounded-judgment-plan.py (execution-aware readiness + branch blockers), godspeed-bounded-judgment-brief.md
+  - 'crates/sea-forge-server/tests/conformance_run_locator.rs (T03: restart models a real stop; assertions untouched)'
+  - 'crates/sea-forge-server/tests/conformance_authority_nonbypass.rs (T04: new adversarial battery, 8 tests)'
+  - 'crates/sea-forge-cli/src/pipeline.rs (T05: settlement cites committed decision ULIDs)'
+  - '../gauntlet/.github/workflows/ci.yml (T02: UNCOMMITTED; activation on operator commit+push)'
+  decisions:
+  - 'Spec binding verified, never repaired: recomputed sha256 equals the bound 69b7d1ba...baf6a82; spec untouched during execution.'
+  - 'Baseline reds are classified PREEXISTING_BASELINE_FAILURE with exact ids: rustfmt drift (sea-forge-server tests/example incl. two committed unmodified files, plus dirty domainforge conformance test),
+    cli m13 t13_1, and the KNOWN server run_locator both_layouts failure (re-confirmed, not assumed). No plan regression is claimed.'
+  - Target-machine gates (EDGEAI_HEALTH, EDGEAI_JETSON_PORTS) resolved by reading ../edgeai/Justfile and recorded NOT_RUN_TARGET_ONLY; development-host output is never target evidence.
+  - The checked-in validator is a T00-time binding gate over the pre-execution status contract; after settlement it will fail on status-alignment by design. Readiness is computed from depends_on plus settled
+    tasks (plan status_rule), not by re-running that validator.
+  - Teeth-4 round-1 was an attack-implementation error (edge added in the wrong direction); preserved as evidence, corrected in round-2, plan restored byte-exact after every attack.
+  warnings:
+  - Do not touch unrelated modified worktree files; this handoff scopes to the listed .agents files only.
+  - Run heavy gates sequentially; never run the full daemon suite or parallel heavy jobs on this workstation.
+  - SEA_TEST aborts at the first failing suite; suites after conformance_m13 and after conformance_run_locator were NOT executed at T00 and have no baseline verdict.
+objective: 'Execute the GodSpeed bounded-judgment settlement graph task by dependency: T00 froze authority, bound real gate baselines, and validated the plan; the graph now advances to T01-T05 with deterministic
+  attribution for every later gate observation.'
+worktree_state:
+  branch: ultracode/sea-forge-completion
+  dirty: true
+  note: The pre-existing dirty inventory (73 entries) was captured BEFORE any gate ran and is preserved at .agents/evidence/godspeed-bounded-judgment/T00/ dirty-inventory.txt for regression attribution.
+    T00 added only the evidence tree, the decision log, OBSERVED_DEBT entries, and these status files.
+completed:
+- 'T00 settled: authority frozen, gate baselines recorded with exact failing ids, target-only gates NOT_RUN_TARGET_ONLY, dirty inventory captured.'
+- 'Representational rebase (CASE 2): plan v1.2.0 with explicit T01 freeze_contract; validator execution-aware.'
+- 'T01 settled (CONFIRM): PROOF-1 outcome C on the first surface; preregistered second-surface evaluation also failed authorization (single-class baselines on both shapes); capability-class question ESCALATED
+  per REQ-JUDG-023 — the corpus supports neither promotion nor class-level rejection.'
+- 'T02 settled: Gauntlet CI authored (uncommitted), teeth verified, all six recipes green individually.'
+- 'T03 settled: restart-test repaired (cell-lock invariant proven correct; test now models a real stop); three masked sfwp failures recorded as pre-existing.'
+- 'T04 settled (CONFIRM): authority non-bypass proven adversarially — 8-case battery plus seven independent verifier attacks; no authority-widening case exists.'
+- 'T05 settled (CONFIRM): loop correlation identity bound (ledger causal references; admission intent ULID); broken settlement hop repaired; joinability 8/8 incl. collision/restart/missing-hop/stale/mismatch/VAR-008.'
+verification:
+- command: python3 .agents/plans/validate-godspeed-bounded-judgment-plan.py
+  result: PASS (settled set + branch blockers mechanically consistent)
+- command: just context-check
+  result: PASS
+- command: T04 gates
+  result: sea-forge-authority exit 0; sea-forge-server exit 101 solely on recorded pre-existing sfwp trio
+- command: T05 gates
+  result: sea-forge-core exit 0; joinability 8/8 exit 0; proof exit 0; cli exit 101 solely on recorded pre-existing t13_1
+- command: T02 teeth
+  result: gauntlet lint fails on deliberate violation (101), passes restored
+- command: T01 gates
+  result: run_pilot --read-only exit 0; verify_disclosure PASS (15 files); 8 teeth executed
+remaining:
+- 'T06-T12: ESCALATED — need a larger varied corpus re-run through the frozen harness family, or an explicit operator override.'
+- T12 additionally needs Jetson target access (physical).
+- T13 needs T07; T14 needs T12+T13 — both blocked accordingly.
+- 'Operator hygiene options: commit/push Gauntlet CI workflow; the two OBSERVED_DEBT repairs; pre-existing red gates (rustfmt drift, cli t13_1, sfwp trio).'
+blockers:
+- 'JUDGMENT_SLICE_ESCALATION (T06-T12): evidence per D-2026-09-17-T01R2-03; re-open path = better corpus + frozen harness re-run, or operator override.'
+- 'TARGET_ACCESS (T12, and T14 transitively): no Jetson reachable from this host.'
+decisions:
+- The spec remains authoritative and unchanged; all current repairs are non-normative execution-plan corrections.
+- 'T00 settled 2026-09-17 at revision 7234823; ready set recomputed from the plan DAG: T01-T05.'
+changed_files:
+- .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+- .agents/plans/godspeed-casework-cognitive-environment.plan.yaml
+- .agents/plans/validate-godspeed-casework-cognitive-environment.py
+- .agents/evidence/godspeed-bounded-judgment/decisions.yml (append-only contract parity resolution)
+- .agents/reports/interface-contracts/ (reconciled package; untracked source package)
+- docs/decisions/ADR-006-godspeed-casework-ui-replacement.md
+- .agents/reports/2026-09-19-casework-cognitive-environment-adversarial-review.md
+- .agents/CURRENT_STATUS.md
+- .agents/current_status.yml
+- .agents/plans/godspeed-cognitive-world-execution.md
+changed_files_scope: casework_document_review_and_interface_contract_reconciliation; pre-existing worktree changes are preserved
+document_reviews:
+  casework_cognitive_environment:
+    date: '2026-09-20'
+    status: product_experience_implemented_not_settled
+    spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+    plan_path: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml
+    adr_path: docs/decisions/ADR-006-godspeed-casework-ui-replacement.md
+    report_path: .agents/reports/2026-09-19-casework-cognitive-environment-adversarial-review.md
+    requirement_mapping: 86/86
+    tasks: 15
+    plan_version: 0.2.5
+    isolation: Dedicated SEA Forge and Gauntlet worktrees; use canonical status files within the SEA Forge worktree.
+    resource_policy: Preflight memory before every build; defer Rust gates when unsafe and leave affected tasks unsettled.
+    next_action: 'Render the integrated CORE composition on a GPU host and record the four T06 perceptual states; then retire src/host/scene/CoreObject.tsx and AccretionSwirl.tsx and settle the remaining Go/SEA authority integration. Do not treat the fixture or legacy Go demo as authority proof. Preserve dirty worktree.'
+    handoff_2026_09_22:
+      status: 'Gargantua CORE relocated into the cognitive UI and integrated as the persistent deepest layer; T06 renderer composition settled in the governing artifact; GATE_UI green; rendered acceptance and UI removal still open'
+      trigger: 'Operator resumed the session that died mid-turn (opencode ses_f36860523ffenPfOlcyO6sXAdM looped on a repeated bash command, emitted malformed tool JSON, then returned empty responses after compaction).'
+      scope_decision: 'Path B, operator-decided: Gargantua is the canonical CORE, not a backdrop. R3F keeps objects/relationships/projections/interaction geometry above it. CoreObject/AccretionSwirl are retired only after integration AND acceptance.'
+      phase_1_repair:
+        status: complete
+        finding: 'The prior session copied the donor tree with cp -a but never validated it; the relocation broke every depth-sensitive reference and GATE_UI was RED at baseline.'
+        repaired:
+        - 'projections/CoreVisualProjection.ts and dev/CoreTuningPanel.tsx: ../core/CoreVisualState -> ../CoreVisualState'
+        - 'removed the duplicated root CoreVisualProjection.ts (byte-identical to the projections/ copy)'
+        - 'camera/CoreCamera.test.ts, quality/AdaptiveQuality.test.ts, donorParity.test.ts: vitest -> bun:test, vi.fn() -> mock()'
+        - 'donorParity.test.ts: vite-only ?raw golden import replaced by a bun-compatible node:fs read, so the comparison target is the actual untouched donor file'
+        - '16 module headers repointed from src/core/PROVENANCE.md to src/host/gargantua/PROVENANCE.md'
+        - 'PROVENANCE.md: golden-reference section, module map paths, D-01 three sourcing (0.186.0, no new dependency), and a 2026-09-22 migration record'
+        provenance_proof: 'golden reference sha256 9cfdc399c3fdf5fc73cbaf0545ef2fa7a49b4d6e9f8772a817949b10883c93cd identical in both copies; diff -rq reports no differing files between workbench core/ and the ported tree; 22 donor tests compare every shader module against the on-disk golden file'
+      phase_2_t06_settlement:
+        status: complete
+        spec_version: 0.2.4
+        spec_sha256: 4baac56017bfcff8ba51c58190f66a4b9a29de1baff267a66f66dc626c1f2891
+        plan_version: 0.2.5
+        changed:
+        - 'spec renderer_boundary now states layer composition explicitly: the persistent CORE MAY be a GodSpeed-owned Three.js renderer owning its own WebGL context and canvas, with the R3F/Three/Drei scene alpha-composited above it inside the same GodSpeed-owned scene-adapter seam'
+        - 'plan source.spec re-bound to the new spec bytes; T06 changes/step text updated to the settled composition'
+        - 'ADR-006 dated 2026-09-22 addendum'
+        - 'decision log D-2026-09-22-T06-01 (DECIDED)'
+        no_requirement_change: 'No requirement ID added or removed; validator still pins 86 requirements / 15 tasks / 6 high-risk groups.'
+        gate_spec_trace: 'PASS python3 .agents/plans/validate-godspeed-casework-cognitive-environment.py'
+      phase_3_integration:
+        status: implemented_not_render_verified
+        added:
+        - 'src/host/scene/coreVisualIntent.ts (UiState -> CORE visual intent; the only app-to-renderer path)'
+        - 'src/host/scene/CoreLayer.tsx (persistent CORE mount, framing asserted on focus transitions only)'
+        - 'src/host/scene/CoreLayer.module.css (deepest layer, pointer-events none)'
+        - 'src/host/scene/coreVisualIntent.test.ts (12 tests)'
+        changed:
+        - 'src/host/App.tsx mounts CoreLayer as the deepest layer before SceneCanvas'
+        - 'src/host/scene/SceneCanvas.tsx: gl alpha true, clearAlpha 0, scene.background null, fog retained; system-scale CoreObject and AccretionSwirl removed from the render path'
+        composition: 'Gargantua WebGL canvas (deepest) -> transparent R3F canvas (objects, relationships, projections, interaction geometry) -> DOM surfaces (composer, controls, artifacts)'
+        restraint_preserved: 'mass/spin stay at donor defaults; activity only moves temp within +/-0.05 and bloom within +/-0.15 around the donor look; zoom is recorded as representational depth and deliberately does NOT drive camera radius, because scaling the Core to mean deeper is the geometric-only zoom the spec rejects'
+        activity_source: 'projected attention (requires-judgment / notable) plus active narration, never stored object count (REQ-ATTN-002)'
+        pointer_routing: 'CORE layer is pointer-events:none; the R3F scene above remains the single pointer authority'
+        ui_gate: 'PASS just casework-ui-check: frozen install, typecheck, production build, 140 tests / 823 assertions across 23 files'
+      remaining_limits:
+      - 'no GPU in this environment: the integrated composition has NO rendered acceptance; the four T06 perceptual states are unrecorded'
+      - 'CoreObject.tsx and AccretionSwirl.tsx still exist; AccretionSwirl is now unused, CoreObject is still used by LocalHomeAnchor as a small local origin marker and is NOT maintained as an alternate CORE'
+      - 'donor drag-to-orbit and wheel-to-CORE are unreachable while the R3F canvas sits above the CORE layer'
+      - 'StarDust particulate and the donor CORE particles may duplicate visually; unreviewed'
+      - 'reduced-motion handling for CORE is unimplemented (no donor API for it; would be a new documented deviation)'
+      - 'if CORE WebGL2 is unavailable the field degrades to the donor failure surface over a black backdrop, not a near-pure-white opening'
+      - 'workbench/ NOT deleted'
+      removal_hold: 'Operator said to delete the Tauri workbench when done; held because GATE_REMOVAL activates at T14 and the plan removes superseded UIs only after replacement parity and real integration.'
+    handoff_2026_09_21:
+      status: 'donor-based cognitive world integrated; product experience substantially verified but governing replacement plan remains unsettled'
+      visual_acceptance: 'PASS for architect-inspected desktop/390px/320px first frame, 3D Core, celestial objects, camera focus/home, causal comparison, clean temporal comparison, and artifact continuity'
+      ui_gate: 'PASS just casework-ui-check: frozen install, typecheck, production build, 106 tests / 731 assertions'
+      go_gate: 'PASS with PATH=/home/sprime01/.local/share/mise/installs/go/1.27.1/bin:$PATH just casework-go-check; legacy fixture transport only, no frozen rich-wire or SEA authority proof'
+      contract_gate: 'PASS 9 interface conformance tests; casework plan validator PASS 86/86 requirements and 15-task DAG'
+      copilot: '11 typed semantic commands; default and configured production builds PASS; no live runtime demonstration'
+      browser_evidence: 'Ready-to-Begin -> In Progress -> Done & Proven projection; role pending feedback; readable artifact expand/close; temporal history and A/B comparison; causal comparison; narration pause observed; zero browser errors in focused audits'
+      remaining_limits:
+      - 'real Go adapter does not conform to or prove the frozen rich contract and authority boundary'
+      - 'formal frame-cost profile is unrecorded'
+      - 'live Copilot service demonstration is unavailable'
+      - '15-task GUI replacement/removal settlement remains open'
+      execution_plan: .agents/plans/godspeed-cognitive-world-execution.md
+    handoff_2026_09_20:
+      reason: user_resumed_after_usage_reset
+      latest_visual_requirement: 'Core clearly reads as a 3D black hole in space with lensing and slow moving accretion disk; CognitiveObjects clearly read as 3D celestial bodies orbiting Core.'
+      visual_acceptance: failed_current_flat_core_and_object_discs
+      interrupted_agent: 'Terra core_3d_rebuild resumed; no validated result yet.'
+      layout_typecheck: 'PASS after focused layout repair'
+      layout_test: 'PASS 3/3 after eng-internal/ns-path-10 repair'
+      ui_build: 'PASS just casework-ui-check: frozen install, typecheck, production build, 78 tests; re-run after current edits'
+      go_gate: 'PASS with PATH=/home/sprime01/.local/share/mise/installs/go/1.27.1/bin:$PATH just casework-go-check'
+      contract_gate: 'PASS 9 tests; plan validator PASS'
+      donor_report: .agents/reports/godspeed-casework-cognitive-environment/godspeed-cognitive-world-donor-provenance-2026-09-20.md
+      galaxy_adaptation: 'StarDust and starDustMotion adapted from pinned threejs-galaxy-shader; one focused test passed; integration render pending'
+      racing_game: inspected_only_mechanic_adaptation_pending
+      donor_copy_instruction: 'User explicitly prefers copying coherent licensed donor mechanics and tailoring them; preserve MIT notices and exact source provenance.'
+      active_seams: 'Terra frozen contract adapter and role/action UI; Luna focused scene framing; Luna narration contrast'
+      browser_audit: 'Causal query, history entry/return, artifact disclosure/close, recursive focus, accessible outline observed. Recap/Clear contrast 3.52:1 serious violation. Comparison, full history, pause/resume, role actions, real authority integration, lazy chunks remain unproven.'
+      next_agent_plan: .agents/plans/godspeed-cognitive-world-execution.md
+    authority_correction_2026_09_20:
+      spec_version: 0.2.3
+      plan_version: 0.2.4
+      spec_sha256: 09d4292b956b09066b84bb03014413cae2b14a2c89f5338b34b6ebf542ab1dae
+      adr_addendum: recorded
+      validator: PASS
+      contract_conformance: 'Bun test: 9 pass; structural required-field and 15-name action parity checks pass; full draft-2020-12 semantic validation not implemented'
+      traceability: 86 IDs / 15 tasks unchanged
+      interface_package: 'reconciled across prose/TypeScript/schema/examples/tests; 15-name wire action union verified; full JSON Schema semantic validation remains unimplemented'
+      ui_status: 'authority correction complete; prior valid work preserved; visual acceptance open; Core donor provenance/render and camera verification pending; T06 visual acceptance not claimed'
+      verification_pending:
+      - 'Core donor revision/license/provenance and restrained rendered inspection'
+      - 'Camera travel and recursive focus rendered journey, including return/home'
+
+gargantua_core_migration:
+  date: '2026-09-22'
+  status: implemented_not_render_verified_on_gpu
+  golden_reference: workbench/apps/desktop/public/reference/gargantua.html
+  golden_sha256: 9cfdc399c3fdf5fc73cbaf0545ef2fa7a49b4d6e9f8772a817949b10883c93cd
+  renderer_root: workbench/apps/desktop/src/core/
+  provenance: workbench/apps/desktop/src/core/PROVENANCE.md
+  architecture_doc: docs/CORE_ARCHITECTURE.md
+  dependency_adr: docs/decisions/ADR-007-core-renderer-three-dependency.md
+  deviations: D-01_through_D-07_in_PROVENANCE
+  removed_shell:
+  - src/shell/Sidebar.tsx (+css)
+  - src/shell/GlobalHeader.tsx (+css+test)
+  - src/shell/JourneyRibbon.tsx (+css)
+  - src/mockup.css
+  - src/mockupFidelity.test.ts
+  - src/shell/shellKeyboard.test.tsx
+  retained_contracts: pages_hooks_guards_bridge_contracts_composed_as_surfaces
+  ui_gate: 'PASS bun frozen-install + check + build + 178 desktop tests + 17 ui-component tests'
+  contracts_gate: 'PASS just workbench-contracts-gate'
+  tauri_fmt: 'PASS cargo fmt --check src-tauri'
+  not_run:
+  - 'cargo-built gates (pre-existing tracked target self-symlink breaks root cargo; cold tauri compile exceeded budget; src-tauri untouched)'
+  - 'GPU side-by-side vs golden (headless env; shader byte-parity tests hold)'
+  - 'Rust kernel gates (same pre-existing target blocker)'
+cognitive_ui_functional_phase:
+  date: '2026-09-23'
+  status: functionally_complete_against_local_contract_adapter
+  backend: local contract-conformant adapter (Go system front end deliberately not connected)
+  report_dir: .agents/reports/godspeed-cognitive-ui-functional/
+  evidence_dir: .agents/evidence/godspeed-casework-cognitive-environment/ui-journeys/latest/
+  e2e_ladder: 'J0-J9 + RECOVERY: 11/11 PASS, 78/78 steps (real pointer input via agent-browser)'
+  gate_ui: 'PASS just casework-ui-check (185 tests / 633 assertions)'
+  variations: VAR-001..VAR-007 exercised UI-side; backend portions of VAR-004/005/007 deferred
+  deferred: [RECOV-001, RECOV-002, go_http_adapter, sea_forge_authority, gauntlet_execution]
+  next_action: implement HttpCaseworkAdapter (read-only paths) and rerun J0-J4 unchanged against Go

@@ -1,0 +1,35 @@
+[
+  {
+    "journey_id": "L-RECOV",
+    "title": "Recovery: corrupt artifact, SSE drop, kernel and gateway kill -9",
+    "status": "FAIL",
+    "depends_on": [
+      "L1"
+    ],
+    "settles": "the UI is honest and consistent with the durable files across a corrupt artifact, an SSE drop and kernel/gateway crashes",
+    "unlocks": [],
+    "steps": [
+      {
+        "journey": "L-RECOV",
+        "name": "setup: design case R1 through the UI and execute its first item; the artifact is captured",
+        "ok": true,
+        "ms": 28564
+      },
+      {
+        "journey": "L-RECOV",
+        "name": "(a) corrupt artifact: bytes edited inside the cell -> typed digest-mismatch card, nothing rendered from the bad bytes; restored afterwards",
+        "ok": true,
+        "ms": 31269
+      },
+      {
+        "journey": "L-RECOV",
+        "name": "(d) SSE drop: while the stream is down another session executes; the pill says Reconnecting (no progress), then resumes from the cursor with no duplicate revision",
+        "ok": false,
+        "ms": 45258,
+        "error": "Timed out waiting for pill shows Reconnecting while the stream is down"
+      }
+    ],
+    "total_ms": 111663,
+    "error": "Timed out waiting for pill shows Reconnecting while the stream is down"
+  }
+]

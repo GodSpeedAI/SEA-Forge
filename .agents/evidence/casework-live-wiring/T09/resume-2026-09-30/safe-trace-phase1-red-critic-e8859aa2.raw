@@ -1,0 +1,4 @@
+# ./internal/adapters/sfwp
+open /home/sprime01/.cache/go-build/b1/b1aca64eed55f5bafbf88e0e1acd9375214859d08b868f0bcea0e555beaff3c4-d: read-only file system
+FAIL	./internal/adapters/sfwp [setup failed]
+FAIL

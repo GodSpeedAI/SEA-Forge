@@ -1,0 +1,21 @@
+go: downloading github.com/coreos/go-oidc/v3 v3.21.0
+go: downloading golang.org/x/crypto v0.57.0
+go: downloading golang.org/x/oauth2 v0.37.0
+go: downloading github.com/go-jose/go-jose/v4 v4.1.4
+go: downloading golang.org/x/sys v0.48.0
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/cmd/godspeed-casework	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	0.004s
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	4.009s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	30.882s
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	0.006s
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	0.003s
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.012s
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	0.003s
+?   	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	0.003s
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.003s
+ok  	github.com/GodspeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	11.456s
+casework-go-check: format, vet and tests green

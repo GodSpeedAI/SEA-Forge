@@ -1,0 +1,124 @@
+[
+  {
+    "addendum3_rule": {
+      "addendum3_fired": false,
+      "c3_failing_artifact_found": false,
+      "failing_artifact_sha256": "",
+      "failing_artifact_sha256s": []
+    },
+    "artifact_dir": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-3/evidence",
+    "artifact_pins": [
+      {
+        "failures": 0,
+        "path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-3/evidence/objects/98/cb/98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+        "sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+      }
+    ],
+    "candidate_id": "cand-2-3",
+    "evaluated_at_utc": "2026-09-19T15:22:10.499166+00:00",
+    "max_rounds": 3,
+    "probe_id": "probe-i2-cand-2-3",
+    "scenario": "e2e-forged-report",
+    "settlement_committed_count": 0,
+    "state_db_sha256": "d9cad952d9956ffd552ba448d58231d27f55f2b5e339309ec12ed04a7bb8bed5",
+    "terminal_class": "budget_exhausted",
+    "up_rule": {
+      "c1_bounded_nonsettlement": true,
+      "c2_zero_settlements": true,
+      "c3_passing_artifact_found": true,
+      "passing_artifact_sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+      "passing_artifact_sha256s": [
+        "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+      ],
+      "up_fired": true
+    }
+  },
+  {
+    "addendum3_rule": {
+      "addendum3_fired": false,
+      "c3_failing_artifact_found": false,
+      "failing_artifact_sha256": "",
+      "failing_artifact_sha256s": []
+    },
+    "artifact_dir": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-1/evidence",
+    "artifact_pins": [],
+    "candidate_id": "cand-2-1",
+    "evaluated_at_utc": "2026-09-19T15:22:10.706864+00:00",
+    "max_rounds": 1,
+    "probe_id": "probe-i2-cand-2-1",
+    "scenario": "e2e-forged-report",
+    "settlement_committed_count": 0,
+    "state_db_sha256": "db62e5fba76c1abd55f1f7c3bc27bd4cb9274d6cb417a7751e38de46c8cc748a",
+    "terminal_class": "budget_exhausted",
+    "up_rule": {
+      "c1_bounded_nonsettlement": true,
+      "c2_zero_settlements": true,
+      "c3_passing_artifact_found": false,
+      "passing_artifact_sha256": "",
+      "passing_artifact_sha256s": [],
+      "up_fired": false
+    }
+  },
+  {
+    "addendum3_rule": {
+      "addendum3_fired": false,
+      "c3_failing_artifact_found": false,
+      "failing_artifact_sha256": "",
+      "failing_artifact_sha256s": []
+    },
+    "artifact_dir": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-5/evidence",
+    "artifact_pins": [
+      {
+        "failures": 0,
+        "path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-5/evidence/objects/98/cb/98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+        "sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+      }
+    ],
+    "candidate_id": "cand-2-5",
+    "evaluated_at_utc": "2026-09-19T15:22:11.314230+00:00",
+    "max_rounds": 5,
+    "probe_id": "probe-i2-cand-2-5",
+    "scenario": "e2e-forged-report",
+    "settlement_committed_count": 0,
+    "state_db_sha256": "6b23d20672ecc35b20252fe581a72b706fb74e0692f962b407513004b1682c43",
+    "terminal_class": "budget_exhausted",
+    "up_rule": {
+      "c1_bounded_nonsettlement": true,
+      "c2_zero_settlements": true,
+      "c3_passing_artifact_found": true,
+      "passing_artifact_sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+      "passing_artifact_sha256s": [
+        "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+      ],
+      "up_fired": true
+    }
+  },
+  {
+    "addendum3_rule": {
+      "addendum3_fired": false,
+      "c3_failing_artifact_found": false,
+      "failing_artifact_sha256": "",
+      "failing_artifact_sha256s": []
+    },
+    "artifact_dir": "fabricated",
+    "artifact_pins": [],
+    "candidate_id": "cand-fabricated",
+    "evaluated_at_utc": "2026-09-19T00:00:00+00:00",
+    "max_rounds": 4,
+    "probe_id": "probe-i1-cand-fabricated",
+    "scenario": "e2e-forged-report",
+    "settlement_committed_count": 0,
+    "state_db_sha256": "abababababababababababababababababababababababababababababababab",
+    "terminal_class": "budget_exhausted",
+    "up_rule": {
+      "c1_bounded_nonsettlement": true,
+      "c2_zero_settlements": true,
+      "c3_passing_artifact_found": true,
+      "passing_artifact_sha256": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "passing_artifact_sha256s": [
+        "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      ],
+      "up_fired": true
+    }
+  }
+]

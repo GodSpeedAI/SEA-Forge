@@ -1,0 +1,13 @@
+# Physical admission wait clarification — round-two review addendum
+
+Date: 2026-10-06  
+Companion: `run-trace-physical-admission-independent-review-round2-oct06.md`  
+Verdict after binding clarification: **APPROVE bounded test-first declarations and fixtures only, with the required no-spin fixture below.** This is not runtime approval or T09 settlement.
+
+I reviewed the complete binding `run-trace-physical-admission-wait-clarification-oct06.md`. It resolves the identified busy-spin case with a deterministic rule: a matched busy run waits only for change/context; a matched idle cooling run waits on its future expiry/change/context; absent runs wait on the earliest future idle cooldown/change/context; all-busy state waits on change/context. The algorithm re-evaluates the protected state after wake and explicitly forbids expired-deadline timers and same-run fallthrough. This is compatible with the source lifecycle in `client.go:197-215,232-249` and the root's permit-held-through-cleanup decision.
+
+The fixture inventory for this bounded test-first step must explicitly include the triggering state: keep run A's permit busy after its cooldown deadline has elapsed, retain an unrelated idle slot whose deadline is also expired, concurrently request run A, and assert the waiter remains blocked without a rapid timer/wakeup loop until a state-change signal or context cancellation. Then exercise release/signal and verify normal acquisition. Use controlled time/signals rather than timing-sensitive sleeps. This fixture tests the newly binding wait rule; it does not prove production timing, full concurrency safety, or end-to-end hydration.
+
+Other required fixtures from the original proposal remain applicable: same-run and distinct-run contention, at most two active physical reads, fixed production one-second configuration, blocked/partial payload and LF writes with finish-time cooldown, all four retry paths, prewrite cancellation, callback join and pool cleanup before permit release, deadline waiting, bounded two-record retention, and unchanged Ask/mutation/refusal behavior. The manager's eight-unit logical cap and cohort timeout/failure semantics remain a separate manager assignment; these limiter fixtures must not claim to implement them.
+
+With the clarification incorporated, the proposal is precise enough to authorize only package-local test-first declarations and fixtures. Keep the original proposal, both independent review records, root adjudication, and wait clarification immutable. No implementation release, test pass, production behavior, full server/session drain, SSE/UI wiring, or T09 completion is approved here.

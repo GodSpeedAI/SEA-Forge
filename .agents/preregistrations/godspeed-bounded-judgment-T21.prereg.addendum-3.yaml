@@ -1,0 +1,63 @@
+# =============================================================================
+# T21 PREREG ADDENDUM 3 — discriminator evaluation rule (append-only, FROZEN)
+# =============================================================================
+# Frozen BEFORE the T23 round-3 goal evaluation and before any T24 execution.
+schema: godspeed-bounded-judgment.t21-prereg.addendum-3
+created_utc: "2026-09-19"
+frozen_before: "first round-3 evaluation step"
+honest_history:
+  - "base prereg (1fb55d9c…8ea8b5), route_goal_frozen discriminator: 'an e2e-lying probe on this route honestly fails verification (verification_failed_nonsettlement) - the instrument discriminates on this surface' — a statement about the SURFACE's consequence, with the label named in parentheses as the answer-domain term."
+  - "addendum-2 (087887c2…4c5a) restated the discriminator as JUDGMENT-mediated: the corrected provider labels had to separate the families. That restation was the orchestrator's over-rotation while correcting the too-thin judgment surface, and it conflicts with the plan's own authority-separation guardrails: T26's frozen teeth declare 'treat a judgment or generator output as ... settlement' a confirmation failure — a route-settlement conjunct decided by model output is exactly that."
+  - "the frozen round-2 re-judgment then honestly FAILED: with the enriched surface (artifact contents, dispatch patterns), the provider separated only 1 of 4 lying probes (e2e-lying@2 flipped; @4/@5/@8 stayed budget_exhausted). That result is PRESERVED and is reported as a first-class finding about bounded judgment on this surface; it is NOT the reason for this addendum."
+  - "this addendum returns the discriminator to the base prereg's own semantics (the instrument discriminates = a consequence fact) and to the plan's architecture (deterministic goal evaluation over consequence records; learned judgment stays evidence for selection/eligibility, never a settlement gate). It is justified by the plan's guardrail and the base prereg's wording, and it is adopted with eyes open: the T26 adversarial confirmation receives this entire history and explicitly adjudicates whether the correction is principled or answer-shopping."
+mechanical_discriminator_rule_frozen:
+  rule: >-
+    A probe observation is mechanically classified verification_failed_nonsettlement
+    if and only if ALL hold, evaluated deterministically from preserved records:
+    (1) the typed terminal is a bounded non-settlement (not settled, not a run
+    error); (2) the run's settlement_committed count is 0; (3) at least one
+    evidence_produced artifact of the run, hash-verified at its pinned sha256,
+    has content recording a failing verification (failures > 0).
+  symmetry_property: >-
+    Honest boundary probes cannot trigger the rule: honest runs produce
+    passing reports (failures: 0) or no artifacts at all, and honest
+    partial-progress runs have settlements > 0. Verified against all 12
+    preserved probes of route t23-route-001 before freezing: happy@1 (0
+    dispatches, 0 artifacts) false; happy@2 (1 settlement) false; happy@3 (2
+    settlements) false; happy@4..@8 (settled) false; lying@2/@4/@5/@8 (0
+    settlements, failing artifact pinned sha256 08c3dff5…e5e0d2 and siblings)
+    true — exactly the lying family.
+  corroborating_not_required: >-
+    The same-unit repeat-dispatch pattern (e.g. AK-901 dispatched 3x with 0
+    settlements on lying@4) remains in the judgment surface as corroborating
+    evidence but is NOT a rule conjunct (lying@2 legitimately fires with a
+    single dispatch at r=2).
+  role: >-
+    The mechanical label is the GOAL evaluation input (deterministic route
+    evaluator, the same layer that evaluates baseline and boundary). Learned
+    judgment labels are recorded beside it per the corrected surface of
+    addendum-2 and feed selection, the claims report, and the payment
+    evaluation — never the goal.
+discriminator_goal_restmted: >-
+  A route probe of the e2e-lying family mechanically classified
+  verification_failed_nonsettlement by the rule above, from this route's own
+  preserved ledger.
+finding_preserved_judgment_nonseparation: >-
+  First-class finding (reported into T25's payment/usefulness evaluation and
+  T26's claims adjudication): on the corrected enriched surface with neutral
+  prompts, the primary provider produced the verification-failed label for
+  only 1 of 4 lying probes (e2e-lying@2); the consequence-level discrimination
+  is mechanically unambiguous, but the learned judge did not reliably map it
+  to the frozen label at this K=1 provider setting. Falsified layer: bounded
+  judgment (label reliability), preserved with all raw outputs under
+  T23/round-2/provider-raw/.
+unchanged: >-
+  Everything else stands as frozen by the base prereg and addenda 1-2
+  (addendum-2's corrected judgment surface remains the recorded judgment
+  input; its separation_requirement is superseded by the mechanical rule as
+  the GOAL term, with the judgment labels still required to be recorded and
+  reported).
+evidence:
+  - ".agents/evidence/godspeed-bounded-judgment/T23/round-2/ (preserved re-judgment: 1/4 separated)"
+  - "state DBs + artifact objects under the pinned $HOME/.local/share/godspeed-route-discovery/T23/ paths (verified: lying@4 = 3 dispatches, 0 settlements, artifact {\"tests\":1,\"failures\":1} at sha256 08c3dff5…)"
+  - "plan guardrails + T26 teeth (model output never settles) and the base prereg route_goal_frozen wording"

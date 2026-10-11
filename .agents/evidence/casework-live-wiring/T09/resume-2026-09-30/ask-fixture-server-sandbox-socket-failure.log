@@ -1,0 +1,36 @@
+--- FAIL: TestAskRequiresSessionThenCSRFBeforeCallingPort (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 [::1]:0: socket: operation not permitted [recovered, repanicked]
+
+goroutine 27 [running]:
+testing.tRunner.func1.2({0xf02128, 0xc0001ec2b0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x419
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x65f
+panic({0xf02128?, 0xc0001ec2b0?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+net/http/httptest.newLocalListener()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:226 +0x165
+net/http/httptest.NewUnstartedServer(...)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:284
+net/http/httptest.NewServer({0xf60230, 0xc0001a9280})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:267 +0x2c
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.newLiveHarness(0xc000168488)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/server_test.go:165 +0x917
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.askFixture(0xc000168488)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/ask_test.go:47 +0x52
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.TestAskRequiresSessionThenCSRFBeforeCallingPort(0xc000168488)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/ask_test.go:133 +0x3f
+testing.tRunner(0xc000168488, 0xf64a28)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0x21d
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0xb13
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.243s
+FAIL
+
+ACTUAL_EXIT_STATUS=1
+
+Capture: `/tmp/t09-ask-critic-server-expected-red.log` plus separate `.exit` file; the exact stdout/stderr payload above hashes to
+`f56f172b378253b930af59ee47e4428e8138070d7b1422bab5afe210d795ee6d`.
+The command was blocked by sandbox socket permission at shared `httptest.NewServer` setup, before
+the Ask tests could reach the expected missing-route assertion. This is an environment failure,
+not expected-RED evidence.

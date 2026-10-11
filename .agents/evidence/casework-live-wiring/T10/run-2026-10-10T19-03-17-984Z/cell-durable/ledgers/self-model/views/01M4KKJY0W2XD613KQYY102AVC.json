@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KKJY0W2XD613KQYY102AVC",
+  "source_entry_ulids": [
+    "01M4KKJY0W2XD613KQYY102AVC"
+  ],
+  "source_payload_hash": "sha256:b7098b6978507ab7a32d760fc40dcd284de2ddf772e691587ee3db9c1b754a8e",
+  "view_path": "/tmp/t10-live-q81e1S/cell/self-model/projections/self-model/kg/model.ttl",
+  "view_sha256": "sha256:dc663562a54cee5bac4f919f1abfcc50ed89c786763659f8d1c3c97654485dfe",
+  "status": "current",
+  "failure_class": null
+}

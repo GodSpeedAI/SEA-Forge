@@ -1,0 +1,1 @@
+{"intent_id":"critic2-schema-err-2","success":false,"refusal":{"refusal_kind":"INVALID","message":"plan_schema_error: plan_schema_error: unknown dependency no-such-stage"},"error_code":"INVALID","error_message":"plan_schema_error: plan_schema_error: unknown dependency no-such-stage"}

@@ -1,0 +1,115 @@
+{
+  "attention_focus": {
+    "narration": "prepare dataset is actionable: ready_to_begin.",
+    "primary_object_id": "task_prepare",
+    "salience_rank": [
+      "task_prepare",
+      "task_publish",
+      "ms_chain_accepted"
+    ]
+  },
+  "available_actions": [
+    {
+      "consequential": true,
+      "id": "act-execute_item-task_prepare",
+      "intent": "EXECUTE_ITEM",
+      "label": "Execute",
+      "variant": "PRIMARY"
+    },
+    {
+      "consequential": true,
+      "id": "act-add_discretionary_work-task_prepare",
+      "intent": "ADD_DISCRETIONARY_WORK",
+      "label": "Add discretionary work",
+      "requires_justification": true,
+      "variant": "SECONDARY"
+    },
+    {
+      "consequential": true,
+      "id": "act-add_discretionary_work-task_publish",
+      "intent": "ADD_DISCRETIONARY_WORK",
+      "label": "Add discretionary work",
+      "requires_justification": true,
+      "variant": "SECONDARY"
+    },
+    {
+      "consequential": true,
+      "id": "act-terminate_case-\u003cCASE_ID\u003e",
+      "intent": "TERMINATE_CASE",
+      "label": "Terminate case",
+      "requires_justification": true,
+      "variant": "DANGER"
+    }
+  ],
+  "case_id": "\u003cCASE_ID\u003e",
+  "cursor": "\u003cKERNEL_CURSOR\u003e",
+  "perspective": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  },
+  "summary": {
+    "headline": "Case in progress",
+    "phase": "active",
+    "progress_percent": 0,
+    "status_phrase": "1 item(s) ready to execute."
+  },
+  "timestamp": "\u003cTIMESTAMP\u003e",
+  "visible_objects": [
+    {
+      "actions": [
+        {
+          "consequential": true,
+          "id": "act-execute_item-task_prepare",
+          "intent": "EXECUTE_ITEM",
+          "label": "Execute",
+          "variant": "PRIMARY"
+        },
+        {
+          "consequential": true,
+          "id": "act-add_discretionary_work-task_prepare",
+          "intent": "ADD_DISCRETIONARY_WORK",
+          "label": "Add discretionary work",
+          "requires_justification": true,
+          "variant": "SECONDARY"
+        }
+      ],
+      "badge": "Ready",
+      "explanation": "Entry criteria are met; this item is ready to execute.",
+      "id": "task_prepare",
+      "kind": "work_item",
+      "name": "prepare dataset",
+      "salience": 0.85,
+      "status": "READY_TO_BEGIN"
+    },
+    {
+      "actions": [
+        {
+          "consequential": true,
+          "id": "act-add_discretionary_work-task_publish",
+          "intent": "ADD_DISCRETIONARY_WORK",
+          "label": "Add discretionary work",
+          "requires_justification": true,
+          "variant": "SECONDARY"
+        }
+      ],
+      "badge": "Waiting",
+      "explanation": "No work has been recorded for this item yet: its entry sentries have not fired.",
+      "id": "task_publish",
+      "kind": "work_item",
+      "name": "publish dataset report",
+      "salience": 0.4,
+      "status": "WAITING"
+    },
+    {
+      "actions": [],
+      "badge": "Waiting",
+      "explanation": "No work has been recorded for this item yet: its entry sentries have not fired.",
+      "id": "ms_chain_accepted",
+      "kind": "milestone",
+      "name": "chain accepted",
+      "salience": 0.4,
+      "status": "WAITING"
+    }
+  ],
+  "world_id": "\u003cWORLD_ID\u003e"
+}

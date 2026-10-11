@@ -1,0 +1,8 @@
+               total        used        free      shared  buff/cache   available
+Mem:      8327897088  5538959360   106418176    64864256  2948886528  2788937728
+Swap:    12884901888  8641908736  4242993152
+Filesystem      1B-blocks       Used  Available Use% Mounted on
+tmpfs          4163948544 2799501312 1364447232  68% /tmp
+1.4.0
+c5d9e16187ede70fd3a77e5ec078b99ef0e872b99e7a644aa8be55e204e0fd77  src/build/rendererChunkContract.ts
+25b74d25318ce97659c91f3d734ca9b2cd794d0b4d90b1ec54c045b7ce022d08  src/build/rendererChunkContract.test.ts

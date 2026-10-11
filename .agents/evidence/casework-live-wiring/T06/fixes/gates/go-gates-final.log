@@ -1,0 +1,38 @@
+VET_EXIT=0
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/cmd/godspeed-casework	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	1.077s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	2.238s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	1.184s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	1.039s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	1.082s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	1.179s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	1.025s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.037s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	1.554s
+UNIT_EXIT=0
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	1.018s
+--- FAIL: TestLiveKillMidCommitRecovery (0.40s)
+    live_recovery_test.go:25: warm-up case case_20260926T010207Z_672e0a committed
+    live_recovery_test.go:59: server killed mid-commit; restarting
+    live_recovery_test.go:98: commit interrupted by the kill; outcome resolved as request_interrupted
+    live_recovery_test.go:124: an interrupted commit must have appended no CaseCreated (cell has 2)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	5.186s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	1.438s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	1.125s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	1.771s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	2.720s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	1.050s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.268s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	2.194s
+FAIL
+LIVE_P1_EXIT=1
+FMT_EXIT=0

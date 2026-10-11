@@ -1,0 +1,53 @@
+schema: godspeed-bounded-judgment.t22-route-record
+correction_round: 2
+probe_data_root: /home/sprime01/.local/share/godspeed-route-discovery/T22/round2
+note: stop_condition records THIS task-scoped run's bound of exactly one advance (see deviations in b1-result.json);
+  the route itself stays open for T23 under the frozen 6-iteration bound; settled is false because a probe terminal
+  is a probe consequence, never route settlement
+route_state:
+  route_id: t22-route-001-round2
+  created_at_utc: '2026-09-19T01:45:45.068203+00:00'
+  probes_remaining: 9
+  retained_moves:
+  - candidate_id: cand-3
+    correlation_id: t22-route-001-round2-iter1
+    scenario: e2e-happy
+    max_rounds: 7
+    expected_role: boundary_probe
+    judgment_label: budget_exhausted
+  probed:
+  - candidate_id: cand-1
+    correlation_id: t22-route-001-round2-iter1
+    scenario: e2e-happy
+    max_rounds: 8
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-2
+    correlation_id: t22-route-001-round2-iter1
+    scenario: e2e-lying
+    max_rounds: 8
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-3
+    correlation_id: t22-route-001-round2-iter1
+    scenario: e2e-happy
+    max_rounds: 7
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  denied_keys: []
+route_record:
+  route_id: t22-route-001-round2
+  correlation_id: t22-route-001-round2-iter1
+  settled: false
+  stop_condition: iteration_limit_reached
+  moves:
+  - scenario: e2e-happy
+    max_rounds: 7
+    terminal_class: budget_exhausted
+  fingerprint: e2e-happy@7:budget_exhausted
+  correlation_ids:
+  - t22-route-001-round2-iter1
+  policy_version: selection-policy-v1
+  prereg_sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+  opened_at_utc: '2026-09-19T01:45:45.068203+00:00'
+  closed_at_utc: '2026-09-19T01:46:41.511805+00:00'

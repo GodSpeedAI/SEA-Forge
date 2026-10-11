@@ -10,9 +10,6 @@
 			"path": "../../../cep"
 		},
 		{
-			"path": "../../../Context_Kernel_Service_MCP"
-		},
-		{
 			"path": "../../../SWE_SEED"
 		},
 		{
@@ -26,6 +23,9 @@
 		},
 		{
 			"path": "../../../Strategist"
+		},
+		{
+			"path": "../../../Context_Kernel"
 		}
 	],
 	"settings": {}

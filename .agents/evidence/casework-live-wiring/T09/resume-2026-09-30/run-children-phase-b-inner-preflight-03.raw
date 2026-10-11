@@ -1,0 +1,5 @@
+Thu Oct  1 20:04:07 UTC 2026
+MemTotal:        8132708 kB
+MemAvailable:    2708436 kB
+2109808 bun             31604
+kernel_binary=../../target/debug/sea-forge-server bytes=51456400 executable=yes

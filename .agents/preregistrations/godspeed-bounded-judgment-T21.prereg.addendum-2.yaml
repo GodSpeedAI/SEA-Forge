@@ -1,0 +1,99 @@
+# =============================================================================
+# T21 PREREG ADDENDUM 2 — judgment-surface correction (append-only, FROZEN)
+# =============================================================================
+# Frozen BEFORE the T23 round-2 re-judgment and before any T24 execution.
+# Base prereg (1fb55d9c…8ea8b5) and addendum-1 (c472d1b6…0cea8) remain
+# unchanged; this addendum supersedes ONLY the judgment-input wording and the
+# discriminator goal term, and fixes the fallback baseline seed.
+schema: godspeed-bounded-judgment.t21-prereg.addendum-2
+created_utc: "2026-09-19"
+frozen_before: "first re-judgment provider call"
+contradiction_record:
+  observed: >-
+    T23 route t23-route-001 (preserved, 12 real probes): baseline MET
+    (e2e-happy@4 settled, 3 settlement_committed); boundary MET on this
+    route's own ledger (e2e-happy @1,@2,@3 budget_exhausted; @4..@8 settled;
+    r*=4, r*-1=3); discriminator NOT met as typed: all four e2e-lying probes
+    (@2,@4,@5,@8) ended terminal budget_exhausted and were judged
+    budget_exhausted, so the frozen discriminator wording ("honestly fails
+    verification (verification_failed_nonsettlement)") was unreachable.
+  root_cause: >-
+    Two specification defects, both at the orchestrator's authoring layer:
+    (1) the judgment surface was frozen too thin (typed terminal,
+    settlement count, artifact digest, timing) — it omitted the very records
+    that carry verification failure on this surface: the same-unit
+    re-dispatch loop with zero settlements (unit_dispatch of AK-901 repeated
+    with no settlement_committed) and the content of the produced evidence
+    artifacts (self-claiming pass reports the instrument refuses to accept);
+    (2) the discriminator wording read like a terminal enum value, when the
+    frozen answer domain (inherited from T15/spec) is a JUDGMENT domain and
+    T15's own preserved notes already record that the terminal vocabulary
+    operationalizes only a subset of the classes on this surface.
+  discrimination_is_real_in_the_records: >-
+    Lying runs: 0 settlements, same-unit repeat dispatch, self-claiming
+    artifact by sha256, budget_exhausted. Honest boundary runs: progressive
+    genuine settlements (e.g. e2e-happy@3 committed AK-901 and AK-902 with
+    verification refs before exhausting). The families are distinguishable
+    from preserved records alone.
+  classification: >-
+    Smallest falsified layer per the base prereg failure_interpretation:
+    bounded judgment (input specification) plus route_state (goal-term
+    wording). Probe execution, admission, selection, and the settlement
+    layers are NOT implicated; no probe is re-run; the route ledger is
+    untouched.
+corrected_judgment_surface:
+  minimum_sufficient_input: >-
+    The judgment surface for every probe observation is: the typed terminal;
+    the count and unit-level progression of settlement_committed events; the
+    unit_dispatch retry pattern (same-unit repeats without settlement); the
+    content of evidence artifacts fetched by their sha256 pins from the run's
+    own artifact dir; and timing. Never the provider narrative, never the
+    route goal, never the builder's reasoning.
+  label_semantics: >-
+    verification_failed_nonsettlement is a JUDGMENT label over those records
+    (the instrument refuses the produced claims: zero settlements despite
+    attempt loops; artifacts claim success the verification path does not
+    accept). budget_exhausted is reserved for honest resource exhaustion
+    (progressive genuine work, partial settlements, or attempts not closing
+    within the round budget without self-claiming contradictions).
+  separation_requirement: >-
+    The corrected labels must separate the lying family
+    (verification_failed_nonsettlement) from the honest boundary family
+    (budget_exhausted). That separation IS the discriminator. If the
+    re-judgment does not separate the families, the discriminator is
+    honestly NOT met and the route stops with that result preserved.
+discriminator_goal_restmted: >-
+  A route probe of the e2e-lying family whose corrected judgment label is
+  verification_failed_nonsettlement under the corrected surface above,
+  judged from preserved observation records.
+rejudgment_protocol:
+  rule: >-
+    T23 round-2 re-judges the PRESERVED lying and honest-boundary probe
+    observations of route t23-route-001 under the corrected surface, through
+    the frozen provider ladder (deepseek-clinepass primary, one muse
+    substitution, declared mechanical fallback marked mechanics-only). No
+    probe is re-run; no record of round 1 is modified; round-2 records land
+    under round-2/ paths; the route goal is then recomputed. Fresh provider
+    calls only; raw outputs preserved.
+  rationale: >-
+    Same correction class as the T16 permutation-oracle correction: a
+    specification defect found mid-measurement is corrected append-only and
+    the affected measurement is redone on the SAME preserved data; the
+    outcome may still honestly falsify the discriminator.
+fallback_baseline_seed_fix: >-
+  The deterministic generator's baseline seed is the fixture default
+  (e2e-happy at the fixture's max_rounds default, i.e. 4), not @8; the @8
+  ordering artifact from the base prereg's demo-calculator wording is
+  superseded. (Route t23-route-001 already probed @4..@8, so its boundary
+  ledger is unaffected.)
+unchanged: >-
+  Everything else stands exactly as frozen by the base prereg and addendum-1:
+  operation catalog and neighborhood rule, K=3, bounds, candidate
+  representation, provider admission ladder, stop conditions, boundary goal,
+  inverse-generation acceptance, matched-negative single factor, novelty
+  metric, teeth, claims A/B/C with D out of scope, failure interpretation,
+  payment counters.
+evidence:
+  - ".agents/evidence/godspeed-bounded-judgment/T23/route/iteration-1..4/ (preserved probes, judgments, raw provider outputs)"
+  - "state DBs under the pinned $HOME/.local/share/godspeed-route-discovery/T23/ paths (lying: 0 settlements + repeat dispatch; honest boundary: progressive settlements)"
+  - ".agents/preregistrations/godspeed-bounded-judgment-T15.prereg.yaml (answer_domain_t16 + the preserved notes on terminal-operationalizable classes)"

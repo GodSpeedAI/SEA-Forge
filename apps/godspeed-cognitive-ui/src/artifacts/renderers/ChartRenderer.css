@@ -1,0 +1,116 @@
+.gs-r-chart-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--font-sans);
+  color: var(--dock-ink);
+  overflow: hidden;
+}
+
+.gs-r-chart-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  overflow: auto;
+  background: var(--dock-bg-2);
+}
+
+.gs-r-chart-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.gs-r-chart-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gs-r-chart-container::-webkit-scrollbar-thumb {
+  background: var(--dock-ink-2);
+  border-radius: 4px;
+}
+
+.gs-r-chart-container::-webkit-scrollbar-thumb:hover {
+  background: var(--dock-ink);
+}
+
+.gs-r-chart-svg {
+  width: 100%;
+  height: 100%;
+  max-width: 500px;
+  max-height: 300px;
+}
+
+.gs-r-chart-gridline {
+  pointer-events: none;
+}
+
+.gs-r-chart-bar {
+  cursor: pointer;
+  outline: none;
+}
+
+.gs-r-chart-bar:focus .gs-r-chart-bar-rect {
+  stroke: var(--tone-progress);
+  stroke-width: 2;
+  opacity: 1;
+}
+
+.gs-r-chart-bar-rect {
+  transition: opacity 0.15s ease, fill 0.15s ease;
+}
+
+.gs-r-chart-bar:hover .gs-r-chart-bar-rect {
+  opacity: 1;
+}
+
+.gs-r-chart-bar--selected .gs-r-chart-bar-rect {
+  fill: var(--tone-attention);
+  opacity: 1;
+}
+
+.gs-r-chart-tooltip {
+  position: absolute;
+  background: var(--dock-bg);
+  border: 1px solid var(--dock-line);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+.gs-r-chart-tooltip-label {
+  color: var(--dock-ink-2);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.gs-r-chart-tooltip-value {
+  color: var(--dock-ink);
+  font-weight: 600;
+}
+
+.gs-r-chart-detail {
+  padding: 8px 16px;
+  border-top: 1px solid var(--dock-line);
+  font-size: 13px;
+  color: var(--tone-attention);
+  font-weight: 500;
+  background: var(--dock-bg);
+}
+
+.gs-r-chart-caption {
+  padding: 8px 16px;
+  border-top: 1px solid var(--dock-line);
+  font-size: 13px;
+  color: var(--dock-ink);
+  font-style: italic;
+  background: var(--dock-bg);
+}

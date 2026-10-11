@@ -1,0 +1,427 @@
+{
+ "accepted-A1": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "accepted-A10": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "not_settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 4,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": false,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 0.8
+ },
+ "accepted-A11": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "not_settled"
+  ],
+  "correct": 4,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": false,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 0.8
+ },
+ "accepted-A12": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "insufficient_evidence"
+  ],
+  "correct": 4,
+  "abstain": 1,
+  "modal": "settled",
+  "all_agree": false,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 0.8
+ },
+ "accepted-A2": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "accepted-A3": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "accepted-A4": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "not_settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 4,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": false,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 0.8
+ },
+ "accepted-A5": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "accepted-A6": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "accepted-A7": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "accepted-A8": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "accepted-A9": {
+  "truth": "settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "budget-C1": {
+  "truth": "not_settled",
+  "answers": [
+   "insufficient_evidence",
+   "insufficient_evidence",
+   "insufficient_evidence",
+   "not_settled",
+   "insufficient_evidence"
+  ],
+  "correct": 1,
+  "abstain": 4,
+  "modal": "insufficient_evidence",
+  "all_agree": false,
+  "aggregate": "insufficient_evidence",
+  "aggregate_correct": false,
+  "stability": 0.8
+ },
+ "budget-C2": {
+  "truth": "not_settled",
+  "answers": [
+   "insufficient_evidence",
+   "not_settled",
+   "insufficient_evidence",
+   "insufficient_evidence",
+   "not_settled"
+  ],
+  "correct": 2,
+  "abstain": 3,
+  "modal": "insufficient_evidence",
+  "all_agree": false,
+  "aggregate": "insufficient_evidence",
+  "aggregate_correct": false,
+  "stability": 0.6
+ },
+ "budget-C3": {
+  "truth": "not_settled",
+  "answers": [
+   "settled",
+   "settled",
+   "settled",
+   "settled",
+   "settled"
+  ],
+  "correct": 0,
+  "abstain": 0,
+  "modal": "settled",
+  "all_agree": true,
+  "aggregate": "settled",
+  "aggregate_correct": false,
+  "stability": 1.0
+ },
+ "budget-C4": {
+  "truth": "not_settled",
+  "answers": [
+   "insufficient_evidence",
+   "insufficient_evidence",
+   "insufficient_evidence",
+   "not_settled",
+   "insufficient_evidence"
+  ],
+  "correct": 1,
+  "abstain": 4,
+  "modal": "insufficient_evidence",
+  "all_agree": false,
+  "aggregate": "insufficient_evidence",
+  "aggregate_correct": false,
+  "stability": 0.8
+ },
+ "budget-C5": {
+  "truth": "not_settled",
+  "answers": [
+   "insufficient_evidence",
+   "insufficient_evidence",
+   "not_settled",
+   "insufficient_evidence",
+   "not_settled"
+  ],
+  "correct": 2,
+  "abstain": 3,
+  "modal": "insufficient_evidence",
+  "all_agree": false,
+  "aggregate": "insufficient_evidence",
+  "aggregate_correct": false,
+  "stability": 0.6
+ },
+ "forge-D1": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "not_settled",
+  "all_agree": true,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "forge-D2": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "insufficient_evidence",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 4,
+  "abstain": 1,
+  "modal": "not_settled",
+  "all_agree": false,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 0.8
+ },
+ "lying-B1": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "not_settled",
+  "all_agree": true,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "lying-B2": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "not_settled",
+  "all_agree": true,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "lying-B3": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "not_settled",
+  "all_agree": true,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "lying-B4": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "not_settled",
+  "all_agree": true,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "lying-B5": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "not_settled",
+  "all_agree": true,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ },
+ "lying-B6": {
+  "truth": "not_settled",
+  "answers": [
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled",
+   "not_settled"
+  ],
+  "correct": 5,
+  "abstain": 0,
+  "modal": "not_settled",
+  "all_agree": true,
+  "aggregate": "not_settled",
+  "aggregate_correct": true,
+  "stability": 1.0
+ }
+}

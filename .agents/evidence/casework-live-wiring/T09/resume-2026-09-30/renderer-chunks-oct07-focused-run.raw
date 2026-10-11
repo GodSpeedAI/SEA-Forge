@@ -1,0 +1,21 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/build/rendererChunkContract.test.ts:
+(pass) emitted renderer chunk contract > accepts nine distinct dynamic renderer entries linked from the registry [7.10ms]
+(pass) emitted renderer chunk contract > matches full renderer suffixes in Windows paths with query and hash suffixes [0.63ms]
+(pass) emitted renderer chunk contract > allows unrelated shared chunks and additional dynamic dependencies [1.03ms]
+(pass) emitted renderer chunk contract > rejects a missing renderer module even when a same-named asset exists [0.21ms]
+(pass) emitted renderer chunk contract > rejects one renderer module placed in two output chunks [0.12ms]
+(pass) emitted renderer chunk contract > rejects two renderer modules coalesced into one output filename [0.21ms]
+(pass) emitted renderer chunk contract > rejects a renderer chunk that is not a dynamic entry [0.12ms]
+(pass) emitted renderer chunk contract > rejects a renderer chunk not linked by a registry dynamic import [0.13ms]
+(pass) emitted renderer chunk contract > rejects missing registry module placement [0.07ms]
+(pass) emitted renderer chunk contract > rejects duplicate registry module placement [0.12ms]
+(pass) emitted renderer chunk contract > rejects an unrelated module with a renderer basename [0.09ms]
+(pass) emitted renderer chunk contract > rejects a renderer suffix whose src prefix is not a path segment [0.12ms]
+(pass) emitted renderer chunk contract > rejects a registry suffix whose src prefix is not a path segment [0.19ms]
+
+ 13 pass
+ 0 fail
+ 35 expect() calls
+Ran 13 tests across 1 file. [26.00ms]

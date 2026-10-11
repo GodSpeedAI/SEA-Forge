@@ -1,0 +1,11 @@
+[replay] first: ok
+[replay] identical replay: {"case_id": "case_20260925T014522Z_36e371", "exit_code": 5, "state": "active"}
+[replay] delegation-audit records: 1
+[replay] same-id different-actor: {"error": "this request verified actor `operator_b` but attributes its work to `operator_a`; the two must name the same actor", "error_class": "identity_entity_mismatch", "next_lawful_action": "Attrib
+[replay] same-id different-payload: {"error": "request_id `critic-commit-1` was already used for a different operation or payload; issue a new id rather than re-using this one", "error_class": "request_id_reused", "no_side_effect": true
+
+[unwritable] seeding commit: ok
+[unwritable] RESPONSE: {"error": "the delegation audit record for this request could not be written, so the gateway's attribution cannot be established: open entries: Permission denied (os error 13)", "error_class": "delegation_audit_unwritable", "no_side_effect": true}
+[unwritable] cases 1->1, digest unchanged
+
+PROBES: PASS

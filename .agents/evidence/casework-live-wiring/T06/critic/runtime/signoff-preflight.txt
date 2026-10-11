@@ -1,0 +1,3 @@
+# preflight signoff-gate
+{"template_ref":"e2e-signoff-gate@0.1.0","params":{"change_summary":"critic delegated flow"},"passed":true,"reasons":[],"digest":"sha256:cdbb4b4d69e896104c510aa007658ad8a0a1e6e333d5ad330a3951dd450ce78e"}
+

@@ -1,0 +1,159 @@
+# Behavioral IR: CJ10 Reuse Demonstrated Knowledge and Capability
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ10"
+  slug: "reuse_demonstrated_knowledge_and_capability"
+  title: "Reuse Demonstrated Knowledge and Capability"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "epistemic"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - planning_needs_prior_settled_context
+    - execution_needs_prior_settled_context
+    - capability_tier_inspection
+    - memory_or_projection_suspect_or_stale
+  actor_roles:
+    - Operator
+    - CaseOwner
+    - DomainAuthor
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - query_context_or_intent
+      - actor_disclosure_scope
+      - memory_store_target
+    context_scope: "Historical settlements, qualifying evidence, capability tiers, disclosure boundaries"
+
+  IS2_preflight:
+    checks:
+      - disclosure_authority_verified_before_search
+      - qualifying_settlement_records_accessible
+      - memory_index_rebuildability_verified
+    readiness_classification:
+      expected: "ready | disclosure_restricted | index_stale"
+      failure_action: "fall_back_to_authoritative_source_records"
+
+  IS3_authority_resolution:
+    required_role: "Operator"
+    alternate_role: "CaseOwner"
+    grant_scope: "governed_recall_and_capability_routing"
+    separation_of_duty: "Disclosure scope checked prior to recall; memory summaries cannot bypass authorization"
+    approval:
+      status: "implemented"
+      note: "Disclosure plans restrict memory projection output"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "memory.recall_and_route"
+      invoked_capabilities:
+        - "governed_memory_recall"
+        - "source_record_fallback"
+        - "influence_tracking"
+        - "capability_derivation"
+        - "promotion_and_contraction"
+        - "capability_browse_and_detail"
+        - "deterministic_rebuild"
+        - "routing_gates"
+        - "thoth_claim_derivation"
+      binding:
+        status: "exercised"
+        source_ref: "sea-forge-server / memory and capability engine"
+    bounds:
+      side_effects: "strictly_read_only"
+      influence_recording: "enabled"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "settled_evidence"
+      to: "recall_influence_linked"
+      alternative_states:
+        - "capability_promoted"
+        - "capability_contracted"
+        - "capability_quarantined"
+        - "projection_rebuilt_deterministically"
+    artifacts:
+      - "recall_result_bundle"
+      - "influence_link_record"
+      - "capability_standing_descriptor"
+      - "variation_and_regression_summary"
+      - "rebuilt_index_receipt"
+    mutation_rule: "Memory projections are rebuildable derived stores; source truth lives in ledger"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "qualifying_settlement_reference_hashes"
+        evidence_class: "observed"
+      - item: "influence_link_provenance"
+        evidence_class: "observed"
+      - item: "capability_tier_criteria_fulfillment"
+        evidence_class: "observed"
+    integrity_verification:
+      derivative_store_subordination_verified: true
+      qualifying_settlement_anchor_verified: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "Reused knowledge or capability is disclosure-safe, traceable to source settlements, explicit about scope and weakness, and linked to the resulting plan, decision, answer, or settlement."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "knowledge_reused_safely"
+        - "capability_routing_approved"
+        - "capability_contracted_on_regression"
+        - "memory_index_rebuilt"
+    settlement_vs_termination: "Vector hit or keyword match is not settlement; proof requires citation of qualifying settlement."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "route_work_through_demonstrated_capability"
+        target_journey: "CJ04"
+        condition: "outcome == capability_routing_approved"
+      - id: "gather_more_qualifying_evidence"
+        target_journey: "CJ07"
+        condition: "capability_standing == attempted || capability_standing == demonstrated"
+      - id: "rebuild_stale_memory_view"
+        action: "invoke_deterministic_rebuild"
+        condition: "state == index_stale"
+    blocked_affordances:
+      - id: "route_through_unproven_capability"
+        action: "assign_unproven_capability"
+        reason: "missing_capability"
+        explanation: "Capability lacks required qualifying settlement history across required variation dimensions"
+
+recovery_paths:
+  - condition: "index_corruption_or_skew"
+    remedy: "Fall back to authoritative ledger scans; trigger deterministic rebuild of derived views"
+  - condition: "capability_regression"
+    remedy: "Contract capability standing immediately; require fresh qualifying settlements to restore tier"
+  - condition: "disclosure_boundary_violation"
+    remedy: "Suppress forbidden item; log access attempt; return sanitized subset"
+
+unresolved_bindings:
+  - component: "workbench_capability_browse_and_detail"
+    status: "unresolved_in_source"
+    impact: "Capability management surface in Workbench is preview-only; derivation engine is CLI/tested"

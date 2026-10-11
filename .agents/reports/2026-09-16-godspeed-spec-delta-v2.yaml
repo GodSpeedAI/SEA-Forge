@@ -1,0 +1,500 @@
+# =============================================================================
+# GODSPEED SPEC DELTA v2 — corrected annotated delta (supersedes v1 AS A PROPOSAL)
+# =============================================================================
+# PROVENANCE (nothing overwritten)
+#   baseline_normative : .agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml (v0.1.0, UNCHANGED)
+#   template           : .agents/specs/AGENT_SPEC_TEMPLATE.yaml           (UNCHANGED)
+#   delta_v1           : 2026-09-16-godspeed-spec-delta.yaml              (RETAINED)
+#   spec_v1            : 2026-09-16-godspeed-judgment-plane-spec-revised.yaml (v0.2.0, RETAINED)
+#   spec_v2            : 2026-09-16-godspeed-judgment-plane-spec-revised-v2.yaml (v0.3.0)
+#   review             : 2026-09-16-godspeed-judgment-plane-adversarial-review.md (RETAINED)
+#   correction_note    : 2026-09-16-godspeed-spec-correction-note.md
+#
+# This delta records the DELTA ONLY. It is not a specification.
+# =============================================================================
+schema: godspeed.spec_delta
+schema_version: "2.0"
+created: "2026-09-16"
+status: review_artifact
+supersedes: "2026-09-16-godspeed-spec-delta.yaml (v1) as a proposal"
+preserves: "every entity and requirement disposition from v1, corrected where v1 exceeded the evidence"
+
+corrections_index:
+  purpose: >-
+    Maps each of the eleven corrections to the delta elements it changed, so a reader can
+    see that no architectural conclusion was reversed.
+  entries:
+    - id: C1
+      subject: "VerificationRecord is a proving carrier, not the universal judgment type"
+      delta_elements_changed:
+        - "entities[JudgmentObservation].disposition: merge -> merge-for-slice-1"
+        - "entities[JudgmentObservation].universality_clause: ADDED (status NOT_ESTABLISHED)"
+        - "entities[JudgmentObservation].scope_of_this_decision: ADDED (slice-1 carrier selection only)"
+        - "entities[JudgmentObservation].families_requiring_future_evidence: ADDED (7 families)"
+        - "rejected_or_merged_ledger: permanence field added per item; the carrier merge is slice-scoped while the three rejections remain standing"
+        - "new_requirements: NONGOAL-008 (both directions of the error prohibited)"
+        - "roadmap: judgment_carrier_generalization gate with three required evidences"
+      reversal: false
+      preserved: "the v1 reduction (do not create a new type now) is fully preserved"
+    - id: C2
+      subject: "PROOF-1 may falsify a surface, not the capability class"
+      delta_elements_changed:
+        - "propositions: PROP-02..PROP-14 statements about what PROOF-1 decides were narrowed"
+        - "new_requirements: REQ-JUDG-023, REQ-OUT-007"
+        - "amended: REQ-OUT-006 (now requires a declared scope of falsification)"
+        - "new_entity: ScopeOfFalsification with values surface | task_family | capability_class"
+        - "PROOF-1 outcomes A-E each carry a forbidden inference"
+      reversal: false
+      preserved: "a negative result is still a valid and useful outcome"
+    - id: C3
+      subject: "The 17-settlement output is a pilot measurement, not calibration"
+      delta_elements_changed:
+        - "proof: 'calibration report' renamed to 'bounded-judgment pilot measurement report'"
+        - "new_requirements: REQ-VERIFY-012 (reporting discipline and mandatory disclosure)"
+        - "amended: REQ-VERIFY-004 and REQ-SETTLE-003 (measurability, not calibration)"
+        - "amended: VAR-008 wording (reserved terminology)"
+        - "CLAIM-003: explicitly_not_claiming added"
+        - "roadmap: judgment_calibration gate with four required evidences"
+      reversal: false
+      preserved: "the v1 conclusion that 17 settled judgments cannot support calibration"
+    - id: C4
+      subject: "DecisionSurface authority must be explicit"
+      delta_elements_changed:
+        - "entities[DecisionSurface]: semantic_basis and evaluation_basis fields ADDED with owners"
+        - "new_requirements: REQ-AUTH-006, NONGOAL-010"
+        - "validation_matrix: REQ-AUTH-006 row (adversarial)"
+        - "conformance: REQ-AUTH-006 added to the authority_separation high-risk group"
+      reversal: false
+      preserved_all: "DomainForge was already stated as the sole semantic authority in v1"
+    - id: C5
+      subject: "Judgment Plane is an architectural concern, not a runtime noun"
+      delta_elements_changed:
+        - "new_requirements: NONGOAL-009"
+        - "explicit architectural_concern section in the spec, with a normative use rule"
+        - "dialect rule: requirements MAY reference the concern, MUST NOT require a component under that name"
+      reversal: false
+      preserved: "the v1 rejection of a JudgmentPlane runtime component"
+    - id: C6
+      subject: "Correlation is joinability, not a field name"
+      delta_elements_changed:
+        - "amended: REQ-PROV-021 (joinability is the requirement)"
+        - "new_requirements: REQ-PROV-022 (mechanism implementation-defined, proven lossless)"
+        - "entities[LoopCorrelationIdentity]: requirement field set to JOINABILITY"
+        - "validation_matrix: REQ-PROV-022 joinability test row"
+      reversal: false
+      preserved: "REQ-PROV-021 remains blocking and first-class"
+    - id: C7
+      subject: "Jev comparability split into three claim levels"
+      delta_elements_changed:
+        - "new_requirements: CLAIM-006 with levels A/B/C"
+        - "roadmap[TypeSafe Jev provider] reclassified: level A only"
+        - "definition_of_done: no level-C claim without a materially larger evaluation set"
+        - "conformance: new claim_scope_integrity group"
+      reversal: false
+      preserved: "the v1 finding that a Jev-like primitive appears affordable at interface level"
+    - id: C8
+      subject: "The strong reductions are preserved"
+      delta_elements_changed: []
+      reversal: false
+      preserved_list:
+        - "DomainForge unchanged; no .sea grammar change"
+        - "DecisionSurface initially derived, not a new compiled language construct"
+        - "Gauntlet AgentRunner remains the invocation boundary"
+        - "no third provider port; HTTP provider coverage is the missing transport"
+        - "SEA-Forge remains the authority owner"
+        - "provider and model output is evidence, never permission"
+        - "deterministic composition stays outside the model"
+        - "composition rules become versioned and inspectable"
+        - "no new database or message broker on the judgment path"
+        - "no training pipeline in slice 1; no learning claim"
+        - "no destructive rewrite of existing ledgers"
+        - "memory and evidence ownership explicitly scoped rather than collapsed"
+    - id: C9
+      subject: "AnswerDomain carrier is contingent on compatibility evidence"
+      delta_elements_changed:
+        - "entities[Question]: disposition clarified to relocate (carrier-conditional); carrier_status OPEN"
+        - "entities[Question].compatibility.acceptable_slice_1_carriers: three options named"
+        - "new_requirements: REQ-JUDG-024 (carrier independence and versioning)"
+        - "config: answer_domain_carrier field added"
+        - "U1 status: OPEN, deliberately unsettled"
+      reversal: false
+      note: >-
+        v1 relocated Question into CEP-0005 as though compatibility were established. The
+        distinction is unchanged; only the claim about physical placement was narrowed.
+    - id: C10
+      subject: "PROOF-1 answers the right question with five admissible outcomes"
+      delta_elements_changed:
+        - "proof_1_definition: governing question rewritten as two parts"
+        - "proof_1_definition.admissible_outcomes: A, B, C, D, E with bounded conclusions and forbidden inferences"
+        - "corpus_reality block stated inline"
+      reversal: false
+      preserved: "PROOF-1 remains read-only, undefined as implementation, and unexecuted"
+    - id: C11
+      subject: "Exploratory metrics without false precision"
+      delta_elements_changed:
+        - "pilot_measurement_metrics: may_compute, must_report_with_every_metric, must_not_claim, instability_rule, metric_naming"
+        - "new_requirements: REQ-VERIFY-012"
+      reversal: false
+
+  aggregate:
+    corrections_applied: 11
+    architectural_conclusions_reversed: 0
+    requirements_weakened: 0
+    requirement_ids_renumbered: 0
+    requirement_ids_amended: [REQ-OUT-006, REQ-JUDG-020, REQ-PROV-021, REQ-VERIFY-004]
+    requirement_ids_added: [REQ-OUT-007, REQ-JUDG-023, REQ-JUDG-024, REQ-AUTH-006, REQ-PROV-022, REQ-VERIFY-012, CLAIM-006, NONGOAL-008, NONGOAL-009, NONGOAL-010]
+    direction_of_change: >-
+      Every correction narrows a CLAIM or a SCOPE. None widens the system, adds a
+      component, or weakens a requirement.
+
+entities:
+  change_from_v1: "carrier dispositions are slice-scoped; authority bases are explicit; one concept added"
+  items:
+    - name: DecisionSurface
+      disposition: amend
+      changed_from_v1: "dual-basis requirement added (semantic_basis, evaluation_basis)"
+      authority_assignment:
+        semantic_possibility_and_identity: DomainForge (sole)
+        the_question_asked_of_that_world: "Gauntlet or CEP evaluation context"
+        break_rule: "evaluation context MUST NOT acquire semantic authority (REQ-AUTH-006)"
+      evidence:
+        - "FACT domainforge-core/src/application/contract.rs carries ApplicationContract and policy bindings"
+        - "FACT gauntlet-domain/src/reference.rs:217,233 carries quality dimensions, which are evaluation criteria rather than domain meaning"
+        - "FACT the baseline defers surface compilation to roadmap"
+      preserves_v1: true
+    - name: Question
+      disposition: relocate (carrier-conditional)
+      changed_from_v1: "CEP relocation is now conditional on proven compatibility and ownership"
+      normative: "every bounded question MUST have an explicit, versioned answer domain"
+      carrier_status: OPEN (U1)
+      acceptable_slice_1_carriers: ["additive CEP field if proven", "existing result-contract artifact", "another hash-addressed evaluation artifact"]
+      preserves_v1: true
+    - name: AnswerDomain
+      disposition: add
+      changed_from_v1: "physical placement decoupled from the requirement; must be versioned and recorded"
+      evidence_gap_closed: CAP-001
+      preserves_v1: true
+    - name: JudgmentRequest
+      disposition: merge
+      changed_from_v1: "loop_correlation_identity added as an opaque, mechanism-free field"
+      merged_into: "gauntlet_ports::RoleInvocationSpec plus ContextEnvelope"
+      preserves_v1: true
+    - name: JudgmentProvider
+      disposition: reject
+      changed_from_v1: none
+      permanence: standing (not slice-scoped)
+      superseded_by: "gauntlet_ports::AgentRunner plus one HTTP transport adapter"
+      preserves_v1: true
+    - name: JudgmentObservation
+      disposition: merge-for-slice-1
+      changed_from_v1: >-
+        v1 disposition was an unqualified merge. It is now a SLICE-1 CARRIER SELECTION with
+        universality explicitly NOT ESTABLISHED, a named adoption rule, a named
+        new-carrier rule, and a named prohibition on the reverse error.
+      carrier: "gauntlet_domain::VerificationRecord (verification_record@v1)"
+      universality: NOT_ESTABLISHED
+      candidate_mismatch_families:
+        - incident classification
+        - severity estimation
+        - capability classification
+        - represented versus unrepresented discrimination
+        - routing classification
+        - state interpretation
+        - proposition estimation before a verification claim exists
+      adoption_rule: "Slice 1 MUST reuse this carrier unless evidence demonstrates it cannot preserve the required distinction."
+      new_carrier_rule: "No new generic probabilistic-result type until a concrete non-verification use case demonstrates semantic insufficiency."
+      reverse_error_prohibited: "This carrier MUST NOT be declared the permanent universal judgment abstraction."
+      evidence:
+        - "FACT gauntlet-domain/src/verification.rs:26-33 binds run, claim, evidence, outcome, instrument - a VERIFICATION shape"
+        - "FACT no evidence exists that this shape fits a non-verification family"
+      preserves_v1: true
+      corrected_in_v0_3_0: C1
+    - name: ScopeOfFalsification
+      disposition: add
+      changed_from_v1: "did not exist; v1 had no way to express a bounded negative result"
+      required_values: [surface, task_family, capability_class]
+      rules:
+        - "Any negative report MUST declare its scope."
+        - "A capability-class conclusion requires at least two materially different judgment shapes."
+        - "Slice 1 need not cover all three shapes but MUST NOT generalize from one to another."
+      shapes_to_distinguish: ["binary or proposition", "multiclass choice or classification", "ordered score or rubric"]
+      corrected_in_v0_3_0: C2
+      preserves_v1: true
+    - name: JudgmentComposer
+      disposition: reject
+      changed_from_v1: none
+      permanence: standing
+      superseded_by: "sea-forge-settlement with versioned composition rules"
+      preserves_v1: true
+    - name: CaseAssessment
+      disposition: reject
+      changed_from_v1: none
+      permanence: standing
+      superseded_by: "SettlementClaim plus SettlementEvent"
+      preserves_v1: true
+    - name: LoopCorrelationIdentity
+      disposition: add
+      changed_from_v1: "stated as a field echoed at four boundaries; now stated as JOINABILITY with an implementation-defined mechanism"
+      requirement: "artifacts participating in one operative loop MUST be deterministically joinable without heuristic string matching"
+      mechanism: implementation-defined (direct echo, envelope projection, mapping table, or another lossless mechanism)
+      proof: "a joinability test; never inferred from string similarity"
+      corrected_in_v0_3_0: C6
+      preserves_v1: true
+    - name: DownstreamAuthorityBoundary
+      disposition: keep
+      changed_from_v1: "REQ-AUTH-006 reinforces that semantics stay with DomainForge"
+      preserves_v1: true
+
+requirement_group_dispositions:
+  change_from_v1: "amended groups now carry the correction that changed them; two groups added"
+  items:
+    - group: authority_separation
+      disposition: amend
+      changed_from_v1: "REQ-AUTH-006 added: semantic authority is not conferred by contributing evaluation context"
+      corrected_in_v0_3_0: C4
+    - group: semantic_bounding
+      disposition: amend
+      changed_from_v1: "REQ-JUDG-024 added: answer-domain requirement is carrier-independent and versioned"
+      corrected_in_v0_3_0: [C9]
+    - group: claim_scope_integrity
+      disposition: add
+      changed_from_v1: "new group: prevents a surface-level negative result or a small-corpus metric from being reported as a wider conclusion"
+      requirements: [REQ-JUDG-023, REQ-OUT-006, REQ-OUT-007, REQ-VERIFY-012, CLAIM-006]
+      confirmation: adversarial
+      corrected_in_v0_3_0: [C2, C3, C7]
+    - group: uncertainty_integrity
+      disposition: keep
+      changed_from_v1: none
+      requirements: [REQ-JUDG-012, REQ-JUDG-013, REQ-JUDG-022]
+      confirmation: independent
+    - group: provenance_and_replay
+      disposition: amend
+      changed_from_v1: "REQ-PROV-022 added: the correlation mechanism is implementation-defined and must be proven lossless"
+      corrected_in_v0_3_0: C6
+    - group: deterministic_composition
+      disposition: keep
+      changed_from_v1: none
+      note: "REQ-CONFIG-003 already required versioned thresholds; the defect is a violation, not a missing requirement"
+    - group: settlement_linkage
+      disposition: amend
+      changed_from_v1: "REQ-SETTLE-003 annotated: a compliant dataset is a PREREQUISITE for calibration, not evidence of it"
+      corrected_in_v0_3_0: C3
+    - group: safe_failure
+      disposition: keep
+      changed_from_v1: none
+    - group: security_safety_trust_boundaries
+      disposition: amend
+      changed_from_v1: "REQ-SEC-004 reinforced by REQ-AUTH-006"
+      corrected_in_v0_3_0: C4
+    - group: verification_proof
+      disposition: amend
+      changed_from_v1: "REQ-VERIFY-012 added: pilot reporting discipline; REQ-VERIFY-004 downgraded to measurability"
+      corrected_in_v0_3_0: [C3, C11]
+    - group: repeatability_variation
+      disposition: keep
+      changed_from_v1: "VAR-008 wording aligned to reserved terminology; corpus availability annotated"
+      corrected_in_v0_3_0: C3
+    - group: failure_model_recovery
+      disposition: keep
+      changed_from_v1: "a measurement-failure class added so a corpus blocker cannot be read as a judgment-quality result"
+      corrected_in_v0_3_0: C10
+    - group: claim_discipline_goals_nongoals
+      disposition: amend
+      changed_from_v1: "CLAIM-005, CLAIM-006, NONGOAL-008, NONGOAL-009, NONGOAL-010 added"
+      corrected_in_v0_3_0: [C1, C3, C4, C5, C7]
+    - group: roadmap_boundaries
+      disposition: amend
+      changed_from_v1: "judgment_carrier_generalization and judgment_calibration gates added"
+      corrected_in_v0_3_0: [C1, C3, C7, C9]
+
+new_requirements:
+  carried_from_v1:
+    note: "introduced in the v1 delta and retained unchanged in substance"
+    items:
+      - {id: REQ-JUDG-020, purpose: "explicit declared answer domain per question"}
+      - {id: REQ-JUDG-021, purpose: "declared unresolved-reference policy; no placeholder identity"}
+      - {id: REQ-JUDG-022, purpose: "typed place to hold a distribution or an explicit abstention"}
+      - {id: REQ-PROV-020, purpose: "provider, model, surface and semantic identity on every judgment"}
+      - {id: REQ-PROV-021, purpose: "loop correlation identity (blocking)"}
+      - {id: REQ-COMP-020, purpose: "versioned, hash-addressable composition rules"}
+      - {id: REQ-VERIFY-010, purpose: "adversarial authority non-bypass test"}
+      - {id: REQ-VERIFY-011, purpose: "cross-provider semantic comparison"}
+      - {id: CLAIM-005, purpose: "no learning claim while nothing changes weights"}
+      - {id: NONGOAL-007, purpose: "no new component, port, schema, database or DSL construct where one already exists"}
+  added_in_v0_3_0:
+    note: "introduced only because the corrected distinction did not previously exist"
+    items:
+      - id: REQ-OUT-007
+        corrects: C2
+        purpose: "a scoped non-promotion outcome so a bounded negative result is expressible"
+      - id: REQ-JUDG-023
+        corrects: C2
+        purpose: "a negative result MUST declare its scope of falsification; a capability-class conclusion needs at least two materially different judgment shapes"
+      - id: REQ-JUDG-024
+        corrects: C9
+        purpose: "the answer-domain requirement is carrier-independent, and the carrier must be declared, recorded and versioned"
+      - id: REQ-AUTH-006
+        corrects: C4
+        purpose: "contributing evaluation context MUST NOT confer semantic authority; DomainForge remains sole"
+      - id: REQ-PROV-022
+        corrects: C6
+        purpose: "the correlation mechanism is implementation-defined and must be proven lossless by a joinability test"
+      - id: REQ-VERIFY-012
+        corrects: [C3, C11]
+        purpose: "pilot reporting discipline: mandatory disclosure block, reserved terminology, instability statements"
+      - id: CLAIM-006
+        corrects: C7
+        purpose: "comparability MUST be claimed at an explicit level (interface, operational, model quality)"
+      - id: NONGOAL-008
+        corrects: C1
+        purpose: "neither asserting a universal carrier from one family nor forbidding a future carrier without evidence"
+      - id: NONGOAL-009
+        corrects: C5
+        purpose: "the Judgment Plane MUST NOT be realized as a deployable unit"
+      - id: NONGOAL-010
+        corrects: C4
+        purpose: "evaluation context MUST NOT become semantic authority"
+  amended:
+    items:
+      - id: REQ-OUT-006
+        corrects: C2
+        was: "a falsification of the bounded-judgment hypothesis"
+        now: "a negative result at an explicitly declared scope, never generalized beyond it"
+      - id: REQ-JUDG-020
+        corrects: C9
+        was: "the answer domain is realized in CEP-0005"
+        now: "the answer domain is required; the carrier is declared, recorded and versioned (REQ-JUDG-024)"
+      - id: REQ-PROV-021
+        corrects: C6
+        was: "one field echoed at four boundaries"
+        now: "joinability without heuristic string matching; mechanism implementation-defined"
+      - id: REQ-VERIFY-004
+        corrects: C3
+        was: "historical replay supports the capability claim"
+        now: "historical replay establishes MEASURABILITY only, with corpus limits stated in the same artifact"
+
+propositions:
+  change_from_v1: >-
+    All fifteen propositions from the v1 delta are carried. Six had their CONCLUSION
+    narrowed because PROOF-1 was previously given too much epistemic authority, and two had
+    the Jev-comparability reading separated into claim levels. No verdict changed from TRUE
+    to FALSE or the reverse except where noted, and no architectural conclusion was reversed.
+  items:
+    - id: PROP-01
+      proposition: "GodSpeed actually needs a new Judgment Plane"
+      verdict: "TRUE but NARROW"
+      confidence: high
+      changed_from_v1: "the phrase Judgment Plane is now explicitly an architectural concern, resolving the language ambiguity"
+    - id: PROP-02
+      proposition: "Judgment Plane deserves its own runtime component"
+      verdict: FALSE
+      confidence: high
+      changed_from_v1: none
+    - id: PROP-03
+      proposition: "JudgmentObservation deserves a new type"
+      verdict: "FALSE FOR SLICE 1; NOT UNIVERSALLY ESTABLISHED"
+      confidence: "high for the slice, low for universality"
+      changed_from_v1: >-
+        v1 stated an unqualified FALSE. The evidence supports the slice-1 conclusion and
+        does NOT support extending it to non-verification judgment families.
+      corrected_in_v0_3_0: C1
+    - id: PROP-04
+      proposition: "CaseAssessment deserves a new type"
+      verdict: FALSE
+      confidence: high
+      changed_from_v1: none
+    - id: PROP-05
+      proposition: "DomainForge should compile DecisionSurfaces"
+      verdict: PREMATURE
+      confidence: medium-high
+      changed_from_v1: >-
+        additionally clarified that DomainForge owns SEMANTIC possibility while the
+        evaluation context owns the QUESTION, so a future compiler has a defined boundary
+      corrected_in_v0_3_0: C4
+    - id: PROP-06
+      proposition: "SEA-Forge is the correct authority owner"
+      verdict: TRUE
+      confidence: high
+      changed_from_v1: "strengthened by REQ-AUTH-006, which extends the same boundary to semantic authority"
+      corrected_in_v0_3_0: C4
+    - id: PROP-07
+      proposition: "Gauntlet is the correct execution and orchestration owner"
+      verdict: "TRUE, with an unprotected ownership"
+      confidence: high
+      changed_from_v1: "clarified that Gauntlet's evaluation context confers no semantic authority, which limits how far its ownership extends"
+      corrected_in_v0_3_0: C4
+    - id: PROP-08
+      proposition: "RealityTrace is the correct consequence and evidence owner"
+      verdict: "TRUE IN PROTOCOL, UNPROVEN IN RUNTIME"
+      confidence: medium
+      changed_from_v1: none
+    - id: PROP-09
+      proposition: "Agent Memory Ledger is the correct developmental-memory owner"
+      verdict: FALSE AS STATED
+      confidence: medium-high
+      changed_from_v1: none
+    - id: PROP-10
+      proposition: "Existing event schemas can remain stable"
+      verdict: "TRUE FOR SLICE 1"
+      confidence: high
+      changed_from_v1: "additional support: the answer domain need not be physically in CEP, so no CEP version change is required to begin"
+      corrected_in_v0_3_0: C9
+    - id: PROP-11
+      proposition: "A local Qwen provider can approximate the desired interface sufficiently for development"
+      verdict: "TRUE for interface; reliability and latency must be measured"
+      confidence: "high on interface, medium on reliability"
+      changed_from_v1: "the reserved level-B claim now makes the unmeasured part explicit"
+      corrected_in_v0_3_0: C7
+    - id: PROP-12
+      proposition: "Jev can eventually be added as a pure adapter"
+      verdict: "TRUE at interface level only"
+      confidence: medium-high
+      changed_from_v1: >-
+        v1 asserted affordability without separating claim levels. Adding the adapter would
+        support level A; level B requires target evidence; level C is unproven.
+      corrected_in_v0_3_0: C7
+    - id: PROP-13
+      proposition: "Historical Gauntlet data is sufficient for calibration"
+      verdict: FALSE
+      confidence: high
+      changed_from_v1: "reinforced: the output is now named a pilot measurement, and calibration is roadmap-gated"
+      corrected_in_v0_3_0: C3
+    - id: PROP-14
+      proposition: "The stack is close enough to production that convergence beats simplification"
+      verdict: "TRUE, with named exceptions"
+      confidence: medium-high
+      changed_from_v1: none
+    - id: PROP-15
+      proposition: "Separate repositories provide useful modularity rather than accidental fragmentation"
+      verdict: MIXED
+      confidence: medium
+      changed_from_v1: none
+  summary:
+    true: [PROP-01, PROP-06, PROP-07, PROP-10, PROP-11, PROP-12, PROP-14]
+    false: [PROP-02, PROP-03, PROP-04, PROP-09, PROP-13]
+    partial_or_deferred: [PROP-05, PROP-08, PROP-15]
+    highest_confidence_falsification: PROP-13
+    most_consequential_narrowing: PROP-03
+
+residual_open_items:
+  note: "carried from the v1 delta; statuses updated by the corrections"
+  items:
+    - {id: U1, question: "answer-domain coexistence with the pinned CEP envelope hash", status: "OPEN - carrier decoupled from the requirement", corrected_in_v0_3_0: C9}
+    - {id: U2, question: "which record kinds actually exist in the 16 run databases", status: open}
+    - {id: U3, question: "whether the model probe's Accepted settlement is operational settlement", status: open}
+    - {id: U4, question: "whether the harness crate graph can depend on the agent crate", status: open}
+    - {id: U5, question: "real bounded-question latency and model-swap cost on target", status: "open; also required for claim level B", corrected_in_v0_3_0: C7}
+    - {id: U6, question: "which noun carries probabilistic judgment", status: "open, blocking"}
+    - {id: U7, question: "does uncertainty add information on the first surface", status: "open; scope is SURFACE, not capability class", corrected_in_v0_3_0: C2}
+    - {id: U8, question: "which materially different shape to examine if the first surface shows no gain", status: "new - DECISION_REQUIRED", corrected_in_v0_3_0: C2}
+    - {id: U9, question: "are the named loop components intended to be connected", status: open}
+
+final_verification:
+  baseline_requirement_ids_preserved: true
+  baseline_requirement_ids_lost: []
+  requirement_ids_renumbered: none
+  architectural_conclusions_reversed: none
+  reductions_preserved: true
+  proof_1_authorised: false
+  implementation_authorised: false
+  baseline_still_authoritative: true

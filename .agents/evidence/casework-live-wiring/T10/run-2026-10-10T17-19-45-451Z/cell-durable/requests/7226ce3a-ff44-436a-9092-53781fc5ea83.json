@@ -1,0 +1,14 @@
+{
+  "request_id": "7226ce3a-ff44-436a-9092-53781fc5ea83",
+  "method": "human_task.complete",
+  "status": "completed",
+  "submitted_at": "2026-10-10T17:26:00.890710208+00:00",
+  "completed_at": "2026-10-10T17:26:01.093956016+00:00",
+  "outcome": {
+    "case_id": "case_20261010T172227Z_a8d966",
+    "exit_code": 5,
+    "item_id": "signoff_release",
+    "ok": true
+  },
+  "payload_hash": "73f14a0a729db75747716eb3463141f3e4760376a935505335df1bd9daff7caf"
+}

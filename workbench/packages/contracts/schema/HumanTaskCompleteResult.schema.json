@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HumanTaskCompleteResult",
+  "description": "`human_task.complete` result body.",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "exit_code": {
+      "description": "`0` when the completion closed the case, `5` when work remains — the\nCLI's historical exit-code contract, surfaced instead of invented.",
+      "type": "integer",
+      "format": "uint8",
+      "maximum": 255,
+      "minimum": 0
+    },
+    "item_id": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "case_id",
+    "item_id",
+    "exit_code"
+  ]
+}

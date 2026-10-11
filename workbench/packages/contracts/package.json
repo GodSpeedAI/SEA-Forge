@@ -1,0 +1,16 @@
+{
+  "name": "@sea-forge/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./generated/index.ts"
+  },
+  "scripts": {
+    "generate": "bun run scripts/generate.ts"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "json-schema-to-typescript": "15.0.4"
+  }
+}

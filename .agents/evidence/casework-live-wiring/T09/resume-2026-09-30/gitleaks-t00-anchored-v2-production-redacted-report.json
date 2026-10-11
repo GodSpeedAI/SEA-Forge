@@ -1,0 +1,61 @@
+{
+  "scan": "production-synthetic",
+  "actual_config_sha256": "608a687e53ba365fc743ae6c8d2ded7a1c006e8c6b0f5f209109d055f6e5ad05",
+  "synthetic_config_sha256": "c7defacfbe48c4477f2a324fef9ff51c7b422364fb353fd392db951c7d612486",
+  "findings": [
+    {
+      "RuleID": "github-pat",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 4
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": "outside-scope/probe.jsonl",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl.backup",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "f40850fa35453292f7d7f5f092438ca19398537e",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 5
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": "lookalike-prefix/.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": "lookalike-prefix/.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl.backup",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": "outside-scope/probe.jsonl",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "github-pat",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 2
+    }
+  ]
+}

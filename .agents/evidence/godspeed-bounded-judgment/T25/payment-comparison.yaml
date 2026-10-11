@@ -1,0 +1,115 @@
+schema: godspeed-bounded-judgment.t25-payment-comparison
+task: T25
+honesty_rule: every number below is counted or quoted from a recorded evidence file named beside it; unobservable
+  quantities are n/a; no estimates; the two sides measure DIFFERENT surfaces (loop-mechanism payment vs manual corpus
+  construction) and support only the recorded CLAIM-C measurement surface, no general economic claim
+mechanism_side_this_branch:
+  operator_decision_entries:
+    count: 7
+    source: .agents/evidence/godspeed-bounded-judgment/decisions.yml (range D-2026-09-18-T21-01..D-2026-09-19-T23-03)
+    ids:
+    - D-2026-09-18-T21-01
+    - D-2026-09-18-T21-02
+    - D-2026-09-18-T21-03
+    - D-2026-09-18-T22-01
+    - D-2026-09-19-T23-01
+    - D-2026-09-19-T23-02
+    - D-2026-09-19-T23-03
+  wall_clock_seconds_recorded:
+    per_task:
+      t22_round1_failed: 48.852
+      t22_round2: 56.456
+      t23_route_round1: 275.997
+      t23_round2_rejudgment: n/a (no wall clock recorded in payment-counters.round2.yaml)
+      t23_round3_mechanical_rule: n/a (deterministic rule evaluation; no wall clock recorded)
+      t24_case_generation: 23.737
+      t24_independent_replay_run: 0.505
+      t24_tooth_t7: 0.204
+      t25_matched_negative: 0.303
+    total_recorded: 406.054
+    unrecorded_note: T23 round-2 and round-3 recorded no wall clock; excluded from the total (n/a, not estimated)
+  model_calls:
+    by_stage_recorded:
+      t22_round1_failed: 4
+      t22_round2: 4
+      t23_route_round1: 16
+      t23_round2_rejudgment: 12
+      t23_round3: 0
+      t24_case_generation: 1
+      t25_matched_negative: 0
+    generation_calls: 7
+    judgment_calls: 18
+    total: 37
+    sources:
+    - T22/iteration-1/payment-counters.yaml
+    - T22/round-2/payment-counters.yaml
+    - T23/route/payment-counters.yaml
+    - T23/round-2/payment-counters.round2.yaml
+    - T23/round-3/route-record.round3.yaml payment block
+    - T24/payment-counters.yaml
+    - T25/payment-counters.yaml
+  tool_executions:
+    by_stage_recorded:
+      t22_round1_probes_failed_round: 3
+      t22_round2_probes: 3
+      t23_route_probes: 12
+      t23_teeth_t4: 1
+      t24_replays_candidate_and_t7_tooth: 2
+      t25_negative: 1
+    total: 22
+    note: real gauntlet executions only (probes 12 + failed round-1 probes + teeth T4 + T24 replay + T7 attack +
+      the matched negative)
+  failed_executions:
+    by_stage_recorded:
+      t22_round1_failed_round: 3
+      t22_round2: 0
+      t23_route: 0
+      t23_teeth: 0
+      t24_replay_and_t7: 0
+      t25_negative: 0
+    total: 3
+    note: the T22 round-1 run_error trio (preserved failed round); T23's teeth round-1 script crash never reached
+      a gauntlet execution and is not one
+  tokens_and_cost: 'n/a: the frozen provider seam does not expose token/cost accounting (recorded honest gap in
+    every counter file)'
+manual_baseline_t15_t16:
+  source_note: manual corpus construction as RECORDED in the T15/T16 evidence; only recorded values are quoted;
+    unobservable quantities are n/a (no estimates)
+  t15_corpus:
+    runs: 9
+    class_counts_recorded:
+      budget_exhausted: 6
+      settled: 3
+    rounds_recorded: round-3 clean batch (the manifest); rounds 1-2 preserved as FAILED rounds (generator targeting
+      + wall-clock mismatch + state-dir reuse)
+    case_definitions: operator-authored 9-case grid (T15 prereg case table)
+  t16_expansion:
+    runs: 25
+    class_counts_recorded:
+      settled: 12
+      budget_exhausted: 13
+    measurement_rounds_recorded: round-1 quota-blocked (preserved); round-2 scoring defect (preserved failed); round-3
+      provider re-calls after harness corrections; round-4 first complete measurement; round-5 baseline scoring
+      correction (no provider re-calls); plus the N=25 expansion round
+    provider_answers_recorded:
+      nine_row_report:
+        deepseek-clinepass:
+          n_answered: 9
+          contract_failures: 0
+        prime-agent:
+          n_answered: 0
+          contract_failures: 9
+      expanded_round_report:
+        deepseek-clinepass:
+          n_answered: 24
+          contract_failures: 1
+        muse-spark-free:
+          n_answered: 25
+          contract_failures: 0
+  wall_clock: 'n/a: no wall clock is recorded in the T15/T16 evidence'
+  operator_decision_entries: 21
+  tokens_and_cost: n/a (honest gap, as recorded)
+comparison_note: the mechanism produced the settled route, the accepted generated case, the matched pair and the
+  novelty measurement for the recorded payment above; the recorded manual baseline purchased the T15/T16 corpora
+  (9 then 25 runs) with operator-authored case definitions and manual verification rounds; recorded-side differences
+  only - no normalized cost claim

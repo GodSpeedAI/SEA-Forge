@@ -1,0 +1,5 @@
+--- FAIL: TestRunObservationManagerCanceledPartialPrepareJoinsOwnedReadBeforeRetry (0.00s)
+    run_observation_manager_test.go:1020: Prepare returned before the canceled partial-Prepare read: got semantic failure event={EventType: Cursor: Timestamp: Payload:{CaseID: ObservedAt: RunListState: ObservationState: ListedRunCount:<nil> SelectedRunCount:<nil> ValidatedRunCount:<nil> UnreadableRunCount:<nil> UnavailableRunCount:<nil> OmittedRunCount:<nil> HydrationReadBudget:{Limit:0 ReadsAttempted:0 Exhausted:false} Runs:[]}} lease=<nil> err=unavailable: run observation manager unit 1 is not wired (run_observation); expected successful attachment reaching the controlled read
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.234s
+FAIL

@@ -1,0 +1,156 @@
+Preflight for current-source diagnostic; baseline command has fully exited.
+Command: date -u; MemTotal/MemAvailable/SwapTotal/SwapFree from /proc/meminfo; full ps PID/COMMAND/RSS.
+Mon Oct  5 17:39:19 UTC 2026
+MemTotal:        8132712 kB
+MemAvailable:    2725892 kB
+SwapTotal:      12582912 kB
+SwapFree:        1378952 kB
+    PID COMMAND           RSS
+ 393814 .cline          1238652
+ 383827 node            423044
+   1709 node            414532
+  38102 codex           296576
+   1528 node            289400
+   1613 node            260700
+   4442 claude          192496
+   2559 language_server 167160
+1581995 node-MainThread 122788
+ 384376 language_server 117832
+1581588 serena          104956
+    703 MainThread      102744
+1581653 node-MainThread 93148
+1581621 node-MainThread 92812
+1581639 node-MainThread 92636
+   5511 node            86404
+1581619 node-MainThread 75804
+  38680 codex           67620
+   1562 node            67184
+1581595 MainThread      63848
+  39399 node-MainThread 62772
+1541351 node-MainThread 55960
+   5695 zcode-cli       48680
+1541828 node-MainThread 47452
+1541349 node-MainThread 44880
+1541347 node-MainThread 43932
+1541372 node-MainThread 42472
+  38911 node-MainThread 36024
+ 404946 .cline          35412
+    337 MainThread      27804
+   4679 bun             23996
+     48 systemd-journal 23216
+1581968 node            18824
+ 280671 node            17672
+1472686 codex-code-mode 17668
+ 383828 node            17592
+1581591 node            17244
+1581585 node            17104
+1581590 node            17048
+    203 snapd           14484
+   3252 node            14204
+ 470172 node            13800
+    165 snapfuse        12640
+ 384078 node            12372
+  39543 node-MainThread 12160
+  39104 node-MainThread 12124
+1581601 node            11964
+ 471033 node            11752
+ 471026 node            11264
+ 471128 node            11196
+   4851 node-MainThread  9512
+1587193 wsl-pro-service  8840
+      1 systemd          8780
+1541804 node             8156
+1541304 node             8132
+1541302 node             7996
+1541296 node             7956
+1541297 node             7920
+1582614 sleep            7824
+  38204 codex            7276
+    294 systemd          6232
+   5751 zcode-node-repl  6104
+     83 systemd-udevd    5244
+    338 MainThread       4996
+ 384922 node-MainThread  4888
+  38019 xdg-desktop-por  4880
+ 385612 chrome-devtools  4824
+ 393694 node-MainThread  4812
+1552635 polkitd          4740
+1541311 serena           4652
+    204 systemd-logind   4472
+1588595 ps               4328
+  38041 xdg-desktop-por  4312
+  38929 node-MainThread  4300
+  38928 node-MainThread  4284
+  39360 node-MainThread  4276
+  39364 node-MainThread  4236
+  39363 node-MainThread  4104
+    282 unattended-upgr  4060
+  38915 node-MainThread  4044
+  39308 serena           4028
+  38873 serena           4016
+     80 systemd-resolve  3960
+    196 dbus-daemon      3956
+   3558 chrome-devtools  3916
+   4647 serena           3904
+1463466 bash             3828
+    215 rsyslogd         3800
+  38029 xdg-document-po  3792
+  38017 dbus-daemon      3744
+   4766 node-MainThread  3736
+    200 networkd-dispat  3688
+   3624 node-MainThread  3672
+ 392648 bash             3476
+ 384251 bash             3464
+1588591 bash             3464
+    261 chronyd          3416
+  38083 dbus-daemon      3408
+  38074 at-spi-bus-laun  3360
+   1833 bash             3280
+  38088 at-spi2-registr  3184
+   1831 bash             3100
+    456 login            3036
+   1489 bash             2976
+  38024 xdg-permission-  2964
+    195 cron             2692
+  39079 node             2668
+   3529 node             2652
+ 393656 node             2644
+   3441 node             2632
+ 384834 node             2632
+  38869 node             2628
+  39315 node             2628
+   4822 node             2624
+  39327 node             2624
+  39330 node             2616
+  39316 node             2608
+   1825 bash             2596
+ 385514 node             2596
+  38868 node             2588
+  38872 node             2588
+  38877 node             2588
+   4757 node             2584
+  39537 node             2584
+    239 agetty           2476
+   2504 bash             2320
+    534 bash             2268
+1588592 bash             2264
+  38035 fusermount3      2148
+    194 chronyd-starter  1888
+   1518 sh               1888
+    151 snapfuse         1532
+    305 (sd-pam)         1512
+    152 snapfuse         1464
+    275 chronyd          1448
+    162 snapfuse         1388
+      7 init              716
+      2 init-systemd(Ub   632
+   1487 Relay(1489)       536
+1433926 nix-daemon        536
+      3 init-watcher      420
+   5510 Relay(5511)       416
+   1485 SessionLeader     288
+   5509 SessionLeader     288
+   2726 node                0
+ 384651 node                0
+Go limits: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0
+Diagnostic sequence: baseline command completed with exit 1 before current command.

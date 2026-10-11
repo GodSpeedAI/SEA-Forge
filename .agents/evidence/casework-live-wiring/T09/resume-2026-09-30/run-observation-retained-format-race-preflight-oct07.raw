@@ -1,0 +1,14 @@
+UTC 2026-10-07T17:31:17Z
+/home/sprime01/projects/sea-rs/apps/godspeed-casework-go
+Command: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1 go test -race -count=1 -parallel=1 -timeout=60s ./internal/server -run '^TestRunObservationRetained'
+MemAvailableMiB=3656
+SwapFreeMiB=12284
+2157583fbb74f519c2e4254bf1fd26fce330ed567ac7ddaf006b510c87fd50bd  internal/server/run_observation_retained_version.go
+fa1601f3746bca6c6697e5e6c6861bb9442bac6aafc2aa762a4f32580f8a905d  internal/server/run_observation_manager.go
+af2dfcb8c83d8a53186d8e446a11de35ce51d45cac74461ea3c3f971d0da30c4  internal/server/run_observation_manager_test.go
+34df05f171f2fbb513caf86d096a87b9c3a4f353b2a5bef236d08132b040bfd7  internal/server/run_observation_retained_version_test.go
+4c70bc853ae73f4025b177b5fb505d8a456c89c41b1b13ac86faed5cba9620e7  internal/server/run_observation_retained_policy_test.go
+38ca7fdaf45b016fb8a55fdb72a32b15cad100fb5b31585410af943dddf7447a  /tmp/run_observation_retained_version.preimage-oct07.go
+2157583fbb74f519c2e4254bf1fd26fce330ed567ac7ddaf006b510c87fd50bd  /tmp/renderer-go-format-review-oct07/gofmt.stdout
+go version go1.27.1 linux/amd64
+GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1

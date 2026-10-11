@@ -1,0 +1,39 @@
+{
+  "findings": [
+    {
+      "session": "tooth",
+      "journey": "L9",
+      "where": "pageerror",
+      "text": "Error: tooth-injected-page-error\n    at file:///tmp/l9-tooth-OvERXH/noisy.html:1:140"
+    },
+    {
+      "session": "tooth",
+      "journey": "L9",
+      "where": "console",
+      "text": "tooth-injected-console-error"
+    }
+  ],
+  "harvests": [
+    {
+      "journey": "L9",
+      "session": "journey-L9",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L9",
+      "session": "tooth",
+      "page_errors": 1,
+      "console_errors": 1,
+      "console_total": 2
+    },
+    {
+      "journey": "end-of-run",
+      "session": "tooth",
+      "page_errors": 1,
+      "console_errors": 1,
+      "console_total": 2
+    }
+  ]
+}

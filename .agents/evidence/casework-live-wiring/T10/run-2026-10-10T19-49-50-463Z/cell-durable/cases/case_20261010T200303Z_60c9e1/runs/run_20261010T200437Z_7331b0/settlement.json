@@ -1,0 +1,14 @@
+{
+  "version": "0.1",
+  "settlement_id": "set_37e6e6",
+  "run_id": "run_20261010T200437Z_7331b0",
+  "status": "accepted",
+  "basis": [
+    "authority_allow",
+    "write_only",
+    "required_artifact_present:work/report.md",
+    "legacy_unattributed_criteria"
+  ],
+  "review_required": false,
+  "settled_at": "2026-10-10T20:04:37.286087180+00:00"
+}

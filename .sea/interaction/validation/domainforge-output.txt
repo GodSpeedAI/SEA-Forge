@@ -1,0 +1,109 @@
+SEA Forge canonical interaction model — DomainForge validation evidence
+Captured: 2026-08-12T23:18:18Z
+
+== toolchain ==
+$ domainforge --version
+domainforge 0.16.0
+DomainForge repository: /home/sprime01/projects/domainforge
+  branch:   feat/rdf-instance-policy-projection
+  commit:   c8f7300dc181824e897d06a2861b2053001a4292
+  worktree: dirty (see validation/domainforge-change-review.md "Working-tree delta")
+  binary:   target/release/domainforge, built with --features cli from the working tree
+
+== 1. semantic validation of the canonical entry point ==
+$ domainforge validate --format human --no-color .sea/interaction/interaction-model.sea
+Validation succeeded: 0 violations total
+$ domainforge validate --format json .sea/interaction/interaction-model.sea
+{
+  "error_count": 0,
+  "violations": []
+}
+
+== 2. semantic graph ==
+$ domainforge parse --format json .sea/interaction/interaction-model.sea | (declaration census)
+  entities             39
+  roles                9
+  resources            5
+  flows                16
+  relations            3
+  entity_instances     168
+  policies             16
+  patterns             3
+  entity_contracts     7
+  enum_contracts       4
+  entity_instances by type:
+    CanonicalJourney                 12
+    CanonicalizationClassification   8
+    InterfaceBinding                 90
+    InterfaceSurface                 38
+    JourneyStep                      8
+    ProductPurpose                   1
+    VariationDimension               11
+
+== 3. AST ==
+$ domainforge parse --ast --format json .sea/interaction/interaction-model.sea | (node census)
+  Entity       39
+  Enum         4
+  Export       33
+  Flow         16
+  Instance     168
+  Operation    1
+  Pattern      3
+  Policy       16
+  Record       2
+  Relation     3
+  Resource     5
+  Role         9
+
+== 4. canonical semantic envelope (library API; no CLI path) ==
+$ dfharness envelope .sea/interaction/interaction-model.sea
+  schema_version          domainforge-semantic-envelope/v1
+  producer                domainforge-core 0.16.0
+  source_set_hash         sha256:6f5bb9d515304c561c82e17bb4f5b84c84a53f7452911aeb10ff61d5b02ebaca
+  language_schema_version domainforge-ast/v3
+  interpretation_version  domainforge-interpretation/v1
+  semantic_closure_hash   sha256:437e7ee2c0cf08ecd13d2d0beb2aa38830a84202131f4ed342accd6b7a1c71fc
+  self_hash               sha256:96b75ef044d42550d36c5cb8597d2523daa43f88fe3db2fdb5402fa320634a96
+  modules                 ['interaction-model.sea']
+  module content hash     sha256:f36c876172a7699e5f85144147eb94ea484eefeb4c0c9e305336f28c88d3d833
+  resolved_references     14
+  semantic_declarations   266
+    entity       39
+    enum         4
+    flow         16
+    instance     168
+    operation    1
+    pattern      3
+    policy       16
+    record       2
+    relation     3
+    resource     5
+    role         9
+
+== 5. application contract ==
+$ dfharness contract .sea/interaction/interaction-model.sea
+  schema_version    domainforge-application-contract/v1
+  self_hash         sha256:138e5982bba5f7fdfd1fa40c0adce497d647b60385627b629081e3a07be61673
+  enums             ['CanonicalizationClass', 'ImplementationMaturity', 'InteractionPhase', 'InterfaceKind']
+  records           ['GetCanonicalJourneyInput', 'GetCanonicalJourneyOutput']
+  typed entities    ['JourneyStep', 'VariationDimension', 'CanonicalizationClassification', 'CanonicalJourney', 'InterfaceBinding', 'InterfaceSurface', 'ProductPurpose']
+  operation         get_canonical_journey
+      intent         "return the canonical interaction contract for one journey so any interface can project it without redefining 
+      direction      "inbound"
+      actor          {"kind": "anonymous"}
+      access         {"kind": "public"}
+      input          "sea_forge.interaction.record.GetCanonicalJourneyInput"
+      output         "sea_forge.interaction.record.GetCanonicalJourneyOutput"
+      state          "8df69b0d-0e26-507e-9de9-4089de5a4099"
+      effect         "reads"
+      transaction    "read_only"
+      idempotency    {"kind": "inherent"}
+      concurrency    {"kind": "read_snapshot"}
+      evidence       "operation_trace"
+      lifecycle      "synchronous_request_response"
+      failures       ['invalid_journey_id', 'canonical_journey_not_found']
+
+== 6. RDF projection: released vs local build ==
+See validation/domainforge-change-review.md "Working-tree delta".
+Released 0.16.0 model.ttl: 333 lines, 0 occurrences of workbench_readiness_routes / twelve_canonical_journeys / IB001.
+Local worktree model.ttl:  2101 lines, all three present.

@@ -1,0 +1,30 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0007",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "ESCALATE_OR_OVERRIDE",
+    "target_object_id": "item-verify-15",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000417",
+    "actor": {
+      "actor_id": "actor-op-7",
+      "role": "agent_operator"
+    },
+    "justification": "The verification is blocking the release train; the custodian must decide whether to wait or override."
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0007",
+      "success": true,
+      "new_cursor": "1.0000000418"
+    },
+    {
+      "intent_id": "intent-3f9c2a81-0007",
+      "success": false,
+      "refusal": {
+        "refusal_kind": "UNAVAILABLE",
+        "message": "No escalation target is configured in this deployment; the request cannot be routed."
+      }
+    }
+  ]
+}

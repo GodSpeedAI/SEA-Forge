@@ -1,0 +1,14 @@
+{
+  "journey_id": "CJ02",
+  "oracle_name": "CJ02_LawfulAffordanceDiscoveryOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Source-backed affordances discovered with explicit boundaries and limitations.",
+  "authoritative_record_inspected": "asset.list (captured invoke response)",
+  "rationale": "asset.list returned 2 source-backed asset(s); guard denial surface rendered an explicit blocker for G9.",
+  "evidence_refs": [
+    "crates/sea-forge-server/src/sfwp/assets.rs"
+  ],
+  "carried_state": {
+    "asset_count": 2
+  }
+}

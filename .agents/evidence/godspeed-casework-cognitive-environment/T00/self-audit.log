@@ -1,0 +1,88 @@
+== 1. withdrawn wording survives only as a disclosure ==
+  ok: 0 non-disclosed assertion(s) across 42 scanned file(s)
+== 2. every repo-rooted path cited in the handoff exists ==
+  ok: 0 missing of 53 cited path(s) (4 in the Gauntlet worktree)
+
+CHECKS-1-2: PASS
+== 3. every GiB figure that carries a kB anchor is arithmetically consistent ==
+  ok: 0 inconsistent of 10 anchored GiB/kB pair(s) (bare prose figures are NOT policed here - documented limitation)
+== 4. one applied correction round, and it is the newest mentioned ==
+  ok: applied correction round = [6]
+  ok: freshness - applied [6] vs history mentions [4, 5, 6]
+== 5. no artifact claims an unrun gate passed ==
+  ok: 0 possible unrun-gate pass claim(s) among 12 unrun gate names
+== 6. required files exist AND have content ==
+  ok: decision log parses with 9 decisions incl. D-2026-09-19-T00-01..D-2026-09-19-T00-09
+  ok: 15 of 15 required files present and non-trivial
+  ok: the self-test log records SELF-TEST: PASS
+
+CHECKS-3-6: PASS
+
+SELF-AUDIT: PASS
+
+# --- 2026-09-20 maintenance runs (appended; earlier runs preserved above) ---
+# World changed: T03 implemented just casework-ui-check (GATE_UI) and settled, which made
+# the audit's UNRUN list and the tooth's DAG/absent-seam expectations stale. The instruments
+# were maintained per their own comments (unrun list: GATE_UI/casework-ui-check left when
+# implemented; tooth: DAG expectation moved to T04/T06/T08 ready; GATE_UI seam re-asserted
+# PRESENT). The audit first CAUGHT the builder's own new defects (GB values under GiB labels in
+# T03-settlement-report.md: 2141308 kB is 2.04 GiB not 2.14; 1626988 kB is 1.55 GiB not 1.63;
+# and a dropped applied-correction-round token in CURRENT_STATUS.md) - all corrected.
+
+$ self-audit.sh (after maintenance)
+== 1. withdrawn wording survives only as a disclosure ==
+  ok: 0 non-disclosed assertion(s) across 69 scanned file(s)
+== 2. every repo-rooted path cited in the handoff exists ==
+  ok: 0 missing of 75 cited path(s) (4 in the Gauntlet worktree)
+
+CHECKS-1-2: PASS
+== 3. every GiB figure that carries a kB anchor is arithmetically consistent ==
+  ok: 0 inconsistent of 11 anchored GiB/kB pair(s) (bare prose figures are NOT policed here - documented limitation)
+== 4. one applied correction round, and it is the newest mentioned ==
+  ok: applied correction round = [6]
+  ok: freshness - applied [6] vs history mentions [5, 6, 7]
+== 5. no artifact claims an unrun gate passed ==
+  ok: 0 possible unrun-gate pass claim(s) among 8 unrun gate names
+== 6. required files exist AND have content ==
+  ok: decision log parses with 14 decisions incl. D-2026-09-19-T00-01..D-2026-09-19-T00-09
+  ok: 16 of 16 required files present and non-trivial
+  ok: the self-test log records SELF-TEST: PASS
+
+CHECKS-3-6: PASS
+
+SELF-AUDIT: PASS
+exit=0
+
+$ run-teeth.sh (after maintenance)
+== Tooth 1: one-byte spec mutation must be detected and block ==
+-- control: unmutated copy must PASS --
+   control exit=0 (expected) :: PASS: spec hash, 86/86 requirements, 15-task DAG, gate activation, and UI removal
+-- attack: flip exactly one byte of the copied spec --
+   mutated byte at offset 19: 0x73 -> 0x74
+   attack exit non-zero (expected: blocked) :: FAIL: frozen spec SHA-256 differs from current bytes
+   divergence named explicitly: frozen spec SHA-256 differs from current bytes
+
+== Tooth 2: a claim that an absent capability already exists must be contradicted ==
+   INVENTORY CONFIRMS (corrected) PRESENT: Go toolchain is installed and declared (B1 resolved by approved remediation)
+   INVENTORY CONFIRMS (corrected) PRESENT: Go module apps/godspeed-casework-go exists with go.mod (created by T01)
+   INVENTORY CONFIRMS (corrected) PRESENT: React contract package apps/godspeed-cognitive-ui/contracts exists (created by T01)
+   INVENTORY CONFIRMS (corrected) PRESENT: GATE_GO recipe just casework-go-check exists (added by T01)
+   INVENTORY CONFIRMS (corrected) PRESENT: GATE_UI recipe just casework-ui-check (implemented by T03, 2026-09-20)
+   INVENTORY CONFIRMS (corrected) PRESENT: the cognitive UI app (apps/godspeed-cognitive-ui, built by T03)
+   INVENTORY CONTRADICTS CLAIM: SFWP repository-fact method (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: GitHub REST/webhook client inside the server crate (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: Open MCT / OpenMontage donor checkout (claim: present)
+   INVENTORY CONTRADICTS CLAIM: SFWP lease/claim/reserve method (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: SFWP artifact-persistence method (claim: exists)
+   INVENTORY CONFIRMS (corrected) PRESENT: GitHub PR authority action (AuthorityAction::GithubPr)
+   INVENTORY CONFIRMS (corrected) PRESENT: GitHub PR policy surface (github_pr, default escalate)
+-- dependent tasks stay blocked (plan DAG at initial_state) --
+   settled now: ['T00', 'T02', 'T01', 'T03']
+   ready now: ['T04', 'T06', 'T08']
+   T04 blocked_on=[] (ready after T01 settled T04; T06/T08 after T03 settled 2026-09-20)
+   T06 blocked_on=[] (ready after T01 settled T04; T06/T08 after T03 settled 2026-09-20)
+   T08 blocked_on=[] (ready after T01 settled T04; T06/T08 after T03 settled 2026-09-20)
+   all absent seams remain recorded as absent
+
+TEETH RESULT: both teeth behaved as specified
+exit=0

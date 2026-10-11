@@ -1,0 +1,48 @@
+{"timestamp":"2026-09-30T21:44:25.577652Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t08-shared-live-green-20260930/t08-live-run-xfw9XO/cell","socket":"/tmp/t08-shared-live-green-20260930/t08-live-run-xfw9XO/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-09-30T21:44:25.585866Z","level":"INFO","message":"server listening on /tmp/t08-shared-live-green-20260930/t08-live-run-xfw9XO/cell/server.sock"}
+godspeed-casework: configuration loaded (version 1, cell_root "/tmp/t08-shared-live-green-20260930/t08-live-run-xfw9XO/cell", evidence_root "", 1 capability/ies, 0 resolved secret(s))
+  ready     authority      kind=authority required=false adapter=sfwp
+godspeed-casework: ready=[authority] degraded=[] blocking=[]
+godspeed-casework: preflight clear (no required capability blocking)
+godspeed-casework: serving LIVE cognitive projection on http://127.0.0.1:4179 (provenance go:live:sfwp; kernel socket /tmp/t08-shared-live-green-20260930/t08-live-run-xfw9XO/cell/server.sock; auth mode dev; no static UI)
+ts=2026-09-30T21:44:26Z correlation_id="ab234293e8f41f4b76f5ffd69a327971" method="GET" path="/api/healthz" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="7411f480e49333507740200505eb3524" method="GET" path="/api/world" status=401 duration_ms=0.0 remote="127.0.0.1" auth="-" actor="-"
+PASS unauthenticated world is 401 — status 401
+ts=2026-09-30T21:44:26Z correlation_id="d39109f548113d43a2bd72b87d721e98" method="GET" path="/api/session" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="df56adfdd1733d4ce0bd8d3c41e46112" method="POST" path="/api/auth/login" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="6cc1d93275f99da627b694dfe6d4e17a" method="GET" path="/api/session" status=200 duration_ms=0.0 remote="127.0.0.1" auth="-" actor="-"
+PASS login resolves the session identity — {"user":"operator_local","actor_id":"operator_local","role":"operator","roles":[],"kind":"human"}
+ts=2026-09-30T21:44:26Z correlation_id="826f07a21f7414404a7e1c0ea689328d" method="GET" path="/api/templates" status=200 duration_ms=1.9 remote="127.0.0.1" auth="-" actor="-"
+PASS templates list serves the E2E templates — e2e-sentry-chain@0.1.0, e2e-signoff-gate@0.1.0
+ts=2026-09-30T21:44:26Z correlation_id="1660f26530af1e41cca14890ca74ffd8" method="POST" path="/api/templates/preflight" status=200 duration_ms=4.2 remote="127.0.0.1" auth="-" actor="-"
+PASS preflight passes with a digest — {"template_ref":"e2e-sentry-chain@0.1.0","params":{"dataset_label":"live conformance","dataset_name":"t08-live","max_row
+ts=2026-09-30T21:44:26Z correlation_id="t08-propose-1790804666290" method="POST" path="/api/intents" status=200 duration_ms=19.4 remote="127.0.0.1" auth="-" actor="-"
+PASS PROPOSE_CASE accepted — {}
+PASS PROPOSE_CASE names the new case — case_20260930T214426Z_c74e1b
+ts=2026-09-30T21:44:26Z correlation_id="845d4f620dec7c6df962b5b4f4829dfb" method="GET" path="/api/world" status=200 duration_ms=4.1 remote="127.0.0.1" auth="-" actor="-"
+PASS snapshot carries the sentry chain — task_prepare, task_publish, ms_chain_accepted
+PASS task_prepare offers EXECUTE_ITEM (session identity, not client-asserted)
+PASS task_publish offers no EXECUTE while its sentry waits
+ts=2026-09-30T21:44:26Z correlation_id="dd21c2c28ffff35b51ab132fbfefba53" method="GET" path="/api/world" status=200 duration_ms=3.7 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="28c3f3dd8d9daa268971df9a772de5ce" method="GET" path="/api/trajectory" status=200 duration_ms=0.6 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="4de79514dfcc8cd30362cf7c10e3eb6c" method="GET" path="/api/world" status=200 duration_ms=0.5 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="5942f9589e72be612c1df9ef425642f0" method="GET" path="/api/templates" status=200 duration_ms=1.3 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="13a58a0e232d3c5864ed8f057ced5e87" method="POST" path="/api/templates/preflight" status=200 duration_ms=3.8 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="t08-conformance-exec-1790804666341" method="POST" path="/api/intents" status=200 duration_ms=21.0 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="8d9ca9b06320fe4930f977b6aead1e08" method="GET" path="/api/events" status=200 duration_ms=24.2 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="6b61aeb4216daa583f46f7b29da22c56" method="GET" path="/api/trajectory" status=200 duration_ms=0.7 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="53a4c2fd4f534f56c2b43f92f45382ae" method="GET" path="/api/events" status=200 duration_ms=39.6 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="829892a29ee8a92e6ddf1a3ef88f4af8" method="GET" path="/api/trajectory" status=200 duration_ms=0.7 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="3c0e53a8b7d75ee36f4dff88283177dc" method="GET" path="/api/world" status=200 duration_ms=0.7 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="4751a6b4b507e2129c66155277fae50b" method="GET" path="/api/artifacts/sha256:899480a316301f785b2d00bd0f6185db175bcc37521da87880ffcfc8679f001f" status=200 duration_ms=2.6 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="t08-conformance-exec-1790804666341-stale" method="POST" path="/api/intents" status=200 duration_ms=0.7 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="3d4c69f0dd71a9ad3c4b8b494251324f" method="GET" path="/api/trajectory" status=200 duration_ms=0.7 remote="127.0.0.1" auth="-" actor="-"
+PASS the shared CaseworkPort suite passes against the real HTTP adapter
+PASS the kernel ledger recorded item_activated
+ts=2026-09-30T21:44:26Z correlation_id="8ea5c131622ca740d23ede8f50d6edab" method="GET" path="/api/session" status=200 duration_ms=0.0 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="47e01c5f94814170059f9226eb66256a" method="POST" path="/api/auth/login" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-09-30T21:44:26Z correlation_id="4c40c3e67b4711b731bac7b43618553f" method="GET" path="/api/session" status=200 duration_ms=0.0 remote="127.0.0.1" auth="-" actor="-"
+PASS the R-SO session resolves its own kernel standing — {"user":"rso_local","actor_id":"rso_local","role":"R-SO","roles":[],"kind":"human"}
+godspeed-casework: terminated received - shutting down
+live conformance: all checks passed
+exit=0

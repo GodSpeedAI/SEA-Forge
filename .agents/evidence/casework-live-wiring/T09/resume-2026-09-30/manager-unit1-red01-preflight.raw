@@ -1,0 +1,4 @@
+MemAvailableMiB 4151 SwapFreeMiB 9066
+internal/server/run_observation_manager.go fa1601f3746bca6c6697e5e6c6861bb9442bac6aafc2aa762a4f32580f8a905d
+internal/server/run_observation_manager_test.go b1b585320ef65ed1cb27a2b618bcca4a8b2e368c9646e96a6229e6855e91c72a
+resource and source floors PASS; root sole heavy owner

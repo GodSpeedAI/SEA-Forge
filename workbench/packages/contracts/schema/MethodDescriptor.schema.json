@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MethodDescriptor",
+  "description": "A method in the SFWP catalog. Maintained as a manually-written table\nbecause Rust has no enum-variant reflection without an extra derive\ndependency, which is out of scope for Task 3.",
+  "type": "object",
+  "properties": {
+    "class": {
+      "$ref": "#/$defs/InteractionClass"
+    },
+    "method": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "method",
+    "class"
+  ],
+  "$defs": {
+    "InteractionClass": {
+      "description": "Interaction class for an SFWP method, mirroring the classes named in\n`.claude/skills/building-sea-forge-workbench/reference/api-and-event-contracts.md`.",
+      "type": "string",
+      "enum": [
+        "inspect",
+        "command",
+        "subscribe"
+      ]
+    }
+  }
+}

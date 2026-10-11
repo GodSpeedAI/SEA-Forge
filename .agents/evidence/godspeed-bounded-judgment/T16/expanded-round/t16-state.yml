@@ -1,0 +1,32 @@
+# T16 expanded-measurement state (post round-5 corrections, N=25)
+schema: godspeed-bounded-judgment.t16-expanded-state
+date: "2026-09-18"
+corpus: "expanded manifest 9bc65fb9... (25 runs: settled 12 / budget_exhausted 13; all mechanisms fired; 0 problems)"
+deepseek_clinepass_leg:
+  status: COMPLETE and D-QUALIFIED
+  contract_failures: 0
+  accuracy: 0.800 (20/25) — MEETS the frozen 0.8 D-bar exactly
+  abstention: 0.16 (4/25, all on not_settled rows)
+  entropy_nats: 0.828
+  settled_class: 12/12 correct
+  not_settled_class: 8/13 correct + 4 responsible abstentions + 1 lying-claim error
+  exact_permutation_tooth: >-
+    over all 5,200,300 class-preserving truth permutations, the maximum
+    attainable accuracy is 12/25 = 0.48; the observed 20/25 occurs under ZERO
+    permutations: exact one-sided p < 2e-7. The measurement discriminates
+    absolutely for this leg.
+prime_agent_leg:
+  status: ENVIRONMENTALLY BLOCKED — RESUME AUTHORIZED
+  contract_failures: 24/25 (429 usage_limit_reached; upstream codex-plus plan window)
+  quota_reset_epoch: 1789783016 (resets_in_seconds ~15298 at the 2026-09-18 post-correction smoke)
+  resume_authorization: "the corrected exact tooth PASSES (2.5e-6) and DeepSeek remains D-qualified, so the Prime leg IS authorized to resume the moment invocation is available (D-2026-09-18-T16-14)"
+  note: "the single answered row is not scored or claimed"
+decision_state:
+  mechanical_letter: "B (harness: contract failures dominate) — SUPERSEDED as environmental per the D-2026-09-18-T16-02 precedent; quota refusals carry no epistemic content"
+  frozen_D_rule: "requires BOTH providers >= 0.8 non-abstaining; Prime's leg is missing for environmental reasons, so D cannot yet be issued OR denied"
+  deepseek_leg_alone: "meets every frozen D requirement with an absolutely-separating permutation tooth"
+resume_procedure:
+  - "1. after Prime-Agent's quota window resets, re-run ONLY the Prime leg over the frozen expanded corpus (same harness, same prompts)"
+  - "2. apply the frozen rule to the completed pair: both >= 0.8 -> D (T06 unlocks on this surface, scoped); otherwise C/E per the frozen legs"
+  - "3. run disclosure verification + fresh independent adversarial confirmation on the completed record"
+  - "4. settle T16 per the confirmed outcome; update projections; continue the plan"

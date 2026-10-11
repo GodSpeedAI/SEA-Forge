@@ -1,0 +1,2 @@
+{"timestamp":"2026-09-25T01:40:40.944797Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/sf-t04critic-H8bj","socket":"/tmp/sf-t04critic-H8bj/server.sock","max_concurrent":4}
+{"timestamp":"2026-09-25T01:40:40.951030Z","level":"INFO","message":"server listening on /tmp/sf-t04critic-H8bj/server.sock"}

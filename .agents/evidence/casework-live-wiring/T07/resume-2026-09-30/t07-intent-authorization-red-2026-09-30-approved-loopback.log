@@ -1,0 +1,12 @@
+--- FAIL: TestIntentAuthorizationPrecedesCachedReplay (0.17s)
+    intent_authorization_test.go:112: revoked cached replay must fail closed before returning its receipt: status=200 error={Kind: Note:}
+--- FAIL: TestIntentAuthorizationFailsClosedBeforeDispatcher (0.14s)
+    --- FAIL: TestIntentAuthorizationFailsClosedBeforeDispatcher/verifier_unavailable (0.03s)
+        intent_authorization_test.go:196: intent auth failure: status=200 kind="", want 503/"unavailable"
+    --- FAIL: TestIntentAuthorizationFailsClosedBeforeDispatcher/kernel_identity_check_unavailable (0.05s)
+        intent_authorization_test.go:196: intent auth failure: status=200 kind="", want 502/"unavailable"
+    --- FAIL: TestIntentAuthorizationFailsClosedBeforeDispatcher/session_actor_is_not_delegated (0.05s)
+        intent_authorization_test.go:196: intent auth failure: status=200 kind="", want 403/"authority_denied"
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.947s
+FAIL

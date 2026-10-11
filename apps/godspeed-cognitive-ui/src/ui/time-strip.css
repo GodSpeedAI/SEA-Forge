@@ -1,0 +1,205 @@
+.time-strip {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 150px;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+
+.time-strip.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(8px);
+}
+
+.time-strip__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-strip__button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+  white-space: nowrap;
+}
+
+.time-strip__button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.time-strip__button:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.time-strip__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.time-strip__button--nav {
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+}
+
+.time-strip__button--mark {
+  border-color: var(--ink-4);
+}
+
+.time-strip__button--mark.marked {
+  background: rgba(59, 139, 240, 0.1);
+  border-color: var(--tone-progress);
+  color: var(--tone-progress);
+}
+
+.time-strip__button--close {
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+  font-size: 16px;
+  margin-left: auto;
+}
+
+:root[data-theme='dark'] .time-strip__button {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme='dark'] .time-strip__button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme='dark'] .time-strip__button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+:root[data-theme='dark'] .time-strip__button--mark.marked {
+  background: rgba(61, 123, 255, 0.15);
+  border-color: var(--tone-progress);
+}
+
+.time-strip__current {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.time-strip__current-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.time-strip__current-summary {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time-strip__track {
+  position: relative;
+  width: 440px;
+  height: 1px;
+  background: var(--line);
+  cursor: pointer;
+  user-select: none;
+}
+
+.time-strip__marker-wrapper {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.time-strip__marker {
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  min-height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid var(--ink-4);
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 200ms ease;
+  position: relative;
+}
+
+.time-strip__marker.current {
+  background: var(--tone-progress);
+  border-color: var(--tone-progress);
+  box-shadow: 0 0 0 5px rgba(59, 139, 240, 0.18);
+}
+
+.time-strip__marker.marked {
+  border-color: var(--tone-attention);
+  background: var(--tone-attention);
+}
+
+.time-strip__marker.marked.current {
+  box-shadow: 0 0 0 5px rgba(240, 100, 58, 0.2);
+  border-color: var(--tone-attention);
+}
+
+:root[data-theme='dark'] .time-strip__marker.current {
+  box-shadow: 0 0 0 5px rgba(61, 123, 255, 0.24);
+}
+
+:root[data-theme='dark'] .time-strip__marker.marked.current {
+  box-shadow: 0 0 0 5px rgba(255, 138, 61, 0.24);
+}
+
+.time-strip__marker-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 14px;
+  height: 14px;
+  background: var(--tone-attention);
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid white;
+}
+
+:root[data-theme='dark'] .time-strip__marker-badge {
+  border-color: var(--surface);
+}
+
+.time-strip__hint {
+  font-size: 11px;
+  color: var(--ink-3);
+  text-align: center;
+  margin-top: 4px;
+}

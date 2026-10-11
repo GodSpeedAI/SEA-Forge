@@ -1,0 +1,50 @@
+# E2E ladder template B — the human sign-off gate (plan
+# casework-live-wiring-production T03, resolves GAP-D).
+#
+# Purpose in the ladder: CJ06/CJ07 ("add discretionary work / approve") need a
+# case that legitimately stops for a human decision. This template models the
+# gate exactly the way the planner's case engine models it: an ItemKind
+# HumanTask with settlement criteria require_approval: true. The engine parks
+# a HumanTask (ParkHumanTask) with an ItemActivated{human_task: true} trace
+# event and leaves the case active until a HumanTaskCompleted event resolves
+# it — the human_task.complete verb arrives with plan task T04. No approval
+# TraceKind is invented here.
+#
+# Standing after a case.commit: task_draft is `enabled` (manual activation),
+# signoff_release is `active` with settlement `unsettled` — parked in the
+# approval flow, waiting for the operator's decision.
+name: e2e-signoff-gate
+version: 0.1.0
+description: >-
+  A governed draft write followed by a human sign-off gate (ItemKind HumanTask
+  with require_approval) that parks the case for an operator decision.
+parameters:
+  change_summary:
+    type: string
+    required: true
+plan:
+  items:
+    # The work the sign-off gates: a manual-activation governed write.
+    - plan_item_id: task_draft
+      name: draft change note
+      item_kind: sandboxed_task
+      sandbox_class: local
+      markers:
+        required: true
+        manual_activation: true
+      operations:
+        - kind: write_file
+          path: review/draft.md
+          content_hint: "change: ${change_summary}"
+      settlement_criteria:
+        required_artifacts: [review/draft.md]
+    # The gate itself. A HumanTask carries no operations (only sandboxed and
+    # agent tasks may); its settlement criteria declare the sign-off
+    # (require_approval), and the case engine parks it for a human.
+    - plan_item_id: signoff_release
+      name: operator sign-off
+      item_kind: human_task
+      markers:
+        required: true
+      settlement_criteria:
+        require_approval: true

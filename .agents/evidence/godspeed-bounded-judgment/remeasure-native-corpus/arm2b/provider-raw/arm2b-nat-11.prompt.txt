@@ -1,0 +1,44 @@
+You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+Question: classify the recorded consequence of one bounded Gauntlet probe.
+Answer domain for "label" (choose exactly one): settled_accepted | verification_failed_nonsettlement | budget_exhausted | execution_failed | insufficient_evidence
+Judge ONLY from the corrected observation record below (typed terminal; settlement_committed count and unit-level progression; unit_dispatch retry pattern; the content of produced evidence artifacts fetched by their sha256 pins; timing). Use insufficient_evidence if the record genuinely cannot decide.
+JSON shape: {"label": "<one label from the answer domain>", "settled_units_estimate": <integer or null>}
+Exploratory addendum (clearly marked exploratory, outside the scored label domain): "settled_units_estimate" is your estimate of the number of units that will have committed settlement in this run's recorded consequence; give an integer, or null if you cannot estimate.
+
+Corrected observation record:
+{
+ "bounded_input": {
+  "max_rounds": 1,
+  "scenario": "e2e-happy"
+ },
+ "candidate_id": "cand-2",
+ "correlation_id": "t23-route-001-iter4",
+ "evidence_artifacts": [],
+ "mechanism": "t15-frozen-case-execution",
+ "operation": "run_case",
+ "probe_id": "probe-i4-cand-2",
+ "settlement_committed_count": 0,
+ "settlement_progression": [],
+ "state_db_sha256": "678ffdd7bed7b375ac71f6c343de191a1d3bdd76d0a9d329840ea27c9c3cceb3",
+ "timing": {
+  "checkpoint_iterations": [
+   1,
+   1
+  ],
+  "event_clock_first": 0,
+  "event_clock_last": 0,
+  "finished_at_utc": "2026-09-19T02:27:56.431797+00:00",
+  "started_at_utc": "2026-09-19T02:27:56.227970+00:00",
+  "wall_seconds": 0.204
+ },
+ "typed_terminal": {
+  "run_terminal_states": [
+   "budget_exhausted"
+  ],
+  "terminal_class": "budget_exhausted"
+ },
+ "unit_dispatch_pattern": {
+  "dispatch_sequence": [],
+  "per_unit": []
+ }
+}

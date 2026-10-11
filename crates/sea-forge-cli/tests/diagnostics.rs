@@ -68,14 +68,26 @@ fn malformed_policy_classes_fail_before_run_creation() {
 
 #[test]
 fn recall_missing_memory_is_an_io_error() {
-    let root = env::temp_dir().join(format!("sea-forge-missing-memory-{}", std::process::id()));
+    let parent = env::temp_dir().join(format!("sea-forge-missing-memory-{}", std::process::id()));
+    let root = parent.join("state");
+    let policy = parent.join("policy.yaml");
+    fs::create_dir_all(&parent).unwrap();
+    fs::write(&policy, "version: \"0.1\"\nrules: []\n").unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_sea-forge"))
-        .args(["recall", "anything", "--root", root.to_str().unwrap()])
+        .args([
+            "recall",
+            "anything",
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy.to_str().unwrap(),
+        ])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(1));
     let diagnostic: serde_json::Value = serde_json::from_slice(&output.stderr).unwrap();
     assert_eq!(diagnostic["error_class"], "io_error");
+    fs::remove_dir_all(parent).unwrap();
 }
 
 #[test]

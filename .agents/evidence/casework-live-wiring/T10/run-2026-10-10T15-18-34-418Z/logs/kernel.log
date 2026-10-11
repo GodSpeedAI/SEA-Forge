@@ -1,0 +1,19 @@
+{"timestamp":"2026-10-10T15:18:35.834976Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t10-live-kCNqZF/cell","socket":"/tmp/t10-live-kCNqZF/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T15:18:35.851602Z","level":"INFO","message":"server listening on /tmp/t10-live-kCNqZF/cell/server.sock"}
+{"timestamp":"2026-10-10T15:18:46.407776Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:18:52.465279Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:18:56.613015Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:19:07.021935Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:19:17.829976Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:19:19.132542Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:19:20.431555Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:19:29.433777Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:19:42.640719Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:19:57.647135Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:20:12.657501Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:20:17.029655Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:20:17.039265Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:20:27.663630Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:20:42.672387Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:20:50.508157Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T15:20:50.515693Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}

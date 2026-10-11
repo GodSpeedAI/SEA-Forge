@@ -1,0 +1,11 @@
+UTC 2026-10-06T00:04:24Z
+MemTotal:        8132712 kB
+MemAvailable:    2580432 kB
+SwapTotal:      12582912 kB
+SwapFree:        4861180 kB
+    PID COMMAND           RSS
+      1 codex           19120
+      2 bash             3436
+      4 bash             2028
+      5 tee              7476
+      9 ps               4032

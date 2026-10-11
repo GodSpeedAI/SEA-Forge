@@ -1,0 +1,11 @@
+{
+	"version": 1,
+	"sessions": {
+		"17316508-3d2e-4627-8d22-5e930e01aa26": {
+			"sessionId": "17316508-3d2e-4627-8d22-5e930e01aa26",
+			"transcriptPath": "/home/sprime01/.claude/projects/-home-sprime01-projects-sea-rs/17316508-3d2e-4627-8d22-5e930e01aa26.jsonl",
+			"updatedAt": "2026-10-05T16:08:27.283Z",
+			"source": "claude"
+		}
+	}
+}

@@ -1,0 +1,1243 @@
+[
+ {
+  "run_id": "demo-calculator.proof-2of3-2216",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-0W57BQMRJ1A0FV8WE0G6BYQEB4",
+  "iteration_no": 3,
+  "unit_id": "AK-9011",
+  "claim": "calculator.html exists at the workspace root and declares digit buttons 0-9 and operator buttons for add, subtract, multiply, and divide.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/markup-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+  "produced_at": 1789437964,
+  "record_ts": 1789437964,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 3,
+    "unit_states_digest": "[[\"AK-9011\",\"open\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789437964.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "XHK2W8NSEQ9X8BYVEBET7915C5",
+      "iteration_no": 3,
+      "evidence_ref": "sha256:69738812fe748553e9560bd74d2c3aab88c96089d49369b38739a782e43358d7",
+      "observation_digest": "sha256:52231d52738b31164ee8c2417bbe228ec6c3aad0afd343c77fb4e32c2ef566f7"
+     }
+    },
+    "evidence_production": {
+     "run_id": "XHK2W8NSEQ9X8BYVEBET7915C5",
+     "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/markup-check-report.json",
+     "iteration_no": 1,
+     "produced_at": 1789437640,
+     "event_log_offset": 4,
+     "content_digest": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "XHK2W8NSEQ9X8BYVEBET7915C5",
+    "unit_id": "AK-9011",
+    "verification_ref": "vrf-0W57BQMRJ1A0FV8WE0G6BYQEB4",
+    "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 13,
+    "settled_at": 1789437964,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.proof-2of3-2216",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-60VR4YV7E61VQA5ESED3S7JJ22",
+  "iteration_no": 4,
+  "unit_id": "AK-9012",
+  "claim": "The project's real check command runs the calculator check and exits zero.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+  "produced_at": 1789438104,
+  "record_ts": 1789438104,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 4,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789438104.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "XHK2W8NSEQ9X8BYVEBET7915C5",
+      "iteration_no": 4,
+      "evidence_ref": "sha256:561dd505c694b1d63a4ceb390f0a44ecb4366d10ecd214f1b33195adc5961400",
+      "observation_digest": "sha256:a9ca88187f3725121342b84f7976e05e45b3a8f916d6b42aa06de9cb9f353419"
+     }
+    },
+    "evidence_production": {
+     "run_id": "XHK2W8NSEQ9X8BYVEBET7915C5",
+     "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/check-report.json",
+     "iteration_no": 4,
+     "produced_at": 1789438104,
+     "event_log_offset": 17,
+     "content_digest": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "XHK2W8NSEQ9X8BYVEBET7915C5",
+    "unit_id": "AK-9012",
+    "verification_ref": "vrf-60VR4YV7E61VQA5ESED3S7JJ22",
+    "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 18,
+    "settled_at": 1789438104,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-0904",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-JKSW77QCSQKM788SBT9WPPS8V5",
+  "iteration_no": 1,
+  "unit_id": "AK-9011",
+  "claim": "calculator.html exists at the project root and declares digit buttons 0-9 and operator buttons for add, subtract, multiply, and divide.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/markup-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+  "produced_at": 1789391253,
+  "record_ts": 1789391253,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 1,
+    "unit_states_digest": "[[\"AK-9011\",\"open\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "role_invocation",
+    "ts": 1789391092.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+      "iteration_no": 1,
+      "evidence_ref": "sha256:7bbca237766449925be86bff10cbc5d7e34a9f416f4570089b7b9d3f88974ccf",
+      "observation_digest": "sha256:c9bac447819fa0321f1898d380c3730110194d89d74b340253bad7e7981de345"
+     }
+    },
+    "evidence_production": {
+     "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+     "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/markup-check-report.json",
+     "iteration_no": 1,
+     "produced_at": 1789391253,
+     "event_log_offset": 4,
+     "content_digest": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+    "unit_id": "AK-9011",
+    "verification_ref": "vrf-JKSW77QCSQKM788SBT9WPPS8V5",
+    "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+    "reference_digest": "sha256:a593207d165b5161aca3ae3901e78facb366c58bd64406bca8eb529b8b7ab6bc",
+    "event_log_offset": 5,
+    "settled_at": 1789391253,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-0904",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-6602B3WRBNAVDKBHGK1M1XED23",
+  "iteration_no": 3,
+  "unit_id": "AK-9012",
+  "claim": "The project's real check command runs the calculator check and exits zero.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+  "produced_at": 1789391552,
+  "record_ts": 1789391552,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 3,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "role_invocation",
+    "ts": 1789391092.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+      "iteration_no": 3,
+      "evidence_ref": "sha256:4f7d202ae259acd2bfc2fde45753dc77e98f6fec4bd8e49b62358a283990fc89",
+      "observation_digest": "sha256:19debd4a600a0fbb6f8f13b9c144dee59b0c0a9eb5e9a484f90e2bc5da2ac998"
+     }
+    },
+    "evidence_production": {
+     "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+     "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/check-report.json",
+     "iteration_no": 3,
+     "produced_at": 1789391552,
+     "event_log_offset": 13,
+     "content_digest": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+    "unit_id": "AK-9012",
+    "verification_ref": "vrf-6602B3WRBNAVDKBHGK1M1XED23",
+    "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+    "reference_digest": "sha256:a593207d165b5161aca3ae3901e78facb366c58bd64406bca8eb529b8b7ab6bc",
+    "event_log_offset": 14,
+    "settled_at": 1789391552,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-0904",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-7VNV6H9JCDMTA8SZM5T8XS1MD5",
+  "iteration_no": 4,
+  "unit_id": "AK-9013",
+  "claim": "calculator.html's evaluation path produces correct results for at least two arithmetic expressions covering different operators.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/eval-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+  "produced_at": 1789391672,
+  "record_ts": 1789391672,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 4,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"settled\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "role_invocation",
+    "ts": 1789391092.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+      "iteration_no": 4,
+      "evidence_ref": "sha256:ae602404d50a369414f0eade271f145d11693c601929fd96aea279ca8c2fdeac",
+      "observation_digest": "sha256:860762b615d429b7530544b625597efeef86dcc82dd3ce7b2b13d5153fe2f9ef"
+     }
+    },
+    "evidence_production": {
+     "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+     "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/eval-check-report.json",
+     "iteration_no": 4,
+     "produced_at": 1789391672,
+     "event_log_offset": 18,
+     "content_digest": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "C7T42J1ECBMK45JTB0VB9CX8T4",
+    "unit_id": "AK-9013",
+    "verification_ref": "vrf-7VNV6H9JCDMTA8SZM5T8XS1MD5",
+    "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+    "reference_digest": "sha256:a593207d165b5161aca3ae3901e78facb366c58bd64406bca8eb529b8b7ab6bc",
+    "event_log_offset": 19,
+    "settled_at": 1789391672,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-clean-seed-0730",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-4PVZ7Y42G33YM99CTMGATCX3N2",
+  "iteration_no": 2,
+  "unit_id": "AK-9011",
+  "claim": "calculator.html exists at the workspace root and declares digit buttons 0-9 and operator buttons for add, subtract, multiply, and divide.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/markup-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+  "produced_at": 1789471484,
+  "record_ts": 1789471484,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 2,
+    "unit_states_digest": "[[\"AK-9011\",\"open\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789471484.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+      "iteration_no": 2,
+      "evidence_ref": "sha256:72f1a2048f4adea71e398dcbb9aded2bb00b882d2ee7018ee38c035c2ed5fe50",
+      "observation_digest": "sha256:4c4d25491a3e7f66767917c7cf43333e76deefa96978a6fb49927655f6cdd14f"
+     }
+    },
+    "evidence_production": {
+     "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+     "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/markup-check-report.json",
+     "iteration_no": 1,
+     "produced_at": 1789471314,
+     "event_log_offset": 4,
+     "content_digest": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+    "unit_id": "AK-9011",
+    "verification_ref": "vrf-4PVZ7Y42G33YM99CTMGATCX3N2",
+    "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 9,
+    "settled_at": 1789471484,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-clean-seed-0730",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-VJQQ6WW1VHDS60N9CAR0YW4A95",
+  "iteration_no": 3,
+  "unit_id": "AK-9012",
+  "claim": "The project's real check command runs the calculator check and exits zero.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+  "produced_at": 1789471627,
+  "record_ts": 1789471627,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 3,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789471627.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+      "iteration_no": 3,
+      "evidence_ref": "sha256:5d19c8306052ab83ae48bb5005b7b4824f0d0abb8cf23c8ba91dc62622fb3e34",
+      "observation_digest": "sha256:bb33bf66fd434966a8541d56085993b57112f71275e9f7a840ac4172b7030c35"
+     }
+    },
+    "evidence_production": {
+     "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+     "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/check-report.json",
+     "iteration_no": 3,
+     "produced_at": 1789471627,
+     "event_log_offset": 13,
+     "content_digest": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+    "unit_id": "AK-9012",
+    "verification_ref": "vrf-VJQQ6WW1VHDS60N9CAR0YW4A95",
+    "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 14,
+    "settled_at": 1789471627,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-clean-seed-0730",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-XYE6Y01VVXESCEZZ3JFJD9VEZ7",
+  "iteration_no": 4,
+  "unit_id": "AK-9013",
+  "claim": "calculator.html's evaluation path produces correct results for at least two arithmetic expressions covering different operators.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/eval-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+  "produced_at": 1789471755,
+  "record_ts": 1789471755,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 4,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"settled\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789471755.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+      "iteration_no": 4,
+      "evidence_ref": "sha256:689780998074fd90d81303d7d26a0ce007ba5463b3b7692d127973a1c70d4405",
+      "observation_digest": "sha256:dff418ed80d3baa78cf5c0a1ec4d4056f0f68d683e9e75182ab8a970c1f31a12"
+     }
+    },
+    "evidence_production": {
+     "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+     "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/eval-check-report.json",
+     "iteration_no": 4,
+     "produced_at": 1789471755,
+     "event_log_offset": 18,
+     "content_digest": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "DP0QVSJK2NA0ZFA3R33HDJ37X2",
+    "unit_id": "AK-9013",
+    "verification_ref": "vrf-XYE6Y01VVXESCEZZ3JFJD9VEZ7",
+    "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 19,
+    "settled_at": 1789471755,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-contaminated-seed-2234",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-T9YER7X243SFSBG8XGJM1S22Q7",
+  "iteration_no": 1,
+  "unit_id": "AK-9011",
+  "claim": "calculator.html exists at the workspace root and declares digit buttons 0-9 and operator buttons for add, subtract, multiply, and divide.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/markup-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+  "produced_at": 1789439382,
+  "record_ts": 1789439382,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 1,
+    "unit_states_digest": "[[\"AK-9011\",\"open\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789439382.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+      "iteration_no": 1,
+      "evidence_ref": "sha256:5873c5272111d98b1525e1cb5e3b5dc6fd6895ec5db1e66479c8cf403d4d44ec",
+      "observation_digest": "sha256:ab2b98fae25a1360e781f1d3b567b042edc95f22d7b0fb1231420d9207f91113"
+     }
+    },
+    "evidence_production": {
+     "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+     "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/markup-check-report.json",
+     "iteration_no": 1,
+     "produced_at": 1789439382,
+     "event_log_offset": 4,
+     "content_digest": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+    "unit_id": "AK-9011",
+    "verification_ref": "vrf-T9YER7X243SFSBG8XGJM1S22Q7",
+    "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 5,
+    "settled_at": 1789439382,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-contaminated-seed-2234",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-7D9SAXR1EBW2YPQBKGGHAK45N5",
+  "iteration_no": 2,
+  "unit_id": "AK-9012",
+  "claim": "The project's real check command runs the calculator check and exits zero.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+  "produced_at": 1789439538,
+  "record_ts": 1789439538,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 2,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789439538.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+      "iteration_no": 2,
+      "evidence_ref": "sha256:7a296f2801e2cbe2161d041120a05d9e21b0eed63d839678ed908b7309c18dc4",
+      "observation_digest": "sha256:d2374210772b58fb2bd504df2b1d88b6db2a74fe103928765b5e847f63c62003"
+     }
+    },
+    "evidence_production": {
+     "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+     "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/check-report.json",
+     "iteration_no": 2,
+     "produced_at": 1789439538,
+     "event_log_offset": 9,
+     "content_digest": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+    "unit_id": "AK-9012",
+    "verification_ref": "vrf-7D9SAXR1EBW2YPQBKGGHAK45N5",
+    "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 10,
+    "settled_at": 1789439538,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-contaminated-seed-2234",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-WFHWS1PNKXPE0QB9CV0RQ64TS0",
+  "iteration_no": 3,
+  "unit_id": "AK-9013",
+  "claim": "calculator.html's evaluation path produces correct results for at least two arithmetic expressions covering different operators.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/eval-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+  "produced_at": 1789439644,
+  "record_ts": 1789439644,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 3,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"settled\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789439644.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+      "iteration_no": 3,
+      "evidence_ref": "sha256:61b8f6da774fc335fe9605c427b519765337a83ec2c093920d527bb2a063db26",
+      "observation_digest": "sha256:f9beeb058b9f0e3ff914d889cd48c682ec7a548025d2aa2786bb8b0de375a0cf"
+     }
+    },
+    "evidence_production": {
+     "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+     "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/eval-check-report.json",
+     "iteration_no": 3,
+     "produced_at": 1789439644,
+     "event_log_offset": 14,
+     "content_digest": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "FGDP3KMN47XKCCM9WA22SJQRB4",
+    "unit_id": "AK-9013",
+    "verification_ref": "vrf-WFHWS1PNKXPE0QB9CV0RQ64TS0",
+    "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 15,
+    "settled_at": 1789439644,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-sharpened-role-1044",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-SJFWWGJ8MF2Z2S4TPJKTWN8JE0",
+  "iteration_no": 2,
+  "unit_id": "AK-9011",
+  "claim": "calculator.html exists at the workspace root and declares digit buttons 0-9 and operator buttons for add, subtract, multiply, and divide.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/markup-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+  "produced_at": 1789483153,
+  "record_ts": 1789483153,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 2,
+    "unit_states_digest": "[[\"AK-9011\",\"open\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789483153.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+      "iteration_no": 2,
+      "evidence_ref": "sha256:4169aec47388f88b65358ccf4af64ed6f16bb0ce0ded60c66e0e6ee1bfb49cbf",
+      "observation_digest": "sha256:36bae0fe65bfa634849f9df5d689cd6de733c5dd526f9a5605eeebfc07edd1d7"
+     }
+    },
+    "evidence_production": {
+     "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+     "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/markup-check-report.json",
+     "iteration_no": 1,
+     "produced_at": 1789482997,
+     "event_log_offset": 4,
+     "content_digest": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+    "unit_id": "AK-9011",
+    "verification_ref": "vrf-SJFWWGJ8MF2Z2S4TPJKTWN8JE0",
+    "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 9,
+    "settled_at": 1789483153,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-sharpened-role-1044",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-SBB9QJMF1QNW5XK7ZX8WJQ9Y64",
+  "iteration_no": 3,
+  "unit_id": "AK-9012",
+  "claim": "The project's real check command runs the calculator check and exits zero.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+  "produced_at": 1789483293,
+  "record_ts": 1789483293,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 3,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789483293.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+      "iteration_no": 3,
+      "evidence_ref": "sha256:9a2e9093d786b3c953c77c173f0e2ce1aff822c6bcd900fd6ccd99a915d7f152",
+      "observation_digest": "sha256:920d7cf0039cc90a6ec4a79cd6a9cb634a118002583ceab94b7223e31d0d2251"
+     }
+    },
+    "evidence_production": {
+     "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+     "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/check-report.json",
+     "iteration_no": 3,
+     "produced_at": 1789483293,
+     "event_log_offset": 13,
+     "content_digest": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+    "unit_id": "AK-9012",
+    "verification_ref": "vrf-SBB9QJMF1QNW5XK7ZX8WJQ9Y64",
+    "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 14,
+    "settled_at": 1789483293,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-3of3-sharpened-role-1044",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-FHJ4SE9GHAY68ZY7015ABCPGG5",
+  "iteration_no": 4,
+  "unit_id": "AK-9013",
+  "claim": "calculator.html's evaluation path produces correct results for at least two arithmetic expressions covering different operators.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/eval-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+  "produced_at": 1789483434,
+  "record_ts": 1789483434,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 4,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"settled\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789483434.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+      "iteration_no": 4,
+      "evidence_ref": "sha256:4375db56deefd46b043e5cec3ca95cdb8d6abe2b6ba7fe17c7d6bf9c79201ffd",
+      "observation_digest": "sha256:54840670ac540c63b89db74f7d656855e43c08a9852d644b1cbb5f30cbc178f9"
+     }
+    },
+    "evidence_production": {
+     "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+     "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/eval-check-report.json",
+     "iteration_no": 4,
+     "produced_at": 1789483434,
+     "event_log_offset": 18,
+     "content_digest": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "QW2GJ0A1R9KASRMDBJD3BVAXD4",
+    "unit_id": "AK-9013",
+    "verification_ref": "vrf-FHJ4SE9GHAY68ZY7015ABCPGG5",
+    "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+    "reference_digest": "sha256:cc5dbab6dbe9688be1a757b21590a7d0d628e1d7fc39bb1458dffb4c95cd74bf",
+    "event_log_offset": 19,
+    "settled_at": 1789483434,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-rpc-1652",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-ETM4562EMTH8CMRCHHK6VF3WV7",
+  "iteration_no": 1,
+  "unit_id": "AK-9011",
+  "claim": "calculator.html exists at the project root and declares digit buttons 0-9 and operator buttons for add, subtract, multiply, and divide.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/markup-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+  "produced_at": 1789419324,
+  "record_ts": 1789419324,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 1,
+    "unit_states_digest": "[[\"AK-9011\",\"open\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789419324.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+      "iteration_no": 1,
+      "evidence_ref": "sha256:9f93fb71d4786998f6fe4b847e29145ddf4322facf78710738b15f962dd9aaf2",
+      "observation_digest": "sha256:5387cd3152ced2d7ef4c26df82214c70894c17934e86279f2f0aaca8ae118aeb"
+     }
+    },
+    "evidence_production": {
+     "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+     "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/markup-check-report.json",
+     "iteration_no": 1,
+     "produced_at": 1789419324,
+     "event_log_offset": 4,
+     "content_digest": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+    "unit_id": "AK-9011",
+    "verification_ref": "vrf-ETM4562EMTH8CMRCHHK6VF3WV7",
+    "evidence_ref": "sha256:088421aaaebb0ac04666db21f29b5c2b2383330c2fc5c243def25c4335494fdc",
+    "reference_digest": "sha256:a593207d165b5161aca3ae3901e78facb366c58bd64406bca8eb529b8b7ab6bc",
+    "event_log_offset": 5,
+    "settled_at": 1789419324,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-rpc-1652",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-TBB330BPR5YJA41BWRRC4M8VA7",
+  "iteration_no": 2,
+  "unit_id": "AK-9012",
+  "claim": "The project's real check command runs the calculator check and exits zero.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+  "produced_at": 1789419448,
+  "record_ts": 1789419448,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 2,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"open\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789419448.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+      "iteration_no": 2,
+      "evidence_ref": "sha256:5bff479ffafe74247a070f2640c5033a43e6174480f823473a166d47606bc294",
+      "observation_digest": "sha256:326b27e2805b6237ca4c341c41340c69bbf1d223d91d0533565531b31beb3f36"
+     }
+    },
+    "evidence_production": {
+     "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+     "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/check-report.json",
+     "iteration_no": 2,
+     "produced_at": 1789419448,
+     "event_log_offset": 9,
+     "content_digest": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+    "unit_id": "AK-9012",
+    "verification_ref": "vrf-TBB330BPR5YJA41BWRRC4M8VA7",
+    "evidence_ref": "sha256:b71b847cb5f714f0de291a2982bbd4f26b79928dccb0fe639ba61c7f65760e55",
+    "reference_digest": "sha256:a593207d165b5161aca3ae3901e78facb366c58bd64406bca8eb529b8b7ab6bc",
+    "event_log_offset": 10,
+    "settled_at": 1789419448,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ },
+ {
+  "run_id": "demo-calculator.settled-rpc-1652",
+  "verification_record_id": null,
+  "schema": "verification_record@v1",
+  "verification_ref": "vrf-A500W2QQ0CFD2DYRANTHW97742",
+  "iteration_no": 3,
+  "unit_id": "AK-9013",
+  "claim": "calculator.html's evaluation path produces correct results for at least two arithmetic expressions covering different operators.",
+  "requirement": {
+   "kind": "test_report",
+   "locator": "evidence/eval-check-report.json",
+   "producer": "instrument"
+  },
+  "instrument": {
+   "name": "gauntlet-verify-test-report",
+   "version": "0.1.0",
+   "deterministic": true
+  },
+  "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+  "produced_at": 1789419574,
+  "record_ts": 1789419574,
+  "deterministic_outcome": "PASS",
+  "record_class": null,
+  "detail": "decided by the test-report rung (gauntlet-verify-test-report) at 14.2 ladder position 4",
+  "model_identity": null,
+  "chain": {
+   "state_before": {
+    "source": "checkpoints",
+    "matched_by": "iteration_order",
+    "iteration_no": 3,
+    "unit_states_digest": "[[\"AK-9011\",\"settled\"],[\"AK-9012\",\"settled\"],[\"AK-9013\",\"open\"]]"
+   },
+   "action": {
+    "kind": "correction_selection",
+    "ts": 1789419574.0
+   },
+   "consequence": {
+    "observation_binding": {
+     "matched_by": "run_id+iteration_no",
+     "binding": {
+      "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+      "iteration_no": 3,
+      "evidence_ref": "sha256:97a4b975ecfd5d35ac2d84dcbbc84463e36c7a7c2dc5cde76669810358ea4489",
+      "observation_digest": "sha256:a8ae67f77a16f1a4beb4d76db43a30ec264afcb704a27b130c3c82ec3700f953"
+     }
+    },
+    "evidence_production": {
+     "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+     "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+     "producer_name": "gauntlet-observe-filesystem",
+     "producer_version": "0.1.0",
+     "locator": "evidence/eval-check-report.json",
+     "iteration_no": 3,
+     "produced_at": 1789419574,
+     "event_log_offset": 14,
+     "content_digest": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a"
+    },
+    "evidence_object_resolvable": true
+   },
+   "settlement": {
+    "run_id": "VEVQZWMHZK61P4ASC2ZRMAX4T7",
+    "unit_id": "AK-9013",
+    "verification_ref": "vrf-A500W2QQ0CFD2DYRANTHW97742",
+    "evidence_ref": "sha256:5d8361c0f7a1db91eeac69dd94bdb1eb9adcf1fde5ed7cda523e2fb1d8bf838a",
+    "reference_digest": "sha256:a593207d165b5161aca3ae3901e78facb366c58bd64406bca8eb529b8b7ab6bc",
+    "event_log_offset": 15,
+    "settled_at": 1789419574,
+    "_matched_by": "verification_ref_equality"
+   },
+   "temporal_integrity": "ok"
+  },
+  "attribution_status": "unattributed"
+ }
+]

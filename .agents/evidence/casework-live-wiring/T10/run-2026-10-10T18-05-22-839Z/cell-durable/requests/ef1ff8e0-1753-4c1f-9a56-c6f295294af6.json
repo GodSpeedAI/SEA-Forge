@@ -1,0 +1,20 @@
+{
+  "request_id": "ef1ff8e0-1753-4c1f-9a56-c6f295294af6",
+  "method": "item.execute",
+  "status": "completed",
+  "submitted_at": "2026-10-10T18:07:41.996210547+00:00",
+  "completed_at": "2026-10-10T18:07:42.027193082+00:00",
+  "outcome": {
+    "case_id": "case_20261010T180607Z_a41256",
+    "episodes": [
+      {
+        "item_id": "task_prepare",
+        "run_id": "run_20261010T180741Z_a62d4e",
+        "settlement_status": "accepted"
+      }
+    ],
+    "ok": true,
+    "state": "idle"
+  },
+  "payload_hash": "a2d0c61cf75fa8852dcc1916a4e60a6be268f0dfc44add068898a7c5ea2613ce"
+}

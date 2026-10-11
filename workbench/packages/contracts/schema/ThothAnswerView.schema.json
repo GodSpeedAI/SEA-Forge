@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ThothAnswerView",
+  "description": "The answer to one `thoth.ask`, as the Workbench reads it.",
+  "type": "object",
+  "properties": {
+    "answer_id": {
+      "type": "string"
+    },
+    "answered_at": {
+      "type": "string"
+    },
+    "assurance": {
+      "description": "Ledger assurance vocabulary (spec-full §7.0c).",
+      "type": "string"
+    },
+    "authority_notice": {
+      "description": "The fixed notice that an answer grants nothing.",
+      "type": "string"
+    },
+    "claims": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ClaimView"
+      }
+    },
+    "disposition": {
+      "description": "`answered`, `partial`, or `denied`. A denial is a governed outcome with\nits own shape, not an error (epic invariant 3).",
+      "type": "string"
+    },
+    "freshness": {
+      "description": "`current` or `stale`.",
+      "type": "string"
+    },
+    "limitations": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "omitted_claim_classes": {
+      "description": "Classes this answer was not permitted to speak to. Present on a partial\nanswer as well as a denied one — an operator has to be able to see that\nwhat they received is not the whole picture.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "question_id": {
+      "type": "string"
+    },
+    "snapshot_ref": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "answer_id",
+    "question_id",
+    "disposition",
+    "snapshot_ref",
+    "freshness",
+    "assurance",
+    "authority_notice",
+    "answered_at"
+  ],
+  "$defs": {
+    "ClaimView": {
+      "description": "One grounded claim, with the records that back it.",
+      "type": "object",
+      "properties": {
+        "capability_record_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "claim_class": {
+          "description": "Wire spelling, e.g. `demonstrated_capability`.",
+          "type": "string"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "settlement_refs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "snapshot_ref": {
+          "type": "string"
+        },
+        "statement": {
+          "description": "Template-generated from typed fields. Never free-form model output —\nwhich is why it is safe to render as prose.",
+          "type": "string"
+        },
+        "status": {
+          "description": "Wire spelling of the capability ladder position, e.g. `demonstrated`.",
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "claim_class",
+        "subject",
+        "status",
+        "statement",
+        "snapshot_ref"
+      ]
+    }
+  }
+}

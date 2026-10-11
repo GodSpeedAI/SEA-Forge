@@ -1,0 +1,14 @@
+--- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry (3.00s)
+    --- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry/run_get (1.00s)
+        client_cancellation_test.go:230: manual cancellation did not interrupt the in-flight request within 1s
+    --- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry/ask (1.00s)
+        client_cancellation_test.go:230: manual cancellation did not interrupt the in-flight request within 1s
+    --- FAIL: TestManualCancellationInterruptsRunGetAskAndMutationWithoutRetry/correlated_mutation (1.00s)
+        client_cancellation_test.go:230: manual cancellation did not interrupt the in-flight request within 1s
+--- FAIL: TestCancelingOnePoolRequestLeavesConcurrentRequestUsable (1.00s)
+    client_cancellation_test.go:294: manual cancellation did not interrupt the in-flight request within 1s
+--- FAIL: TestCanceledPartialRunGetConnectionIsNotReused (1.00s)
+    client_cancellation_test.go:340: manual cancellation did not interrupt the in-flight request within 1s
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	23.173s
+FAIL

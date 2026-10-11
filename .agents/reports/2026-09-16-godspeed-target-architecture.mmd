@@ -1,0 +1,87 @@
+%% GodSpeed — MINIMUM-COHERENT target architecture derived from the evidence, not from the brief.
+%% Changes vs current are bounded to: (S1) one provider adapter, (S2) one bounded-question type,
+%% (S3) one composition rule table, (S4) one correlation identity, (S5) one memory owner.
+%% Everything else is REUSE of an existing stable noun. Nothing is deleted, renamed, or rewritten.
+
+flowchart TB
+
+  DF["DomainForge<br/>MEANING<br/>UNCHANGED — no .sea grammar change"]
+  CK["Context Kernel<br/>REPRESENTATION<br/>UNCHANGED"]
+
+  subgraph QA["S2 — bounded question surface (the only genuinely new semantic object)"]
+    DS["DecisionSurface<br/>{id, version, semantic_pack_hash, questions[]}<br/>a DERIVED artifact — no new storage engine,<br/>materialized from DomainForge ApplicationContract<br/>+ Reference/ReferenceDefinition"]
+    Q["Question<br/>{id, kind in {choice,score,proposition},<br/>semantic_reference, output_contract}<br/>CARRIED IN THE CEP QUESTION ENVELOPE SECTION<br/>CEP-0005 extended additively — no new envelope kind"]
+    RULE["CompositionRule<br/>{rule_version, thresholds, contradiction_policy}<br/>a VERSIONED CONFIG FILE, not a service"]
+  end
+
+  subgraph PB["S1 — provider boundary (REUSE, do not create)"]
+    PORT["gauntlet_ports::AgentRunner<br/>unchanged trait<br/>RoleInvocationSpec.context_envelope.digest<br/>IS the judgment request identity"]
+    NEWAD["NEW: one HTTP AgentRunner adapter<br/>reusing sea_forge_agent::OpenAiCompatibleProvider<br/>+ EndpointSnapshot + NetworkPolicy + AgentError<br/>~1 adapter crate, no new port, no new service"]
+    OLDAD["CliAgentRunner / PrimeAgentRunner / MockAgentRunner<br/>UNCHANGED"]
+  end
+
+  subgraph JR["Judgment record (REUSE)"]
+    VR["gauntlet_domain::VerificationRecord@v1<br/>+ additive fields: distribution, provider_identity,<br/>semantic_pack_hash<br/>record_type slot 'verification_record' ALREADY EXISTS"]
+    XR["sxr record kinds question.declared /<br/>claim.made / diagnostic.hypothesis<br/>UNCHANGED — no new record kind in slice 1"]
+  end
+
+  subgraph S3["S3 — deterministic composition (REUSE)"]
+    AGG["gauntlet-app aggregate/residual<br/>UNCHANGED"]
+    EVS["sea-forge-settlement<br/>SettlementClaim.evaluator_scores<br/>+ CompositionRule (file) -> SettlementEvent<br/>UNCHANGED TYPE, rule now external + versioned"]
+  end
+
+  AUTH["sea-forge-authority<br/>AUTHORITY<br/>UNCHANGED — Verdict{Allow,Deny,Escalate}<br/>judgment is EVIDENCE, never permission"]
+  EX["SEA-Forge governed execution<br/>+ Gauntlet orchestration<br/>EXECUTION — UNCHANGED"]
+  OBS["Gauntlet evidence CAS + observation_bindings<br/>sea-forge-evidence<br/>OBSERVATION — UNCHANGED"]
+  SET["Gauntlet settlements + SettlementDeclaration<br/>SETTLEMENT — UNCHANGED"]
+
+  subgraph S4["S4 — correlation identity (NEW: one field, no new store)"]
+    CORR["loop_correlation_id<br/>one value bound at case admission,<br/>echoed by: sea-rs run_id, Gauntlet run_id,<br/>sxr snapshot/run refs, CEP envelope scope"]
+  end
+
+  subgraph S5["S5 — developmental memory: ONE owner per purpose"]
+    OWN1["Operator/generational durability -> sea-forge-ledger (MMR+witness)"]
+    OWN2["Run-consequence corpus (the calibration substrate)<br/>-> Gauntlet SQLite, made canonical for REPLAY<br/>16 run DBs already exist"]
+    OWN3["Semantic/CEP history -> sxr-ledger"]
+    OWN4["Navigation + affordance memory -> godspeed_agent LedgerStore"]
+  end
+
+  subgraph AD["ADAPTATION — bounded to measurement in slice 1"]
+    MEAS["Consequence-grounded measurement harness (READ-ONLY)<br/>replays targets/.runs/*/state/*.db through<br/>DecisionSurface -> judgment -> composition<br/>and scores against recorded settlements"]
+    CAL["Calibration report (Brier / reliability / ECE)<br/>first real calibration artifact"]
+    NOTRAIN["EXPLICITLY NOT BUILT: weight updates, fine-tuning,<br/>adaptive auto-thresholds, online policy learning"]
+  end
+
+  DF --> DS
+  CK -->|"bounded cited context"| PORT
+  DS --> Q
+  Q --> PORT
+  PORT --> VR
+  XR -.-> VR
+  VR --> AGG
+  AGG --> EVS
+  RULE --> EVS
+  EVS --> AUTH
+  AUTH --> EX
+  EX --> OBS
+  OBS --> SET
+  SET --> AD
+  CORR -.-> AUTH
+  CORR -.-> EX
+  CORR -.-> OBS
+  CORR -.-> SET
+  CORR -.-> OWN2
+  SET --> OWN2
+  OWN2 --> MEAS
+  MEAS --> CAL
+  CAL -.->|"operator-reviewed, versioned proposal only"| RULE
+  SET --> OWN1
+  SET --> OWN3
+  SET --> OWN4
+
+  subgraph ORIGIN["Data origin for slice 1"]
+    HIST["16 historical Gauntlet run DBs<br/>37 role_invocation / 28 correction_selection /<br/>17 verification_record / 17 settlements /<br/>29 observation_bindings"]
+    JET["Jetson: edgeai launcher :18001<br/>Qwen local inference as Provider B"]
+  end
+  HIST --> MEAS
+  JET --> NEWAD

@@ -1,0 +1,51 @@
+schema: godspeed-bounded-judgment.t25-novelty
+task: T25
+metric_frozen:
+  fingerprint: ordered retained-move sequence of (scenario, max_rounds) plus the final terminal of each (prereg
+    novelty_metric; computed with the frozen T21 route_contracts.route_fingerprint)
+  classification:
+    novel: no equal fingerprint in the T15/T16 grids
+    near-duplicate: same operation set, different order
+    structural-duplicate: equal fingerprint
+  policy: duplicates are measured and recorded; no automatic rejection is frozen in this slice
+subject:
+  route_id: t23-route-001
+  fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+  operation_set:
+  - e2e-happy@2
+  - e2e-happy@3
+  - e2e-happy@6
+reference_grid_as_recorded:
+  size: 25
+  sources:
+  - .agents/preregistrations/godspeed-bounded-judgment-T15.corpus-manifest.yml
+  - .agents/preregistrations/godspeed-bounded-judgment-T15.prereg.yaml (case table budget dimensions)
+  - .agents/preregistrations/godspeed-bounded-judgment-T16.expanded-corpus-manifest.yml
+  - .agents/preregistrations/godspeed-bounded-judgment-T16.expansion-addendum.yaml (mechanism mix)
+  grid_fingerprints:
+  - e2e-forged-report@4:budget_exhausted
+  - e2e-happy@1:budget_exhausted
+  - e2e-happy@2:budget_exhausted
+  - e2e-happy@4:settled
+  - e2e-lying@4:budget_exhausted
+  grid_budget_levels_recorded: &id001
+  - 1
+  - 2
+  - 4
+  budget_levels_note: defaults means the fixture default max_rounds 4 (addendum-1)
+t16_expansion_never_probed:
+  claim: the T16 expansion never probed fixture-target budget levels 5, 6, or 7
+  verified_from: the recorded budget dimensions of the T15 prereg case table (defaults, max_rounds 1, max_rounds
+    2) and the T16 expansion addendum mechanism mix (e2e-happy x9 at defaults, e2e-lying x3, budget-r1 x2, e2e-forged-report
+    x2), cross-checked against the mapped 25-run grid levels [1, 2, 4]
+  recorded_grid_levels: *id001
+  levels_5_6_7_present: []
+  verified: true
+  route_levels_outside_the_grid:
+  - 3
+  - 6
+classification: novel
+classification_basis: no grid fingerprint equals the route fingerprint (the grid records single-run cases only)
+  and no grid operation set equals the route's operation set; the route's budget levels 3 and 6 were never probed
+  in the recorded grids
+duplicate_policy: measured and recorded; no automatic rejection

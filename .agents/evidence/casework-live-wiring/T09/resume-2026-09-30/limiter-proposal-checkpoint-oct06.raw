@@ -1,0 +1,82 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/sea-rs
+context check passed
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Finished `dev` profile [unoptimized] target(s) in 2.85s
+[understand-anything] commit 6c5e3106546b64b207de89dcbcc68be47b725426 changed source files; the .ua knowledge graph is now stale.
+[understand-anything] Re-run the understand skill (incremental mode) to refresh /home/sprime01/projects/sea-rs/.ua.
+[casework/live-wiring 6c5e310] docs(casework): record reviewed admission design and pending fixtures
+ 20 files changed, 767 insertions(+), 19 deletions(-)
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/case-inventory-frontier-race-source-recon-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-bootstrap-store-source-inventory-oct05.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prereq-checkpoint-preflight-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prereq-root-checkpoint-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prereq-root-checkpoint-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prereq-settled-index-gitleaks-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prereq-settled-index-gitleaks-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prereq-staged-gitleaks-oct06.exit
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prereq-staged-gitleaks-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/prerequisite-checkpoint-root-record-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-fixture-root-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-independent-review-round2-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-independent-review-round2-supplement-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-repair-proposal-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-root-adjudication-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-root-proposal-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-trace-physical-admission-wait-clarification-oct06.md

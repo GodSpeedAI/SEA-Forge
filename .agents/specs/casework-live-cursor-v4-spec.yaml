@@ -1,0 +1,860 @@
+schema: agent.spec
+schema_version: "1.0"
+
+metadata:
+  id: casework.live-cursor-v4
+  title: GodSpeed Casework Live Cursor V4
+  status: approved
+  version: "0.1.0"
+  created: "2026-10-08"
+  revised: "2026-10-09"
+  owner: GodSpeed casework
+  normative_language: RFC 2119
+  purpose: >-
+    Specify the bounded, restart-safe live and historical case projection
+    boundary for GodSpeed Casework V4. This supplement refines the parent
+    cognitive-environment specification only for live cursor, capture identity,
+    bootstrap, recovery, Store/SSE, and their readiness evidence.
+  approval_record:
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-six-recommendations-operator-approval-oct08.md
+    scope: six recommendation-level architecture and public-contract areas approved
+    exact_candidate_hash_read_or_approved: false
+    implementation_status: held
+  additional_policy_approval:
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-additional-policy-operator-approval-oct08.md
+    scope: four bounded-reader policy decisions approved for normative incorporation
+    exact_candidate_hash_read_or_approved: false
+    implementation_status: held
+  candidate_basis:
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision7-oct08.md
+    sha256: ad82478fbe008358841b3be2ff0e29139f0327f1dd7cbbcbaf798a2795bd09b6
+    independent_design_review: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision7-independent-review-oct08.md
+    design_review_result: approved_design_proposal_only
+sources:
+  parent_spec:
+    role: normative parent; this supplement is narrower and cannot relax its authority, settlement, or migration rules
+    path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+  architecture_decision:
+    role: decision rationale for shared journal, global frontier, identity, limits, and readiness gates
+    path: docs/decisions/ADR-008-casework-live-cursor-v4.md
+  operator_approval:
+    role: explicit approval of six recommendation-level areas, not exact candidate hash
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-six-recommendations-operator-approval-oct08.md
+  design_candidate:
+    role: complete reviewed DOCONLY design basis; not proof of implementation
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision7-oct08.md
+  frontier_clarification:
+    role: semantic decision for global continuity versus case-local invalidation
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-global-frontier-root-clarification-oct08.md
+  legacy_and_ordinal_clarification:
+    role: legacy bounded-read and full-u64 TypeScript rules
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-legacy-bounds-and-u64-root-clarification-oct08.md
+  bounded_reader_policy_approval:
+    role: additional bounded-reader policies approved for normative incorporation; not implementation authorization
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-bounded-reader-additional-policy-operator-approval-oct08.md
+  bounded_reader_proposal:
+    role: independently reviewed proposal basis for reader requirements; not runtime evidence
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-bounded-ledger-reader-proposal-revision4-correction-oct08.md
+  reader_input_accounting_clarification:
+    role: approved registration and total raw-page-input accounting clarification; no source release
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-registration-input-accounting-root-decisions-oct09.md
+  reader_input_accounting_review:
+    role: independent approval of that clarification only; normative traceability remains a reader-grant prerequisite
+    path: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-reader-registration-input-accounting-independent-review-oct09.md
+
+authority:
+  applies_to: C2 live cursor V4 only
+  precedence:
+    - The parent GodSpeed casework specification remains authoritative outside this supplement's narrow scope.
+    - After independent review accepts this supplement, it is normative for V4 cursor, capture, bootstrap, journal, frontier, history, Store, SSE, error, and proof requirements.
+    - If a V4 detail conflicts with a general projection statement in the parent, this supplement controls only that V4 detail; SEA Forge authority, D-2, settlement, and migration rules remain unchanged.
+  change_rule: >-
+    The operator approved six recommendation-level change areas and the four
+    bounded-reader policy choices recorded in the additional policy approval.
+    Do not request those same approvals again. Any other material design choice
+    requires a specific decision before implementation. Public schemas and
+    authored contracts must be updated together after independent review.
+  no_authority_change: >-
+    A cursor, ordinal, digest, journal record, projection, lease, bootstrap arm,
+    or stream never grants authority or changes settlement. Existing SEA Forge
+    authorization, domain guards, D-2 identity, dual-principal audit,
+    separation of duties, CSRF, rate limits, and fresh-source checks remain in
+    force.
+
+scope:
+  includes:
+    - exact case and world identity in live and historical snapshots
+    - complete-empty inventory and create readiness
+    - versioned bounded global event scanning and per-case projection delivery
+    - shared mutation journal, recovery, capture stamps, and readiness
+    - digest-bound historical GET, intent preconditions, Store retention, and SSE replay
+    - global and per-case failure classification, resource limits, and verification
+  excludes:
+    - implementation source, public schema generation, or runtime release authorization
+    - new kernel verbs, dependencies, authority rules, ID grammar, or historical truth
+    - fencing manual, plugin, out-of-tree, or other uncooperative writers
+    - reconstructing past frames or source facts from present state
+
+model:
+  cursor_identity:
+    cursor: exact opaque ledger entry_ulid
+    sequence: durable append_ordinal from the shared ledger
+    case_world_ids: preserve exact generated or supported legacy IDs
+  capture_identity:
+    ordinary_snapshot: exact public snapshot plus capture_digest
+    capture_kinds: [process_baseline, event_capture]
+    digest: sha256:v1 over the fixed Go encoding/json preimage in REQ-C2-DIGEST-001
+    authority: none
+  frontiers:
+    global: validated scanned-through row in the shared ledger, bound to real cursor, ordinal, continuation, and pinned head
+    case: independent indexed head and delivery watermark; may skip other-case and non-event global ordinals
+  journal: derived coordination evidence; never a second source of case truth
+
+limits:
+  event_page:
+    scan_rows: 500
+    emitted_frames: 500
+    serialized_response_bytes: 1048576
+    ledger_lock_wait_ms: 50
+    continuation_token_bytes: 4096
+    continuation_payload_bytes: 2048
+    raw_ledger_row_bytes_including_lf: 2097152
+    raw_page_input_bytes_including_non_events_and_lookahead: 4194304
+    reconciliation_per_turn:
+      pages: 2
+      elapsed_ms: 500
+  index:
+    version: case-head-index-v1
+    cases: 4096
+    bytes: 8388608
+    rebuild_rows_per_lineage: 1000000
+    rebuild_active_work_minutes_per_lineage: 10
+    automatic_ceiling_reset: forbidden
+  inventory:
+    cases: 4096
+    bytes: 4194304
+  journal:
+    record_bytes: 32768
+    records: 256
+    bytes: 8388608
+    lock_wait_ms: 50
+  retained_projection:
+    individual_snapshot_or_event_bytes: 1048576
+    revisions_per_case: 64
+    bytes_per_case: 4194304
+    store_bytes: 67108864
+    case_heads: 128
+  subscriptions:
+    streams: 32
+    live_frames_per_queue: 2
+    live_queue_bytes: 2097152
+    replay_revisions: 64
+    replay_bytes: 4194304
+    aggregate_bytes_including_replay_queues_and_inflight: 67108864
+    write_deadline_seconds_per_header_or_frame: 5
+    post_invalidation_inflight_writes: 1
+  interpretation: >-
+    Byte limits are serialized-payload availability limits, not RSS or heap
+    guarantees. No cap may be bypassed by truncating data while claiming
+    continuity. Any changed ceiling is a material design change requiring a
+    specific decision and updated proof.
+
+requirements:
+  - id: REQ-C2-ARCH-001
+    text: >-
+      The implementation MUST keep SEA Forge as the sole case authority and
+      settlement owner. It MUST add no kernel verb, dependency, permission rule,
+      synthetic ID authority, or second authoritative history.
+    verify: [V-C2-AUTH-01, V-C2-SCOPE-01]
+  - id: REQ-C2-ID-001
+    text: >-
+      Case IDs, world IDs, and event cursors MUST be preserved byte-for-byte.
+      Generated case IDs use the existing case_YYYYMMDDTHHMMSSZ_<6 lowercase
+      hex> grammar; supported legacy case IDs use case-[a-z0-9_.-]+.
+      World ID remains world-<exact case ID>. Cursor remains the exact opaque
+      entry_ulid. Sequence MUST come from append ordinal, never cursor parsing,
+      normalization, or lexical ordering.
+    verify: [V-C2-ID-01, V-C2-ID-02, V-C2-U64-01]
+  - id: REQ-C2-U64-001
+    text: >-
+      Every ordinal crossing JSON MUST be a canonical unsigned decimal string,
+      not a JSON number. This applies to event/page ordinals, request bounds,
+      pinned head, scanned-through value, continuations, Go event/revision
+      fields, snapshot cursor_ordinal, and SSE envelopes. Rust and Go MUST use
+      checked u64 adapters. TypeScript MUST validate grammar 0|[1-9][0-9]*,
+      at most 20 digits, and checked BigInt range no greater than
+      18446744073709551615. Comparisons MUST use validated BigInt only; Number,
+      parseInt, parseFloat, lexical ordering, and silent narrowing are forbidden.
+      A client with no ordinal comparison responsibility MAY preserve the
+      validated string opaquely. Opaque cursors and digests MUST never be parsed
+      or used to derive ordinals.
+    verify: [V-C2-U64-01, V-C2-U64-02, V-C2-ID-02]
+  - id: REQ-C2-BOOT-001
+    text: >-
+      Bootstrap MUST use the reviewed revision-3 mutually exclusive response
+      arms: validated ordinary snapshot or complete-empty bootstrap with actual
+      response timestamp, session-verified perspective, and canonical templates.
+      Bootstrap MUST have no case/world ID, cursor, revision, or history. It is
+      an as-of capture, not an atomic empty interval.
+    verify: [V-C2-BOOT-01, V-C2-BOOT-02]
+  - id: REQ-C2-BOOT-002
+    text: >-
+      Complete-empty/bootstrap success MUST require complete strict inventory,
+      global frontier proof, and clean journal. Pending operations block empty
+      success even before a case directory exists. Explicit case selection MUST
+      never redirect to another case or bootstrap. Only an absent case query may
+      select default/bootstrap; an explicit case query remains bound to that
+      case. A nonempty cursor selects retained history; absent or empty cursor
+      selects the validated live path.
+    verify: [V-C2-BOOT-01, V-C2-BOOT-03, V-C2-FAIL-01]
+  - id: REQ-C2-BOOT-003
+    text: >-
+      Inventory MUST be complete-or-error and its wire response MUST require
+      cases and unreadable:[] for completeness. A readable absent root is
+      complete-empty only with a clean journal and proven global coverage. It
+      MUST reject unknown children,
+      non-UTF8 names, enumeration/metadata/I/O failures, missing or malformed
+      case.json, journal dirtiness, and configured inventory caps as unavailable,
+      never as empty. Flat legacy case-keyed files are not directory membership.
+      Create preflight MUST preserve the reviewed PROPOSE_CASE empty-cell
+      exception. Bootstrap samples a pinned head around complete inventory,
+      retries at most three times if samples change, then fails closed; it does
+      not claim an atomic empty interval. Only the returned actual case ID may
+      proceed, and history/SSE must wait for that exact case's validated snapshot.
+    verify: [V-C2-BOOT-01, V-C2-BOOT-02, V-C2-BOOT-03]
+  - id: REQ-C2-RANGE-001
+    text: >-
+      events.get_range MUST provide optional range_version=2 bounded paging.
+      Unknown versions fail typed. V2 pages MUST carry exact cursor and decimal
+      ordinal per frame, real pinned head pair, scanned_through_ordinal,
+      continuation, completion state, and optional case_state_stamp. Continuation
+      binds the exact stream, pinned head, last fully validated row cursor,
+      ordinal, entry hash, byte boundaries and raw-row checksum, plus exact
+      request-filter bindings and nullable resolved filter ordinals. Resumed
+      reads verify the preceding row before seeking. V2 uses separate DTOs and
+      MUST NOT reshape the legacy EventFrame or add a kernel verb. A fresh scan
+      MUST acquire a real pinned head under the cooperative stream lock within
+      the configured wait and release that lock before scanning the page.
+      Limits are those in limits.event_page.
+    verify: [V-C2-RANGE-01, V-C2-RANGE-02, V-C2-RANGE-03]
+  - id: REQ-C2-RANGE-002
+    text: >-
+      An omitted range_version MUST preserve the existing vector response shape.
+      Unknown cursor values retain the existing typed input-error classification.
+      It may return a successful requested frame prefix only after a bounded scan
+      validates coverage through the real pinned head. If row, input-byte,
+      response-byte, or lock-wait limits prevent proof, return typed unavailable
+      with no success vector and no partial frames. Callers MUST surface that
+      failure. Large histories require v2 paging; no unbounded compatibility
+      fallback is allowed. The reader has no per-page elapsed-time guarantee;
+      an outer scheduling deadline MUST NOT acknowledge an unfinished scan or
+      convert it to successful partial output.
+    verify: [V-C2-LEGACY-01, V-C2-LEGACY-02, V-C2-LEGACY-03]
+  - id: REQ-C2-RANGE-003
+    text: >-
+      The authoritative reader MUST validate every complete global ledger row
+      from actual origin or verified continuation through a real pinned head
+      before filtering event frames. It MUST validate checked successive global
+      ordinals, exact row cursor identity, prior continuation row/checksum, and
+      head identity. Non-event rows advance global progress but never become
+      fabricated event frames. Preserve the existing typed hash protocol:
+      payload_hash covers the complete payload Value and entry_hash uses the
+      typed LedgerEntry helper. Unknown top-level LedgerEntry fields remain
+      tolerated and are ignored by typed deserialization/reserialization;
+      unknown payload fields remain in the Value and are hashed. Validate known
+      required fields and types. For sfwp_event, kind MUST be a string and
+      detail MUST be present but MAY be null; case_id and run_id MAY be absent
+      or null, otherwise they MUST be strings. Do not add a kind grammar or
+      reject extra payload fields. An empty filtered page may advance global
+      progress. A partial row, lookahead row not delivered, filtered count, or
+      failed page never proves completion or advances the acknowledged frontier.
+    verify: [V-C2-RANGE-02, V-C2-GLOBAL-01, V-C2-GLOBAL-02, V-C2-GLOBAL-03]
+  - id: REQ-C2-RANGE-004
+    text: >-
+      Continuations MUST use a fresh process-memory Ed25519 key generated at
+      server startup with the existing getrandom::fill entropy source; entropy
+      failure MUST fail startup before the service accepts requests. The local
+      seed MUST be zeroized with the existing zeroize support immediately after
+      signing-key construction. The key MUST NOT be persisted or logged. A
+      process restart
+      invalidates old tokens; a trusted global owner MUST treat its failed
+      continuation as no acknowledgement, remain unavailable/drain as required
+      by REQ-C2-FRONTIER-002, and rebuild boundedly from actual origin. Token
+      issuance occurs only after validating the acknowledged prefix. The signed
+      continuation MUST carry a field-specific domain-separated SHA-256 digest
+      of the exact registered stream identity, not its raw value. Compute the
+      digest from a distinct fixed ASCII domain tag, a presence byte, the
+      checked UTF-8 byte length as unsigned 64-bit big-endian, and the exact
+      UTF-8 bytes when present; absent uses the absent tag and zero length.
+      Recompute and compare this digest against the requested registered stream
+      identity before any seek. Binding digests are integrity inputs, never
+      authority or identity normalization. Before
+      splitting or allocating variable decoded state, the reader MUST enforce
+      the 4,096-byte encoded-token limit, 2,048-byte payload limit, and fixed
+      existing ed25519: signature representation (96 ASCII bytes encoding
+      exactly 64 decoded bytes). It MUST verify the signature over the exact
+      payload bytes before parsing payload fields or using seek data.
+      Invalid or oversized tokens fail typed unavailable without fallback.
+      The 2 MiB raw-row cap includes LF. For each page, the 4 MiB raw-input
+      budget MUST include every actual raw ledger byte read: pinned-head/tail
+      reads, continuation-predecessor revalidation, forward scanning,
+      non-event rows, and lookahead. Every repeated read counts again;
+      metadata checks and seeks consume no raw-input bytes. The reader MUST
+      limit each read request and row-buffer growth to the remaining page budget
+      before reading or allocating. If the remaining budget cannot establish
+      the next complete validated row, the page may return only prior
+      acknowledged progress or typed unavailable; it MUST NOT acknowledge a
+      partial row, undelivered lookahead, or incomplete validation. These
+      limits supplement, and do
+      not increase, the 500-row, 500-frame, 1 MiB complete serialized-response,
+      and 50 ms lock-wait limits. Byte limits are not RSS/heap guarantees or
+      OS-read latency bounds. A malformed direct request cannot mutate the
+      trusted Go owner's expected continuation or readiness. No new dependency,
+      persisted key, or authority is added.
+    verify: [V-C2-RANGE-01, V-C2-RANGE-03, V-C2-GLOBAL-03]
+  - id: REQ-C2-RANGE-005
+    text: >-
+      V2 from_cursor and to_cursor MUST retain exact opaque UTF-8 identity and
+      exclusive-from/inclusive-to semantics. Each signed filter binding MUST be
+      a field-specific domain-separated SHA-256 digest computed from a distinct
+      fixed ASCII domain tag, a presence byte, the checked UTF-8 byte length as
+      unsigned 64-bit big-endian, and the exact UTF-8 bytes when present; absent
+      uses the absent tag and zero length. The token carries these digests, not
+      raw stream or filter strings. On resume, recompute each requested filter's
+      digest and require exact equality before using its resolved state or any
+      seek data. No normalization, parsing, or cursor ordering is allowed. The
+      signed token MUST distinguish an
+      absent filter from a present but unresolved filter and carry nullable
+      canonical-decimal resolved_from_ordinal and resolved_to_ordinal. Resolve
+      a filter only when its exact cursor row lies in the acknowledged validated
+      prefix, and validate any carried ordinal as canonical checked u64 no later
+      than that frontier. Ordinal zero is "0", never a null sentinel. An
+      undelivered lookahead row MUST advance neither resolved filter state nor
+      the acknowledged frontier. Until a requested from_cursor is found, emit
+      no matching frames. On a nonempty stream, any requested bound still
+      unresolved at the pinned head fails with the existing unknown-cursor
+      input error and no complete-success page; incomplete earlier pages remain
+      page prefixes only. Only an actually registered stream whose registered
+      path is proven absent or zero-byte by a successful check under the
+      cooperative lock returns v2 complete-empty with complete=true, null
+      pinned-head and scanned-through values, no frames, and no continuation;
+      it has no synthetic cursor. A requested cursor on that stream is
+      unknown-cursor input error. Corrupt, unreadable, nonempty-whitespace, or
+      torn history is unavailable, never empty success.
+    verify: [V-C2-RANGE-01, V-C2-RANGE-02, V-C2-RANGE-03, V-C2-LEGACY-01]
+  - id: REQ-C2-FRONTIER-001
+    text: >-
+      The Go owner MUST maintain one validated global scan frontier separately
+      from each case head and delivery watermark. It accepts only the expected
+      continuation and pinned head, acknowledges only fully validated global
+      progress, and routes validated event frames by exact case ID. Case
+      watermarks may skip global ordinals occupied by other cases or non-event
+      rows. Wake broadcasts are hints only and never advance frontiers.
+    verify: [V-C2-GLOBAL-01, V-C2-GLOBAL-02, V-C2-GLOBAL-04]
+  - id: REQ-C2-FRONTIER-002
+    text: >-
+      A missing, unreadable, malformed, discontinuous, or identity-inconsistent
+      global row, or invalid continuation/head binding, has unknown case impact.
+      The system MUST make live projection, dependent bootstrap, and dependent
+      streams unavailable/drained cell-wide; it MUST not acknowledge the failed
+      page or serve retained bytes as ready current state or successful replay.
+      Readiness returns only after bounded proof to a real pinned head, checked
+      index, strict inventory, clean journal, and valid capture stamps. Exhausted
+      cumulative limits stay unavailable for operational review; no ceiling reset
+      or fabricated history is allowed.
+    verify: [V-C2-GLOBAL-03, V-C2-FAIL-01, V-C2-RECOVERY-01]
+  - id: REQ-C2-FRONTIER-003
+    text: >-
+      Case-local invalidation is allowed only after global continuity is proved
+      and validated metadata identifies the affected case. Unretainable
+      authorized captures, dirty case journal markers, and unavailable or evicted
+      retained pairs may invalidate that case and drain its streams while
+      independently validated cases continue. A latest-head index or per-case
+      ordinal spacing cannot attribute a missing global row.
+    verify: [V-C2-GLOBAL-05, V-C2-FAIL-02]
+  - id: REQ-C2-INDEX-001
+    text: >-
+      case-head-index-v1 is derived, never authority or history. It stores exact
+      real global and per-case head pairs, version/checksum, and resumable repair
+      position within the limits in limits.index. Missing, corrupt, ahead,
+      behind, or mismatched index remains unavailable until repaired from
+      complete ledger pages to a real pinned head. A rebuild ceiling is
+      cumulative per detected lineage and is never automatically reset.
+    verify: [V-C2-RECOVERY-01, V-C2-RECOVERY-02]
+  - id: REQ-C2-JOURNAL-001
+    text: >-
+      All supported case-visible writers and coherent Facts captures MUST use
+      one cell-scoped interprocess case-projection lock in the existing
+      sea-forge-case-runner dependency direction. Acquire it before the ledger
+      append lock; never reverse. Authorization, session resolution, and
+      existing guards occur before journal effects. No auth callback, network
+      I/O, capability execution, or unbounded work runs under the journal lock.
+    verify: [V-C2-JOURNAL-01, V-C2-JOURNAL-02, V-C2-AUTH-01]
+  - id: REQ-C2-JOURNAL-002
+    text: >-
+      Before case-visible writes, persist a versioned pending journal record and
+      increment checked u64 state epoch. Records contain exact IDs, fixed
+      mutation class, and an already-authorized caller class limited to cli_actor,
+      verified_gateway_user, verified_gateway_agent, supervisor, or migration.
+      Record operation ULID, prior global ordinal, epoch, and pending status;
+      never credentials, raw errors, or arbitrary payload. Reuse the existing
+      public sea-forge-ledger ULID helper; add no identifier dependency or
+      authority. Use synced temp, atomic rename, and parent-directory sync. Prune
+      only durable completed records. Cap and lock wait use
+      limits.journal; overflow or full pending capacity refuses before writes.
+    verify: [V-C2-JOURNAL-01, V-C2-RECOVERY-02, V-C2-FAIL-03]
+  - id: REQ-C2-JOURNAL-003
+    text: >-
+      After existing case/local-ledger writes, append a real safe global event
+      carrying the operation ID (case.projection_changed when no semantic event
+      exists), update and durably replace the derived index, then publish only a
+      wake hint and durably mark completion at the next checked epoch. Publication failure cannot be
+      reported as clean success. A crash leaves pending/unavailable state,
+      never a fabricated historical success.
+    verify: [V-C2-JOURNAL-02, V-C2-RECOVERY-02]
+  - id: REQ-C2-RECOVERY-001
+    text: >-
+      Recovery persists operation identity, exact start/prior ordinal and pinned
+      head pair, next byte offset, last complete row cursor/ordinal, and scan
+      version/checksum.
+      Each bounded step validates complete rows and durably advances continuation.
+      Absence is proven only after validated global coverage reaches the pinned
+      head. Partial, corrupt, unreadable, timed-out, or over-budget scans remain
+      pending; they cannot emit reconciliation events or clear a marker. On
+      proven absence, validate current actual state, append a real
+      case.projection_reconciled event with outcome state_reconciled, repair the
+      index, then complete. This describes present-state repair, not past success.
+    verify: [V-C2-RECOVERY-01, V-C2-RECOVERY-02, V-C2-RECOVERY-03]
+  - id: REQ-C2-WRITERS-001
+    text: >-
+      Before migration readiness, an independent complete-writer audit MUST
+      enumerate and prove participation of every in-tree writer of projected
+      case facts, records, local events, and run membership. The current inventory
+      is a checklist, expressly non-exhaustive and not proof. It includes
+      CaseRunner case_ops and append/save/run_stage_case; CLI case/task/manager/
+      project/approve/migrate, plan_pipeline, pipeline, and resume; server lib,
+      case_mutations, case_ops/advance, case_dispatch; delegation
+      execute_with_permission_broker and finish_rejected; case_dispatch
+      execute_sandbox; agent_probe probe and finish_rejected; and
+      recover_cancelled_delegations. Permission-broker success, rejection,
+      probe, and cancellation-recovery writes to runs/<run>/settlement.json
+      affect RunsListForCase and MUST participate. In-tree event publication
+      coverage alone is insufficient.
+    verify: [V-C2-WRITERS-01, V-C2-RECOVERY-02]
+  - id: REQ-C2-EXTERNAL-001
+    text: >-
+      Cooperative journal locking does not fence manual, plugin, out-of-tree,
+      or external filesystem writers. Such writers are unsupported during live
+      operation. If they may be active, affected projection remains
+      unavailable; the system MUST NOT claim they were coordinated.
+    verify: [V-C2-JOURNAL-03, V-C2-FAIL-01]
+  - id: REQ-C2-CAPTURE-001
+    text: >-
+      The Go Facts capture MUST bracket existing authorized reads with clean
+      case_state_stamp values carrying state_epoch, case_dirty, and exact real
+      head cursor/ordinal pair. Accept only matching epochs and head pairs;
+      discard partial Facts on mismatch, retry at most three times, then return
+      typed unavailable. A post-final-stamp mutation may stale the capture; the
+      protocol does not claim an atomic later disclosure or an external-writer
+      guarantee. No lock spans RPC.
+    verify: [V-C2-CAPTURE-01, V-C2-CAPTURE-02]
+  - id: REQ-C2-DIGEST-001
+    text: >-
+      Ordinary snapshots carry capture_kind process_baseline or event_capture
+      and capture_digest sha256:v1:<64 lowercase hex>. The preimage is Go
+      encoding/json Marshal bytes of a dedicated fixed struct, in order:
+      world_id, case_id, cursor, cursor_ordinal, timestamp, capture_kind,
+      perspective, summary, visible_objects, available_actions, attention_focus.
+      Exclude only capture_digest. Nested field orders are ActorPerspective
+      (actor_id, role, display_name), WorldSummary (headline, phase,
+      status_phrase, progress_percent), CognitiveObject (id, kind, name,
+      status, badge, explanation, salience, parent_id, depends_on,
+      spatial_layout, actions), SpatialLayout (x,y,z,radius), ActionDescriptor
+      (id,label,intent,variant,consequential,requires_justification), and
+      AttentionFocus (primary_object_id,salience_rank,narration). No maps or
+      extension fields are permitted in v1. Preserve encoding/json escaping,
+      null/empty, and omitempty behavior. Digest failure prevents readiness.
+      Clients compare and echo the digest exactly; they do not recanonicalize
+      it. Digest identifies a public capture; it is never cursor, authority,
+      event, or historical reconstruction.
+    verify: [V-C2-DIGEST-01, V-C2-HISTORY-01, V-C2-SSE-01]
+  - id: REQ-C2-PRECONDITION-001
+    text: >-
+      Every non-create intent carries exact case_id, opaque client_cursor, and
+      client_capture_digest as untrusted stale-precondition input. Validate
+      against the current authorized retained capture and refuse missing or
+      mismatched values before effects. The digest does not authorize or make
+      check-to-mutation atomic. Preserve the narrow create-only PROPOSE_CASE
+      empty-cell exception and all existing authority checks.
+    verify: [V-C2-AUTH-01, V-C2-HISTORY-01]
+  - id: REQ-C2-HISTORY-001
+    text: >-
+      GET /api/world?case=<exact case ID>&cursor=<opaque cursor> requires the
+      exact cursor and capture_digest pair. Missing,
+      wrong, evicted, or mismatched pairs never return another capture at the
+      same cursor. Before body bytes, return typed resync_required 404 with only
+      an actual current retained boundary (cursor, cursor_ordinal, and
+      capture_digest) for that case; if none is available, return 503
+      unavailable. Current-world GET without a historical cursor returns only
+      validated current capture.
+    verify: [V-C2-HISTORY-01, V-C2-HISTORY-02]
+  - id: REQ-C2-STORE-001
+    text: >-
+      Store ingestion validates real cursor/ordinal pair, exact case identity,
+      serialized size, and capture digest. It maintains the global scan
+      acknowledgement separately from case watermarks. Exact repeated pairs
+      are duplicate deliveries. Failed or incomplete pages never advance
+      global or case acknowledgement.
+    verify: [V-C2-GLOBAL-01, V-C2-GLOBAL-03, V-C2-STORE-01]
+  - id: REQ-C2-SSE-001
+    text: >-
+      GET /api/events?case_id=<exact case ID>&last=<opaque cursor>&last_capture_digest=<digest>
+      binds the exact case, last cursor, and last_capture_digest. Preserve the
+      exact cursor in the SSE id field and bind digest separately.
+      Under Store mutex it checks global and case readiness, validates the
+      retained pair, copies bounded replay, charges bytes, and registers a
+      separate live queue. Replay precedes live frames and is never inserted
+      into the queue. Release the mutex before callback, cancellation, join,
+      headers, or network I/O. Mismatch/eviction returns pre-header
+      resync_required 409 with a real boundary; unavailable readiness/boundary
+      returns 503. No 200 or hello precedes successful admission.
+    verify: [V-C2-SSE-01, V-C2-SSE-02]
+  - id: REQ-C2-SSE-002
+    text: >-
+      The adapter stores and sends both reconnect cursor and digest; browser
+      Last-Event-ID alone is insufficient. On resync, clear only that case,
+      fetch its actual current snapshot, and reconnect with its exact pair.
+      Global integrity failure prevents new admission and drains dependent
+      streams; proven case-local failure drains only that case. At most one
+      already permitted in-flight write may complete after invalidation;
+      later permits are barred. Enforce each configured header/frame deadline
+      or hold implementation. No network I/O or cancellation occurs under
+      Store mutex.
+    verify: [V-C2-SSE-02, V-C2-FAIL-01, V-C2-FAIL-02]
+  - id: REQ-C2-ERROR-001
+    text: >-
+      Keep typed inventory_unavailable, frontier_rebuilding, projection_gap,
+      case_not_ready, and resync_required errors. projection_gap distinguishes
+      unknown-impact global failure from proven case-local failure. Inventory,
+      frontier, cap, and global coverage errors are 503; explicit unknown case
+      is 404; existing case without real indexed cursor is 503; historical GET
+      resync is 404 and SSE resync is 409, both pre-body/pre-header as
+      applicable. Errors never become empty success.
+    verify: [V-C2-FAIL-01, V-C2-FAIL-02, V-C2-BOOT-01, V-C2-HISTORY-02]
+  - id: REQ-C2-CLIENT-001
+    text: >-
+      The client validates one response arm. Bootstrap stays outside history,
+      cursor cache, trajectory, and SSE. Refresh is authenticated and
+      serialized, at least one second apart, abortable on disposal/session
+      change/transition, and stale results are ignored. Reuse the canonical
+      template mapper and preserve its ordering, optional fields, type to
+      param_type mapping, required default false, and default conversion.
+      After accepted create, retain only returned actual ID and wait boundedly
+      for that exact case's validated ordinary snapshot before history/UI/SSE.
+      Timeout is accepted-but-not-ready; never issue a second create or
+      redirect explicit selection. Resync fetches actual current capture.
+    verify: [V-C2-BOOT-02, V-C2-BOOT-03, V-C2-HISTORY-02, V-C2-SSE-02]
+  - id: REQ-C2-APPROVAL-001
+    text: >-
+      The operator-approved scope includes the six recommendation-level areas
+      recorded in the original approval source and the four bounded-reader
+      policy choices recorded in the additional approval source: process-memory
+      Ed25519 key lifecycle; token, payload, raw-row, and raw-page byte limits;
+      verified-empty v2 representation; and acknowledged-prefix resolved cursor
+      filters. These approvals do not mean the operator read or approved the
+      exact V7 or reader-proposal hash. A material expansion beyond the two
+      recorded approvals requires a specific decision. Neither approval
+      establishes implementation readiness.
+    verify: [V-C2-SCOPE-01]
+  - id: REQ-C2-READY-001
+    text: >-
+      Readiness and implementation settlement require accepted authored
+      spec/schema/ADR review, complete writer inventory and proof that every
+      supported in-tree writer participates, focused TDD including all
+      positive/negative cases below, and required canonical/runtime verification.
+      Runtime proof must follow actual migration and demonstrate participation;
+      it is not a prerequisite for authoring this specification. Until all
+      evidence is accepted, C-2 and dependent live readiness remain held.
+    verify: [V-C2-WRITERS-01, V-C2-GATES-01]
+
+verification_contract:
+  traceability_rule: >-
+    Every requirement ID above maps to one or more named verification cases.
+    Implementation evidence records actual commands, outputs, exits, and
+    independent review. A process exit alone is not success. No case below is
+    claimed executed by this specification authoring task.
+  matrix:
+    - id: V-C2-AUTH-01
+      requirements: [REQ-C2-ARCH-001, REQ-C2-JOURNAL-001, REQ-C2-PRECONDITION-001]
+      proof: >-
+        Denied, stale, missing-digest, or unavailable authority produces zero
+        mutation effects; authenticated actor and all existing D-2/CSRF/SoD
+        checks remain effective. No projection token grants authority.
+    - id: V-C2-SCOPE-01
+      requirements: [REQ-C2-ARCH-001, REQ-C2-APPROVAL-001]
+      proof: >-
+        Independent architecture review compares every proposed schema,
+        persisted field, dependency, authority, route, and error change to the
+        six recommendation-level areas and four bounded-reader policies in
+        their respective approval records. Any other expansion is held for a
+        specific decision; exact candidate-hash approval is not fabricated.
+    - id: V-C2-ID-01
+      requirements: [REQ-C2-ID-001]
+      proof: >-
+        Generated and legacy case IDs and world_id round-trip byte-for-byte;
+        unsupported children and malformed names fail strict inventory.
+    - id: V-C2-ID-02
+      requirements: [REQ-C2-ID-001, REQ-C2-U64-001]
+      proof: >-
+        Cursor remains exact entry_ulid and SSE id; no cursor parsing,
+        normalization, lexical ordering, or cursor-derived ordinal occurs.
+    - id: V-C2-U64-01
+      requirements: [REQ-C2-ID-001, REQ-C2-U64-001]
+      proof: >-
+        Round-trip 0, 9007199254740991, 9007199254740992, and 18446744073709551615
+        through Rust, Go, JSON, and TypeScript unchanged and compare via checked
+        u64/BigInt only.
+    - id: V-C2-U64-02
+      requirements: [REQ-C2-U64-001]
+      proof: >-
+        Reject overflow 18446744073709551616, signs, plus sign, leading zero,
+        whitespace, decimal/exponent syntax, non-digits, nonstring, and more
+        than 20 digits; no Number rounding or lexical comparison.
+    - id: V-C2-BOOT-01
+      requirements: [REQ-C2-BOOT-001, REQ-C2-BOOT-002, REQ-C2-BOOT-003, REQ-C2-ERROR-001]
+      proof: >-
+        Complete clean empty inventory yields only reviewed bootstrap arm.
+        Partial, malformed, unreadable, capped, dirty, or globally unproven
+        inventory/frontier never returns empty success.
+    - id: V-C2-BOOT-02
+      requirements: [REQ-C2-BOOT-001, REQ-C2-CLIENT-001]
+      proof: >-
+        Bootstrap is not history/SSE; refresh intervals, aborts, stale result
+        suppression, template mapping, and exact actual-ID readiness are checked.
+    - id: V-C2-BOOT-03
+      requirements: [REQ-C2-BOOT-002, REQ-C2-BOOT-003, REQ-C2-CLIENT-001]
+      proof: >-
+        Create preflight and PROPOSE_CASE use only the approved empty-cell
+        exception; accepted create is not repeated and explicit case selection
+        never redirects.
+    - id: V-C2-RANGE-01
+      requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-004, REQ-C2-RANGE-005]
+      proof: >-
+        V2 schema and adapter tests verify exact request/page field types,
+        canonical ordinal strings, continuation binding, typed unknown-version
+        errors, and bounded token and payload validation before decode/seek use.
+        Digest vectors pin distinct stream/from/to domain tags and the exact
+        presence, checked-length, and UTF-8-byte encoding; changed identity bytes
+        fail comparison before seek and token fields contain digests, not raw
+        stream/filter strings.
+        Key acceptance vectors verify that entropy failure prevents startup from
+        accepting requests and that the local seed is zeroized immediately after
+        signing-key construction; a fresh process key rejects tokens after
+        restart.
+    - id: V-C2-RANGE-02
+      requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-003, REQ-C2-RANGE-005]
+      proof: >-
+        Interleaved cases and non-event rows retain global ordinal order;
+        empty filtered page advances only scanned-through global row. Exact
+        from/to filters remain bound over several pages, resolved ordinals come
+        only from the acknowledged prefix, zero is distinct from unresolved,
+        and lookahead cannot advance a filter or frontier. Continuation validates
+        preceding row, cursor, ordinal, checksum, and pinned head. Complete-empty
+        is accepted only for an actually registered stream whose registered path
+        is successfully checked as absent or zero-byte under the cooperative
+        lock; unregistered, unreadable, or corrupt history is unavailable. Empty
+        history returns only the approved null-head form; requested bounds are
+        unknown.
+    - id: V-C2-RANGE-03
+      requirements: [REQ-C2-RANGE-001, REQ-C2-RANGE-004, REQ-C2-RANGE-005]
+      proof: >-
+        Exact-cap and cap-plus-one boundaries are tested for token, payload,
+        raw-row, and aggregate raw-page byte limits. Aggregate page vectors
+        combine auxiliary bytes read for pinned-head/tail checks and continuation
+        predecessor revalidation with forward-scan bytes; every repeated read
+        is charged again, while metadata checks and seeks are not charged.
+        Oversized token, payload, or single row is typed unavailable. At the
+        aggregate exact cap, progress is acknowledged only through complete
+        validated rows; at cap-plus-one, no read exceeds the remaining budget
+        and the request returns only previously acknowledged progress or typed
+        unavailable, never acknowledging a failed page, partial row, or
+        undelivered lookahead. The 500-row and 500-frame boundaries
+        return incomplete progress with a continuation when more data remains;
+        the next row/frame is not acknowledged if undelivered. The full 1 MiB
+        response envelope and 50 ms lock wait are tested at their boundaries;
+        bad signature, stale head, unresolved cursor at pin, corrupt/torn input,
+        and lock timeout fail typed without a partial-complete marker. No
+        per-page elapsed guarantee or RSS/I/O-latency bound is asserted; outer
+        scheduling expiry cannot acknowledge or convert an unfinished scan.
+    - id: V-C2-LEGACY-01
+      requirements: [REQ-C2-RANGE-002]
+      proof: >-
+        Sparse history with more than 500 scanned rows before the pinned head
+        fails typed unavailable with no successful vector or partial frames;
+        caller surfaces unavailable and selects v2 explicitly.
+    - id: V-C2-LEGACY-02
+      requirements: [REQ-C2-RANGE-002]
+      proof: >-
+        Exact scan limit that reaches and validates the real pinned head returns
+        the existing vector shape and requested frame prefix; no extra frame is
+        returned.
+    - id: V-C2-LEGACY-03
+      requirements: [REQ-C2-RANGE-002]
+      proof: >-
+        Input/response-byte and lock-wait limits before head proof fail closed;
+        outer scheduling expiry never yields partial success. No per-page elapsed
+        bound, unbounded retry, or compatibility fallback is introduced.
+    - id: V-C2-GLOBAL-01
+      requirements: [REQ-C2-RANGE-003, REQ-C2-FRONTIER-001, REQ-C2-STORE-001]
+      proof: >-
+        Validated global frontier and case delivery watermark remain distinct;
+        interleaved other-case and non-event rows may cause case ordinal gaps.
+    - id: V-C2-GLOBAL-02
+      requirements: [REQ-C2-RANGE-003, REQ-C2-FRONTIER-001]
+      proof: >-
+        Empty filtered page advances only global frontier; duplicate or reordered
+        wake hints do not advance global or case acknowledgement.
+    - id: V-C2-GLOBAL-03
+      requirements: [REQ-C2-RANGE-003, REQ-C2-FRONTIER-002, REQ-C2-STORE-001]
+      proof: >-
+        Missing/malformed/reordered global rows, stale continuation, cursor or
+        ordinal mismatch, and bad pinned head produce no acknowledgement and
+        global unavailable/drain.
+    - id: V-C2-GLOBAL-04
+      requirements: [REQ-C2-FRONTIER-001]
+      proof: >-
+        Exact repeated ordinal/cursor pair dedupes; conflicting pair is global
+        integrity failure; no lexical cursor sorting.
+    - id: V-C2-GLOBAL-05
+      requirements: [REQ-C2-FRONTIER-003]
+      proof: >-
+        After complete global proof, a metadata-attributed case-local dirty or
+        unretainable capture drains only that case; a valid peer remains ready.
+        A missing global row cannot be isolated by latest-head index.
+    - id: V-C2-JOURNAL-01
+      requirements: [REQ-C2-JOURNAL-001, REQ-C2-JOURNAL-002]
+      proof: >-
+        Concurrent supported writers serialize through the cell lock; journal
+        lock precedes ledger append lock; auth and guards precede journal effects;
+        no callback, network I/O, capability execution, or unbounded work occurs
+        while locked.
+    - id: V-C2-JOURNAL-02
+      requirements: [REQ-C2-JOURNAL-003, REQ-C2-RECOVERY-001]
+      proof: >-
+        Crash injection at every pending/write/event/index/complete boundary
+        leaves durable dirty state; recovery dedupes actual operation event and
+        never reports historical success.
+    - id: V-C2-JOURNAL-03
+      requirements: [REQ-C2-EXTERNAL-001]
+      proof: >-
+        Operating guidance and readiness show unsupported uncooperative writers
+        keep live projection held; no fencing claim is made.
+    - id: V-C2-RECOVERY-01
+      requirements: [REQ-C2-INDEX-001, REQ-C2-RECOVERY-001, REQ-C2-FRONTIER-002]
+      proof: >-
+        Bounded resumable recovery reaches a real pinned head; incomplete scan
+        cannot prove absence; corrupt/unreadable/timeout/over-budget state stays
+        unavailable; ceilings do not reset automatically.
+    - id: V-C2-RECOVERY-02
+      requirements: [REQ-C2-INDEX-001, REQ-C2-JOURNAL-002, REQ-C2-JOURNAL-003, REQ-C2-WRITERS-001, REQ-C2-RECOVERY-001]
+      proof: >-
+        Every enumerated writer participates; delegated success, rejection,
+        probe, and cancellation settlements are covered. Index repairs only
+        from full validated pages and actual source state.
+    - id: V-C2-RECOVERY-03
+      requirements: [REQ-C2-RECOVERY-001, REQ-C2-BOOT-002]
+      proof: >-
+        Any pending operation, including one without a case directory, blocks
+        empty bootstrap; only validated complete absence permits actual-state
+        reconciliation event and clean completion.
+    - id: V-C2-CAPTURE-01
+      requirements: [REQ-C2-CAPTURE-001]
+      proof: >-
+        Mutation between each Facts read changes a stamp and discards partial
+        data; three retries maximum then typed unavailable. No RPC occurs under
+        the journal lock.
+    - id: V-C2-CAPTURE-02
+      requirements: [REQ-C2-CAPTURE-001]
+      proof: >-
+        Equal epochs and exact head pairs accept capture; documented post-final
+        stamp mutation and unsupported external writer limits are preserved.
+    - id: V-C2-DIGEST-01
+      requirements: [REQ-C2-DIGEST-001]
+      proof: >-
+        Golden bytes and SHA-256 pin exact struct declaration/tag order,
+        null/empty/omitempty, HTML/Unicode escaping, decimals, populated arrays,
+        and capture_digest exclusion.
+    - id: V-C2-HISTORY-01
+      requirements: [REQ-C2-DIGEST-001, REQ-C2-PRECONDITION-001, REQ-C2-HISTORY-001]
+      proof: >-
+        Same cursor with different capture digest is rejected before intent
+        effects or history disclosure; exact authorized current pair succeeds.
+    - id: V-C2-HISTORY-02
+      requirements: [REQ-C2-HISTORY-001, REQ-C2-CLIENT-001, REQ-C2-ERROR-001]
+      proof: >-
+        Historical GET missing/wrong/evicted pair returns pre-body typed 404
+        resync with only a real boundary; absent boundary is 503. Client resets
+        only that case and loads actual current snapshot.
+    - id: V-C2-STORE-01
+      requirements: [REQ-C2-STORE-001, REQ-C2-SSE-001]
+      proof: >-
+        Snapshot/event and replay/queue/aggregate byte boundaries, head and
+        stream count caps are exact; no truncation claims continuity.
+    - id: V-C2-SSE-01
+      requirements: [REQ-C2-DIGEST-001, REQ-C2-SSE-001]
+      proof: >-
+        Exact case/cursor/digest reconnect replays immutable history before live
+        queue; missing/mismatch/eviction is pre-header 409 resync or 503 when no
+        real boundary exists; no early 200/hello.
+    - id: V-C2-SSE-02
+      requirements: [REQ-C2-SSE-001, REQ-C2-SSE-002, REQ-C2-CLIENT-001]
+      proof: >-
+        Resync clears only the selected case, reloads exact current pair, then
+        reconnects. Slow reader, overflow, cancellation, write deadlines,
+        permitted in-flight residual, and no-I/O-under-mutex are proven.
+    - id: V-C2-FAIL-01
+      requirements: [REQ-C2-BOOT-002, REQ-C2-FRONTIER-002, REQ-C2-EXTERNAL-001, REQ-C2-ERROR-001]
+      proof: >-
+        Unknown-impact global integrity or external-writer uncertainty blocks
+        current projection/bootstrap and drains dependent streams cell-wide.
+    - id: V-C2-FAIL-02
+      requirements: [REQ-C2-FRONTIER-003, REQ-C2-SSE-002, REQ-C2-ERROR-001]
+      proof: >-
+        Only validated case-attributed failure is case-local; unaffected
+        independently validated case remains available.
+    - id: V-C2-FAIL-03
+      requirements: [REQ-C2-JOURNAL-002, REQ-C2-ERROR-001]
+      proof: >-
+        Epoch overflow, full pending journal, cap exhaustion, malformed capture,
+        and unavailable reads fail typed before unsafe success; no counter wraps.
+    - id: V-C2-WRITERS-01
+      requirements: [REQ-C2-WRITERS-001, REQ-C2-READY-001]
+      proof: >-
+        Independent source audit enumerates every in-tree writer and demonstrates
+        journal participation for every path before readiness. The listed paths
+        are a starting inventory, not an exhaustive claim.
+    - id: V-C2-GATES-01
+      requirements: [REQ-C2-READY-001]
+      proof: >-
+        Independent spec/ADR/source review, focused TDD, writer audit, canonical
+        verification, and required runtime gates pass with actual captured
+        evidence before any C-2 readiness or settlement claim.
+
+release:
+  implementation_authorization: separate
+  prerequisites:
+    - independent review accepts this specification and ADR
+    - authored schemas and generated contracts are reviewed and updated together
+    - complete independent writer inventory and actual writer participation proof
+    - focused tests prove every verification matrix case, including negative paths
+    - required canonical and runtime gates pass with archived actual outputs
+  hold_conditions:
+    - any unknown global coverage, malformed continuation, or unavailable inventory
+    - incomplete writer participation or possible active unsupported writer
+    - cap, deadline, or aggregate resource guarantee cannot be enforced
+    - any test, authority check, or independent review fails
+    - any material design choice outside the six approved recommendation areas and four approved bounded-reader policies lacks a specific decision
+  evidence_rule: >-
+    This specification authors requirements and verification targets only. It
+    does not claim that code, schemas, tests, writer migration, runtime gates,
+    or T09 settlement exist or pass.

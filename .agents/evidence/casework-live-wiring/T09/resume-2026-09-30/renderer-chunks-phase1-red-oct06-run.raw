@@ -1,0 +1,200 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/build/rendererChunkContract.test.ts:
+77 | describe('emitted renderer chunk contract', () => {
+78 | 	test('accepts nine distinct dynamic renderer entries linked from the registry', () => {
+79 | 		const bundle = makeValidBundle()
+80 | 		const before = structuredClone(bundle)
+81 | 
+82 | 		expect(() => assertRendererChunks(bundle)).not.toThrow()
+                                                      ^
+error: expect(received).not.toThrow()
+
+Error name: "Error"
+Error message: "renderer chunk output assertion is not implemented"
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:82:50)
+(fail) emitted renderer chunk contract > accepts nine distinct dynamic renderer entries linked from the registry [15.36ms]
+103 | 			modules[windowsModuleID] = {}
+104 | 			bundle[fileName] = { ...entry, modules }
+105 | 		}
+106 | 		const before = structuredClone(bundle)
+107 | 
+108 | 		expect(() => assertRendererChunks(bundle)).not.toThrow()
+                                                       ^
+error: expect(received).not.toThrow()
+
+Error name: "Error"
+Error message: "renderer chunk output assertion is not implemented"
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:108:50)
+(fail) emitted renderer chunk contract > matches full renderer suffixes in Windows paths with query and hash suffixes [4.68ms]
+111 | 
+112 | 	test('allows unrelated shared chunks and additional dynamic dependencies', () => {
+113 | 		const bundle = makeValidBundle()
+114 | 		const before = structuredClone(bundle)
+115 | 
+116 | 		expect(() => assertRendererChunks(bundle)).not.toThrow()
+                                                       ^
+error: expect(received).not.toThrow()
+
+Error name: "Error"
+Error message: "renderer chunk output assertion is not implemented"
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:116:50)
+(fail) emitted renderer chunk contract > allows unrelated shared chunks and additional dynamic dependencies [0.22ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "src/artifacts/renderers/DiffRenderer.tsx"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:130:3)
+(fail) emitted renderer chunk contract > rejects a missing renderer module even when a same-named asset exists [1.13ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "src/artifacts/renderers/DiffRenderer.tsx"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:150:3)
+(fail) emitted renderer chunk contract > rejects one renderer module placed in two output chunks [4.15ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "distinct"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:184:3)
+(fail) emitted renderer chunk contract > rejects two renderer modules coalesced into one output filename [0.40ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "src/artifacts/renderers/GraphRenderer.tsx"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:197:3)
+(fail) emitted renderer chunk contract > rejects a renderer chunk that is not a dynamic entry [0.09ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "src/artifacts/renderers/TraceRenderer.tsx"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:215:3)
+(fail) emitted renderer chunk contract > rejects a renderer chunk not linked by a registry dynamic import [0.20ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "registry"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:224:3)
+(fail) emitted renderer chunk contract > rejects missing registry module placement [0.10ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "registry"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:237:3)
+(fail) emitted renderer chunk contract > rejects duplicate registry module placement [0.11ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "src/artifacts/renderers/DiffRenderer.tsx"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:256:3)
+(fail) emitted renderer chunk contract > rejects an unrelated module with a renderer basename [0.88ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "src/artifacts/renderers/DiffRenderer.tsx"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:274:3)
+(fail) emitted renderer chunk contract > rejects a renderer suffix whose src prefix is not a path segment [0.72ms]
+69 | 	}
+70 | 	return bundle
+71 | }
+72 | 
+73 | function expectContractError(bundle: RendererChunkBundle, message: string): void {
+74 | 	expect(() => assertRendererChunks(bundle)).toThrow(message)
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "src/artifacts/registry.tsx"
+Received message: "renderer chunk output assertion is not implemented"
+
+      at expectContractError (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:74:45)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts:288:3)
+(fail) emitted renderer chunk contract > rejects a registry suffix whose src prefix is not a path segment [0.21ms]
+
+ 0 pass
+ 13 fail
+ 32 expect() calls
+Ran 13 tests across 1 file. [108.00ms]

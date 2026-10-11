@@ -1,0 +1,5 @@
+{"timestamp":"2026-10-01T21:01:35.533757Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t09u4capture/TestLiveRunScope3078527605/001","socket":"/tmp/t09u4capture/TestLiveRunScope3078527605/001/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-01T21:01:35.535683Z","level":"INFO","message":"server listening on /tmp/t09u4capture/TestLiveRunScope3078527605/001/server.sock"}
+tail: '/tmp/t09u4capture/TestLiveRunScope3078527605/001/server.log' has become inaccessible: No such file or directory
+tail: directory containing watched file was removed
+tail: inotify cannot be used, reverting to polling

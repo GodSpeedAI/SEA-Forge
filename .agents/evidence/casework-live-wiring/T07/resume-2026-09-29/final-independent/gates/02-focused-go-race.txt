@@ -1,0 +1,10 @@
+Command: GOMAXPROCS=2 GOFLAGS=-p=1 go test -race -count=1 ./internal/server/... ./internal/auth/...
+Working directory: apps/godspeed-casework-go
+Exit: 1.
+Observed failures:
+- TestSSEResyncRequiredWhenLastPredatesRetention: server_test.go:687, stream closed while waiting for replay 01BBB.
+- TestSessionHistoricalAndSSEViewsUseRetainedFacts: server_test.go:286, malformed URL `http://127.0.0.1:<port>http://127.0.0.1:<port>/api/world?...`.
+- TestSessionReadRefusalsPrecedeCachedLookupAndFailClosed: same malformed URL at server_test.go:286.
+- TestLegacyRevisionCannotCrossSessionPerspective: same malformed URL at server_test.go:286.
+Auth package passed under race (33.312 s). Other focused output was limited to the server failures above.
+RAM/process precheck before run: 3.8 GiB available; no Go/Cargo compiler processes.

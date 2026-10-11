@@ -1,0 +1,19 @@
+--- FAIL: TestRunObservationRetainedCandidateCopiesPointersAndCapturesWindow (0.00s)
+    run_observation_retained_version_test.go:95: candidate outcome/state = 1/(*server.runObservationRetainedState)(nil), want accepted/non-nil
+--- FAIL: TestRunObservationRetainedCandidateClonesPriorAndSourcePointers (0.00s)
+    run_observation_retained_version_test.go:117: candidate outcome/state = 1/(*server.runObservationRetainedState)(nil), want accepted/non-nil
+--- FAIL: TestRunObservationRetainedCandidateKeepsFirstOrdinalsAcrossReorderAndShorterWindow (0.00s)
+    run_observation_retained_version_test.go:148: candidate outcome/state = 1/(*server.runObservationRetainedState)(nil), want accepted/non-nil
+--- FAIL: TestRunObservationRetainedCandidateRejectsDuplicateIDsInOneWindow (0.00s)
+    run_observation_retained_version_test.go:231: duplicate IDs in one trace window = 1/(*server.runObservationRetainedState)(nil), want invalid/nil without selecting a winner
+--- FAIL: TestRunObservationRetainedCandidateRejectsBudgetAtomicallyAndRecovers (0.00s)
+    run_observation_retained_version_test.go:254: over-budget outcome/state = 1/(*server.runObservationRetainedState)(nil)
+--- FAIL: TestRunObservationRetainedCandidateTerminalRefusalKeepsOnlySafePriorState (0.00s)
+    run_observation_retained_version_test.go:329: terminal over-budget state = 1/(*server.runObservationRetainedState)(nil)
+--- FAIL: TestRunObservationRetainedImageFixedWidthControlsAndExactLimit (0.03s)
+    run_observation_retained_version_test.go:435: exact image boundary outcome = 1
+--- FAIL: TestRunObservationRetainedCandidateBoundsWindowAndOrdinalOverflow (0.00s)
+    run_observation_retained_version_test.go:468: candidate outcome/state = 1/(*server.runObservationRetainedState)(nil), want accepted/non-nil
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.155s
+FAIL

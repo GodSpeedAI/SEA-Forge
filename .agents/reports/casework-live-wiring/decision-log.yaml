@@ -1,0 +1,355 @@
+schema: casework-live-wiring.decision_log
+schema_version: '1.0'
+plan_id: casework-live-wiring-production
+created: '2026-09-23'
+note: >-
+  Durable decision record for the casework-live-wiring-production plan. Operator decisions are
+  recorded verbatim from .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml
+  (approved 2026-09-23). Corrections to report Section 0 facts are recorded here per the plan's
+  correction_protocol before any affected work continues.
+
+operator_decisions:
+  D-C2-recommendations-2026-10-08:
+    status: APPROVED_RECOMMENDATIONS_INDEPENDENT_DESIGN_REVIEW_PENDING
+    operator_reply: "i approve all, following your recommendations"
+    evidence: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/c2-six-recommendations-operator-approval-oct08.md
+    decision: >-
+      Approve shared all-writer journal and crash recovery; bounded versioned
+      event reader preserving old response format; global integrity versus
+      proven case-local failure isolation; cursor plus capture digest history,
+      SSE and mutation preconditions; actual ID grammar and strict bootstrap/
+      create contracts; initial retention/stream/deadline limits and resync
+      errors with load verification. No new dependency or authority weakening.
+      Concrete revision6 independent review and authored specs/ADR, complete
+      writer audit and runtime gates remain required. This is not a claim the
+      operator approved the exact revision6 hash or that implementation passed.
+  D-1:
+    status: APPROVED 2026-09-23
+    question: "Which UI<->gateway contract is canonical?"
+    decision: >-
+      The spec-04 CognitiveWorldSnapshot (interface-contracts/typescript/types.ts) is the single
+      UI<->gateway contract. The Go projection moves to spec-04; contracts/*.ts is retired or kept
+      as a documented internal subset with a mapping table. Exactly one contract ships.
+  D-2:
+    status: APPROVED 2026-09-23
+    question: "How do multiple browser users act as distinct kernel actors when the server derives identity from the socket peer uid?"
+    decision: >-
+      Gateway principal: the server binds the gateway uid to role 'gateway' in server.yaml. Only
+      that principal may send an on_behalf_of actor, and only for actors listed in a
+      gateway-delegable allowlist. Every such request is ledgered with both principals. SoD
+      compares end-user actors, never the gateway. Requires an ADR amending identity.rs:14-27 with
+      a threat model, revocation story and audit fields.
+  D-3:
+    status: APPROVED 2026-09-23
+    question: "Who advances a case after a sentry enables an item: a server-side supervisor, or an explicit operator 'execute' verb?"
+    decision: >-
+      Both, behind one engine call. Add an explicit case.advance/item.execute verb for
+      operator-driven work, plus an opt-in server supervisor for auto-advancing SandboxedTask
+      items. Both call CaseRunner (next_ready_actions / run_sandboxed_episode /
+      apply_episode_completion) in-process. Neither shells out to the CLI.
+  dependencies:
+    status: APPROVED 2026-09-23
+    decision: >-
+      APPROVED: one maintained Go OIDC library (e.g. github.com/coreos/go-oidc/v3 +
+      golang.org/x/oauth2) and golang.org/x/crypto/argon2. REJECTED: Playwright; E2E uses
+      agent-browser. Anything else is ask-first.
+
+corrections:
+  C-1:
+    recorded: '2026-09-23'
+    discovered_in_task: T00
+    status: RE-PLANNED-OPTION-A-EXECUTOR-CONTINUED
+    report_claim: >-
+      Report 2026-09-23-case-engine-frontend-e2e-journey-mapping.md Section 0.2 ("Docs / workbench
+      / justfile"): "The justfile recipes casework-server-up, casework-go-up, casework-ui-up and
+      casework-e2e-live do not exist. Only casework-go-check and workbench-* exist."
+    finding: >-
+      Wrong on two counts in the tree this plan baselines from (HEAD = 44ffadd):
+      (1) casework-ui-up/down/status have existed since commit 118761a (2026-09-19, "T03 cognitive
+      UI core, fixture providers, runnable host, GATE_UI") — four days BEFORE the report was
+      authored, so the claim was already false against the committed tree at verification time.
+      (2) casework-go-up/down/status and casework-demo-up were added in commit 44ffadd itself
+      (2026-09-23 21:26, +103 justfile lines) — the same commit that shipped the report's Section 0
+      and this plan. The plan (T00 hot_context: "justfile (only casework-go-check and workbench-*
+      exist today)") therefore also asserts the wrong fact.
+      Materially: casework-go-up boots the FIXTURE stack (configs/fixture-serve.json,
+      "fixture-labeled provider") and casework-demo-up composes it. T00 as written would "add"
+      recipes whose names are taken, and its gate
+      (just casework-cell-init && just casework-server-up && just casework-go-up && just casework-stack-down)
+      would silently boot the fixture gateway — proving nothing about the live stack.
+      casework-server-up, casework-cell-init, casework-stack-down and casework-e2e-live genuinely
+      do not exist; casework-ui-check also exists (not just casework-go-check).
+    evidence: >-
+      git log -S 'casework-ui-up' -- justfile        -> 118761a 2026-09-19, 44ffadd 2026-09-23
+      git log -S 'casework-go-up' -- justfile        -> 44ffadd 2026-09-23
+      git show 44ffadd -- justfile                   -> +103 lines (casework-go-up/down/status,
+                                                       casework-demo-up, fixture-serve.json config)
+      Raw output: .agents/evidence/casework-live-wiring/T00/c1-git-evidence.txt
+    protocol_action: >-
+      Per correction_protocol: recorded here, recorded in report Section 0 (0.2 justfile bullet
+      amended), recorded in current_status.yml handoff.warnings; plan execution STOPPED before any
+      code change for operator re-plan of the affected T00 deliverable (recipe naming/semantics).
+    replan_options:
+      A_distinct_live_recipe_names:
+        summary: >-
+          Keep the fixture recipes untouched (guardrail: fixtures stay for dev/demo). Name the live
+          recipes distinctly: casework-cell-init, casework-server-up/down, casework-live-go-up/down
+          (with a checked-in live config), casework-stack-down, casework-e2e-live (T10).
+          casework-ui-up stays shared (vite dev server proxying /api to 4179 works for both stacks;
+          T10's live ladder uses the gateway serving the production UI build instead).
+        tradeoff: >-
+          Plan text must be amended (T00 changes/gate/hot_context and references in T10/T11).
+          Fixture demo path and live path never alias; gates cannot pass vacuously.
+      B_parameterize_existing:
+        summary: >-
+          Add a config parameter to casework-go-up (default fixture-serve.json) and have the live
+          stack call it with the live config; casework-server-up/cell-init/stack-down still new.
+        tradeoff: >-
+          T00's gate line "just casework-go-up" then boots the fixture unless also amended; the
+          recipe becomes dual-purpose and easier to misuse. Not recommended.
+      C_replace_fixture_recipes:
+        summary: Repurpose casework-go-up as live-only and move the fixture demo to casework-demo-*.
+        tradeoff: >-
+          Breaks the prior plan's GATE_UI operator surface and its committed justfile comments;
+          largest blast radius. Not recommended.
+    recommendation: A_distinct_live_recipe_names
+    resolution: >-
+      2026-09-23: the protocol stop was surfaced to the operator (AskUserQuestion with options
+      A/B/C) and went unanswered. Per the operator's standing instruction ("keep working through
+      tasks without waiting for me... Continue using your best judgment"), the executor adopted
+      option A and amended plan T00 (version 0.2.0 -> 0.2.1): live recipes are casework-cell-init,
+      casework-server-up/down, casework-live-go-up/down, casework-stack-down (+ casework-e2e-live
+      in T10); the fixture recipes casework-go-up/down/status, casework-ui-up/down/status and
+      casework-demo-up stay untouched; casework-ui-up is shared (vite /api proxy serves both
+      stacks). This is an executor decision, NOT operator approval: it is recorded here and in
+      current_status.yml handoff.warnings, and renaming recipes later is cheap.
+
+  C-2:
+    recorded: '2026-10-05'
+    discovered_in_task: T09
+    status: RECOMMENDATIONS-OPERATOR-APPROVED-CONCRETE-INDEPENDENT-REVIEW-PENDING
+    report_claim: >-
+      Section0.2 event streaming says the Go SSE bridge can relay the subscription
+      directly; this does not establish durable ordering or restart history.
+    finding: >-
+      Kernel publishes after separate blocking append tasks complete, which does
+      not prove broadcast order equals append order. Existing get_range resolves
+      exact ULID cursor identities to authoritative append ordinals. Canonical
+      numeric-dot grammar and downstream lexical/numeric comparisons conflict
+      with the actual producer. Cold replay of current Facts cannot reconstruct
+      past captures; empty bootstrap is also not a canonical case revision.
+    evidence:
+      - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-contract-independent-recon-oct05.md
+      - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-contract-v2-independent-review-oct05.md
+      - .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/empty-world-bootstrap-contract-recon-oct05.md
+    protocol_action: >-
+      Report Section0 amended, handoff warned and defects surfaced to operator.
+      Affected public contracts/runtime/version changes are stopped. Root V3 is
+      a held design proposal; independent review must resolve concrete semantics
+      before an exact operator approval request. Approved trace/auth prerequisites
+      proceed separately without relying on the rejected direct-relay assumption.
+    resolution: >-
+      2026-10-08: operator explicitly approved all six recommended correction
+      changes (D-C2-recommendations-2026-10-08). Earlier HOLD prose records the
+      historical sequence. Concrete revision6 independent review, authored
+      specs/schema/ADR updates and complete writer participation audit remain
+      required before affected runtime release; no correctness claim follows
+      from operator approval. Material decisions outside approval stay held.
+
+baseline:
+  B-1:
+    recorded: '2026-09-23'
+    task: T00
+    summary: >-
+      Captured at HEAD 44ffadd before any code change. cargo four-crate gate GREEN (the archived
+      baseline_warnings' expected pre-existing reds — sea-forge-server sfwp trio, sea-forge-cli
+      t13_1 — did NOT reproduce; warning stale). Go vet+race GREEN. bun typecheck + 185 tests
+      GREEN. Local e2e ladder RED deterministically: J1 "Focus substrate" fails at step "focus
+      again: identity and state survive" (two runs); J2+ dependency-blocked; the 11/11 evidence
+      committed in 44ffadd is stale relative to its own UI rework. Recorded as OBSERVED_DEBT;
+      T09 owns restoring the ladder. T00 settles with this as the recorded baseline floor (the
+      gate_binding_rule's "green" cannot mean greener than the untouched baseline; the
+      baseline_warnings mechanism exists for exactly this case).
+    evidence: .agents/evidence/casework-live-wiring/T00/baseline-summary.md
+
+environment_incidents:
+  E-1:
+    recorded: '2026-09-23'
+    finding: >-
+      /home/sprime01/projects/sea-rs/target was a broken self-referential symlink
+      (target -> /home/sprime01/projects/sea-rs/target, created ~2026-09-23 14:05, before this
+      session), making every cargo command fail with "failed to create directory target: Not a
+      directory (os error 20)".
+    action: >-
+      Removed the symlink (it referenced only itself; /target/ is gitignored; repo .cargo/config.toml
+      sets no alternate target-dir) and re-ran the cargo baseline gate from a cold target dir.
+    evidence: .agents/evidence/casework-live-wiring/T00/baseline/env-notes.txt
+
+  S2-1:
+    recorded: '2026-09-24'
+    kind: settlement-integrity finding and resolution
+    summary: >-
+      Session 2 settled T04 citing an independent critic ("t04-critic") that in fact REJECTED
+      (procedural grounds) and whose report is not preserved in the repo; the builder then wrote
+      T04/confirmation.md itself, reconciling the rejection. Per the operator's standing
+      delegation rule (a rejection requires repeating independent verification until an
+      evidence-backed approval), session 3 dispatched a fresh independent critic over units B+C.
+    resolution: >-
+      APPROVE, 2026-09-24: .agents/evidence/casework-live-wiring/T04/confirmation-independent.md
+      (operative verdict; gates EXIT=0 first attempt, teeth re-run, fresh-cell runtime attack
+      passed, zero code defects, all deviations non-blocking). The builder-written
+      confirmation.md is retained as a historical artifact, superseded by the independent file.
+      T04 settlement stands. Lesson recorded in LESSONS-worthy form: a critic REJECT is never
+      self-reconcilable by the builder, and critic reports must be preserved in-repo.
+  D-2-impl-notes:
+    recorded: '2026-09-24'
+    summary: >-
+      T04 critic flags for downstream tasks (non-blocking, recorded so T05/T06 builders see them):
+      (1) the cannot-miss event publication is scoped to the T04 mutation verbs; legacy
+      submit/case.commit dispatch still appends case-events without per-append frames (one coarse
+      case.submitted event). (2) CommandStarted/CommandFinished/ArtifactCaptured frames are
+      written to the run's trace.jsonl, NOT published on the event bus — T06's SSE bridge and
+      T09's ExecutionPill need either a server-side publication extension or a run-trace read
+      path (SEAM-5). (3) dispatched episodes now capture stdout/stderr artifacts (parity change
+      vs CLI). (4) artifact_get bound is 1 MiB (MAX_ARTIFACT_BYTES).
+
+  D-3-followups:
+    recorded: '2026-09-25'
+    kind: kernel fixes during T05 (T04-scope defects)
+    decisions: >-
+      (1) WriteFile episodes materialize via sea_forge_sandbox::materialize, capture the written
+      file as a content-addressed artifact, and settle on the honest write_only basis (F-10);
+      run traces for write-only episodes contain NO CommandStarted/CommandFinished (no command
+      ran). L4 command-frame expectations apply to execute_command items — T09/T10 must assert
+      per-item-kind. (2) case.trace.<kind> event names are snake_case (item_activated) — the
+      helper now matches its doc; the Go adapter + goldens are the only consumers and were
+      updated. Evidence: .agents/evidence/casework-live-wiring/T05/kernel-fix/summary.md.
+
+  D-3-followups-2:
+    recorded: '2026-09-25'
+    kind: kernel recovery-contract reconciliation (T06 fix F7)
+    decision: >-
+      A kill that landed after a case.commit's durable append but before the terminal correlation
+      write used to leave a failed record over a landed effect (the correlated outcome was lost).
+      The pending record is now bound to the minted case id (locator) BEFORE any case ledger
+      write, and the startup settlement reconciles located commits whose case ledger landed to
+      "completed" with the case id; unlanded locators stay interrupted. Locator is additive on
+      RequestRecord (schema regenerated). Live gate posture: go live suites run with -p 1
+      (package serialization) — parallel per-package kernel cells made restart/resume/relay
+      tests load-flaky; -p 1 is green twice consecutively and matches the repo's cargo jobs=1.
+    evidence: .agents/evidence/casework-live-wiring/T06/fixes/summary.md
+
+redesign_reviews:
+  T09-contract:
+    recorded: '2026-09-30'
+    status: operator_approved_independent_proposal_architecture_approved
+    independent_review: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/proposal-independent-approval-round4.md
+    operator_reply: "i approve"
+    approval_context: >-
+      Operator approved after the proposed T09 contract amendment and its response-size cap,
+      bounded reconnect hydration and UI cache behavior were surfaced. Scope is the additive
+      execution-observation and protected disclosure-complete Ask interface, including the
+      proposed client response bound. Independent review and implementation verification remain
+      required. No new dependency, Rust verb, identity model, deployment or publishing authorized.
+    trigger: "T09 journeys need data that the current contract does not carry; return to T01."
+    findings: >-
+      Existing execution_trace objects and parent_id already represent run children; that
+      implementation gap needs no new object kind. ExecutionProgressPayload requires a
+      measured percentage that run.get does not provide. Grounded Thoth disclosures also
+      need a protected HTTP route and a complete UI answer contract. The logical thoth.ask
+      descriptor uses the actual Request::Ask wire verb ask, not a dotted JSON verb.
+    proposal: .agents/reports/casework-live-wiring/t09-contract-extension-proposal.md
+    boundary: >-
+      Operator approval and independent proposal architecture review are satisfied. Implement
+      the scoped T01 amendment only after T07/T08 settlement; implementation and integration
+      require independent verification. T07/T08 independent work continues.
+      Preserve current identity model, existing kernel verbs and dependency set.
+
+t10_accepted_deviations:
+  recorded: '2026-10-10'
+  scope: T10 live ladder (apps/godspeed-cognitive-ui/e2e), recorded after an independent audit. Appended; nothing above was rewritten.
+  status: accepted_deviations_not_defects_unless_marked
+  items:
+    - id: T10-DEV-1
+      title: No PlanCreated trace on case.commit
+      deviation: >-
+        The kernel's case.commit appends case_created then item_enabled; it emits no PlanCreated
+        trace kind. L1 asserts case_created + item_enabled in case-events.jsonl and the plan itself
+        in cases/<id>/plan.json instead.
+    - id: T10-DEV-2
+      title: Write-only items emit no CommandStarted/CommandFinished
+      deviation: >-
+        Template items that write a file settle on the write_only basis (D-3-followups): their run
+        trace holds authority_evaluated, workspace_created, artifact_captured and settlement_recorded
+        and no command_started/command_finished (no command ran). L4 asserts per item kind.
+    - id: T10-DEV-3
+      title: Operator denial is a gateway-level typed refusal, kernel SoD cited separately
+      deviation: >-
+        The operator who executed the escalated draft is never offered Approve/Reject, and an
+        APPROVE_HUMAN_TASK intent posted anyway is refused by the gateway with typed UNAUTHORIZED_ROLE
+        before the kernel is touched (no delegated request is recorded; approvals.jsonl and the case
+        trace are unchanged). The kernel-level rule that a requester cannot resolve their own approval
+        is proven separately: crates/sea-forge-case-runner/tests/case_ops.rs
+        (the_requester_cannot_resolve_the_approval_their_own_action_opened, added by this audit fix;
+        the_proposer_cannot_resolve_its_own_items_approval), crates/sea-forge-server/tests/
+        conformance_identity.rs (a_submitter_cannot_approve_their_own_work_but_another_actor_can) and
+        sfwp_delegated_identity.rs (separation_of_duty_holds_between_end_users_behind_one_gateway).
+    - id: T10-DEV-4
+      title: Kernel provides no resume after approval over SFWP (OPEN KERNEL GAP)
+      deviation: >-
+        Approving the escalated settlement writes a second approvals.jsonl record and
+        approval_resolution/authority_decision ledger entries, but no case event is emitted, the
+        escalated settlement stays escalated and the case stays awaiting_approval; nothing re-runs the
+        item. L7 completes the human gate by hand to continue the lifecycle. This is a real product
+        gap for the kernel owners, tracked as DEBT CW-45, not closed by T10.
+    - id: T10-DEV-5
+      title: Harness stack differs from a production cell
+      deviation: >-
+        The harness runs the gateway with auth.mode=dev and production:false, a hand-built
+        server.yaml instead of casework-cell-init, and applies the e2e policy grant and the self-model
+        rebuild in the harness rather than in cell-init (the shared persistent cell is avoided on
+        purpose: stale-cell confound; its identity bindings also use security_officer, not rso_local).
+        Tracked as DEBT CW-44.
+    - id: T10-DEV-6
+      title: Per-run evidence is screenshots + console captures + HAR(L6); no video, no trace
+      deviation: >-
+        browser.ts has record/trace/har helpers, but the journeys use only the HAR (L6). Tried and
+        rejected on this host: `agent-browser record stop` fails inside ffmpeg and leaves a 0-byte
+        .webm (and record start creates a fresh browser context, which would drop the in-page state
+        the journeys rely on); a run-long `agent-browser trace` per session was wired and the live run
+        passed, but `trace stop` timed out after 30s on all three sessions after a ~15 minute run, so
+        no trace was produced and the wiring was removed rather than shipped as evidence that does
+        not exist. Per-run evidence is therefore screenshots, console/ captures (including the
+        accumulated per-journey error harvest), the L6 HAR, durable-delta.jsonl and results.json.
+        Tracked as DEBT CW-44.
+    - id: T10-DEV-7
+      title: UI does not self-heal after a gateway restart; artifact errors are cached per ref
+      deviation: >-
+        After a gateway restart the page stays Reconnecting until reloaded (the user signs in again by
+        design: sessions are in-memory), and ArtifactService caches an error per artifact ref until the
+        page is reloaded (L-RECOV restores the bytes, then reloads to prove the digest verifies again).
+        L-RECOV asserts the behavior as it is. Tracked as DEBT CW-46.
+    - id: T11-DEV-1
+      title: Load budgets are calibrated on one shared development host
+      deviation: >-
+        The load harness budgets (intent p95 20s, event lag p95 40s, bounded gateway memory) were set from
+        runs on a single shared WSL2 host, not a dedicated production-like machine. The T12 independent run
+        measured intent p95 8.0s, event lag p95 7.75s, 0 errors, memory 30-47 MB across kernel and gateway
+        kill teeth. The budgets are regression guards, not capacity claims. Tracked in load-budgets.md.
+    - id: T11-DEV-2
+      title: CI workflow written but not yet dispatched on GitHub
+      deviation: >-
+        .github/workflows/casework-live.yml has not been run on GitHub (DEBT CW-53). It is unverified
+        until a manual workflow_dispatch is done; that is an outward-facing action left to the operator.
+    - id: T11-DEV-3
+      title: Backup is offline-only; metrics are loopback-only
+      deviation: >-
+        casework-cell-backup/restore require the stack stopped (no online snapshot). Prometheus-text
+        metrics are served on a loopback-only listener by design. Packaging (systemd units, config
+        reference, runbook) was checked by static review and systemd-analyze in the authoring session;
+        T12 did not independently reproduce systemd-analyze.
+    - id: T11-DEV-4
+      title: T11 security review was self-run by a delegated agent, not an external review
+      deviation: >-
+        .agents/reports/casework-live-wiring/security-review.md was produced by a delegated agent with
+        fixes committed in e8d66ad. T12 did not independently re-audit it.

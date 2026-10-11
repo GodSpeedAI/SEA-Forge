@@ -1,0 +1,14 @@
+Checking if dev server is running at http://127.0.0.1:4178
+Dev server is ready. Running tests with base=http://127.0.0.1:4178
+Output directory: /home/sprime01/projects/sea-rs/.agents/evidence/casework-live-wiring/T09/ladder-final
+[PASS] J0: Boot / orientation substrate (6/6 steps, 31080ms)
+[PASS] J1: Focus substrate (6/6 steps, 66324ms)
+[PASS] J2: Artifact inspection substrate (7/7 steps, 103652ms)
+[PASS] J3: Representation-switching substrate (6/6 steps, 101161ms)
+[PASS] J4: Temporal + comparison substrate (8/8 steps, 163265ms)
+[PASS] J5: Narrated semantic-beat journey (6/6 steps, 208827ms)
+[PASS] J6: Causal reasoning journey (6/6 steps, 102625ms)
+[PASS] J7: Case Design journey (8/8 steps, 122168ms)
+[PASS] J8: Consequential-action UI journey (contract adapter) (8/8 steps, 104637ms)
+[PASS] J9: Integrated cognitive-environment journey (contract adapter) (9/9 steps, 326358ms)
+[PASS] RECOVERY: UI-level recovery (bounded failures) (8/8 steps, 302382ms)

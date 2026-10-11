@@ -1,0 +1,164 @@
+# Behavioral IR: CJ06 Resolve Human Judgment and Approval
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ06"
+  slug: "resolve_human_judgment_and_approval"
+  title: "Resolve Human Judgment and Approval"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - commitment
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - approval_pending
+    - human_task_assigned
+    - acp_permission_prompted
+    - request_expired_or_denied
+  actor_roles:
+    - Approver
+    - CaseOwner
+    - Operator
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - approval_request_id
+      - acting_human_identity
+      - request_context_bundle
+      - downstream_effect_descriptor
+    context_scope: "Pending item, case id, policy clauses, resource grants, expiry deadline"
+
+  IS2_preflight:
+    checks:
+      - request_exists_and_unsettled
+      - expiry_deadline_not_passed
+      - acting_actor_satisfies_independence_and_separation_of_duty
+      - required_human_task_inputs_provided
+    readiness_classification:
+      expected: "eligible | ineligible_actor | request_expired | request_already_decided"
+      failure_action: "refuse_ineligible_decision_without_affecting_pending_state"
+
+  IS3_authority_resolution:
+    required_role: "Approver"
+    alternate_role: "CaseOwner"
+    grant_scope: "approval_grant_or_rejection"
+    separation_of_duty: "Approver cannot be the same actor who created or proposed the execution item (anti-self-approval)"
+    approval:
+      status: "implemented"
+      note: "Explicit role checking and separation of duty enforced at kernel boundary"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "approval.decide"
+      invoked_capabilities:
+        - "approval.list"
+        - "approval.get_context"
+        - "approval.decide"
+        - "human_task.list_and_complete"
+        - "acp_permission_handling"
+        - "separation_of_duty_check"
+        - "case.reevaluate_sentries"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-server / sea-forge-kernel approval"
+    bounds:
+      decision_set:
+        - "approve"
+        - "reject"
+        - "refuse"
+      rationale_required: true
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "approval_pending"
+      to: "approval_settled"
+      alternative_states:
+        - "request_approved"
+        - "request_rejected"
+        - "request_expired"
+        - "decision_refused_ineligible"
+        - "human_item_criterion_complete"
+    artifacts:
+      - "immutable_decision_record"
+      - "approver_attribution_token"
+      - "decision_rationale_note"
+      - "human_task_evidence_bundle"
+      - "dependent_sentry_evaluation_event"
+    mutation_rule: "Append-only governance record; subsequent unblocks trigger sentry re-evaluation"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "signed_decision_record"
+        evidence_class: "observed"
+      - item: "separation_of_duty_attestation"
+        evidence_class: "observed"
+      - item: "downstream_unblock_trace"
+        evidence_class: "observed"
+    integrity_verification:
+      actor_separation_verified: true
+      expiry_timestamp_verified: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "An eligible human decision or contribution is committed with its actor, context, evidence, rationale, and downstream effect, or refusal, denial, or expiry is recorded without unauthorized side effects."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "approval_committed_approved"
+        - "approval_committed_rejected"
+        - "decision_refused_ineligible"
+        - "request_marked_expired"
+    settlement_vs_termination: "Submitting decision form is not settlement; decision must be admitted into case event ledger."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "resume_dependent_execution"
+        target_journey: "CJ07"
+        condition: "outcome == approval_committed_approved"
+      - id: "replan_or_cancel_rejected_branch"
+        target_journey: "CJ05"
+        condition: "outcome == approval_committed_rejected"
+      - id: "escalate_to_alternate_approver"
+        action: "notify_alternate_eligible_approver"
+        condition: "outcome == decision_refused_ineligible || outcome == request_marked_expired"
+    blocked_affordances:
+      - id: "execute_unapproved_work"
+        target_journey: "CJ07"
+        reason: "unauthorized"
+        explanation: "Action requires positive approval decision; execution is blocked"
+
+recovery_paths:
+  - condition: "ineligible_actor_attempt"
+    remedy: "Preserve pending request state; report separation of duty violation; reassign to independent approver"
+  - condition: "request_expired"
+    remedy: "Mark request expired in ledger; require case owner to re-issue fresh approval request"
+  - condition: "acp_permission_prompt_stalled"
+    remedy: "Enforce timeout; treat silence as denial/expiry rather than implicit consent"
+
+unresolved_bindings:
+  - component: "combined_inbox_and_human_task_complete_ui"
+    status: "unresolved_in_source"
+    impact: "Unified inbox spanning approvals and human tasks specified in epic but partial in frontend"

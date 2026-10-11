@@ -1,0 +1,55 @@
+{
+  "task": "T23",
+  "builder": "B3",
+  "round": 3,
+  "status": "complete",
+  "route": {
+    "settled": true,
+    "baseline_met": true,
+    "boundary_met": true,
+    "discriminator_met": true,
+    "mechanical_separation": "separated",
+    "goal_summary": {
+      "r_star": 4,
+      "boundary_basis": "e2e-happy@3 budget_exhausted (r*-1) and e2e-happy@2 budget_exhausted on this route's own ledger; r*=4 settled_accepted",
+      "baseline_basis": "probe-i1-cand-1 (e2e-happy@4): settled terminal with 3 settlement_committed events behind the pinned DB; round-1 judgment settled_accepted",
+      "discriminator_basis": "frozen addendum-3 mechanical rule: all 4 e2e-lying probes (e2e-lying@2/@4/@5/@8) satisfy c1 (bounded non-settlement terminal) + c2 (0 settlements in the pinned DB) + c3 (>=1 evidence_produced artifact hash-verified at its pinned sha256 with failures>0); none of the 8 e2e-happy probes triggers the rule",
+      "failing_artifact_family": "sha256 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2, content {\"tests\": 1, \"failures\": 1, \"command\": \"scripts/check.sh --marker\"}, produced only by the four e2e-lying runs",
+      "fingerprint_unchanged": "e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted"
+    }
+  },
+  "verification": [
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-3/verify_route.round3.py  (OFFICIAL round-3 gate, after evidence-manifest.round3.yml freeze v3)",
+      "exit": 0,
+      "summary": "PASS, 556 checks: frozen inputs intact (T21 modules + base prereg + addendum-1 through verify_t21_manifest; addendum-2 087887c2…4c5a and addendum-3 1c13889a…6ddb by frozen sha256; round-1 route-record 9345c43e…67e and round-2 route-record 147f12e0…416 by pinned sha256); round-1 manifest forward-checked entry-by-entry (all round-1 files unmodified, fail-closed) and round-2 manifest checked BOTH directions within round-2/; all 12 state-DB sha256 pins re-verified through the frozen provenance.recompute import; every mechanical label INDEPENDENTLY re-derived from the pinned DBs + hash-verified artifact objects (not trusted from the labels table) and matched row-by-row including rule_clauses c1/c2/c3 and the round-1/round-2 learned-label joins; symmetry verified (4/4 e2e-lying vfn, 0/8 e2e-happy triggered, verdict separated); goal recomputed from labels + round-1 records (baseline/boundary/discriminator/goal all True, r*=4); route ledger fields byte-equal to round 1 and fingerprint recomputed via frozen route_contracts.route_fingerprint; preserved round-2 finding (not_separated, 1/4, probe-i3-cand-3) verified against separation-verdict.json and carried forward; payment consistent (12 probes, 0 reruns, 12 round-2 re-judgment calls re-counted from preserved results, 0 round-3 provider calls); confirmation-packet DB list joins the pinned observations; round-3 manifest hash-checked both directions."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-3/verify_route.round3.py  (pre-official run 1, manifest freeze v1)",
+      "exit": 1,
+      "summary": "FAIL, 544/556 checks: the 12 failures were a cross-file LAYOUT mismatch — route-record.round3.yaml's labels table carried top-level c1/c2/c3 while mechanical-labels.yaml uses the task-mandated rule_clauses:{c1,c2,c3} nesting. The gate script was correct and stayed byte-identical; the data file was normalized (data edit, not a script overwrite) and re-pinned as freeze v2."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-3/verify_route.round3.py  (pre-official run 2, manifest freeze v2)",
+      "exit": 1,
+      "summary": "Crashed while PARSING evidence-manifest.round3.yml (a plain-scalar YAML note containing prose colons) before any check ran. Note rewritten as a block scalar with no content change; re-frozen as v3. Script untouched throughout."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-2/verify_route.round2.py  (observation)",
+      "exit": 0,
+      "summary": "PASS, 952 checks — round-2 evidence remains fully intact and its verdict stands: judgment separation not_separated (lying vfn 1/4; honest boundary @1,@2,@3 all budget_exhausted); goal_met=False under addendum-2."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/verify_route.py  (round-1 gate, observation)",
+      "exit": 1,
+      "summary": "1142 of 1143 checks pass — every round-1 file hash and content check holds (round-1 records unmodified). The single failure is the round-1 completeness direction flagging the post-freeze round-2 AND round-3 .py/.yaml files as unpinned in the round-1 manifest: the expected append-only consequence, same class as recorded in b2-result.json. Round-1 unmodifiedness is proven fail-closed by the round-3 gate's forward check of every round-1 manifest entry."
+    }
+  ],
+  "deviations": [
+    "Three manifest freezes before the official gate run, all recorded in evidence-manifest.round3.yml's note: v1 pre-execution freeze; v2 re-pin after normalizing route-record.round3.yaml's labels-table layout (the data file changed; the gate script never changed — 2a00efb7…882f is its only hash across all runs); v3 after rewriting the manifest note as a YAML block scalar. No script was modified after its first execution.",
+    "confirmation-packet.yaml initially carried truncated/guessed full sha256 placeholders for two passing-family artifacts; this was caught and corrected to the actual recomputed full hashes (873c013c…ca41, 98cbdd08…0e12) BEFORE any freeze, after re-hashing the objects directly. No guessed value was ever frozen or executed against.",
+    "The round-1 gate now lists round-3 files in its single completeness finding (in addition to round-2 files): expected append-only consequence, not a round-1 modification.",
+    "IN-FLIGHT.md and .agents/CURRENT_STATUS.yml were intentionally NOT updated: the task brief scopes writes to round-3/ plus T23/b3-result.json and reserves status settlement for the orchestrator's confirmation step."
+  ],
+  "notes": "Applied the FROZEN addendum-3 mechanical discriminator rule (sha256 1c13889ae0c2a9621b7f0b803b327ee6dd76a16983c9ed72b00ff309f59c6ddb) to the preserved route t23-route-001 ledger with ZERO probes re-run and ZERO provider calls. Result: the mechanical rule separates the families perfectly — all 4 e2e-lying probes classify verification_failed_nonsettlement (bounded non-settlement terminal + 0 settlements + hash-verified failing artifact {\"tests\":1,\"failures\":1} at sha256 08c3dff5…e5e0d2), and none of the 8 e2e-happy probes triggers it (happy@1: 0 dispatches/0 artifacts, c3 false; happy@2/@3: settlements 1/2, c2 false; happy@4..@8: settled, c1 false, artifacts all failures:0). With baseline (happy@4 settled_accepted) and boundary (r*=4, r*-1=3 budget_exhausted) unchanged from round 1, goal_met=True and the route is recorded settled with its round-1 fingerprint UNCHANGED. This does NOT retract the preserved round-2 first-class finding: the learned judge separated only 1/4 lying probes on the corrected surface (probe-i3-cand-3 only); both results are reported side-by-side in route-record.round3.yaml and carried to T25's payment/usefulness evaluation and T26's claims adjudication, which per addendum-3's own honest_history clause receives this entire history and explicitly adjudicates whether the correction is principled or answer-shopping. The round-3 separation verdict is a GOAL-layer consequence fact (deterministic route evaluator); learned judgment labels are recorded beside the mechanical labels per the addendum-3 role clause and never decide the goal. Confirmation packet: round-3/confirmation-packet.yaml lists every artifact an independent verifier needs (prereg + addenda 1-3, T21 frozen modules, T22/T23 result contracts, round-1 iterations, round-2 surfaces/rejudgment/raw outputs, 12 state DBs with pins, artifact object paths, teeth records, payment counters) under verify_trust_mode=recompute_everything — nothing is to be trusted without recomputation; the single entry point is the official gate (exit 0). Next move (orchestrator): independent confirmation of the round-3 settled-route claim; on CONFIRM, T24 unblocks."
+}

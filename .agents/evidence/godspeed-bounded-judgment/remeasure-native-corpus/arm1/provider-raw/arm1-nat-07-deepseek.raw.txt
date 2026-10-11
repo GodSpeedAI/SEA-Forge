@@ -1,0 +1,1 @@
+{"answer": "insufficient_evidence", "confidence": 0.5, "distribution": {"settled": 0.3, "not_settled": 0.3, "insufficient_evidence": 0.4}, "reason": "The records show only an admitted mock-agent builder invocation and a single correction with no claims, evidence, or settlement outcome, so they cannot decide whether the run closes accepted."}

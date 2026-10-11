@@ -1,0 +1,7 @@
+[tools]
+"npm:@jolli.ai/cli" = "latest"
+"npm:agent-browser" = "latest"
+"npm:command-code" = "latest"
+# Go toolchain for the casework-environment plan (T01+). Pinned because the Go
+# module under apps/godspeed-casework-go is part of this repository's build.
+go = "1.27.1"

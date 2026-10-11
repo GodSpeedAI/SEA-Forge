@@ -1,0 +1,132 @@
+{
+  "scan": "no-t00-baseline",
+  "config_sha256": "20a8bfbba8c980e705a3fd150ec71072482b7035047becc2354817eaf70b67fc",
+  "findings": [
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": "outside-scope/probe.jsonl",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": "outside-scope/probe.jsonl",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "f40850fa35453292f7d7f5f092438ca19398537e",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 5
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": "lookalike-prefix/.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl.backup",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": "lookalike-prefix/.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 3
+    },
+    {
+      "RuleID": "github-pat",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 4
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "github-pat",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log",
+      "StartLine": 1
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log",
+      "StartLine": 2
+    },
+    {
+      "RuleID": "generic-api-key",
+      "Commit": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+      "File": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl.backup",
+      "StartLine": 1
+    }
+  ]
+}

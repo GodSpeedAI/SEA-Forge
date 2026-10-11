@@ -1,0 +1,34 @@
+PREFLIGHT: isolated canonical casework-go-check; UTC/resources/process/Git/source identities/current-primary comparisons
+UTC=2026-10-07T18:54:31Z
+MemAvailableKiB=3072068
+SwapFreeKiB=10744696
+COMPETING_COMPILER_PROCESS_CHECK
+    PID STAT COMMAND
+      1 Ss   codex
+      2 S    bash
+     15 S    bash
+     18 R    ps
+HEAD
+74f86f0964f92c5b1715eb0703a9b880d28cccae
+STATUS
+?? apps/godspeed-casework-go/internal/server/run_observation_key.go
+?? apps/godspeed-casework-go/internal/server/run_observation_manager_retained_image_test.go
+?? apps/godspeed-casework-go/internal/server/run_observation_poller_image.go
+?? apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go
+?? apps/godspeed-casework-go/internal/server/run_observation_retained_version.go
+?? apps/godspeed-casework-go/internal/server/run_observation_retained_version_test.go
+ISOLATED_SOURCE_HASHES
+a6f0114d73aefdf816d35df7fd0b18d708924c3d673f78472e79c283bef3557b  apps/godspeed-casework-go/internal/server/run_observation_key.go
+2157583fbb74f519c2e4254bf1fd26fce330ed567ac7ddaf006b510c87fd50bd  apps/godspeed-casework-go/internal/server/run_observation_retained_version.go
+34df05f171f2fbb513caf86d096a87b9c3a4f353b2a5bef236d08132b040bfd7  apps/godspeed-casework-go/internal/server/run_observation_retained_version_test.go
+4c70bc853ae73f4025b177b5fb505d8a456c89c41b1b13ac86faed5cba9620e7  apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go
+3dba418f6f4920f89bb10ec59e9b77076e3005d3a03d7504212887369b5ed3f9  apps/godspeed-casework-go/internal/server/run_observation_poller_image.go
+cf501bf7d65a413a2c575b951980be3d0e301f3515a991682680b2d3baa4f256  apps/godspeed-casework-go/internal/server/run_observation_manager_retained_image_test.go
+PRIMARY_COMPARISONS
+CMP_PRIMARY_run_observation_key.go=0
+CMP_PRIMARY_run_observation_retained_version.go=0
+CMP_PRIMARY_run_observation_retained_version_test.go=0
+CMP_PRIMARY_run_observation_retained_policy_test.go=0
+CMP_PRIMARY_run_observation_poller_image.go=0
+CMP_PRIMARY_run_observation_manager_retained_image_test.go=0
+COMMAND: JUST_TEMPDIR=/tmp GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS='-p=1 -count=1' GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1 RUST_TEST_THREADS=1 just casework-go-check

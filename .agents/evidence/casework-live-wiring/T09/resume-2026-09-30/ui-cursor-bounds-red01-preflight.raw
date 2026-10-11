@@ -1,0 +1,9 @@
+Wed Oct  7 03:58:44 UTC 2026
+               total        used        free      shared  buff/cache   available
+Mem:            7944        3893         158          15        4101        4051
+Swap:          12288        3084        9203
+resource floors passed; root sole heavy owner
+134ba6162b60eddcf46b9b92347a8da4feda8cca1a26b68ae31edb1922285e8a  src/adapters/local/localAdapter.cursorBounds.test.ts
+373a2b5db74fda2210f84ea2962783d115d5b8ef413f118c9b52977b7d6fdbd1  src/adapters/local/localAdapter.cursorOrder.test.ts
+d8b0feb02e489587672968c7450373f000ba02e3fd3d0d509888ca1e0f595f34  src/adapters/local/localAdapter.ts
+edf8ed69fc9d4cf3c1ed2a136cc5f076ada72117497a92865cfdb19f3ef31c1c  src/adapters/conformance/caseworkPortConformance.ts

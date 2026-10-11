@@ -1,0 +1,79 @@
+{
+  "description": "Temporal progression checkpoints and historical snapshot reconstruction",
+  "trajectory": {
+    "case_id": "case-auth-v2-001",
+    "base_cursor": "1.0000000001",
+    "head_cursor": "1.0000000042",
+    "points": [
+      {
+        "cursor": "1.0000000001",
+        "timestamp": "2026-09-20T10:00:00Z",
+        "event_type": "CaseStarted",
+        "summary": "Case initiated from Blueprint: Authentication Gateway Refactor",
+        "actor_id": "usr-admin-01",
+        "actor_role": "case_architect",
+        "consequential": true,
+        "completed_plan_items_count": 0,
+        "total_plan_items_count": 5
+      },
+      {
+        "cursor": "1.0000000015",
+        "timestamp": "2026-09-20T10:07:00Z",
+        "event_type": "PlanItemCompleted",
+        "summary": "Completed: Audit existing token format",
+        "actor_id": "worker-node-01",
+        "actor_role": "developer",
+        "consequential": true,
+        "completed_plan_items_count": 1,
+        "total_plan_items_count": 5
+      },
+      {
+        "cursor": "1.0000000020",
+        "timestamp": "2026-09-20T10:10:00Z",
+        "event_type": "StageAdvanced",
+        "summary": "Specification & Architecture phase completed",
+        "actor_id": "usr-admin-01",
+        "actor_role": "case_architect",
+        "consequential": true,
+        "completed_plan_items_count": 2,
+        "total_plan_items_count": 5
+      },
+      {
+        "cursor": "1.0000000042",
+        "timestamp": "2026-09-20T10:15:35Z",
+        "event_type": "SettlementAccepted",
+        "summary": "Ed25519 Bridge verified and settled by SEA-Forge",
+        "actor_id": "system",
+        "actor_role": "system",
+        "consequential": true,
+        "completed_plan_items_count": 3,
+        "total_plan_items_count": 5
+      }
+    ]
+  },
+  "historical_snapshot_at_cursor_20": {
+    "world_id": "ws-case-auth-v2-001-1.0000000020",
+    "case_id": "case-auth-v2-001",
+    "cursor": "1.0000000020",
+    "timestamp": "2026-09-20T10:10:00Z",
+    "summary": {
+      "headline": "Authentication Gateway Refactor",
+      "phase": "Specification & Architecture",
+      "status_phrase": "Historical Inspection Mode (as of 1.0000000020 - 2026-09-20 10:10 UTC)"
+    },
+    "historical_inspection_indicator": {
+      "is_historical": true,
+      "head_cursor": "1.0000000042",
+      "consequential_actions_disabled": true
+    },
+    "available_actions": [
+      {
+        "id": "act_resume_live",
+        "label": "Return to Live Head",
+        "intent": "RESUME_LIVE_STREAM",
+        "consequential": false,
+        "variant": "PRIMARY"
+      }
+    ]
+  }
+}

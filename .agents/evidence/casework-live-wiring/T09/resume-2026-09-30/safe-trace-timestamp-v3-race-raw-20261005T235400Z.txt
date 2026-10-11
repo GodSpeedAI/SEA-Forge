@@ -1,0 +1,15 @@
+--- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention (0.65s)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/returned_row_count_0_and_newest_retention (0.00s)
+        run_trace_test.go:457: safe returned run trace = ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{}, TotalFrameCount:0}
+--- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON (0.05s)
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/invalid_JSON_text (0.01s)
+        run_trace_test.go:541: run trace error = internal: response line is not a JSON object (decode): invalid character 'o' in literal null (expecting 'u'), want typed unavailable
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/array_JSON_root (0.01s)
+        run_trace_test.go:541: run trace error = internal: response line is not a JSON object (decode): json: cannot unmarshal array into Go value of type struct { Type string "json:\"type\""; Error *string "json:\"error\""; Class string "json:\"error_class\""; NoEff bool "json:\"no_side_effect\""; Next string "json:\"next_lawful_action\""; Raw jsontext.Value "json:\"-\"" }, want typed unavailable
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/string_JSON_root (0.01s)
+        run_trace_test.go:541: run trace error = internal: response line is not a JSON object (decode): json: cannot unmarshal string into Go value of type struct { Type string "json:\"type\""; Error *string "json:\"error\""; Class string "json:\"error_class\""; NoEff bool "json:\"no_side_effect\""; Next string "json:\"next_lawful_action\""; Raw jsontext.Value "json:\"-\"" }, want typed unavailable
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/number_JSON_root (0.01s)
+        run_trace_test.go:541: run trace error = internal: response line is not a JSON object (decode): json: cannot unmarshal number into Go value of type struct { Type string "json:\"type\""; Error *string "json:\"error\""; Class string "json:\"error_class\""; NoEff bool "json:\"no_side_effect\""; Next string "json:\"next_lawful_action\""; Raw jsontext.Value "json:\"-\"" }, want typed unavailable
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.910s
+FAIL

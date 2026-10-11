@@ -1,0 +1,69 @@
+3:49:10 PM [vite] Internal server error: Transform failed with 1 error:
+/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/e2e/native-events-live.ts:265:10: ERROR: The symbol "resyncPayload" has already been declared
+  Plugin: vite:esbuild
+  File: /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/e2e/native-events-live.ts:265:10
+  
+  The symbol "resyncPayload" has already been declared
+  263 |      assert(resyncL?.event_type === 'resync_required' && resyncL.cursor === retained.head,
+  264 |        `retry must first report resync_required L: ${JSON.stringify(resyncL)}`)
+  265 |      const resyncPayload = resyncL.payload as { requested_cursor?: string; oldest_available_cursor?: string }
+      |            ^
+  266 |      assert(resyncPayload.requested_cursor === afterMutation.head && resyncPayload.oldest_available_cursor === retaine...
+  267 |        `retry resync must name interrupted K and retained L: ${JSON.stringify(resyncPayload)}`)
+  
+      at failureErrorWithLog (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:1752:15)
+      at /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:1019:50
+      at responseCallbacks.<computed> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:886:9)
+      at handleIncomingPacket (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:941:12)
+      at Socket.readFromStdout (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:864:7)
+      at Socket.emit (node:events:514:20)
+      at addChunk (node:internal/streams/readable:575:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:526:3)
+      at Readable.push (node:internal/streams/readable:406:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+3:49:24 PM [vite] Internal server error: Transform failed with 1 error:
+/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/e2e/native-events-live.ts:265:10: ERROR: The symbol "resyncPayload" has already been declared
+  Plugin: vite:esbuild
+  File: /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/e2e/native-events-live.ts:265:10
+  
+  The symbol "resyncPayload" has already been declared
+  263 |      assert(resyncL?.event_type === 'resync_required' && resyncL.cursor === retained.head,
+  264 |        `retry must first report resync_required L: ${JSON.stringify(resyncL)}`)
+  265 |      const resyncPayload = resyncL.payload as { requested_cursor?: string; oldest_available_cursor?: string }
+      |            ^
+  266 |      assert(resyncPayload.requested_cursor === afterMutation.head && resyncPayload.oldest_available_cursor === retaine...
+  267 |        `retry resync must name interrupted K and retained L: ${JSON.stringify(resyncPayload)}`)
+  
+      at failureErrorWithLog (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:1752:15)
+      at /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:1019:50
+      at responseCallbacks.<computed> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:886:9)
+      at handleIncomingPacket (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:941:12)
+      at Socket.readFromStdout (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:864:7)
+      at Socket.emit (node:events:514:20)
+      at addChunk (node:internal/streams/readable:575:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:526:3)
+      at Readable.push (node:internal/streams/readable:406:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+3:49:25 PM [vite] Internal server error: Transform failed with 1 error:
+/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/e2e/native-events-live.ts:265:10: ERROR: The symbol "resyncPayload" has already been declared
+  Plugin: vite:esbuild
+  File: /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/e2e/native-events-live.ts:265:10
+  
+  The symbol "resyncPayload" has already been declared
+  263 |      assert(resyncL?.event_type === 'resync_required' && resyncL.cursor === retained.head,
+  264 |        `retry must first report resync_required L: ${JSON.stringify(resyncL)}`)
+  265 |      const resyncPayload = resyncL.payload as { requested_cursor?: string; oldest_available_cursor?: string }
+      |            ^
+  266 |      assert(resyncPayload.requested_cursor === afterMutation.head && resyncPayload.oldest_available_cursor === retaine...
+  267 |        `retry resync must name interrupted K and retained L: ${JSON.stringify(resyncPayload)}`)
+  
+      at failureErrorWithLog (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:1752:15)
+      at /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:1019:50
+      at responseCallbacks.<computed> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:886:9)
+      at handleIncomingPacket (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:941:12)
+      at Socket.readFromStdout (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/esbuild/lib/main.js:864:7)
+      at Socket.emit (node:events:514:20)
+      at addChunk (node:internal/streams/readable:575:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:526:3)
+      at Readable.push (node:internal/streams/readable:406:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)

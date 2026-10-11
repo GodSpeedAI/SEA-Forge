@@ -1,0 +1,7 @@
+2026-10-01T05:43:33Z
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.7Gi       338Mi       800Mi       2.8Gi       2.1Gi
+Swap:           12Gi       6.3Gi       5.7Gi
+target/debug/sea-forge 42026280 bytes
+target/debug/sea-forge-server 51456400 bytes
+predicted socket path bytes: 93

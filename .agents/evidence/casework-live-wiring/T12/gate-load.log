@@ -1,0 +1,26 @@
+casework-load: evidence -> /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T11/run-20261011T002224Z
+=== RUN   TestLoadBudgets
+    load_test.go:229: evidence: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T11/run-20261011T002224Z/load-20261011T002224Z.json
+    load_test.go:230: intent latency ms p50/p95/p99/max = 4134.6/8042.6/9430.4/9788.7 over 100 intents; errors 0 (0.00%); stale refusals retried 2; 4.1 intents/s
+    load_test.go:233: event lag ms p50/p95/p99/max = 2775.5/7754.2/8956.4/8985.1 over 5000 deliveries (100 revisions per client)
+    load_test.go:235: gateway RSS MB idle/peak/after = 46.8/46.8/28.2; goroutines idle/after = 112/131; fds idle/peak = 66/85; threads peak 13; kernel RSS peak 63.1 MB
+    load_test.go:238: gateway backlog peaks: queue depth 0, cursor lag 0
+    load_test.go:239: CPU during burst: gateway 870 ms, kernel 72980 ms (burst wall 24576 ms)
+    load_test.go:240: metrics: sse_clients=50 queue_depth_max=0 cursor_lag_max=0 delivery_lag_count=6000 delivery_lag_sum_s=16566.178512667095
+--- PASS: TestLoadBudgets (30.28s)
+=== RUN   TestToothKernelRestartUnder50SSEClients
+    load_test.go:501: evidence: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T11/run-20261011T002224Z/tooth-kernel-20261011T002224Z.json
+    load_test.go:502: kernel restart: resynced 50/50 clients (reconnected 0, re-logged-in 0, resync_required frames 0); first accepted intent 924 ms after the restart began; post burst 40 intents, 0 errors
+    load_test.go:504: in flight at the crash: 80 intents, 68 failed; acknowledged 76, durable plan_mutated events 77
+    load_test.go:506: gateway RSS MB before/peak/after = 27.0/30.1/30.1; goroutines 119 -> 119; fds 73 -> 73; revisions per client 32 -> 82; outage probe (1 ms): ok=false status 502: {"error":{"kind":"unavailable","note":"the kernel could not verify the session perspective"}}
+--- PASS: TestToothKernelRestartUnder50SSEClients (56.77s)
+=== RUN   TestToothGatewayRestartUnder50SSEClients
+    load_test.go:501: evidence: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T11/run-20261011T002224Z/tooth-gateway-20261011T002224Z.json
+    load_test.go:502: gateway restart: resynced 50/50 clients (reconnected 50, re-logged-in 50, resync_required frames 0); first accepted intent 1287 ms after the restart began; post burst 40 intents, 0 errors
+    load_test.go:504: in flight at the crash: 80 intents, 71 failed; acknowledged 73, durable plan_mutated events 81
+    load_test.go:506: gateway RSS MB before/peak/after = 26.3/47.4/28.0; goroutines 119 -> 119; fds 73 -> 73; revisions per client 32 -> 89; outage probe (0 ms): 
+--- PASS: TestToothGatewayRestartUnder50SSEClients (23.98s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/loadtest	111.030s
+casework-load: all budgets and restart teeth passed
+EXIT 0 dur=112s

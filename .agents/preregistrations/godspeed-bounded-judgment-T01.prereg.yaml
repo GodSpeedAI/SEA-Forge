@@ -1,0 +1,190 @@
+# =============================================================================
+# T01 PREREGISTRATION — PROOF-1 read-only bounded-judgment pilot measurement
+# =============================================================================
+# FROZEN ARTIFACT (plan v1.2.0, task T01 freeze_contract). This file is hashed
+# and recorded in the append-only decision log BEFORE the first harness
+# execution. Any change after the first run is a new round (round-2+), never an
+# edit. F0 items gate the first harness execution; F1 items were frozen at the
+# same instant, which is strictly earlier than "before any provider result is
+# observed", satisfying both stages.
+schema: godspeed-bounded-judgment.t01-preregistration
+schema_version: "1.0"
+task: T01
+plan: ".agents/plans/godspeed-bounded-judgment-plan.yaml (v1.2.0)"
+created_utc: "2026-09-17"
+frozen_before: "first run_pilot.py execution"
+
+# ---------------------------------------------------------------------------
+f0_freeze:
+  corpus_manifest:
+    path: ".agents/preregistrations/godspeed-bounded-judgment-T01.corpus-manifest.yml"
+    sha256: "6738d5a8f514a55f87e8bc9bec2749958a1d24505631ecea70954e0271ca879f"
+    runs_total: 16
+    runs_selected: 16
+    selection_rule: "all discovered runs included; exclusion only for structural absence (none applied pre-freeze); per-run db sha256 + bytes + mtime recorded"
+  object_hash_sidecar:
+    path: ".agents/evidence/godspeed-bounded-judgment/T01/objects-hashes-f0.yml"
+    sha256: "b4c863f6e2791b040bd30abc6ceb79f6ce58c8759c03b4fe4400ef83bfc33cf0"
+    files_hashed: 632
+  preregistered_surface_nomination:
+    default_first_surface: >-
+      'Does the evidence at the declared locator satisfy the declared requirement?'
+      over the existing verification-record claim and requirement fields (the
+      surface with the most rows and an existing declared answer set, per the
+      plan's first_surface_selection_rule).
+    preregistered_second_surface:
+      shape: multiclass_choice (materially different from the binary/proposition first surface)
+      question: "Which verification-chain deficiency, if any, does this record's chain exhibit?"
+      domain: [no_chain_deficiency, missing_evidence_object, unresolvable_reference, instrument_mismatch, insufficient_provenance]
+      derived_from: "the chain-gap taxonomy of the reconstruction step (schema-level), never from observed outcomes"
+      evaluated_only_if: "outcome C occurs (plan second_surface_rule)"
+  harness:
+    run_pilot:
+      path: ".agents/evidence/godspeed-bounded-judgment/T01/run_pilot.py"
+      sha256: "c595abc4b00a0a8bdaa673dc8433f7b93cee2a417aa04e9b63cd70c5043139dd"
+    verify_disclosure:
+      path: ".agents/evidence/godspeed-bounded-judgment/T01/verify_disclosure.py"
+      sha256: "3cedd89613a80b89d12f7d9a08c67b7bc861ec7420ce747d2b09b4b619e2246a"
+  analysis_algorithm: >-
+    Adaptive-join reconstruction, preregistered here: the harness discovers each
+    database's schema at run time (sqlite_master + PRAGMA), locates the known
+    tables (records/record_type, checkpoints, settlements, observation_bindings,
+    evidence_productions) by name and columns by preregistered alias lists
+    (id/rowid; record_type|kind|type; payload|body|data|json|content;
+    run_id; iteration_no|iteration|iter; unit_id|unit;
+    produced_at|created_at|ts|timestamp|recorded_at|at; ref|reference|target|
+    evidence_ref), reconstructs per verification-record row the chain
+    state_before -> judgment -> action -> observed consequence -> settlement
+    with EXPLICIT NULLS for missing hops, classifies every gap per field,
+    applies the temporal-integrity rule (a judgment recorded after its
+    consequence is VIOLATED, never accepted as pre-consequence), then runs the
+    frozen provider paths and computes the frozen exploratory metrics. Any
+    schema surprise degrades to a named gap in the reports; it never silently
+    substitutes defaults.
+
+# ---------------------------------------------------------------------------
+f1_freeze:
+  selected_surface:
+    name: "verification-satisfaction (binary/proposition shape)"
+    question: "Does the evidence at the declared locator satisfy the declared requirement?"
+    input_fields_allowlist: ["claim", "requirement (kind, locator, producer)", "instrument (name)", "evidence content resolved via evidence_ref"]
+    leakage_controls:
+      - "provider input is built ONLY from the allowlisted fields; outcome, class, detail, and any settlement field are structurally excluded and asserted by the harness (assert_no_leakage)"
+      - "the deterministic baseline outcome is shown to NO provider"
+      - "this domain is stated in this frozen preregistration; it is not derived from any observed outcome distribution"
+  answer_domain:
+    shape: choice
+    version: "t01-surface-verification-satisfaction/v1"
+    labels: [satisfied, not_satisfied, insufficient_evidence]
+    rules: "closed and enumerated; explicit insufficiency label included (spec AnswerDomain); a vacuous (single effective label) domain is a specification defect and is rejected"
+  semantic_basis:
+    owner: DomainForge (spec REQ-AUTH-006)
+    statement: >-
+      The surface's canonical meanings ('evidence', 'satisfy', 'requirement',
+      'locator') are the corpus's own record-contract terms cited as-is; no
+      evaluation context or provider output defines, renames, widens, or
+      overrides them. The pilot adds no semantic authority anywhere.
+  evaluation_basis:
+    owner: "the Gauntlet evaluation context that produced the verification records (existing evaluation layer)"
+    statement: >-
+      The question 'does the evidence satisfy the requirement' and the criterion
+      labels above belong to the evaluation basis; they select which declared
+      meanings are relevant and confer no semantic authority.
+  provider_identities:
+    - id: codex
+      kind: capable
+      invocation: "codex exec --skip-git-repo-check <prompt> (cwd=/tmp/t01-provider-cwd, timeout 180s)"
+      identity_record: "codex CLI (OpenAI-backed); exact model as configured for the CLI, not overridden; recorded per run"
+    - id: prime-agent
+      kind: capable
+      invocation: "prime-agent -p --offline --cwd /tmp/t01-provider-cwd <prompt> (timeout 180s)"
+      identity_record: "prime-agent CLI as found on PATH; version recorded per run"
+      confound: "same harness lineage that produced the corpus runs (demo-calculator.*); its judgments may correlate with its own recorded outcomes — disclosed with every result"
+    - id: scripted
+      kind: mechanics_only_never_real_substitution
+      invocation: "deterministic marker-count heuristic in-process"
+  independence_claim: >-
+    codex and prime-agent are materially independent provider paths (different
+    implementations and model lineages); the scripted provider is mechanics-only
+    and is never counted as real substitution. Limitation disclosed: the
+    capable-provider count is exactly 2; claude (org-disabled) and opencode
+    (unauthenticated) were smoke-tested and excluded before the freeze.
+  deterministic_baseline: >-
+    The recorded verification_record 'outcome' (produced by the existing
+    deterministic instrument). It is paired with provider answers for
+    agreement/confusion/Brier/log-loss computation and is never shown to a
+    provider. Baseline outcome values outside the frozen domain are excluded
+    from pairing and counted, never coerced.
+  metrics:
+    - "accuracy of each provider vs the deterministic baseline (surface-agreement, NOT correctness ground truth)"
+    - "confusion matrix: provider answer x recorded baseline"
+    - "mean Brier score of the provider distribution against the baseline label"
+    - "mean log loss against the baseline label (clipped at 1e-4)"
+    - "mean distribution entropy (bits) — the uncertainty the deterministic point outcome does not carry"
+    - "reliability bins of provider confidence vs baseline agreement"
+    - "abstention rate (insufficient_evidence) and its co-occurrence with chain provenance gaps"
+    - "cross-provider disagreement (capable-vs-capable pair; capable-vs-scripted reported separately)"
+    - "corpus concentration: rows per run + effective run diversity"
+  disclosure_block_required_keys: [n, independent_run_count, class_counts, concentration_by_run, missing_attribution, reconstructibility_rate, stability]
+  stability_rule: "every metric is labelled UNSTABLE (pilot corpus of order 10^1 settled judgments); nothing is reported as reliable at population level"
+  falsification_scope: >-
+    SURFACE-SCOPED. Any negative result applies to THIS surface + THIS answer
+    domain + THESE providers + THIS corpus (spec REQ-JUDG-023). It must not be
+    reported as a task_family or capability_class conclusion; a capability-class
+    rejection requires the preregistered materially-different second surface
+    first (plan second_surface_rule; outcome C).
+  known_confounds:
+    - "corpus size is order 10^1 settled judgments; every metric is unstable"
+    - "historical rows carry model: null; provider attribution is impossible for past rows and is never inferred"
+    - "one run may dominate the corpus; effective diversity is disclosed with every N"
+    - "only a few record kinds appear in practice; the schema is richer than the content"
+    - "prime-agent shares lineage with the corpus-producing harness (disclosed per result)"
+    - "providers are sampled once per row per provider; no intra-provider repeat is funded, so provider self-noise is not separately bounded in this pilot"
+    - "the provider prompt is fixed; prompt-sensitivity is not explored in this pilot"
+  branch_conditions:
+    A: "history cannot be materially reconstructed -> judgment implementation branch BLOCKED; T06..T12 MUST NOT start; provenance/correlation repair (T05) becomes critical path; no conclusion about judgment quality"
+    B: "history reconstructs but providers cannot reliably satisfy the bounded output contract -> semantic/value hypothesis stays OPEN; provider/structured-output mechanics (T08/T09) become critical path; never conclude uncertainty is useless"
+    C: "history reconstructs and the distribution adds little on THIS surface -> no promotion for THIS surface; preregistered second surface of a different shape MUST be evaluated before any capability-class rejection"
+    D: "history reconstructs and the distribution carries useful descriptive information -> T06..T12 become eligible in dependency order, scoped to the examined surface and shape; permission to PROCEED, not evidence of settlement"
+    E: "providers disagree strongly -> classify the disagreement (surface ambiguity / insufficient context / unsuitable provider / genuine case uncertainty / malformed contract / provider implementation differences) before judging the surface; disagreement is evidence, not a verdict"
+  classification_rule: >-
+    The outcome letter is chosen by the preregistered conditions from the
+    harness outputs alone, recorded in the decision log with its consequence.
+    Outcome D requires: contract reliability (schema_failures + out_of_domain +
+    provider_failures = 0 rows for capable providers), reconstructibility not
+    materially broken (settlement+consequence gaps for a minority of rows), and
+    capable-provider agreement with the baseline plus non-degenerate uncertainty
+    (entropy > 0) on materially informative rows. If any leg fails, the letter
+    follows the FIRST matching condition among B (contract leg), A
+    (reconstruction leg), C (information leg), E (disagreement dominates:
+    capable-vs-capable disagreement > 0.5), evaluated in that order.
+  confirmation_condition: >-
+    A fresh independent adversarial reviewer, receiving the requirement ids, this
+    frozen preregistration, the exact corpus manifest and hashes, both frozen
+    harness scripts, and the raw round evidence (but NOT the builder's narrative
+    conclusion), can recompute every reported number from the persisted harness
+    and the read-only corpus, and verifies that label-shuffle, label-leakage,
+    degenerate-domain, and scope-widening attacks fail as declared and that all
+    conclusions are restricted to the measured surface. Required verdict: CONFIRM.
+
+claims:
+  - "The historical Gauntlet corpus can be inspected WITHOUT MUTATION to determine how much of the pre-decision -> judgment -> consequence -> settlement chain is reconstructible."
+  - "The first bounded decision surface can be stated using only labels that existed BEFORE any outcome was observed, without inventing semantic labels after seeing outcomes."
+  - "Materially independent providers can produce bounded outputs over that frozen surface and answer domain."
+  - "On THIS SURFACE, uncertainty-preserving output provides incremental DESCRIPTIVE information over the existing deterministic outcome."
+
+falsifiers:
+  - "The chain cannot be reconstructed for a material fraction of rows, or temporal ordering between state_before, judgment, action, consequence and settlement cannot be established."
+  - "The first surface cannot be stated without reference to the eventual outcome (label leakage), or its answer domain is degenerate (a single effective label)."
+  - "Providers cannot produce output inside the declared answer domain, or cannot be shown to be materially independent."
+  - "The distribution adds no descriptive information over the deterministic baseline on this surface."
+
+teeth_registry:
+  shuffle-labels: "shuffle recorded outcomes; agreement must collapse toward/below the real pairing; a surviving high score means the harness computed nothing real — TASK FAILS"
+  missing-fields: "remove rows/fields; the missing-field report names them and reconstructibility drops; no silent defaults"
+  degenerate-domain: "a one-label domain is rejected as a specification defect, never scored"
+  late-domain: "a domain constructed after observing outcomes fails the label-leakage check; scoring never proceeds on it"
+  out-of-domain: "an illegal provider value is rejected as a typed schema failure and counted, never coerced"
+  strip-identity: "a stripped row is recorded explicitly unattributed; no identity inferred"
+  duplicate-rows: "duplicating dominant-run rows is exposed by the concentration report; effective diversity contradicts inflated N"
+  reverse-time: "reversed judgment/settlement order FAILS the chain-integrity check; never accepted as pre-consequence"

@@ -1,0 +1,21 @@
+$ just casework-cell-init  # first run
+casework-cell-init: wrote .sea-forge/casework-live/cell/server.yaml (comment-only; ServerConfig::load yields defaults)
+casework-cell-init: cell path: /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell
+exit=0
+
+$ sha256sum .sea-forge/casework-live/cell/server.yaml
+9922dd80dc28c4d90680213a0a99a56ba1fce6624747349cf0d68345425e2e9c  .sea-forge/casework-live/cell/server.yaml
+
+$ just casework-cell-init  # second run (idempotency)
+casework-cell-init: cell already initialized at .sea-forge/casework-live/cell (server.yaml present; not modified)
+casework-cell-init: cell path: /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell
+exit=0
+
+$ sha256sum .sea-forge/casework-live/cell/server.yaml  # after second run
+9922dd80dc28c4d90680213a0a99a56ba1fce6624747349cf0d68345425e2e9c  .sea-forge/casework-live/cell/server.yaml
+
+IDEMPOTENT: server.yaml unchanged across second cell-init (sha256 9922dd80dc28c4d90680213a0a99a56ba1fce6624747349cf0d68345425e2e9c)
+
+$ cat .sea-forge/casework-live/cell/server.yaml
+# Live-stack cell (plan casework-live-wiring-production T00).
+# Identity bindings are deliberately absent: protected verbs fail closed until T02/T03.

@@ -1,0 +1,6 @@
+{
+  "path": "apps/godspeed-casework-go/internal/server/run_observation_poller_worker.go",
+  "source": "package server\n\n// launchPollerBatch is the future production launch boundary. The creator\n// owns the immutable batch and must start every entry once, outside mu, before\n// any readiness wait. Phase A leaves worker launch unwired.\nfunc (m *runObservationManager) launchPollerBatch([]*runObservationPoller) {}\n\n// claimPollerReadStart is the real mu-protected read-eligibility transition\n// shared by initial and recurring reads. Phase A intentionally refuses all\n// starts until the manager lifecycle is implemented.\nfunc (m *runObservationManager) claimPollerReadStart(*runObservationPoller) bool { return false }\n\n// runPoller is the sole future worker entry point. Phase A has no worker body.\nfunc (m *runObservationManager) runPoller(*runObservationPoller) {}\n\n// runPollerFromClaim is the mandatory continuation used by runPoller after\n// every eligibility decision. Tests stage Stop through this same production\n// boundary; Phase A leaves the continuation unwired.\nfunc (m *runObservationManager) runPollerFromClaim(*runObservationPoller, bool) {}\n",
+  "hash": "f90cd397cd983e42e53498f13baa89fbfeac54e07eb3847b3228592ddd4d929f",
+  "bytes": 1056
+}

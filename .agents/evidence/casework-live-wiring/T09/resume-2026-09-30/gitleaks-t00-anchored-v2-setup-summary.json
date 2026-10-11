@@ -1,0 +1,22 @@
+{
+  "repo": "/tmp/gitleaks-t00-anchored-v2-20261005T232117Z/repo",
+  "config": "/tmp/gitleaks-t00-anchored-v2-20261005T232117Z/production-synthetic.toml",
+  "no_t00_config": "/tmp/gitleaks-t00-anchored-v2-20261005T232117Z/no-t00-synthetic.toml",
+  "config_sha256": "c7defacfbe48c4477f2a324fef9ff51c7b422364fb353fd392db951c7d612486",
+  "no_t00_config_sha256": "20a8bfbba8c980e705a3fd150ec71072482b7035047becc2354817eaf70b67fc",
+  "actual_config_sha256": "608a687e53ba365fc743ae6c8d2ded7a1c006e8c6b0f5f209109d055f6e5ad05",
+  "commit1": "3c04a8d5b96e4cd13aaabee636e58078c4a310ff",
+  "commit2": "c7bc9fcd30caaab9298e7f20a805c858fa97a892",
+  "unlisted_commit": "f40850fa35453292f7d7f5f092438ca19398537e",
+  "intended_paths": [
+    ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+    ".agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl",
+    ".agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl",
+    ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log",
+    ".agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log"
+  ],
+  "prefix_path": "lookalike-prefix/.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl",
+  "suffix_path": ".agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl.backup",
+  "unlisted_path": "outside-scope/probe.jsonl"
+}

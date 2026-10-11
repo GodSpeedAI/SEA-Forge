@@ -1,0 +1,42 @@
+schema: godspeed-bounded-judgment.t22-probe-run-meta
+route_id: t22-route-001
+iteration: 1
+note: typed sidecar for exit codes and wall seconds; the frozen probe_observation schema has an exact field set
+  and refuses extra fields
+probes:
+- probe_id: probe-cand-1
+  candidate_id: cand-1
+  command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+    page
+  cwd: /home/sprime01/.local/share/godspeed-route-discovery/T22/targets/cand-1
+  exit_code: 1
+  timed_out: false
+  wall_seconds: 0.111
+  state_db_exists: true
+  raw_terminal_state: null
+  settlement_committed_count_from_db: 0
+  note: state_db_sha256 is the digest of the real gauntlet state database
+- probe_id: probe-cand-2
+  candidate_id: cand-2
+  command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+    page
+  cwd: /home/sprime01/.local/share/godspeed-route-discovery/T22/targets/cand-2
+  exit_code: 1
+  timed_out: false
+  wall_seconds: 0.103
+  state_db_exists: true
+  raw_terminal_state: null
+  settlement_committed_count_from_db: 0
+  note: state_db_sha256 is the digest of the real gauntlet state database
+- probe_id: probe-cand-3
+  candidate_id: cand-3
+  command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+    page
+  cwd: /home/sprime01/.local/share/godspeed-route-discovery/T22/targets/cand-3
+  exit_code: 1
+  timed_out: false
+  wall_seconds: 0.103
+  state_db_exists: true
+  raw_terminal_state: null
+  settlement_committed_count_from_db: 0
+  note: state_db_sha256 is the digest of the real gauntlet state database

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/schemas/case-operations.schema.json",
+  "title": "CaseOperationsCatalog",
+  "description": "JSON-RPC operational schemas for SEA-Forge case operations exposed through the Go CasePort.",
+  "type": "object",
+  "definitions": {
+    "CaseCreateRequest": {
+      "type": "object",
+      "required": ["definition_id", "actor_id", "role"],
+      "properties": {
+        "definition_id": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "role": { "type": "string" },
+        "initial_parameters": { "type": "object" }
+      }
+    },
+    "CaseLifecycleTransitionRequest": {
+      "type": "object",
+      "required": ["case_id", "transition", "actor_id", "role"],
+      "properties": {
+        "case_id": { "type": "string" },
+        "transition": {
+          "type": "string",
+          "enum": ["START", "SUSPEND", "RESUME", "CLOSE", "TERMINATE", "REOPEN"]
+        },
+        "reason": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "role": { "type": "string" }
+      }
+    },
+    "AddDiscretionaryWorkRequest": {
+      "type": "object",
+      "required": ["case_id", "stage_id", "discretionary_item_id", "actor_id", "role"],
+      "properties": {
+        "case_id": { "type": "string" },
+        "stage_id": { "type": "string" },
+        "discretionary_item_id": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "role": { "type": "string" },
+        "input_parameters": { "type": "object" }
+      }
+    },
+    "DecideHumanTaskRequest": {
+      "type": "object",
+      "required": ["case_id", "task_id", "decision", "actor_id", "role"],
+      "properties": {
+        "case_id": { "type": "string" },
+        "task_id": { "type": "string" },
+        "decision": {
+          "type": "string",
+          "enum": ["APPROVED", "REJECTED"]
+        },
+        "justification": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "role": { "type": "string" }
+      }
+    },
+    "OverrideSentryRequest": {
+      "type": "object",
+      "required": ["case_id", "sentry_id", "justification", "actor_id", "role"],
+      "properties": {
+        "case_id": { "type": "string" },
+        "sentry_id": { "type": "string" },
+        "justification": { "type": "string", "minLength": 20 },
+        "actor_id": { "type": "string" },
+        "role": { "type": "string" }
+      }
+    }
+  }
+}

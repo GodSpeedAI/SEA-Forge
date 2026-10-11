@@ -1,0 +1,59 @@
+{
+  "capture_originals": {
+    "preflight.raw": {
+      "path": "/tmp/sea-gitleaks-checkpoints-20261008-critic01/preflight.raw",
+      "bytes": 608,
+      "sha256": "b3b5ef08841ebfe7540c8b94237664fb695ef40aaed6a27129f8259f0f6b5751",
+      "base64": "VVRDPTIwMjYtMTAtMDhUMTg6MTc6NDNaCmN3ZD0vaG9tZS9zcHJpbWUwMS9wcm9qZWN0cy9zZWEtcnMKR2l0bGVha3MgY29tbWFuZDogZ2l0bGVha3MgZGV0ZWN0IC0tbm8tYmFubmVyIC0tcmVkYWN0IC0tcmVwb3J0LWZvcm1hdCBqc29uIC0tcmVwb3J0LXBhdGggL3RtcC9zZWEtZ2l0bGVha3MtY2hlY2twb2ludHMtMjAyNjEwMDgtY3JpdGljMDEvZmluZGluZ3MuanNvbgoKL3Byb2MvbWVtaW5mbzoKTWVtQXZhaWxhYmxlOiAgICAzMzYzNDQ4IGtCClN3YXBGcmVlOiAgICAgICAgMzcyMDM3NiBrQgoKTmFtZXNwYWNlLXZpc2libGUgcHJvY2VzcyBpbnZlbnRvcnkgKFBJRCBQUElEIFNUQVQgQ09NTSBSU1MpOgogICAgUElEICAgIFBQSUQgU1RBVCBDT01NQU5EICAgICAgICAgICBSU1MKICAgICAgMSAgICAgICAwIFNzICAgY29kZXggICAgICAgICAgIDQzMDE2CiAgICAgIDIgICAgICAgMSBTICAgIGJhc2ggICAgICAgICAgICAgMzU1MgogICAgICA2ICAgICAgIDIgUiAgICBwcyAgICAgICAgICAgICAgIDQwNDgKCkNvbXBpbGVyL3Byb2Nlc3MgbWF0Y2ggY291bnQgKGdvfGNhcmdvfHJ1c3RjfGJ1bnx0c2N8Z2l0bGVha3MpOgowCnByZWZsaWdodCBnYXRlIGV4aXQgMAo="
+    },
+    "command.raw": {
+      "path": "/tmp/sea-gitleaks-checkpoints-20261008-critic01/command.raw",
+      "bytes": 134,
+      "sha256": "27e6610964f6851204129db294420e6b4b2560ca6c2d7e00dc7ab787e3c61759",
+      "base64": "Z2l0bGVha3MgZGV0ZWN0IC0tbm8tYmFubmVyIC0tcmVkYWN0IC0tcmVwb3J0LWZvcm1hdCBqc29uIC0tcmVwb3J0LXBhdGggL3RtcC9zZWEtZ2l0bGVha3MtY2hlY2twb2ludHMtMjAyNjEwMDgtY3JpdGljMDEvZmluZGluZ3MuanNvbgo="
+    },
+    "stdout.raw": {
+      "path": "/tmp/sea-gitleaks-checkpoints-20261008-critic01/stdout.raw",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "base64": ""
+    },
+    "stderr.raw": {
+      "path": "/tmp/sea-gitleaks-checkpoints-20261008-critic01/stderr.raw",
+      "bytes": 110,
+      "sha256": "5711a8deb677085541b8118804d01d9f87320ac29255f94eb69dc99697554901",
+      "base64": "MjoxOVBNIElORiA1MjIgY29tbWl0cyBzY2FubmVkLgoyOjE5UE0gSU5GIHNjYW5uZWQgfjkwOTk3NzUxIGJ5dGVzICg5MSBNQikgaW4gMW0yN3MKMjoxOVBNIFdSTiBsZWFrcyBmb3VuZDogMgo="
+    },
+    "exit.raw": {
+      "path": "/tmp/sea-gitleaks-checkpoints-20261008-critic01/exit.raw",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "base64": "MQo="
+    }
+  },
+  "safe_report_summary": {
+    "private_original_report_path": "/tmp/sea-gitleaks-checkpoints-20261008-critic01/findings.json",
+    "private_original_report_bytes": 2253,
+    "private_original_report_sha256": "b36556b934727765a79a894406a1618601d76a74498761685d8e32aac8dc562e",
+    "finding_count": 2,
+    "findings": [
+      {
+        "RuleID": "generic-api-key",
+        "Fingerprint": "58f4c34d9aa0f4f9534bbcb6a402600f6c9de3c0:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision2-oct08.md:generic-api-key:58",
+        "File": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/live-cursor-v4-complete-candidate-revision2-oct08.md",
+        "StartLine": 58,
+        "Commit": "58f4c34d9aa0f4f9534bbcb6a402600f6c9de3c0"
+      },
+      {
+        "RuleID": "generic-api-key",
+        "Fingerprint": "f56fc1756a68a4ca5a42f6e98b9ec690821f5088:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/task-artifact-checkpoint-inventory-oct08.json:generic-api-key:1",
+        "File": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/task-artifact-checkpoint-inventory-oct08.json",
+        "StartLine": 1,
+        "Commit": "f56fc1756a68a4ca5a42f6e98b9ec690821f5088"
+      }
+    ],
+    "all_match_fields_redacted": false,
+    "all_secret_fields_redacted": true,
+    "raw_report_archived": false
+  }
+}

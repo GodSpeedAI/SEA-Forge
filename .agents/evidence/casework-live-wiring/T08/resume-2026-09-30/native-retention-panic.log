@@ -1,0 +1,30 @@
+2026/09/30 15:50:36 http: panic serving 127.0.0.1:44536: runtime error: index out of range [1] with length 1
+goroutine 46 [running]:
+net/http.(*conn).serve.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/server.go:1939 +0xfd
+panic({0xfdf1e8?, 0xc00002d320?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection.(*Store).At(_, {_, _})
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/projection/store.go:119 +0x414
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server_test.(*nativeEventPhase).state(0xc0000b8790)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/native_events_live_test.go:525 +0x52c
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server_test.(*nativeEventHarness).ServeHTTP(0xc000006850, {0x1000910, 0xc0016c21e0}, 0xc0016f2280)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/native_events_live_test.go:640 +0x1052
+net/http.serverHandler.ServeHTTP({0xc0000bb700?}, {0x1000910, 0xc0016c21e0}, 0xc0016f2280)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/server.go:3413 +0x2a2
+net/http.(*conn).serve(0xc0016f4090, {0x1000d48, 0xc0016c70b0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/server.go:2137 +0xedb
+created by net/http.(*Server).Serve in goroutine 16
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/server.go:3581 +0x92a
+--- FAIL: TestNativeEventSourceResyncRetryAndRetentionReplay (10.23s)
+    native_events_live_test.go:205: run phase1 through the browser's native EventSource path: agent-browser eval --stdin: exit status 1 (✗ Evaluation error: Error: stable test state request failed (500)
+            at assert (http://127.0.0.1:42313/e2e/native-events-live.ts:3:25)
+            at settledPhaseState (http://127.0.0.1:42313/e2e/native-events-live.ts:15:3)
+            at async phaseOne (http://127.0.0.1:42313/e2e/native-events-live.ts:86:25)
+            at async <anonymous>:3:25) (diagnostics: /tmp/sea-t08-native-diagnostic-2979089792)
+    native_events_live_test.go:132: preserved native EventSource diagnostics at /tmp/sea-t08-native-diagnostic-2979089792
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-1460415755/cell
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-1662638709/cell
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	10.407s
+FAIL

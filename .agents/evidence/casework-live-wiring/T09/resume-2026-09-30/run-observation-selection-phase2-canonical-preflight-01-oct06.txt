@@ -1,0 +1,76 @@
+$ free -b
+               total        used        free      shared  buff/cache   available
+Mem:      8327897088  6052466688   131125248    45473792  2471579648  2275430400
+Swap:    12884901888  9127190528  3757711360
+[exit 0]
+$ cat /proc/meminfo
+MemTotal:        8132712 kB
+MemFree:          126276 kB
+MemAvailable:    2297432 kB
+Buffers:          201724 kB
+Cached:          1615700 kB
+SwapCached:        59792 kB
+Active:          4005152 kB
+Inactive:        2551344 kB
+Active(anon):    2599128 kB
+Inactive(anon):  2185220 kB
+Active(file):    1406024 kB
+Inactive(file):   366124 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:      12582912 kB
+SwapFree:        3669604 kB
+Dirty:               960 kB
+Writeback:             0 kB
+AnonPages:       4680796 kB
+Mapped:           332240 kB
+Shmem:             44408 kB
+KReclaimable:     595784 kB
+Slab:             846320 kB
+SReclaimable:     595784 kB
+SUnreclaim:       250536 kB
+KernelStack:       19808 kB
+PageTables:       213732 kB
+SecPageTables:         0 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    16649268 kB
+Committed_AS:   18138204 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:      145712 kB
+VmallocChunk:          0 kB
+Percpu:             4480 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:      2048 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:         0 kB
+FilePmdMapped:         0 kB
+Unaccepted:            0 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+DirectMap4k:       58368 kB
+DirectMap2M:     4134912 kB
+DirectMap1G:    13631488 kB
+[exit 0]
+$ swapon --show --bytes
+NAME     TYPE             SIZE       USED PRIO
+/dev/sdc partition 12884901888 9127227392   -2
+[exit 0]
+$ df -B1 /tmp
+Filesystem      1B-blocks       Used  Available Use% Mounted on
+tmpfs          4163948544 2794147840 1369800704  68% /tmp
+[exit 0]
+$ du -sb /tmp/sea-casework-go-build-cache-e8859aa2-setupfix1
+323636877	/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1
+[exit 0]
+$ sha256sum apps/godspeed-casework-go/internal/server/run_observation_selection.go apps/godspeed-casework-go/internal/server/run_observation_selection_test.go
+b9de3dae19ea9f473eaa0bbf680d06bcab3975195d90eea3bc0e40866c1ca63d  apps/godspeed-casework-go/internal/server/run_observation_selection.go
+1e2295a37aec4383f2473226680129f26394253e0ed43d6f05120ef6b30bada4  apps/godspeed-casework-go/internal/server/run_observation_selection_test.go
+[exit 0]

@@ -1,0 +1,164 @@
+# Behavioral IR: CJ04 Form and Commit a Governed Case
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ04"
+  slug: "form_and_commit_governed_case"
+  title: "Form and Commit a Governed Case"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - open_input
+  - entity_resolution
+  - validation
+  - commitment
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - intent_submitted
+    - template_selected
+    - external_proposal_received
+    - methodology_topology_selected
+  actor_roles:
+    - CaseOwner
+    - Operator
+    - ExternalActor
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - actor_attribution
+      - cell_root
+      - work_source_descriptor
+      - semantic_references
+      - environment_and_evaluator_bindings
+    context_scope: "Case boundary, proposed plan stages, items, sentries, milestones, isolation parameters"
+
+  IS2_preflight:
+    checks:
+      - work_source_supported_and_untainted
+      - semantic_references_resolve_to_active_domain_model
+      - criteria_provenance_explicit
+      - required_execution_limits_and_sandbox_declared
+      - proposal_freshness_verified
+    readiness_classification:
+      expected: "preflight_passed | preflight_failed | stale_proposal"
+      failure_action: "return_validation_diagnostics_without_execution_effects"
+
+  IS3_authority_resolution:
+    required_role: "CaseOwner"
+    alternate_role: "Operator"
+    grant_scope: "case_creation_and_plan_commitment"
+    separation_of_duty: "External actors may propose but cannot commit case without CaseOwner grant"
+    approval:
+      status: "unresolved_in_source"
+      note: "Pre-commit policy checks verify budget and sandbox permissions"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "case.commit"
+      invoked_capabilities:
+        - "intent_planning"
+        - "template_instantiation"
+        - "proposal_validation"
+        - "topology_construction"
+        - "pipeline_planning"
+        - "delegation.preview"
+        - "case.preflight"
+        - "case.commit"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-server / sea-forge-kernel"
+    bounds:
+      side_effects: "immutable_commit_only"
+      execution_effects: "no_immediate_execution_without_explicit_dispatch"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "draft_or_external_proposal"
+      to: "immutable_committed_case"
+      alternative_states:
+        - "draft_rejected"
+        - "draft_returned_for_preflight"
+    artifacts:
+      - "committed_case_plan"
+      - "plan_stages_and_items_table"
+      - "sentries_and_milestones_index"
+      - "criteria_provenance_manifest"
+      - "evaluator_and_environment_bindings"
+      - "immutable_case_digest"
+    mutation_rule: "Append-only; committed case plan is strictly immutable. Subsequent adaptations create new versions."
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "accepted_plan_digest"
+        evidence_class: "observed"
+      - item: "criteria_provenance_records"
+        evidence_class: "observed"
+      - item: "preflight_result_token"
+        evidence_class: "observed"
+      - item: "commit_ledger_entry"
+        evidence_class: "observed"
+    integrity_verification:
+      hash_pinned_criteria: true
+      untrusted_proposal_containment_checked: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "The exact accepted plan, parameters, criteria, provenance, configuration digests, and model references are committed before any execution side effect."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "case_committed"
+        - "preflight_rejected"
+        - "commit_request_recovered"
+    settlement_vs_termination: "Plan creation must be anchored in persistent ledger before any execution item is enabled."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "start_lawful_work"
+        target_journey: "CJ07"
+        condition: "outcome == case_committed && initial_items_enabled"
+      - id: "resolve_likely_approvals"
+        target_journey: "CJ06"
+        condition: "outcome == case_committed && approvals_pending"
+      - id: "navigate_live_case"
+        target_journey: "CJ05"
+        condition: "outcome == case_committed"
+    blocked_affordances:
+      - id: "dispatch_uncommitted_items"
+        target_journey: "CJ07"
+        reason: "no_settlement_access"
+        explanation: "Work items cannot run without committed case ledger anchoring"
+
+recovery_paths:
+  - condition: "untrusted_proposal_rejected"
+    remedy: "Return validation errors without side effects; do not pollute case history"
+  - condition: "source_drift_during_formation"
+    remedy: "Repeat preflight against fresh snapshot before commitment"
+  - condition: "ambiguous_delivery_or_timeout"
+    remedy: "Use request-status recovery to retrieve committed case without re-submitting"
+
+unresolved_bindings:
+  - component: "all_fields_preflight_story_6_8"
+    status: "unresolved_in_source"
+    impact: "Complete all-fields preflight described in story 6.8 remains specified beyond implemented summary"

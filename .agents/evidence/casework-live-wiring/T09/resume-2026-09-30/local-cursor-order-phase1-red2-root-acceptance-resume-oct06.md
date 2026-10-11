@@ -1,0 +1,7 @@
+# Local cursor RED2 — root acceptance on resume
+
+Date: 2026-10-06. Root read the independent evidence verdict and checked its bounded semantic conclusion against preserved stdout and the previously reviewed frozen source identities. Accept only the recorded four semantic negative assertions: future-floor equality delivery, settlement/progress cursors resolving to history, and queued delivery after unsubscribe. This authorizes preparation of the remaining deterministic fixtures before implementing the already reviewed private local ordering algorithm; it does not approve that algorithm or full UI/T09 behavior.
+
+The twelve final guard and three UI RED2 repository captures retain their contemporaneously recorded identities. Original transient files are absent in this resumed environment; no fresh original-byte comparison is asserted. Earlier recorded direct-copy comparisons remain historical evidence. CW-24 records incomplete earlier-attempt archival. No missing output was reconstructed.
+
+Remaining test obligations include parser aliases/invalid values, constructor seed coherence, sequence ceiling, FIFO64/overflow isolation, reentrancy/throw/disposal, and the later assertions unreachable in this RED run. A fresh builder owns those fixtures; a different critic must verify source before one exclusive compiler owner obtains actual RED. Guard checkpoint uses only its accepted source/evidence and handoff paths; unrelated eleven staged identities and unaccepted UI changes remain excluded.

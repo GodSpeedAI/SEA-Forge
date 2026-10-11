@@ -1,0 +1,2768 @@
+schema: agent.development_plan
+schema_version: '1.0'
+metadata:
+  id: godspeed-bounded-judgment
+  title: GodSpeed Bounded-Judgment Capability — Implementation and Settlement
+  status: ready
+  version: 1.7.0
+  created: '2026-09-16'
+  updated: '2026-09-19'
+  revision_note: >-
+    v1.7.0 (2026-09-19): added T29 (native route-discovery breadth - second
+    operation family, e2e-forged-report detection-boundary characterization)
+    branching from the settled T21-T26 branch (T26). Tests whether the
+    route-discovery mechanism survives a materially different family; per its
+    frozen prereg the two-settleable-families breadth claim is NOT earnable in
+    this family (no honest-completion scenario exists in the catalog), so T29
+    may earn only the characterize-and-stop survival claim plus the family
+    detection boundary. Minimal amendment: 1 new task, 1 new edge, validator
+    pins updated. No prior settlement changed. v1.6.0 (2026-09-18): added T27
+    (claim-vs-observation paired experiment) and T28 (independent
+    confirmation/disposition) after T16 Outcome C + T18 negative result +
+    DeepSeek repeatability R1 localized the failure to claim-vs-observation
+    confusion. Minimal amendment: 2 new tasks, 2 new edges. No prior
+    settlement changed.
+  purpose: Project the authoritative GodSpeed Judgment Plane specification (v1.0.0) into a dependency-correct settlement graph that first purchases decisive evidence (PROOF-1) about whether uncertainty-preserving
+    bounded judgment carries information beyond the existing deterministic instrument, and only then settles the minimal bounded-judgment capability over existing GodSpeed machinery.
+source:
+  spec:
+    intended_repository_path: .agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml
+    artifact_name: GODSPEED_JUDGMENT_PLANE_SPEC.yaml
+    spec_id: godspeed.judgment-plane
+    spec_version: 1.0.0
+    sha256: 69b7d1baabd55ae61c73e615f04cf0fda43a4958a9fa3d50567035425baf6a82
+    authority: normative
+    superseded_draft:
+      path: .agents/specs/archive/GODSPEED_JUDGMENT_PLANE_SPEC.v0.1.0-draft.yaml
+      sha256: ffcb844da0b1447429b0970f5e629b911f4391652d3bb603c5dfb14cd60fe7f1
+      authority: provenance_only
+  implementation_brief:
+    intended_repository_path: .agents/plans/godspeed-bounded-judgment-brief.md
+    authority: non_normative_execution_context
+    conflict_rule: The normative specification governs. Any conflict MUST be surfaced as a blocked decision rather than silently resolved by the implementing agent.
+  supporting_sources:
+  - path: .agents/reports/2026-09-16-godspeed-judgment-plane-adversarial-review.md
+    role: repository-grounded evidence base for the reduction; does NOT override the spec
+  - path: .agents/reports/2026-09-16-godspeed-capability-gap.yaml
+    role: gap and blocker inventory with evidence citations; does NOT override the spec
+  - path: .agents/reports/2026-09-16-godspeed-spec-delta-v2.yaml
+    role: per-entity and per-requirement disposition rationale; does NOT override the spec
+  - path: .agents/reports/2026-09-16-godspeed-target-architecture-v2.mmd
+    role: target architecture diagram; does NOT override the spec
+  - path: .agents/CURRENT_STATUS.md
+    role: pre-existing repository state, known-red gates, and prior settled work
+target_settlement: A bounded learned inference can be issued over an explicitly declared answer domain and a bounded context through the existing GodSpeed execution architecture; the result preserves uncertainty
+  or abstention and provenance where applicable; deterministic, versioned composition remains outside the model; model or provider output cannot acquire authority; the inference can be correlated through
+  execution to observed consequence and settlement; the same stable semantic contract can be exercised through materially independent provider paths; target-machine operation fails safely; and every claim
+  remains within its actual evidence level.
+explicit_non_requirements: This target does NOT require external bounded-judgment service access, comparable model quality to any external service, population calibration, model training, .sea grammar changes,
+  a new Judgment service, a new database, a new ledger, or production multi-tenancy.
+operating_contract:
+  core_principle: Evidence that a judgment is POSSIBLE is not evidence that a judgment is USEFUL. This plan therefore settles measurability first (PROOF-1) and capability second, and it MUST NOT build the
+    capability before the measurement that would justify it.
+  rules:
+  - Execute tasks by dependency, not by narrative order.
+  - Independent tasks MAY be assigned concurrently only after all declared dependencies are settled; on this RAM-constrained workstation, builds, tests, type checks, daemons, and other heavy commands MUST
+    run one at a time.
+  - Never run the full daemon suite. Use the exact scoped task gates, then the exact closure gates named by the task; do not substitute pnpm, raw Cargo, or ad-hoc commands for repository recipes.
+  - Every task MUST leave the repository in a coherent state with all applicable global gates green.
+  - A task is not complete because code exists, a process starts once, the builder reports success, or a happy-path test passes.
+  - A passing gate proves only what that gate actually observes.
+  - High-risk P3 work requires fresh independent/adversarial confirmation.
+  - Do not generalize from one observation unless the normative requirement is itself general.
+  - Do not silently widen domain, schema, API, config, service, or authority surfaces when an existing representation can preserve the required distinction.
+  - Runtime, machine and provider facts belong in the established config/secret hierarchy rather than scattered hardcoding.
+  - Preserve failed evidence and correction history.
+  - A negative measurement result on one DecisionSurface is a result about THAT SURFACE and MUST NOT be reported as a capability-class conclusion (spec REQ-JUDG-023).
+  - The first corpus measurement is a PILOT MEASUREMENT. Reserved terms (calibrated probability, calibration curve, production threshold, population reliability, model generalization) MUST NOT be used for
+    it (spec REQ-VERIFY-012).
+  - Reuse proven on one judgment family MUST NOT be restated as universality (spec NONGOAL-008).
+  - 'Every claim MUST name its level where the spec defines levels: comparability A/B/C (spec CLAIM-006) and scope of falsification surface/task_family/capability_class (spec REQ-JUDG-023).'
+  task_local_harness_rule: 'A Python gate under a task evidence directory is task-owned executable evidence, not a pre-existing repository utility. The task MUST author it at the path named by the gate
+    before first execution, record its sha256 in that task''s evidence manifest, and never overwrite a script or output after execution. A correction uses round-2+ paths. T00 is the sole exception: its
+    plan validator is checked in under `.agents/plans/` before execution and T00 records the checked-in validator''s sha256.'
+  claim_states:
+  - OBSERVED
+  - INFERRED
+  - DECIDED
+  - ASSUMED
+  - UNKNOWN
+  correction_protocol:
+  - Preserve the failed evidence.
+  - 'Classify the failure: implementation, oracle/test, representation, missing prerequisite, environmental confound, or source-spec ambiguity.'
+  - Determine whether the governing requirement/invariant remains valid.
+  - Correct the smallest falsified layer.
+  - Rerun the original teeth/falsification check.
+  - Rerun the original confirmation path.
+  - Append the correction round; do not erase the failed round.
+  - Do not weaken acceptance merely because the implementation repeatedly fails it.
+  scope_control: 'A newly discovered issue enters this plan only when it blocks a normative requirement or is itself required by the source specification. Valuable but independent discoveries become OBSERVED_DEBT.
+    Attractive architecture with no requirement is rejected from current scope. In particular: no observability platform, no message broker, no new ledger, no vLLM/llama.cpp change, and no training infrastructure
+    may be added because it exists elsewhere in the stack.'
+artifacts:
+  current_status: .agents/current_status.yml
+  decision_log: .agents/evidence/godspeed-bounded-judgment/decisions.yml
+  evidence_root: .agents/evidence/godspeed-bounded-judgment
+  reports_root: .agents/reports
+  preregistration_root: .agents/preregistrations
+  plan_validator: .agents/plans/validate-godspeed-bounded-judgment-plan.py
+  convention_notes:
+    current_status: Reuses the repository's existing repo-level current-status artifact rather than introducing a second status surface. Mutable execution truth lives there and MUST NOT become a source
+      of desired-state or normative authority.
+    evidence: Follows the existing .agents/evidence/<plan-id>/ convention (already used by .agents/evidence/e2e/ and .agents/evidence/bootstrap-config-remediation/).
+    preregistrations: NEW convention introduced by this plan. The repository has exactly one frozen preregistration (.agents/specs/e2e-preregistration.yml) and no per-task prereg convention. Per-task preregistrations
+      are placed under .agents/preregistrations/ so that normative specs (`.agents/specs/`) stay free of derived execution material.
+    decision_log: NEW append-only artifact under the plan's evidence root. Records decisions and discoveries that change the execution model. Never rewritten, only appended.
+  status_rule: Mutable current status is an operational projection and MUST NOT become a source of desired-state or normative authority. Readiness is computed from `depends_on` plus settled tasks plus blocked
+    dependencies, never from prose.
+  failure_preservation_rule: Failed rounds remain present in the evidence tree. Correction rounds APPEND as `round-2`, `round-3`, ... . No evidence file is overwritten or deleted.
+verification:
+  global_gates:
+  - id: SEA_CHECK
+    repository: sea-rs
+    working_directory: .
+    command: just check
+    covers: context-check + fmt-check + lint + typecheck + security
+    baseline_status: EXPECTED_GREEN
+  - id: SEA_TEST
+    repository: sea-rs
+    working_directory: .
+    command: just test
+    covers: cargo test --workspace --all-features --locked
+    baseline_status: PREEXISTING_BASELINE_FAILURE_SUSPECTED
+    baseline_note: .agents/CURRENT_STATUS.md (2026-08-31) records that the sea-forge-server suite reaches an unrelated failing test. T00 MUST confirm or refute this against the current revision and record
+      the exact failing test id(s) as PREEXISTING_BASELINE_FAILURE before any task may claim a regression.
+  - id: SEA_CI
+    repository: sea-rs
+    working_directory: .
+    command: just ci
+    covers: context-check + fmt-check + lint + typecheck + security + test + no-async-kernel + build
+    baseline_status: DEPENDS_ON_SEA_TEST
+    baseline_note: Inherits SEA_TEST's baseline state. If SEA_TEST is red at baseline, SEA_CI is red at baseline for the same reason and the plan MUST NOT claim a plan regression.
+  - id: SEA_NO_ASYNC_KERNEL
+    repository: sea-rs
+    working_directory: .
+    command: just no-async-kernel
+    covers: 'dependency boundary: the 19 synchronous kernel crates must not gain async/HTTP deps'
+    baseline_status: EXPECTED_GREEN
+    plan_relevance: Directly constrains the HTTP AgentRunner task. The judgment invocation boundary is an async EDGE concern; it MUST NOT push tokio/reqwest into kernel crates.
+  - id: SEA_PROOF
+    repository: sea-rs
+    working_directory: .
+    command: just proof
+    covers: spec-minimum P1-P4b minimum proofs
+    baseline_status: UNKNOWN_UNTIL_T00
+  - id: GAUNTLET_CHECK
+    repository: gauntlet
+    working_directory: ../gauntlet
+    command: just check
+    baseline_status: UNKNOWN_UNTIL_T00
+  - id: GAUNTLET_TEST
+    repository: gauntlet
+    working_directory: ../gauntlet
+    command: just test
+    baseline_status: UNKNOWN_UNTIL_T00
+  - id: GAUNTLET_CI
+    repository: gauntlet
+    working_directory: ../gauntlet
+    command: just ci
+    covers: check + test + lint + deny + boundaries + ruler
+    baseline_status: UNKNOWN_UNTIL_T00
+    plan_relevance: The recipe exists; T02 binds it into hosted CI, which does not exist today.
+  - id: EDGEAI_HEALTH
+    repository: edgeai
+    working_directory: the edgeai repository root on the deployment target
+    command: just health
+    baseline_status: TARGET_MACHINE_ONLY
+    plan_relevance: T12 prerequisite; the development host is not the deployment target
+  - id: EDGEAI_JETSON_PORTS
+    repository: edgeai
+    working_directory: the edgeai repository root on the deployment target
+    command: just jetson-check-ports
+    baseline_status: TARGET_MACHINE_ONLY
+  gate_binding_rule: All commands above were discovered by reading the repositories' justfiles, not inferred from naming. T00 MUST re-verify each command resolves, MUST record its baseline exit state, and
+    MUST NOT create a parallel command surface. Task-level narrow gates MUST reuse `just crate-check <crate>` / `just crate-test <crate> [filter]` for sea-rs and `just check-package <package>` / `just test-package
+    <package>` from the Gauntlet root. T00 runs global gates sequentially in listed order. TARGET_MACHINE_ONLY gates are resolved but not executed on the development host and receive no pass classification.
+  baseline_classification_rule: 'Every gate is classified at T00 as one of: EXPECTED_GREEN, PREEXISTING_BASELINE_FAILURE, or UNKNOWN_UNTIL_T00. A gate that was already failing at the T00 baseline MUST NOT
+    be counted as a plan regression. A gate that was green at T00 and is red later IS a plan regression and MUST block settlement of the offending task.'
+  proof_levels:
+    P0: Mechanical/deterministic change. Requires a narrow direct gate plus applicable global gates.
+    P1: Normal behavioral work. Requires positive behavior, a meaningful teeth/falsification check, and applicable global gates.
+    P2: Invariant-sensitive work. Requires an explicit or preregistered claim, meaningful adversarial/negative evidence, an evidence artifact, applicable global gates, and review of a plausible alternate
+      failure path.
+    P3: Settlement-critical work. Requires frozen preregistration, builder evidence, explicit adversarial attacks, fresh independent confirmation, and correction/re-confirmation after any failed confirmation.
+  high_risk_confirmation_rule: "The specification declares six high-risk requirement groups with required confirmation modes (spec conformance_traceability.high_risk_requirement_groups):\n  authority_separation\
+    \   -> adversarial\n  semantic_bounding      -> independent\n  uncertainty_integrity  -> independent\n  claim_scope_integrity  -> adversarial\n  provenance_replay      -> fresh_target_reproduction\n\
+    \  safe_failure           -> adversarial\nEvery group MUST be confirmed by a task whose `confirmation` mode matches or exceeds the declared mode. This is verified mechanically in `traceability`."
+dependency_graph:
+  edges:
+  - - T00
+    - T01
+  - - T00
+    - T02
+  - - T00
+    - T03
+  - - T00
+    - T04
+  - - T00
+    - T05
+  - - T01
+    - T06
+  - - T06
+    - T07
+  - - T03
+    - T08
+  - - T06
+    - T08
+  - - T07
+    - T09
+  - - T08
+    - T09
+  - - T07
+    - T10
+  - - T08
+    - T11
+  - - T09
+    - T11
+  - - T05
+    - T12
+  - - T09
+    - T12
+  - - T10
+    - T12
+  - - T11
+    - T12
+  - - T01
+    - T13
+  - - T05
+    - T13
+  - - T07
+    - T13
+  - - T02
+    - T14
+  - - T03
+    - T14
+  - - T04
+    - T14
+  - - T12
+    - T14
+  - - T13
+    - T14
+  - - T01
+    - T15
+  - - T15
+    - T16
+  - - T16
+    - T06
+  - - T03
+    - T17
+  - - T17
+    - T14
+  - - T16
+    - T18
+  - - T18
+    - T19
+  - - T19
+    - T20
+  - - T16
+    - T21
+  - - T21
+    - T22
+  - - T22
+    - T23
+  - - T23
+    - T24
+  - - T24
+    - T25
+  - - T23
+    - T26
+  - - T24
+    - T26
+  - - T25
+    - T26
+  - - T16
+    - T27
+  - - T27
+    - T28
+  - - T26
+    - T29
+  edge_rationale:
+    T00 -> T01..T05: Nothing may be measured, gated, or proven before the authority is frozen and the real gates are bound.
+    T01 -> T06: 'The bounded answer domain must not be finalized before PROOF-1 establishes whether the first surface is answerable and how the corpus constrains it. This is the spec''s own dependency (C10:
+      do not promote for a surface without measurement).'
+    T06 -> T07: Carrier fields cannot be chosen before the answer-domain contract they must hold exists.
+    T03,T06 -> T08: The HTTP provider path needs both a declared answer domain and a green SEA server baseline because its comparison evidence cites the existing server HTTP path.
+    T07,T08 -> T09: Provenance and retry accounting attach to the carrier fields and the provider path; neither can be observed without both.
+    T07 -> T10: Composition thresholds operate on a distribution; the distribution must be persistable first.
+    T08,T09 -> T11: Provider substitution compares semantics of two paths, which requires a second path and the provenance that makes the comparison attributable.
+    T05,T09,T10,T11 -> T12: The live target pilot exercises correlation, provenance, composition, and substitution together on real hardware.
+    T01,T05,T07 -> T13: Evidence ownership and export depend on the measured corpus, the correlation identity, and the persisted carrier whose deliberately partial replay scope T13 closes.
+    T02,T03,T04,T12,T13,T17 -> T14: Final confirmation cannot settle the plan while either hygiene task remains open; it also requires authority, target reproduction, evidence ownership, and genuinely green
+      required global gates.
+    T01 -> T15: The variation corpus exists to answer T01's escalated question; the frozen harness family and its disclosure discipline are the measurement instrument.
+    T15 -> T16: The remeasurement consumes exactly the frozen T15 corpus manifest; wildcards forbidden.
+    T16 -> T06: T06's surface authorization may now be earned by the varied-corpus measurement; DAG-level, T16 gates T06 alongside T01.
+    T03 -> T17: T17 inherits T03's attribution records and extends gate remediation to full green.
+    T16 -> T21: The route-discovery branch is a separate developmental experiment branching from the settled T16 result; it must not reopen T16 or unlock T06.
+    T21 -> T22 -> T23 -> T24 -> T25: The loop cannot execute before its contract/fixture freeze (T21); a route cannot settle before the loop executes (T22); a case cannot be inverted before a route genuinely
+      settles (T23); the matched negative and payment comparison require an accepted generated case (T24).
+    T23,T24,T25 -> T26: The independent adversarial confirmation adjudicates the scoped claims (route search, case generation, data-generation payment) and therefore requires all of their evidence.
+  deliberate_non_edges:
+  - note: T02 (Gauntlet CI) and T03 (SEA-Forge gate repair) have NO edge to or from T01. They are independent of the pilot. T03 is nevertheless a prerequisite of T08 and both are prerequisites of final
+      settlement at T14.
+  - note: T04 (authority non-bypass) and T05 (correlation) have no edge to or from T01. Both are independently required by the spec (REQ-AUTH-*, REQ-PROV-021) and MUST proceed in parallel. If PROOF-1 returns
+      outcome A, T05 becomes the critical path but its work does not become blocked.
+  - note: T07 and T08 are siblings, not a chain. T10 branches from T07 rather than from T09 because composition needs the distribution, not the retry accounting.
+  critical_path:
+  - T00
+  - T01
+  - T06
+  - T07
+  - T09
+  - T11
+  - T12
+  - T14
+  parallel_tracks:
+  - name: production-hygiene
+    after: T00
+    tasks:
+    - T02
+    - T03
+    rationale: The review found the owner of the judgment corpus has no CI and the authority-owning crate has a red full-suite gate. Neither blocks T01; T03 blocks T08 and both block T14.
+  - name: authority-and-correlation
+    after: T00
+    tasks:
+    - T04
+    - T05
+    rationale: Both are normative requirements independent of whether PROOF-1 finds the distribution informative.
+  - name: judgment-slice
+    after: T06
+    tasks:
+    - T07
+    - T08
+    rationale: Carrier fields and the HTTP provider path are siblings.
+  settlement_sequence:
+  - T00 freeze authority and bind real gates
+  - T01 measure whether bounded judgment is answerable and informative (PROOF-1)
+  - T02..T05 close independent hygiene, authority, and correlation requirements in parallel
+  - T06 declare the bounded answer domain and the dual-basis surface
+  - T07..T11 settle the minimal judgment slice (carrier, provider, provenance, composition, substitution)
+  - T12 prove it on the real deployment target
+  - T13 settle evidence/memory ownership and read-only export after T07's carrier exists
+  - T14 fresh independent adversarial confirmation of the whole capability
+initial_state:
+  current_task: T00
+  last_settled_task: null
+  ready:
+  - T00
+  blocked:
+    T01:
+    - T00
+    T15:
+    - T01
+    T16:
+    - T15
+    T17:
+    - T03
+    T02:
+    - T00
+    T03:
+    - T00
+    T04:
+    - T00
+    T05:
+    - T00
+    T06:
+    - T01
+    - T16
+    T07:
+    - T06
+    T08:
+    - T03
+    - T06
+    T09:
+    - T07
+    - T08
+    T10:
+    - T07
+    T11:
+    - T08
+    - T09
+    T12:
+    - T05
+    - T09
+    - T10
+    - T11
+    T13:
+    - T01
+    - T05
+    - T07
+    T14:
+    - T02
+    - T03
+    - T04
+    - T12
+    - T13
+    - T17
+    T18:
+    - T16
+    T19:
+    - T18
+    T20:
+    - T19
+    T21:
+    - T16
+    T22:
+    - T21
+    T23:
+    - T22
+    T24:
+    - T23
+    T25:
+    - T24
+    T26:
+    - T23
+    - T24
+    - T25
+    T27:
+    - T16
+    T28:
+    - T27
+    T29:
+    - T26
+tasks:
+  T00:
+    title: Freeze authority, bind real gates, and validate the plan itself
+    initial_status: ready
+    depends_on: []
+    proof_level: P1
+    confirmation: builder
+    settles: []
+    settles_explanation: 'This is an explicit baseline/prerequisite task. It settles no product requirement because it changes no product behavior: it freezes the normative authority, binds the repository''s
+      REAL gates, and validates this plan''s own DAG and traceability. Every later evidence claim depends on it, which is why it is a task and not a note.'
+    changes: Adds a frozen authority record and a bound-gate record to the repository's agent workbench. No product code, schema, runtime, database, or persisted production state changes.
+    proves: That this plan is projected from an exact, self-checked specification revision; that every REQUIRED normative requirement is mapped to at least one task; that the plan references no unknown
+      requirement id; that the dependency graph is acyclic; and that every global gate's BASELINE exit state is recorded before any task runs.
+    does_not_prove: Anything about bounded judgment. It does not prove the capability works, that the historical corpus is reconstructible, or that any provider can satisfy a bounded contract.
+    hot_context:
+    - .agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml
+    - .agents/specs/archive/GODSPEED_JUDGMENT_PLANE_SPEC.v0.1.0-draft.yaml
+    - 'justfile (recipes: check, test, ci, proof, no-async-kernel, context-check, crate-check, crate-test)'
+    - '../gauntlet/justfile (recipes: check, test, lint, deny, boundaries, ruler, ci, verify)'
+    - '../edgeai/Justfile (recipes: health, jetson-check-ports, appliance-verify)'
+    - '.agents/evidence/ (existing convention: <plan-id>/ subdirectories)'
+    - .agents/plans/validate-godspeed-bounded-judgment-plan.py (checked-in mechanical validator; execution output belongs under T00 evidence)
+    - .agents/current_status.yml (the plan's declared mutable status artifact)
+    - 'KNOWN FACT: .agents/CURRENT_STATUS.md (2026-08-31) records an unrelated failing test in the sea-forge-server suite. Do not re-derive that from scratch; CONFIRM it.'
+    - 'KNOWN FACT: this plan''s source spec revision is 1.0.0 with sha256 69b7d1ba...baf6a82. A mismatch is a stop condition, not a reconciliation task.'
+    steps:
+    - Recompute sha256 of .agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml and assert equality with source.spec.sha256. On mismatch STOP and report a blocked decision; do not 'update' the hash.
+    - Re-run the specification's own final_self_check (all 12 statements holds==true) and assert the correction_ledger records 11 corrections with architectural_conclusions_reversed == 'none'.
+    - Mechanically parse every normative requirement id from the spec; classify REQUIRED (all REQ-*, VAR-*, RECOV-*, CLAIM-*) versus excluded (NONGOAL-*, roadmap items, narrative).
+    - Run the checked-in plan validator and record its sha256 plus complete stdout/stderr under T00 evidence. It validates the spec binding, 90/90 bidirectional task mapping, DAG/state equivalence, task
+      completeness, preregistration declarations, gate-script authoring, stale literals, and all six high-risk confirmation groups.
+    - 'For each gate in verification.global_gates: change to its declared working_directory, resolve the recipe, then run non-target gates sequentially in listed order. Record command, cwd, revision, exit
+      code, and a bounded output tail; never run two heavy gates concurrently.'
+    - For TARGET_MACHINE_ONLY gates, confirm the recipe exists in ../edgeai/Justfile but record NOT_RUN_TARGET_ONLY on the development host. Do not convert resolution into passing target evidence.
+    - Record the exact failing test id(s) of any red gate as PREEXISTING_BASELINE_FAILURE with the revision hash observed.
+    - 'Confirm repository clean-state expectations: record which tracked files are already modified before this plan runs, so later regression attribution is possible.'
+    - Write .agents/evidence/godspeed-bounded-judgment/T00/gate-baseline.yml and .agents/evidence/godspeed-bounded-judgment/decisions.yml.
+    - 'Update .agents/current_status.yml: metadata.plan_id=godspeed-bounded-judgment, spec binding, execution.ready_tasks from initial_state, and blockers only where the plan declares them.'
+    gate:
+    - python3 .agents/plans/validate-godspeed-bounded-judgment-plan.py
+    - just context-check
+    teeth:
+    - attack: Corrupt the bound sha256 in the plan (or edit the spec after binding) and re-run validation.
+      expected: Validation FAILS with an explicit hash-mismatch. It must not silently accept a drifted spec.
+    - attack: Remove one task.settles entry for a REQUIRED requirement and re-run validation.
+      expected: unmapped_requirements becomes non-empty and plan generation FAILS. It must not report success with a partial mapping.
+    - attack: Add a fake requirement id (for example REQ-FAKE-999) to any task.settles and re-run validation.
+      expected: unknown_plan_requirement_ids becomes non-empty and plan generation FAILS.
+    - attack: Introduce a cycle by adding an edge T14 -> T00 and re-run validation.
+      expected: Acyclicity check FAILS naming the cycle.
+    redesign_trigger: If the specification cannot be parsed into a stable requirement id set, or its own final_self_check does not hold, then the plan's source authority is not trustworthy and ALL downstream
+      work is blocked. Do not repair the specification inside this plan.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T00/
+    done_when:
+    - Recomputed spec sha256 equals the bound value.
+    - Spec final_self_check holds 12/12 and correction_ledger reports 11 corrections with zero reversals.
+    - validate-godspeed-bounded-judgment-plan.py exits 0 with 90/90 bidirectional mappings, an acyclic state-equivalent DAG, and 6/6 confirmation-conformant high-risk groups.
+    - Every global gate has a recorded baseline exit state and classification.
+    - Pre-existing modified tracked files are recorded for later regression attribution.
+    - Global gates applicable at baseline show no NEW failures introduced by T00 itself.
+  T01:
+    title: PROOF-1 — read-only bounded-judgment pilot measurement
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P2
+    confirmation: independent_adversarial
+    settles:
+    - REQ-VERIFY-004
+    - REQ-SETTLE-003
+    - REQ-OUT-006
+    - REQ-OUT-007
+    - REQ-JUDG-023
+    - REQ-VERIFY-012
+    - CLAIM-003
+    - CLAIM-006
+    - VAR-001
+    - VAR-002
+    - VAR-003
+    changes: Adds a read-only measurement harness and its report under the plan's evidence root. Reads only the exact Gauntlet database and evidence paths frozen in the T01 corpus manifest; wildcard paths
+      are discovery inputs, never the executed corpus contract. Changes NO production code path, NO schema, NO runtime behavior, and NO persisted state. This is the single most important task in the plan
+      because it decides whether the rest of the judgment-slice branch is justified.
+    proves: (1) How much of the pre-decision -> judgment -> consequence -> settlement chain is reconstructible from the existing corpus, with per-field gaps named; and (2) on the FIRST selected DecisionSurface,
+      what descriptive incremental information uncertainty-preserving outputs from materially independent providers carry relative to the existing deterministic outcome.
+    does_not_prove: That uncertainty-preserving judgment is useful as a system capability; that any provider is better at judgment; that probabilities are calibrated; that any threshold is valid in production;
+      that results generalize to other judgment shapes; or that the stack is production ready. A negative result here is a result about ONE SURFACE (spec REQ-JUDG-023) and MUST NOT be reported at a wider
+      scope.
+    terminology_rule: This task produces a PILOT MEASUREMENT, never a calibration report. The terms calibrated probability, calibration curve, production threshold, population-level reliability, and model
+      generalization are FORBIDDEN for this corpus (spec REQ-VERIFY-012).
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T01.prereg.yaml
+      freeze_contract:
+        contract_rule: F0 items MUST be frozen and hashed before the FIRST harness execution. F1 items MUST be frozen before the first PROVIDER RESULT is observed, so the surface and answer domain can never
+          be fitted to outcomes (target leakage). The preregistration artifact carries both stages; each freeze is hashed and recorded in the decision log before the work it governs.
+        f0_before_first_harness_execution:
+        - 'exact corpus manifest: per-run ids, state database paths, evidence objects and pins paths, selected/excluded status with reason'
+        - 'exact corpus hashes: sha256 per manifest entry, re-verified before the first run; runtime wildcards forbidden'
+        - 'the preregistration text itself: claims, falsifiers, known confounds, confirmation condition, branch conditions (outcomes A-E with their DAG consequences)'
+        - 'surface selection rule and surface NOMINATION (the preregistered default: does the evidence at the declared locator satisfy the declared requirement, over existing verification-record claim/requirement
+          fields) plus the preregistered second surface of a materially different judgment shape'
+        - the two harness scripts' identities (sha256) and gate paths
+        f1_before_first_provider_result_observed:
+        - the selected DecisionSurface and its judgment shape (binary/proposition, multiclass choice, or ordered score/rubric)
+        - the closed, versioned answer domain, including the explicit insufficiency/undecidable label
+        - 'the semantic basis: which canonical meanings and identities the surface cites, owned by DomainForge; evaluation context may select but never define, rename, widen, or override them (spec REQ-AUTH-006)'
+        - 'the evaluation basis: which evaluation/criteria fields pose the question and which evaluation layer owns them (kept distinguishable from the semantic basis per the spec''s dual-basis requirement)'
+        - provider identities and config identities for every provider path (at least two materially independent; the deterministic/scripted provider is mechanics-only and never counted as real substitution;
+          historical rows stay unattributed)
+        - 'the deterministic baseline: the existing deterministic outcome used for every incremental-information comparison'
+        - 'the exploratory pilot metrics to be computed: accuracy, confusion matrix, Brier score, log loss, reliability bins, abstention rate, provider disagreement — each reported only with the mandatory
+          disclosure block (N, independent run count, class counts, concentration/effective diversity, missing attribution, reconstructibility rate) and marked unstable where the sample makes it so'
+        - the falsification scope statement (surface-scoped; capability-class conclusions require the preregistered second shape per spec REQ-JUDG-023)
+      claims:
+      - The historical Gauntlet corpus can be inspected WITHOUT MUTATION to determine how much of the pre-decision -> judgment -> consequence -> settlement chain is reconstructible.
+      - The first bounded decision surface can be stated using only labels that existed BEFORE any outcome was observed, without inventing semantic labels after seeing outcomes.
+      - Materially independent providers can produce bounded outputs over that frozen surface and answer domain.
+      - On THIS SURFACE, uncertainty-preserving output provides incremental DESCRIPTIVE information over the existing deterministic outcome.
+      falsifiers:
+      - The chain cannot be reconstructed for a material fraction of rows, or temporal ordering between state_before, judgment, action, consequence and settlement cannot be established.
+      - The first surface cannot be stated without reference to the eventual outcome (label leakage), or its answer domain is degenerate (a single effective label).
+      - Providers cannot produce output inside the declared answer domain, or cannot be shown to be materially independent.
+      - The distribution adds no descriptive information over the deterministic baseline on this surface.
+      known_confounds:
+      - Corpus size is small (order 10^1 settled judgments), so every metric is unstable.
+      - Historical records carry no model identity, so provider attribution is impossible for past rows.
+      - One run dominates the corpus, so effective diversity is lower than the run count suggests.
+      - Only three record kinds appear in practice across the corpus, so the schema is richer than the content.
+      confirmation_condition: A reviewer can recompute every reported number from the persisted harness and the read-only corpus, every claim is accompanied by its scope of falsification and the mandatory
+        disclosure block, and no forbidden calibration term appears in the report.
+    evaluation_context_of_the_preregistration: The preregistration MUST be frozen (hashed) BEFORE the first harness run. Any change after the first run is a new round appended as round-2, never an edit.
+    corpus_manifest_rule: Before reading payloads, enumerate candidate runs under ../gauntlet/targets/.runs/ and write an exact manifest beside the preregistration. The manifest MUST name each run id, state
+      database path and sha256, evidence/objects path, evidence/pins path, and selected/excluded status with reason. run_pilot.py consumes only that manifest and refuses wildcard input, a missing hash,
+      a changed hash, or any writable source.
+    first_surface_selection_rule: 'Select the surface that already exists in the corpus with the most rows and an existing declared answer set. Default candidate: ''does the evidence at the declared locator
+      satisfy the declared requirement?'', over the existing verification record claim and requirement fields, with a closed answer domain that INCLUDES an explicit insufficient/undecidable label. The selection
+      and its judgment SHAPE must be recorded in the preregistration before running.'
+    second_surface_rule: Nominate in the preregistration one materially DIFFERENT judgment shape (binary or proposition, multiclass choice or classification, ordered score or rubric) to be examined if outcome
+      C occurs. This nomination is required so that outcome C cannot be used to close the question by exhaustion.
+    hot_context:
+    - ../gauntlet/targets/.runs/*/state/*.db (discovery pattern only; the frozen corpus manifest supplies exact paths and hashes)
+    - 'Tables of interest: checkpoints, records(record_type), settlements, observation_bindings, evidence_productions'
+    - ../gauntlet/targets/.runs/<frozen-run-id>/evidence/objects/ and evidence/pins/ (resolved per exact manifest entry; no runtime globbing)
+    - 'KNOWN FACT: record_type=''verification_record'' payload is a JSON document containing schema, verification_ref, run_id, iteration_no, unit_id, claim, requirement{kind,locator,producer}, instrument{name,version,deterministic},
+      evidence_ref, produced_at, outcome, class, detail.'
+    - 'KNOWN FACT: historical role_invocation payloads carry model: null. Do NOT fabricate model identity.'
+    - 'KNOWN FACT: measured aggregate counts across the 16 databases are approximately: role_invocation 37, correction_selection 28, verification_record 17, settlements 17, observation_bindings 29. Treat
+      these as INFERRED until recomputed by the harness.'
+    steps:
+    - Draft the preregistration and analysis algorithm without executing the harness or inspecting payload rows.
+    - Author run_pilot.py and verify_disclosure.py at the gate paths. They MUST implement the declared metrics and teeth, refuse non-manifest inputs, open SQLite with mode=ro, and emit outputs only under
+      the current T01 evidence round.
+    - Enumerate candidate run paths without reading payload rows; write the exact corpus manifest required by corpus_manifest_rule and add the manifest plus both harness sha256 values to the preregistration.
+    - Freeze the preregistration and corpus manifest; record both sha256 values in the append-only decision log before the first harness execution.
+    - Copy the frozen corpus to a read-only working area OR open every manifest database with SQLite mode=ro. Mutation of ../gauntlet is FORBIDDEN; record source hashes and mtimes before and after.
+    - For every database in the manifest, dump schema; count rows per record_type; record which kinds are absent (this measures the schema-versus-content gap).
+    - 'Reconstruct, per row: state_before (from checkpoints), judgment (from records), action (from role_invocation / correction_selection), observed consequence (from observation_bindings + evidence objects),
+      settlement (from settlements). Emit a machine-readable pilot dataset with explicit nulls for missing fields.'
+    - Emit the reconstructibility/coverage report and the missing-field report; classify every gap by field, not by impression.
+    - Emit the provider attribution report; mark every historical row with unattributed model identity rather than inferring one.
+    - Freeze the first surface and its answer domain; assert no label was derived from the observed outcome.
+    - 'Run at least two materially independent provider paths over the frozen surface for every reconstructible row: a deterministic/scripted provider (mechanics only, never counted as real substitution)
+      and at least one capable provider.'
+    - Emit the descriptive scoring report, the provider disagreement report, the abstention/insufficiency report, the deterministic baseline comparison, and the corpus concentration/diversity report.
+    - 'Prefix every result with the mandatory disclosure block: N, independent run count, class counts, concentration by run, missing attribution, reconstructibility rate.'
+    - Write the explicit scope-of-falsification statement, including which shapes were and were not examined.
+    - Append the outcome classification (A/B/C/D/E) and the consequence for the dependent branch to the decision log.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T01/run_pilot.py --manifest .agents/preregistrations/godspeed-bounded-judgment-T01.corpus-manifest.yml --read-only
+    - python3 .agents/evidence/godspeed-bounded-judgment/T01/verify_disclosure.py
+    teeth:
+    - attack: Shuffle the settlement labels and re-run scoring.
+      expected: Reported incremental information collapses toward the deterministic baseline or below it. If a high score survives label shuffling, the harness is computing nothing real and the task FAILS.
+    - attack: Deliberately remove rows/fields to simulate an incomplete corpus.
+      expected: The missing-field report names the removed fields and the reconstructibility rate drops accordingly; the run does not silently substitute defaults.
+    - attack: Construct a degenerate one-label answer domain.
+      expected: 'The harness REJECTS the domain as a specification defect (spec AnswerDomain rule: a vacuous domain is a defect) rather than reporting a perfect score.'
+    - attack: Construct an answer domain AFTER observing the target outcome.
+      expected: The label-leakage check FAILS the surface and the task does not proceed to scoring.
+    - attack: Return a provider value outside the declared answer domain.
+      expected: The value is rejected as a typed schema failure and counted; it is never coerced into a legal label.
+    - attack: Strip provider/model identity from a forward judgment.
+      expected: The row is recorded as explicitly unattributed; no identity is inferred.
+    - attack: Duplicate rows from the dominant run to inflate N.
+      expected: The concentration/diversity report exposes the inflation and the effective-diversity figure contradicts the inflated N.
+    - attack: Reverse the temporal order of judgment and settlement for a subset of rows.
+      expected: The chain-integrity check FAILS. The harness must not accept a judgment recorded after its consequence as a pre-consequence judgment.
+    independent_confirmation:
+      verifier_receives:
+      - the claim-scope requirements and their normative text
+      - the frozen preregistration, exact corpus manifest, and their sha256 values
+      - the two frozen harness scripts and raw round evidence
+      - 'the exact confirmation question: do label shuffle, label leakage, degenerate-domain, and scope-widening attacks fail as declared, and are all conclusions restricted to the measured surface?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      - instructions to prefer outcome A, B, C, D, or E
+      required_verdict: CONFIRM
+    branch_outcomes:
+      A:
+        condition: History cannot be reconstructed (materially).
+        consequence: 'Judgment implementation branch is BLOCKED. T06..T12 MUST NOT be started. Provenance/correlation repair becomes the immediate dependency: T05 becomes critical path and dependent work
+          is re-planned only after it settles.'
+        inference_allowed: That provenance and correlation are the blocker.
+        inference_forbidden: Anything about probabilistic judgment quality, about any answer domain, or about the capability class.
+        scope_of_falsification: not_applicable
+      B:
+        condition: History reconstructs, but providers cannot reliably satisfy the bounded output contract.
+        consequence: The semantic/value hypothesis remains OPEN. Provider and structured-output mechanics become the blocker; T08 and T09 are the critical path. Do NOT conclude uncertainty is useless.
+        inference_allowed: That contract mechanics, structured output, or provider fit needs work.
+        inference_forbidden: That uncertainty-preserving judgment is useless.
+        scope_of_falsification: not_applicable
+      C:
+        condition: History reconstructs, and the distribution adds little on THIS surface.
+        consequence: Do NOT promote probabilistic judgment for this surface. T06..T12 MUST NOT proceed ON THAT SURFACE. Before any capability-class rejection, the preregistered second surface of a DIFFERENT
+          shape MUST be evaluated.
+        inference_allowed: That this surface does not justify probabilistic judgment.
+        inference_forbidden: That multiclass choice, ordered score/rubric, or other judgment classes are falsified. A single-shape failure MUST NOT be generalized (spec REQ-JUDG-023).
+        scope_of_falsification: surface
+      D:
+        condition: History reconstructs, and the distribution carries useful descriptive information.
+        consequence: 'T06..T12 become eligible in dependency order. Permission is scoped to the examined surface and its shape. NOTE: this is permission to PROCEED, not evidence that the capability is settled.'
+        inference_allowed: Interface compatibility (spec CLAIM-006 level A) and a surface-scoped promotion decision.
+        inference_forbidden: Level B operational comparability (requires T12), level C model-quality comparability (unproven), and any calibration claim.
+        scope_of_falsification: not_applicable
+      E:
+        condition: Providers disagree strongly.
+        consequence: 'Diagnose before judging the surface: classify whether disagreement points to surface ambiguity, insufficient context, unsuitable provider, genuine case uncertainty, malformed contract,
+          or provider implementation differences.'
+        inference_allowed: That the disagreement is itself evidence requiring classification.
+        inference_forbidden: The surface MUST NOT automatically be declared wrong. Provider disagreement is evidence, not a verdict.
+        scope_of_falsification: not_applicable
+    redesign_trigger: If the corpus cannot establish TEMPORAL ORDERING between state_before, provider judgment, action, consequence and settlement, then STOP. Do not manufacture that chain heuristically.
+      The architecture decision becomes 'provenance first' and this plan's judgment slice is re-planned after T05/T09 rather than patched around.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T01/
+    done_when:
+    - The preregistration was frozen and hashed before the first run, and has not been edited since.
+    - The pilot dataset, coverage report, missing-field report, provider attribution report, descriptive scoring report, provider disagreement report, abstention report, deterministic baseline comparison,
+      and concentration report all exist.
+    - Every reported metric carries the mandatory disclosure block, and unstable metrics are labelled unstable.
+    - No forbidden calibration term appears in any report (verify_disclosure.py exits 0).
+    - The scope-of-falsification statement is present and no wider claim is made.
+    - All declared teeth behave as specified, including the label-shuffle and label-leakage attacks.
+    - Fresh independent adversarial confirmation returns CONFIRM.
+    - An outcome classification (A/B/C/D/E) is recorded in the decision log with its consequence.
+    - '../gauntlet was not modified: recorded corpus mtimes/hashes are unchanged.'
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T02:
+    title: Gauntlet CI — enforce the existing gate set on the judgment-corpus owner
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P1
+    confirmation: builder
+    settles: []
+    settles_explanation: Explicit prerequisite task. The Gauntlet CI gate settles no product requirement by itself; it is the enforcement mechanism that makes every Gauntlet-scoped evidence claim in this
+      plan falsifiable and protects the corpus that PROOF-1 depends on. It exists because the review established that the component owning the execution and judgment corpus has no automated gate at all.
+    changes: Adds continuous-integration enforcement for the Gauntlet repository using its EXISTING recipes. Changes no product behavior, no schema, and no runtime semantics.
+    proves: That the Gauntlet gate set (check, test, lint, deny, boundaries, ruler) runs automatically on change, so corpus and adapter work cannot silently regress.
+    does_not_prove: That the gate set is sufficient. A green Gauntlet gate proves only what those recipes observe; it does not prove judgment quality, corpus completeness, or production readiness.
+    hot_context:
+    - '../gauntlet/justfile (ci: check test lint deny boundaries ruler; verify: ci)'
+    - ../gauntlet/deny.toml (dependency policy)
+    - 'KNOWN FACT: ../gauntlet currently has no .github/workflows directory. Verify before and after.'
+    - 'KNOWN FACT: the sea-rs repository already uses .github/workflows/{ci,pr-title,release-please,security}.yml and invokes devbox + just. Reuse that established shape rather than inventing a second one.'
+    steps:
+    - Confirm ../gauntlet has no existing CI configuration; record the check and its result.
+    - Record the CURRENT exit state of each Gauntlet recipe individually before adding any automation, so a pre-existing red recipe is distinguished from a regression.
+    - Add CI configuration that invokes the existing `just ci` (or the same recipes) using the repository's established toolchain conventions. Do NOT create new test logic or a parallel command surface.
+    - If any recipe is red at baseline, record it as PREEXISTING_BASELINE_FAILURE with the exact failing test id and do NOT weaken or skip it to obtain green.
+    - Record the resulting workflow path(s) and the exact command invoked.
+    gate:
+    - cd ../gauntlet && just ci
+    teeth:
+    - attack: Introduce a trivial deliberate lint or boundary violation in a scratch branch and observe the configured gate.
+      expected: The gate FAILS. A gate that cannot fail on a known violation is not a gate.
+    - attack: Attempt to make the gate pass by excluding a crate or skipping a recipe.
+      expected: The exclusion is rejected during review; narrowing the observed surface while claiming the same gate is a violation of the operating contract.
+    redesign_trigger: If the Gauntlet recipes cannot run in the available environment (missing toolchain, unavailable dependency, or an environment assumption that cannot be satisfied on the development
+      host), then CI enforcement is not achievable as scoped and the affected evidence claims must be marked as relying on manual runs until a runner exists.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T02/
+    done_when:
+    - CI configuration exists and invokes only existing Gauntlet recipes.
+    - The configured gate was observed to fail on a deliberate violation and pass on the unmodified revision.
+    - Any baseline-red recipe is recorded as PREEXISTING_BASELINE_FAILURE, not hidden.
+    - No new test logic or command surface was introduced.
+  T03:
+    title: Repair the pre-existing red sea-forge-server full-suite gate
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P1
+    confirmation: builder
+    settles: []
+    settles_explanation: Explicit prerequisite task. A red full-suite gate on the crate that owns the authority and runtime boundary makes every 'gates green' claim in this plan untrustworthy. The task
+      settles no new product requirement; it restores an existing one to an observable state.
+    changes: Changes test isolation so that two server instances can coexist in the conformance test harness. Changes no production behavior unless the investigation proves the defect is in production code,
+      in which case the smallest production correction is made and separately recorded.
+    proves: That `just crate-test sea-forge-server` reaches a green state, and that the specific previously-failing test now passes for the CORRECT reason rather than by weakened assertion.
+    does_not_prove: That the server has no other latent isolation defects, that the full workspace suite is green, or that any judgment-related behavior works.
+    hot_context:
+    - 'KNOWN FACT: .agents/CURRENT_STATUS.md (2026-08-31) records `conformance_run_locator::both_layouts_still_resolve_after_a_restart` failing because a second server cannot start while the first still
+      owns the cell lock.'
+    - crates/sea-forge-server/ (server, cell lock, conformance tests)
+    - crates/sea-forge-cell/ (cell identity and ownership)
+    - justfile recipe `crate-test crate test_filter=''`
+    steps:
+    - Reproduce the failure first and capture its exact output and exit code into the evidence directory as round-1. Do not begin by editing.
+    - Determine whether the lock is per-cell or per-process, and whether the test's assumption or the production lock scope is wrong. Record the determination as DECIDED with its evidence.
+    - Apply the smallest correction that makes the test's assumption and the implementation agree.
+    - Re-run the narrow test, then the full crate suite, then the workspace suite.
+    - If the workspace suite reveals additional PRE-EXISTING failures unrelated to this defect, record them as PREEXISTING_BASELINE_FAILURE and do not silently fix or hide them.
+    gate:
+    - just crate-test sea-forge-server
+    - just test
+    teeth:
+    - attack: Weaken or delete the failing assertion to obtain green.
+      expected: REJECTED. The test must assert the same property it asserted before; only the isolation mechanism may change.
+    - attack: Mark the test ignored or filtered out of the suite.
+      expected: REJECTED. A skipped test is not a green gate.
+    - attack: Serialise the suite by forcing tests to run single-threaded as the fix.
+      expected: Allowed ONLY if the test's own assumption is genuinely that it owns the process; must be recorded as a DECIDED trade-off with its cost, not applied silently.
+    redesign_trigger: If investigation shows the failure is caused by the cell lock being fundamentally process-scoped in a way the runtime depends on, then the defect is a representation problem in cell
+      ownership, not test isolation. Stop and record it as a design question rather than adjusting tests around it.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T03/
+    done_when:
+    - The previously-failing test passes with its original assertions intact.
+    - '`just crate-test sea-forge-server` exits 0.'
+    - The original failure output is preserved as round-1 evidence.
+    - Any remaining workspace failures are classified as PREEXISTING_BASELINE_FAILURE with exact test ids.
+  T04:
+    title: Authority non-bypass — adversarial proof that model output cannot widen authority
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-AUTH-001
+    - REQ-AUTH-002
+    - REQ-AUTH-003
+    - REQ-AUTH-004
+    - REQ-AUTH-005
+    - REQ-AUTH-006
+    - REQ-VERIFY-005
+    - REQ-VERIFY-010
+    - REQ-OUT-005
+    - REQ-SAFE-001
+    - REQ-SAFE-005
+    - REQ-SEC-005
+    - REQ-GOAL-003
+    - CLAIM-002
+    changes: Adds adversarial tests around the existing authority-before-provider-dispatch ordering. Does NOT change the authority engine's semantics; if a test reveals an actual bypass, the smallest correction
+      is made and recorded separately.
+    proves: That no provider or model response, however shaped, can produce an authority ALLOW without independent agreement from the authority engine; and that provider timeout, unavailability, malformed
+      output, or contradictory output cannot default to permissive behavior.
+    does_not_prove: That the authority policy itself is correct, complete, or free of misconfiguration; that any judgment is useful; or that composition thresholds are sound. It proves the ORDERING and
+      the FAIL-CLOSED property, not policy quality.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T04.prereg.yaml
+      claims:
+      - A provider returning an allow-shaped or high-confidence answer while the authority engine says DENY produces DENY.
+      - Provider timeout produces a typed non-authoritative state, never ALLOW.
+      - Unavailable provider produces a typed non-authoritative state, never ALLOW.
+      - Malformed or out-of-domain provider output produces a typed failure, never ALLOW.
+      - A contradictory model response cannot produce ALLOW.
+      - Evaluation context contributed to a DecisionSurface cannot redefine canonical domain meaning (REQ-AUTH-006).
+      falsifiers:
+      - Any single case above produces ALLOW without independent authority agreement.
+      - Any failure mode is observed to be indistinguishable from success in the recorded outcome.
+      - An evaluation criterion is observed to define, rename, widen, or override a canonical concept.
+      known_confounds:
+      - A permissive test policy could make the tests vacuous. The preregistration MUST declare a DENY-by-default policy for the adversarial cases.
+      - A stub provider that cannot express an allow-shaped answer would make the primary attack vacuous. The preregistration MUST require the stub to be capable of emitting the strongest available allow-shaped
+        answer.
+      confirmation_condition: A fresh independent verifier, given the requirement ids, the frozen preregistration, the tests, and the evidence, independently attempts the same attacks and returns CONFIRM
+        with no authority-widening case found.
+    hot_context:
+    - crates/sea-forge-server/src/agent_probe.rs (verdict checked before dispatch; failure settles Rejected)
+    - crates/sea-forge-authority/src/lib.rs (Verdict, NormalizedDisposition, Determinism, PolicyAuthorityEngine)
+    - crates/sea-forge-authority/tests/conformance_m0_authority.rs (existing policy-binding conformance; NOT an adversarial model-output test)
+    - 'KNOWN FACT: authority-before-model is true BY CONSTRUCTION today and is UNPROVEN BY TEST. This task is the missing proof.'
+    steps:
+    - Freeze the preregistration, including the DENY-by-default policy and the strongest-available-allow-shaped-answer requirement for the stub.
+    - Build the adversarial stub capable of emitting an allow-shaped, high-confidence answer.
+    - Add the timeout, unavailable, malformed, out-of-domain, and contradictory cases.
+    - 'Add the semantic-authority case: an evaluation criterion attempting to redefine a canonical concept is refused.'
+    - Run all cases under the DENY-by-default policy and capture raw evidence per case.
+    - Obtain fresh independent adversarial confirmation.
+    gate:
+    - just crate-test sea-forge-authority
+    - just crate-test sea-forge-server
+    teeth:
+    - attack: Provider returns ALLOW with maximum confidence while the policy says DENY.
+      expected: Authority returns DENY. The judgment is recorded as evidence, never permission.
+    - attack: Provider times out mid-invocation.
+      expected: Typed timeout failure; no ALLOW; the attempt remains referenceable.
+    - attack: Provider endpoint unreachable.
+      expected: Typed unreachable failure; no ALLOW.
+    - attack: Provider returns a value outside the declared answer domain.
+      expected: Typed schema failure; no ALLOW; the value is not coerced.
+    - attack: Provider returns contradictory answers across two invocations of the same request.
+      expected: Both are preserved; the contradiction is explicit; no ALLOW.
+    - attack: An evaluation criterion attempts to redefine a canonical DomainForge concept.
+      expected: Refused. Semantic authority does not move.
+    - attack: Make the test policy permissive and re-run.
+      expected: The harness MUST detect that the adversarial cases became vacuous and FAIL the run rather than reporting green.
+    independent_confirmation:
+      verifier_receives:
+      - the settled requirement ids and their normative text
+      - the frozen preregistration
+      - the adversarial tests and the stub provider
+      - the per-case raw evidence
+      - 'the exact confirmation question: can any provider response produce an authority ALLOW without independent authority agreement?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      - the builder's list of which attacks were considered hardest
+      required_verdict: CONFIRM
+    redesign_trigger: If a genuine authority bypass is found, the ordering invariant itself is falsified. Stop, preserve the evidence, and revise the specification rather than patching the test. A bypass
+      is a normative failure, not an implementation bug.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T04/
+    done_when:
+    - Every preregistered case behaves as specified under a DENY-by-default policy.
+    - The vacuity guard fails the run if the policy or stub makes cases trivial.
+    - Fresh independent adversarial confirmation returns CONFIRM.
+    - Raw per-case evidence is preserved, including any failed round.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T05:
+    title: Loop correlation identity — deterministic joinability without heuristic string matching
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-PROV-021
+    - REQ-PROV-022
+    - REQ-SETTLE-001
+    - REQ-GOAL-005
+    - VAR-008
+    - RECOV-004
+    changes: Introduces or binds ONE stable correlation identity that makes artifacts of a single operative loop deterministically joinable, and records the chosen mechanism. Does not create a new store,
+      a new service, or a new ledger.
+    proves: That a judgment, its authority decision, its execution, its observed consequence, and its settlement can be joined mechanically by a correlation identity alone, with no heuristic string matching
+      and with false joins impossible or rejected.
+    does_not_prove: That every subsystem physically exposes an identically named field. The requirement is JOINABILITY, not a field name; the mechanism is implementation-defined unless an existing repository
+      contract forces one representation. It also does not prove the judgment is correct or useful.
+    mechanism_rule: Acceptable mechanisms include direct echo, envelope projection, an explicit mapping table, or another lossless mechanism. Whatever is chosen MUST be demonstrated lossless by a joinability
+      test. Joinability MUST NOT be inferred from string similarity.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T05.prereg.yaml
+      claims:
+      - A single stable correlation identity can be bound at admission and preserved across meaning, judgment, authority, execution, observation, and settlement boundaries.
+      - 'The chosen mechanism is lossless: every artifact that cites a judgment or a settlement is joinable to it.'
+      - False joins are impossible or explicitly rejected.
+      - A settlement that contradicts a prior judgment leaves the original judgment immutable and correlatable (VAR-008).
+      falsifiers:
+      - Two concurrent runs with similar human-readable ids produce a false join.
+      - A restart or resume loses the correlation for in-flight artifacts.
+      - A duplicate external id causes a wrong join instead of a rejection.
+      - A missing hop is silently tolerated rather than reported.
+      - A stale mapping binds a judgment to the wrong settlement.
+      known_confounds:
+      - Existing run_id strings are already reused across systems, so a test that merely matches run_id strings may appear to pass while proving nothing about joinability under collision.
+      - If the corpus is small, collision cases must be constructed deliberately rather than waited for.
+      confirmation_condition: A fresh independent verifier receives the requirement, the mechanism, the joinability tests, and the evidence, and independently attempts false joins and missing-hop cases,
+        returning CONFIRM with no false join achieved and no silent missing hop tolerated.
+    hot_context:
+    - gauntlet-ports/src/agent_runner.rs (ContextEnvelope{body,digest}; RoleInvocationSpec)
+    - gauntlet-domain/src/role_invocation.rs (RoleInvocationDefinition.context_envelope_digest)
+    - sea-forge-core/src/types.rs (Determinism{policy_bundle_hash, action_request_hash, identity_binding_hash})
+    - sea-forge-ledger/src/types.rs (LedgerEntry, MmrState, CommittedRecordRef)
+    - sxr-core/src/types.rs (LedgerPosition, DeclKey) and sxr-core/src/record_kinds.csv (settlement_dependency column)
+    - 'KNOWN FACT: no shared correlation value survives the round trip today. Correlation is currently by run_id string convention across four systems.'
+    steps:
+    - Inspect the corrected specification and the existing identities before designing anything; record which identities already exist and what each can and cannot express.
+    - Freeze the preregistration before implementation or harness execution.
+    - Choose the mechanism and record WHY, including whether any existing repository contract forces one representation.
+    - Bind the identity at admission and preserve it across the required boundaries using the chosen lossless mechanism.
+    - Author joinability_test.py at the gate path and record its sha256 before first execution; it joins judgment to settlement by the correlation identity alone and implements every declared false-join
+      attack.
+    - Construct the collision, restart, duplicate-id, missing-hop, stale-mapping, and mismatched-pair cases.
+    - Obtain fresh independent adversarial confirmation.
+    gate:
+    - just crate-test sea-forge-core
+    - python3 .agents/evidence/godspeed-bounded-judgment/T05/joinability_test.py
+    teeth:
+    - attack: Two simultaneous runs with similar human-readable ids.
+      expected: No false join; each artifact resolves to its own loop.
+    - attack: Restart or resume mid-loop.
+      expected: Correlation survives; in-flight artifacts remain joinable.
+    - attack: Duplicate external id.
+      expected: Rejected as a conflict, never silently joined.
+    - attack: Remove one correlation hop.
+      expected: The joinability check FAILS and names the missing hop; it does not fall back to string matching.
+    - attack: Serve a stale mapping.
+      expected: The stale mapping is detected and rejected.
+    - attack: Intentionally mismatch a judgment with a settlement from another run.
+      expected: The false join is refused.
+    - attack: Make the joinability test pass by matching run_id strings only.
+      expected: The collision case above MUST fail such an implementation.
+    independent_confirmation:
+      verifier_receives:
+      - REQ-PROV-021 and REQ-PROV-022 normative text
+      - the frozen preregistration
+      - the chosen mechanism and its rationale
+      - the joinability tests and the adversarial cases
+      - the raw evidence
+      - 'the exact confirmation question: can any two artifacts from different operative loops be joined, or can any required hop be silently missing?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      required_verdict: CONFIRM
+    redesign_trigger: If joinability cannot be achieved without changing an existing event schema or creating a new persistence subsystem, STOP. That would contradict the specification's reduction and requires
+      an explicit spec revision rather than an implementation workaround.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T05/
+    done_when:
+    - A correlation identity is bound at admission and preserved across all required boundaries.
+    - The joinability test joins judgment to settlement by the correlation identity alone.
+    - Every adversarial case behaves as specified; no false join is achievable.
+    - Fresh independent adversarial confirmation returns CONFIRM.
+    - No new store, service, or ledger was introduced.
+  T06:
+    title: Bounded answer-domain contract and the first declared DecisionSurface
+    initial_status: blocked
+    depends_on:
+    - T01
+    - T16
+    proof_level: P2
+    confirmation: independent
+    settles:
+    - REQ-JUDG-001
+    - REQ-JUDG-002
+    - REQ-JUDG-020
+    - REQ-JUDG-021
+    - REQ-JUDG-024
+    - REQ-OUT-002
+    - REQ-OUT-003
+    - REQ-CONFIG-011
+    - REQ-SEC-004
+    - REQ-GOAL-001
+    - REQ-GOAL-002
+    - CLAIM-001
+    - VAR-004
+    - RECOV-003
+    changes: 'Adds the declared answer-domain data structure and the first DecisionSurface declaration derived from T01''s preregistered surface. This is a normative-code change gated on PROOF-1: it MUST
+      NOT be started before T01 settles, and MUST NOT be started at all if T01''s outcome is A or B, or is C without the second-surface evaluation.'
+    proves: That a closed, typed, versioned answer domain with an explicit non-availability label can be declared and enforced, and that the first surface is answerable within it with real provider inputs
+      (from T01's harness data, not invented data).
+    does_not_prove: That the domain is the RIGHT one for any other surface; that probabilities are calibrated; that providers behave; or that composition thresholds are sound. A one-label domain is a specification
+      defect, not a simplification.
+    dependency_on_proof_1: 'Per the spec''s own dependency chain: surface selection needs measurement, context framing needs selected surface, carrier field needs declared answer domain, provider and provenance
+      paths need the carrier. T06 therefore MUST NOT run before T01, and the surface it declares MUST be the one T01 measured, unless the decision log records a justified re-selection with its evidence.'
+    answer_domain_rules:
+    - The domain is CLOSED and ENUMERATED; values are typed, not free text.
+    - The domain VERSION is part of the contract; changing the domain is a new version, not an edit.
+    - An explicit non-availability / insufficient-context / undecidable label is REQUIRED. A domain without one is rejected.
+    - A vacuous (single effective label) domain is a specification defect and MUST be rejected by validation.
+    - Out-of-domain provider values are typed schema failures; they are counted, never coerced into a legal label.
+    hot_context:
+    - .agents/preregistrations/godspeed-bounded-judgment-T01.prereg.yaml (the frozen first surface)
+    - .agents/evidence/godspeed-bounded-judgment/T01/ (the measured corpus and domain candidate)
+    - The specification's bounded judgment contract (REQ-JUDG-001..005, answer domain, uncertainty fields, decision-shape taxonomy)
+    - 'crates/sea-forge-authority/src/lib.rs (GovernanceDisposition: the repository''s canonical closed governance enumeration)'
+    - '../gauntlet/crates/gauntlet-domain/src/verification.rs (VerificationRecord: the mandated slice-1 carrier)'
+    steps:
+    - Confirm T01's settled outcome authorizes this task (outcome D, or C after the preregistered second-surface evaluation, or E resolved to D). Record the authorization in the decision log.
+    - 'Declare the answer domain from T01''s frozen surface: enumerated labels, explicit insufficiency label, version.'
+    - 'Implement domain validation: closure, non-vacuity, insufficiency-label presence, out-of-domain rejection as typed failure.'
+    - 'Add the positive test: the surface is answerable within the domain using T01''s real rows (not synthetic data).'
+    - 'Add the negative tests: vacuous domain rejected, missing insufficiency label rejected, out-of-domain value rejected without coercion.'
+    gate:
+    - (cd ../gauntlet && just check-package gauntlet-domain)
+    - (cd ../gauntlet && just test-package gauntlet-domain)
+    teeth:
+    - attack: Declare a one-label domain.
+      expected: Validation REJECTS it as vacuous (spec defect), never accepts a trivially-satisfiable domain.
+    - attack: Remove the insufficiency label from a declared domain.
+      expected: Validation REJECTS the domain.
+    - attack: Feed a value outside the declared domain.
+      expected: Typed schema failure, counted; never coerced or silently dropped.
+    - attack: Reopen the domain to free-text by adding a wildcard label.
+      expected: Validation REJECTS a non-enumerated domain.
+    - attack: Change a label's meaning in place without bumping the domain version.
+      expected: The version check detects the mutation and rejects the contract.
+    independent_confirmation:
+      verifier_receives:
+      - the semantic-bounding requirements and their normative text
+      - T01's frozen authorized surface, answer-domain evidence, and outcome decision
+      - the domain implementation, focused tests, and raw gate output
+      - 'the exact confirmation question: can any vacuous, open, unversioned, missing-insufficiency, or outcome-leaking domain pass validation?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      required_verdict: CONFIRM
+    branch_dependent_note: 'Authorization routes: (a) T01 outcome D; (b) T01 outcome C followed by the preregistered second surface earning authorization (both historical surfaces FAILED authorization —
+      recorded, not erased); or (c) T16''s consequence-grounded remeasurement over the controlled-variation corpus earning authorization under T16''s frozen decision rule. If T16 also fails to earn authorization,
+      T06 remains blocked and the capability-class question stays escalated per spec REQ-JUDG-023 rather than resolved by exhaustion.'
+    redesign_trigger: If the first surface cannot be stated without reference to the eventual outcome (label leakage that T01's checks missed), the surface is invalid. Do not weaken the leakage check; return
+      to surface selection.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T06/
+    done_when:
+    - The answer domain is declared, versioned, closed, and carries an explicit insufficiency label.
+    - Positive answerability over T01's real rows is demonstrated.
+    - All five teeth behave as specified.
+    - Fresh independent confirmation returns CONFIRM.
+    - The decision log records the T01-outcome authorization for starting this task.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T07:
+    title: Dual-basis surface carrier and persisted uncertainty distribution
+    initial_status: blocked
+    depends_on:
+    - T06
+    proof_level: P2
+    confirmation: independent
+    settles:
+    - REQ-JUDG-010
+    - REQ-JUDG-012
+    - REQ-JUDG-013
+    - REQ-JUDG-022
+    - REQ-OUT-001
+    - REQ-GOAL-007
+    - VAR-007
+    - CLAIM-004
+    - CLAIM-005
+    changes: 'Adds carrier fields to the execution boundary event envelope for exactly one judgment slot, plus a bounded persistence surface (append-only rows: surface id, domain version, provider identity,
+      uncertainty fields, request digest) and its read path. No deterministic engine is replaced; no migration of existing tables; no runtime behavior change beyond the new fields.'
+    proves: That uncertainty-preserving output can be carried as typed fields alongside the deterministic basis without displacing it (CLAIM-004), that both bases are attributable (CLAIM-005), that the
+      distribution survives restart and settlement, and that schema evolution is additive with compatibility handling (REQ-JUDG-021/022).
+    does_not_prove: That any provider produces good values; that composition thresholds are sound; that the deterministic path is affected; or that replay reproduces a full legacy chain. The T13 replay
+      scope is DELIBERATELY PARTIAL at this stage; it completes only at T13 with the read-only export path. This staging MUST be stated in T07's evidence.
+    hot_context:
+    - ../gauntlet/crates/gauntlet-ports/src/agent_runner.rs (ContextEnvelope and RoleInvocationSpec)
+    - ../gauntlet/crates/gauntlet-domain/src/role_invocation.rs (RoleInvocationDefinition and context_envelope_digest)
+    - ../gauntlet/crates/gauntlet-domain/src/verification.rs (VerificationRecord, the mandated slice-1 carrier)
+    - ../gauntlet/crates/gauntlet-ports/src/state_store.rs (StateStore append/persistence contract)
+    - ../gauntlet/crates/adapters/gauntlet-adapter-state-sqlite/src/ (SQLite implementation)
+    - sxr-core/src/types.rs (LedgerPosition — claim/entry/receipt numbering, an example of the repo's envelope-of-envelopes style)
+    - 'sea-forge-ledger/src/types.rs (LedgerEntry kind split: Body|Seal|Tail)'
+    - 'KNOWN FACT: the first surface is verification-shaped; the provider-identity chain is currently unattributed end-to-end.'
+    steps:
+    - Design the carrier fields for exactly ONE judgment slot against the declared answer domain from T06; record the field-for-field mapping to REQ-JUDG-002's required uncertainty fields.
+    - 'Make every field optional-at-transport and typed; absence is represented explicitly (see REQ-JUDG-022: no collapsed-value-only persistence), never as a sentinel value.'
+    - Carry provider identity and provider version in the same envelope slot (REQ-JUDG-014).
+    - Extend the append-style persistence to hold the distribution rows bounded to that one surface; define retention/compaction expectations now, even if enforcement lands in T09.
+    - 'Add schema-evolution tests: add a field (additive, old readers ignore), change a field''s type (old readers must fail explicitly, not misread).'
+    - Add the not-lost-on-restart and not-lost-on-settlement tests.
+    - 'Add the disjoint-upgrade test: a producer that does not populate the new fields must still produce consumable records for a consumer that expects them (explicit-absence semantics end-to-end).'
+    gate:
+    - (cd ../gauntlet && just test-package gauntlet-domain)
+    - (cd ../gauntlet && just test-package gauntlet-ports)
+    - (cd ../gauntlet && just test-package gauntlet-app)
+    - (cd ../gauntlet && just test-package gauntlet-adapter-state-sqlite)
+    teeth:
+    - attack: Omit the uncertainty fields entirely from a record.
+      expected: The record remains valid and consumable; absence is explicit (schema-valid) (CLAIM-005).
+    - attack: Send uncertainty fields with wrong types.
+      expected: 'Typed schema failure at the boundary; not silently coerced (REQ-JUDG-020: out-of-domain rejection).'
+    - attack: Populate a deterministic field and an uncertainty field with contradictory content.
+      expected: Both are preserved; the deterministic basis is not overwritten (CLAIM-004).
+    - attack: Restart the process between record append and read.
+      expected: The distribution survives and is queryable unchanged.
+    - attack: Consume an old-schema record with the new reader.
+      expected: Explicit handling of the missing fields (defaults are named, never inferred content) (REQ-JUDG-021).
+    - attack: Feed the new reader a record whose changed field type it does not know.
+      expected: Old readers fail explicitly rather than misreading (REQ-JUDG-022).
+    - attack: Corrupt one distribution row and attempt attribution.
+      expected: 'The reader detects the corruption rather than attributing garbage (REQ-JUDG-013: no fabricated confidence).'
+    - attack: Omit provider identity from a distribution row.
+      expected: 'The row is recorded as explicitly unattributed; no identity is inferred (REQ-JUDG-013: no fabricated identity).'
+    independent_confirmation:
+      verifier_receives:
+      - the uncertainty-integrity requirements and their normative text
+      - the carrier schema, migrations/additive representation, and raw persistence evidence
+      - the restart, settlement, corruption, and disjoint-upgrade tests
+      - 'the exact confirmation question: can a collapsed value, fabricated distribution/confidence, overwritten deterministic basis, or inferred provider identity pass?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      required_verdict: CONFIRM
+    redesign_trigger: If the chosen carrier requires mutating existing persisted tables rather than an additive extension, STOP. That contradicts the spec's non-displacement requirement (CLAIM-004) and
+      needs a spec-level decision, not an implementation workaround.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T07/
+    done_when:
+    - Carrier fields exist for exactly one judgment slot with explicit-absence semantics.
+    - The distribution is persisted append-only and survives restart and settlement.
+    - Provider identity and version are carried and observable.
+    - All eight teeth behave as specified, including the disjoint-upgrade case.
+    - The deterministic basis is demonstrably not displaced.
+    - Fresh independent confirmation returns CONFIRM.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T08:
+    title: HTTP provider path through the existing AgentRunner edge
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T06
+    proof_level: P2
+    confirmation: builder_with_teeth
+    settles:
+    - REQ-JUDG-010
+    - REQ-JUDG-011
+    - REQ-CONFIG-001
+    - REQ-CONFIG-002
+    - REQ-CONFIG-004
+    - REQ-CONFIG-010
+    - REQ-CONFIG-012
+    - REQ-SEC-002
+    - REQ-SEC-003
+    - VAR-006
+    changes: Adds exactly one Gauntlet edge adapter crate, crates/adapters/gauntlet-adapter-agent-http, implementing the existing synchronous gauntlet_ports::AgentRunner contract over bounded HTTP operations.
+      It adds no port and does not reuse sea_forge_agent::AgentProvider, which the spec identifies as a disjoint second port. Operational and model-quality comparability remain UNPROVEN until T11/T12.
+    proves: That a provider can be invoked over HTTP inside the existing invocation path, that contract failures are typed failures (never coercion), that semantic context is not authoritative, and that
+      the async boundary stays at the edge.
+    does_not_prove: That provider outputs are useful (T01 scope), that they are attributable end-to-end (T09), that substitution is operationally sound (T11), or that the stack works on the real target
+      (T12).
+    dependency_boundary_rule: The AgentRunner port lives in gauntlet-ports and is synchronous/admission-based. Provider-specific HTTP code belongs only in the new adapter; Gauntlet domain, ports, and app
+      may not gain HTTP/runtime dependencies. `just boundaries` from the Gauntlet root is the binding dependency-direction gate. `just no-async-kernel` remains a SEA gate and MUST also pass if T08 changes
+      any sea-rs file, but it does not prove the Gauntlet boundary.
+    operator_approval_required: Before editing T08, obtain operator approval for the new adapter crate and its exact HTTP/runtime dependency set, as required by repository policy. The approved default architecture
+      is the crate and boundary stated in `changes`; approval may choose dependencies, but MUST NOT choose a third provider port or place HTTP dependencies in gauntlet-domain, gauntlet-ports, or gauntlet-app.
+      If approval is denied, block T08 and record a spec/plan decision; do not hide HTTP inside an existing unrelated adapter.
+    hot_context:
+    - ../gauntlet/crates/gauntlet-ports/src/agent_runner.rs (the synchronous AgentRunner seam and shared contract semantics)
+    - ../gauntlet/crates/adapters/gauntlet-adapter-agent-mock/ (current scripted AgentRunner implementation and contract pattern)
+    - ../gauntlet/crates/adapters/gauntlet-adapter-agent-prime/ and gauntlet-adapter-agent-cli/ (real adapter composition patterns; neither is an HTTP adapter)
+    - ../gauntlet/crates/gauntlet-cli/ (composition root; adapter selection is config-driven)
+    - crates/sea-forge-server/src/agent_probe.rs (reference HTTP failure taxonomy only; not the port to implement)
+    - crates/sea-forge-agent/src/provider.rs (the disjoint AgentProvider port that MUST NOT become the judgment port)
+    - 'KNOWN FACT: today only ONE role definition exists, so T08 must not claim multi-role generality.'
+    steps:
+    - Obtain and record the operator approval required above before changing workspace membership or dependencies.
+    - Add gauntlet-adapter-agent-http under crates/adapters/, depending inward only on gauntlet-domain and gauntlet-ports plus the approved external HTTP/runtime dependencies.
+    - 'Implement the full existing AgentRunner contract: prompt admission, non-blocking poll, bounded collect, idempotent cancellation, stable terminal state, capabilities, and typed AgentError mapping.
+      Do not add or alter a provider port.'
+    - Wire adapter selection in the Gauntlet composition root through existing configuration; the kernel/app path remains caller-compatible.
+    - 'Map provider failures to typed outcomes: timeout, unreachable, malformed, out-of-domain (REQ-JUDG-014: bounded observable retries; each state distinct and non-authoritative).'
+    - 'Enforce contract validation at the boundary: out-of-domain values are rejected, never coerced (REQ-JUDG-020).'
+    - 'Preserve semantic context as context: an evaluation criterion cannot redefine canonical domain meaning (REQ-AUTH-006).'
+    - Extend the Gauntlet shared AgentRunner contract suite and architecture registry to cover the HTTP adapter.
+    gate:
+    - (cd ../gauntlet && just check-package gauntlet-adapter-agent-http)
+    - (cd ../gauntlet && just test-package gauntlet-adapter-agent-http)
+    - (cd ../gauntlet && just test-package gauntlet-ports)
+    - (cd ../gauntlet && just boundaries)
+    - just crate-test sea-forge-server
+    - just no-async-kernel
+    teeth:
+    - attack: Return an out-of-domain value from the provider.
+      expected: Typed rejection, counted; no coercion into a legal label.
+    - attack: Force a provider timeout.
+      expected: Typed timeout outcome, distinct from unavailable and malformed; nothing downstream treats it as a judgment.
+    - attack: Kill the provider endpoint.
+      expected: Typed unreachable outcome; no silent fallback to the deterministic engine presented as provider output.
+    - attack: Return well-formed JSON that violates the contract.
+      expected: Typed contract failure; not a panic and not a silent pass-through.
+    - attack: Have an evaluation criterion redefine a canonical concept and see whether dispatch changes.
+      expected: Semantic authority does not move; dispatch behavior is unchanged by the redefinition.
+    - attack: Move the HTTP client into a kernel crate.
+      expected: Gauntlet `just boundaries` FAILS and the change is rejected; SEA `just no-async-kernel` remains green.
+    - attack: Substitute the HTTP provider for the stub at the AgentRunner port with no other changes.
+      expected: The kernel path is unchanged and observable behavior contracts hold (interface compatibility, CLAIM-006 level A only).
+    redesign_trigger: If the adapter cannot satisfy the existing synchronous AgentRunner contract without changing the port, introducing a third provider abstraction, or adding HTTP/runtime dependencies
+      to domain/ports/app, STOP. Record the failed design evidence and request a spec decision; do not thread async through inner crates or repurpose AgentProvider.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T08/
+    done_when:
+    - A real provider is reachable over HTTP through the existing invocation path.
+    - All seven teeth behave as specified.
+    - The existing AgentRunner shared contract suite passes for the HTTP adapter.
+    - Gauntlet `just boundaries` and SEA `just no-async-kernel` pass with no inner-crate HTTP/runtime dependency.
+    - Failure modes are distinct, typed, and non-authoritative.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T09:
+    title: Provenance, retry accounting, and safe failure of the judgment path
+    initial_status: blocked
+    depends_on:
+    - T07
+    - T08
+    proof_level: P2
+    confirmation: independent_adversarial
+    settles:
+    - REQ-PROV-001
+    - REQ-PROV-002
+    - REQ-PROV-003
+    - REQ-PROV-020
+    - REQ-OUT-004
+    - REQ-JUDG-011
+    - REQ-JUDG-014
+    - REQ-SAFE-002
+    - REQ-SAFE-003
+    - REQ-SAFE-004
+    - REQ-SEC-001
+    - REQ-GOAL-004
+    - REQ-VERIFY-001
+    - REQ-VERIFY-003
+    - RECOV-001
+    - RECOV-002
+    changes: 'Adds provenance capture and retry/fallback accounting to the judgment path built by T07 and T08: provider identity on every downstream record, explicit retry provenance, typed degradation
+      states, and credential/rate-limit failure handling. Changes no deterministic engine and no authority ordering established by T04.'
+    proves: That every judgment is attributable to its producing provider, that retries do not silently masquerade as fresh judgments, that degraded judgments are marked degraded, and that credential or
+      rate-limit failures are typed and non-authoritative.
+    does_not_prove: 'That the provenance chain covers legacy historical rows (T01 scope, unattributed by construction); that replay reproduces full legacy chains (completes only at T13 with the read-only
+      export); or that any threshold is valid for production. REQ-VERIFY-003 is shared with T12: T09 proves provenance on the development host; T12 re-proves it by fresh reproduction on the deployment target.'
+    shared_requirement_note: 'REQ-VERIFY-003 and RECOV-001 each appear in two tasks deliberately. Strategy: T09 establishes the mechanism and the positive behavior; T12 re-establishes it by FRESH REPRODUCTION
+      on the deployment target. The second occurrence is not a duplicate claim; it is the spec''s own provenance_replay confirmation mode (fresh_target_reproduction) applied at the point where the target
+      first executes.'
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T07/ (carrier fields and persisted distribution)
+    - .agents/evidence/godspeed-bounded-judgment/T08/ (HTTP provider path and typed failure modes)
+    - ../gauntlet/crates/gauntlet-domain/src/role_invocation.rs and verification.rs (forward record shapes)
+    - ../gauntlet/crates/gauntlet-ports/src/state_store.rs plus crates/adapters/gauntlet-adapter-state-sqlite/src/ (retry/persistence contract and implementation)
+    - 'KNOWN FACT: historical role_invocation payloads carry model: null; forward rows MUST carry provider identity so the same gap never recurs.'
+    steps:
+    - Attach provider identity to every downstream record produced from a judgment, including retries and fallbacks.
+    - 'Represent retry provenance explicitly: a retried judgment is marked retried with its attempt count and antecedent reference; it is never presented as a first attempt.'
+    - 'Represent degraded judgments explicitly: a judgment produced under fallback or partial context is marked degraded, not presented as full.'
+    - Handle credential and rate-limit failures as typed non-authoritative outcomes.
+    - 'Add the replay check over the forward chain: given the persisted records, the judgment and its settlement join by the T05 correlation identity; legacy historical rows are explicitly excluded from
+      the replay claim.'
+    gate:
+    - (cd ../gauntlet && just test-package gauntlet-domain)
+    - (cd ../gauntlet && just test-package gauntlet-app)
+    - (cd ../gauntlet && just test-package gauntlet-adapter-state-sqlite)
+    teeth:
+    - attack: Strip provider identity from a forward judgment.
+      expected: The row is recorded as explicitly unattributed; no identity is inferred.
+    - attack: Retry a judgment and inspect its provenance.
+      expected: The record is marked retried with attempt count and antecedent; a reader can distinguish it from a first attempt.
+    - attack: Force fallback context and inspect the judgment marking.
+      expected: The judgment is marked degraded; it is not presented as full.
+    - attack: Expire the provider credential mid-run.
+      expected: Typed credential failure; never a silent downgrade to unattributed success.
+    - attack: Trigger the provider rate limit.
+      expected: Typed rate-limit outcome; the attempt remains referenceable.
+    - attack: 'Attempt replay over a legacy historical row with model: null.'
+      expected: Replay explicitly reports the unattributed gap rather than inferring identity.
+    - attack: Duplicate a distribution row and attempt to attribute both copies to the same settlement.
+      expected: Deduplication or explicit conflict, never double-counted attribution.
+    independent_confirmation:
+      verifier_receives:
+      - the safe-failure requirements and their normative text
+      - the forward provenance, retry, degradation, credential, rate-limit, and replay evidence
+      - the focused tests and exact raw gate output
+      - 'the exact confirmation question: can any retry, fallback, missing identity, credential failure, rate limit, or duplicate row appear as authoritative success or erase its antecedent?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      required_verdict: CONFIRM
+    redesign_trigger: If attaching provider identity requires mutating already-persisted historical rows rather than writing identity forward, STOP. History is immutable; the requirement is forward attribution,
+      not retroactive mutation.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T09/
+    done_when:
+    - Every forward judgment record carries provider identity or an explicit unattributed marking.
+    - Retries and degraded judgments are explicitly marked; no masquerading case passes.
+    - Credential and rate-limit failures are typed and non-authoritative.
+    - Forward-chain replay joins by the T05 correlation identity; legacy rows are explicitly excluded.
+    - Fresh independent adversarial confirmation returns CONFIRM.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T10:
+    title: Versioned composition rules consumed by the existing settlement path
+    initial_status: blocked
+    depends_on:
+    - T07
+    proof_level: P2
+    confirmation: builder_with_teeth
+    settles:
+    - REQ-COMP-001
+    - REQ-COMP-002
+    - REQ-COMP-003
+    - REQ-COMP-020
+    - REQ-CONFIG-003
+    - REQ-SETTLE-002
+    changes: 'Introduces a versioned composition-rule artifact (thresholds and decision logic as data, not code constants) consumed by the EXISTING settlement path. No new composer component; no parallel
+      settlement path; no training pipeline. This task is the spec''s rejection of a JudgmentComposer made concrete: the defect was unversioned thresholds, so the correction is versioned thresholds.'
+    proves: That composition thresholds are versioned artifacts pinned per run, that composition reads them rather than code constants, that threshold evolution is observable, and that the existing settlement
+      path consumes them without a third truth source.
+    does_not_prove: That any threshold VALUE is valid for production. It proves the VERSIONING and CONSUMPTION mechanism, not the calibration of any value. Threshold values remain unset by this task.
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T07/ (the distribution the rules compose)
+    - The existing settlement path and its current threshold constants (identify and cite before changing; the spec records that composition already exists twice)
+    - 'KNOWN FACT: the spec rejects a new JudgmentComposer component; this task MUST NOT create one.'
+    steps:
+    - Locate the existing threshold constants consumed by the settlement path; record each constant, its file, and its current value as the pre-change baseline.
+    - Define the versioned composition-rule artifact format (rule id, version, thresholds, decision logic reference).
+    - Migrate the settlement path to read thresholds from the pinned rule artifact rather than code constants.
+    - Pin the rule version per run so that two runs with different rule versions are distinguishable.
+    - 'Add threshold-evolution observability: given two rule versions, the effective decision difference is reportable.'
+    - 'Add the no-third-truth test: the settlement path consumes the artifact; no new composer component exists.'
+    gate:
+    - (cd ../gauntlet && just test-package gauntlet-app)
+    - (cd ../gauntlet && just test-package gauntlet-adapter-state-sqlite)
+    teeth:
+    - attack: Change a threshold value without bumping the rule version.
+      expected: The version check detects the mutation and rejects the rule.
+    - attack: Run two settlements under different rule versions.
+      expected: Each run's pinned version is observable and the decisions are attributable to their respective versions.
+    - attack: Remove the rule artifact and run settlement.
+      expected: Settlement fails explicitly with a missing-rule error; it does not silently fall back to hardcoded constants.
+    - attack: Propose adding a new JudgmentComposer component to 'simplify' composition.
+      expected: REJECTED. The spec's rejection is binding; composition stays in the existing settlement path.
+    - attack: Set a threshold value and claim it is production-valid.
+      expected: REJECTED. Values are unset by this task; only the versioning mechanism is proven.
+    redesign_trigger: If the settlement path cannot consume an external rule artifact without a rewrite of its decision core, STOP. The requirement assumes the existing path is parameterizable; if it is
+      not, that assumption is falsified and needs a spec-level decision.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T10/
+    done_when:
+    - Thresholds are versioned artifacts pinned per run, not code constants.
+    - Threshold evolution is observable across rule versions.
+    - No new composer component was created.
+    - No production threshold value is claimed valid.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T11:
+    title: Provider substitution methodology — semantic comparability without a truth claim
+    initial_status: blocked
+    depends_on:
+    - T08
+    - T09
+    proof_level: P2
+    confirmation: independent
+    settles:
+    - REQ-JUDG-003
+    - REQ-VERIFY-002
+    - REQ-VERIFY-011
+    - REQ-GOAL-006
+    - VAR-005
+    - CLAIM-006
+    changes: 'Adds the substitution contract AT THE SPECIFIED LEVEL: interface compatibility now; operational comparability after T12; model-quality comparability EXPLICITLY UNPROVEN in this plan. Swaps
+      two semantically comparable providers behind the same port over the same frozen surface and reports the comparison at the level actually achieved, with the unachieved levels named.'
+    proves: That two materially different provider paths can serve the same frozen surface behind the same port, that substitution is mechanical and observable, and that the comparison report states its
+      level honestly.
+    does_not_prove: That either provider is good; that substitution preserves decision quality; that operational comparability holds before T12; or that model-quality comparability holds at all. A substitution
+      report that claims an unachieved level is a plan violation, not a success.
+    comparability_levels:
+      A_interface: Substitution is mechanical behind the same port with no caller changes. Settled HERE.
+      B_operational: Substitution preserves operating behavior under failure and retry. Settled only at T12.
+      C_model_quality: Substitution preserves decision quality. UNPROVEN in this plan; requires evidence this plan does not collect.
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T08/ (the HTTP provider path and its port)
+    - .agents/evidence/godspeed-bounded-judgment/T09/ (provenance that makes the comparison attributable)
+    - .agents/preregistrations/godspeed-bounded-judgment-T01.prereg.yaml (the frozen surface the comparison runs over)
+    - 'KNOWN FACT: a second disjoint port (sea_forge_agent::AgentProvider) exists for HTTP; cite which port the substitution runs behind and why.'
+    steps:
+    - Freeze the comparison surface, the two provider paths, and the comparison metrics BEFORE running; record the freeze hash in the decision log.
+    - Author run_substitution.py at the gate path before first execution and record its sha256 beside the comparison freeze.
+    - Run both providers over the same frozen rows through the same port.
+    - Report agreement, disagreement, abstention-rate difference, and failure-mode difference per provider.
+    - State the achieved comparability level explicitly; name the unachieved levels.
+    - 'Run the determinism-vs-stochasticity separation: identical inputs re-run must show whether observed differences are provider differences or sampling noise.'
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T11/run_substitution.py
+    - (cd ../gauntlet && just test-package gauntlet-ports)
+    - (cd ../gauntlet && just test-package gauntlet-adapter-agent-http)
+    teeth:
+    - attack: Swap the providers and re-run without any caller change.
+      expected: Substitution is mechanical; the path works behind the same port.
+    - attack: Compare a provider against itself across two runs.
+      expected: Self-agreement bounds the noise floor; cross-provider disagreement beyond that floor is real difference, not noise.
+    - attack: Have one provider abstain heavily while the other answers.
+      expected: The abstention-rate difference is reported, not hidden inside agreement metrics.
+    - attack: Write the substitution report claiming model-quality comparability.
+      expected: REJECTED. Level C is unproven in this plan and MUST be named as such.
+    - attack: Run the comparison over a different surface than the frozen one.
+      expected: The freeze check FAILS; the comparison is re-run over the frozen surface or not claimed.
+    independent_confirmation:
+      verifier_receives:
+      - the semantic-bounding and comparability requirements and their normative text
+      - the frozen surface, provider paths, metrics, and run_substitution.py hash
+      - the raw provider outputs and comparison report
+      - 'the exact confirmation question: are both providers behind the same AgentRunner port over the same surface, and does the report refuse every unachieved A/B/C level?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      required_verdict: CONFIRM
+    redesign_trigger: If the two provider paths cannot share one port without caller-visible behavioral differences beyond the values themselves (different failure shapes, different latency classes that
+      callers must handle differently), then interface compatibility is falsified at level A. Record it as such rather than hiding the difference.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T11/
+    done_when:
+    - Both providers ran over the same frozen surface behind the same port.
+    - The comparison report states its achieved level and names the unachieved levels.
+    - The noise floor is separated from real provider difference.
+    - No level-C claim is made.
+    - Fresh independent confirmation returns CONFIRM.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T12:
+    title: Live-target pilot — fresh reproduction on the real deployment machine
+    initial_status: blocked
+    depends_on:
+    - T05
+    - T09
+    - T10
+    - T11
+    proof_level: P3
+    confirmation: fresh_target_reproduction
+    settles:
+    - REQ-PROV-001
+    - REQ-PROV-003
+    - REQ-PROV-004
+    - REQ-PROV-020
+    - REQ-PROV-021
+    - REQ-PROV-022
+    - REQ-VERIFY-003
+    - REQ-SAFE-005
+    - REQ-CONFIG-012
+    - RECOV-001
+    - RECOV-003
+    - RECOV-004
+    - CLAIM-006
+    changes: 'Executes the bounded-judgment slice on the real deployment target (Jetson-class edge machine): correlation, provenance, composition, and substitution re-proven by fresh reproduction, plus
+      recovery drills (provider failure, corrupted state, restart mid-loop). Changes no deployment topology; the pilot runs the existing edge binaries and recipes on the target.'
+    proves: 'That the capability works on the machine it will actually run on: provenance replays by fresh reproduction, safe failure holds under real faults, and recovery drills restore a known-good state
+      without silent data loss.'
+    does_not_prove: Production readiness, fleet behavior, or long-horizon reliability. It proves the slice on ONE real target, not the system at scale or over time.
+    target_machine_rule: The development host is NOT the target. `just health`, `just jetson-check-ports`, and `just appliance-verify` exist in ../edgeai and resolve ONLY on the target machine. T00 records
+      them as TARGET_MACHINE_ONLY; THIS task executes them where they resolve. A target-machine gate that 'passes' on the development host is vacuous and MUST be treated as not-run.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T12.prereg.yaml
+      claims:
+      - Correlation, provenance, composition, and substitution reproduce on the deployment target by fresh execution.
+      - Provider failure, corrupted state, and restart mid-loop each recover to a known-good state with typed evidence.
+      - No silent data loss occurs during any recovery drill.
+      falsifiers:
+      - Any reproduced behavior diverges from the development-host evidence beyond declared environment deltas.
+      - Any recovery drill loses data silently or restores an unverified state.
+      - Any target-machine gate is executed on the development host and claimed as target evidence.
+      known_confounds:
+      - The target machine differs from the development host (architecture, resources, network). Declared environment deltas must be recorded in the preregistration before running.
+      - A single target machine is not a fleet; fleet behavior is explicitly out of scope.
+      confirmation_condition: A fresh independent verifier, given the requirement ids, the frozen preregistration, the target-machine evidence, and the recovery drill logs, independently re-executes the
+        replay subset and returns CONFIRM with no divergence beyond declared deltas.
+    hot_context:
+    - '../edgeai/Justfile (recipes: health, jetson-check-ports, appliance-verify, plus NVIDIA/OSTree notes)'
+    - .agents/evidence/godspeed-bounded-judgment/T05/ (correlation mechanism under test)
+    - .agents/evidence/godspeed-bounded-judgment/T09/ (provenance mechanism under test)
+    - .agents/evidence/godspeed-bounded-judgment/T10/ (composition rules under test)
+    - .agents/evidence/godspeed-bounded-judgment/T11/ (substitution comparison under test)
+    - 'KNOWN FACT: edgeai has an extensive tests/ suite governed by tests/AGENTS.md, including unit, integration, and acceptance fixtures. T12 uses the existing health/port recipes plus its preregistered
+      targeted recovery drills; it does not invent a parallel test entrypoint.'
+    steps:
+    - Author verify_reproduction.py at the gate path without executing it; it consumes an explicit target-evidence manifest, verifies source host/revision/timestamps/hashes, and rejects development-host
+      evidence.
+    - Add verify_reproduction.py's sha256 and the declared environment deltas to the T12 preregistration, then freeze it before the first target command or drill.
+    - Run `just health` and `just jetson-check-ports` on the TARGET machine; record raw output.
+    - Re-execute the correlation joinability, provenance replay, composition consumption, and substitution comparison on the target by fresh execution.
+    - 'Run the three recovery drills on the target: provider failure, corrupted state, restart mid-loop. Record drill logs verbatim.'
+    - Compare every reproduced result against the development-host evidence; classify each delta as declared-environment or unexplained.
+    - Obtain fresh independent adversarial confirmation.
+    gate:
+    - command: just health
+      repository: edgeai
+      host: deployment_target
+      working_directory: edgeai repository root
+    - command: just jetson-check-ports
+      repository: edgeai
+      host: deployment_target
+      working_directory: edgeai repository root
+    - command: python3 .agents/evidence/godspeed-bounded-judgment/T12/verify_reproduction.py --manifest .agents/evidence/godspeed-bounded-judgment/T12/target-evidence-manifest.yml
+      repository: sea-rs
+      host: development_host
+      working_directory: sea-rs repository root
+    teeth:
+    - attack: Corrupt persisted state on the target and run recovery.
+      expected: Typed corruption detection; recovery to a known-good state; no silent loss.
+    - attack: Kill the provider mid-loop on the target.
+      expected: Typed failure; the loop settles to a safe state, never an authoritative ALLOW.
+    - attack: Restart the target mid-loop.
+      expected: Correlation survives; in-flight artifacts remain joinable after restart.
+    - attack: Run the target-machine gates on the development host and claim target evidence.
+      expected: REJECTED. Development-host output is not target evidence; the task remains unsettled.
+    - attack: Introduce an undeclared environment delta and observe the comparison.
+      expected: verify_reproduction.py FAILS with the delta named as unexplained.
+    independent_confirmation:
+      verifier_receives:
+      - the settled requirement ids and their normative text
+      - the frozen preregistration with declared environment deltas
+      - the target-machine raw evidence and drill logs
+      - the development-host evidence being reproduced
+      - 'the exact confirmation question: does the capability reproduce on the deployment target with no unexplained divergence, and does every recovery drill reach a known-good state without silent loss?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusion
+      required_verdict: CONFIRM
+    redesign_trigger: If the slice cannot run on the target without changing deployment topology or introducing new infrastructure, STOP. The plan assumes the existing edge binaries suffice; if they do
+      not, that assumption is falsified and needs a spec-level decision.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T12/
+    done_when:
+    - All four mechanisms reproduce on the target with no unexplained divergence.
+    - All three recovery drills reach a known-good state with verbatim logs.
+    - No target-machine claim rests on development-host output.
+    - Fresh independent adversarial confirmation returns CONFIRM.
+    - No new deployment infrastructure was introduced.
+  T13:
+    title: Evidence and memory ownership, read-only export, and preservation replay
+    initial_status: blocked
+    depends_on:
+    - T01
+    - T05
+    - T07
+    proof_level: P2
+    confirmation: builder_with_teeth
+    settles:
+    - REQ-PROV-004
+    - REQ-SETTLE-003
+    - VAR-008
+    changes: Settles which system owns what along the judgment evidence chain (Gauntlet evidence objects and pins versus ledger-attached receipts versus correlation references), adds the read-only export
+      path that completes T07's deliberately partial replay scope from T07, and proves that a settlement contradicting a prior judgment leaves the original immutable and correlatable. No ownership is asserted
+      by possession; every ownership claim is a recorded decision with its evidence.
+    proves: That the preservation scope left open at T07 is now closed by an explicit mechanism with explicit exclusions, that ownership boundaries are decided and recorded, and that contradiction does
+      not rewrite history.
+    does_not_prove: That the export path is a production API; that ownership decisions generalize to future judgment families; or that any UI renders the chain. It proves the ownership contract and the
+      read-only replay mechanism, not a product surface.
+    shared_requirement_notes: 'REQ-SETTLE-003 is shared with T01: T01 established what the corpus can and cannot reconstruct; T13 establishes what the FORWARD chain guarantees going forward. The two together
+      close the requirement from both ends without conflating past gaps with forward guarantees. VAR-008 is shared with T05: T05 proved correlation survives contradiction; T13 proves the contradicted judgment
+      remains replayable through the export path.'
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T01/ (what the corpus can and cannot reconstruct — the past end)
+    - .agents/evidence/godspeed-bounded-judgment/T05/ (correlation identity — the join mechanism)
+    - .agents/preregistrations/godspeed-bounded-judgment-T01.corpus-manifest.yml (exact historical evidence object/pin roots; never rediscover with a runtime glob)
+    - sea-forge-ledger/src/types.rs (LedgerEntry; CommittedRecordRef)
+    - sxr-core/src/types.rs (LedgerPosition; DeclKey) and sxr-core/src/record_kinds.csv (settlement_dependency column)
+    - 'KNOWN FACT: T07''s replay scope was deliberately partial; T13 completes it. Cite the T07 staging note.'
+    steps:
+    - 'Record the ownership decision per chain segment: which system owns the judgment record, the evidence objects, the settlement, and the correlation reference. Justify each from an existing repository
+      contract.'
+    - 'Implement the read-only export path: given a correlation identity, export the joined chain (judgment, authority decision, execution, observation, settlement) without mutation.'
+    - 'State the preservation exclusions explicitly: what the export path does NOT cover and why.'
+    - 'Add the contradiction test: settle against a prior judgment; assert the original is immutable and both remain correlatable and exportable.'
+    - 'Add the read-only test: run the export twice and assert byte-identical output with no source mutation.'
+    - Author verify_export.py at the gate path before first execution; record its sha256 and require it to compare source hashes/mtimes before and after both exports.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T13/verify_export.py
+    - just crate-test sea-forge-ledger
+    teeth:
+    - attack: Settle against a prior judgment and inspect the original.
+      expected: The original is byte-identical and immutable; both records export and join.
+    - attack: Run the export path twice over the same chain.
+      expected: Byte-identical output; source mtimes/hashes unchanged.
+    - attack: Request export of a chain with a missing hop.
+      expected: Explicit missing-hop error naming the hop; never a silently partial chain presented as complete.
+    - attack: Assert ownership of a segment by possession rather than by recorded decision.
+      expected: REJECTED. Ownership without a cited repository contract is not recorded.
+    - attack: Export a legacy historical row with unattributed provider identity.
+      expected: The export marks the gap explicitly, consistent with T01's attribution report.
+    redesign_trigger: If the export path requires write access to any source system to function, it is not read-only. Stop and redesign; a read-write 'export' contradicts the requirement it claims to settle.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T13/
+    done_when:
+    - Ownership is decided per segment with cited repository contracts.
+    - The read-only export path joins and exports the full forward chain.
+    - Preservation exclusions are stated explicitly.
+    - Contradiction leaves history immutable and correlatable.
+    - The T07 partial-scope staging note is explicitly closed.
+    - All applicable global gates show no NEW failures versus the T00 baseline.
+  T14:
+    title: Final settlement — fresh independent adversarial confirmation of the whole capability
+    initial_status: blocked
+    depends_on:
+    - T02
+    - T03
+    - T04
+    - T12
+    - T13
+    - T17
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - CLAIM-004
+    - CLAIM-005
+    acceptance_scope: 'In addition to its two settled claims, T14 is the plan''s FINAL ACCEPTANCE task: it checks whole-system properties (authority ordering under adversarial pressure, dual-basis coexistence,
+      evidence-chain joinability, gate health versus the T00 baseline) rather than merely counting settled tasks. No task is ''done'' until this task confirms the capability as a whole.'
+    changes: 'Changes nothing. This is a pure confirmation task: a fresh verifier, who built nothing, attempts to break the settled capability and reports a verdict. If the verifier finds a genuine break,
+      the affected task is reopened as a new correction round; this task does not fix anything itself.'
+    proves: That uncertainty-preserving output coexists with the deterministic basis without displacing it (CLAIM-004), that the capability degrades to explicit absence rather than silent failure (CLAIM-005),
+      and that the settled system as a whole withstands fresh adversarial pressure.
+    does_not_prove: Production readiness, fleet behavior, long-horizon reliability, model-quality comparability (level C, explicitly unproven), or calibration (forbidden for this corpus). The confirmation
+      report MUST name these as unproven.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T14.prereg.yaml
+      claims:
+      - The deterministic basis is not displaced by any settled judgment path (CLAIM-004).
+      - Every failure and absence degrades to an explicit state, never a silent one (CLAIM-005).
+      - The authority ordering proven at T04 still holds after all later tasks.
+      - The evidence chain proven at T05/T09/T13 still joins end to end.
+      - No global gate is redder than its T00 baseline classification.
+      falsifiers:
+      - Any deterministic record is overwritten, displaced, or contradicted by a judgment field.
+      - Any failure mode is indistinguishable from success in the recorded outcome.
+      - Any authority-widening case succeeds after the full slice is in place.
+      - Any required chain hop is missing or silently partial.
+      - Any global gate regressed versus its T00 baseline without a recorded correction round.
+      known_confounds:
+      - The verifier did not build the system; unfamiliarity may produce false alarms. False alarms are recorded as such with their evidence, not hidden.
+      - A verifier who reuses the builder's harness without independent attack is not independent. The preregistration MUST require independently authored attacks.
+      confirmation_condition: The verifier independently authors attacks against the settled system, executes them, finds no genuine break, and returns CONFIRM with the unproven list intact.
+    steps:
+    - Author verify_settlement.py at the gate path without executing it; it MUST verify every T00-T13 settlement record, dependency, required confirmation verdict, evidence path, and baseline comparison.
+    - Add verify_settlement.py's sha256 to the T14 preregistration and freeze it before the verifier begins.
+    - 'Assemble the confirmation packet: T04 authority evidence, T06 semantic-domain evidence, T07 carrier evidence, T09 provenance evidence, T11 substitution evidence, T12 target evidence, T13 export evidence,
+      the T00 gate baseline, and the full correction history.'
+    - The fresh verifier independently authors and executes attacks against the settled capability.
+    - The verifier returns CONFIRM or a genuine break with its evidence.
+    - Any genuine break reopens the affected task as a new correction round (round-2+); T14 does not settle until every break is corrected and re-confirmed.
+    - 'Write the handoff record: settled tasks, unsettled tasks (must be none), evidence locations, rollback notes, unproven list, and next action.'
+    gate:
+    - just ci
+    - python3 .agents/evidence/godspeed-bounded-judgment/T14/verify_settlement.py
+    teeth:
+    - attack: The verifier replays the builder's own harness verbatim and calls it confirmation.
+      expected: REJECTED as non-independent. The verifier MUST author independent attacks.
+    - attack: The verifier finds a genuine authority-widening case.
+      expected: T14 FAILS; T04 reopens as round-2; the break is preserved as evidence.
+    - attack: The verifier finds a silently partial export.
+      expected: T14 FAILS; T13 reopens as round-2.
+    - attack: A global gate is redder than its T00 baseline.
+      expected: T14 FAILS until the regression is corrected or classified as a new pre-existing failure with its evidence.
+    - attack: The confirmation report omits the unproven list.
+      expected: REJECTED. A confirmation that does not name level-C comparability, calibration, fleet behavior, and long-horizon reliability as unproven is incomplete.
+    independent_confirmation:
+      verifier_receives:
+      - CLAIM-004 and CLAIM-005 normative text
+      - the frozen T14 preregistration
+      - the full confirmation packet (evidence from T04, T06, T07, T09, T11, T12, T13; T00 gate baseline; correction history)
+      - 'the exact confirmation question: does the settled capability withstand independent adversarial pressure with no genuine break, and does the report name what remains unproven?'
+      verifier_should_not_receive:
+      - the builders' narrative conclusions
+      - any guidance on which attacks to try
+      required_verdict: CONFIRM
+    redesign_trigger: If the verifier demonstrates a structural break that correction rounds cannot close (for example, the dual-basis coexistence fails under a load or ordering condition the slice cannot
+      avoid), the capability as scoped is falsified. Block the plan and revise the specification rather than weakening CLAIM-004 or CLAIM-005.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T14/
+    done_when:
+    - The verifier returns CONFIRM with independently authored attacks.
+    - Every task T00-T13 is settled; no task is merely ready, blocked, in flight, or omitted.
+    - No genuine break remains open; every correction round is re-confirmed.
+    - The confirmation report names the unproven list explicitly.
+    - '`just ci` shows no regression versus the T00 baseline.'
+    - The handoff record is written with settled/unsettled/evidence/rollback/next action.
+  T15:
+    title: Controlled consequence-backed variation corpus acquisition
+    initial_status: ready
+    depends_on:
+    - T01
+    proof_level: P2
+    confirmation: independent
+    settles: []
+    settles_explanation: 'Evidence-acquisition prerequisite (operator-directed bridge after T01''s escalation). The historical corpus is reconstructible but outcome-degenerate: both preregistered surfaces
+      collapsed to a single deterministic class (PASS x17; no_chain_deficiency x17), so it cannot discriminate the promotion question. T15 purchases the missing variation through real, preregistered Gauntlet
+      cases whose ground truth is the OBSERVED CONSEQUENCE produced by real system mechanisms — never hand-authored labels.'
+    changes: Adds new Gauntlet run databases under a controlled corpus root plus the corpus manifest and generator preregistration under .agents/. Changes no product code in sea-rs; Gauntlet runs use its
+      existing CLI/adapters and write only new run state.
+    proves: 'That the controlled corpus contains multiple consequence classes that actually occur (at minimum: successful closure, a governing constraint blocking execution, and an execution failure), produced
+      by real mechanisms, with more than one case family contributing and full provenance.'
+    does_not_prove: Anything about provider judgment quality; the corpus is input to T16, not a conclusion.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T15.prereg.yaml
+    hot_context:
+    - ../gauntlet (read-only sources; runs write only NEW state)
+    - 'Gauntlet scenario/adapter machinery: gauntlet-adapter-agent-mock (deterministic), gauntlet-adapter-meter-memory (budget), policy/sandbox refusal paths, verifier ladder'
+    - T01 frozen harness family and disclosure discipline
+    - SPEC VAR-001..VAR-004 (the four-way blockage distinction) as the candidate variation axes
+    steps:
+    - Investigate which blockage classes the repository can operationalize with objective, consequence-based definitions; record what is and is not operationalizable.
+    - 'Author the T15 preregistration: exact case definitions and ids, per-case intended variation dimension and expected mechanism, frozen answer domain and DecisionSurface for the subsequent measurement,
+      provider identities, exclusion/duplicate/retry rules, subject identity (base commit + canonical patch hashes + config hashes), falsification scope.'
+    - Freeze the preregistration and generator identity BEFORE the first case executes; record hashes in the decision log.
+    - Execute the cases through real Gauntlet mechanisms; let each case settle through the existing verifier/settlement path; record per-run state databases.
+    - Sequentially inspect class coverage and mechanism validity; if still degenerate, add the cheapest missing variation; stop when the architecture decision is affordable.
+    - Author verify_corpus.py at the gate path before first execution; record its sha256 beside the frozen preregistration.
+    - Write the exact corpus manifest (run ids, state db paths + sha256, selected/excluded with reason) beside the preregistration; freeze it.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T15/verify_corpus.py
+    - cd ../gauntlet && just test
+    independent_confirmation:
+      verifier_receives:
+      - the frozen T15 preregistration, generator identity, and corpus manifest
+      - the run state databases and the mechanism-provenance checks
+      verifier_should_not_receive:
+      - the builder's narrative conclusions
+      required_verdict: CONFIRM
+    teeth:
+    - attack: Attempt to hand-author a settlement row directly in SQLite.
+      expected: The corpus verifier rejects any run whose settlement was not produced through the gauntlet settlement path (mechanism provenance check).
+    - attack: A case whose intended variation mechanism did not actually fire (e.g. budget never checked).
+      expected: The case is excluded with reason by the verifier; it must not count toward class coverage.
+    - attack: A corpus with a single consequence class.
+      expected: verify_corpus.py FAILS the class-coverage requirement; T16 must not run on it.
+    redesign_trigger: 'If the repository cannot operationalize at least three consequence classes objectively (no hand-labeling), the proposed DecisionSurface is wrong or premature: record Result A (representation
+      revision needed) and block T16 rather than forcing cases.'
+    evidence: .agents/evidence/godspeed-bounded-judgment/T15/
+    done_when:
+    - Corpus manifest frozen with per-run hashes and selection reasons.
+    - Multiple consequence classes present, multi-case-family coverage, provenance complete.
+    - verify_corpus.py exits 0.
+    - ../gauntlet sources unmodified; only new run state written.
+  T16:
+    title: Consequence-grounded remeasurement over the controlled-variation corpus
+    initial_status: blocked
+    depends_on:
+    - T15
+    proof_level: P2
+    confirmation: independent_adversarial
+    settles: []
+    settles_explanation: Measurement round over T15's varied corpus using the T01 frozen harness family (new round directory; T01 itself is preserved untouched). This is the measurement that either earns
+      T06's authorization or narrows/stops the capability per the frozen decision rule.
+    changes: Adds read-only measurement harnesses and reports under the T16 evidence round. No production code, schema, or runtime change.
+    proves: 'On the controlled-variation surface: whether uncertainty-preserving provider output carries consequence-grounded descriptive information beyond the deterministic baseline (agreement, per-class
+      behavior, abstention usefulness, disagreement concentration), with the mandatory disclosure block on every metric.'
+    does_not_prove: Population calibration, production thresholds, model generalization, or anything beyond the measured surface and corpus; a negative result is scoped to THIS surface and corpus.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T16.prereg.yaml
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T01/ (frozen harness family; import or round-2 discipline, never edit frozen files)
+    - .agents/preregistrations/godspeed-bounded-judgment-T15.prereg.yaml (frozen surface/domain/providers)
+    - T15 corpus manifest (exact runs; wildcards forbidden)
+    steps:
+    - 'Author the T16 preregistration: frozen surface, answer domain (with explicit insufficiency label), semantic/evaluation bases, provider identities, deterministic baseline definition, metrics, decision
+      rule A-E, leakage controls; freeze before any provider call.'
+    - Author run_remeasure.py and verify_disclosure.py at the gate paths before first execution; record their sha256 values beside the frozen preregistration.
+    - Run the frozen measurement family over the T15 corpus manifest, read-only.
+    - Emit all reports with the mandatory disclosure block; run the disclosure gate and the applicable teeth (shuffle, leakage, degenerate-domain, out-of-domain, duplicate-class inflation, baseline-triviality
+      confound check).
+    - Apply the frozen decision rule; record the outcome letter and consequence in the decision log.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T16/run_remeasure.py --manifest .agents/preregistrations/godspeed-bounded-judgment-T15.corpus-manifest.yml --read-only
+    - python3 .agents/evidence/godspeed-bounded-judgment/T16/verify_disclosure.py
+    independent_confirmation:
+      verifier_receives:
+      - the frozen T16 preregistration and the T15 corpus manifest
+      - the frozen harnesses, raw provider outputs, and all reports
+      - 'the exact confirmation question: do the preregistered attacks behave as declared, is any baseline-triviality or leakage confound detected, and is the recorded decision letter supported by the reports
+        alone?'
+      verifier_should_not_receive:
+      - the builder's narrative conclusions
+      - guidance toward a preferred outcome letter
+      required_verdict: CONFIRM
+    teeth:
+    - attack: Shuffle consequence targets and rescore.
+      expected: Agreement collapses; a surviving high score fails the task.
+    - attack: Leak the settled outcome into the pre-consequence representation.
+      expected: The leakage detector catches it and the run fails.
+    - attack: Collapse the answer domain or introduce an invalid answer.
+      expected: Rejected as a specification defect / typed schema failure, counted.
+    - attack: Duplicate one class until naive accuracy looks excellent.
+      expected: The concentration report exposes the inflation against per-class metrics.
+    - attack: Make the deterministic baseline trivially predictive by class imbalance.
+      expected: The baseline-triviality confound check detects and reports it; no promotion may rest on it.
+    redesign_trigger: If T15's corpus cannot support a leakage-checked, non-degenerate measurement, return to T15/representation rather than interpreting a degenerate result.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T16/
+    done_when:
+    - Prereg frozen before any provider call; hashes in the decision log.
+    - All reports carry the disclosure block; disclosure gate exits 0.
+    - Applicable teeth executed and behaved as specified.
+    - Fresh independent adversarial confirmation returns CONFIRM.
+    - Outcome letter (A-E of the amendment decision rule) recorded with its consequence.
+    branch_outcomes:
+      A: Generator cannot create objective variation -> block judgment implementation; revise the surface/spec.
+      B: Variation exists but providers cannot satisfy the contract -> provider/structured-output mechanics are the next blocker; do not infer the distinction is useless.
+      C: Varied cases exist, providers work, uncertainty adds nothing -> scoped falsification per REQ-JUDG-023; capability-class rejection only if the preregistered criteria are met.
+      D: Uncertainty adds useful consequence-grounded information -> T06+ unlock per the CURRENT DAG (surface earned authorization).
+      E: Mixed -> narrow the capability claim and implementation to what was earned; no binary conclusion.
+  T17:
+    title: SEA-Forge required-gate remediation to genuinely green
+    initial_status: ready
+    depends_on:
+    - T03
+    proof_level: P1
+    confirmation: builder
+    settles: []
+    settles_explanation: 'Operator-directed (2026-09-18): PREEXISTING_BASELINE_FAILURE establishes attribution, not acceptability. Before final whole-plan settlement the required global gates must genuinely
+      exit 0. T17 owns the failure-by-failure remediation (reproduce, classify, correct the smallest falsified layer, never weaken tests) through iterative closure until SEA_CHECK, SEA_TEST, and SEA_CI
+      all exit 0.'
+    changes: Test-only corrections (stale pre-admission tests updated for the request-admission contract; masked lint/clippy cleanup; rustfmt), lockfile-only dependency updates to patched releases (RUSTSEC-2026-0285,
+      yanked chacha20), and a commit-scoped gitleaks allowlist for verified simulated fixtures. No production behavior change.
+    proves: 'That the SEA-Forge authority/settlement substrate''s required conformance gates genuinely pass: SEA_CHECK, SEA_TEST, SEA_CI all exit 0, with every repair recorded failure-by-failure and no
+      assertion weakened.'
+    does_not_prove: Anything about bounded judgment's value; green gates are a substrate property, not a capability claim.
+    hot_context:
+    - crates/sea-forge-server/tests/conformance_sfwp.rs (pre-admission precondition tests)
+    - 'crates/sea-forge-cli/tests/conformance_m13.rs + crates/sea-forge-cli/src/plan_pipeline.rs (t13_1: delegate request_id + T05 correction refs)'
+    - crates/sea-forge-server/tests/convergence_t1{1,2}_*.rs (masked clippy drift)
+    - Cargo.lock, .gitleaks.toml
+    steps:
+    - Reproduce each failing test/gate before editing; preserve evidence.
+    - Classify (product defect / test defect / fixture / lint drift / stale expectation / masked pre-existing) and correct the smallest falsified layer.
+    - 'Iterate: rerun the owning suite then the full gate; expose the next masked failure; repeat until green.'
+    gate:
+    - just check
+    - just test
+    - just ci
+    teeth:
+    - attack: Delete, skip, filter, or weaken a failing test to obtain green.
+      expected: REJECTED by review; every assertion changed is diff-audited against its original invariant.
+    - attack: Broadly reformat or refactor unrelated code while passing through.
+      expected: REJECTED; changes limited to the failing layers plus minimal formatting.
+    redesign_trigger: If any failure turns out to be a product-level invariant conflict rather than a stale caller/test, stop and record it as a design question instead of patching around it.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T17/
+    done_when:
+    - SEA_CHECK exit 0; SEA_TEST exit 0; SEA_CI exit 0.
+    - Every repair recorded with its classification and preserved failure evidence.
+    - No test weakened, deleted, filtered, or ignored; audit trail in the decision log.
+  T18:
+    title: Epistemic-role representation paired experiment (Stage 1 developmental)
+    initial_status: ready
+    depends_on:
+    - T16
+    proof_level: P2
+    confirmation: independent
+    settles: []
+    settles_explanation: 'Developmental representation experiment (operator-directed after T16 Outcome C). Tests whether explicitly typing the epistemic role of already-visible information improves bounded-judgment
+      discrimination on the frozen 25-case corpus, WITHOUT adding new facts or leaking post-judgment information. This is a paired within-case A/B experiment: same cases, same providers, same truth; only
+      the representation differs.'
+    changes: Adds a condition-B prompt renderer (epistemic-role tagging) and the paired scoring/reporting harness under the T18 evidence directory. No product code, schema, or runtime change.
+    proves: Whether epistemic-role tagging materially improves accuracy, reduces harmful abstention, or corrects the lying-claim error class, compared to condition A on the SAME cases by the SAME providers.
+    does_not_prove: Transfer beyond these cases, provider-general capability, calibration, or architectural promotion. A positive Stage 1 authorizes Stage 2 (fresh transfer); it does not unlock T06.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T18.prereg.yaml
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T16/expanded-round/provider-raw-results.json (condition A persisted answers)
+    - .agents/preregistrations/godspeed-bounded-judgment-T16.expanded-corpus-manifest.yml (frozen 25-run corpus)
+    - .agents/evidence/godspeed-bounded-judgment/T16/run_remeasure.py (condition A renderer + scoring)
+    - 'the fixture target''s records: role_invocation payloads, evidence_produced, observation_bindings'
+    steps:
+    - Author run_paired.py and verify_teeth.py at the gate paths; freeze their sha256 values.
+    - 'Author the T18 preregistration: epistemic-role mapping (which JSON fields get which role tag), condition A/B renderer specs, paired scoring, teeth, success criterion, leakage rules; freeze before
+      any provider call.'
+    - Author condition A renderer (byte-compatible with the T16 representation) and condition B renderer (same factual content, epistemic-role tagged).
+    - Implement content-equivalence, label-removal, truth-leakage, temporal-horizon, random-role, and case-identity teeth.
+    - Run both conditions across the 25 frozen cases with the available providers (per-provider paired A/B; no cross-provider merging).
+    - 'Compute paired deltas per provider: delta-accuracy, delta-non-abstaining, delta-abstention, case-level corrections and regressions.'
+    - Apply the frozen Stage 1 decision criterion.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T18/run_paired.py --manifest .agents/preregistrations/godspeed-bounded-judgment-T16.expanded-corpus-manifest.yml --condition both
+    - python3 .agents/evidence/godspeed-bounded-judgment/T18/verify_teeth.py
+    teeth:
+    - attack: 'Content-equivalence: condition B adds a fact absent from condition A.'
+      expected: The equivalence checker rejects it; the experiment is invalid.
+    - attack: 'Label removal: strip epistemic-role tags from condition B.'
+      expected: The remaining substantive content is identical to condition A (modulo deterministic formatting).
+    - attack: 'Truth leakage: a role name encodes correctness (e.g. false_builder_claim).'
+      expected: The role vocabulary validator rejects it.
+    - attack: 'Temporal-horizon: inject a post-judgment artifact into condition B.'
+      expected: The temporal-horizon checker rejects it.
+    - attack: 'Random roles: randomize epistemic-role labels holding content fixed.'
+      expected: If random labels produce the same improvement, H_REPRESENTATION is weakened.
+    - attack: 'Case-identity swap: give case X''s typed representation to case Y.'
+      expected: Correlation controls reject it.
+    independent_confirmation:
+      verifier_receives:
+      - the frozen preregistration, both renderers, the raw paired outputs, and the scoring
+      - the frozen corpus manifest and the exact permutation tooth
+      verifier_should_not_receive:
+      - the builder narrative conclusions or preferred hypothesis
+      required_verdict: CONFIRM
+    redesign_trigger: If epistemic-role tagging cannot be implemented without adding new information or violating the observer horizon, the hypothesis is not testable on this surface; record and stop.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T18/
+    done_when:
+    - Prereg frozen before any provider call.
+    - Both conditions measured on the same 25 cases by the same providers.
+    - All six teeth executed and recorded.
+    - Paired deltas computed per provider.
+    - Stage 1 decision recorded (authorize Stage 2 or not).
+  T19:
+    title: Fresh transfer confirmation (Stage 2)
+    initial_status: blocked
+    depends_on:
+    - T18
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles: []
+    settles_explanation: 'Transfer confirmation for the epistemic-role representation: fresh consequence-backed cases NOT used to design the representation, measured under both conditions by the frozen
+      renderers, to determine whether the Stage 1 improvement generalizes.'
+    changes: New consequence-backed Gauntlet runs (same frozen generator recipe) plus paired measurement. No product code change.
+    proves: That the Stage 1 representation improvement transfers beyond the cases that inspired it.
+    does_not_prove: Architectural promotion (that requires the frozen T16 D-rule on the transfer corpus, evaluated separately).
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T19.prereg.yaml
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T18/ (frozen renderers and Stage 1 evidence)
+    - the same gauntlet generator recipe as T15/T16
+    steps:
+    - 'Freeze the Stage 2 prereg: fresh case grid, renderers unchanged from T18, success criterion, stopping rule.'
+    - Generate fresh consequence-backed cases through real Gauntlet execution.
+    - Run both conditions per case; compute paired deltas.
+    - Author run_transfer.py at the gate path; freeze its sha256.
+    - Run all teeth; obtain fresh independent adversarial confirmation.
+    independent_confirmation:
+      verifier_receives:
+      - the frozen T19 prereg and the T18 frozen renderers
+      - the fresh corpus manifest and all paired raw outputs
+      verifier_should_not_receive:
+      - the builder narrative or preferred outcome
+      required_verdict: CONFIRM
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T19/run_transfer.py
+    teeth:
+    - attack: Identical to T18 teeth, applied to the transfer corpus.
+      expected: Same pass/fail conditions.
+    redesign_trigger: If fresh cases cannot be generated through real mechanisms, T19 is blocked (same as T15 was for the accepted class).
+    evidence: .agents/evidence/godspeed-bounded-judgment/T19/
+    done_when:
+    - Prereg frozen before providers.
+    - Fresh corpus generated and frozen.
+    - Both conditions measured.
+    - Confirmation returns per the frozen criterion.
+  T20:
+    title: Epistemic-role disposition — independent confirmation and hypothesis adjudication
+    initial_status: blocked
+    depends_on:
+    - T19
+    proof_level: P2
+    confirmation: independent_adversarial
+    settles: []
+    settles_explanation: 'Final disposition of the epistemic-role representation hypothesis: independent confirmation of the paired deltas across Stage 1 and Stage 2, adjudication among H_REPRESENTATION
+      / H_PROVIDER / H_SURFACE / H_PRIOR, and recording of the economic/payment assessment.'
+    changes: Changes nothing; pure confirmation task.
+    proves: Whether the epistemic-role representation improvement is real, transferable, and economically justified.
+    does_not_prove: Architectural promotion (that still requires the frozen T16 D-rule on the improved measurement).
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T18/
+    - .agents/evidence/godspeed-bounded-judgment/T19/
+    steps:
+    - Assemble the confirmation packet from T18 and T19 evidence.
+    - Author verify_disposition.py at the gate path; freeze its sha256.
+    - Dispatch a fresh independent verifier to confirm paired deltas, teeth, and hypothesis adjudication.
+    independent_confirmation:
+      verifier_receives:
+      - the T18 Stage 1 and T19 Stage 2 frozen preregistrations and evidence
+      - the paired deltas and hypothesis adjudication
+      verifier_should_not_receive:
+      - the builder narrative or preferred hypothesis
+      required_verdict: CONFIRM
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T20/verify_disposition.py
+    teeth:
+    - attack: Confirm without independently recomputing the paired deltas.
+      expected: REJECTED as non-independent.
+    redesign_trigger: N/A (pure confirmation)
+    evidence: .agents/evidence/godspeed-bounded-judgment/T20/
+    done_when:
+    - Fresh independent adversarial confirmation returns the frozen verdict.
+    - Hypothesis adjudication recorded (H_REPRESENTATION / H_PROVIDER / H_SURFACE / H_PRIOR).
+    - Economic/payment assessment recorded.
+  T21:
+    title: Native route-discovery contract + fixture freeze (developmental branch)
+    initial_status: ready
+    depends_on:
+    - T16
+    proof_level: P1
+    confirmation: builder
+    settles: []
+    settles_explanation: 'Operator-directed developmental branch (2026-09-18) branching from the settled T16 result: can GodSpeed autonomously construct fresh, genuinely settleable routes over an existing
+      governed operation surface and thereby generate fresh consequence-backed cases at lower payment than manual case construction? T21 freezes the experiment BEFORE any loop execution: the fixture/case
+      family, the represented operation surface, candidate count K, route/budget/iteration bounds, the typed candidate representation, the judgment answer domain, the versioned deterministic selection rule,
+      the provider admission policy, the stop conditions, the route settlement criterion, the inverse-generation acceptance criterion, the matched-negative mutation, the novelty metric, the teeth, the success
+      criteria, and the failure interpretation. No product code, schema, runtime, or .sea grammar changes; no ToolGrad/LangGraph/LangChain dependency; the blocked judgment product path (T06..T10) and the
+      epistemic-role branch (T18..T20) are untouched.'
+    changes: Adds task-local harness modules under the T21 evidence directory (typed candidate/observation/route-record schemas, the admission module, the frozen selection-policy module, and verify_contract.py),
+      the frozen experiment preregistration under .agents/preregistrations/, and append-only decision-log entries. All mechanisms reuse existing gauntlet CLI behavior (headless `gauntlet run` over disposable
+      demo-calculator copies with the deterministic mock replay runner) exactly as frozen by T15.
+    proves: 'That the route-discovery contract is complete and frozen before execution: existing seams identified (gauntlet run terminal states as consequences; the T15/spec answer-domain vocabulary; the
+      T16 provider seam), the minimal typed candidate representation exists, the bounded operation surface is defined from existing fixtures, the iteration/budget/stop/selection policy is frozen and versioned,
+      and the harness modules validate the contract against themselves (schema round-trips, policy unit vectors, admission classifications) without executing any route.'
+    does_not_prove: Any route execution, any candidate probe, any judgment call, any route settlement, any case generation, and any payment claim. Also does not prove affordance representation via live
+      DomainForge/Thoth queries (the frozen operations catalog is declared data derived from existing fixture mechanisms, recorded as a scope boundary).
+    hot_context:
+    - .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml
+    - .agents/evidence/godspeed-bounded-judgment/T15/batch-round1-failed.sh (the frozen case-execution mechanism)
+    - .agents/preregistrations/godspeed-bounded-judgment-T15.prereg.yaml (answer domain + case families)
+    - .agents/evidence/godspeed-bounded-judgment/T16/run_remeasure.py (frozen provider seam)
+    - ../gauntlet/tests/fixtures/mock_runner_scenarios/ (e2e-happy, e2e-lying, e2e-forged-report)
+    - ../gauntlet/examples/demo-calculator/GAUNTLET.md (budget/runner levers)
+    - 'gauntlet binary: ../gauntlet/target/debug/gauntlet built at gauntlet commit 3a9955fa (read-only reuse)'
+    steps:
+    - Freeze .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml BEFORE any harness execution; record its sha256 in the decision log and the T21 evidence manifest.
+    - Author the typed schemas module (candidate_move, admission_decision, probe_observation, judgment_result, selection_record, route_state, route_record, generated_case_record) as task-local Python under
+      .agents/evidence/godspeed-bounded-judgment/T21/.
+    - Author the admission module (valid / denied / unreachable / unaffordable / redundant / admitted classifications from the frozen neighborhood and payment rules) and the frozen selection_policy module
+      (versioned rule exactly as preregistered).
+    - Author verify_contract.py at the gate path; freeze its sha256; run schema round-trips, policy unit vectors, and admission classification vectors.
+    - Record the operations catalog (scenario x max_rounds neighborhood derived from existing fixtures) as frozen data with its sha256.
+    - Append the freeze decision to the decision log; create the T21 IN-FLIGHT.md and update CURRENT_STATUS per the handoff contract.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T21/verify_contract.py
+    - cd ../gauntlet && just ruler
+    teeth:
+    - attack: Widen the candidate representation to free-form shell plans.
+      expected: REJECTED; schema validation refuses any candidate without a catalog operation id and bounded fields.
+    - attack: Let the selection policy read provider reasoning or re-ask the model which candidate is best.
+      expected: REJECTED; the policy module consumes only typed records and has no provider interface.
+    - attack: Freeze the contract AFTER seeing probe results.
+      expected: REJECTED; prereg sha256 is recorded in the decision log before the first probe exists, and any later change requires an append-only addendum.
+    redesign_trigger: If the fixture cannot support two plausible route choices, or the frozen answer domain cannot classify a real terminal consequence, stop and record a design question instead of improvising
+      surface changes.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T21/
+    done_when:
+    - Prereg frozen (sha256 recorded) before any execution; validator and context-check PASS.
+    - verify_contract.py PASS on schemas, admission vectors, and frozen policy unit vectors.
+    - Operations catalog frozen; no ToolGrad dependency; no product/spec/gauntlet-source change.
+  T22:
+    title: Candidate -> governed probe -> bounded judgment -> deterministic selection loop (one real advance)
+    initial_status: blocked
+    depends_on:
+    - T21
+    proof_level: P2
+    confirmation: builder_with_teeth
+    settles: []
+    settles_explanation: 'Executes the frozen loop machinery for real, one route advance: generate K candidates from the bounded neighborhood, admit each through the frozen authority/admission rules, probe
+      every admitted candidate with a real headless gauntlet run (disposable target copy, frozen env, typed terminal consequence), construct the bounded judgment surface over the observation records under
+      the frozen answer domain, and let the frozen deterministic selection rule retain exactly one eligible move onto the route with full provenance. Authority teeth (no bypass, no model override, no correlation
+      swap) pass in this task. A successful probe proves only that bounded action''s consequence; it is never treated as route settlement.'
+    changes: Adds the loop executor, probe runner, and judgment adapter as task-local harness modules under the T22 evidence directory, plus append-only run records. Probes write durable run state under
+      $HOME/.local/share/godspeed-route-discovery/ (the T18 /tmp-wipe lesson) with manifests pinned in the evidence tree.
+    proves: That several candidates can be generated provider-neutrally, governed and probed for real, that observations reach bounded judgment, that the frozen deterministic composition selects one eligible
+      move, that a denied, ineligible, or fabricated candidate can never advance the route, and that every record joins by its correlation identity.
+    does_not_prove: A complete settled route (T23), case generation (T24), the matched negative or payment comparison (T25), and any capability-class claim.
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T21/ (frozen schemas, admission, selection policy)
+    - .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml
+    - .agents/evidence/godspeed-bounded-judgment/T22/loop.py (authored this task)
+    - .agents/evidence/godspeed-bounded-judgment/T22/verify_loop.py (authored this task)
+    steps:
+    - 'Author loop.py (iterate once: neighborhood -> K candidates -> admission -> probes -> observations -> judgment -> selection -> route record) and verify_loop.py at the gate path; freeze sha256s.'
+    - Run the loop for one advance with providers live (frozen T16 seam) or the declared deterministic fallback; preserve all provider raw outputs, probe records, and judgment records append-only.
+    - Execute authority teeth T1 (out-of-authority candidate), T2 (ineligible-but-preferred candidate), and T5 (evidence swap) as recorded attack runs with expected rejections.
+    - Verify route provenance joins candidate/admission/probe/judgment/selection by correlation id; verify a probe success is not recorded as settlement.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T22/verify_loop.py
+    teeth:
+    - attack: Inject a candidate move outside granted authority (operation outside the frozen catalog, or runner other than the frozen mock replay runner).
+      expected: Candidate classified denied/invalid at admission; never executed; no route transition; strong provider preference changes nothing.
+    - attack: Judge strongly favors a candidate the deterministic rule declares ineligible.
+      expected: The ineligible candidate cannot advance the route; the disagreement is recorded, never resolved by the model.
+    - attack: Swap execution evidence between two probed candidates.
+      expected: Provenance/joinability validation fails the mismatched correlation id and the route record refuses the swap.
+    redesign_trigger: If real probes cannot be classified by the frozen answer domain, or the deterministic rule cannot retain any eligible move across two correction rounds, stop and record the design
+      question; correct the smallest falsified layer only.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T22/
+    done_when:
+    - One real route advance recorded end-to-end with complete provenance.
+    - Authority teeth T1/T2/T5 executed and rejected as expected.
+    - verify_loop.py PASS; no fabricated execution record; no settlement claim.
+  T23:
+    title: Multi-step route settlement under the frozen stop conditions
+    initial_status: blocked
+    depends_on:
+    - T22
+    proof_level: P2
+    confirmation: independent
+    settles: []
+    settles_explanation: 'Iterates the frozen loop until the route settles or a legitimate stop condition fires: baseline settled_accepted, discriminator demonstrated (a lying probe honestly failing verification
+      as verification_failed_nonsettlement), and the minimal settling budget boundary r* discovered by real probes with both r* settling and r*-1 exhausting payment on this route''s own ledger. Execution
+      failure, budget exhaustion, and iteration limits must stop the route honestly. The settled route record carries its fingerprint and complete provenance. This is CLAIM A''s evidence surface.'
+    changes: Adds the iteration driver and route-settlement evaluator as task-local harness under the T23 evidence directory; append-only route/probe/judgment records; nothing else.
+    proves: That the loop can repeatedly advance and stop within frozen bounds, that at least one multi-step route genuinely settles through real governed execution without an LLM controlling authority
+      or settlement, that provenance is complete and joinable, and that the route fingerprint is captured for novelty measurement.
+    does_not_prove: Case generation (T24), the matched negative or payment comparison (T25), usefulness of the generated data at transfer scale, architectural promotion, and any capability-class claim.
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T22/ (loop machinery)
+    - .agents/evidence/godspeed-bounded-judgment/T23/run_route.py (authored this task)
+    - .agents/evidence/godspeed-bounded-judgment/T23/verify_route.py (authored this task)
+    - .agents/evidence/godspeed-bounded-judgment/T15/verify_corpus.py (mechanism-provenance pattern)
+    steps:
+    - Author run_route.py (iterate to a terminal route state under frozen bounds) and verify_route.py at the gate path; freeze sha256s.
+    - Run the loop to route settlement (or an honest stop); preserve every probe's gauntlet state database and the run_terminal consequences; never convert a failed probe into success.
+    - Execute teeth T3 (fabricated success report), T4 (genuine execution failure), and T6 (budget exhaustion) as recorded attack runs with expected outcomes.
+    - Compute the route fingerprint; record the settled route record append-only with full provenance.
+    independent_confirmation:
+      verifier_receives:
+      - the frozen T21 preregistration and contract modules
+      - the T22/T23 route, probe, judgment, and selection records
+      - the gauntlet state databases and manifests needed to recompute terminal consequences
+      - the frozen selection policy and its version
+      verifier_should_not_receive:
+      - the builder narrative or any provider reasoning transcript
+      required_verdict: CONFIRM
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T23/verify_route.py
+    teeth:
+    - attack: Inject or forge an execution-success report without the corresponding real gauntlet state database.
+      expected: Mechanism-provenance validation refuses the record; no settlement; no route advance.
+    - attack: Make a candidate genuinely fail (corrupted target check script) and relabel it as progress.
+      expected: Failure preserved as its typed class; the route does not silently advance.
+    - attack: Provide a useful remaining move but insufficient remaining payment.
+      expected: The route stops or selects an affordable alternative; no hidden budget override.
+    redesign_trigger: If the frozen goal is unreachable within frozen bounds for reasons the evidence attributes to the contract itself (not to provider or environmental noise), stop and record the design
+      question with the failed round preserved.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T23/
+    done_when:
+    - At least one multi-step route genuinely settles with complete provenance and fingerprint, or an honest frozen stop condition is recorded with preserved evidence.
+    - Teeth T3/T4/T6 executed with expected outcomes.
+    - Independent confirmation returns CONFIRM on the settled-route claim.
+  T24:
+    title: Settlement-first inverse case generation with independent replay validation
+    initial_status: blocked
+    depends_on:
+    - T23
+    proof_level: P2
+    confirmation: independent
+    settles: []
+    settles_explanation: From the settled T23 route only, derive a candidate case for which that route should be a legitimate solution (settlement-first generation), freeze the candidate case record, then
+      independently replay it from a fresh disposable target copy under the same frozen mechanism. The generated case is accepted only if the independent replay genuinely settles; otherwise it is rejected
+      and recorded as invalid (tooth T7). An accepted case is appended to the developmental manifest with its route fingerprint, generator identity/version, replay reference, and actual settlement.
+    changes: Adds the inverse generator and replay validator as task-local harness under the T24 evidence directory plus append-only generated-case records; nothing else.
+    proves: That a settled route can produce a candidate inverse-generated case, that independent replay validates or rejects the case by real consequence, and that at least one valid consequence-backed
+      synthetic case exists if the mechanism works (CLAIM B).
+    does_not_prove: That the mechanism generates useful variation at lower payment (T25 measures that), breadth across case families, transfer to the judgment corpus, and architectural promotion.
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T23/ (settled route record + fingerprint)
+    - .agents/evidence/godspeed-bounded-judgment/T24/generate_case.py (authored this task)
+    - .agents/evidence/godspeed-bounded-judgment/T24/verify_case.py (authored this task)
+    steps:
+    - Author generate_case.py (inverse generation from the frozen settled route; generator identity/version and prompt/config recorded) and verify_case.py at the gate path; freeze sha256s.
+    - Freeze the candidate case record BEFORE replay; then replay independently (fresh target copy, same frozen config, fresh seed) through the real mechanism.
+    - Accept only on genuine replay settlement; append the accepted generated-case record (or the rejection) to the developmental manifest.
+    - Execute tooth T7 (an inverse case whose replay does not settle) as a recorded attack with expected rejection.
+    independent_confirmation:
+      verifier_receives:
+      - the settled route record and fingerprint
+      - the frozen candidate case record and the replay run records
+      - the gauntlet state databases needed to recompute the replay settlement
+      verifier_should_not_receive:
+      - the builder narrative or the generator prompt beyond its frozen recorded form
+      required_verdict: CONFIRM
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T24/verify_case.py
+    teeth:
+    - attack: Accept a generated case because the generator asserts it is solved by the route.
+      expected: REJECTED; acceptance requires the independent replay's real settlement.
+    - attack: Generate a case whose independent replay does not settle and admit it as valid developmental data.
+      expected: Rejected and recorded as invalid; not added as valid developmental data.
+    redesign_trigger: If settled routes cannot be inverted into replayable cases at all, stop and record the falsified layer (inverse generation) with evidence; do not widen acceptance.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T24/
+    done_when:
+    - At least one accepted consequence-backed generated case with independent replay settlement, or a recorded honest rejection with preserved evidence.
+    - Tooth T7 executed with the expected rejection.
+    - Independent confirmation returns CONFIRM on the case-generation claim.
+  T25:
+    title: Matched negative + payment evaluation against manual corpus construction
+    initial_status: blocked
+    depends_on:
+    - T24
+    proof_level: P2
+    confirmation: independent
+    settles: []
+    settles_explanation: 'From the accepted positive generated case, remove exactly ONE prerequisite (payment capacity: max_rounds one notch below the discovered settling boundary), rerun through the real
+      mechanism, and require the actual non-settlement consequence; the negative label is determined by settlement, never assigned. Then measure the mechanism''s payment against the manual T15/T16 corpus
+      construction (operator decisions, wall-clock, model calls, tool executions, failed executions, tokens where observable, new route count, valid settled route count, valid generated case count, mechanism
+      diversity, orchestration burden) and measure novelty of the generated route against the existing T15/T16 grid (novel / near-duplicate / structural duplicate). Duplicate routes are measured, not auto-rejected.'
+    changes: Adds the matched-negative runner and payment/novelty evaluator as task-local harness under the T25 evidence directory plus append-only records; nothing else.
+    proves: That the mechanism produces a controlled matched pair whose labels are determined by settlement, and what generating the fresh variation cost compared with the recorded manual process (CLAIM
+      C's measurement surface).
+    does_not_prove: That the mechanism is economically justified in general (one comparison on one surface), scale behavior, and architectural promotion (CLAIM D is out of scope for this branch).
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T24/ (accepted generated case)
+    - .agents/evidence/godspeed-bounded-judgment/T15/ and T16/ (manual-construction payment baseline records)
+    - .agents/evidence/godspeed-bounded-judgment/T25/run_negative.py (authored this task)
+    - .agents/evidence/godspeed-bounded-judgment/T25/verify_payment.py (authored this task)
+    steps:
+    - Author run_negative.py (single-factor matched negative through the real mechanism) and verify_payment.py at the gate path; freeze sha256s.
+    - Run the matched negative; require the actual non-settlement consequence; record the pair.
+    - Assemble the payment comparison table from recorded counters on both sides; mark unobservable quantities n/a honestly.
+    - Compute route novelty against the T15/T16 grid; record the classification.
+    - Execute tooth T8 (regenerate a structurally equivalent route) as a recorded attack; duplication must be detectable.
+    independent_confirmation:
+      verifier_receives:
+      - the matched pair records and the underlying gauntlet state databases
+      - the payment comparison table and its raw counters
+      - the novelty classification and the fingerprints it compares
+      verifier_should_not_receive:
+      - the builder narrative or cost expectations
+      required_verdict: CONFIRM
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T25/verify_payment.py
+    teeth:
+    - attack: Assign the negative label manually instead of by settlement.
+      expected: REJECTED; verify_payment recomputes the label from the run_terminal consequence.
+    - attack: Change two factors in the matched negative.
+      expected: REJECTED; the mutation record pins exactly one changed factor.
+    - attack: Regenerate a structurally identical route and claim novelty.
+      expected: Duplicate fingerprint detected and recorded; no novelty claim possible.
+    redesign_trigger: If the matched negative cannot be realized with a single-factor mutation on this surface, record the limitation and settle the task on the payment and novelty measurements alone; do
+      not force a second factor.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T25/
+    done_when:
+    - One controlled matched pair recorded with settlement-determined labels.
+    - Payment comparison and novelty classification recorded with raw counters.
+    - Tooth T8 executed; independent confirmation returns CONFIRM on the measurement claims.
+  T26:
+    title: Native route discovery — fresh independent adversarial confirmation of the scoped claims
+    initial_status: blocked
+    depends_on:
+    - T23
+    - T24
+    - T25
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles: []
+    settles_explanation: 'Final confirmation of the developmental branch: a fresh independent adversarial verifier receives the frozen plan context, the preregistration, the source changes (harness modules),
+      candidate/probe traces, judgment artifacts, the deterministic policy, authority/admission records, route settlement evidence, the inverse-generated case, replay evidence, the matched-negative evidence,
+      the payment comparison, and the correction history, and adjudicates the frozen question: did the native implementation genuinely construct a governed route from real candidate probes and independently
+      validate a generated case, or did any model-produced representation get mistaken for authority, execution, evidence, or settlement? Verdict vocabulary: CONFIRM / NOT_CONFIRM. Claims are kept separate:
+      A (route search works), B (case generation works), C (data generation measured usefulness), D (durability/promotion — explicitly NOT adjudicated here).'
+    changes: Changes nothing; pure confirmation task.
+    proves: Whether the scoped developmental claims A and B (and C's measurement) are genuinely earned by the recorded evidence, under fresh adversarial examination.
+    does_not_prove: Architectural promotion, production readiness, capability-class generalization beyond the frozen surface, and anything about T06 or the epistemic-role branch (T18..T20).
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T21/ through T25/
+    - .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml
+    - .agents/evidence/godspeed-bounded-judgment/T26/verify_discovery.py (authored this task)
+    steps:
+    - Author verify_discovery.py at the gate path (recomputes joins, labels, fingerprints, and payment counters from raw records); freeze its sha256.
+    - Assemble the confirmation packet per the frozen list; dispatch a fresh independent adversarial verifier.
+    - Adjudicate claims A/B/C separately; record the verdict and any falsified layer classification.
+    independent_confirmation:
+      verifier_receives:
+      - the frozen preregistration, selection policy, and correction history
+      - all candidate/probe/judgment/selection/route/case records and their gauntlet state databases
+      - the payment comparison and novelty records
+      verifier_should_not_receive:
+      - the builder narrative, provider reasoning transcripts, or preferred conclusions
+      required_verdict: CONFIRM
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T26/verify_discovery.py
+    teeth:
+    - attack: Confirm without independently recomputing at least one probe's terminal consequence from its state database.
+      expected: REJECTED as non-independent.
+    - attack: Treat a judgment or generator output as authority, execution, evidence, or settlement.
+      expected: The verdict is NOT_CONFIRM with the layer named.
+    redesign_trigger: N/A (pure confirmation)
+    evidence: .agents/evidence/godspeed-bounded-judgment/T26/
+    done_when:
+    - Fresh independent adversarial verdict recorded per claim (CONFIRM/NOT_CONFIRM).
+    - On NOT_CONFIRM, the falsified layer classified per the frozen interpretation.
+    - The next affordable move recorded without any promotion claim.
+  T27:
+    title: Claim-vs-observation paired judgment experiment
+    initial_status: blocked
+    depends_on:
+    - T16
+    proof_level: P2
+    confirmation: independent
+    settles: []
+    settles_explanation: Developmental representational experiment testing whether explicit structural separation of actor claims from independently observed evidence improves bounded-judgment discrimination
+      on conflict cases without degrading agreement cases.
+    changes: Adds condition-B prompt renderer with epistemic provenance typing and the paired scoring harness under T27 evidence directory. No product code, schema, or runtime change.
+    proves: Whether claim-vs-observation structural separation improves bounded-judgment accuracy on conflict cases without degrading agreement cases, compared to the current undifferentiated representation.
+    does_not_prove: Transfer to unseen surfaces, architectural promotion, provider-general capability, or calibration.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T27.prereg.yaml
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T16/expanded-round/provider-raw-results.json (condition A persisted answers)
+    - .agents/preregistrations/godspeed-bounded-judgment-T16.expanded-corpus-manifest.yml (25-run corpus)
+    - .agents/evidence/godspeed-bounded-judgment/repeatability/ (repeatability evidence)
+    steps:
+    - 'Freeze the T27 prereg: selected corpus subset and rationale, condition A/B renderers, epistemic-role vocabulary, paired scoring, significance/practical thresholds, regression guard, stop conditions.'
+    - 'Build condition B renderer: same factual data as condition A but with structural [claim]/[observation]/[evidence] provenance typing.'
+    - Run both conditions across the frozen corpus subset with DeepSeek 4.1 Flash via ClinePass (established repeatable provider).
+    - 'Compute paired deltas: corrections, regressions, McNemar exact test, per-class behavior.'
+    - Apply the frozen C1-C5 interpretation framework.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T27/run_claim_obs.py --condition both
+    teeth:
+    - attack: Condition B adds a fact absent from condition A.
+      expected: Content-equivalence checker rejects it.
+    - attack: Role vocabulary encodes correctness (e.g. contradicted_claim).
+      expected: Role validator rejects it.
+    - attack: Post-judgment artifact enters condition B input.
+      expected: Temporal-horizon checker rejects it.
+    - attack: Typed representation swapped between cases.
+      expected: Case-identity control rejects it.
+    independent_confirmation:
+      verifier_receives:
+      - frozen prereg
+      - both renderers
+      - raw paired outputs
+      - scoring code
+      - frozen corpus manifest
+      verifier_should_not_receive:
+      - the builder narrative or preferred C1-C5 outcome
+      required_verdict: CONFIRM
+    redesign_trigger: If epistemic provenance typing cannot be implemented without encoding correctness or leaking post-judgment information, the hypothesis is not testable on this surface.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T27/
+    done_when:
+    - Prereg frozen before any provider call
+    - Both conditions measured on the frozen corpus subset
+    - All teeth executed and recorded
+    - McNemar exact test computed on discordant pairs
+    - C1-C5 interpretation recorded with consequence
+  T28:
+    title: Claim-vs-observation disposition — independent confirmation
+    initial_status: blocked
+    depends_on:
+    - T27
+    proof_level: P2
+    confirmation: independent_adversarial
+    settles: []
+    settles_explanation: Independent adversarial confirmation of the T27 paired result and hypothesis adjudication among C1-C5.
+    changes: Changes nothing; pure confirmation task.
+    proves: Whether the T27 result was validly obtained and correctly interpreted.
+    does_not_prove: Architectural promotion (that still requires the frozen T16/T18 D-rule).
+    preregistration:
+      required: false
+    hot_context:
+    - .agents/evidence/godspeed-bounded-judgment/T27/
+    steps:
+    - Assemble the confirmation packet.
+    - Dispatch a fresh independent verifier.
+    gate:
+    - python3 .agents/evidence/godspeed-bounded-judgment/T27/run_claim_obs.py --verify-only
+    teeth:
+    - attack: Confirm without independently recomputing paired deltas.
+      expected: REJECTED as non-independent.
+    independent_confirmation:
+      verifier_receives:
+      - the frozen T27 prereg
+      - both renderers
+      - raw paired outputs
+      - scoring
+      verifier_should_not_receive:
+      - the builder narrative or preferred C1-C5 outcome
+      required_verdict: CONFIRM
+    redesign_trigger: N/A (pure confirmation).
+    evidence: .agents/evidence/godspeed-bounded-judgment/T28/
+    done_when:
+    - Fresh independent adversarial confirmation returns the frozen verdict.
+  T29:
+    title: Native route-discovery breadth — second operation family (forged-report detection boundary)
+    initial_status: ready
+    depends_on: [T26]
+    proof_level: P2
+    confirmation: independent_adversarial
+    settles: []
+    settles_explanation: >-
+      Operator-directed breadth variation of the settled T21-T26 mechanism
+      (governing question: does native route discovery survive a materially
+      different operation family?). Per the frozen T29 preregistration the
+      family is e2e-forged-report x budget ladder: no honest-completion
+      scenario exists in the T21 catalog, so the two-settleable-families
+      breadth claim is NOT earnable here; T29 may earn the
+      characterize-and-stop survival claim and the family's mechanical
+      detection boundary (d* = minimal budget at which the frozen
+      unsubstantiated-pass rule fires), with a matched negative at d*-1 and
+      reuse of the settled family-1 ledger for cross-family separation.
+    changes: >-
+      Task-local harness and append-only records under
+      .agents/evidence/godspeed-bounded-judgment/T29/; real gauntlet probes
+      over disposable fixture-target copies with durable state under
+      $HOME/.local/share/godspeed-route-discovery/T29/. No product, spec, or
+      gauntlet-source change; the T21 frozen contract modules are reused
+      unchanged.
+    proves: >-
+      Whether the route-discovery mechanism (catalog -> admission -> real
+      probes -> mechanical discrimination -> frozen route goal ->
+      matched negative) transfers to and completes a materially different
+      family in characterize-and-stop mode, and what the family's detection
+      boundary is, measured by real consequence.
+    does_not_prove: >-
+      The two-settleable-families breadth claim; general route-discovery
+      capability; arbitrary-domain transfer; large-scale efficiency;
+      metabolized capability; autonomous structural learning;
+      provider-independent performance; production-scale reliability; any
+      learned-judgment role (learned output is observational only and never
+      alters retention or settlement).
+    hot_context:
+      - .agents/preregistrations/godspeed-bounded-judgment-T29.prereg.yaml
+      - .agents/evidence/godspeed-bounded-judgment/T21/ (frozen contract modules)
+      - .agents/evidence/godspeed-bounded-judgment/T23/round-3/ (family-1 route ledger reused for separation)
+      - /home/sprime01/projects/gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+    steps:
+      - Freeze the T29 preregistration (family selection rationale and every frozen term) BEFORE any scored probe; record sha256 in the decision log.
+      - Author the harness (admission via T21 modules; the family-2 mechanical rule; probe runner; route evaluator) under T29/; freeze script sha256s before first execution.
+      - Execute the real probe ladder on the forged family; establish d* and d*-1 by real probes; run the matched negative; reuse the frozen family-1 ledger for cross-family separation.
+      - Record append-only route records, payment counters, and the breadth comparison against family 1.
+      - Author verify_breadth.py at the gate path; then dispatch a fresh independent adversarial verifier per the frozen independent_confirmation block.
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/godspeed-bounded-judgment-T29.prereg.yaml
+    independent_confirmation:
+      verifier_receives:
+        - the frozen T29 preregistration and T21 contract modules
+        - all candidate/admission/probe/route records and pinned state DBs
+        - the family-1 ledger used for separation and the breadth comparison
+      verifier_should_not_receive:
+        - the builder narrative or preferred outcome
+      required_verdict: CONFIRM
+    gate:
+      - python3 .agents/evidence/godspeed-bounded-judgment/T29/verify_breadth.py
+    teeth:
+      - {attack: Fabricate a detection record without a pinned real probe DB., expected: Mechanism-provenance validation refuses; no route credit.}
+      - {attack: Hand-assign the d* boundary or the negative label instead of deriving it from terminals and artifacts., expected: Gate recomputation from pinned DBs refuses; labels are read, never assigned.}
+      - {attack: Let the optional learned observer label alter retention or settlement., expected: REJECTED; the observer is recorded as observational evidence only.}
+    redesign_trigger: >-
+      If the frozen detection rule cannot separate the forged family from the
+      honest and lying families on real probes, stop and record the falsified
+      layer with preserved evidence; do not weaken or redefine the rule
+      post hoc.
+    evidence: .agents/evidence/godspeed-bounded-judgment/T29/
+    done_when:
+      - At least one multi-step detection route is recorded with complete provenance and the d*/d*-1 boundary established by real probes, or an honest frozen stop with the falsified layer classified.
+      - Matched negative differs by exactly one declared factor (budget) with the label read from real terminals.
+      - Breadth comparison against family 1 recorded (shared vs family-specific machinery).
+      - Fresh independent adversarial confirmation returns the frozen verdict.
+final_acceptance:
+  authority_and_safety:
+  - No provider or model response can produce an authority ALLOW without independent authority agreement (T04 evidence, re-confirmed at T14).
+  - Provider timeout, unavailability, malformed output, and contradictory output all settle to typed non-authoritative states; none defaults to permissive (T04, T08, T09 evidence).
+  - Every judgment failure mode is distinguishable from success in the recorded outcome (T09, T14 evidence).
+  - No global gate is redder than its T00 baseline classification.
+  bounded_judgment:
+  - The first surface was frozen before measurement and measured read-only; its outcome classification (A/B/C/D/E) is recorded with its consequence (T01 evidence).
+  - The declared answer domain is closed, versioned, carries an explicit insufficiency label, and rejects vacuous domains (T06 evidence).
+  - The deterministic basis is not displaced by any settled judgment path (T07 evidence, re-confirmed at T14).
+  - The distribution survives restart and settlement and is attributable or explicitly unattributed (T07, T09 evidence).
+  - Substitution is reported at the level actually achieved; model-quality comparability is named as unproven (T11 evidence).
+  provenance_and_replay:
+  - Judgment, authority decision, execution, observation, and settlement join by the correlation identity with no heuristic string matching (T05 evidence).
+  - Provenance replays by fresh reproduction on the deployment target with no unexplained divergence (T12 evidence).
+  - The read-only export path joins and exports the full forward chain with explicit exclusions (T13 evidence).
+  - Recovery drills (provider failure, corrupted state, restart mid-loop) reach known-good states without silent loss (T12 evidence).
+  evidence_and_confirmation:
+  - Every REQUIRED normative spec requirement maps to at least one settled task/evidence record.
+  - Every P3 task has the required fresh independent confirmation.
+  - Failed/correction evidence has not been erased.
+  - Documentation/status claims do not exceed observed proof.
+  - All global gates exit 0 or match their T00 baseline classification.
+  - 'The confirmation report names the unproven list explicitly: model-quality comparability, calibration, fleet behavior, long-horizon reliability.'
+guardrails:
+- No Judgment Plane service, daemon, provider port, database, broker, or deployment artifact may be introduced under that name; the concern is realized through existing machinery (source-of-truth rule).
+- No .sea grammar change; no training pipeline; no learning claim in this plan.
+- 'Provider/model output NEVER widens authority: authority is evaluated before provider dispatch, and failure defaults to non-authoritative, never permissive.'
+- No new generic probabilistic-result type until a concrete non-verification use case demonstrates semantic insufficiency (spec C1); slice 1 reuses the verification record shape.
+- A negative PROOF-1 result falsifies a SURFACE, never the capability class; surface-scoped language is mandatory (spec C2).
+- The terms calibrated probability, calibration curve, production threshold, population-level reliability, and model generalization are FORBIDDEN for this corpus (spec REQ-VERIFY-012).
+- 'No silent fallback: timeout, unreachable, malformed, out-of-domain, retry, degraded, and unattributed states are explicit, typed, and recorded.'
+- 'No retroactive mutation of history: contradicted judgments stay immutable and correlatable; legacy unattributed rows stay unattributed.'
+- No new test logic or command surface where an existing recipe exists; `just no-async-kernel` is the binding async-boundary gate.
+- Development-host output is never claimed as target-machine evidence.
+handoff_contract:
+  must_report:
+  - settled capabilities/requirements
+  - explicitly unsettled or deferred items
+  - current operational system state
+  - requirement-to-evidence index
+  - known limitations
+  - rollback/recovery instructions where relevant
+  - important decisions/discoveries that changed the execution model
+  - exact next executable action or 'none — plan settled'
+  settled_next_action_rule: The next executable action MUST be set to `none \u2014 plan settled` only after the final required conformance/confirmation task succeeds.
+traceability:
+  spec_requirement_count: 90
+  mapped_requirement_count: 90
+  unmapped_requirements: []
+  unknown_plan_requirement_ids: []
+  requirement_to_tasks:
+    CLAIM-001:
+    - T06
+    CLAIM-002:
+    - T04
+    CLAIM-003:
+    - T01
+    CLAIM-004:
+    - T07
+    - T14
+    CLAIM-005:
+    - T07
+    - T14
+    CLAIM-006:
+    - T01
+    - T11
+    - T12
+    RECOV-001:
+    - T09
+    - T12
+    RECOV-002:
+    - T09
+    RECOV-003:
+    - T06
+    - T12
+    RECOV-004:
+    - T05
+    - T12
+    REQ-AUTH-001:
+    - T04
+    REQ-AUTH-002:
+    - T04
+    REQ-AUTH-003:
+    - T04
+    REQ-AUTH-004:
+    - T04
+    REQ-AUTH-005:
+    - T04
+    REQ-AUTH-006:
+    - T04
+    REQ-COMP-001:
+    - T10
+    REQ-COMP-002:
+    - T10
+    REQ-COMP-003:
+    - T10
+    REQ-COMP-020:
+    - T10
+    REQ-CONFIG-001:
+    - T08
+    REQ-CONFIG-002:
+    - T08
+    REQ-CONFIG-003:
+    - T10
+    REQ-CONFIG-004:
+    - T08
+    REQ-CONFIG-010:
+    - T08
+    REQ-CONFIG-011:
+    - T06
+    REQ-CONFIG-012:
+    - T08
+    - T12
+    REQ-GOAL-001:
+    - T06
+    REQ-GOAL-002:
+    - T06
+    REQ-GOAL-003:
+    - T04
+    REQ-GOAL-004:
+    - T09
+    REQ-GOAL-005:
+    - T05
+    REQ-GOAL-006:
+    - T11
+    REQ-GOAL-007:
+    - T07
+    REQ-JUDG-001:
+    - T06
+    REQ-JUDG-002:
+    - T06
+    REQ-JUDG-003:
+    - T11
+    REQ-JUDG-010:
+    - T07
+    - T08
+    REQ-JUDG-011:
+    - T08
+    - T09
+    REQ-JUDG-012:
+    - T07
+    REQ-JUDG-013:
+    - T07
+    REQ-JUDG-014:
+    - T09
+    REQ-JUDG-020:
+    - T06
+    REQ-JUDG-021:
+    - T06
+    REQ-JUDG-022:
+    - T07
+    REQ-JUDG-023:
+    - T01
+    REQ-JUDG-024:
+    - T06
+    REQ-OUT-001:
+    - T07
+    REQ-OUT-002:
+    - T06
+    REQ-OUT-003:
+    - T06
+    REQ-OUT-004:
+    - T09
+    REQ-OUT-005:
+    - T04
+    REQ-OUT-006:
+    - T01
+    REQ-OUT-007:
+    - T01
+    REQ-PROV-001:
+    - T09
+    - T12
+    REQ-PROV-002:
+    - T09
+    REQ-PROV-003:
+    - T09
+    - T12
+    REQ-PROV-004:
+    - T12
+    - T13
+    REQ-PROV-020:
+    - T09
+    - T12
+    REQ-PROV-021:
+    - T05
+    - T12
+    REQ-PROV-022:
+    - T05
+    - T12
+    REQ-SAFE-001:
+    - T04
+    REQ-SAFE-002:
+    - T09
+    REQ-SAFE-003:
+    - T09
+    REQ-SAFE-004:
+    - T09
+    REQ-SAFE-005:
+    - T04
+    - T12
+    REQ-SEC-001:
+    - T09
+    REQ-SEC-002:
+    - T08
+    REQ-SEC-003:
+    - T08
+    REQ-SEC-004:
+    - T06
+    REQ-SEC-005:
+    - T04
+    REQ-SETTLE-001:
+    - T05
+    REQ-SETTLE-002:
+    - T10
+    REQ-SETTLE-003:
+    - T01
+    - T13
+    REQ-VERIFY-001:
+    - T09
+    REQ-VERIFY-002:
+    - T11
+    REQ-VERIFY-003:
+    - T09
+    - T12
+    REQ-VERIFY-004:
+    - T01
+    REQ-VERIFY-005:
+    - T04
+    REQ-VERIFY-010:
+    - T04
+    REQ-VERIFY-011:
+    - T11
+    REQ-VERIFY-012:
+    - T01
+    VAR-001:
+    - T01
+    VAR-002:
+    - T01
+    VAR-003:
+    - T01
+    VAR-004:
+    - T06
+    VAR-005:
+    - T11
+    VAR-006:
+    - T08
+    VAR-007:
+    - T07
+    VAR-008:
+    - T05
+    - T13
+  coverage_rule: Every REQUIRED normative requirement in the source specification MUST map to at least one settlement task. High-risk requirements additionally require the confirmation mode defined by the
+    specification and this plan.
+  high_risk_confirmation_check:
+    authority_separation:
+      confirmation: adversarial
+      requirements:
+      - REQ-AUTH-001
+      - REQ-AUTH-002
+      - REQ-AUTH-003
+      - REQ-AUTH-004
+      - REQ-AUTH-005
+      - REQ-AUTH-006
+      - REQ-VERIFY-010
+      settled_by:
+      - T04
+      confirmation_mode: independent_adversarial
+      verdict: SATISFIED
+    semantic_bounding:
+      confirmation: independent
+      requirements:
+      - REQ-JUDG-001
+      - REQ-JUDG-002
+      - REQ-JUDG-003
+      - REQ-JUDG-020
+      - REQ-JUDG-021
+      - REQ-JUDG-024
+      settled_by:
+      - T06
+      - T11
+      confirmation_mode: independent (T06, T11)
+      verdict: SATISFIED
+    uncertainty_integrity:
+      confirmation: independent
+      requirements:
+      - REQ-JUDG-012
+      - REQ-JUDG-013
+      - REQ-JUDG-022
+      settled_by:
+      - T07
+      confirmation_mode: independent (T07)
+      verdict: SATISFIED
+    claim_scope_integrity:
+      confirmation: adversarial
+      requirements:
+      - REQ-JUDG-023
+      - REQ-OUT-006
+      - REQ-OUT-007
+      - REQ-VERIFY-012
+      - CLAIM-006
+      settled_by:
+      - T01
+      confirmation_mode: independent_adversarial
+      verdict: SATISFIED
+    provenance_replay:
+      confirmation: fresh_target_reproduction
+      requirements:
+      - REQ-PROV-001
+      - REQ-PROV-003
+      - REQ-PROV-004
+      - REQ-PROV-020
+      - REQ-PROV-021
+      - REQ-PROV-022
+      settled_by:
+      - T12
+      confirmation_mode: fresh_target_reproduction
+      verdict: SATISFIED
+    safe_failure:
+      confirmation: adversarial
+      requirements:
+      - REQ-SAFE-001
+      - REQ-SAFE-002
+      - REQ-SAFE-003
+      - REQ-SAFE-004
+      - REQ-SAFE-005
+      settled_by:
+      - T04
+      - T09
+      confirmation_mode: independent_adversarial
+      verdict: SATISFIED

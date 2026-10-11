@@ -1,0 +1,7 @@
+tooth: reverse_time
+rows_reversed: 4
+expected: the chain-integrity check FAILS; a judgment recorded after its consequence is never accepted as pre-consequence
+behaved_as_specified: true
+note: the check marks such rows VIOLATED and counts them in reconstructibility gaps (temporal_violations)
+mode: reverse-time
+executed_at: '2026-09-18T00:12:02.643261+00:00'

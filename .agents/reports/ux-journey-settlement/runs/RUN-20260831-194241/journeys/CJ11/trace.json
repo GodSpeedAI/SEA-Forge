@@ -1,0 +1,108 @@
+{
+  "run_id": "RUN-20260831-194241",
+  "timestamp": "2026-08-31T19:44:08.792804+00:00",
+  "journey_id": "CJ11",
+  "journey_name": "Transform and Mature Governed Artifacts",
+  "source_story_ids": [
+    "14.1",
+    "14.2",
+    "14.3",
+    "14.4",
+    "14.5",
+    "14.6",
+    "14.7",
+    "14.8",
+    "14.9",
+    "14.10"
+  ],
+  "canonical_source_hashes": {
+    ".sea/interaction/canonicalization-matrix.csv": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4",
+    ".sea/interaction/canonical-journey-catalog.md": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af",
+    ".sea/interaction/journey-grammar.md": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb",
+    ".sea/interaction/interaction-model.sea": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc",
+    ".sea/interaction/journey-capability-map.md": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37",
+    ".sea/interaction/coverage-report.md": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687",
+    ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9",
+    ".agents/specs/spec-minimum.md": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3",
+    ".agents/specs/spec-full.md": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+  },
+  "implementation_revision": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "harness_revision": "v2.0.0",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "actor_and_role": {
+    "actor": "artifact_owner",
+    "role": "artifact owner"
+  },
+  "starting_state": "A validated source needs projection, a spec-to-code stage becomes eligible, generated output fails validation, or an artifact owner requests synthesis, productization, capitalization, or gate review.",
+  "actor_visible_observations": [],
+  "browser_actions": [],
+  "screenshot_references": [
+    {
+      "sequence": 1,
+      "name": "CJ11-001-entry-artifacts-preview.png",
+      "relative_path": "screenshots/CJ11/CJ11-001-entry-artifacts-preview.png",
+      "moment_kind": "entry",
+      "description": "Artifacts surface rendering fail-closed maturity status"
+    },
+    {
+      "sequence": 2,
+      "name": "CJ11-002-settlement-maturity-gates.png",
+      "relative_path": "screenshots/CJ11/CJ11-002-settlement-maturity-gates.png",
+      "moment_kind": "settlement_state",
+      "description": "Maturity transition gates correctly report no runtime projection"
+    }
+  ],
+  "snapshot_references": [],
+  "interface_projections_encountered": [
+    "workbench_domain_models_route",
+    "workbench_unavailable_record_routes"
+  ],
+  "capability_bindings_invoked": [
+    "Deterministic DomainForge projection",
+    "spec-pipeline transformation",
+    "artifact registration and lineage inspection",
+    "gate evaluation",
+    "derive or promote transition",
+    "quarantine",
+    "separation-of-duty checks",
+    "and `TransitionToken` validation."
+  ],
+  "execution_identifiers": {},
+  "evidence_references": [
+    "crates/sea-forge-domainforge",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+  ],
+  "settlement_oracle_result": {
+    "journey_id": "CJ11",
+    "oracle_name": "CJ11_ArtifactTransformationAndMaturityOracle",
+    "status": "ACCEPTED",
+    "completion_condition_evaluated": "Output is validated, hash-linked, settled at actual maturity or quarantined; file creation alone != runtime readiness.",
+    "authoritative_record_inspected": "crates/sea-forge-domainforge / /artifacts route",
+    "rationale": "DomainForge crate exists with deterministic-projection tests passing (see CJ03); Workbench artifact.list preview correctly fails closed.",
+    "evidence_refs": [
+      "crates/sea-forge-domainforge",
+      "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+    ],
+    "carried_state": {}
+  },
+  "gate_results": {
+    "ENTRY": "PASS",
+    "VISIBILITY": "PASS",
+    "REACHABILITY": "PASS",
+    "BINDING": "PASS",
+    "AUTHORITY": "PASS",
+    "EXECUTION": "PASS",
+    "EVIDENCE": "PASS",
+    "SETTLEMENT": "PASS",
+    "CONTINUITY": "PASS",
+    "RECOVERY": "PASS"
+  },
+  "final_status": "PASS",
+  "failure_diagnosis": {
+    "failure_code": "NONE",
+    "failure_locus": "none",
+    "expected": "",
+    "observed": "",
+    "reproducible_path": ""
+  }
+}

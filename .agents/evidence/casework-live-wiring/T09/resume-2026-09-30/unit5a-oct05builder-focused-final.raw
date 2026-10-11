@@ -1,0 +1,5 @@
+--- FAIL: TestRunGetCancellationRacesResponseAndPoolReturn (0.00s)
+    client_cancellation_test.go:547: retired race peer ended with io: read/write on closed pipe, want independently observed EOF
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.030s
+FAIL

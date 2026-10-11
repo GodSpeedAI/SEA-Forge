@@ -1,0 +1,17 @@
+CHECK: actual-host UTC time
+2026-09-30 21:17:55 UTC
+CHECK: memory
+               total        used        free      shared  buff/cache   available
+Mem:      8327892992  6560522240   145199104     2916352  1826578432  1767370752
+Swap:    12884901888  7770460160  5114441728
+CHECK: compiler/browser related process names (no command lines)
+  13814     469  1000 bun                02:06:47
+CHECK: kernel/browser/cache
+kernel-binary-present
+/home/sprime01/.local/share/mise/shims/agent-browser
+/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/node_modules/.bin/vite
+GOCACHE-existing-writable
+Filesystem         1B-blocks         Used    Available Use% Mounted on
+/dev/sdd       1081101176832 266622799872 759486021632  26% /
+c7530522053e952fd36c13a55af7ea44e62f16275e26dd583b88b3d0b9a270b1  /home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/native_events_live_test.go
+ba29bdccfd5bc375ef52b7dd6366be15c8d04cc3924352f8c09137ef69c6ab80  /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/e2e/native-events-live.ts

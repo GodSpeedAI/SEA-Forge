@@ -1,0 +1,14 @@
+=== just casework-cell-init (run 1, fresh cell) ===
+casework-cell-init: wrote .sea-forge/casework-live/cell/server.yaml (operator identity bound to uid 1000)
+casework-cell-init: installed templates: e2e-sentry-chain@0.1.0.yaml e2e-signoff-gate@0.1.0.yaml 
+casework-cell-init: wrote .sea-forge/casework-live/cell/authority/active-policy.json (E2E policy: write_file + approval_resolution for operator)
+casework-cell-init: cell path: /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell
+exit=0
+
+=== just casework-cell-init (run 2, must change nothing) ===
+casework-cell-init: cell already initialized at .sea-forge/casework-live/cell (server.yaml present; not modified)
+casework-cell-init: installed templates: e2e-sentry-chain@0.1.0.yaml e2e-signoff-gate@0.1.0.yaml 
+casework-cell-init: active policy: .sea-forge/casework-live/cell/authority/active-policy.json
+casework-cell-init: identity bindings in server.yaml: 1
+casework-cell-init: cell path: /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell
+exit=0

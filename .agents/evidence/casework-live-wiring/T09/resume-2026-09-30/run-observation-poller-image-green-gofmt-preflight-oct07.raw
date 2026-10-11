@@ -1,0 +1,20 @@
+PREFLIGHT: gofmt retry; actual UTC, resources, compiler processes, and seven source hashes
+UTC=2026-10-07T18:32:52Z
+MemAvailableKiB=3120168
+SwapFreeKiB=11146584
+    PID STAT COMMAND
+      1 Ss   codex
+      2 S    bash
+     15 S    bash
+     18 R    ps
+GO_VERSION
+go version go1.27.1 linux/amd64
+SOURCE_HASHES
+3dba418f6f4920f89bb10ec59e9b77076e3005d3a03d7504212887369b5ed3f9  internal/server/run_observation_poller_image.go
+cf501bf7d65a413a2c575b951980be3d0e301f3515a991682680b2d3baa4f256  internal/server/run_observation_manager_retained_image_test.go
+fa1601f3746bca6c6697e5e6c6861bb9442bac6aafc2aa762a4f32580f8a905d  internal/server/run_observation_manager.go
+af2dfcb8c83d8a53186d8e446a11de35ce51d45cac74461ea3c3f971d0da30c4  internal/server/run_observation_manager_test.go
+2157583fbb74f519c2e4254bf1fd26fce330ed567ac7ddaf006b510c87fd50bd  internal/server/run_observation_retained_version.go
+34df05f171f2fbb513caf86d096a87b9c3a4f353b2a5bef236d08132b040bfd7  internal/server/run_observation_retained_version_test.go
+4c70bc853ae73f4025b177b5fb505d8a456c89c41b1b13ac86faed5cba9620e7  internal/server/run_observation_retained_policy_test.go
+COMMAND: cd apps/godspeed-casework-go && gofmt -d internal/server/run_observation_poller_image.go internal/server/run_observation_manager_retained_image_test.go

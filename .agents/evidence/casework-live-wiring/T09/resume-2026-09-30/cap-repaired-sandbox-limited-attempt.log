@@ -1,0 +1,27 @@
+--- FAIL: TestResponseLineLimitConfigValidationBeforeDial (0.00s)
+    --- FAIL: TestResponseLineLimitConfigValidationBeforeDial/negative (0.00s)
+        response_limit_test.go:66: New with MaxResponseLineBytes=-1 returned client=&{{unused -1 2 2000000000 1000000000 3000000000 20000000 100000000 5000000000 8000000000 <nil> 0x75e1c0} {{} {0 0}} [] 0 true 0xc00007e2a0 {{} {} 0} 1634} error=<nil>, want typed config error
+    --- FAIL: TestResponseLineLimitConfigValidationBeforeDial/above_hard_ceiling (0.00s)
+        response_limit_test.go:66: New with MaxResponseLineBytes=33554433 returned client=&{{unused 33554433 2 2000000000 1000000000 3000000000 20000000 100000000 5000000000 8000000000 <nil> 0x75e1c0} {{} {0 0}} [] 0 true 0xc00007e380 {{} {} 0} 1634} error=<nil>, want typed config error
+--- FAIL: TestLowerResponseLineLimitAppliesToRPC (0.00s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToRPC/exact_configured_boundary (0.00s)
+        response_limit_test.go:98: listen unix /tmp/sfwp-fake-4248897801/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestLowerResponseLineLimitAppliesToRPC/one_byte_over_is_unavailable_after_the_safe_inspect_retry (0.00s)
+        response_limit_test.go:116: listen unix /tmp/sfwp-fake-2762598652/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestLowerResponseLineLimitAppliesToSubscription (0.00s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToSubscription/exact_configured_boundary (0.00s)
+        response_limit_test.go:145: listen unix /tmp/sfwp-fake-2412717147/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestLowerResponseLineLimitAppliesToSubscription/one_byte_over_is_rejected_before_delivery (0.00s)
+        response_limit_test.go:145: listen unix /tmp/sfwp-fake-2770859469/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestResponseLineLimitExactBoundaryAndOverflowPoison (5.35s)
+    --- FAIL: TestResponseLineLimitExactBoundaryAndOverflowPoison/one_byte_over_limit_is_typed_unavailable_and_poisons_the_connection (1.15s)
+        response_limit_test.go:218: over-limit response error=<nil>, want typed unavailable
+--- FAIL: TestInspectOverLimitResponseRetriesOnceOnFreshConnection (0.19s)
+    response_limit_test.go:252: listen unix /tmp/sfwp-fake-2333896946/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestOverLimitMutationAndRecoveryResponsesNeverResendMutation (0.14s)
+    response_limit_test.go:287: listen unix /tmp/sfwp-fake-574688301/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestSubscribeOverLimitEventIsRejectedBeforeDecode (3.27s)
+    response_limit_test.go:398: unbounded subscription reader delivered oversized valid event before rejection: cursor="1.1"
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	8.991s
+FAIL

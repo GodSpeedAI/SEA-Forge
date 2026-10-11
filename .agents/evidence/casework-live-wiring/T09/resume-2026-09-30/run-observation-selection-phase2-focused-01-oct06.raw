@@ -1,0 +1,16 @@
+=== RUN   TestSelectObservationRunsRanksGroupsAndKeepsTheFirstEight
+--- PASS: TestSelectObservationRunsRanksGroupsAndKeepsTheFirstEight (0.00s)
+=== RUN   TestSelectObservationRunsRanksAllTerminalStatesTogether
+--- PASS: TestSelectObservationRunsRanksAllTerminalStatesTogether (0.00s)
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput/empty
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput/empty_nonnil
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput/short
+--- PASS: TestSelectObservationRunsHandlesEmptyAndShortInput (0.00s)
+    --- PASS: TestSelectObservationRunsHandlesEmptyAndShortInput/empty (0.00s)
+    --- PASS: TestSelectObservationRunsHandlesEmptyAndShortInput/empty_nonnil (0.00s)
+    --- PASS: TestSelectObservationRunsHandlesEmptyAndShortInput/short (0.00s)
+=== RUN   TestSelectObservationRunsRejectsUnknownExecutionWithoutPartialSelection
+--- PASS: TestSelectObservationRunsRejectsUnknownExecutionWithoutPartialSelection (0.00s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	1.413s

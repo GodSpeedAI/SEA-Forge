@@ -1,0 +1,101 @@
+# =============================================================================
+# PREREGISTRATION — learned-judgment remeasurement on the native route-discovery
+# corpus (operator-directed developmental measurement; OUTSIDE the settled plan)
+# =============================================================================
+# FROZEN BEFORE THE FIRST SCORED PROVIDER CALL. The corpus manifest is
+# materialized from the pinned sources below and its sha256 is recorded in the
+# decision log BEFORE the first call (two-stage freeze, both append-only).
+# This file is never edited post-freeze; changes require append-only addenda.
+schema: godspeed-bounded-judgment.native-corpus-remeasure-prereg
+created_utc: "2026-09-19"
+frozen_before: "first scored provider call"
+governing_question: >-
+  On naturally generated, consequence-backed route-discovery cases, does the
+  learned judgment provider add reliable information beyond the
+  deterministic/mechanical consequence surface, and if so, under what bounded
+  role?
+relation_to_prior_work:
+  reuses: "the T16 measurement apparatus (loader, prompt shape, parser, scoring) for comparability; the T23 round-2 enriched observation surface for the discrimination arm; the frozen provider seam"
+  does_not: "reopen T18; authorize T19/T20; modify the settled T21-T26 branch, its plan entries, its evidence, or its mechanism; introduce a representation intervention"
+corpus:
+  description: "15 consequence-backed rows from the settled native route-discovery branch; every row is a real gauntlet run on the corrected fixture mechanism (addendum-1) with a pinned state DB; truth is mechanical, never hand-assigned"
+  rows:
+    - {id: nat-01, source: t23-iter1, probe: e2e-happy@4 (route baseline), truth_class: settled_accepted}
+    - {id: nat-02, source: t23-iter1, probe: e2e-happy@3, truth_class: budget_exhausted}
+    - {id: nat-03, source: t23-iter1, probe: e2e-lying@4, truth_class: verification_failed_nonsettlement}
+    - {id: nat-04, source: t23-iter2, probe: e2e-happy@5, truth_class: settled_accepted}
+    - {id: nat-05, source: t23-iter2, probe: e2e-lying@5, truth_class: verification_failed_nonsettlement}
+    - {id: nat-06, source: t23-iter2, probe: e2e-happy@6, truth_class: settled_accepted}
+    - {id: nat-07, source: t23-iter3, probe: e2e-happy@2, truth_class: budget_exhausted}
+    - {id: nat-08, source: t23-iter3, probe: e2e-happy@8, truth_class: settled_accepted}
+    - {id: nat-09, source: t23-iter3, probe: e2e-lying@2, truth_class: verification_failed_nonsettlement}
+    - {id: nat-10, source: t23-iter4, probe: e2e-lying@8, truth_class: verification_failed_nonsettlement}
+    - {id: nat-11, source: t23-iter4, probe: e2e-happy@1, truth_class: budget_exhausted}
+    - {id: nat-12, source: t23-iter4, probe: e2e-happy@7, truth_class: settled_accepted}
+    - {id: nat-13, source: t24-replay, probe: e2e-happy@4 (accepted case t24-case-001 replay), truth_class: settled_accepted}
+    - {id: nat-14, source: t24-tooth-t7, probe: e2e-happy@2 (impostor run), truth_class: budget_exhausted, provenance_note: "run constructed as tooth T7; included because its consequence is real and mechanically derived; provenance labeled"}
+    - {id: nat-15, source: t25-negative, probe: e2e-happy@3 (matched negative), truth_class: budget_exhausted}
+  source_pins: >-
+    Row state_db_path + sha256 pins are taken from the frozen branch records:
+    T23/route/iteration-1..4/probe-observations.json (+ probe-run-meta.yaml),
+    T24/accepted-case.yaml + T24/teeth.yaml, T25/matched-pair.yaml. At
+    materialization every DB file must re-hash to its pin or the run FAILS.
+  exclusions:
+    - "T22 round-2 probes (3): demo-calculator targeting, the superseded mechanism (preserved failed-round data, not the frozen surface)"
+    - "all tooth runs EXCEPT the T7 impostor run (teeth are not naturally generated cases)"
+    - "no T15/T16 hand-constructed rows: this corpus is the native slice only"
+  class_counts_frozen: {settled_accepted: 6, budget_exhausted: 5, verification_failed_nonsettlement: 4}
+truth_derivation:
+  mechanical_rule: "settled terminal -> settled_accepted; addendum-3 rule (bounded-non-settlement terminal AND 0 settlements AND >=1 sha256-verified failing artifact) -> verification_failed_nonsettlement; any other bounded non-settlement -> budget_exhausted; run error -> execution_failed (none expected)"
+  note: "truth is derived by the frozen mechanical rule from pinned DBs and artifact objects; the provider never sees truth"
+arms:
+  arm1_t16_comparable_predictive:
+    task: "predictive, exact T16 comparability: given the run's PRE-TERMINAL records, will it settle accepted or end non-settled?"
+    records: "the T16 loader's leakage-cut view: unit_dispatch + evidence_produced kinds + role_invocation result documents + correction counts; terminal/settlement events EXCLUDED (asserted)"
+    prompt: "the T16 PROMPT verbatim (T16/run_remeasure.py), records blob substituted, 12000-char cap"
+    domain: [settled, not_settled, insufficient_evidence]
+    parser: "parse_t16 verbatim (typed schema_failure/out_of_domain; distribution normalization; confidence clamp)"
+    samples: 1
+    baseline: "T16 face-value rule verbatim (all result documents claim completed -> settled), scored against the same mapped truth (settled->settled; all non-settled classes->not_settled)"
+  arm2_discrimination:
+    task: "classification on the frozen enriched surface: given the full observation record (typed terminal, settlement count + unit progression, dispatch retry pattern, artifact contents by sha256, timing), classify the consequence"
+    surface: "the T23 round-2 surface builder (imported unchanged from T23/round-2/build_surfaces.py)"
+    prompt: "the T23 round-2 re-judgment prompt template verbatim (template pinned by the sha256 of the round-2 provider-raw prompt files; only the records blob is substituted); answer domain stated without label semantics"
+    domain: [settled_accepted, verification_failed_nonsettlement, budget_exhausted, execution_failed, insufficient_evidence]
+    samples: 3
+    aggregation_frozen: "per-row majority over the 3 samples (ties -> insufficient_evidence); reported beside single-sample accuracy (sample 1) - aggregation is an arm-level comparison, never a replacement"
+  arm2b_graded_progress_exploratory:
+    task: "one exploratory probe for comparison 8: additionally asks for settled_units_estimate (integer or null) on the honest-family rows"
+    samples: 1
+    scored_against: "the row's actual settlement_committed unit count from the pinned DB"
+    status: "exploratory; excluded from the primary verdicts"
+provider:
+  scored_provider: "deepseek-clinepass via `opencode run -m cline-pass/cline-pass/deepseek-v4.1-flash` (the line's intended free provider; single-provider measurement)"
+  substitution_policy: "on provider_timeout/provider_error: ONE muse-spark-free retry per call, recorded per-call; substituted rows are reported as a separate provider-qualified slice and NEVER pooled into the deepseek measurement"
+  failure_handling: "if the deepseek leg fails structurally (quota-refusal on every call), the deepseek arm is recorded NOT_RUN_PROVIDER and the muse slice is reported as the provider-qualified result, honestly labeled"
+normalization_and_scoring:
+  normalization: "T16 parse semantics verbatim per arm domain; out-of-domain = typed rejection, counted, never coerced; abstention = insufficient_evidence (plus typed rejections reported separately)"
+  scoring:
+    - "accuracy vs mechanical truth per arm (Clopper-Pearson exact 95% CI)"
+    - "per-class confusion; honest-vs-adversarial breakdown (comparison 3)"
+    - "abstention + typed-rejection rates (comparison 4)"
+    - "stability: per-row 3-sample agreement rate on arm2 (comparison 5)"
+    - "majority vs single-sample accuracy on arm2 (comparison 6)"
+    - "McNemar exact test, learned vs face-value baseline on arm1 paired rows"
+    - "error cases: every row where the learned label disagrees with mechanically unambiguous consequence, listed with raw outputs (comparison 7)"
+    - "graded-progress: arm2b settled_units_estimate vs actual unit count, MAE + exact-hit rate (comparison 8)"
+frozen_interpretive_frames:
+  - "the mechanical consequence layer derives truth on this corpus by construction; the question is whether the learned layer adds a distinction or decision capability the mechanical layer does not already provide cheaply and reliably - never whether accuracy alone is high"
+  - "no promotion question is asked; the T16 D-rule and outcome letters are NOT reused"
+payment_counters:
+  - "provider calls per arm (scored + substitutions), wall time per call, and the payment added by the learned layer relative to the mechanical layer (which requires zero provider calls)"
+execution_policy:
+  order: "corpus manifest materialized + hashed + decision-logged BEFORE any call; arm1, then arm2, then arm2b; all raw outputs preserved verbatim under the evidence dir; no re-rolls of any call; a failed call is recorded and (once) substituted per policy"
+  stop: "any pinned-DB hash mismatch, any truth-derivation ambiguity, or provider-total failure stops the measurement with preserved evidence"
+reporting:
+  durable_report: ".agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/remeasure-report.md with frozen corpus identity, provider, protocol, baseline, results, error patterns, stats, aggregation effect, unique contribution (if any), learned-layer payment, architectural + developmental consequence, limitations, next affordable move"
+  mutable_state: "CURRENT_STATUS updated after the report; recommendation (retain-narrower / re-aggregate / revise-surface / remove-from-path / proceed-to-second-family) must follow the evidence"
+limitations_frozen:
+  - "N=15, single provider, single family; descriptive power limited; CIs reported, no capability-class claims"
+  - "4 lying rows and 8 happy rows were previously judged in T23 round-2 under the same surface; this is a FRESH frozen measurement (new calls, aggregation added); prior results are acknowledged, not pooled"
+  - "truth is mechanically derived; learned-layer 'unique contribution' can only appear as graded/auxiliary signal (arm2b) or reliability structure, never as new truth"

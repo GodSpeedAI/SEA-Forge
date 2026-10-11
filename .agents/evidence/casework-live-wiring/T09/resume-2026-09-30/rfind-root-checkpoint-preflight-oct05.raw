@@ -1,0 +1,166 @@
+2026-10-05 18:25:43 UTC
+MemTotal:        8132712 kB
+MemAvailable:    2193004 kB
+SwapTotal:      12582912 kB
+SwapFree:           4492 kB
+    PID COMMAND           RSS
+      1 systemd          6464
+      2 init-systemd(Ub   632
+      3 init-watcher      420
+      7 init              736
+     48 systemd-journal 20596
+     80 systemd-resolve  2952
+     83 systemd-udevd    4668
+    151 snapfuse         1208
+    152 snapfuse         1204
+    162 snapfuse         1152
+    165 snapfuse        13328
+    194 chronyd-starter  1376
+    195 cron             1928
+    196 dbus-daemon      3124
+    200 networkd-dispat  2496
+    203 snapd           17260
+    204 systemd-logind   3360
+    215 rsyslogd         2940
+    239 agetty           1964
+    261 chronyd          2256
+    275 chronyd          1048
+    282 unattended-upgr  2756
+    294 systemd          5144
+    305 (sd-pam)         1224
+    337 MainThread      21968
+    338 MainThread       4500
+    456 login            2212
+    534 bash             1656
+    703 MainThread      62568
+   1485 SessionLeader     288
+   1487 Relay(1489)       536
+   1489 bash             2584
+   1518 sh               1376
+   1528 node            344988
+   1562 node            68228
+   1613 node            252916
+   1709 node            440944
+   1825 bash             1852
+   1831 bash             2320
+   1833 bash             2508
+   2504 bash             1668
+   2559 language_server 170336
+   2726 node                0
+   3252 node            14944
+   3441 node             2012
+   3529 node             2012
+   3558 chrome-devtools  3104
+   3624 node-MainThread  3024
+   4442 claude          198960
+   4647 serena           3160
+   4679 bun             26520
+   4757 node             1984
+   4766 node-MainThread  3068
+   4822 node             2016
+   4851 node-MainThread  4312
+   5509 SessionLeader     288
+   5510 Relay(5511)       416
+   5511 node            89808
+   5695 zcode-cli       57588
+   5751 zcode-node-repl  4304
+  38017 dbus-daemon      2656
+  38019 xdg-desktop-por  3152
+  38024 xdg-permission-  2120
+  38029 xdg-document-po  2740
+  38035 fusermount3      1568
+  38041 xdg-desktop-por  3344
+  38074 at-spi-bus-laun  2412
+  38083 dbus-daemon      2760
+  38088 at-spi2-registr  2620
+  38102 codex           305340
+  38204 codex            3748
+  38680 codex           83044
+  38868 node             1984
+  38869 node             2016
+  38872 node             1984
+  38873 serena           3048
+  38877 node             1984
+  38911 node-MainThread 39576
+  38915 node-MainThread  3352
+  38928 node-MainThread  3412
+  38929 node-MainThread  3444
+  39079 node             2016
+  39104 node-MainThread  4580
+  39308 serena           3060
+  39315 node             2016
+  39316 node             2008
+  39327 node             2016
+  39330 node             2012
+  39360 node-MainThread  3424
+  39363 node-MainThread  3392
+  39364 node-MainThread  3412
+  39399 node-MainThread 62012
+  39537 node             1984
+  39543 node-MainThread  4616
+ 280671 node            14456
+ 383827 node            447176
+ 383828 node            15828
+ 384078 node             9968
+ 384251 bash             2548
+ 384376 language_server 108692
+ 384651 node                0
+ 384834 node             2020
+ 384922 node-MainThread  3592
+ 385514 node             1992
+ 385612 chrome-devtools  3568
+ 392648 bash             2548
+ 393656 node             2024
+ 393694 node-MainThread  3636
+ 393814 .cline          1469556
+ 404946 .cline          37948
+ 470172 node            18500
+ 471026 node             6936
+ 471033 node            16204
+ 471128 node             6908
+1433926 nix-daemon        212
+1463466 bash             2560
+1472686 codex-code-mode 19892
+1541296 node             2016
+1541297 node             2020
+1541302 node             1988
+1541304 node             2020
+1541311 serena           3084
+1541347 node-MainThread  4096
+1541349 node-MainThread  4140
+1541351 node-MainThread 28824
+1541372 node-MainThread  4060
+1541804 node             2020
+1541828 node-MainThread  7184
+1552635 polkitd          2844
+1581585 node             1964
+1581588 serena           3300
+1581590 node             2036
+1581591 node             2028
+1581601 node             2020
+1581619 node-MainThread  4068
+1581621 node-MainThread  4204
+1581639 node-MainThread  4240
+1581653 node-MainThread 26288
+1581968 node             2100
+1581995 node-MainThread 16428
+1628009 node            14084
+1628011 node             9880
+1628013 node            14608
+1628017 MainThread      43884
+1628020 node             9880
+1628053 node-MainThread 46064
+1628055 node-MainThread 49348
+1628057 node-MainThread 43552
+1628077 node-MainThread 28780
+1628684 serena          92836
+1628795 node            11736
+1628801 node-MainThread 89224
+1662249 node            17068
+1662258 npm exec playwr 99068
+1662363 sh               2008
+1662364 node            16816
+1662386 node-MainThread 167480
+1663852 sleep            7688
+1664398 bash             3496
+1664401 ps               4400

@@ -1,0 +1,397 @@
+{
+  "run_id": "RUN-20260831-194241",
+  "timestamp": "2026-08-31T19:44:14.548414+00:00",
+  "git_commit": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "total_journeys_tested": 12,
+  "passed": 10,
+  "failed": 2,
+  "journeys": {
+    "CJ04": {
+      "journey_id": "CJ04",
+      "journey_name": "Form and Commit a Governed Case",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ04",
+        "oracle_name": "CJ04_GovernedCaseCommitOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Exact accepted plan, parameters, criteria, and digests committed before execution.",
+        "authoritative_record_inspected": "case.get_overview(case_01mockcase)",
+        "rationale": "Case case_01mockcase committed via 1 observed case.commit call(s); state=active; preflight pinned digest=sha256:b40f2954f5320d2...",
+        "evidence_refs": [
+          "mocked IPC command log"
+        ],
+        "carried_state": {
+          "case_id": "case_01mockcase",
+          "state": "active",
+          "stages_count": 1
+        }
+      },
+      "screenshot_count": 5
+    },
+    "CJ05": {
+      "journey_id": "CJ05",
+      "journey_name": "Navigate and Adapt a Live Case",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "FAIL",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ05",
+        "oracle_name": "CJ05_LiveCaseHorizonOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Governing outcome, spendable/blocked work, evidence, and lawful actions are distinct and traceable.",
+        "authoritative_record_inspected": "case_horizon(case_01mockcase)",
+        "rationale": "Case horizon projected 1 item(s), each with distinct execution/settlement standing folded from trace events.",
+        "evidence_refs": [
+          "case.get_horizon(case_01mockcase)"
+        ],
+        "carried_state": {
+          "case_id": "case_01mockcase",
+          "horizon_items_count": 1
+        }
+      },
+      "screenshot_count": 3
+    },
+    "CJ01": {
+      "journey_id": "CJ01",
+      "journey_name": "Establish Trusted Cell Context",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ01",
+        "oracle_name": "CJ01_TrustedCellContextOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Actor is attributable, snapshots explicit, readiness classified with evidence.",
+        "authoritative_record_inspected": "/home/sprime01/projects/sea-rs",
+        "rationale": "Foundation source records exist on disk; /readiness rendered an explicit classification; /admin rendered attributable identity content.",
+        "evidence_refs": [
+          "crates/sea-forge-server/src/sfwp/readiness.rs",
+          "crates/sea-forge-self-model"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 3
+    },
+    "CJ02": {
+      "journey_id": "CJ02",
+      "journey_name": "Discover Lawful Affordances",
+      "final_status": "FAIL",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "FAIL",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ02",
+        "oracle_name": "CJ02_LawfulAffordanceDiscoveryOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Source-backed affordances discovered with explicit boundaries and limitations.",
+        "authoritative_record_inspected": "asset.list (captured invoke response)",
+        "rationale": "asset.list returned 2 source-backed asset(s); guard denial surface rendered an explicit blocker for G9.",
+        "evidence_refs": [
+          "crates/sea-forge-server/src/sfwp/assets.rs"
+        ],
+        "carried_state": {
+          "asset_count": 2
+        }
+      },
+      "screenshot_count": 3
+    },
+    "CJ03": {
+      "journey_id": "CJ03",
+      "journey_name": "Ground Work in Semantic Meaning",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ03",
+        "oracle_name": "CJ03_DomainForgeSemanticGroundingOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Semantic references resolve against exact validated model snapshot or fail closed with diagnostics.",
+        "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea",
+        "rationale": "cargo test -p sea-forge-domainforge ran 26 test(s), 0 failed, exit=0. Diagnostics:  src/lib.rs (target/debug/deps/sea_forge_domainforge-bc68c2a38ad22e07)\n     Running tests/conformance_m0_domainforge.rs (target/debug/deps/conformance_m0_domainforge-368d0ffd73d3e11d)\n     Running tests/projection.rs (target/debug/deps/projection-f700abfd1c5c7420)\n   Doc-tests sea_forge_domainforge\n",
+        "evidence_refs": [
+          ".sea/interaction/interaction-model.sea"
+        ],
+        "carried_state": {
+          "tests_run": 26,
+          "tests_failed": 0
+        }
+      },
+      "screenshot_count": 2
+    },
+    "CJ06": {
+      "journey_id": "CJ06",
+      "journey_name": "Resolve Human Judgment and Approval",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ06",
+        "oracle_name": "CJ06_HumanJudgmentAndApprovalOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Eligible human decision committed with actor, evidence, rationale, and downstream effect.",
+        "authoritative_record_inspected": "approval.decide(id=appr-101)",
+        "rationale": "Approval appr-101 decided with verdict='approve' by actor='approver_alice', observed live on the IPC transcript.",
+        "evidence_refs": [
+          "mocked IPC command log"
+        ],
+        "carried_state": {
+          "approval_id": "appr-101",
+          "verdict": "approve"
+        }
+      },
+      "screenshot_count": 3
+    },
+    "CJ07": {
+      "journey_id": "CJ07",
+      "journey_name": "Execute Governed Work",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ07",
+        "oracle_name": "CJ07_GovernedExecutionOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Execution terminates within granted boundary, leaving outcome evidence; termination != settlement.",
+        "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194241/evidence/sample_run_cj07",
+        "rationale": "Authority decision preceded execution; 1 termination event(s) recorded; 1 evidence artifact(s) hash-verified by recomputation.",
+        "evidence_refs": [
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194241/evidence/sample_run_cj07/authority.json",
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194241/evidence/sample_run_cj07/trace.jsonl",
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194241/evidence/sample_run_cj07/evidence.jsonl"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    },
+    "CJ08": {
+      "journey_id": "CJ08",
+      "journey_name": "Monitor, Intervene, and Recover",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ08",
+        "oracle_name": "CJ08_OperationalMonitoringAndRecoveryOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Authoritative operational standing observed; scoped intervention or explicit recovery reached.",
+        "authoritative_record_inspected": "mocked IPC query/command transcript",
+        "rationale": "Observed 9 real IPC call(s); stale-precondition recovery attempted, succeeded=True.",
+        "evidence_refs": [
+          "mocked IPC command/query transcript"
+        ],
+        "carried_state": {
+          "observed_event_count": 9,
+          "recovery_succeeded": true
+        }
+      },
+      "screenshot_count": 3
+    },
+    "CJ09": {
+      "journey_id": "CJ09",
+      "journey_name": "Evaluate, Settle, and Audit Outcomes",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ09",
+        "oracle_name": "CJ09_OutcomeSettlementAndAuditOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Outcome resolves to attributable, integrity-checked evidence and independent settlement.",
+        "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194241/evidence/sample_run_cj09/settlement.json",
+        "rationale": "Settlement independently verified: status='accepted' with 1 criteria basis entries; envelope attributably linked; evidence digest recomputation matched.",
+        "evidence_refs": [
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194241/evidence/sample_run_cj09/settlement.json",
+          "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-194241/evidence/sample_run_cj09/semantic-envelope.json"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 3
+    },
+    "CJ10": {
+      "journey_id": "CJ10",
+      "journey_name": "Reuse Demonstrated Knowledge and Capability",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ10",
+        "oracle_name": "CJ10_DemonstratedKnowledgeReuseOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Reused knowledge/capability is disclosure-safe, traceable to source settlements, and unauthoritative projections fail closed.",
+        "authoritative_record_inspected": "sea-forge memory CLI / /capabilities, /memory routes",
+        "rationale": "Recall CLI source exists and is source-attributable; Workbench capability.list preview correctly fails closed (system.hello did not list it implemented).",
+        "evidence_refs": [
+          "crates/sea-forge-cli/src/commands/recall.rs",
+          "workbench/apps/desktop/src/pages/SurfacesPages.tsx",
+          "workbench/apps/desktop/src/pages/UnbackedSurface.tsx"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    },
+    "CJ11": {
+      "journey_id": "CJ11",
+      "journey_name": "Transform and Mature Governed Artifacts",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ11",
+        "oracle_name": "CJ11_ArtifactTransformationAndMaturityOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Output is validated, hash-linked, settled at actual maturity or quarantined; file creation alone != runtime readiness.",
+        "authoritative_record_inspected": "crates/sea-forge-domainforge / /artifacts route",
+        "rationale": "DomainForge crate exists with deterministic-projection tests passing (see CJ03); Workbench artifact.list preview correctly fails closed.",
+        "evidence_refs": [
+          "crates/sea-forge-domainforge",
+          "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    },
+    "CJ12": {
+      "journey_id": "CJ12",
+      "journey_name": "Transfer and Adopt Governed Assets",
+      "final_status": "PASS",
+      "gate_results": {
+        "ENTRY": "PASS",
+        "VISIBILITY": "PASS",
+        "REACHABILITY": "PASS",
+        "BINDING": "PASS",
+        "AUTHORITY": "PASS",
+        "EXECUTION": "PASS",
+        "EVIDENCE": "PASS",
+        "SETTLEMENT": "PASS",
+        "CONTINUITY": "PASS",
+        "RECOVERY": "PASS"
+      },
+      "oracle_result": {
+        "journey_id": "CJ12",
+        "oracle_name": "CJ12_AssetTransferAndAdoptionOracle",
+        "status": "ACCEPTED",
+        "completion_condition_evaluated": "Transfer rejected atomically or admitted with assets inert; authorized adoption required before usability.",
+        "authoritative_record_inspected": "crates/sea-forge-cell/src/bundle.rs / /federation route",
+        "rationale": "Cell bundle source exists; Workbench federation.preview_export preview correctly fails closed rather than claiming live transfer capability.",
+        "evidence_refs": [
+          "crates/sea-forge-cell/src/bundle.rs",
+          "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+        ],
+        "carried_state": {}
+      },
+      "screenshot_count": 2
+    }
+  }
+}

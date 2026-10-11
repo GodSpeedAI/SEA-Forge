@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ02",
+  "oracle_name": "CJ02_LawfulAffordanceDiscoveryOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Source-backed affordances discovered with explicit boundaries and limitations.",
+  "authoritative_record_inspected": "asset.list / thoth.ask / readiness.get",
+  "rationale": "Discovered affordances distinguish declared, demonstrated, and unavailable capability standings honestly without false claims.",
+  "evidence_refs": [
+    "crates/sea-forge-server/src/sfwp/assets.rs",
+    "crates/sea-forge-thoth"
+  ],
+  "carried_state": {}
+}

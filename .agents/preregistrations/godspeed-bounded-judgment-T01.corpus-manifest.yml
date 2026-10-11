@@ -1,0 +1,189 @@
+# T01 exact corpus manifest — frozen artifact (see preregistration freeze_contract F0)
+schema: godspeed-bounded-judgment.t01-corpus-manifest
+schema_version: '1.0'
+created: '2026-09-17T23:42:15.011498+00:00'
+corpus_root: /home/sprime01/projects/gauntlet/targets/.runs
+manifest_rule: exact paths and hashes only; no wildcards; harness refuses entries with missing/changed hashes or writable
+  sources; consumption is SQLite mode=ro
+mutation_policy: any change to a listed hash between F0 verification and post-run verification is a plan violation; harness
+  records mtimes before and after
+companion_hash_sidecar: .agents/evidence/godspeed-bounded-judgment/T01/objects-hashes-f0.yml
+run_count: 16
+selected_count: 16
+runs:
+- run_id: demo-calculator.aborted-digest-echo-2243
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.aborted-digest-echo-2243/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.aborted-digest-echo-2243/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.aborted-digest-echo-2243/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: a6014c9a651fc513b2f87f268c04ed8ffbeda275f514037378c9db7e31b643b2
+  state_db_bytes: 135168
+  state_db_mtime: '2026-09-15T02:43:20.224748+00:00'
+  evidence_objects_file_count: 8
+  evidence_pins_file_count: 4
+- run_id: demo-calculator.budget-exhausted-freshseed-2307
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.budget-exhausted-freshseed-2307/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.budget-exhausted-freshseed-2307/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.budget-exhausted-freshseed-2307/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: e9c1c8c215de7536e580d5b96d43658344fff26390d3404f28404dbf220c3ca5
+  state_db_bytes: 151552
+  state_db_mtime: '2026-09-15T03:07:19.136746+00:00'
+  evidence_objects_file_count: 62
+  evidence_pins_file_count: 16
+- run_id: demo-calculator.cwd-bug-1510
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.cwd-bug-1510/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.cwd-bug-1510/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.cwd-bug-1510/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 5d20e3039727a3ec03768a83c9f01ce343ee6feec1f1df3b5ec1f27da8eb34c6
+  state_db_bytes: 126976
+  state_db_mtime: '2026-09-13T19:14:37.907106+00:00'
+  evidence_objects_file_count: 12
+  evidence_pins_file_count: 4
+- run_id: demo-calculator.interrupted-2313
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.interrupted-2313/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.interrupted-2313/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.interrupted-2313/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 9b762e152f9a0b0e6bff9bf05521eea9bd3c4a235dfad64b133f5aa7d7902b56
+  state_db_bytes: 135168
+  state_db_mtime: '2026-09-15T03:13:46.135168+00:00'
+  evidence_objects_file_count: 6
+  evidence_pins_file_count: 3
+- run_id: demo-calculator.parent-refused-0947
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.parent-refused-0947/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.parent-refused-0947/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.parent-refused-0947/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: a020d9bde8098ef00591b6ec3b49aedd8102c106288daa47f15a067ec448b019
+  state_db_bytes: 135168
+  state_db_mtime: '2026-09-14T13:47:17.493003+00:00'
+  evidence_objects_file_count: 4
+  evidence_pins_file_count: 2
+- run_id: demo-calculator.parent-refused-0948b
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.parent-refused-0948b/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.parent-refused-0948b/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.parent-refused-0948b/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: a850ae245d16fb8c8e40ac97978b40ade50074df9230a5afe0ec21e492bae60b
+  state_db_bytes: 135168
+  state_db_mtime: '2026-09-14T13:48:30.337854+00:00'
+  evidence_objects_file_count: 4
+  evidence_pins_file_count: 2
+- run_id: demo-calculator.pre-fix-1349
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.pre-fix-1349/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.pre-fix-1349/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.pre-fix-1349/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 7a91c579db63be0dd012354f4e5517dd0ba1cc4df32f0cda358f6a427fb78214
+  state_db_bytes: 126976
+  state_db_mtime: '2026-09-13T17:50:22.164636+00:00'
+  evidence_objects_file_count: 8
+  evidence_pins_file_count: 5
+- run_id: demo-calculator.pre-settle-fix-1542
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.pre-settle-fix-1542/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.pre-settle-fix-1542/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.pre-settle-fix-1542/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: e9e2c28912e81346be98574f910c7fcb1456e0b422ca3261084c9931af940a02
+  state_db_bytes: 135168
+  state_db_mtime: '2026-09-13T19:42:37.366476+00:00'
+  evidence_objects_file_count: 32
+  evidence_pins_file_count: 10
+- run_id: demo-calculator.proof-2of3-2216
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.proof-2of3-2216/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.proof-2of3-2216/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.proof-2of3-2216/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 413ffe9d6c0179b3cff0b92a0e98c6d1a23d82ca337d6d6b8db1260363233f6c
+  state_db_bytes: 155648
+  state_db_mtime: '2026-09-15T02:12:02.691534+00:00'
+  evidence_objects_file_count: 66
+  evidence_pins_file_count: 21
+- run_id: demo-calculator.refused-1535
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.refused-1535/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.refused-1535/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.refused-1535/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 98e9708b07c1f331f29e155d0330ccf6f479c986efac6e0007c79d9915bf4f84
+  state_db_bytes: 126976
+  state_db_mtime: '2026-09-13T19:35:05.445884+00:00'
+  evidence_objects_file_count: 4
+  evidence_pins_file_count: 2
+- run_id: demo-calculator.rpc-reservation-1624
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.rpc-reservation-1624/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.rpc-reservation-1624/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.rpc-reservation-1624/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 09dbe9e9165d5820ec59180c979a07c81365ba696e77e1e03966e61f73cf8d51
+  state_db_bytes: 135168
+  state_db_mtime: '2026-09-14T20:27:45.710897+00:00'
+  evidence_objects_file_count: 10
+  evidence_pins_file_count: 5
+- run_id: demo-calculator.settled-0904
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-0904/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-0904/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-0904/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 0bcd3f8dce00c4bbbe4789d5f841a25849895e48d37635759b2375dbcc211d3e
+  state_db_bytes: 143360
+  state_db_mtime: '2026-09-14T13:14:33.019906+00:00'
+  evidence_objects_file_count: 52
+  evidence_pins_file_count: 17
+- run_id: demo-calculator.settled-3of3-clean-seed-0730
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-clean-seed-0730/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-clean-seed-0730/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-clean-seed-0730/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 8eb31ffa2304db10738138686f22edb4e25bb136ded15463781841a9edeeed33
+  state_db_bytes: 147456
+  state_db_mtime: '2026-09-15T11:29:15.320166+00:00'
+  evidence_objects_file_count: 60
+  evidence_pins_file_count: 18
+- run_id: demo-calculator.settled-3of3-contaminated-seed-2234
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-contaminated-seed-2234/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-contaminated-seed-2234/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-contaminated-seed-2234/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 03f7c73f8930ab0a177b6ccceed9538d7f5c3257e51617b181e8b14b254552ac
+  state_db_bytes: 143360
+  state_db_mtime: '2026-09-15T02:34:04.861710+00:00'
+  evidence_objects_file_count: 48
+  evidence_pins_file_count: 15
+- run_id: demo-calculator.settled-3of3-sharpened-role-1044
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-sharpened-role-1044/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-sharpened-role-1044/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-3of3-sharpened-role-1044/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: f824ec276ae32af48f3eb5911878011b7f0e7d8b9a32da4187b821cf8bbcf71f
+  state_db_bytes: 147456
+  state_db_mtime: '2026-09-15T14:43:54.444842+00:00'
+  evidence_objects_file_count: 60
+  evidence_pins_file_count: 18
+- run_id: demo-calculator.settled-rpc-1652
+  state_db_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-rpc-1652/state/gauntlet-state.db
+  evidence_objects_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-rpc-1652/evidence/objects
+  evidence_pins_path: /home/sprime01/projects/gauntlet/targets/.runs/demo-calculator.settled-rpc-1652/evidence/pins
+  status: selected
+  selection_reason: all discovered runs included; exclusion only for structural absence (none applied pre-freeze)
+  state_db_sha256: 09ca757bbaf4f3b2a2fa526b05e852b63a4af78343b4f919e64cf062bd1df09e
+  state_db_bytes: 143360
+  state_db_mtime: '2026-09-14T20:59:34.154363+00:00'
+  evidence_objects_file_count: 42
+  evidence_pins_file_count: 12

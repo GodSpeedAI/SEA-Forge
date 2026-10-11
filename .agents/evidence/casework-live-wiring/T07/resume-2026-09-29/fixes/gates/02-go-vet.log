@@ -1,0 +1,4 @@
+Command: GOMAXPROCS=2 GOFLAGS=-p=1 go vet ./...
+Working directory: apps/godspeed-casework-go
+Exit: 0
+Output: no diagnostics

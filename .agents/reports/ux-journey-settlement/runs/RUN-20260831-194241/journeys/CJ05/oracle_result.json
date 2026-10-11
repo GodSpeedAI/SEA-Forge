@@ -1,0 +1,15 @@
+{
+  "journey_id": "CJ05",
+  "oracle_name": "CJ05_LiveCaseHorizonOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Governing outcome, spendable/blocked work, evidence, and lawful actions are distinct and traceable.",
+  "authoritative_record_inspected": "case_horizon(case_01mockcase)",
+  "rationale": "Case horizon projected 1 item(s), each with distinct execution/settlement standing folded from trace events.",
+  "evidence_refs": [
+    "case.get_horizon(case_01mockcase)"
+  ],
+  "carried_state": {
+    "case_id": "case_01mockcase",
+    "horizon_items_count": 1
+  }
+}

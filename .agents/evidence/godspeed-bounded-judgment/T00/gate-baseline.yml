@@ -1,0 +1,265 @@
+# T00 — frozen authority record and bound-gate baseline
+# Executed 2026-09-17 by the plan coordinator. All heavy gates ran sequentially
+# in the order declared by plan verification.global_gates. No product file was
+# modified by T00; only evidence and status artifacts under .agents/ were added.
+schema: godspeed-bounded-judgment.t00-gate-baseline
+schema_version: "1.0"
+
+authority_binding:
+  executed_at: "2026-09-17"
+  host: "development workstation (WSL2, RAM-constrained; sequential execution)"
+  sea_rs_revision: "72348237412dc000533c05b6a36e01066ca3baed"
+  sea_rs_branch: "ultracode/sea-forge-completion"
+  spec_path: ".agents/specs/GODSPEED_JUDGMENT_PLANE_SPEC.yaml"
+  spec_sha256_recomputed: "69b7d1baabd55ae61c73e615f04cf0fda43a4958a9fa3d50567035425baf6a82"
+  spec_sha256_bound: "69b7d1baabd55ae61c73e615f04cf0fda43a4958a9fa3d50567035425baf6a82"
+  spec_sha256_equal: true
+  spec_self_check: "12/12 holds==true"
+  spec_correction_ledger: "11 corrections; architectural_conclusions_reversed=none"
+  plan_sha256: "2733ac13d7df0454e199c400cbbbb952c47064a00bd4cf339b248cc89cfea446"
+  plan_version: "1.1.0"
+  validator_path: ".agents/plans/validate-godspeed-bounded-judgment-plan.py"
+  validator_sha256: "552d010765017d6112fe2d5d8cf92573d8e85fb7d946b7dfcbc066514fd3b33a"
+
+requirement_id_classification:
+  rule: "REQUIRED = REQ-*|VAR-*|RECOV-*|CLAIM-*; excluded = NONGOAL-*, roadmap, narrative"
+  required_total: 90
+  required_by_prefix:
+    "REQ-[A-Z]+-NNN": 72
+    "VAR-NNN": 8
+    "RECOV-NNN": 4
+    "CLAIM-NNN": 6
+  excluded_nongoal_total: 10
+  full_required_id_list: "spec-required-ids.txt (this directory)"
+
+validator_result:
+  command: "python3 .agents/plans/validate-godspeed-bounded-judgment-plan.py"
+  cwd: "/home/sprime01/projects/sea-rs"
+  exit_code: 0
+  stdout: "validator-round1.stdout"
+  stderr: "validator-round1.stderr (empty)"
+  summary: >-
+    PASS: spec_sha256=69b7d1ba...baf6a82; spec_self_check=12/12 corrections=11;
+    requirements=90 mapped=90; tasks=15 dag_edges=26 acyclic=true
+    initial_ready=[T00] status_aligned=true; high_risk_groups=6/6
+    confirmation_conformant=true.
+
+teeth_results:
+  - attack: "Corrupt the bound sha256 in the plan and re-run validation."
+    observed: "Validation FAILS with explicit hash mismatch naming bound vs actual."
+    exit_code: 1
+    evidence: "teeth-1-hash-mismatch.stderr"
+    plan_restored_sha256: "2733ac13d7df0454e199c400cbbbb952c47064a00bd4cf339b248cc89cfea446"
+    verdict: "BEHAVED_AS_DECLARED"
+  - attack: "Remove one task.settles entry for a REQUIRED requirement (removed REQ-AUTH-001 from T04)."
+    observed: >-
+      Validation FAILS: task settlement mismatch unsettled=['REQ-AUTH-001'];
+      mapping mismatch; high-risk group authority_separation lacks adversarial
+      confirmation for REQ-AUTH-001.
+    exit_code: 1
+    evidence: "teeth-2-missing-settles.stderr"
+    plan_restored_sha256: "2733ac13d7df0454e199c400cbbbb952c47064a00bd4cf339b248cc89cfea446"
+    verdict: "BEHAVED_AS_DECLARED"
+  - attack: "Add fake requirement id REQ-FAKE-999 to T04.settles."
+    observed: "Validation FAILS: task settlement mismatch unknown=['REQ-FAKE-999']."
+    exit_code: 1
+    evidence: "teeth-3-fake-requirement.stderr"
+    plan_restored_sha256: "2733ac13d7df0454e199c400cbbbb952c47064a00bd4cf339b248cc89cfea446"
+    verdict: "BEHAVED_AS_DECLARED"
+  - attack: "Introduce a cycle by adding an edge T14 -> T00."
+    round_1:
+      observed: >-
+        ATTENTION: round-1 was an ATTACK-IMPLEMENTATION ERROR, not a validator
+        defect. The declared edge ["T14","T00"] was added, but "T00" was
+        mistakenly added to T14.depends_on (a redundant transitive edge, not a
+        cycle). The validator correctly failed on the DAG edge mismatch. Evidence
+        preserved: teeth-4-cycle.round1.stderr.
+      exit_code: 1
+      evidence: "teeth-4-cycle.round1.stderr"
+    round_2:
+      observed: >-
+        Corrected attack: declared edge ["T14","T00"] plus "T14" added to
+        T00.depends_on. Validation FAILS with the acyclicity check naming the
+        cycle involving all 15 tasks (T00..T14), plus initial-state mismatches.
+      exit_code: 1
+      evidence: "teeth-4-cycle.round2.stderr"
+    plan_restored_sha256: "2733ac13d7df0454e199c400cbbbb952c47064a00bd4cf339b248cc89cfea446"
+    verdict: "BEHAVED_AS_DECLARED (round-2)"
+
+global_gates:
+
+  - id: SEA_CHECK
+    repository: sea-rs
+    working_directory: "/home/sprime01/projects/sea-rs"
+    command: "just check"
+    revision: "72348237412dc000533c05b6a36e01066ca3baed"
+    exit_code: 1
+    declared_baseline_status: EXPECTED_GREEN
+    observed_baseline_classification: PREEXISTING_BASELINE_FAILURE
+    failing_stage: "fmt-check (composite: context-check passed; lint/typecheck/security never reached)"
+    failing_identifiers:
+      - "crates/sea-forge-domainforge/tests/conformance_m0_domainforge.rs (lines 73, 94, 102; file is dirty in worktree)"
+      - "crates/sea-forge-server/examples/journey_gauntlet_bootstrap.rs (line 65; tracked file UNMODIFIED at HEAD)"
+      - "crates/sea-forge-server/tests/convergence_t12_variation.rs (25 diff sites; tracked file UNMODIFIED at HEAD)"
+    attribution: >-
+      Two of the three drift files are unmodified tracked files, so the rustfmt
+      drift exists at the committed revision: it predates T00 and the dirty
+      worktree. Full drift diff preserved in gate-SEA_CHECK-fmt-drift.txt.
+    bounded_output_tail: |
+      error: recipe `fmt-check` failed on line 49 with exit code 1
+      error: recipe `check` failed with exit code 1
+
+  - id: SEA_TEST
+    repository: sea-rs
+    working_directory: "/home/sprime01/projects/sea-rs"
+    command: "just test"
+    revision: "72348237412dc000533c05b6a36e01066ca3baed"
+    exit_code: 101
+    declared_baseline_status: PREEXISTING_BASELINE_FAILURE_SUSPECTED
+    observed_baseline_classification: PREEXISTING_BASELINE_FAILURE
+    failing_identifiers:
+      - "sea-forge-cli::conformance_m13::t13_1_agent_task_routed_through_server_and_settles"
+      - "sea-forge-server::conformance_run_locator::both_layouts_still_resolve_after_a_restart"
+    failing_details:
+      - >-
+        t13_1_agent_task_routed_through_server_and_settles: panicked at
+        crates/sea-forge-cli/tests/conformance_m13.rs:308:5, assertion
+        left==right failed: "sea-forge run --plan failed: case_state=terminated";
+        left=Some(3), right=Some(0). Aborts the workspace suite here (cargo test
+        without --no-fail-fast).
+      - >-
+        both_layouts_still_resolve_after_a_restart: panicked at
+        crates/sea-forge-server/tests/conformance_run_locator.rs:59:56,
+        unwrap on Err Os { code: 2, kind: NotFound }. Confirmed by scoped
+        confirmation run `just crate-test sea-forge-server` (exit 101) — this
+        CONFIRMS the plan's KNOWN FACT from .agents/CURRENT_STATUS.md
+        (2026-08-31) against the current revision.
+    masking_limitation: >-
+      `just test` and `just crate-test sea-forge-server` run without
+      --no-fail-fast and abort at the first failing test binary. Suites ordered
+      after conformance_m13 (workspace) and after conformance_run_locator
+      (server crate) did not execute; additional pre-existing failures, if any,
+      are unknown and were not probed because the declared gate command is
+      `just test`. Later tasks must attribute failures against this record.
+    bounded_output_tail: |
+      failures:
+          t13_1_agent_task_routed_through_server_and_settles
+      test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
+      error: test failed, to rerun pass `-p sea-forge-cli --test conformance_m13`
+      error: recipe `test` failed on line 315 with exit code 101
+
+  - id: SEA_CI
+    repository: sea-rs
+    working_directory: "/home/sprime01/projects/sea-rs"
+    command: "just ci"
+    revision: "72348237412dc000533c05b6a36e01066ca3baed"
+    exit_code: 1
+    declared_baseline_status: DEPENDS_ON_SEA_TEST
+    observed_baseline_classification: PREEXISTING_BASELINE_FAILURE
+    failing_stage: "fmt-check (first failing sub-recipe; lint/typecheck/security/test/no-async-kernel/build never reached in this composite run)"
+    attribution: >-
+      Inherits SEA_CHECK's pre-existing fmt drift as its first failure and
+      SEA_TEST's pre-existing test failures by declared dependency; no plan
+      regression is claimed.
+    bounded_output_tail: |
+      error: recipe `fmt-check` failed on line 49 with exit code 1
+      error: recipe `ci` failed with exit code 1
+
+  - id: SEA_NO_ASYNC_KERNEL
+    repository: sea-rs
+    working_directory: "/home/sprime01/projects/sea-rs"
+    command: "just no-async-kernel"
+    revision: "72348237412dc000533c05b6a36e01066ca3baed"
+    exit_code: 0
+    declared_baseline_status: EXPECTED_GREEN
+    observed_baseline_classification: EXPECTED_GREEN
+    bounded_output_tail: |
+      ok: no async runtime or HTTP client in 19 kernel crates
+
+  - id: SEA_PROOF
+    repository: sea-rs
+    working_directory: "/home/sprime01/projects/sea-rs"
+    command: "just proof"
+    revision: "72348237412dc000533c05b6a36e01066ca3baed"
+    exit_code: 0
+    declared_baseline_status: UNKNOWN_UNTIL_T00
+    observed_baseline_classification: EXPECTED_GREEN
+    bounded_output_tail: |
+      [proof] running spec-minimum §12.2 P1-P4b
+      [proof] P1-P4b passed
+
+  - id: GAUNTLET_CHECK
+    repository: gauntlet
+    working_directory: "/home/sprime01/projects/gauntlet"
+    command: "just check"
+    revision: "3a9955fa331de8b88db6d4025b91096b313f0d5e"
+    exit_code: 0
+    declared_baseline_status: UNKNOWN_UNTIL_T00
+    observed_baseline_classification: EXPECTED_GREEN
+    bounded_output_tail: |
+      cargo check --workspace --all-targets
+          Finished `dev` profile [unoptimized] target(s) in 0.35s
+
+  - id: GAUNTLET_TEST
+    repository: gauntlet
+    working_directory: "/home/sprime01/projects/gauntlet"
+    command: "just test"
+    revision: "3a9955fa331de8b88db6d4025b91096b313f0d5e"
+    exit_code: 0
+    declared_baseline_status: UNKNOWN_UNTIL_T00
+    observed_baseline_classification: EXPECTED_GREEN
+    observed_scale: "1787 tests passed / 0 failed / 0 skipped (1769 workspace + 18 gauntlet-cli)"
+    bounded_output_tail: |
+      Summary [ 130.152s] 1769 tests run: 1769 passed (2 slow), 0 skipped
+      Summary [   0.207s] 18 tests run: 18 passed, 0 skipped
+
+  - id: GAUNTLET_CI
+    repository: gauntlet
+    working_directory: "/home/sprime01/projects/gauntlet"
+    command: "just ci"
+    revision: "3a9955fa331de8b88db6d4025b91096b313f0d5e"
+    exit_code: 0
+    declared_baseline_status: UNKNOWN_UNTIL_T00
+    observed_baseline_classification: EXPECTED_GREEN
+    covers_observed: "check + test + lint + deny + boundaries (261 arch tests) + ruler (verify-ruler.sh PASS)"
+    bounded_output_tail: |
+      Summary [  38.092s] 261 tests run: 261 passed, 0 skipped
+      verify-ruler.sh: PASS — answer key and manifest digests match the frozen lock
+      ci: all gates green
+
+  - id: EDGEAI_HEALTH
+    repository: edgeai
+    working_directory: "the edgeai repository root on the deployment target"
+    command: "just health"
+    revision_observed_on_dev_host: "8f39b85e763a32042571e460782903534980a29b"
+    exit_code: null
+    observed_baseline_classification: NOT_RUN_TARGET_ONLY
+    recipe_resolution: "recipe `health` exists at ../edgeai/Justfile line 495 (resolved by reading the Justfile, not executed)"
+    note: "Development-host output is never target evidence; T12 prerequisite."
+
+  - id: EDGEAI_JETSON_PORTS
+    repository: edgeai
+    working_directory: "the edgeai repository root on the deployment target"
+    command: "just jetson-check-ports"
+    revision_observed_on_dev_host: "8f39b85e763a32042571e460782903534980a29b"
+    exit_code: null
+    observed_baseline_classification: NOT_RUN_TARGET_ONLY
+    recipe_resolution: "recipe `jetson-check-ports` exists at ../edgeai/Justfile line 782 (resolved by reading the Justfile, not executed)"
+
+worktree_baseline:
+  inventory_file: "dirty-inventory.txt (this directory; git status --porcelain=v1 --untracked-files=all)"
+  dirty_entry_count_at_t00_start: 73
+  note: >-
+    Inventory captured BEFORE any gate ran. T00 itself added only:
+    .agents/evidence/godspeed-bounded-judgment/** (this evidence tree).
+    T00 will additionally update .agents/current_status.yml and
+    .agents/CURRENT_STATUS.md. Every other dirty entry is pre-existing and
+    preserved untouched.
+
+no_new_failures_from_t00:
+  statement: >-
+    T00 changed no product code, schema, runtime, or configuration. The red
+    baselines (SEA_CHECK, SEA_TEST, SEA_CI) are attributed to defects that
+    reproduce at the committed revision and/or in files T00 never touched;
+    therefore T00 introduced no new gate failure. Post-T00 verification ran
+    before any status update.

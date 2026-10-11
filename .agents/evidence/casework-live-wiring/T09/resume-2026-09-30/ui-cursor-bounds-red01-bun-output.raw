@@ -1,0 +1,5958 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/adapters/local/localAdapter.cursorBounds.test.ts:
+130 | 
+131 |     const finalPoint = NORTHSTAR_TRAJECTORY.at(-1)!
+132 |     const originalCursor = finalPoint.cursor
+133 |     try {
+134 |       finalPoint.cursor = '1.9999999999'
+135 |       expect(() => new LocalContractAdapter({ latency: 0 })).toThrow()
+                                                                   ^
+error: expect(received).toThrow()
+
+Received function did not throw
+Received value: LocalContractAdapter {
+  cases: Map(2) {
+    "case-northstar": {
+      snaps: [
+        {
+          world_id: "world-northstar",
+          case_id: "case-northstar",
+          cursor: "1.0000000001",
+          timestamp: "2026-09-17T09:00:00Z",
+          summary: {
+            headline: "Northstar claims pilot",
+            phase: "Pilot scoped",
+            status_phrase: "Pilot scoped",
+            progress_percent: 16.666666666666664,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "ns-secondary",
+          },
+          visible_objects: [
+            {
+              id: "cat-ideas",
+              kind: "stage",
+              name: "Ideas",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: -201,
+                y: -280,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-projects",
+              kind: "stage",
+              name: "Projects",
+              badge: "Analyzing",
+              salience: 0.9,
+              spatial_layout: {
+                x: 350,
+                y: -224,
+                z: 0,
+                radius: 13,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "region",
+                metric: "3 items",
+              },
+            }, {
+              id: "cat-people",
+              kind: "stage",
+              name: "People",
+              badge: "On track",
+              salience: 0.4,
+              spatial_layout: {
+                x: 463,
+                y: 5,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                metric: "5 items",
+              },
+            }, {
+              id: "cat-insights",
+              kind: "stage",
+              name: "Insights",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: 240,
+                y: 246,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+              },
+            }, {
+              id: "cat-tasks",
+              kind: "stage",
+              name: "Tasks",
+              badge: "On track",
+              salience: 0.55,
+              spatial_layout: {
+                x: -308,
+                y: 179,
+                z: 0,
+                radius: 7,
+                label_side: "left",
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-knowledge",
+              kind: "stage",
+              name: "Knowledge",
+              badge: "In progress",
+              salience: 0.4,
+              spatial_layout: {
+                x: -438,
+                y: -59,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "northstar",
+              kind: "work_item",
+              name: "Northstar",
+              explanation: "Implementation",
+              badge: "Planning",
+              salience: 0.95,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                artifacts: [
+                  [Object ...]
+                ],
+                template_case_id: "case-northstar-template",
+              },
+            }, {
+              id: "platform",
+              kind: "work_item",
+              name: "Platform",
+              explanation: "Runtime",
+              badge: "Healthy",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "case",
+              },
+            }, {
+              id: "gauntlet",
+              kind: "work_item",
+              name: "Gauntlet",
+              explanation: "Executions",
+              badge: "Running",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                metric: "2 running",
+              },
+            }, {
+              id: "p-alexr",
+              kind: "work_item",
+              name: "Alex R.",
+              explanation: "Engineer",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-sam",
+              kind: "work_item",
+              name: "Sam P.",
+              explanation: "Owner",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "t-rollout",
+              kind: "work_item",
+              name: "Plan rollout",
+              badge: "In progress",
+              salience: 0.2,
+              parent_id: "cat-tasks",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+              },
+            }, {
+              id: "k-eligibility",
+              kind: "work_item",
+              name: "Eligibility rules",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "k-ehr",
+              kind: "work_item",
+              name: "EHR record API",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "i-cohort",
+              kind: "work_item",
+              name: "Cohort-based rollout",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-ideas",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-workflow",
+              kind: "stage",
+              name: "Customer Workflow",
+              explanation: "Acme Health",
+              badge: "Mapping",
+              salience: 0.55,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -514,
+                y: -147,
+                z: 0,
+                radius: 33,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-evidence",
+              kind: "stage",
+              name: "Evidence",
+              badge: "Not started",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 405,
+                y: -143,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                metric: "0 items",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-impl",
+              kind: "stage",
+              name: "Implementation",
+              badge: "Scoping",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 560,
+                y: 91,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                metric: "1 task",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-secondary",
+              kind: "stage",
+              name: "Secondary Coverage",
+              explanation: "Not yet identified",
+              badge: "Not in scope",
+              salience: 0.3,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 295,
+                y: 240,
+                z: 0,
+                radius: 43,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                ghost: true,
+                representations: {
+                  causal: [Object ...],
+                },
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-assumption",
+              kind: "stage",
+              name: "Initial Assumption",
+              explanation: "Secondary not required",
+              badge: "Hypothesis",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -40,
+                y: -270,
+                z: 0,
+                radius: 31,
+              },
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "hypothesis",
+                presentation: "facet",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }
+          ],
+          x: {
+            label: "Sep 17",
+            relationships: [
+              {
+                id: "rel-impl-secondary",
+                from: "ns-impl",
+                to: "ns-secondary",
+                kind: "depends-on",
+              }
+            ],
+          },
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+        }, {
+          world_id: "world-northstar",
+          case_id: "case-northstar",
+          cursor: "1.0000000002",
+          timestamp: "2026-09-17T14:40:00Z",
+          summary: {
+            headline: "Northstar claims pilot",
+            phase: "Before secondary coverage was identified",
+            status_phrase: "Planning phase",
+            progress_percent: 33.33333333333333,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "ns-secondary",
+          },
+          visible_objects: [
+            {
+              id: "cat-ideas",
+              kind: "stage",
+              name: "Ideas",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: -201,
+                y: -280,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-projects",
+              kind: "stage",
+              name: "Projects",
+              badge: "Analyzing",
+              salience: 0.9,
+              spatial_layout: {
+                x: 350,
+                y: -224,
+                z: 0,
+                radius: 13,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "region",
+                metric: "3 items",
+              },
+            }, {
+              id: "cat-people",
+              kind: "stage",
+              name: "People",
+              badge: "On track",
+              salience: 0.4,
+              spatial_layout: {
+                x: 463,
+                y: 5,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                metric: "5 items",
+              },
+            }, {
+              id: "cat-insights",
+              kind: "stage",
+              name: "Insights",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: 240,
+                y: 246,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+              },
+            }, {
+              id: "cat-tasks",
+              kind: "stage",
+              name: "Tasks",
+              badge: "On track",
+              salience: 0.55,
+              spatial_layout: {
+                x: -308,
+                y: 179,
+                z: 0,
+                radius: 7,
+                label_side: "left",
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-knowledge",
+              kind: "stage",
+              name: "Knowledge",
+              badge: "In progress",
+              salience: 0.4,
+              spatial_layout: {
+                x: -438,
+                y: -59,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "northstar",
+              kind: "work_item",
+              name: "Northstar",
+              explanation: "Implementation",
+              badge: "Planning",
+              salience: 0.95,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                artifacts: [
+                  [Object ...]
+                ],
+                template_case_id: "case-northstar-template",
+              },
+            }, {
+              id: "platform",
+              kind: "work_item",
+              name: "Platform",
+              explanation: "Runtime",
+              badge: "Healthy",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "case",
+              },
+            }, {
+              id: "gauntlet",
+              kind: "work_item",
+              name: "Gauntlet",
+              explanation: "Executions",
+              badge: "Running",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                metric: "2 running",
+              },
+            }, {
+              id: "p-alexr",
+              kind: "work_item",
+              name: "Alex R.",
+              explanation: "Engineer",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-maya",
+              kind: "work_item",
+              name: "Maya L.",
+              explanation: "Clinical ops",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-sam",
+              kind: "work_item",
+              name: "Sam P.",
+              explanation: "Owner",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "t-rollout",
+              kind: "work_item",
+              name: "Plan rollout",
+              badge: "In progress",
+              salience: 0.2,
+              parent_id: "cat-tasks",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+              },
+            }, {
+              id: "k-eligibility",
+              kind: "work_item",
+              name: "Eligibility rules",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "k-ehr",
+              kind: "work_item",
+              name: "EHR record API",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "i-cohort",
+              kind: "work_item",
+              name: "Cohort-based rollout",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-ideas",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-workflow",
+              kind: "stage",
+              name: "Customer Workflow",
+              explanation: "Acme Health",
+              badge: "In progress",
+              salience: 0.55,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -514,
+                y: -147,
+                z: 0,
+                radius: 33,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-evidence",
+              kind: "stage",
+              name: "Evidence",
+              badge: "Collecting",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 405,
+                y: -143,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                metric: "1 item",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-impl",
+              kind: "stage",
+              name: "Implementation",
+              badge: "Planning",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 560,
+                y: 91,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                metric: "3 tasks",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-release",
+              kind: "stage",
+              name: "Release",
+              explanation: "v0.2.0",
+              badge: "Not started",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -407,
+                y: 210,
+                z: 0,
+                radius: 36,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "decision_gate",
+                dormant: true,
+              },
+            }, {
+              id: "ns-secondary",
+              kind: "stage",
+              name: "Secondary Coverage",
+              explanation: "Not yet identified",
+              badge: "Not in scope",
+              salience: 0.3,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 295,
+                y: 240,
+                z: 0,
+                radius: 43,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                ghost: true,
+                representations: {
+                  causal: [Object ...],
+                },
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-assumption",
+              kind: "stage",
+              name: "Initial Assumption",
+              explanation: "Secondary not required",
+              badge: "Hypothesis",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -40,
+                y: -270,
+                z: 0,
+                radius: 31,
+              },
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "hypothesis",
+                presentation: "facet",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }
+          ],
+          x: {
+            label: "Sep 17",
+            relationships: [
+              {
+                id: "rel-assumes",
+                from: "ns-workflow",
+                to: "ns-assumption",
+                kind: "depends-on",
+                label: "Assumes",
+              }, {
+                id: "rel-impl-secondary",
+                from: "ns-impl",
+                to: "ns-secondary",
+                kind: "depends-on",
+              }, {
+                id: "rel-release-impl",
+                from: "ns-release",
+                to: "ns-impl",
+                kind: "depends-on",
+              }
+            ],
+          },
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+        }, {
+          world_id: "world-northstar",
+          case_id: "case-northstar",
+          cursor: "1.0000000003",
+          timestamp: "2026-09-18T09:15:00Z",
+          summary: {
+            headline: "Northstar claims pilot",
+            phase: "Customer record examined",
+            status_phrase: "Gap identified",
+            progress_percent: 50,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "ns-secondary",
+          },
+          visible_objects: [
+            {
+              id: "cat-ideas",
+              kind: "stage",
+              name: "Ideas",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: -201,
+                y: -280,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-projects",
+              kind: "stage",
+              name: "Projects",
+              badge: "Analyzing",
+              salience: 0.9,
+              spatial_layout: {
+                x: 350,
+                y: -224,
+                z: 0,
+                radius: 13,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "region",
+                metric: "3 items",
+              },
+            }, {
+              id: "cat-people",
+              kind: "stage",
+              name: "People",
+              badge: "On track",
+              salience: 0.4,
+              spatial_layout: {
+                x: 463,
+                y: 5,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                metric: "5 items",
+              },
+            }, {
+              id: "cat-insights",
+              kind: "stage",
+              name: "Insights",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: 240,
+                y: 246,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+              },
+            }, {
+              id: "cat-tasks",
+              kind: "stage",
+              name: "Tasks",
+              badge: "On track",
+              salience: 0.55,
+              spatial_layout: {
+                x: -308,
+                y: 179,
+                z: 0,
+                radius: 7,
+                label_side: "left",
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-knowledge",
+              kind: "stage",
+              name: "Knowledge",
+              badge: "In progress",
+              salience: 0.4,
+              spatial_layout: {
+                x: -438,
+                y: -59,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "northstar",
+              kind: "work_item",
+              name: "Northstar",
+              explanation: "Implementation",
+              badge: "1 needs you",
+              salience: 0.95,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "case",
+                residue: {
+                  label: "1 question open",
+                  tone: "hypothesis",
+                },
+                artifacts: [
+                  [Object ...]
+                ],
+                template_case_id: "case-northstar-template",
+              },
+            }, {
+              id: "platform",
+              kind: "work_item",
+              name: "Platform",
+              explanation: "Runtime",
+              badge: "Healthy",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "case",
+              },
+            }, {
+              id: "gauntlet",
+              kind: "work_item",
+              name: "Gauntlet",
+              explanation: "Executions",
+              badge: "Running",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                metric: "2 running",
+              },
+            }, {
+              id: "p-alexr",
+              kind: "work_item",
+              name: "Alex R.",
+              explanation: "Engineer",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-maya",
+              kind: "work_item",
+              name: "Maya L.",
+              explanation: "Clinical ops",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-sam",
+              kind: "work_item",
+              name: "Sam P.",
+              explanation: "Owner",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "t-rollout",
+              kind: "work_item",
+              name: "Plan rollout",
+              badge: "In progress",
+              salience: 0.2,
+              parent_id: "cat-tasks",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+              },
+            }, {
+              id: "k-eligibility",
+              kind: "work_item",
+              name: "Eligibility rules",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "k-ehr",
+              kind: "work_item",
+              name: "EHR record API",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "i-cohort",
+              kind: "work_item",
+              name: "Cohort-based rollout",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-ideas",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "n-divergence",
+              kind: "work_item",
+              name: "Secondary coverage gap",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-insights",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-goal",
+              kind: "stage",
+              name: "Goal",
+              explanation: "Claims pilot",
+              badge: "On track",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -40,
+                y: -270,
+                z: 0,
+                radius: 31,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "facet",
+              },
+            }, {
+              id: "ns-workflow",
+              kind: "stage",
+              name: "Customer Workflow",
+              explanation: "Acme Health",
+              badge: "In progress",
+              salience: 0.55,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -514,
+                y: -147,
+                z: 0,
+                radius: 33,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-evidence",
+              kind: "stage",
+              name: "Evidence",
+              badge: "Collecting",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 405,
+                y: -143,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                metric: "2 items",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-impl",
+              kind: "stage",
+              name: "Implementation",
+              badge: "In progress",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 560,
+                y: 91,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                metric: "4 tasks",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-release",
+              kind: "stage",
+              name: "Release",
+              explanation: "v0.2.0",
+              badge: "Blocked",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -407,
+                y: 210,
+                z: 0,
+                radius: 36,
+              },
+              actions: [
+                {
+                  id: "approve-rollout",
+                  label: "Approve release",
+                  intent: "APPROVE_HUMAN_TASK",
+                  consequential: true,
+                  requires_justification: true,
+                }
+              ],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "decision_gate",
+              },
+            }, {
+              id: "ns-secondary",
+              kind: "stage",
+              name: "Secondary Coverage",
+              explanation: "Possible gap",
+              badge: "Suspected",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 295,
+                y: 240,
+                z: 0,
+                radius: 43,
+              },
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "hypothesis",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-assumption",
+              kind: "work_item",
+              name: "Implementation Assumption",
+              explanation: "Secondary coverage sufficient",
+              badge: "In code / config",
+              salience: 0.45,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-claims-api",
+              kind: "work_item",
+              name: "Claims API",
+              explanation: "Verified",
+              badge: "Verified",
+              salience: 0.3,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-session",
+              kind: "work_item",
+              name: "Session Migration",
+              explanation: "Complete",
+              badge: "Complete",
+              salience: 0.25,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-record",
+              kind: "work_item",
+              name: "Customer Record",
+              explanation: "No secondary coverage",
+              badge: "Actual data",
+              salience: 0.45,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "hypothesis",
+                presentation: "evidence_record",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-interview",
+              kind: "work_item",
+              name: "Interview",
+              explanation: "Clinical ops lead",
+              badge: "Quoted",
+              salience: 0.25,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "evidence_record",
+              },
+            }
+          ],
+          x: {
+            label: "Sep 18",
+            relationships: [
+              {
+                id: "rel-assumes",
+                from: "ns-workflow",
+                to: "ns-assumption",
+                kind: "depends-on",
+                label: "Assumes",
+              }, {
+                id: "rel-leads",
+                from: "ns-assumption",
+                to: "ns-record",
+                kind: "produces",
+                label: "Leads to",
+              }, {
+                id: "rel-evidence-record",
+                from: "ns-evidence",
+                to: "ns-record",
+                kind: "attests",
+              }, {
+                id: "rel-impl-secondary",
+                from: "ns-impl",
+                to: "ns-secondary",
+                kind: "depends-on",
+              }, {
+                id: "rel-release-impl",
+                from: "ns-release",
+                to: "ns-impl",
+                kind: "depends-on",
+              }
+            ],
+          },
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+        }, {
+          world_id: "world-northstar",
+          case_id: "case-northstar",
+          cursor: "1.0000000004",
+          timestamp: "2026-09-18T16:30:00Z",
+          summary: {
+            headline: "Northstar claims pilot",
+            phase: "Coverage gap confirmed",
+            status_phrase: "Gap confirmed",
+            progress_percent: 66.66666666666666,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "ns-secondary",
+          },
+          visible_objects: [
+            {
+              id: "cat-ideas",
+              kind: "stage",
+              name: "Ideas",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: -201,
+                y: -280,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-projects",
+              kind: "stage",
+              name: "Projects",
+              badge: "Analyzing",
+              salience: 0.9,
+              spatial_layout: {
+                x: 350,
+                y: -224,
+                z: 0,
+                radius: 13,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "region",
+                metric: "3 items",
+              },
+            }, {
+              id: "cat-people",
+              kind: "stage",
+              name: "People",
+              badge: "On track",
+              salience: 0.4,
+              spatial_layout: {
+                x: 463,
+                y: 5,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                metric: "5 items",
+              },
+            }, {
+              id: "cat-insights",
+              kind: "stage",
+              name: "Insights",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: 240,
+                y: 246,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+              },
+            }, {
+              id: "cat-tasks",
+              kind: "stage",
+              name: "Tasks",
+              badge: "On track",
+              salience: 0.55,
+              spatial_layout: {
+                x: -308,
+                y: 179,
+                z: 0,
+                radius: 7,
+                label_side: "left",
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-knowledge",
+              kind: "stage",
+              name: "Knowledge",
+              badge: "In progress",
+              salience: 0.4,
+              spatial_layout: {
+                x: -438,
+                y: -59,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "northstar",
+              kind: "work_item",
+              name: "Northstar",
+              explanation: "Implementation",
+              badge: "1 needs you",
+              salience: 0.95,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "case",
+                residue: {
+                  label: "1 gap confirmed",
+                  tone: "attention",
+                },
+                artifacts: [
+                  [Object ...]
+                ],
+                template_case_id: "case-northstar-template",
+              },
+            }, {
+              id: "platform",
+              kind: "work_item",
+              name: "Platform",
+              explanation: "Runtime",
+              badge: "Healthy",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "case",
+              },
+            }, {
+              id: "gauntlet",
+              kind: "work_item",
+              name: "Gauntlet",
+              explanation: "Executions",
+              badge: "Running",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                metric: "2 running",
+              },
+            }, {
+              id: "p-alexr",
+              kind: "work_item",
+              name: "Alex R.",
+              explanation: "Engineer",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-maya",
+              kind: "work_item",
+              name: "Maya L.",
+              explanation: "Clinical ops",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-sam",
+              kind: "work_item",
+              name: "Sam P.",
+              explanation: "Owner",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "t-rollout",
+              kind: "work_item",
+              name: "Plan rollout",
+              badge: "In progress",
+              salience: 0.2,
+              parent_id: "cat-tasks",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+              },
+            }, {
+              id: "k-eligibility",
+              kind: "work_item",
+              name: "Eligibility rules",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "k-ehr",
+              kind: "work_item",
+              name: "EHR record API",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "i-cohort",
+              kind: "work_item",
+              name: "Cohort-based rollout",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-ideas",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "n-divergence",
+              kind: "work_item",
+              name: "Secondary coverage gap",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-insights",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-goal",
+              kind: "stage",
+              name: "Goal",
+              explanation: "Claims pilot",
+              badge: "On track",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -40,
+                y: -270,
+                z: 0,
+                radius: 31,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "facet",
+              },
+            }, {
+              id: "ns-workflow",
+              kind: "stage",
+              name: "Customer Workflow",
+              explanation: "Acme Health",
+              badge: "In progress",
+              salience: 0.55,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -514,
+                y: -147,
+                z: 0,
+                radius: 33,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-evidence",
+              kind: "stage",
+              name: "Evidence",
+              badge: "Analyzing",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 405,
+                y: -143,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                metric: "3 items",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-impl",
+              kind: "stage",
+              name: "Implementation",
+              badge: "In progress",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 560,
+                y: 91,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                metric: "5 tasks",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-release",
+              kind: "stage",
+              name: "Release",
+              explanation: "v0.2.0",
+              badge: "Blocked",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -407,
+                y: 210,
+                z: 0,
+                radius: 36,
+              },
+              actions: [
+                {
+                  id: "approve-rollout",
+                  label: "Approve release",
+                  intent: "APPROVE_HUMAN_TASK",
+                  consequential: true,
+                  requires_justification: true,
+                }
+              ],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "decision_gate",
+              },
+            }, {
+              id: "ns-secondary",
+              kind: "stage",
+              name: "Secondary Coverage",
+              explanation: "Gap confirmed",
+              badge: "Investigating",
+              salience: 1,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 295,
+                y: 240,
+                z: 0,
+                radius: 43,
+              },
+              actions: [],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-assumption",
+              kind: "work_item",
+              name: "Implementation Assumption",
+              explanation: "Secondary coverage sufficient",
+              badge: "In code / config",
+              salience: 0.45,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-claims-api",
+              kind: "work_item",
+              name: "Claims API",
+              explanation: "Verified",
+              badge: "Verified",
+              salience: 0.3,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-session",
+              kind: "work_item",
+              name: "Session Migration",
+              explanation: "Complete",
+              badge: "Complete",
+              salience: 0.25,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-record",
+              kind: "work_item",
+              name: "Customer Record",
+              explanation: "No secondary coverage",
+              badge: "Actual data",
+              salience: 0.45,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "hypothesis",
+                presentation: "evidence_record",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-interview",
+              kind: "work_item",
+              name: "Interview",
+              explanation: "Clinical ops lead",
+              badge: "Quoted",
+              salience: 0.25,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "evidence_record",
+              },
+            }, {
+              id: "ns-observation",
+              kind: "work_item",
+              name: "Observation",
+              explanation: "Front desk intake",
+              badge: "Noted",
+              salience: 0.25,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "evidence_record",
+              },
+            }
+          ],
+          x: {
+            label: "Sep 18",
+            relationships: [
+              {
+                id: "rel-assumes",
+                from: "ns-workflow",
+                to: "ns-assumption",
+                kind: "depends-on",
+                label: "Assumes",
+              }, {
+                id: "rel-leads",
+                from: "ns-assumption",
+                to: "ns-record",
+                kind: "produces",
+                label: "Leads to",
+              }, {
+                id: "rel-triggers",
+                from: "ns-record",
+                to: "ns-secondary",
+                kind: "produces",
+                label: "Triggers",
+              }, {
+                id: "rel-evidence-record",
+                from: "ns-evidence",
+                to: "ns-record",
+                kind: "attests",
+              }, {
+                id: "rel-impl-secondary",
+                from: "ns-impl",
+                to: "ns-secondary",
+                kind: "depends-on",
+              }, {
+                id: "rel-release-impl",
+                from: "ns-release",
+                to: "ns-impl",
+                kind: "depends-on",
+              }
+            ],
+          },
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+        }, {
+          world_id: "world-northstar",
+          case_id: "case-northstar",
+          cursor: "1.0000000005",
+          timestamp: "2026-09-19T08:05:00Z",
+          summary: {
+            headline: "Northstar claims pilot",
+            phase: "PR #491 opened",
+            status_phrase: "Fix in progress",
+            progress_percent: 83.33333333333334,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "ns-secondary",
+          },
+          visible_objects: [
+            {
+              id: "cat-ideas",
+              kind: "stage",
+              name: "Ideas",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: -201,
+                y: -280,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-projects",
+              kind: "stage",
+              name: "Projects",
+              badge: "Analyzing",
+              salience: 0.9,
+              spatial_layout: {
+                x: 350,
+                y: -224,
+                z: 0,
+                radius: 13,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "region",
+                metric: "3 items",
+              },
+            }, {
+              id: "cat-people",
+              kind: "stage",
+              name: "People",
+              badge: "On track",
+              salience: 0.4,
+              spatial_layout: {
+                x: 463,
+                y: 5,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                metric: "5 items",
+              },
+            }, {
+              id: "cat-insights",
+              kind: "stage",
+              name: "Insights",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: 240,
+                y: 246,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+              },
+            }, {
+              id: "cat-tasks",
+              kind: "stage",
+              name: "Tasks",
+              badge: "On track",
+              salience: 0.55,
+              spatial_layout: {
+                x: -308,
+                y: 179,
+                z: 0,
+                radius: 7,
+                label_side: "left",
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-knowledge",
+              kind: "stage",
+              name: "Knowledge",
+              badge: "In progress",
+              salience: 0.4,
+              spatial_layout: {
+                x: -438,
+                y: -59,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "northstar",
+              kind: "work_item",
+              name: "Northstar",
+              explanation: "Implementation",
+              badge: "1 needs you",
+              salience: 0.95,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "case",
+                residue: {
+                  label: "1 issue needs review",
+                  tone: "critical",
+                },
+                artifacts: [
+                  [Object ...]
+                ],
+                template_case_id: "case-northstar-template",
+              },
+            }, {
+              id: "platform",
+              kind: "work_item",
+              name: "Platform",
+              explanation: "Runtime",
+              badge: "Healthy",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "case",
+              },
+            }, {
+              id: "gauntlet",
+              kind: "work_item",
+              name: "Gauntlet",
+              explanation: "Executions",
+              badge: "Running",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                metric: "2 running",
+              },
+            }, {
+              id: "p-alexr",
+              kind: "work_item",
+              name: "Alex R.",
+              explanation: "Engineer",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-maya",
+              kind: "work_item",
+              name: "Maya L.",
+              explanation: "Clinical ops",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-sam",
+              kind: "work_item",
+              name: "Sam P.",
+              explanation: "Owner",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "t-review",
+              kind: "work_item",
+              name: "Review PR #491",
+              badge: "Needs you",
+              salience: 0.4,
+              parent_id: "cat-tasks",
+              actions: [],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "item",
+              },
+            }, {
+              id: "t-rollout",
+              kind: "work_item",
+              name: "Plan rollout",
+              badge: "In progress",
+              salience: 0.2,
+              parent_id: "cat-tasks",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+              },
+            }, {
+              id: "k-eligibility",
+              kind: "work_item",
+              name: "Eligibility rules",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "k-ehr",
+              kind: "work_item",
+              name: "EHR record API",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "i-cohort",
+              kind: "work_item",
+              name: "Cohort-based rollout",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-ideas",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "n-divergence",
+              kind: "work_item",
+              name: "Secondary coverage gap",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-insights",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-goal",
+              kind: "stage",
+              name: "Goal",
+              explanation: "Claims pilot",
+              badge: "On track",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -40,
+                y: -270,
+                z: 0,
+                radius: 31,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "facet",
+              },
+            }, {
+              id: "ns-workflow",
+              kind: "stage",
+              name: "Customer Workflow",
+              explanation: "Acme Health",
+              badge: "In progress",
+              salience: 0.55,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -514,
+                y: -147,
+                z: 0,
+                radius: 33,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-evidence",
+              kind: "stage",
+              name: "Evidence",
+              badge: "Analyzing",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 405,
+                y: -143,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                metric: "3 items",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-impl",
+              kind: "stage",
+              name: "Implementation",
+              badge: "In progress",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 560,
+                y: 91,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                metric: "5 tasks",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-release",
+              kind: "stage",
+              name: "Release",
+              explanation: "v0.3.0",
+              badge: "Staging",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -407,
+                y: 210,
+                z: 0,
+                radius: 36,
+              },
+              actions: [
+                {
+                  id: "approve-release",
+                  label: "Approve release",
+                  intent: "APPROVE_HUMAN_TASK",
+                  consequential: true,
+                  variant: "PRIMARY",
+                }, {
+                  id: "request-changes",
+                  label: "Request changes",
+                  intent: "REJECT_HUMAN_TASK",
+                  consequential: true,
+                  variant: "SECONDARY",
+                }, {
+                  id: "escalate",
+                  label: "Escalate",
+                  intent: "ESCALATE_OR_OVERRIDE",
+                  consequential: true,
+                  variant: "GHOST",
+                  requires_justification: true,
+                }
+              ],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "decision_gate",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-secondary",
+              kind: "stage",
+              name: "Secondary Coverage",
+              explanation: "Eligibility validation",
+              badge: "Needs attention",
+              salience: 1,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 295,
+                y: 240,
+                z: 0,
+                radius: 43,
+              },
+              actions: [
+                {
+                  id: "review-change",
+                  label: "Review change",
+                  intent: "OPEN_ARTIFACT",
+                  consequential: false,
+                }
+              ],
+              status: "FAILED",
+              x: {
+                tone: "critical",
+                presentation: "facet",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-assumption",
+              kind: "work_item",
+              name: "Implementation Assumption",
+              explanation: "Secondary coverage sufficient",
+              badge: "In code / config",
+              salience: 0.45,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-claims-api",
+              kind: "work_item",
+              name: "Claims API",
+              explanation: "Verified",
+              badge: "Verified",
+              salience: 0.3,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-session",
+              kind: "work_item",
+              name: "Session Migration",
+              explanation: "Complete",
+              badge: "Complete",
+              salience: 0.25,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-record",
+              kind: "work_item",
+              name: "Customer Record",
+              explanation: "No secondary coverage",
+              badge: "Actual data",
+              salience: 0.45,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "hypothesis",
+                presentation: "evidence_record",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-interview",
+              kind: "work_item",
+              name: "Interview",
+              explanation: "Clinical ops lead",
+              badge: "Quoted",
+              salience: 0.25,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "evidence_record",
+              },
+            }, {
+              id: "ns-observation",
+              kind: "work_item",
+              name: "Observation",
+              explanation: "Front desk intake",
+              badge: "Noted",
+              salience: 0.25,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "evidence_record",
+              },
+            }, {
+              id: "ns-pr491",
+              kind: "work_item",
+              name: "PR #491",
+              explanation: "Coverage guard",
+              badge: "Review",
+              salience: 0.6,
+              parent_id: "ns-secondary",
+              actions: [
+                {
+                  id: "review-change",
+                  label: "Review change",
+                  intent: "OPEN_ARTIFACT",
+                  consequential: false,
+                  variant: "SECONDARY",
+                }
+              ],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "item",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }
+          ],
+          x: {
+            label: "Sep 19",
+            relationships: [
+              {
+                id: "rel-assumes",
+                from: "ns-workflow",
+                to: "ns-assumption",
+                kind: "depends-on",
+                label: "Assumes",
+              }, {
+                id: "rel-leads",
+                from: "ns-assumption",
+                to: "ns-record",
+                kind: "produces",
+                label: "Leads to",
+              }, {
+                id: "rel-triggers",
+                from: "ns-record",
+                to: "ns-secondary",
+                kind: "produces",
+                label: "Triggers",
+              }, {
+                id: "rel-evidence-record",
+                from: "ns-evidence",
+                to: "ns-record",
+                kind: "attests",
+              }, {
+                id: "rel-impl-secondary",
+                from: "ns-impl",
+                to: "ns-secondary",
+                kind: "depends-on",
+              }, {
+                id: "rel-release-impl",
+                from: "ns-release",
+                to: "ns-impl",
+                kind: "depends-on",
+              }
+            ],
+          },
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+        }, {
+          world_id: "world-northstar",
+          case_id: "case-northstar",
+          cursor: "1.0000000006",
+          timestamp: "2026-09-19T10:24:00Z",
+          summary: {
+            headline: "Northstar claims pilot",
+            phase: "Latest",
+            status_phrase: "Ready for approval",
+            progress_percent: 100,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "ns-secondary",
+          },
+          visible_objects: [
+            {
+              id: "cat-ideas",
+              kind: "stage",
+              name: "Ideas",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: -201,
+                y: -280,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-projects",
+              kind: "stage",
+              name: "Projects",
+              badge: "Analyzing",
+              salience: 0.9,
+              spatial_layout: {
+                x: 350,
+                y: -224,
+                z: 0,
+                radius: 13,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "region",
+                metric: "3 items",
+              },
+            }, {
+              id: "cat-people",
+              kind: "stage",
+              name: "People",
+              badge: "On track",
+              salience: 0.4,
+              spatial_layout: {
+                x: 463,
+                y: 5,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                metric: "5 items",
+              },
+            }, {
+              id: "cat-insights",
+              kind: "stage",
+              name: "Insights",
+              badge: "On track",
+              salience: 0.35,
+              spatial_layout: {
+                x: 240,
+                y: 246,
+                z: 0,
+                radius: 6,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+              },
+            }, {
+              id: "cat-tasks",
+              kind: "stage",
+              name: "Tasks",
+              badge: "On track",
+              salience: 0.55,
+              spatial_layout: {
+                x: -308,
+                y: 179,
+                z: 0,
+                radius: 7,
+                label_side: "left",
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "cat-knowledge",
+              kind: "stage",
+              name: "Knowledge",
+              badge: "In progress",
+              salience: 0.4,
+              spatial_layout: {
+                x: -438,
+                y: -59,
+                z: 0,
+                radius: 6,
+                label_side: "left",
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "region",
+                label_side: "left",
+              },
+            }, {
+              id: "northstar",
+              kind: "work_item",
+              name: "Northstar",
+              explanation: "Implementation",
+              badge: "1 needs you",
+              salience: 0.95,
+              parent_id: "cat-projects",
+              actions: [
+                {
+                  id: "add-discretionary",
+                  label: "Add discretionary work",
+                  intent: "ADD_DISCRETIONARY_WORK",
+                  consequential: true,
+                  variant: "SECONDARY",
+                  requires_justification: true,
+                }, {
+                  id: "reopen-case",
+                  label: "Reopen case",
+                  intent: "REOPEN_CASE",
+                  consequential: true,
+                  variant: "SECONDARY",
+                  requires_justification: true,
+                }, {
+                  id: "terminate-case",
+                  label: "Terminate case",
+                  intent: "TERMINATE_CASE",
+                  consequential: true,
+                  variant: "DANGER",
+                  requires_justification: true,
+                }
+              ],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "case",
+                residue: {
+                  label: "1 issue needs review",
+                  tone: "critical",
+                },
+                artifacts: [
+                  [Object ...]
+                ],
+                template_case_id: "case-northstar-template",
+              },
+            }, {
+              id: "platform",
+              kind: "work_item",
+              name: "Platform",
+              explanation: "Runtime",
+              badge: "Healthy",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "case",
+              },
+            }, {
+              id: "gauntlet",
+              kind: "work_item",
+              name: "Gauntlet",
+              explanation: "Executions",
+              badge: "Running",
+              salience: 0.3,
+              parent_id: "cat-projects",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "case",
+                metric: "2 running",
+              },
+            }, {
+              id: "p-alexr",
+              kind: "work_item",
+              name: "Alex R.",
+              explanation: "Engineer",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-maya",
+              kind: "work_item",
+              name: "Maya L.",
+              explanation: "Clinical ops",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "p-sam",
+              kind: "work_item",
+              name: "Sam P.",
+              explanation: "Owner",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-people",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "person",
+              },
+            }, {
+              id: "t-review",
+              kind: "work_item",
+              name: "Review PR #491",
+              badge: "Needs you",
+              salience: 0.4,
+              parent_id: "cat-tasks",
+              actions: [
+                {
+                  id: "complete-review",
+                  label: "Complete review",
+                  intent: "COMPLETE_HUMAN_TASK",
+                  consequential: true,
+                  variant: "PRIMARY",
+                  requires_justification: true,
+                }
+              ],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "item",
+              },
+              depends_on: [ "t-rollout" ],
+            }, {
+              id: "t-rollout",
+              kind: "work_item",
+              name: "Plan rollout",
+              badge: "In progress",
+              salience: 0.2,
+              parent_id: "cat-tasks",
+              actions: [
+                {
+                  id: "execute-rollout",
+                  label: "Execute rollout",
+                  intent: "EXECUTE_ITEM",
+                  consequential: true,
+                  variant: "PRIMARY",
+                }
+              ],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+              },
+            }, {
+              id: "k-eligibility",
+              kind: "work_item",
+              name: "Eligibility rules",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "k-ehr",
+              kind: "work_item",
+              name: "EHR record API",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-knowledge",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "i-cohort",
+              kind: "work_item",
+              name: "Cohort-based rollout",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-ideas",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "n-divergence",
+              kind: "work_item",
+              name: "Secondary coverage gap",
+              badge: "",
+              salience: 0.2,
+              parent_id: "cat-insights",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "none",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-goal",
+              kind: "stage",
+              name: "Goal",
+              explanation: "Claims pilot",
+              badge: "On track",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -40,
+                y: -270,
+                z: 0,
+                radius: 31,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "facet",
+              },
+            }, {
+              id: "ns-workflow",
+              kind: "stage",
+              name: "Customer Workflow",
+              explanation: "Acme Health",
+              badge: "In progress",
+              salience: 0.55,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -514,
+                y: -147,
+                z: 0,
+                radius: 33,
+              },
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "facet",
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-evidence",
+              kind: "stage",
+              name: "Evidence",
+              badge: "Analyzing",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 405,
+                y: -143,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "facet",
+                metric: "3 items",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-impl",
+              kind: "stage",
+              name: "Implementation",
+              badge: "On track",
+              salience: 0.6,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 560,
+                y: 91,
+                z: 0,
+                radius: 35,
+              },
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "facet",
+                metric: "5 tasks",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-release",
+              kind: "stage",
+              name: "Release",
+              explanation: "v0.3.0",
+              badge: "In progress",
+              salience: 0.5,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: -407,
+                y: 210,
+                z: 0,
+                radius: 36,
+              },
+              actions: [
+                {
+                  id: "approve-release",
+                  label: "Approve release",
+                  intent: "APPROVE_HUMAN_TASK",
+                  consequential: true,
+                  variant: "PRIMARY",
+                }, {
+                  id: "request-changes",
+                  label: "Request changes",
+                  intent: "REJECT_HUMAN_TASK",
+                  consequential: true,
+                  variant: "SECONDARY",
+                }, {
+                  id: "escalate",
+                  label: "Escalate",
+                  intent: "ESCALATE_OR_OVERRIDE",
+                  consequential: true,
+                  variant: "GHOST",
+                  requires_justification: true,
+                }
+              ],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "decision_gate",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-secondary",
+              kind: "stage",
+              name: "Secondary Coverage",
+              explanation: "Eligibility validation",
+              badge: "Needs attention",
+              salience: 1,
+              parent_id: "northstar",
+              spatial_layout: {
+                x: 295,
+                y: 240,
+                z: 0,
+                radius: 43,
+              },
+              actions: [
+                {
+                  id: "review-change",
+                  label: "Review change",
+                  intent: "OPEN_ARTIFACT",
+                  consequential: false,
+                }
+              ],
+              status: "FAILED",
+              x: {
+                tone: "critical",
+                presentation: "facet",
+                artifacts: [
+                  [Object ...], [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-assumption",
+              kind: "work_item",
+              name: "Implementation Assumption",
+              explanation: "Secondary coverage sufficient",
+              badge: "In code / config",
+              salience: 0.45,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "IN_PROGRESS",
+              x: {
+                tone: "progress",
+                presentation: "item",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-claims-api",
+              kind: "work_item",
+              name: "Claims API",
+              explanation: "Verified",
+              badge: "Verified",
+              salience: 0.3,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-session",
+              kind: "work_item",
+              name: "Session Migration",
+              explanation: "Complete",
+              badge: "Complete",
+              salience: 0.25,
+              parent_id: "ns-impl",
+              actions: [],
+              status: "COMPLETED",
+              x: {
+                tone: "ok",
+                presentation: "item",
+              },
+            }, {
+              id: "ns-record",
+              kind: "work_item",
+              name: "Customer Record",
+              explanation: "No secondary coverage",
+              badge: "Actual data",
+              salience: 0.45,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "ACTIVE",
+              x: {
+                tone: "hypothesis",
+                presentation: "evidence_record",
+                artifacts: [
+                  [Object ...]
+                ],
+                representations: {
+                  causal: [Object ...],
+                },
+              },
+            }, {
+              id: "ns-interview",
+              kind: "work_item",
+              name: "Interview",
+              explanation: "Clinical ops lead",
+              badge: "Quoted",
+              salience: 0.25,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "evidence_record",
+              },
+            }, {
+              id: "ns-observation",
+              kind: "work_item",
+              name: "Observation",
+              explanation: "Front desk intake",
+              badge: "Noted",
+              salience: 0.25,
+              parent_id: "ns-evidence",
+              actions: [],
+              status: "WAITING",
+              x: {
+                tone: "muted",
+                presentation: "evidence_record",
+              },
+            }, {
+              id: "ns-pr491",
+              kind: "work_item",
+              name: "PR #491",
+              explanation: "Coverage guard",
+              badge: "Review",
+              salience: 0.6,
+              parent_id: "ns-secondary",
+              actions: [
+                {
+                  id: "review-change",
+                  label: "Review change",
+                  intent: "OPEN_ARTIFACT",
+                  consequential: false,
+                  variant: "SECONDARY",
+                }
+              ],
+              status: "ACTION_REQUIRED",
+              x: {
+                tone: "attention",
+                presentation: "item",
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }, {
+              id: "ns-failure",
+              kind: "work_item",
+              name: "Observed Failure",
+              explanation: "Claim rejected",
+              badge: "Actual outcome",
+              salience: 0.7,
+              parent_id: "ns-release",
+              actions: [],
+              status: "FAILED",
+              x: {
+                tone: "critical",
+                presentation: "execution_trace",
+                representations: {
+                  causal: [Object ...],
+                },
+                artifacts: [
+                  [Object ...]
+                ],
+              },
+            }
+          ],
+          x: {
+            label: "Now",
+            relationships: [
+              {
+                id: "rel-assumes",
+                from: "ns-workflow",
+                to: "ns-assumption",
+                kind: "depends-on",
+                label: "Assumes",
+              }, {
+                id: "rel-leads",
+                from: "ns-assumption",
+                to: "ns-record",
+                kind: "produces",
+                label: "Leads to",
+              }, {
+                id: "rel-triggers",
+                from: "ns-record",
+                to: "ns-secondary",
+                kind: "produces",
+                label: "Triggers",
+              }, {
+                id: "rel-results",
+                from: "ns-secondary",
+                to: "ns-failure",
+                kind: "produces",
+                label: "Results in",
+              }, {
+                id: "rel-evidence-record",
+                from: "ns-evidence",
+                to: "ns-record",
+                kind: "attests",
+              }, {
+                id: "rel-impl-secondary",
+                from: "ns-impl",
+                to: "ns-secondary",
+                kind: "depends-on",
+              }, {
+                id: "rel-release-impl",
+                from: "ns-release",
+                to: "ns-impl",
+                kind: "depends-on",
+              }
+            ],
+          },
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+        }
+      ],
+      points: [
+        {
+          cursor: "1.0000000001",
+          timestamp: "2026-09-17T09:00:00Z",
+          event_type: "case_opened",
+          summary: "Pilot scoped",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: false,
+          active_stage_id: "northstar",
+          completed_plan_items_count: 0,
+          total_plan_items_count: 5,
+        }, {
+          cursor: "1.0000000002",
+          timestamp: "2026-09-17T14:40:00Z",
+          event_type: "plan_revised",
+          summary: "Before secondary coverage was identified",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: false,
+          active_stage_id: "northstar",
+          completed_plan_items_count: 0,
+          total_plan_items_count: 5,
+        }, {
+          cursor: "1.0000000003",
+          timestamp: "2026-09-18T09:15:00Z",
+          event_type: "observation_recorded",
+          summary: "Customer record examined",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: false,
+          active_stage_id: "northstar",
+          completed_plan_items_count: 0,
+          total_plan_items_count: 6,
+        }, {
+          cursor: "1.0000000004",
+          timestamp: "2026-09-18T16:30:00Z",
+          event_type: "discrepancy_confirmed",
+          summary: "Coverage gap confirmed",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: false,
+          active_stage_id: "northstar",
+          completed_plan_items_count: 1,
+          total_plan_items_count: 7,
+        }, {
+          cursor: "1.0000000005",
+          timestamp: "2026-09-19T08:05:00Z",
+          event_type: "change_proposed",
+          summary: "PR #491 opened",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: false,
+          active_stage_id: "northstar",
+          completed_plan_items_count: 1,
+          total_plan_items_count: 8,
+        }, {
+          cursor: "1.9999999999",
+          timestamp: "2026-09-19T10:24:00Z",
+          event_type: "review_requested",
+          summary: "Latest",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: false,
+          active_stage_id: "northstar",
+          completed_plan_items_count: 1,
+          total_plan_items_count: 9,
+        }
+      ],
+    },
+    "case-northstar-template": {
+      snaps: [
+        {
+          world_id: "world-template",
+          case_id: "case-northstar-template",
+          cursor: "1.0000000001",
+          timestamp: "2026-09-19T08:00:00Z",
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+          summary: {
+            headline: "Northstar Case Template",
+            phase: "Version 1",
+            status_phrase: "v0.1 published",
+            progress_percent: 100,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "tpl-northstar",
+          },
+          visible_objects: [
+            {
+              id: "tpl-northstar",
+              kind: "work_item",
+              name: "Northstar Case",
+              status: "IN_PROGRESS",
+              badge: "Designing",
+              explanation: "Case Template",
+              salience: 1,
+              actions: [],
+              x: {
+                presentation: "case",
+              },
+            }, {
+              id: "tpl-goal",
+              kind: "stage",
+              name: "Goal",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Resolve secondary coverage validation",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -120,
+                y: -223,
+                z: 0,
+                radius: 28,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "target",
+                  accent: "orange",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-stages",
+              kind: "stage",
+              name: "Stages",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "4 stages",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 195,
+                y: -188,
+                z: 0,
+                radius: 28,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "layers",
+                  accent: "blue",
+                  items: [
+                    [Object ...], [Object ...], [Object ...], [Object ...]
+                  ],
+                },
+              },
+            }, {
+              id: "tpl-roles",
+              kind: "stage",
+              name: "Roles",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "3 roles",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 323,
+                y: -80,
+                z: 0,
+                radius: 30,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "people",
+                  accent: "dark",
+                  items: [
+                    [Object ...], [Object ...], [Object ...]
+                  ],
+                },
+              },
+            }, {
+              id: "tpl-evidence",
+              kind: "stage",
+              name: "Evidence",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Required artifacts",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 290,
+                y: 98,
+                z: 0,
+                radius: 30,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "doc",
+                  accent: "orange",
+                  items: [
+                    [Object ...], [Object ...], [Object ...]
+                  ],
+                },
+              },
+            }, {
+              id: "tpl-milestones",
+              kind: "stage",
+              name: "Milestones",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Key checkpoints",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 199,
+                y: 224,
+                z: 0,
+                radius: 31,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "flag",
+                  accent: "dark",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-governed",
+              kind: "stage",
+              name: "Governed Work",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Policies & rules",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -115,
+                y: 255,
+                z: 0,
+                radius: 32,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "shield",
+                  accent: "blue",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-triggers",
+              kind: "stage",
+              name: "Triggers",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Entry conditions",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -302,
+                y: 159,
+                z: 0,
+                radius: 31,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "bolt",
+                  accent: "green",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-versions",
+              kind: "stage",
+              name: "Versions",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Draft v0.1",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -366,
+                y: 11,
+                z: 0,
+                radius: 29,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "history",
+                  accent: "dark",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-preview",
+              kind: "stage",
+              name: "Preview",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Simulate case",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -329,
+                y: -130,
+                z: 0,
+                radius: 28,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "eye",
+                  accent: "dark",
+                  items: undefined,
+                },
+              },
+            }
+          ],
+          x: {
+            label: "v0.1 published",
+            relationships: [],
+          },
+        }, {
+          world_id: "world-template",
+          case_id: "case-northstar-template",
+          cursor: "1.0000000002",
+          timestamp: "2026-09-19T10:00:00Z",
+          perspective: {
+            actor_id: "projection",
+            role: "developer",
+          },
+          summary: {
+            headline: "Northstar Case Template",
+            phase: "Version 2",
+            status_phrase: "v0.2 published",
+            progress_percent: 100,
+          },
+          available_actions: [],
+          attention_focus: {
+            primary_object_id: "tpl-northstar",
+          },
+          visible_objects: [
+            {
+              id: "tpl-northstar",
+              kind: "work_item",
+              name: "Northstar Case",
+              status: "IN_PROGRESS",
+              badge: "Designing",
+              explanation: "Case Template",
+              salience: 1,
+              actions: [],
+              x: {
+                presentation: "case",
+              },
+            }, {
+              id: "tpl-goal",
+              kind: "stage",
+              name: "Goal",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Resolve secondary coverage validation",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -120,
+                y: -223,
+                z: 0,
+                radius: 28,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "target",
+                  accent: "orange",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-stages",
+              kind: "stage",
+              name: "Stages",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "5 stages",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 195,
+                y: -188,
+                z: 0,
+                radius: 28,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "layers",
+                  accent: "blue",
+                  items: [
+                    [Object ...], [Object ...], [Object ...], [Object ...], [Object ...]
+                  ],
+                },
+              },
+            }, {
+              id: "tpl-roles",
+              kind: "stage",
+              name: "Roles",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "3 roles",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 323,
+                y: -80,
+                z: 0,
+                radius: 30,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "people",
+                  accent: "dark",
+                  items: [
+                    [Object ...], [Object ...], [Object ...]
+                  ],
+                },
+              },
+            }, {
+              id: "tpl-evidence",
+              kind: "stage",
+              name: "Evidence",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Required artifacts",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 290,
+                y: 98,
+                z: 0,
+                radius: 30,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "doc",
+                  accent: "orange",
+                  items: [
+                    [Object ...], [Object ...], [Object ...]
+                  ],
+                },
+              },
+            }, {
+              id: "tpl-milestones",
+              kind: "stage",
+              name: "Milestones",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Key checkpoints",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: 199,
+                y: 224,
+                z: 0,
+                radius: 31,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "flag",
+                  accent: "dark",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-governed",
+              kind: "stage",
+              name: "Governed Work",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Policies & rules",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -115,
+                y: 255,
+                z: 0,
+                radius: 32,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "shield",
+                  accent: "blue",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-triggers",
+              kind: "stage",
+              name: "Triggers",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Entry conditions",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -302,
+                y: 159,
+                z: 0,
+                radius: 31,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "bolt",
+                  accent: "green",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-versions",
+              kind: "stage",
+              name: "Versions",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Draft v0.2",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -366,
+                y: 11,
+                z: 0,
+                radius: 29,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "history",
+                  accent: "dark",
+                  items: undefined,
+                },
+              },
+            }, {
+              id: "tpl-preview",
+              kind: "stage",
+              name: "Preview",
+              status: "ACTIVE",
+              badge: "",
+              explanation: "Simulate case",
+              salience: 0.5,
+              parent_id: "tpl-northstar",
+              actions: [],
+              spatial_layout: {
+                x: -329,
+                y: -130,
+                z: 0,
+                radius: 28,
+              },
+              x: {
+                presentation: "facet",
+                design: {
+                  icon: "eye",
+                  accent: "dark",
+                  items: undefined,
+                },
+              },
+            }
+          ],
+          x: {
+            label: "v0.2 published",
+            relationships: [],
+          },
+        }
+      ],
+      points: [
+        {
+          cursor: "1.0000000001",
+          timestamp: "2026-09-19T08:00:00Z",
+          event_type: "template_published",
+          summary: "v0.1 published",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: true,
+          completed_plan_items_count: 0,
+          total_plan_items_count: 0,
+        }, {
+          cursor: "1.0000000002",
+          timestamp: "2026-09-19T10:00:00Z",
+          event_type: "template_published",
+          summary: "v0.2 published",
+          actor_id: "usr-sam",
+          actor_role: "case_architect",
+          consequential: true,
+          completed_plan_items_count: 0,
+          total_plan_items_count: 0,
+        }
+      ],
+    },
+  },
+  listeners: Map {},
+  seen: Set {},
+  payloads: {
+    "evi-diff-491": {
+      evidence_id: "evi-diff-491",
+      name: "PR #491 · Add secondary coverage guard",
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000025f6adcc",
+      content_type: "text/x-diff",
+      content: "diff --git a/northstar b/northstar\nindex 0000000..1111111 100644\n--- a/northstar\n+++ b/northstar\n@@ -1,3 +1,14 @@ src/coverage/eligibility.ts\n const primaryEligible = await checkPrimaryCoverage(\n memberId,\n );\n-if (!primaryEligible) {\n-return { eligible: false, reason: \"Primary not eligible\" };\n-}\n+// Also validate secondary coverage if present\n+if (member.secondaryCoverage) {\n+const secondaryEligible = await checkSecondaryCoverage(\n+memberId,\n+member.secondaryCoverage\n+);\n+if (!secondaryEligible) {\n+return {\n+eligible: false,\n+reason: \"Secondary coverage not eligible\",\n+code: \"SECONDARY_INELIGIBLE\",\n+};\n+}\n+}\n return { eligible: true, reason: \"Eligible\" };\n }\n",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-secondary",
+        invocation_id: "inv-491-review",
+        run_id: "run-491-review-1",
+        pr_number: 491,
+      },
+    },
+    "evi-record": {
+      evidence_id: "evi-record",
+      name: "Customer record EHR-77392",
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000008fe3290",
+      content_type: "text/markdown",
+      content: "# Customer Record EHR-77392\n\n## Member\nID: M-20930144, Acme Health Plan, enrolled 2024-03-15\n\n## Primary Coverage\nAcme Health PPO active, coverage effective through 2026-12-31\n\n## Secondary Coverage\nNone on file at time of claim (09:12, Sep 16)\n\n## Claim\n#CLM-20931 rejected — secondary payer required by policy\n\n## Source\nEHR export, retrieved Sep 18, 2026\n",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-record",
+        invocation_id: "inv-record-ehr77392",
+        run_id: "run-ehr-export-sep18",
+      },
+    },
+    "evi-assumption": {
+      evidence_id: "evi-assumption",
+      name: "Initial assumption: Primary-only scope",
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000016161801",
+      content_type: "text/markdown",
+      content: "# Initial Assumption\n\n## Scope\nThe pilot scope assumed members carry primary coverage only.\n\n## Eligibility Logic\nCurrent eligibility check validates primary insurance only.\n\n## Next Steps\nRevisit scope if secondary payers appear in real-world workflow.\n",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-assumption",
+        invocation_id: "inv-assumption-draft",
+        run_id: "run-assumption-v0.1",
+      },
+    },
+    "evi-checks-table": {
+      evidence_id: "evi-checks-table",
+      name: "Nightly checks: Coverage validation suite",
+      digest: "sha256:000000000000000000000000000000000000000000000000000000003d6665e5",
+      content_type: "application/json",
+      content: "{\"schema\":\"table\",\"columns\":[\"Test Path\",\"Result\",\"Duration (s)\"],\"rows\":[[\"primary-only\",\"pass\",\"0.8\"],[\"secondary-present\",\"pass\",\"1.2\"],[\"secondary-missing\",\"fail\",\"0.9\"],[\"dual-payer\",\"pass\",\"1.5\"],[\"medicare-secondary\",\"pass\",\"2.1\"],[\"no-coverage\",\"fail\",\"0.7\"],[\"expired-primary\",\"fail\",\"0.6\"],[\"under-investigation\",\"pass\",\"1.3\"],[\"pending-coordination\",\"pass\",\"2.0\"],[\"edge-case-carve-out\",\"pass\",\"1.8\"]],\"caption\":\"Nightly checks run against coverage validation logic\"}",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-impl",
+        invocation_id: "inv-checks-nightly",
+        run_id: "run-checks-sep19-0300",
+      },
+    },
+    "evi-rejections-chart": {
+      evidence_id: "evi-rejections-chart",
+      name: "Claim rejections by day",
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000013fa3894",
+      content_type: "application/json",
+      content: "{\"schema\":\"chart\",\"unit\":\"claims\",\"series\":[{\"label\":\"Sep 13\",\"value\":2},{\"label\":\"Sep 14\",\"value\":3},{\"label\":\"Sep 15\",\"value\":4},{\"label\":\"Sep 16\",\"value\":12},{\"label\":\"Sep 17\",\"value\":8},{\"label\":\"Sep 18\",\"value\":6},{\"label\":\"Sep 19\",\"value\":3}],\"caption\":\"Rejected claims by day, showing spike around secondary coverage gap discovery\"}",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-evidence",
+        invocation_id: "inv-rejections-daily",
+        run_id: "run-analytics-sep19",
+      },
+    },
+    "evi-impl-graph": {
+      evidence_id: "evi-impl-graph",
+      name: "Northstar dependency graph",
+      digest: "sha256:000000000000000000000000000000000000000000000000000000006521ee82",
+      content_type: "application/json",
+      content: "{\"schema\":\"graph\",\"nodes\":[{\"object_id\":\"ns-goal\",\"label\":\"Goal\",\"kind\":\"work_item\"},{\"object_id\":\"ns-workflow\",\"label\":\"Customer Workflow\",\"kind\":\"work_item\"},{\"object_id\":\"ns-assumption\",\"label\":\"Implementation Assumption\",\"kind\":\"work_item\"},{\"object_id\":\"ns-record\",\"label\":\"Customer Record\",\"kind\":\"evidence_record\"},{\"object_id\":\"ns-secondary\",\"label\":\"Secondary Coverage\",\"kind\":\"work_item\"},{\"object_id\":\"ns-pr491\",\"label\":\"PR #491\",\"kind\":\"work_item\"},{\"object_id\":\"ns-impl\",\"label\":\"Implementation\",\"kind\":\"work_item\"},{\"object_id\":\"ns-release\",\"label\":\"Release\",\"kind\":\"work_item\"},{\"object_id\":\"ns-failure\",\"label\":\"Observed Failure\",\"kind\":\"execution_trace\"}],\"edges\":[{\"from\":\"ns-workflow\",\"to\":\"ns-assumption\",\"label\":\"Assumes\"},{\"from\":\"ns-assumption\",\"to\":\"ns-record\",\"label\":\"Leads to\"},{\"from\":\"ns-record\",\"to\":\"ns-secondary\",\"label\":\"Triggers\"},{\"from\":\"ns-secondary\",\"to\":\"ns-failure\",\"label\":\"Results in\"},{\"from\":\"ns-impl\",\"to\":\"ns-secondary\",\"label\":\"Depends on\"},{\"from\":\"ns-release\",\"to\":\"ns-impl\",\"label\":\"Depends on\"}]}",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-impl",
+        invocation_id: "inv-graph-render",
+        run_id: "run-graph-sep19",
+      },
+    },
+    "evi-coverage-trace": {
+      evidence_id: "evi-coverage-trace",
+      name: "Reality trace: Secondary coverage validation",
+      digest: "sha256:000000000000000000000000000000000000000000000000000000003853f317",
+      content_type: "application/json",
+      content: "{\"schema\":\"realitytrace\",\"question\":{\"question_id\":\"q-secondary-coverage\",\"predicate\":\"ASSERT_SECONDARY_COVERAGE_VALIDATED\",\"target_entity\":\"services/eligibility/coverage.ts\"},\"claim\":{\"proposition\":\"Every claim with secondary coverage is validated before submission.\",\"asserted_by\":\"implementation-plan\"},\"evaluation\":{\"discrepancy_count\":2,\"discrepancies\":[{\"attribution_locus\":\"Locus2_Configuration\",\"declared_state\":\"secondary coverage validated before submit\",\"observed_state\":\"validation skipped when primary payer present\"},{\"attribution_locus\":\"Locus5_ObservedOutcome\",\"declared_state\":\"claim accepted\",\"observed_state\":\"claim rejected: coordination of benefits missing\"}]}}",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-secondary",
+        invocation_id: "inv-trace-analysis",
+        run_id: "run-trace-sep18",
+      },
+    },
+    "evi-case-timeline": {
+      evidence_id: "evi-case-timeline",
+      name: "Case timeline: Northstar pilot progression",
+      digest: "sha256:00000000000000000000000000000000000000000000000000000000545d5630",
+      content_type: "application/json",
+      content: "{\"schema\":\"timeline\",\"events\":[{\"at\":\"2026-09-17T09:00:00Z\",\"label\":\"Sep 17\",\"summary\":\"Pilot scoped\",\"cursor\":\"1.0000000001\"},{\"at\":\"2026-09-17T14:40:00Z\",\"label\":\"Sep 17\",\"summary\":\"Before secondary coverage was identified\",\"cursor\":\"1.0000000002\"},{\"at\":\"2026-09-18T09:15:00Z\",\"label\":\"Sep 18\",\"summary\":\"Customer record examined\",\"cursor\":\"1.0000000003\"},{\"at\":\"2026-09-18T16:30:00Z\",\"label\":\"Sep 18\",\"summary\":\"Coverage gap confirmed\",\"cursor\":\"1.0000000004\"},{\"at\":\"2026-09-19T08:05:00Z\",\"label\":\"Sep 19\",\"summary\":\"PR #491 opened\",\"cursor\":\"1.0000000005\"},{\"at\":\"2026-09-19T10:24:00Z\",\"label\":\"Now\",\"summary\":\"Latest\",\"cursor\":\"1.0000000006\"}]}",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "northstar",
+        invocation_id: "inv-timeline-build",
+        run_id: "run-timeline-sep19",
+      },
+    },
+    "evi-release-log": {
+      evidence_id: "evi-release-log",
+      name: "Release staging log",
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000059b5bb09",
+      content_type: "text/plain",
+      content: "2026-09-19T10:15:00Z [INFO] Starting v0.3.0 staging verification\n2026-09-19T10:15:45Z [INFO] Checking artifact signatures... 12 artifacts verified\n2026-09-19T10:16:12Z [INFO] Running pre-release tests... 487 passed, 2 skipped\n2026-09-19T10:16:58Z [INFO] Validating secondary coverage guard activation\n2026-09-19T10:17:23Z [INFO] Secondary coverage validation: READY\n2026-09-19T10:17:45Z [INFO] Checking feature flags... all ENABLED\n2026-09-19T10:18:02Z [INFO] Staging environment health check: HEALTHY\n2026-09-19T10:18:30Z [INFO] Load test 1: 100 RPS - PASS (p99: 247ms)\n2026-09-19T10:19:15Z [INFO] Load test 2: 250 RPS - PASS (p99: 312ms)\n2026-09-19T10:20:01Z [INFO] Canary deployment prepared for 5% traffic\n2026-09-19T10:24:00Z [INFO] Release v0.3.0 ready for approval\n",
+      provenance: {
+        case_id: "case-northstar",
+        plan_item_id: "ns-release",
+        invocation_id: "inv-release-staging",
+        run_id: "run-release-v0.3.0",
+      },
+    },
+  },
+  identity: {
+    actor_id: "usr-sam",
+    role: "case_architect",
+    display_name: "Sam Prime",
+    kind: "human",
+  },
+  opts: {
+    speed: 1,
+    failArtifacts: [],
+    corruptArtifacts: [],
+    latency: 0,
+  },
+  session: [AsyncFunction: session],
+  login: [AsyncFunction: login],
+  logout: [AsyncFunction: logout],
+  getTemplates: [AsyncFunction: getTemplates],
+  preflightTemplate: [AsyncFunction: preflightTemplate],
+  getSnapshot: [AsyncFunction: getSnapshot],
+  getSnapshotAt: [AsyncFunction: getSnapshotAt],
+  resolveArtifact: [AsyncFunction: resolveArtifact],
+  queryTemporalTrajectory: [AsyncFunction: queryTemporalTrajectory],
+  subscribeEvents: [Function: subscribeEvents],
+  dispatchIntent: [AsyncFunction: dispatchIntent],
+  commitCase: [Function: commitCase],
+  execute: [Function: execute],
+  progress: [Function: progress],
+  append: [Function: append],
+  emit: [Function: emit],
+  case: [Function: case],
+  stamp: [Function: stamp],
+  wait: [Function: wait],
+}
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:135:62)
+(fail) LocalContractAdapter cursor validation and bounded delivery > validates constructor seed against the final snapshot and trajectory cursor [7.10ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > template-committed case starts with matching snapshot and trajectory seed cursors [2.68ms]
+176 |       const received: StreamEvent[] = []
+177 |       const errors: Error[] = []
+178 |       const stop = subscribe(adapter, floor, (event) => received.push(event), (error) => errors.push(error))
+179 |       const boundary = appendFixture(adapter, 'at leading-zero future floor')
+180 |       timers.runAll()
+181 |       expect(received.map((event) => event.cursor)).toEqual([])
+                                                          ^
+error: expect(received).toEqual(expected)
+
+- []
++ [
++   "1.0000000007",
++ ]
+
+- Expected  - 1
++ Received  + 3
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:181:53)
+(fail) LocalContractAdapter cursor validation and bounded delivery > accepts leading-zero decimal epoch and sequence by numeric equality [2.84ms]
+209 |         const received: StreamEvent[] = []
+210 |         const errors: Error[] = []
+211 |         const stop = subscribe(adapter, floor, (event) => received.push(event), (error) => errors.push(error))
+212 |         appendFixture(adapter, `after invalid floor ${floor}`)
+213 |         timers.runAll()
+214 |         expect(errors, floor).toHaveLength(1)
+                                    ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 1
+Received length: 0
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:214:31)
+(fail) LocalContractAdapter cursor validation and bounded delivery > rejects malformed, unsafe, wrong-epoch, and over-ceiling floors once without registering [2.64ms]
+233 |       const received: StreamEvent[] = []
+234 |       const errors: Error[] = []
+235 |       const stop = subscribe(adapter, boundaryCursor, (event) => received.push(event), (error) => errors.push(error))
+236 |       const boundary = appendFixture(adapter, 'at future floor')
+237 |       timers.runAll()
+238 |       expect(received).toEqual([])
+                             ^
+error: expect(received).toEqual(expected)
+
+- []
++ [
++   {
++     "cursor": "1.0000000007",
++     "event_type": "snapshot",
++     "payload": {
++       "attention_focus": {
++         "primary_object_id": "ns-secondary",
++       },
++       "available_actions": [],
++       "case_id": "case-northstar",
++       "cursor": "1.0000000007",
++       "perspective": {
++         "actor_id": "projection",
++         "role": "developer",
++       },
++       "summary": {
++         "headline": "Northstar claims pilot",
++         "phase": "at future floor",
++         "progress_percent": 100,
++         "status_phrase": "Ready for approval",
++       },
++       "timestamp": "2026-10-07T03:58:44.386Z",
++       "visible_objects": [
++         {
++           "actions": [],
++           "badge": "On track",
++           "id": "cat-ideas",
++           "kind": "stage",
++           "name": "Ideas",
++           "salience": 0.35,
++           "spatial_layout": {
++             "label_side": "left",
++             "radius": 6,
++             "x": -201,
++             "y": -280,
++             "z": 0,
++           },
++           "status": "IN_PROGRESS",
++           "x": {
++             "label_side": "left",
++             "presentation": "region",
++             "tone": "progress",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Analyzing",
++           "id": "cat-projects",
++           "kind": "stage",
++           "name": "Projects",
++           "salience": 0.9,
++           "spatial_layout": {
++             "radius": 13,
++             "x": 350,
++             "y": -224,
++             "z": 0,
++           },
++           "status": "WAITING",
++           "x": {
++             "metric": "3 items",
++             "presentation": "region",
++             "tone": "muted",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "On track",
++           "id": "cat-people",
++           "kind": "stage",
++           "name": "People",
++           "salience": 0.4,
++           "spatial_layout": {
++             "radius": 6,
++             "x": 463,
++             "y": 5,
++             "z": 0,
++           },
++           "status": "COMPLETED",
++           "x": {
++             "metric": "5 items",
++             "presentation": "region",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "On track",
++           "id": "cat-insights",
++           "kind": "stage",
++           "name": "Insights",
++           "salience": 0.35,
++           "spatial_layout": {
++             "radius": 6,
++             "x": 240,
++             "y": 246,
++             "z": 0,
++           },
++           "status": "COMPLETED",
++           "x": {
++             "presentation": "region",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "On track",
++           "id": "cat-tasks",
++           "kind": "stage",
++           "name": "Tasks",
++           "salience": 0.55,
++           "spatial_layout": {
++             "label_side": "left",
++             "radius": 7,
++             "x": -308,
++             "y": 179,
++             "z": 0,
++           },
++           "status": "COMPLETED",
++           "x": {
++             "label_side": "left",
++             "presentation": "region",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "In progress",
++           "id": "cat-knowledge",
++           "kind": "stage",
++           "name": "Knowledge",
++           "salience": 0.4,
++           "spatial_layout": {
++             "label_side": "left",
++             "radius": 6,
++             "x": -438,
++             "y": -59,
++             "z": 0,
++           },
++           "status": "IN_PROGRESS",
++           "x": {
++             "label_side": "left",
++             "presentation": "region",
++             "tone": "progress",
++           },
++         },
++         {
++           "actions": [
++             {
++               "consequential": true,
++               "id": "add-discretionary",
++               "intent": "ADD_DISCRETIONARY_WORK",
++               "label": "Add discretionary work",
++               "requires_justification": true,
++               "variant": "SECONDARY",
++             },
++             {
++               "consequential": true,
++               "id": "reopen-case",
++               "intent": "REOPEN_CASE",
++               "label": "Reopen case",
++               "requires_justification": true,
++               "variant": "SECONDARY",
++             },
++             {
++               "consequential": true,
++               "id": "terminate-case",
++               "intent": "TERMINATE_CASE",
++               "label": "Terminate case",
++               "requires_justification": true,
++               "variant": "DANGER",
++             },
++           ],
++           "badge": "1 needs you",
++           "explanation": "Implementation",
++           "id": "northstar",
++           "kind": "work_item",
++           "name": "Northstar",
++           "parent_id": "cat-projects",
++           "salience": 0.95,
++           "status": "ACTION_REQUIRED",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "northstar",
++                 "currentLevel": "minimal",
++                 "kind": "decision_record",
++                 "mediaType": "application/json",
++                 "ref": "evi-case-timeline",
++                 "sourceProvenance": "sxr:cas://evi-case-timeline",
++                 "title": "Case timeline",
++               },
++             ],
++             "presentation": "case",
++             "residue": {
++               "label": "1 issue needs review",
++               "tone": "critical",
++             },
++             "template_case_id": "case-northstar-template",
++             "tone": "attention",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Healthy",
++           "explanation": "Runtime",
++           "id": "platform",
++           "kind": "work_item",
++           "name": "Platform",
++           "parent_id": "cat-projects",
++           "salience": 0.3,
++           "status": "COMPLETED",
++           "x": {
++             "presentation": "case",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Running",
++           "explanation": "Executions",
++           "id": "gauntlet",
++           "kind": "work_item",
++           "name": "Gauntlet",
++           "parent_id": "cat-projects",
++           "salience": 0.3,
++           "status": "IN_PROGRESS",
++           "x": {
++             "metric": "2 running",
++             "presentation": "case",
++             "tone": "progress",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "",
++           "explanation": "Engineer",
++           "id": "p-alexr",
++           "kind": "work_item",
++           "name": "Alex R.",
++           "parent_id": "cat-people",
++           "salience": 0.2,
++           "status": "ACTIVE",
++           "x": {
++             "presentation": "person",
++             "tone": "none",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "",
++           "explanation": "Clinical ops",
++           "id": "p-maya",
++           "kind": "work_item",
++           "name": "Maya L.",
++           "parent_id": "cat-people",
++           "salience": 0.2,
++           "status": "ACTIVE",
++           "x": {
++             "presentation": "person",
++             "tone": "none",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "",
++           "explanation": "Owner",
++           "id": "p-sam",
++           "kind": "work_item",
++           "name": "Sam P.",
++           "parent_id": "cat-people",
++           "salience": 0.2,
++           "status": "ACTIVE",
++           "x": {
++             "presentation": "person",
++             "tone": "none",
++           },
++         },
++         {
++           "actions": [
++             {
++               "consequential": true,
++               "id": "complete-review",
++               "intent": "COMPLETE_HUMAN_TASK",
++               "label": "Complete review",
++               "requires_justification": true,
++               "variant": "PRIMARY",
++             },
++           ],
++           "badge": "Needs you",
++           "depends_on": [
++             "t-rollout",
++           ],
++           "id": "t-review",
++           "kind": "work_item",
++           "name": "Review PR #491",
++           "parent_id": "cat-tasks",
++           "salience": 0.4,
++           "status": "ACTION_REQUIRED",
++           "x": {
++             "presentation": "item",
++             "tone": "attention",
++           },
++         },
++         {
++           "actions": [
++             {
++               "consequential": true,
++               "id": "execute-rollout",
++               "intent": "EXECUTE_ITEM",
++               "label": "Execute rollout",
++               "variant": "PRIMARY",
++             },
++           ],
++           "badge": "In progress",
++           "id": "t-rollout",
++           "kind": "work_item",
++           "name": "Plan rollout",
++           "parent_id": "cat-tasks",
++           "salience": 0.2,
++           "status": "IN_PROGRESS",
++           "x": {
++             "presentation": "item",
++             "tone": "progress",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "",
++           "id": "k-eligibility",
++           "kind": "work_item",
++           "name": "Eligibility rules",
++           "parent_id": "cat-knowledge",
++           "salience": 0.2,
++           "status": "ACTIVE",
++           "x": {
++             "presentation": "item",
++             "tone": "none",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "",
++           "id": "k-ehr",
++           "kind": "work_item",
++           "name": "EHR record API",
++           "parent_id": "cat-knowledge",
++           "salience": 0.2,
++           "status": "ACTIVE",
++           "x": {
++             "presentation": "item",
++             "tone": "none",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "",
++           "id": "i-cohort",
++           "kind": "work_item",
++           "name": "Cohort-based rollout",
++           "parent_id": "cat-ideas",
++           "salience": 0.2,
++           "status": "ACTIVE",
++           "x": {
++             "presentation": "item",
++             "tone": "none",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "",
++           "id": "n-divergence",
++           "kind": "work_item",
++           "name": "Secondary coverage gap",
++           "parent_id": "cat-insights",
++           "salience": 0.2,
++           "status": "ACTIVE",
++           "x": {
++             "presentation": "item",
++             "tone": "none",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "On track",
++           "explanation": "Claims pilot",
++           "id": "ns-goal",
++           "kind": "stage",
++           "name": "Goal",
++           "parent_id": "northstar",
++           "salience": 0.5,
++           "spatial_layout": {
++             "radius": 31,
++             "x": -40,
++             "y": -270,
++             "z": 0,
++           },
++           "status": "COMPLETED",
++           "x": {
++             "presentation": "facet",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "In progress",
++           "explanation": "Acme Health",
++           "id": "ns-workflow",
++           "kind": "stage",
++           "name": "Customer Workflow",
++           "parent_id": "northstar",
++           "salience": 0.55,
++           "spatial_layout": {
++             "radius": 33,
++             "x": -514,
++             "y": -147,
++             "z": 0,
++           },
++           "status": "IN_PROGRESS",
++           "x": {
++             "presentation": "facet",
++             "representations": {
++               "causal": {
++                 "badge": "As designed",
++                 "explanation": "Standard process",
++                 "label": "Expected Workflow",
++                 "order": 1,
++                 "role": "expected",
++                 "tone": "progress",
++               },
++             },
++             "tone": "progress",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Analyzing",
++           "id": "ns-evidence",
++           "kind": "stage",
++           "name": "Evidence",
++           "parent_id": "northstar",
++           "salience": 0.5,
++           "spatial_layout": {
++             "radius": 35,
++             "x": 405,
++             "y": -143,
++             "z": 0,
++           },
++           "status": "WAITING",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-evidence",
++                 "currentLevel": "minimal",
++                 "kind": "data_table",
++                 "mediaType": "application/json",
++                 "ref": "evi-rejections-chart",
++                 "sourceProvenance": "sxr:cas://evi-rejections-chart",
++                 "title": "Claim rejections by day",
++               },
++             ],
++             "metric": "3 items",
++             "presentation": "facet",
++             "tone": "muted",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "On track",
++           "id": "ns-impl",
++           "kind": "stage",
++           "name": "Implementation",
++           "parent_id": "northstar",
++           "salience": 0.6,
++           "spatial_layout": {
++             "radius": 35,
++             "x": 560,
++             "y": 91,
++             "z": 0,
++           },
++           "status": "COMPLETED",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-impl",
++                 "currentLevel": "minimal",
++                 "kind": "document",
++                 "mediaType": "application/json",
++                 "ref": "evi-impl-graph",
++                 "sourceProvenance": "sxr:cas://evi-impl-graph",
++                 "title": "Northstar dependency graph",
++               },
++               {
++                 "boundObject": "ns-impl",
++                 "currentLevel": "minimal",
++                 "kind": "test_report",
++                 "mediaType": "application/json",
++                 "ref": "evi-checks-table",
++                 "sourceProvenance": "sxr:cas://evi-checks-table",
++                 "title": "Nightly checks: coverage validation",
++               },
++             ],
++             "metric": "5 tasks",
++             "presentation": "facet",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [
++             {
++               "consequential": true,
++               "id": "approve-release",
++               "intent": "APPROVE_HUMAN_TASK",
++               "label": "Approve release",
++               "variant": "PRIMARY",
++             },
++             {
++               "consequential": true,
++               "id": "request-changes",
++               "intent": "REJECT_HUMAN_TASK",
++               "label": "Request changes",
++               "variant": "SECONDARY",
++             },
++             {
++               "consequential": true,
++               "id": "escalate",
++               "intent": "ESCALATE_OR_OVERRIDE",
++               "label": "Escalate",
++               "requires_justification": true,
++               "variant": "GHOST",
++             },
++           ],
++           "badge": "In progress",
++           "explanation": "v0.3.0",
++           "id": "ns-release",
++           "kind": "stage",
++           "name": "Release",
++           "parent_id": "northstar",
++           "salience": 0.5,
++           "spatial_layout": {
++             "radius": 36,
++             "x": -407,
++             "y": 210,
++             "z": 0,
++           },
++           "status": "IN_PROGRESS",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-release",
++                 "currentLevel": "minimal",
++                 "kind": "document",
++                 "mediaType": "text/plain",
++                 "ref": "evi-release-log",
++                 "sourceProvenance": "sxr:cas://evi-release-log",
++                 "title": "Release staging log",
++               },
++             ],
++             "presentation": "decision_gate",
++             "tone": "progress",
++           },
++         },
++         {
++           "actions": [
++             {
++               "consequential": false,
++               "id": "review-change",
++               "intent": "OPEN_ARTIFACT",
++               "label": "Review change",
++             },
++           ],
++           "badge": "Needs attention",
++           "explanation": "Eligibility validation",
++           "id": "ns-secondary",
++           "kind": "stage",
++           "name": "Secondary Coverage",
++           "parent_id": "northstar",
++           "salience": 1,
++           "spatial_layout": {
++             "radius": 43,
++             "x": 295,
++             "y": 240,
++             "z": 0,
++           },
++           "status": "FAILED",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-secondary",
++                 "currentLevel": "minimal",
++                 "kind": "code_diff",
++                 "mediaType": "text/x-diff",
++                 "ref": "evi-diff-491",
++                 "sourceProvenance": "sxr:cas://evi-diff-491",
++                 "title": "PR #491 · Add secondary coverage guard",
++               },
++               {
++                 "boundObject": "ns-secondary",
++                 "currentLevel": "minimal",
++                 "kind": "test_report",
++                 "mediaType": "application/json",
++                 "ref": "evi-coverage-trace",
++                 "sourceProvenance": "sxr:cas://evi-coverage-trace",
++                 "title": "Reality trace: secondary coverage",
++               },
++             ],
++             "presentation": "facet",
++             "representations": {
++               "causal": {
++                 "badge": "Critical condition",
++                 "explanation": "Eligibility validation skipped",
++                 "label": "Missing Secondary Coverage",
++                 "order": 4,
++                 "role": "missing",
++                 "tone": "critical",
++               },
++             },
++             "tone": "critical",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "In code / config",
++           "explanation": "Secondary coverage sufficient",
++           "id": "ns-assumption",
++           "kind": "work_item",
++           "name": "Implementation Assumption",
++           "parent_id": "ns-impl",
++           "salience": 0.45,
++           "status": "IN_PROGRESS",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-assumption",
++                 "currentLevel": "minimal",
++                 "kind": "document",
++                 "mediaType": "text/markdown",
++                 "ref": "evi-assumption",
++                 "sourceProvenance": "sxr:cas://evi-assumption",
++                 "title": "Initial assumption: primary-only scope",
++               },
++             ],
++             "presentation": "item",
++             "representations": {
++               "causal": {
++                 "explanation": "Secondary coverage sufficient",
++                 "label": "Implementation Assumption",
++                 "order": 2,
++                 "role": "assumption",
++               },
++             },
++             "tone": "progress",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Verified",
++           "explanation": "Verified",
++           "id": "ns-claims-api",
++           "kind": "work_item",
++           "name": "Claims API",
++           "parent_id": "ns-impl",
++           "salience": 0.3,
++           "status": "COMPLETED",
++           "x": {
++             "presentation": "item",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Complete",
++           "explanation": "Complete",
++           "id": "ns-session",
++           "kind": "work_item",
++           "name": "Session Migration",
++           "parent_id": "ns-impl",
++           "salience": 0.25,
++           "status": "COMPLETED",
++           "x": {
++             "presentation": "item",
++             "tone": "ok",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Actual data",
++           "explanation": "No secondary coverage",
++           "id": "ns-record",
++           "kind": "work_item",
++           "name": "Customer Record",
++           "parent_id": "ns-evidence",
++           "salience": 0.45,
++           "status": "ACTIVE",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-record",
++                 "currentLevel": "minimal",
++                 "kind": "decision_record",
++                 "mediaType": "text/markdown",
++                 "ref": "evi-record",
++                 "sourceProvenance": "sxr:cas://evi-record",
++                 "title": "Customer record EHR-77392",
++               },
++             ],
++             "presentation": "evidence_record",
++             "representations": {
++               "causal": {
++                 "order": 3,
++                 "role": "condition",
++               },
++             },
++             "tone": "hypothesis",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Quoted",
++           "explanation": "Clinical ops lead",
++           "id": "ns-interview",
++           "kind": "work_item",
++           "name": "Interview",
++           "parent_id": "ns-evidence",
++           "salience": 0.25,
++           "status": "WAITING",
++           "x": {
++             "presentation": "evidence_record",
++             "tone": "muted",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Noted",
++           "explanation": "Front desk intake",
++           "id": "ns-observation",
++           "kind": "work_item",
++           "name": "Observation",
++           "parent_id": "ns-evidence",
++           "salience": 0.25,
++           "status": "WAITING",
++           "x": {
++             "presentation": "evidence_record",
++             "tone": "muted",
++           },
++         },
++         {
++           "actions": [
++             {
++               "consequential": false,
++               "id": "review-change",
++               "intent": "OPEN_ARTIFACT",
++               "label": "Review change",
++               "variant": "SECONDARY",
++             },
++           ],
++           "badge": "Review",
++           "explanation": "Coverage guard",
++           "id": "ns-pr491",
++           "kind": "work_item",
++           "name": "PR #491",
++           "parent_id": "ns-secondary",
++           "salience": 0.6,
++           "status": "ACTION_REQUIRED",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-pr491",
++                 "currentLevel": "minimal",
++                 "kind": "code_diff",
++                 "mediaType": "text/x-diff",
++                 "ref": "evi-diff-491",
++                 "sourceProvenance": "sxr:cas://evi-diff-491",
++                 "title": "PR #491 · Add secondary coverage guard",
++               },
++             ],
++             "presentation": "item",
++             "tone": "attention",
++           },
++         },
++         {
++           "actions": [],
++           "badge": "Actual outcome",
++           "explanation": "Claim rejected",
++           "id": "ns-failure",
++           "kind": "work_item",
++           "name": "Observed Failure",
++           "parent_id": "ns-release",
++           "salience": 0.7,
++           "status": "FAILED",
++           "x": {
++             "artifacts": [
++               {
++                 "boundObject": "ns-failure",
++                 "currentLevel": "minimal",
++                 "kind": "test_report",
++                 "mediaType": "application/json",
++                 "ref": "evi-coverage-trace",
++                 "sourceProvenance": "sxr:cas://evi-coverage-trace",
++                 "title": "Reality trace: secondary coverage",
++               },
++             ],
++             "presentation": "execution_trace",
++             "representations": {
++               "causal": {
++                 "order": 5,
++                 "role": "observed",
++               },
++             },
++             "tone": "critical",
++           },
++         },
++       ],
++       "world_id": "world-northstar",
++       "x": {
++         "label": undefined,
++         "relationships": [
++           {
++             "from": "ns-workflow",
++             "id": "rel-assumes",
++             "kind": "depends-on",
++             "label": "Assumes",
++             "to": "ns-assumption",
++           },
++           {
++             "from": "ns-assumption",
++             "id": "rel-leads",
++             "kind": "produces",
++             "label": "Leads to",
++             "to": "ns-record",
++           },
++           {
++             "from": "ns-record",
++             "id": "rel-triggers",
++             "kind": "produces",
++             "label": "Triggers",
++             "to": "ns-secondary",
++           },
++           {
++             "from": "ns-secondary",
++             "id": "rel-results",
++             "kind": "produces",
++             "label": "Results in",
++             "to": "ns-failure",
++           },
++           {
++             "from": "ns-evidence",
++             "id": "rel-evidence-record",
++             "kind": "attests",
++             "to": "ns-record",
++           },
++           {
++             "from": "ns-impl",
++             "id": "rel-impl-secondary",
++             "kind": "depends-on",
++             "to": "ns-secondary",
++           },
++           {
++             "from": "ns-release",
++             "id": "rel-release-impl",
++             "kind": "depends-on",
++             "to": "ns-impl",
++           },
++         ],
++       },
++     },
++     "timestamp": "2026-10-07T03:58:44.386Z",
++   },
++ ]
+
+- Expected  - 1
++ Received  + 868
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:238:24)
+(fail) LocalContractAdapter cursor validation and bounded delivery > a future floor suppresses the exact boundary allocation and delivers the next real event [2.23ms]
+269 |       expect(overflowEvents).toEqual([])
+270 |       expect(overflowErrors).toEqual([])
+271 |       allocated.push(appendFixture(adapter, 'the 65th slow-subscriber event').cursor)
+272 |       timers.runAll()
+273 | 
+274 |       expect(overflowErrors).toHaveLength(1)
+                                   ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 1
+Received length: 0
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:274:30)
+(fail) LocalContractAdapter cursor validation and bounded delivery > 64 pending events stay FIFO; the 65th disposes only the backlogged subscriber [44.74ms]
+(pass) LocalContractAdapter cursor validation and bounded delivery > drains exactly 64 pending slow-subscriber events in FIFO order [65.22ms]
+337 |         if (selfDisposed.length === 1) stopSelf()
+338 |       }, () => {})
+339 |       const selfFirst = appendFixture(adapter, 'self-dispose first')
+340 |       const selfSecond = appendFixture(adapter, 'self-dispose queued')
+341 |       timers.runAll()
+342 |       expect(selfDisposed).toEqual([selfFirst.cursor])
+                                 ^
+error: expect(received).toEqual(expected)
+
+  [
+    "1.0000000010",
++   "1.0000000011",
+  ]
+
+- Expected  - 0
++ Received  + 1
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:342:28)
+(fail) LocalContractAdapter cursor validation and bounded delivery > reentrant enqueue remains FIFO while an independent self-unsubscriber stops queued callbacks [7.52ms]
+350 |     const timers = installManualTimers()
+351 |     try {
+352 |       const adapter = new LocalContractAdapter({ latency: 0 })
+353 |       const thrownErrors: Error[] = []
+354 |       const healthy: string[] = []
+355 |       const stopThrowing = subscribe(adapter, undefined, () => { throw new Error('listener failed') }, (error) => thrownErrors.push(error))
+                                                                                                        ^
+error: listener failed
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:355:99)
+      at runHandle (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:38:13)
+      at runNext (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:32:12)
+      at runAll (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:44:14)
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:358:14)
+(fail) LocalContractAdapter cursor validation and bounded delivery > a throwing onEvent is reported once and does not stop a healthy subscriber [2.94ms]
+384 |       }
+385 |       expect(healthy).toEqual(cursors)
+386 |       expect(onErrorCalls).toBe(0)
+387 |       appendFixture(adapter, 'trigger onError throw after slow queue reaches capacity')
+388 |       timers.runAll()
+389 |       expect(onErrorCalls).toBe(1)
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:389:28)
+(fail) LocalContractAdapter cursor validation and bounded delivery > a throwing onError callback does not prevent another subscriber drain [37.50ms]
+404 |       expect(atCeiling.cursor).toBe('1.9999999999')
+405 |       const snapshotsBefore = structuredClone(record.snaps)
+406 |       const pointsBefore = structuredClone(record.points)
+407 |       const frontier = internals.ordinaryFrontiers?.get(NORTHSTAR_CASE_ID)
+408 |       const frontierBefore = frontier ? { ...frontier } : undefined
+409 |       expect(() => appendFixture(adapter, 'allocation beyond local ceiling')).toThrow()
+                                                                                    ^
+error: expect(received).toThrow()
+
+Received function did not throw
+Received value: {
+  world_id: "world-northstar",
+  case_id: "case-northstar",
+  cursor: "1.10000000000",
+  timestamp: "2026-10-07T03:58:44.548Z",
+  summary: {
+    headline: "Northstar claims pilot",
+    phase: "allocation beyond local ceiling",
+    status_phrase: "Ready for approval",
+    progress_percent: 100,
+  },
+  available_actions: [],
+  attention_focus: {
+    primary_object_id: "ns-secondary",
+  },
+  visible_objects: [
+    {
+      id: "cat-ideas",
+      kind: "stage",
+      name: "Ideas",
+      badge: "On track",
+      salience: 0.35,
+      spatial_layout: {
+        x: -201,
+        y: -280,
+        z: 0,
+        radius: 6,
+        label_side: "left",
+      },
+      actions: [],
+      status: "IN_PROGRESS",
+      x: {
+        tone: "progress",
+        presentation: "region",
+        label_side: "left",
+      },
+    }, {
+      id: "cat-projects",
+      kind: "stage",
+      name: "Projects",
+      badge: "Analyzing",
+      salience: 0.9,
+      spatial_layout: {
+        x: 350,
+        y: -224,
+        z: 0,
+        radius: 13,
+      },
+      actions: [],
+      status: "WAITING",
+      x: {
+        tone: "muted",
+        presentation: "region",
+        metric: "3 items",
+      },
+    }, {
+      id: "cat-people",
+      kind: "stage",
+      name: "People",
+      badge: "On track",
+      salience: 0.4,
+      spatial_layout: {
+        x: 463,
+        y: 5,
+        z: 0,
+        radius: 6,
+      },
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "region",
+        metric: "5 items",
+      },
+    }, {
+      id: "cat-insights",
+      kind: "stage",
+      name: "Insights",
+      badge: "On track",
+      salience: 0.35,
+      spatial_layout: {
+        x: 240,
+        y: 246,
+        z: 0,
+        radius: 6,
+      },
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "region",
+      },
+    }, {
+      id: "cat-tasks",
+      kind: "stage",
+      name: "Tasks",
+      badge: "On track",
+      salience: 0.55,
+      spatial_layout: {
+        x: -308,
+        y: 179,
+        z: 0,
+        radius: 7,
+        label_side: "left",
+      },
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "region",
+        label_side: "left",
+      },
+    }, {
+      id: "cat-knowledge",
+      kind: "stage",
+      name: "Knowledge",
+      badge: "In progress",
+      salience: 0.4,
+      spatial_layout: {
+        x: -438,
+        y: -59,
+        z: 0,
+        radius: 6,
+        label_side: "left",
+      },
+      actions: [],
+      status: "IN_PROGRESS",
+      x: {
+        tone: "progress",
+        presentation: "region",
+        label_side: "left",
+      },
+    }, {
+      id: "northstar",
+      kind: "work_item",
+      name: "Northstar",
+      explanation: "Implementation",
+      badge: "1 needs you",
+      salience: 0.95,
+      parent_id: "cat-projects",
+      actions: [
+        {
+          id: "add-discretionary",
+          label: "Add discretionary work",
+          intent: "ADD_DISCRETIONARY_WORK",
+          consequential: true,
+          variant: "SECONDARY",
+          requires_justification: true,
+        }, {
+          id: "reopen-case",
+          label: "Reopen case",
+          intent: "REOPEN_CASE",
+          consequential: true,
+          variant: "SECONDARY",
+          requires_justification: true,
+        }, {
+          id: "terminate-case",
+          label: "Terminate case",
+          intent: "TERMINATE_CASE",
+          consequential: true,
+          variant: "DANGER",
+          requires_justification: true,
+        }
+      ],
+      status: "ACTION_REQUIRED",
+      x: {
+        tone: "attention",
+        presentation: "case",
+        residue: {
+          label: "1 issue needs review",
+          tone: "critical",
+        },
+        artifacts: [
+          {
+            ref: "evi-case-timeline",
+            kind: "decision_record",
+            title: "Case timeline",
+            boundObject: "northstar",
+            currentLevel: "minimal",
+            mediaType: "application/json",
+            sourceProvenance: "sxr:cas://evi-case-timeline",
+          }
+        ],
+        template_case_id: "case-northstar-template",
+      },
+    }, {
+      id: "platform",
+      kind: "work_item",
+      name: "Platform",
+      explanation: "Runtime",
+      badge: "Healthy",
+      salience: 0.3,
+      parent_id: "cat-projects",
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "case",
+      },
+    }, {
+      id: "gauntlet",
+      kind: "work_item",
+      name: "Gauntlet",
+      explanation: "Executions",
+      badge: "Running",
+      salience: 0.3,
+      parent_id: "cat-projects",
+      actions: [],
+      status: "IN_PROGRESS",
+      x: {
+        tone: "progress",
+        presentation: "case",
+        metric: "2 running",
+      },
+    }, {
+      id: "p-alexr",
+      kind: "work_item",
+      name: "Alex R.",
+      explanation: "Engineer",
+      badge: "",
+      salience: 0.2,
+      parent_id: "cat-people",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "none",
+        presentation: "person",
+      },
+    }, {
+      id: "p-maya",
+      kind: "work_item",
+      name: "Maya L.",
+      explanation: "Clinical ops",
+      badge: "",
+      salience: 0.2,
+      parent_id: "cat-people",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "none",
+        presentation: "person",
+      },
+    }, {
+      id: "p-sam",
+      kind: "work_item",
+      name: "Sam P.",
+      explanation: "Owner",
+      badge: "",
+      salience: 0.2,
+      parent_id: "cat-people",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "none",
+        presentation: "person",
+      },
+    }, {
+      id: "t-review",
+      kind: "work_item",
+      name: "Review PR #491",
+      badge: "Needs you",
+      salience: 0.4,
+      parent_id: "cat-tasks",
+      actions: [
+        {
+          id: "complete-review",
+          label: "Complete review",
+          intent: "COMPLETE_HUMAN_TASK",
+          consequential: true,
+          variant: "PRIMARY",
+          requires_justification: true,
+        }
+      ],
+      status: "ACTION_REQUIRED",
+      x: {
+        tone: "attention",
+        presentation: "item",
+      },
+      depends_on: [ "t-rollout" ],
+    }, {
+      id: "t-rollout",
+      kind: "work_item",
+      name: "Plan rollout",
+      badge: "In progress",
+      salience: 0.2,
+      parent_id: "cat-tasks",
+      actions: [
+        {
+          id: "execute-rollout",
+          label: "Execute rollout",
+          intent: "EXECUTE_ITEM",
+          consequential: true,
+          variant: "PRIMARY",
+        }
+      ],
+      status: "IN_PROGRESS",
+      x: {
+        tone: "progress",
+        presentation: "item",
+      },
+    }, {
+      id: "k-eligibility",
+      kind: "work_item",
+      name: "Eligibility rules",
+      badge: "",
+      salience: 0.2,
+      parent_id: "cat-knowledge",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "none",
+        presentation: "item",
+      },
+    }, {
+      id: "k-ehr",
+      kind: "work_item",
+      name: "EHR record API",
+      badge: "",
+      salience: 0.2,
+      parent_id: "cat-knowledge",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "none",
+        presentation: "item",
+      },
+    }, {
+      id: "i-cohort",
+      kind: "work_item",
+      name: "Cohort-based rollout",
+      badge: "",
+      salience: 0.2,
+      parent_id: "cat-ideas",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "none",
+        presentation: "item",
+      },
+    }, {
+      id: "n-divergence",
+      kind: "work_item",
+      name: "Secondary coverage gap",
+      badge: "",
+      salience: 0.2,
+      parent_id: "cat-insights",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "none",
+        presentation: "item",
+      },
+    }, {
+      id: "ns-goal",
+      kind: "stage",
+      name: "Goal",
+      explanation: "Claims pilot",
+      badge: "On track",
+      salience: 0.5,
+      parent_id: "northstar",
+      spatial_layout: {
+        x: -40,
+        y: -270,
+        z: 0,
+        radius: 31,
+      },
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "facet",
+      },
+    }, {
+      id: "ns-workflow",
+      kind: "stage",
+      name: "Customer Workflow",
+      explanation: "Acme Health",
+      badge: "In progress",
+      salience: 0.55,
+      parent_id: "northstar",
+      spatial_layout: {
+        x: -514,
+        y: -147,
+        z: 0,
+        radius: 33,
+      },
+      actions: [],
+      status: "IN_PROGRESS",
+      x: {
+        tone: "progress",
+        presentation: "facet",
+        representations: {
+          causal: {
+            order: 1,
+            role: "expected",
+            label: "Expected Workflow",
+            explanation: "Standard process",
+            badge: "As designed",
+            tone: "progress",
+          },
+        },
+      },
+    }, {
+      id: "ns-evidence",
+      kind: "stage",
+      name: "Evidence",
+      badge: "Analyzing",
+      salience: 0.5,
+      parent_id: "northstar",
+      spatial_layout: {
+        x: 405,
+        y: -143,
+        z: 0,
+        radius: 35,
+      },
+      actions: [],
+      status: "WAITING",
+      x: {
+        tone: "muted",
+        presentation: "facet",
+        metric: "3 items",
+        artifacts: [
+          {
+            ref: "evi-rejections-chart",
+            kind: "data_table",
+            title: "Claim rejections by day",
+            boundObject: "ns-evidence",
+            currentLevel: "minimal",
+            mediaType: "application/json",
+            sourceProvenance: "sxr:cas://evi-rejections-chart",
+          }
+        ],
+      },
+    }, {
+      id: "ns-impl",
+      kind: "stage",
+      name: "Implementation",
+      badge: "On track",
+      salience: 0.6,
+      parent_id: "northstar",
+      spatial_layout: {
+        x: 560,
+        y: 91,
+        z: 0,
+        radius: 35,
+      },
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "facet",
+        metric: "5 tasks",
+        artifacts: [
+          {
+            ref: "evi-impl-graph",
+            kind: "document",
+            title: "Northstar dependency graph",
+            boundObject: "ns-impl",
+            currentLevel: "minimal",
+            mediaType: "application/json",
+            sourceProvenance: "sxr:cas://evi-impl-graph",
+          }, {
+            ref: "evi-checks-table",
+            kind: "test_report",
+            title: "Nightly checks: coverage validation",
+            boundObject: "ns-impl",
+            currentLevel: "minimal",
+            mediaType: "application/json",
+            sourceProvenance: "sxr:cas://evi-checks-table",
+          }
+        ],
+      },
+    }, {
+      id: "ns-release",
+      kind: "stage",
+      name: "Release",
+      explanation: "v0.3.0",
+      badge: "In progress",
+      salience: 0.5,
+      parent_id: "northstar",
+      spatial_layout: {
+        x: -407,
+        y: 210,
+        z: 0,
+        radius: 36,
+      },
+      actions: [
+        {
+          id: "approve-release",
+          label: "Approve release",
+          intent: "APPROVE_HUMAN_TASK",
+          consequential: true,
+          variant: "PRIMARY",
+        }, {
+          id: "request-changes",
+          label: "Request changes",
+          intent: "REJECT_HUMAN_TASK",
+          consequential: true,
+          variant: "SECONDARY",
+        }, {
+          id: "escalate",
+          label: "Escalate",
+          intent: "ESCALATE_OR_OVERRIDE",
+          consequential: true,
+          variant: "GHOST",
+          requires_justification: true,
+        }
+      ],
+      status: "IN_PROGRESS",
+      x: {
+        tone: "progress",
+        presentation: "decision_gate",
+        artifacts: [
+          {
+            ref: "evi-release-log",
+            kind: "document",
+            title: "Release staging log",
+            boundObject: "ns-release",
+            currentLevel: "minimal",
+            mediaType: "text/plain",
+            sourceProvenance: "sxr:cas://evi-release-log",
+          }
+        ],
+      },
+    }, {
+      id: "ns-secondary",
+      kind: "stage",
+      name: "Secondary Coverage",
+      explanation: "Eligibility validation",
+      badge: "Needs attention",
+      salience: 1,
+      parent_id: "northstar",
+      spatial_layout: {
+        x: 295,
+        y: 240,
+        z: 0,
+        radius: 43,
+      },
+      actions: [
+        {
+          id: "review-change",
+          label: "Review change",
+          intent: "OPEN_ARTIFACT",
+          consequential: false,
+        }
+      ],
+      status: "FAILED",
+      x: {
+        tone: "critical",
+        presentation: "facet",
+        artifacts: [
+          {
+            ref: "evi-diff-491",
+            kind: "code_diff",
+            title: "PR #491 · Add secondary coverage guard",
+            boundObject: "ns-secondary",
+            currentLevel: "minimal",
+            mediaType: "text/x-diff",
+            sourceProvenance: "sxr:cas://evi-diff-491",
+          }, {
+            ref: "evi-coverage-trace",
+            kind: "test_report",
+            title: "Reality trace: secondary coverage",
+            boundObject: "ns-secondary",
+            currentLevel: "minimal",
+            mediaType: "application/json",
+            sourceProvenance: "sxr:cas://evi-coverage-trace",
+          }
+        ],
+        representations: {
+          causal: {
+            order: 4,
+            role: "missing",
+            label: "Missing Secondary Coverage",
+            explanation: "Eligibility validation skipped",
+            badge: "Critical condition",
+            tone: "critical",
+          },
+        },
+      },
+    }, {
+      id: "ns-assumption",
+      kind: "work_item",
+      name: "Implementation Assumption",
+      explanation: "Secondary coverage sufficient",
+      badge: "In code / config",
+      salience: 0.45,
+      parent_id: "ns-impl",
+      actions: [],
+      status: "IN_PROGRESS",
+      x: {
+        tone: "progress",
+        presentation: "item",
+        artifacts: [
+          {
+            ref: "evi-assumption",
+            kind: "document",
+            title: "Initial assumption: primary-only scope",
+            boundObject: "ns-assumption",
+            currentLevel: "minimal",
+            mediaType: "text/markdown",
+            sourceProvenance: "sxr:cas://evi-assumption",
+          }
+        ],
+        representations: {
+          causal: {
+            order: 2,
+            role: "assumption",
+            label: "Implementation Assumption",
+            explanation: "Secondary coverage sufficient",
+          },
+        },
+      },
+    }, {
+      id: "ns-claims-api",
+      kind: "work_item",
+      name: "Claims API",
+      explanation: "Verified",
+      badge: "Verified",
+      salience: 0.3,
+      parent_id: "ns-impl",
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "item",
+      },
+    }, {
+      id: "ns-session",
+      kind: "work_item",
+      name: "Session Migration",
+      explanation: "Complete",
+      badge: "Complete",
+      salience: 0.25,
+      parent_id: "ns-impl",
+      actions: [],
+      status: "COMPLETED",
+      x: {
+        tone: "ok",
+        presentation: "item",
+      },
+    }, {
+      id: "ns-record",
+      kind: "work_item",
+      name: "Customer Record",
+      explanation: "No secondary coverage",
+      badge: "Actual data",
+      salience: 0.45,
+      parent_id: "ns-evidence",
+      actions: [],
+      status: "ACTIVE",
+      x: {
+        tone: "hypothesis",
+        presentation: "evidence_record",
+        artifacts: [
+          {
+            ref: "evi-record",
+            kind: "decision_record",
+            title: "Customer record EHR-77392",
+            boundObject: "ns-record",
+            currentLevel: "minimal",
+            mediaType: "text/markdown",
+            sourceProvenance: "sxr:cas://evi-record",
+          }
+        ],
+        representations: {
+          causal: {
+            order: 3,
+            role: "condition",
+          },
+        },
+      },
+    }, {
+      id: "ns-interview",
+      kind: "work_item",
+      name: "Interview",
+      explanation: "Clinical ops lead",
+      badge: "Quoted",
+      salience: 0.25,
+      parent_id: "ns-evidence",
+      actions: [],
+      status: "WAITING",
+      x: {
+        tone: "muted",
+        presentation: "evidence_record",
+      },
+    }, {
+      id: "ns-observation",
+      kind: "work_item",
+      name: "Observation",
+      explanation: "Front desk intake",
+      badge: "Noted",
+      salience: 0.25,
+      parent_id: "ns-evidence",
+      actions: [],
+      status: "WAITING",
+      x: {
+        tone: "muted",
+        presentation: "evidence_record",
+      },
+    }, {
+      id: "ns-pr491",
+      kind: "work_item",
+      name: "PR #491",
+      explanation: "Coverage guard",
+      badge: "Review",
+      salience: 0.6,
+      parent_id: "ns-secondary",
+      actions: [
+        {
+          id: "review-change",
+          label: "Review change",
+          intent: "OPEN_ARTIFACT",
+          consequential: false,
+          variant: "SECONDARY",
+        }
+      ],
+      status: "ACTION_REQUIRED",
+      x: {
+        tone: "attention",
+        presentation: "item",
+        artifacts: [
+          {
+            ref: "evi-diff-491",
+            kind: "code_diff",
+            title: "PR #491 · Add secondary coverage guard",
+            boundObject: "ns-pr491",
+            currentLevel: "minimal",
+            mediaType: "text/x-diff",
+            sourceProvenance: "sxr:cas://evi-diff-491",
+          }
+        ],
+      },
+    }, {
+      id: "ns-failure",
+      kind: "work_item",
+      name: "Observed Failure",
+      explanation: "Claim rejected",
+      badge: "Actual outcome",
+      salience: 0.7,
+      parent_id: "ns-release",
+      actions: [],
+      status: "FAILED",
+      x: {
+        tone: "critical",
+        presentation: "execution_trace",
+        representations: {
+          causal: {
+            order: 5,
+            role: "observed",
+          },
+        },
+        artifacts: [
+          {
+            ref: "evi-coverage-trace",
+            kind: "test_report",
+            title: "Reality trace: secondary coverage",
+            boundObject: "ns-failure",
+            currentLevel: "minimal",
+            mediaType: "application/json",
+            sourceProvenance: "sxr:cas://evi-coverage-trace",
+          }
+        ],
+      },
+    }
+  ],
+  x: {
+    label: undefined,
+    relationships: [
+      {
+        id: "rel-assumes",
+        from: "ns-workflow",
+        to: "ns-assumption",
+        kind: "depends-on",
+        label: "Assumes",
+      }, {
+        id: "rel-leads",
+        from: "ns-assumption",
+        to: "ns-record",
+        kind: "produces",
+        label: "Leads to",
+      }, {
+        id: "rel-triggers",
+        from: "ns-record",
+        to: "ns-secondary",
+        kind: "produces",
+        label: "Triggers",
+      }, {
+        id: "rel-results",
+        from: "ns-secondary",
+        to: "ns-failure",
+        kind: "produces",
+        label: "Results in",
+      }, {
+        id: "rel-evidence-record",
+        from: "ns-evidence",
+        to: "ns-record",
+        kind: "attests",
+      }, {
+        id: "rel-impl-secondary",
+        from: "ns-impl",
+        to: "ns-secondary",
+        kind: "depends-on",
+      }, {
+        id: "rel-release-impl",
+        from: "ns-release",
+        to: "ns-impl",
+        kind: "depends-on",
+      }
+    ],
+  },
+  perspective: {
+    actor_id: "projection",
+    role: "developer",
+  },
+}
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:409:79)
+(fail) LocalContractAdapter cursor validation and bounded delivery > allocates the ceiling once, then rejects a snapshot without changing history or frontier [4.08ms]
+432 |       const subject = adapter as unknown as {
+433 |         progress(caseId: string, runId: string, phase: 'builder', percent: number, log: string): void
+434 |       }
+435 |       subject.progress(NORTHSTAR_CASE_ID, 'run-exhausted', 'builder', 0.5, 'fixture')
+436 |       timers.runAll()
+437 |       expect(errors).toHaveLength(1)
+                           ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 1
+Received length: 0
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:437:22)
+(fail) LocalContractAdapter cursor validation and bounded delivery > progress exhaustion reports once without publishing an ordinary event [1.70ms]
+478 |       const { internals, record } = seedCursorForBoundary(adapter, '1.9999999999')
+479 |       const snapshotsBefore = structuredClone(record.snaps)
+480 |       const pointsBefore = structuredClone(record.points)
+481 |       const settlementTimer = executionTimers.reduce((latest, timer) => timer.delay >= latest.delay ? timer : latest)
+482 |       expect(() => timers.runHandle(settlementTimer.handle)).not.toThrow()
+483 |       expect(errors).toHaveLength(1)
+                           ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 1
+Received length: 0
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:483:22)
+(fail) LocalContractAdapter cursor validation and bounded delivery > settlement timer exhaustion reports once without a partial snapshot or side event [4.58ms]
+498 |       const events: StreamEvent[] = []
+499 |       const errors: Error[] = []
+500 |       const stop = subscribe(adapter, undefined, (event) => events.push(event), (error) => errors.push(error))
+501 |       const queued = appendFixture(adapter, 'queued before unsubscribe')
+502 |       stop()
+503 |       expect(timers.hasPending()).toBe(false)
+                                        ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts:503:35)
+(fail) LocalContractAdapter cursor validation and bounded delivery > unsubscription clears the pending drain and a timer scheduling failure is reported once after commit [1.74ms]
+
+ 2 pass
+ 12 fail
+ 38 expect() calls
+Ran 14 tests across 1 file. [204.00ms]

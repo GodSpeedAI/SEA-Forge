@@ -1,0 +1,5 @@
+MemAvailable:    3867452 kB
+SwapFree:        7380828 kB
+narrow check exit=0 wall_s=137
+MemAvailable:    3809564 kB
+SwapFree:        7381544 kB

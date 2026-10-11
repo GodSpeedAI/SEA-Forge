@@ -1,0 +1,428 @@
+# DEPRECATED: Current status has migrated to .agents/CURRENT_STATUS.yaml (append-only history)
+# and .agents/CURRENT_STATUS.md (human mirror).
+# Historical pre-migration status archived to: .agents/status-archive/casework-live-wiring-20261008-pre-migration.yml
+schema: agent.current_status
+schema_version: '1.0'
+
+metadata:
+  plan_id: casework-live-wiring-production
+  plan_version: 0.2.1
+  plan_path: .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml
+  brief_path: .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md
+  brief_note: Read Section 0 (Verification Errata, decisions, runner change) FIRST. Where the body disagrees with Section 0, Section 0 is correct (but see correction C-1 in the decision log for one §0 fact that was wrong).
+  spec_path: .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+  initialized: true
+  last_updated: '2026-10-08'
+  updated_by: >-
+    Root orchestration with Luna builders and independent critics. Commit e33bf30
+    contains the verified pure observer projection, approved C2 spec/ADR and exact
+    scanner remedy. Normal commit hooks passed; canonical Go, focused race,
+    corrected full-module race, Graft and context gates passed with root comparison
+    of actual captures. Private observer limits are explicitly operator approved.
+    Exact e33bf30 publication passed normal hooks and remote SHA is verified.
+    The earlier approval rejection is resolved. Lease bookkeeping is TDD source-only;
+    Root rejected initial lease TDD for two static compile defects; a fresh
+    builder is fixing only those test lines before independent review/RED.
+    C2 reader proposal repair is doc-only. T09 remains partial.
+  previous_status:
+    archived_to: .agents/status-archive/current_status.godspeed-bounded-judgment.2026-09-19.yml
+    note: >-
+      The godspeed-bounded-judgment plan's status was archived unchanged. .agents/CURRENT_STATUS.md
+      is the historical narrative; the machine state is THIS file.
+
+execution:
+  last_settled_task: T08
+  settled_tasks: [T00, T01, T02, T03, T04, T05, T06, T07, T08]
+  in_flight_task: T09
+  ready_tasks: []
+  confirmation_debt: >-
+    T07 and T08 independently confirmed and settled 2026-09-30; earlier platform-outage
+    confirmation debt is closed. T09 historical implementation at3e2404f has live wiring
+    omissions and awaits completion plus independent confirmation; T10-T12 await implementation.
+  blocked_tasks: [T10, T11, T12, T13]
+  t02_state: >-
+    SETTLED 2026-09-24 (session 3): independent critic APPROVED (T02/confirmation.md) — all prereg
+    refusals reproduced as fresh-cell runtime attacks with hash-proven no-writes, positive
+    dual-principal flows verified, wire additivity confirmed, all gates re-run green. Critic
+    findings handled: F-7 ADR revocation-timing overclaim corrected in the ADR (true boundary is
+    commit_plan/restart); F-8 OPEN_QUESTIONS entry added (ActorRole::Gateway variant); F-9
+    OBSERVED_DEBT entry (pre-existing partial case dir on mid-handler failure, T11).
+  plan_blocked: false
+  plan_blocker: null
+  external_blockers: []
+  task_detail:
+    T09:
+      units: >-
+        LATEST2026-10-06 private hydrationcap prerequisite ROOTaccepted source3dfa2993/
+        fixture0e3b1774, independent sourceb7ff7b81/runtimec73546f8, fourgatesjoined0
+        72410/29681/42743/54587, root12GREENarchivepairs exact and2hashes exact.
+        Graft86179 joined0:691cards/7601nodes/14667edges. No managercallsite/liveSSE
+        approval, trustedwellformedDTO callerprecondition explicit. Normalunit
+        checkpoint/push next. Sourceoldrejections/actualRED and capture recovery
+        immutable retained; CW18processdebt recorded, reconstruction not original.
+        IN FLIGHT. Canonical authored contract/spec/schema/test/golden unit independently
+        APPROVED and locally checkpointed b608771. Fresh Bun11/0/963 and explicit strict tsc0;
+        root verified source/log identity. Cap focused8/full SFWP race independently pass.
+        Mirror repair independently APPROVED after two immutable rejections and fresh builders.
+        All pre-Ask Go gates PASS; UI263/0/1427 plus production build PASS. Root verified16
+        manifest hashes and36 raw /tmp copies. ROOT compiler token after critic release.
+        Cap/mirror checkpoint b4092bd complete. Ask fixture source review REJECTED missing
+        numeric/boolean roots; fresh t09_ask_scalar_fixture_repair adds only those cases.
+        Fresh repair frozen SHA90612d084a10fce6ec4871faae563790c7de5267d2ef60369bc1fc23bd538cbe.
+        Ask fixture independent APPROVE: server RED reaches absent route405; transportRED
+        EOF/overflow each resend twice. Root matched4source+2loghashes. ROOT owns compiler token.
+        Ask runtime builder froze source/new adapter/live tests without compiling. Existing fixture
+        test hashes unchanged. Root verified exact sandbox original log/exit copies after archive repair.
+        Runtime first verification REJECTED: production askBody collides with frozen test helper,
+        so no tests ran. Secondary source review found raw UTF8 normalization and stale correlation
+        comments. Root verified13source+3artifacthashes and exact original failure copies;
+        Fresh t09_ask_fixture_independent_critic froze PhaseA; primary mirror critic owns token
+        prepares repair in two phases (compile rename/comments/new raw-byte test, observed RED,
+        then raw UTF8 guard). Focused raw UTF8 expectedRED approved; root verified exact three
+        log/exit/preflight originals. PhaseB guard/documentation repair frozen, all three tests
+        unchanged. Renamed live fixture TestLiveAskLedger SHA b97556553bf65a1105e0bfaaccb57e0f421b004141c3a73f782a3cebb0c5478a
+        changes only the identifier. Independent live proof passes twice under original TMPDIR;
+        observed socket path84bytes under95byte kernel limit. Fresh canonical Go and full-module
+        race/count1/parallel1 gates pass; compiler token released. Final evidence archive/review
+        write initially rejected by automatic approval review usage limit; same native patch
+        retry succeeded. ask-runtime-independent-final-confirmation.md APPROVES bounded Ask
+        runtime only. Root matched15source hashes and13new exact raw copies/full hashes;
+        report SHA728a560e3c6a9ced11184dcb2f46695a5f1b3aee1c72909c60c7d9e89d8cde5f.
+        Graft refresh PASS674cards/7349nodes/13995edges; context-check PASS. Ask checkpoint
+        0b55022 complete. Run-child fixture builder owns only new projection/run_children_test.go;
+        fixture frozen SHA68511dc5618c9609e27ae501794265d8fd4d5b18d62466e2465dd51b3507269d;
+        primary mirror critic REJECTS missing exact-ID multiplicity proof; immutable rejection
+        run-children-fixture-independent-reject.md SHAd549a42f502dd0468ca23b8428654df57ef8d43c863e928d89a1d8ec36bc5979.
+        Fresh t09_run_children_fixture_builder repaired only matrix multiplicity; frozen
+        SHA4ddb2445a7ff6726c3b6fd93832ac4122b53da4d26e5b54180f9a1cafb802741.
+        Primary mirror critic source/expected assertionRED APPROVE; token released. Root
+        matched fixture/reviewhashes and4exact log/exit copies, archivedpreflighthashes only
+        (no originalpreflightfiles). Runtime phaseA declarations/scopedtests released under
+        run-children-runtime-test-phases.md; now frozen5files and purefixture unchanged.
+        Primary mirror critic source REJECT: no predial proof and scopedfake discards requested
+        CaseRef. Immutable phaseA rejection SHAc7590c52ff30ce8fdc829c55fac3755fceff5755a93d95e18e954401101d910d.
+        Fresh t09_run_children_fixture_builder repairs only2scopedtests with synchronous Dial
+        counter and exactcase assertion; root authorized same2newfixture whitespace-only
+        formatting before rereview. Final scoped_runsSHA0013b05f69def466e8434182642b4543e68c5b4ad7fd1a3f3f14608337fcc2b5;
+        scoped_liveSHA361fc0328217bf78d4ac3d7c92dad6f8641e931225e3c78cd58685a7bb4a7800.
+        Other3PhaseAfiles/purefixture unchanged. Independent phaseA source/compiling assertion
+        RED approved; root matched6sourceidentities and6exact rawcopies/fullhashes.
+        Token released. Critic overwrote2initialincorrectarchivecopies; actual/tmpunchanged,
+        currentcopiesexact. Sandbox incorrectcopy recoveredexact6cff61f to newlabelledpath;
+        hostincorrectcopy and deletedrecoverytranscription remainunrecovered, disclosederrata.
+        PhaseB runtime frozen after innerGREEN race04; independent semanticREJECT8404a0f:
+        false unknown-case fixture/lateunavailable lookup and blanketRefusalnormalization.
+        Fresh semantic Phase1 TWOtests frozen57bfc686/a9e0deb0; all production unchanged.
+        Root matched2testidentities, original2snapshots and rejected6filediffb0a6b08b.
+        Evidence-only builder archived13innerattempt/preflight/exit files; root bytechecked
+        all13 originals/fullhashes. Manifest93d8a275 records wrongcwd, failures and invalidGREEN.
+        Independent regressionRED APPROVED2d234225; both focusedracecommands compiled and
+        exposed missing-case extra reads/wrong kind and3flattenedrefusalclasses. Root matched
+        6exactrawpairs+10sourcehashes. Fresh Phase2 source frozenlive0f17e374/authoritya9c49702;
+        only2authorizedfiles changed, tests frozen. FocusedGREEN PASS but independent
+        Phase2 REJECTf35d91ce: new livefixture internalprojection->livestack->projection
+        importcycle prevents testbody/kernelproof. Root matched6rawpairs/11sourcehashes.
+        Fresh Luna livefixture frozenffc979ee; externalpackage/helperqualification only.
+        Root exactinverse restores8e485original and helperbodyexact renamed. Firstsnapshot
+        failed2c982 retained; NEWcorrectedsnapshot exact8e485, captureerratumrecordsdiagnosticarg.
+        Primary mirror critic reports repeatfocusedrace/twoactualcasekernelproof/canonical
+        justcasework-go-check/fullmodulerace ALLPASS; post-PASSrelaycleanupwarning preserved.
+        Final boundedunit4 APPROVED8b1432ff with clarifications87e90d10. Root matched
+        11sourcehashes/17exactrawpairs; Graft refreshed679cards/7398nodes/14142edges.
+        Token ROOT. ContextcheckPASS, unit4checkpoint dc82736 complete. FullT09pendingunits5-8.
+        Whole-focus assertion corrected before any verdict; current checks preserve parent rank
+        while allowing actual child IDs. Full T09 remains pending.
+        Run-observation authority/trace/session source facts recorded separately; kernel
+        Inspect invariance does not approve session sharing. Unit6 read-only fixture anchors/
+        cache/history/view requirements recorded; no UI implementation/test write release.
+        Unit5 cancellation source facts: manualctxcancel does not interrupt in-flight socket
+        read, Client.Close onlyidlepool; cancel/drain design mustresolve beforepollerclaims.
+        Root cancellation testfirstproposal held; independent sourcecritique found missing
+        manualAsk/mutationcoverage and fakeEOFproof caveat. NEWsupplement requires both
+        and exactcallbackretirement/peeridentity; repeatcritique before anyGo write release.
+        Run-observation runtime implementation still pending.
+      confirmation: .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/canonical-final-independent-confirmation.md
+      confirmation_note: Bounded units1-4 independently approved; no full T09 approval or settlement.
+      settle_when: All remaining T09 units, required global gates and independent runtime confirmation pass.
+    T08:
+      units: >-
+        SETTLED 2026-09-30. Independent Luna critic approved production HTTP-only builds,
+        same shared local/live suite, typed stale refusal, immutable history and actual native
+        EventSource retention-one/two resync/retry/disposal. Stronger complete stored snapshot
+        comparison passes; fresh current projection requires exact cursor and stable fields,
+        with its actual render timestamp validated separately. Native race PASS35.679s;
+        canonical UI PASS258/0/1271assertions; all three canonical production variants pass.
+        Post-Store canonical Go/vet and full race freshly rerun and pass. Unchanged Rust and
+        local ladder evidence reused with explicit limits. All material harness differences,
+        failed runs and evidence corrections recorded; source/log hashes independently checked.
+      confirmation: .agents/evidence/casework-live-wiring/T08/resume-2026-09-30/independent-final-confirmation.md
+      confirmation_note: >-
+        APPROVE with append-only independent-final-confirmation-go-gates-errata.md, which
+        supplies correct fresh post-Store Go gates and source identity. Root verified all
+        13 main manifest entries, both record hashes and exact copied Go log bytes.
+      settle_when: satisfied — independent confirmation, corrected gate evidence and durable logs exist.
+    T07:
+      units: >-
+        SETTLED 2026-09-30. Independent Luna critic approved current source: immutable
+        session/history/SSE projection, retained cursor publication before waiter release,
+        and current session perspective verification before intent replay/dispatch.
+        Independent red reproduced four missing intent refusals; focused/global Go race,
+        vet and fresh build pass. Real cached receipt revoked403, restored byte-identical200,
+        unchanged trajectory; production dev auth refused exit2 on free port44281.
+        Inherited unchanged Rust/UI global gates remain green, with exact evidence references
+        and limitations recorded. Native browser cookie/reconnect proof belongs to T08.
+      confirmation: .agents/evidence/casework-live-wiring/T07/resume-2026-09-30/authorization-green/independent-verification-record.md
+      confirmation_note: >-
+        APPROVE full T07, independent critic t07_live_confirmation. Root verified source
+        hashes and byte-identical evidence copies. reference-errata.md corrects inherited
+        UI evidence path. Missing earlier cursor stdout and retrieval-scope deviation are
+        disclosed; fresh authorization logs and real-handler replay proof are retained.
+      settle_when: satisfied — independent confirmation and durable evidence exist.
+    T04:
+      units: >-
+        SETTLED 2026-09-24 (session 2). A: DONE, confirmed (1b73724). B: DONE,
+        committed 9c153b2, orchestrator re-verified + critic reviewed (no
+        findings). C: DONE — opt-in supervisor (SupervisorConfig fail-closed
+        default off, slot+run-pool bounded concurrency, same case_ops/advance
+        path, sandbox-class selection), committed this session; gates green
+        (3-crate 57 ok/0 fail, mutations 10/10, supervisor 4/4, config 15,
+        fmt + no-async-kernel EXIT 0); teeth pass incl. TDD baseline.
+      confirmation: .agents/evidence/casework-live-wiring/T04/confirmation-independent.md
+      confirmation_note: >-
+        OPERATIVE verdict (session-3 independent critic, 2026-09-24): APPROVE for units B+C —
+        gates EXIT=0 first attempt, teeth re-run, fresh-cell runtime attack passed, zero code
+        defects. Unit A retains its own confirmation (T04A/confirmation.md). The builder-written
+        T04/confirmation.md is a superseded historical artifact (session-2 self-reconciled a
+        critic REJECT; see decision log S2-1). Downstream flags in decision log D-2-impl-notes:
+        command frames not on the event bus (SEAM-5: T06/T09 need a bridge or run-trace read);
+        legacy submit/commit path has no per-append frames; artifact_get bound 1 MiB.
+      settle_when: satisfied — independent confirmation exists.
+    T02:
+      prereg: .agents/evidence/casework-live-wiring/prereg/T02.yaml # written 2026-09-23, BEFORE implementation; read it first
+      note: >-
+        D-2 gateway principal. Write the ADR first
+        (.agents/reports/casework-live-wiring/adr-identity-delegation.md: threat model, revocation,
+        audit fields, amends identity.rs:14-27). server.yaml gateway section default NONE
+        (fail-closed). Thread the effective actor through EVERY protected verb (the T04B verbs
+        included). Both principals ledgered; SoD compares end users; identity.get reports the
+        effective actor. Gates: cargo test -p sea-forge-server identity; cargo test -p
+        sea-forge-server --test '*delegat*'. Teeth per prereg.
+
+operator_decisions:
+  D-1: "APPROVED 2026-09-23. The spec-04 CognitiveWorldSnapshot (interface-contracts/typescript/types.ts) is the single UI<->gateway contract."
+  D-2: "APPROVED 2026-09-23. A gateway principal acts on_behalf_of allowlisted, gateway-authenticated end users. Both principals are ledgered. Needs an ADR."
+  D-3: "APPROVED 2026-09-23. An explicit case.advance/item.execute verb plus an opt-in server supervisor, both calling CaseRunner in-process."
+  dependencies: "APPROVED: a Go OIDC library and golang.org/x/crypto/argon2. REJECTED: Playwright; use agent-browser. Anything else is ask-first."
+  T09-contract: >-
+    APPROVED 2026-09-30: operator replied "i approve" after proposed T09 additive contract,
+    client response cap, bounded hydration and UI cache behavior were explained. Scope includes
+    execution observations without invented progress and the protected disclosure-complete Ask
+    endpoint. Independent proposal architecture review approved round four; implementation
+    verification remains required after T07/T08 settlement. Existing
+    kernel verbs/identity model/dependency set stay authoritative; no deployment authorization.
+  git: >-
+    Updated operator authorization 2026-10-05: commit and push often at meaningful verified
+    changes; fix commit/push problems. Preserve operator changes and staged files. Explicit
+    task paths only. Fetch, pull, rebase, reset, merge, clean and force operations remain forbidden.
+
+next_action:
+  task: T09
+  action: >-
+    Keep T09 active. Checkpoint e33bf30 was pushed with normal hooks and verified
+    on GodSpeedAI/SEA-Forge branch casework/live-wiring-resume-2026-10-05.
+    The private initial lease bookkeeping builder may change only manager fields
+    and tests under its full assignment; require independent source review and
+    actual focused RED with lossless six-file archives/root comparisons before
+    a fresh implementation grant. Then independently verify the bounded unit,
+    commit at the next milestone, and continue Next capture/commit and wake/drain.
+    Separately repair/review the C2 bounded-reader proposal against root
+    clarification and frontier addendum. Obtain targeted signer/new token/input
+    limits/verified-empty wire approval and update spec/ADR before reader code.
+    Complete exhaustive writer participation audit before migration readiness.
+    Serialize every compiler/heavy gate with RAM/swap checks; preserve unrelated
+    Jolli work, actual evidence, existing authority and all required global gates.
+agent_protocol:
+  read_order:
+    - .agents/current_status.yml (this file)
+    - .agents/plans/2026-09-23-casework-live-wiring-production.plan.yaml (whole file; the operating_contract and guardrails are binding)
+    - .agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md Section 0 only (read the body only when a task's hot_context points there)
+    - .agents/reports/casework-live-wiring/decision-log.yaml (corrections C-1, baseline B-1, incident E-1)
+    - repository AGENTS.md / CLAUDE.md files at each boundary you touch
+  loop: >-
+    Repeat until T12 is settled. (1) Pick the next ready task: the lowest-numbered task whose
+    depends_on are all settled (execution.task_detail carries per-task notes). (2) Write the
+    preregistration when the task requires one. (3) Implement the task's steps. (4) Run the task
+    gate and every global gate that existed before the task; the recorded baseline floor applies
+    (see warnings: ladder J1 red, Go coordinator flake). Save logs under
+    .agents/evidence/casework-live-wiring/<Txx>/. (5) Run the task's teeth attacks and record the
+    results. (6) confirmation=independent tasks need a separate subagent critic that did not build
+    the task; it re-runs gates and teeth and writes confirmation.md. (7) Update this file:
+    settled_tasks, ready_tasks, next_action and the handoff block. (8) Commit (see git). Then
+    continue without waiting for the operator. T13 is a post-production increment: before starting
+    it, split it into tasks in the plan and stop for operator review.
+  delegation: >-
+    OPERATOR STANDING INSTRUCTION (2026-09-23 session 1): aggressively delegate implementation and
+    independent verification. For each meaningful unit: a builder subagent with a bounded,
+    self-contained spec; then an independent critic subagent given the builder's ORIGINAL
+    instructions plus the resulting implementation. The critic must verify correctness and
+    completeness, identify defects/omissions, explain every material deviation, and approve ONLY
+    with evidence (code, diffs, tests, commands, runtime behavior). No evidence -> no approval. On
+    rejection: fresh builder addresses findings, repeat until evidence-backed approval. The
+    orchestrator retains semantics, architecture, decomposition, integration, final decisions.
+    Sessions 1 pattern that worked: run builders in background in parallel only when file sets are
+    disjoint; commit each confirmed unit with explicit-path staging; critics re-run everything
+    themselves. CAVEAT: subagent usage limits killed agents twice on 2026-09-24 — if a spawn
+    fails with a usage-limit error, either wait for the reset time in the error or continue
+    inline for non-settlement work, but NEVER mark a task settled on self-verification alone when
+    its proof level or confirmation requires independence.
+  git:
+    branch: "casework/live-wiring (created 2026-09-23 from 44ffadd). Push authorized 2026-10-05; never fetch/pull/rebase/reset/merge/clean or force push."
+    commits: "One or more commits per settled task (interim per-unit commits allowed with explicit pending-confirmation labeling, as 9c153b2 does). Stage only files this plan's tasks changed, by explicit path. Never `git add -A` or `git add .`."
+    preserve: "The 109-entry dirty baseline was committed by the operator side as 44ffadd before session 1; the tree has been clean since. Do not revert or rewrite any of this branch's commits."
+  context_hygiene: >-
+    This file must always be enough for a fresh agent to resume after /clear or compaction. Update
+    handoff after every task. `just context-check` must pass before any commit that changes
+    project files (it requires a CURRENT_STATUS.md touch whenever project files change — append a
+    dated note there and re-run it).
+  stop_and_ask_when:
+    - "A task's redesign_trigger fires, or the plan's correction_protocol applies (a report Section 0 fact proves wrong). Record in decision log + report Section 0 + handoff.warnings, surface to the operator, and only continue unilaterally under the operator's standing best-judgment instruction if the stop goes unanswered (precedent: correction C-1, option A)."
+    - "A new dependency is needed that is not pre-approved above."
+    - "A change to the security or identity model goes beyond the D-2 ADR scope."
+    - "Any unauthorized destructive or outward-facing action (publish, deleting user data, touching the gauntlet or sxr repos). Meaningful branch pushes are authorized 2026-10-05."
+    - "A global gate that was green at the recorded baseline floor turns red and cannot be fixed within the task's scope."
+
+baseline_warnings:
+  - "SUPERSEDED by B-1 (decision log): the archived pre-existing cargo reds did NOT reproduce; cargo four-crate gate was GREEN at baseline 44ffadd."
+  - "B-1 (binding): local e2e ladder (bun e2e/run.ts) is deterministically RED at baseline — J1 'Focus substrate' fails at step 'focus again: identity and state survive'; J2+ dependency-blocked; stale 11/11 evidence was committed in 44ffadd. Recorded in OBSERVED_DEBT; T09 owns restoring it. Treat as the floor, not a fresh regression; rerun only when UI runtime code changes."
+  - "Pre-existing Go flake (OBSERVED_DEBT): internal/coordinator TestIdempotencyReplayAndConflict fails ~1/5 in isolation; if go test -race ./... goes red on that suite alone, rerun in isolation before calling a regression."
+  - "Global gates (plan verification.global_gates): cargo four-crate test; cd apps/godspeed-casework-go && go vet ./... && go test -race ./...; cd apps/godspeed-cognitive-ui && bun run typecheck && bun test; bun e2e/run.ts (baseline floor above); just casework-e2e-live (exists from T10 only). Go gates need -count=1 for golden-file tests."
+
+handoff:
+  session: 4
+  latest_resume: >-
+    HEAD e33bf30ee33d882c29595c31190dc899efbadc2a, branch casework/live-wiring.
+    Normal commit hooks passed and all six checkpoint02 captures were root
+    compared. Exact operator approval resolved the initial review rejection;
+    normal push04 passed CI1110 Rust tests/0 failures/4 ignored and525 history
+    scan/no leaks. Root six-file push comparison and exact remote verification
+    confirm e33bf30. Initial source builder resumed only after both comparisons.
+    Pure projection source5241e656/tests48c6d28e approved24c7f2c5; focused race,
+    canonical Go02 and corrected fullrace02 pass, root six-file comparison
+    d1a6fce0. Fullrace01 wrong exit remains rejected with immutable erratum.
+    Private16 cohorts/128 attachments/1MiB policy separately approved; CW36 closed.
+    Initial lease bookkeeping TDD was root-rejected for nonconstant const and
+    unused local; fresh two-line repair is active before independent source
+    review/actual RED. No implementation/compiler grant yet. C2 spec/ADR accepted4f24a5a2;
+    bounded-reader options HOLD b3a832dc, fresh corrected doc proposal active.
+    Writer inventory correction db4874f2 accepted only as bounded documentation,
+    complete participation/runtime proof remain open. T00-T08 settled; T09 partial;
+    T10-T12 unstarted. Follow agent_protocol and stop for T13 split/operator review.
+  state_summary: >-
+    LATEST2026-10-08 canonical andfullmodule Go race GREEN10tested/5no-tests
+    packages; root12actualarchivepairs and11sources exact. Graft soleheavy
+    recon; finalboundedreview/checkpoint then private Next. C2publicheld.
+    LATEST Oct08: focused race retry02 GREEN53/53top+22/22nested, root six
+    actual/archive comparisons and eleven identities exact. Canonical Go failed
+    formatting before vet/tests; formatting-only Luna builder, independent
+    review then canonical/fullmodule race. Root sole compiler idle. Manager is
+    private/unwired; Next/live integration pending and public C2 held.
+    Historical checkpoint evidence follows.
+    Oct07: T09 remains partial. Renderer checkpoint74f86f0 committed and pushed
+    with normal hooks; exact remote SHA verified. CI125 summaries/1110 passed/
+    zero failed/4 ignored. All3 actual push captures archived cmp0; full237536
+    byte output SHA98d6504f. Eleven foreign staged blobs unchanged after push.
+    Renderer focused13/0, typecheck/build/canonical299/0/1674 accepted; root
+    verified18 actual capture pairs and9 emitted JS hashes. Helper2157583f
+    exact gofmt-only, independent source/race PASS and root3capturecmp0.
+    Managerab9f1/fixtureaf remains unwired. Core combined encoder design retained;
+    encoder3dba/fixturecf501 independently APPROVED focused GREEN7top/3nested,
+    formatting clean. Root eight actual/archive cmp0; inaccurate oldoutput
+    excluded, exact809720a6 preserved; duplicate native archive write recordedCW18.
+    Key extractiona6f0114 independently sourceREADY; manager onlydeclmove nowab9f1.
+    Exact six-file closure copied/independently READY in isolatedHEAD74 worktree.
+    Canonical firstattempt stopped at policy formatting, vet/tests notrun. Four
+    policy alignmenthunks repaired e156 bothcopies; exactformatter bytes/preimage
+    and8captures independently READY, onepreflight-exit archive explicitlylate.
+    Sandboxcanonical socketEPERM preserved; normal listenerpermission retry
+    canonical/fullmodule-race bothPASS. Root8actualcapturescmp0 and6sourcepairs
+    exact; result215524db, root boundedapproval. GraftPASS705/7801/15250,
+    all3actualcapturescmp0. Normal scopedcommit617 passed, push01 failed. Lifecyclecore
+    approved, supplement4752 independently APPROVED a3b591. Luna PhaseA bounded
+    lifecycle PhaseA frozen managerf932/workerf90/fixture3b0; sourcecriticism
+    undefinedcaller compileblock/forbiddencancelspy, noRED yet. Publicheld;
+    T09 partial. Primitivecheckpoint617dac3 committed normalhooks, all3captures
+    rootcmp0 and11foreignindex unchanged. Normalpush01 failed security scanner
+    onefinding; all3actualcapturescmp0. Diagnosticfinished one generic-api-key
+    at evidencepolicyformat:83, proved exact committedkeyfileSHA reference.
+    Root4diagarchivescmp0; CPwriterdeviation and CR-normalized badcopies excluded.
+    ROOTsoleheavy; onefingerprint+doc repair independently APPROVED3ef3,
+    canonicalsecurityPASS/noleaks516commits/84.29MB, root3actualcapturescmp0;
+    securitycheckpoint7c65be7 committed normalhooks/root3capturescmp0,
+    normalpush02PASS/remote7c65be7 exact, CI125summaries/1110pass/0fail/4ignored,
+    all3actualcapturescmp0/output237347B SHA544ba602, foreign11index unchanged;
+    no hook/gate bypass. CW30specificfindingclosed/residualmetadataopen.
+    FocusedPhaseA attemptcompileFAILED unusedcaller:323, no testsran;
+    result54b5/root4actualarchivesexact. Reconrepair7d changed WRONGheld-read
+    binding notGlobalStop: rootdecoded4ff2preimage/diffcaughtscope+false resultclaim.
+    Rejected d59c; freshcorrectivefixturee63e sourceREADY0ec6. ActualREDretry02
+    compiledninecases/0pass/9expectedstubFAIL; rootfiveactualdecodedcapturescmp0,
+    boundedREDaccepted. Reverse-refclarification013d independentlyAPPROVED7a43:
+    eligibleforwardmap clearsatdetach, noneligible reverseownerretainsuntilJOIN;
+    allsurvivor/cancel/readdecisionsuseexactforwardmembership+notdraining.
+    Missing exactcreatorJOIN/listcancellation boundary nowDOCONLYcorrection;
+    leasecreatorDone/leaseDone+exactleasefinish proposed, criticbeforeTDDsource.
+    ROOTsoleheavy idle, otherssource-only; T09 remains partial/public held.
+  established_conventions:
+    - "Correction protocol precedent C-1: record + amend Section 0 + warn + surface; unanswered stop -> best-judgment continuation with explicit executor-decision labeling."
+    - "Interim commits per confirmed unit are acceptable; mark pending confirmations in the commit message (9c153b2 model)."
+    - "Evidence per task under .agents/evidence/casework-live-wiring/<Txx>/ with gates/, teeth/, confirmation.md."
+    - "Decision log .agents/reports/casework-live-wiring/decision-log.yaml holds D-1/2/3, C-1, B-1, E-1; append new corrections/baselines/incidents there."
+    - "justfile live recipes (T00): casework-cell-init (seeds identity/templates/policy per T03), casework-server-up/down, casework-live-go-up/down, casework-stack-down; fixture recipes casework-go-up/ui-up/demo-up are the PRIOR plan's and must stay untouched."
+    - "Workbench contracts: any server schema change requires `just workbench-contracts-generate` + commit + green `just workbench-contracts-gate` (the gate fails on untracked generated files by design — commit first, then it passes; see T04B evidence)."
+  changed_files:
+    - "committed 8ad72ac: justfile live recipes; configs/live-serve.json; decision log; plan v0.2.1; report §0.2 correction; target symlink deletion (E-1); T00 evidence"
+    - "committed 23e90b8: types.ts additive extension; interface-contracts/golden/; Go internal/contract; UI wireContract pins; contracts/ kebab dialect deleted; ADR adr-wire-contract.md; T01 evidence"
+    - "committed 1b73724: case_ops library; CLI thin callers; approval.decide in-process; run_cli deleted; T04A evidence"
+    - "committed b271a99: fixtures/cells/e2e (templates+policy); casework-cell-init seed; tests/case_templates_live.rs; T03 evidence"
+    - "committed 9c153b2: 7 SFWP verbs + identity classification + case_mutations event publishing + advance.rs + CLI task move + regenerated workbench contracts + sfwp_case_mutations tests + T04B evidence + T02 prereg"
+    - "committed this session (T04C): SupervisorConfig + supervisor.rs + AdvanceCaller/AdvanceScope::Supervisor + per-case key locks + sfwp_supervisor tests + T04C gates/teeth + T04/confirmation.md; T04 SETTLED"
+  decisions: [D-1, D-2, D-3, "dependencies", "agent-browser over Playwright", "C-1 option A (executor, unanswered stop)", "B-1 baseline floor incl. ladder red"]
+  warnings:
+    - "CURRENT Oct08 C-2: revision5 independent review465d8ac8 REJECTS exact-approval readiness because global ledger scan gaps cannot be inferred or isolated from per-case ordinal spacing. Root accepts rejection. New concrete revision and independent review precede exact operator approval; public implementation remains held. Older C-2 warnings below are historical."
+    - "C-2 correction: Section0 direct relay does not prove append order/restart history; exact ULID producer conflicts with cursor grammar/comparisons, and empty bootstrap is noncanonical. Decision log/report updated. Public correction held; V3 independently rejected, concrete reviewed V4 and exact operator approval required before affected implementation. Approved auth/trace prerequisites are checkpointed."
+    - "T09 contract redesign trigger recorded under decision-log redesign_reviews.T09-contract and report Section0.0; operator and independent architecture approved. Implement after T08 settles; independently verify implementation. Existing execution_trace child objects need no kind change."
+    - "Critic t04-critic returned procedural REJECT (C uncommitted at review; no T04/confirmation.md; its live cargo re-runs hit a 30s env timeout) with ZERO code findings; grounds closed in T04/confirmation.md, which stands as the settlement record. Report via team mailbox msg_00002+msg_00003."
+    - "Two subagent usage-limit windows on 2026-09-24 killed in-flight agents; check spawn health before relying on delegation (see agent_protocol.delegation caveat)."
+    - "C-1 resolution is an executor decision under an unanswered protocol stop, NOT operator approval; operator may still override the casework-live-* recipe naming cheaply."
+  evidence:
+    - .agents/evidence/casework-live-wiring/T00/ (baseline-summary.md, confirmation.md, gate-teeth/, c1-git-evidence.txt, baseline/)
+    - .agents/evidence/casework-live-wiring/T01/ (confirmation.md, gates/, teeth/)
+    - .agents/evidence/casework-live-wiring/T03/ (confirmation.md, gates/, teeth-cyclic-template.log)
+    - .agents/evidence/casework-live-wiring/T04A/ (confirmation.md, gates/, teeth/)
+    - .agents/evidence/casework-live-wiring/T04B/ (builder gates + orchestrator re-runs incl. true-exit gate1, contracts gate pre/post commit, teeth transcripts)
+    - .agents/evidence/casework-live-wiring/T04C/ (TDD baseline + post-impl pass + fresh 2026-09-24 session-2 re-runs: 3-crate, mutations, supervisor, config units, fmt, no-async-kernel)
+    - .agents/evidence/casework-live-wiring/T04/confirmation.md (settlement record: gates, teeth, diff review, critic reconciliation)
+    - .agents/evidence/casework-live-wiring/prereg/T02.yaml
+
+cep_world_migration:
+  branch: migration/cep-world-ref
+  base: casework/live-wiring@dc82736
+  note: Separate workstream; does not change the T09 state above.
+  ledger_path: .agents/reports/cep-world-migration/stage0-migration-map.md
+  stages:
+    stage_0: {status: settled, date: '2026-10-04', scope: docs-only recon and boundary matrix}
+    stage_1: {status: settled-with-exception, date: '2026-10-04', exception: legacy SEA branch migration/domainforge-0.18.2 committed (f0af88c) but unpushed, record: .agents/reports/cep-world-migration/stage1-settlement.md}
+    stage_2: {status: settled-at-domainforge, date: '2026-10-04', repo: DomainForge, branch: feat/world-ref, commit: a3a4157, blocker: DomainForge merge and release (expected 0.19.0) then consumer bump, record: .agents/reports/cep-world-migration/stage2-settlement.md}
+    stage_3: {status: settled-pending-release, date: '2026-10-04', repos: [cep profiles/godspeed-v1 36b5ca6, DomainForge feat/cep-snapshot-world-ref 2bf2df4], blocker: DomainForge PRs unmerged and unreleased; cep slice-0a base unmerged, record: .agents/reports/cep-world-migration/stage3-settlement.md}
+    stage_4: {status: settled, date: '2026-10-04', scope: sea-forge-domainforge WorldRegistry + DomainModelRef.world_ref, tests: 'just test 1121 passed', record: .agents/reports/cep-world-migration/stage4-settlement.md}
+    stage_5: {status: settled, date: '2026-10-04', repo: cognate, branch: cognate/harness, commit: dbc6b27, tests: 'runtime-bun 70/0, just verify 78/78', record: .agents/reports/cep-world-migration/stage5-settlement.md}
+    stage_6: {status: settled, date: '2026-10-05', repos: [sea-rs migration/cep-world-ref, cognate a3ee8fd], tests: 'sea-rs 1141/0; cognate runtime-bun live 14/0', record: .agents/reports/cep-world-migration/stage6-settlement.md}
+    stage_7: {status: settled, date: '2026-10-05', repos: [sea-rs migration/cep-world-ref, cognate def311f], tests: 'sea-rs 1157/0; cognate live 17/0', note: 'spec and plan written after implementation', record: .agents/reports/cep-world-migration/stage7-settlement.md}
+    stage_8: {status: settled, date: '2026-10-05', repos: [sea-rs migration/cep-world-ref, cognate cognate/harness], tests: 'sea-rs 1170/0; cognate live 22/0; verify 78/78 x3', record: .agents/reports/cep-world-migration/stage8-settlement.md}
+    stage_9: {status: settled, date: '2026-10-05', repos: [sea-rs migration/cep-world-ref, Context_Kernel 30e8ce1, godspeed_agent baf6005, SWE_SEED a1a3c3d, gauntlet 752cea6, cognate 6118ac2], tests: 'CK 230/0 (+live with SWE_SEED); GSA 1131/0; SWE_SEED 440/0; sea-rs 1180/0; gauntlet 1032/0', record: .agents/reports/cep-world-migration/stage9-settlement.md}
+    stage_10: {status: settled, date: '2026-10-05', tests: 'sea-rs 1195/0; cognate verify 78/78, live 33/0', repos: [sea-rs migration/cep-world-transition, cognate cognate/world-transition], record: .agents/reports/cep-world-migration/stage10-settlement.md}
+    stage_11: {status: settled-pending-merge, record: .agents/reports/cep-world-migration/stage11-settlement.md, final_report: .agents/reports/cep-world-migration/final-report.md, date: '2026-10-05', note: 'production hardening: M-37 closed (verified E4 intake), M-38 closed (world_ref on E7/E8), context_bundle profile, CI per repo, end-to-end world loop', repos: ['sea-rs migration/cep-legacy-chain-verified', 'RealityTrace PR 5', 'GodSpeed-Agent PR 2 and 3', 'cep PR 3', 'Context-Kernel PR 2', 'Cognate PR 3']}
+    release: {status: published-0.19.0, superseded_note: operator merged all PRs; blocked-on-merge, prs: [DomainForge#132, DomainForge#133, cep#1], note: operator cleared the release but the permission layer blocks unreviewed merges; merges and the release-please PR need operator action or an explicit allow rule}
+    consumers_0_19_0: {status: settled, record: .agents/reports/cep-world-migration/release-0.19.0.md, note: all six consumers verified on the published 0.19.0, no stale pins}
+    stage_4: {status: pending, blocker: none; next stage}
+

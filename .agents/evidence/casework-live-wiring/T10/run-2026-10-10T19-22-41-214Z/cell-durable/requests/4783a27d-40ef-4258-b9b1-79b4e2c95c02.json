@@ -1,0 +1,12 @@
+{
+  "request_id": "4783a27d-40ef-4258-b9b1-79b4e2c95c02",
+  "method": "approval.approve",
+  "status": "completed",
+  "submitted_at": "2026-10-10T19:27:00.424212350+00:00",
+  "completed_at": "2026-10-10T19:27:00.494104838+00:00",
+  "outcome": {
+    "ok": true,
+    "output": "approval_id=apr_0001\nstatus=Approved\nresolved_by=rso_local\n"
+  },
+  "payload_hash": "16aca4b3a7e581dda30b860d4e0569efa319223769790ba5404bbe732c0a84f5"
+}

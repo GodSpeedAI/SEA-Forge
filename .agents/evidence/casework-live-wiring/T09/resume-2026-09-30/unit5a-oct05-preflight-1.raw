@@ -1,0 +1,20 @@
+2026-10-05 16:33:47 UTC
+RAM
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.6Gi       117Mi        39Mi       2.3Gi       2.2Gi
+Swap:           12Gi       8.4Gi       3.6Gi
+PROCESS SNAPSHOT
+    PID COMMAND           RSS %MEM
+ 393814 .cline          1632488 20.0
+ 383827 node            393628  4.8
+   1709 node            390872  4.8
+  38102 codex           308548  3.7
+   4442 claude          289856  3.5
+   1613 node            255040  3.1
+   1528 node            246968  3.0
+1475188 node-MainThread 224780  2.7
+1473980 node-MainThread 189812  2.3
+   2559 language_server 157104  1.9
+ 384376 language_server 120588  1.4
+GO ENV LIMITS
+GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0

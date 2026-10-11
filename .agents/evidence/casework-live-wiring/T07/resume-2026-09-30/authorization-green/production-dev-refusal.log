@@ -1,0 +1,1 @@
+godspeed-casework: config error: auth.mode dev is REFUSED in the production posture: the dev surface skips password verification and may carry a static bearer token; configure auth.mode local or oidc for production

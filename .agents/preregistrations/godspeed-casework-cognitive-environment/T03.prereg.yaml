@@ -1,0 +1,81 @@
+schema: agent.preregistration
+schema_version: '1.0'
+metadata:
+  plan_id: godspeed.casework-cognitive-environment.implementation
+  plan_version: 0.2.2
+  task: T03
+  title: Implement the React UI core and local world adapter
+  frozen_at: '2026-09-20T00:13:15Z'
+  frozen_before: >-
+    Any file of the app built at apps/godspeed-cognitive-ui (core, adapters, host, tests, package.json,
+    tsconfig, vite config), any justfile recipe it adds, and its evidence directory.
+  plan_path: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml
+  spec_sha256: 6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641
+  amendment_rule: >-
+    Append-only. A defect found during execution is corrected by an addendum that records the defect
+    and preserves this frozen text.
+claim: >-
+  The cognitive interaction model is independently executable with synthetic projections and contains
+  no backend or renderer authority: the UI core runs against a local fixture world adapter with SEA
+  Forge, GitHub, Gauntlet, CopilotKit, Go transport, and the scene renderer all replaced by no-op or
+  test adapters, and application actions drive focus/selection/surface/time/artifact/narration state
+  without depending on physical input or a renderer.
+falsifier: >-
+  Core behavior cannot be tested without importing Go/SEA-Forge/R3F/CopilotKit implementation objects,
+  or the interaction grammar changes when the fixture provider is swapped for a structurally different
+  provider of the same world port.
+known_confounds:
+  - >-
+    Thin wrapper types can hide direct vendor coupling (the T01 prereg confound, inherited): the core
+    must be scanned mechanically for renderer/transport/provider imports and identifiers, not merely
+    compiled.
+  - >-
+    A fixture adapter with fixture-specific logic leaked into the core would make the "fixture-backed"
+    claim circular; the core must treat every world as an opaque WorldSnapshot and every disclosure as
+    an adapter answer, and a second, structurally different fixture provider must drive the same
+    interaction tests unchanged.
+  - >-
+    A host that mutates state directly (bypassing the application actions) would make the demo work
+    while proving nothing about the action vocabulary; the host renderer must be just another adapter
+    that observes core state and calls the same actions the tests call.
+measurements:
+  - id: M1-gate-ui
+    command: just casework-ui-check  (frozen install, typecheck, production build, unit tests)
+    pass_condition: >-
+      The recipe exists at the repository root under [group('casework')], installs with a frozen
+      lockfile, typechecks, builds, and runs the app's tests green; it observes the real app, never a stub.
+    blocks_on_failure: T03
+  - id: M2-core-runs-without-backends
+    command: bun test (core suite, e.g. src/core/*.test.ts)
+    pass_condition: >-
+      The engine executes against the fixture world adapter with the scene renderer replaced by a
+      recording no-op adapter and the agent adapter replaced by an unavailable no-op adapter; narration
+      degrades honestly (available=false) instead of blocking; all interaction actions are exercised
+      through the public action vocabulary.
+    blocks_on_failure: T03
+  - id: M3-provider-swap
+    command: bun test (provider-parameterised interaction suite)
+    pass_condition: >-
+      The same interaction scenario (focus, move, select, resolve to successive disclosure levels,
+      surface change, time-position change, return to now, refused consequential intent) produces the
+      same core state transitions under two structurally different fixture providers implementing the
+      same world/temporal/artifact ports; the scenario function is one shared function, not a copy.
+    blocks_on_failure: T03
+  - id: M4-core-purity
+    command: bun test (mechanical import/identifier scan over src/core)
+    pass_condition: >-
+      No file under src/core imports or names react, react-dom, three, @react-three, @copilotkit,
+      fetch/XMLHttpRequest/WebSocket/EventSource, or any Go/transport type; the scan fails the suite if
+      one appears (enforced in the test suite so GATE_UI observes it, not a one-off grep).
+    blocks_on_failure: T03
+  - id: M5-runnable-host
+    command: just casework-ui-up && curl -sSf http://127.0.0.1:4178 && just casework-ui-status && just casework-ui-down && just casework-ui-up
+    pass_condition: >-
+      The recipes are idempotent and non-interactive; up prints a URL and log path and writes a pidfile
+      and log under /.sea-forge/; something answers on the printed URL; status reports up/down, pid and
+      log tail; down frees the port; a second up works. The served page labels itself fixture-backed
+      and not connected to SEA Forge.
+    blocks_on_failure: T03
+confirmation_condition: >-
+  A peer reviewer independently runs GATE_UI and the teeth, inspects src/core imports, swaps or
+  replaces an adapter themselves, and confirms the interaction grammar survives both.

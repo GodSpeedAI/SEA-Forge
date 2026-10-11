@@ -1,0 +1,13 @@
+=== RUN   TestLoadBudgets
+    load_test.go:229: evidence: /home/sprime01/projects/sea-rs/.agents/evidence/casework-live-wiring/T11/run-20261010T204626Z/load-20261010T204626Z.json
+    load_test.go:230: intent latency ms p50/p95/p99/max = 5966.5/8071.0/8510.7/8763.5 over 100 intents; errors 0 (0.00%); stale refusals retried 5; 3.3 intents/s
+    load_test.go:233: event lag ms p50/p95/p99/max = 3962.8/13783.5/14250.1/14351.0 over 5000 deliveries (100 revisions per client)
+    load_test.go:235: gateway RSS MB idle/peak/after = 47.5/47.7/29.7; goroutines idle/after = 116/131; fds idle/peak = 70/85; threads peak 13; kernel RSS peak 63.6 MB
+    load_test.go:238: gateway backlog peaks: queue depth 0, cursor lag 1
+    load_test.go:239: CPU during burst: gateway 950 ms, kernel 75010 ms (burst wall 29868 ms)
+    load_test.go:240: metrics: sse_clients=50 queue_depth_max=0 cursor_lag_max=0 delivery_lag_count=6000 delivery_lag_sum_s=26282.965270364937
+    load_test.go:244: load budget/invariant violation: intent latency p95 (ms) = 8071.0 exceeds budget 1000.0
+--- FAIL: TestLoadBudgets (36.14s)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/loadtest	36.144s
+FAIL

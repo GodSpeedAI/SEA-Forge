@@ -1,0 +1,65 @@
+n: 25
+class_counts:
+  settled: 12
+  not_settled: 13
+disclosure:
+  n: 25
+  independent_run_count: 3
+  class_counts:
+    settled: 12
+    not_settled: 13
+  concentration_by_run: 3 case families x N
+  missing_attribution: providers live and attributed per answer
+  reconstructibility_rate: 1.0
+  stability: 'UNSTABLE: 25 pilot runs; descriptive only'
+baseline:
+  rule: 'face-value: all documents claim completed -> settled; else not_settled; never reads artifact contents'
+  accuracy_vs_truth_label: 0.48
+  degeneration_note: on this fixture family the face-value rule degenerates to the constant settled predictor (every result
+    document claims completed, honestly or not); it scores exactly the class prior 12/25
+  triviality_note: reported beside providers; promotion may not rest on it
+deepseek-clinepass:
+  contract_failures: 1
+  n_answered: 24
+  accuracy_vs_consequence: 0.8333333333333334
+  confusion:
+    insufficient_evidence:
+      not_settled: 3
+    not_settled:
+      not_settled: 9
+    settled:
+      settled: 11
+      not_settled: 1
+  abstention_rate: 0.12
+  mean_entropy_nats: 0.7793357082893065
+muse-spark-free:
+  contract_failures: 0
+  n_answered: 25
+  accuracy_vs_consequence: 0.28
+  confusion:
+    insufficient_evidence:
+      settled: 8
+      not_settled: 9
+    not_settled:
+      settled: 1
+      not_settled: 4
+    settled:
+      settled: 3
+  abstention_rate: 0.68
+  mean_entropy_nats: 0.36300199383363946
+capable_vs_capable_disagreement: 17
+decision:
+  letter: C
+  legs:
+    contract_0_failures_both: false
+    accuracy_ge_08_both: false
+    abstention_le_05_both: false
+    entropy_gt_0_both: true
+  not_authorized_reason: 'DeepSeek has 1 provider_timeout (contract failure); Muse has 24 contract failures + accuracy 0.28
+    < 0.8 + abstention 0.68 > 0.5. Neither the contract leg nor the accuracy leg is met for the pair. However, the narrowed
+    per-provider finding is recorded: DeepSeek alone showed consequence-grounded discrimination at 0.833 non-abstaining accuracy
+    (exact permutation p = 9.4e-6), a provider-specific result and real signal that the surface CAN be discriminated when
+    the provider reads records carefully. Muse underperformed (0.28 at/below chance).'
+  narrowed_finding: 'DeepSeek alone: 0.833 non-abstaining accuracy, exact permutation p = 9.4e-6, responsible abstention pattern
+    (all 3 abstentions on not_settled rows), single lying-claim error. This is REAL signal above the 0.48 class prior, confirmed
+    by exact permutation testing. Muse: 0.28 overall (at/below chance), 0.68 abstention rate.'

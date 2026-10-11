@@ -1,0 +1,409 @@
+//! T01 independent adversarial verifier battery.
+//! Fresh attacks designed against the FROZEN contract
+//! (.agents/specs/e2e-preregistration.yml, ENV-I1..I8, I1, I3, I13),
+//! NOT a rerun of the builder's suite.
+
+use std::path::PathBuf;
+use std::sync::{Arc, Barrier};
+
+use serde_json::{json, Map, Value};
+use sha2::{Digest, Sha256};
+
+use swe_seed_core::federation::{
+    canonical_agent, check_conformance, consume_settlement_recorded, derive_event, fallback_hash,
+    idempotency_key, make_event, make_event_verified, strict_resolve, validate_envelope,
+    verify_declared_hash, Admission, ConsumeError, Envelope, HashSource, IdempotencyLedger,
+    IdentityError, ProducerAuthorityError, VerifiedDomainIdentity, SOURCE_AGENT,
+};
+
+fn sha(data: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(data))
+}
+
+fn obj(v: Value) -> Map<String, Value> {
+    v.as_object().unwrap().clone()
+}
+
+fn tmp(tag: &str) -> PathBuf {
+    let d = std::env::temp_dir().join(format!("t01-verifier-{}-{}", tag, std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    d
+}
+
+fn report(name: &str, result: &str, detail: &str) {
+    println!("VERIFIER|{name}|{result}|{detail}");
+}
+
+// --- V-A1: causal continuity beyond one hop ---------------------------------
+
+/// Two agreeing parents from DIFFERENT work cycles is the conflict class;
+/// here: two parents with CONFLICTING work identities must be fatal.
+#[test]
+fn va1a_multiple_parents_with_conflicting_work_identities_are_fatal() {
+    let h = sha(b"model");
+    let p1 = make_event("ContextPacketCreated", obj(json!({"work_request_id": "wr-A"})), &h);
+    let p2 = make_event("ProofCompleted", obj(json!({"work_request_id": "wr-B"})), &h);
+    match derive_event(&[&p1, &p2], "RouteSelected", obj(json!({})), &h, None) {
+        Err(swe_seed_core::federation::DeriveError::CorrelationMismatch { .. }) => {
+            report("V-A1a", "CONTRACT-HELD", "parent-vs-parent conflict is CorrelationMismatch");
+        }
+        other => panic!("conflicting parents accepted: {other:?}"),
+    }
+}
+
+/// Three-generation chain: correlation survives two derivations unchanged;
+/// grandchild identifies its direct parent (transitive chain inspectable).
+#[test]
+fn va1b_three_generation_derivation_preserves_correlation() {
+    let h = sha(b"model");
+    let g0 = make_event("WorkRequested", obj(json!({"work_request_id": "wr-Z"})), &h);
+    let g1 = derive_event(&[&g0], "ContextRequired", obj(json!({"q": 1})), &h, None).unwrap();
+    let g2 = derive_event(&[&g1], "RouteSelected", obj(json!({})), &h, None).unwrap();
+    assert_eq!(g1.work_request_id(), Some("wr-Z"));
+    assert_eq!(g2.work_request_id(), Some("wr-Z"));
+    assert_eq!(g2.causal_parents(), vec![g1.event_id.as_str()]);
+    assert_eq!(g1.causal_parents(), vec![g0.event_id.as_str()]);
+    // Attempted cross-cycle adoption at gen 3 is fatal.
+    match derive_event(&[&g2], "ProofCompleted", obj(json!({})), &h, Some("wr-OTHER")) {
+        Err(swe_seed_core::federation::DeriveError::CorrelationMismatch { .. }) => {
+            report("V-A1b", "CONTRACT-HELD", "correlation stable x3 generations; late cross-wire fatal");
+        }
+        other => panic!("generation-3 cross-wire accepted: {other:?}"),
+    }
+}
+
+// --- V-A2: construction-side bypass around VerifiedDomainIdentity ------------
+
+/// derive_event takes a raw &str hash: a child carrying the FORBIDDEN
+/// namespace-derived pseudo-hash can be CONSTRUCTED through the T01
+/// derivation surface. Probe whether the validation boundary quarantines it.
+#[test]
+fn va2_derivation_surface_stamps_fallback_pseudo_hash() {
+    let h = sha(b"model");
+    let parent = make_event_verified(
+        "WorkRequested",
+        obj(json!({"work_request_id": "wr-K"})),
+        &verify_declared_hash(&h).unwrap(),
+    );
+    let pseudo = fallback_hash();
+    let child = derive_event(
+        &[&parent],
+        "ContextRequired",
+        obj(json!({"q": 1})),
+        &pseudo, // attacker-supplied pseudo-hash through ungated param
+        None,
+    );
+    match child {
+        Ok(c) => {
+            assert_eq!(c.domain_model_hash(), Some(pseudo.as_str()));
+            assert!(!c.causal_parents().is_empty());
+            // Boundary adjudication:
+            let v = validate_envelope(&c, &h);
+            let conf = check_conformance(&c);
+            let rejected = matches!(&v, Err(ConsumeError::Identity(IdentityError::PlaceholderIdentity { .. })));
+            report(
+                "V-A2",
+                if rejected && !conf.is_conformant() { "QUARANTINED-AT-BOUNDARY (construction-side gap recorded)" } else { "FALSIFIER" },
+                &format!("constructed_ok=true validate={v:?} conformant={} pseudo={pseudo}", conf.is_conformant()),
+            );
+            assert!(rejected, "boundary must reject pseudo-hash child");
+            assert!(!conf.is_conformant(), "conformance must flag pseudo-hash");
+        }
+        Err(e) => report("V-A2", "CONTRACT-HELD", &format!("construction refused: {e}")),
+    }
+}
+
+// --- V-A3: identity bound to fabricated manifest, no artifact bytes ----------
+
+/// strict_resolve trusts meta.sea_file_hash declared by ANY readable manifest;
+/// from_resolved then blesses it. Probe: VerifiedDomainIdentity for a hash
+/// whose "model bytes" exist NOWHERE on disk.
+#[test]
+fn va3_fabricated_manifest_yields_verified_identity_without_artifact() {
+    let dir = tmp("va3");
+    let phantom = sha(b"attacker-bytes-never-written-as-any-artifact");
+    let mdir = dir.join("docs/specs/domains/agentic_capability_loop");
+    std::fs::create_dir_all(&mdir).unwrap();
+    let manifest = mdir.join("agentic_capability_loop.manifest.json");
+    std::fs::write(
+        &manifest,
+        json!({"meta": {"sea_file_hash": phantom}}).to_string(),
+    )
+    .unwrap();
+    let root = dir.to_string_lossy().into_owned();
+    let resolved = strict_resolve(Some(&root), None).expect("strict_resolve must see manifest");
+    assert_eq!(resolved.source, HashSource::SeaRoot);
+    let identity = VerifiedDomainIdentity::from_resolved(&resolved)
+        .expect("from_resolved blessed a phantom hash");
+    assert_eq!(identity.as_str(), phantom);
+    // Full composed gate accepts an envelope stamped with the phantom identity
+    // when the caller's expected-hash resolution shares the same substrate.
+    let env = make_event_verified("GovernedWorkRequest", obj(json!({"intent": "x"})), &identity);
+    validate_envelope(&env, identity.as_str()).expect("phantom identity passed full gate");
+    report(
+        "V-A3",
+        "SUBSTRATE-TRUST-LIMIT-RECORDED",
+        "manifest-declared hash blessed without artifact-byte binding; placeholder defense still held below",
+    );
+}
+
+/// The same fabricated-manifest channel CANNOT bless the known placeholders:
+/// all-zero digest through strict_resolve/from_resolved must stay rejected.
+#[test]
+fn va3b_placeholder_defense_survives_resolution_chain() {
+    let dir = tmp("va3b");
+    let mdir = dir.join("docs/specs/domains/agentic_capability_loop");
+    std::fs::create_dir_all(&mdir).unwrap();
+    std::fs::write(
+        mdir.join("agentic_capability_loop.manifest.json"),
+        json!({"meta": {"sea_file_hash": "0".repeat(64)}}).to_string(),
+    )
+    .unwrap();
+    let root = dir.to_string_lossy().into_owned();
+    let resolved = strict_resolve(Some(&root), None).expect("resolve sees manifest");
+    match VerifiedDomainIdentity::from_resolved(&resolved) {
+        Err(IdentityError::PlaceholderIdentity { .. }) => {
+            report("V-A3b", "CONTRACT-HELD", "all-zero manifest hash rejected through resolution chain")
+        }
+        other => panic!("all-zero blessed: {other:?}"),
+    }
+}
+
+/// Manifest without meta.sea_file_hash -> fail-closed MissingArtifact.
+#[test]
+fn va3c_unreadable_manifest_shape_fails_closed() {
+    let dir = tmp("va3c");
+    let mdir = dir.join("docs/specs/domains/agentic_capability_loop");
+    std::fs::create_dir_all(&mdir).unwrap();
+    std::fs::write(
+        mdir.join("agentic_capability_loop.manifest.json"),
+        "{\"unrelated\": true}",
+    )
+    .unwrap();
+    let root = dir.to_string_lossy().into_owned();
+    match strict_resolve(Some(&root), None) {
+        Err(IdentityError::MissingArtifact { .. }) => {
+            report("V-A3c", "CONTRACT-HELD", "hashless manifest fails closed")
+        }
+        other => panic!("hashless manifest accepted: {other:?}"),
+    }
+}
+
+// --- V-A4: exclusive event authority: case/format/alias + path divergence ----
+
+#[test]
+fn va4_producer_forge_format_attacks_fail_closed() {
+    let h = sha(b"model");
+    let mk = |src: &str| {
+        let mut e = make_event("EvidenceRecorded", obj(json!({})), &h);
+        e.source_agent = src.to_string();
+        e
+    };
+    let attacks = [
+        ("RealityTrace", "mixed case"),
+        ("REALITYTRACE", "upper case"),
+        (" realitytrace", "leading space"),
+        ("realitytrace ", "trailing space"),
+        ("reality_trace", "underscore variant"),
+        ("sxr ", "alias plus space"),
+        ("Reality-Tracer", "near-miss spelling"),
+    ];
+    for (src, why) in attacks {
+        let e = mk(src);
+        assert!(
+            validate_envelope(&e, &h).is_err(),
+            "case/format forge '{src}' ({why}) must fail closed"
+        );
+    }
+    // Event-type aliases / formats:
+    for ev in ["evidence_recorded", "Evidencerecorded", "EVIDENCERECORDED", "Evidence Recorded"] {
+        let mut e = make_event(ev, obj(json!({})), &h);
+        e.source_agent = "realitytrace".into();
+        assert!(
+            validate_envelope(&e, &h).is_err(),
+            "event alias '{ev}' must fail closed"
+        );
+    }
+    // Alias table sanity: documented aliases map onto the SAME authority.
+    assert_eq!(canonical_agent("sxr"), canonical_agent("realitytrace"));
+    report("V-A4", "CONTRACT-HELD", "7 agent-format + 4 event-alias forgeries all failed closed");
+}
+
+/// Same forged pair adjudicated by the LEGACY consume path diverges from the
+/// canonical gate: consume_settlement_recorded is a type/ns extractor only.
+#[test]
+fn va4b_legacy_consume_path_diverges_from_canonical_gate() {
+    let h = sha(b"model");
+    let mut forged = make_event("SettlementRecorded", obj(json!({"outcome": "passed"})), &h);
+    forged.source_agent = "context-kernel".into(); // wrong producer
+    let canonical = validate_envelope(&forged, &h);
+    let legacy = consume_settlement_recorded(&forged);
+    assert!(matches!(
+        canonical,
+        Err(ConsumeError::ProducerAuthority(
+            ProducerAuthorityError::NotAuthoritative { .. }
+        ))
+    ));
+    assert!(legacy.is_ok(), "legacy extractor ignores producer authority");
+    report(
+        "V-A4b",
+        "PATH-DIVERGENCE-RECORDED",
+        "canonical gate rejects; spec-0011 extractor does not adjudicate authority (edge adoption = T02+/T06 scope)",
+    );
+}
+
+// --- V-A5: durable idempotency beyond the happy path -------------------------
+
+/// Altered envelope carrying the SAME stable identity after restart:
+/// the rewrite attempt must not produce a second admission.
+#[test]
+fn va5a_altered_payload_same_identity_after_restart_is_suppressed() {
+    let dir = tmp("va5a");
+    let path = dir.join("ledger.jsonl");
+    let h = sha(b"model");
+    let original = make_event("ProofCompleted", obj(json!({"result": "failed"})), &h);
+    let key = original.idempotency_key.clone().unwrap();
+
+    let mut p1 = IdempotencyLedger::open(&path).unwrap();
+    assert_eq!(p1.admit(&key).unwrap(), Admission::First);
+    drop(p1);
+
+    // Attacker/buggy rewriter changes the FACT but keeps the identity.
+    let mut rewritten = original.clone();
+    rewritten.payload["result"] = json!("passed");
+    assert_eq!(
+        rewritten.idempotency_key.as_deref(),
+        Some(key.as_str()),
+        "rewrite keeps stable identity"
+    );
+
+    let mut p2 = IdempotencyLedger::open(&path).unwrap(); // restart
+    assert_eq!(p2.admit(&key).unwrap(), Admission::Duplicate);
+    assert_eq!(p2.len(), 1);
+    // Genuinely different content remains a distinct event:
+    let other = make_event("ProofCompleted", obj(json!({"result": "passed"})), &h);
+    assert_ne!(other.idempotency_key.as_deref(), Some(key.as_str()));
+    assert_eq!(p2.admit(other.idempotency_key.as_deref().unwrap()).unwrap(), Admission::First);
+    report("V-A5a", "CONTRACT-HELD", "same-identity rewrite suppressed after restart; distinct content distinct key");
+}
+
+/// Concurrent racing admitters over ONE ledger file (two-process model):
+/// count how many observe First. Duplicate lines converge on reload.
+#[test]
+fn va5b_concurrent_admission_race_over_shared_file() {
+    let dir = tmp("va5b");
+    let path = Arc::new(dir.join("ledger.jsonl"));
+    let barrier = Arc::new(Barrier::new(2));
+    let key = idempotency_key("EvidenceRecorded", &json!({"n": 1}), Some("wr-race"));
+    let mut handles = Vec::new();
+    for _ in 0..2 {
+        let p = path.clone();
+        let b = barrier.clone();
+        let k = key.clone();
+        handles.push(std::thread::spawn(move || {
+            let mut led = IdempotencyLedger::open(&p).unwrap();
+            b.wait();
+            led.admit(&k).unwrap()
+        }));
+    }
+    let firsts = handles
+        .into_iter()
+        .map(|h| h.join().unwrap())
+        .filter(|r| *r == Admission::First)
+        .count();
+    let mut reloaded = IdempotencyLedger::open(&path).unwrap();
+    let durable_keys = reloaded.len();
+    assert_eq!(reloaded.admit(&key).unwrap(), Admission::Duplicate);
+    report(
+        "V-A5b",
+        if firsts > 1 { "RACE-OBSERVED-DEBT-RECORDED" } else { "CONTRACT-HELD" },
+        &format!("first_outcomes={firsts}/2 durable_unique_keys={durable_keys}; no locking between independent admitters (no production multi-writer exists yet)"),
+    );
+}
+
+// --- V-A6: dangling-but-well-formed parent reference ------------------------
+
+/// ENV-I4 falsifier probe: a syntactically valid parent id referencing a
+/// nonexistent envelope. The gate is stateless; probe what it enforces.
+#[test]
+fn va6_well_formed_dangling_parent_reference_passes_gate() {
+    let h = sha(b"model");
+    let mut child = make_event("RouteSelected", obj(json!({})), &h);
+    child.provenance = Some(json!({
+        "origin": SOURCE_AGENT,
+        "chain": ["domain_model_hash:x", "caused_by:11111111-2222-3333-4444-555555555555"],
+    }));
+    let ok = validate_envelope(&child, &h).is_ok();
+    report(
+        "V-A6",
+        if ok { "LIMIT-RECORDED (representation satisfied; existence binding deferred to store-composing tasks)" } else { "CONTRACT-HELD" },
+        "well-formed dangling parent id: gate enforces well-formedness only",
+    );
+}
+
+// --- V-A7/V-A8: conformance-not-truth + cross-model causality ---------------
+
+/// Structurally perfect, authoritatively produced, canonically identified
+/// EvidenceRecorded carrying a FALSE capability claim: zero truth consequence.
+#[test]
+fn va7_conformant_authoritative_false_claim_has_zero_truth_consequence() {
+    let dir = tmp("va7");
+    let h = sha(b"model");
+    let lying = make_event(
+        "EvidenceRecorded",
+        obj(json!({
+            "observed_outcome": "capability_promoted_to_metabolized",
+            "exit_code": 1,
+            "work_request_id": "wr-LIE"
+        })),
+        &h,
+    );
+    let mut ly = lying.clone();
+    ly.source_agent = "realitytrace".into(); // authoritative producer
+    let conf = check_conformance(&ly);
+    assert!(conf.is_conformant());
+    validate_envelope(&ly, &h).expect("all T01 gates pass for the lie");
+    // And nothing in the crate offers promotion: the only effect primitive is
+    // explicit admission, which we decline. Ledger stays empty.
+    let mut led = IdempotencyLedger::open(&dir.join("effects.jsonl")).unwrap();
+    assert!(led.is_empty());
+    report("V-A7", "CONTRACT-HELD", "conformance+authority+identity confer no truth/effects");
+}
+
+/// Child derives from a parent of a DIFFERENT domain model while keeping the
+/// parent reference: representable and unflagged at the envelope layer.
+#[test]
+fn va8_cross_model_causality_is_representable_and_unflagged() {
+    let h_a = sha(b"model-A");
+    let h_b = sha(b"model-B");
+    let parent = make_event("WorkRequested", obj(json!({"work_request_id": "wr-C"})), &h_a);
+    let child = derive_event(&[&parent], "ContextRequired", obj(json!({})), &h_b, None).unwrap();
+    assert_eq!(child.domain_model_hash(), Some(h_b.as_str()));
+    assert_eq!(child.causal_parents(), vec![parent.event_id.as_str()]);
+    assert!(validate_envelope(&child, &h_b).is_ok());
+    report(
+        "V-A8",
+        "OBSERVATION-RECORDED (no frozen rule requires same-domain parents; flagged for E4 authority-evaluation binding)",
+        "child under model-B references parent under model-A; envelope layer records both facts faithfully",
+    );
+}
+
+/// Precision probe: does ConformanceReport.conforms imply producer-authority?
+#[test]
+fn va9_conformance_report_does_not_adjudicate_producer_pairing() {
+    let h = sha(b"model");
+    let mut forged = make_event("EvidenceRecorded", obj(json!({})), &h);
+    forged.source_agent = SOURCE_AGENT.into(); // swe_seed forging RealityTrace's event
+    assert!(validate_envelope(&forged, &h).is_err()); // canonical gate rejects
+    let conf = check_conformance(&forged);
+    report(
+        "V-A9",
+        if conf.is_conformant() {
+            "OBSERVATION-RECORDED (conformance reports field-level registry membership only; authority pairing enforced solely by validate_envelope)"
+        } else {
+            "CONTRACT-HELD-BEYOND-EXPECTED"
+        },
+        &format!("authority_forge_conformant={}", conf.is_conformant()),
+    );
+}

@@ -1,0 +1,1 @@
+{"answer":"settled","confidence":0.55,"distribution":{"settled":0.55,"not_settled":0.3,"insufficient_evidence":0.15},"reason":"The mock-e2e-happy session shows three admitted builder results with matching corrections, suggesting the loop converged rather than died, but without evidence or terminal state the call remains uncertain."}

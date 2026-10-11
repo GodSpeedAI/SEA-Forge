@@ -1,0 +1,63 @@
+schema: agent.preregistration
+schema_version: '1.0'
+metadata:
+  plan_id: godspeed.casework-cognitive-environment.implementation
+  plan_version: 0.2.2
+  task: T01
+  title: Establish application-owned ports, configuration authority, typed errors, and preflight
+  frozen_at: '2026-09-19T22:18:29Z'
+  frozen_before: 'Any Go module file, React contract file, justfile recipe, or boundary test written for T01.'
+  plan_path: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml
+  spec_sha256: 6312453fc571ffdd14f14c47a9a7d3d8670fafe76e6dd80d004e9d50852d6641
+  amendment_rule: >-
+    Append-only. A defect found during execution is corrected by an addendum that records the defect
+    and preserves this frozen text.
+claim: >-
+  Both applications can own stable ports, one configuration authority, and typed errors without
+  importing vendor or provider schemas into their cores, and invalid or missing configuration fails
+  before consequential operation with the specified blast radius.
+falsifier: >-
+  A core behavior required by the spec turns out to be impossible without provider-specific types, or
+  the applications end up with multiple competing configuration authorities.
+known_confounds:
+  - >-
+    Method aliases, type aliases, or `any`/`interface{}` fields can hide provider coupling while making
+    the code look decoupled; the boundary test must therefore inspect imports and vendor identifiers,
+    not just the declared types.
+  - >-
+    A preflight test that only exercises the happy path would prove nothing about blast radius; the
+    teeth must run the missing-required-credential and unavailable-optional-adapter cases together.
+measurements:
+  - id: M1-port-ownership
+    command: just casework-go-check  (gofmt -l, go vet, go test) plus internal/boundary AST scan
+    pass_condition: >-
+      The Go core packages (ports, config, preflight, apperr) compile with no import of any adapter or
+      provider package and contain no vendor/provider identifier, and the boundary test fails if one
+      is introduced.
+    blocks_on_failure: T01
+  - id: M2-config-authority
+    command: go test ./internal/config/...
+    pass_condition: >-
+      Exactly one precedence order is implemented and documented (defaults < file < environment <
+      explicit override), secrets resolve through indirection and never appear in the loaded config,
+      and validation rejects invalid configuration before activation with a typed error.
+    blocks_on_failure: T01
+  - id: M3-preflight-blast-radius
+    command: go test ./internal/preflight/... and the tooth scenario
+    pass_condition: >-
+      With one required credential missing and one optional adapter unavailable: the required
+      consequential capability is reported blocking with a typed error, the unrelated capability that
+      is available is still reported ready, and the optional one is degraded rather than blocking.
+    blocks_on_failure: T01
+  - id: M4-react-contract-independence
+    command: T01/teeth/run-teeth.sh (textual boundary check over the contract package)
+    pass_condition: >-
+      The React contract package declares world/interaction/agent/artifact/temporal adapter interfaces
+      and references none of: three, @react-three/fiber, @copilotkit, any Go transport type name, or
+      any provider endpoint. (Full UI verification is T03's GATE_UI; this is the contract-shape check
+      T01 owes.)
+    blocks_on_failure: T01
+confirmation_condition: >-
+  A peer reviewer independently runs the Go gate and the boundary tests, inspects the core packages'
+  imports, and confirms that provider replacement points terminate at adapters and that the preflight
+  blast radius matches the plan's teeth.

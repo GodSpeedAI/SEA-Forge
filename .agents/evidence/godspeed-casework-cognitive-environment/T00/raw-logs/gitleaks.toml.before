@@ -1,0 +1,48 @@
+# Gitleaks configuration for SEA Forge.
+#
+# Extends the default gitleaks ruleset. The only addition is a path
+# allowlist for `.entire/metadata/` — these are rebuildable session
+# artifacts (gitignored, not tracked) that exist only in prior git
+# history and contain simulated/fake tokens used to exercise the
+# redaction pipeline. They are not real credentials and are documented
+# as benign in `.agents/CURRENT_STATUS.md`. Source-tree test fixtures
+# carry inline `// gitleaks:allow` comments instead.
+title = "SEA Forge"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "rebuildable session artifacts and historical redaction-session transcripts (simulated tokens)"
+paths = [
+  '''\.entire/metadata/.*''',
+  # Entire CLI checkpoint transcript artifacts at the repo root (numbered
+  # session dirs). Gitignored now but remain in prior history; contain
+  # simulated/fake tokens from redaction-pipeline test sessions.
+  '''^[0-9]+/(full|transcript)\.jsonl$''',
+]
+
+# T17 gate-remediation additions (2026-09-18): commits that predate the
+# request-admission/redaction hardening contain simulated credentials in test
+# fixtures and the transcript-redaction sentinel corpus. All are fake values
+# asserted against by tests (e.g. `sk-live-…` is a synthetic token in a
+# delegation test; SECRET_SENTINELS exists precisely so transcripts are
+# redacted against a canonical fake-key corpus). Verified not real during the
+# bounded-judgment T17 gate remediation; commit-scoped so any NEW occurrence
+# in these paths still fails.
+[[allowlists]]
+description = "test fixtures and redaction sentinels with simulated credentials"
+commits = [
+  "c371fc1733d9b27f24331fd9ba83128c42b6c15c",
+  "4bda7946fc7bdf5e93aa89fe0594ddde154380a6",
+  "87e475b22fc6921fd7b39d791277d9401ef59b1a",
+]
+paths = [
+  '''crates/sea-forge-server/tests/fixtures/t04_governed_work_request\.json''',
+  '''crates/sea-forge-server/tests/convergence_t11_whole_loop\.rs''',
+  '''crates/sea-forge-server/tests/convergence_t12_variation\.rs''',
+  '''crates/sea-forge-agent/src/delegation\.rs''',
+  '''crates/sea-forge-server/tests/conformance_m16\.rs''',
+  '''crates/sea-forge-ledger/src/types\.rs''',
+  '''crates/sea-forge-ledger/tests/conformance_m0_ledger\.rs''',
+]

@@ -1,0 +1,144 @@
+=== TOOTH 1: rename json tag visible_objects -> objects in Go CognitiveWorldSnapshot ===
+$ go test ./internal/contract/...
+--- FAIL: TestGoldenRoundTrip (0.00s)
+    golden_test.go:114: /home/sprime01/projects/sea-rs/.agents/reports/interface-contracts/golden/sse-events.jsonl line 1: snapshot payload is missing world_id or visible_objects
+    golden_test.go:103: world-snapshot.json: round-trip is not byte-stable; the Go json tags and the fixture disagree.
+        --- fixture ---
+        {
+          "world_id": "world-case-31ab",
+          "case_id": "case-31ab",
+          "cursor": "1.0000000410",
+          "timestamp": "2026-09-23T10:14:58Z",
+          "perspective": {
+            "actor_id": "actor-rso-2",
+            "role": "security_officer",
+            "display_name": "Dana Quest"
+          },
+          "summary": {
+            "headline": "Service migration needs your security review",
+            "phase": "remediation",
+            "status_phrase": "One item is waiting on your approval",
+            "progress_percent": 45
+          },
+          "visible_objects": [
+            {
+              "id": "stage-remediation",
+              "kind": "stage",
+              "name": "Remediation",
+              "status": "IN_PROGRESS",
+              "badge": "In progress",
+              "salience": 0.6,
+              "actions": []
+            },
+            {
+              "id": "item-patch-14",
+              "kind": "work_item",
+              "name": "Patch billing adapter",
+              "status": "ACTION_REQUIRED",
+              "badge": "Needs your approval",
+              "explanation": "A human task is waiting on the security sign-off you hold.",
+              "salience": 0.9,
+              "parent_id": "stage-remediation",
+              "actions": [
+                {
+                  "id": "act-approve-patch-14",
+                  "label": "Approve",
+                  "intent": "APPROVE_HUMAN_TASK",
+                  "variant": "PRIMARY",
+                  "consequential": true,
+                  "requires_justification": true
+                },
+                {
+                  "id": "act-reject-patch-14",
+                  "label": "Reject",
+                  "intent": "REJECT_HUMAN_TASK",
+                  "variant": "DANGER",
+                  "consequential": true,
+                  "requires_justification": true
+                },
+                {
+                  "id": "act-open-evidence-88",
+                  "label": "Inspect evidence",
+                  "intent": "OPEN_ARTIFACT",
+                  "consequential": false
+                }
+              ]
+            },
+            {
+              "id": "item-verify-15",
+              "kind": "work_item",
+              "name": "Verify migration under load",
+              "status": "WAITING",
+              "badge": "Ready after security review",
+              "explanation": "This item unlocks once the security review above is settled.",
+              "salience": 0.4,
+              "parent_id": "stage-remediation",
+              "depends_on": [
+                "item-patch-14"
+              ],
+              "actions": []
+            }
+          ],
+          "available_actions": [
+            {
+              "id": "act-approve-patch-14",
+              "label": "Approve",
+              "intent": "APPROVE_HUMAN_TASK",
+              "variant": "PRIMARY",
+              "consequential": true,
+              "requires_justification": true
+            }
+          ],
+          "attention_focus": {
+            "primary_object_id": "item-patch-14",
+            "salience_rank": [
+              "item-patch-14",
+              "item-verify-15",
+              "stage-remediation"
+            ],
+            "narration": "The patch is ready; your approval unblocks the load verification."
+          }
+        }
+        
+        --- re-marshaled ---
+        {
+          "world_id": "world-case-31ab",
+          "case_id": "case-31ab",
+          "cursor": "1.0000000410",
+          "timestamp": "2026-09-23T10:14:58Z",
+          "perspective": {
+            "actor_id": "actor-rso-2",
+            "role": "security_officer",
+            "display_name": "Dana Quest"
+          },
+          "summary": {
+            "headline": "Service migration needs your security review",
+            "phase": "remediation",
+            "status_phrase": "One item is waiting on your approval",
+            "progress_percent": 45
+          },
+          "objects": null,
+          "available_actions": [
+            {
+              "id": "act-approve-patch-14",
+              "label": "Approve",
+              "intent": "APPROVE_HUMAN_TASK",
+              "variant": "PRIMARY",
+              "consequential": true,
+              "requires_justification": true
+            }
+          ],
+          "attention_focus": {
+            "primary_object_id": "item-patch-14",
+            "salience_rank": [
+              "item-patch-14",
+              "item-verify-15",
+              "stage-remediation"
+            ],
+            "narration": "The patch is ready; your approval unblocks the load verification."
+          }
+        }
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.005s
+FAIL
+go-test-exit=1

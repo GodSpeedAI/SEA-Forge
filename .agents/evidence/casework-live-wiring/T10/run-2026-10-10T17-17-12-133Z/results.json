@@ -1,0 +1,25 @@
+[
+  {
+    "journey_id": "L9",
+    "title": "Tooth: the strict console check fails on an injected console error",
+    "status": "PASS",
+    "depends_on": [],
+    "settles": "an injected console.error and uncaught error are caught by the strict check",
+    "unlocks": [],
+    "steps": [
+      {
+        "journey": "L9",
+        "name": "inject one console.error and one uncaught page error into the signed-in page",
+        "ok": true,
+        "ms": 1020
+      },
+      {
+        "journey": "L9",
+        "name": "strict: operator session, agent-browser console and errors are empty of errors for the whole run",
+        "ok": true,
+        "ms": 743
+      }
+    ],
+    "total_ms": 11823
+  }
+]

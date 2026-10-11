@@ -1,0 +1,53 @@
+.session-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 340px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.session-badge-name {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.session-badge-id {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.session-badge-role {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tone-progress);
+  white-space: nowrap;
+}
+
+.session-badge--signed-out .session-badge-role {
+  color: var(--ink-3);
+}
+
+.session-badge-logout {
+  padding: 1px 6px;
+  font: inherit;
+  font-size: 10px;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.session-badge-logout:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}

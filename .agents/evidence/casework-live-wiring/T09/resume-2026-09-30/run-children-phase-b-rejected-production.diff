@@ -1,0 +1,426 @@
+diff --git a/apps/godspeed-casework-go/internal/adapters/sfwp/authority.go b/apps/godspeed-casework-go/internal/adapters/sfwp/authority.go
+index cc1b667..8aa55f2 100644
+--- a/apps/godspeed-casework-go/internal/adapters/sfwp/authority.go
++++ b/apps/godspeed-casework-go/internal/adapters/sfwp/authority.go
+@@ -6,6 +6,8 @@ package sfwp
+ import (
+ 	"context"
+ 	"encoding/json"
++	"errors"
++	"strings"
+ 	"time"
+ 
+ 	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
+@@ -249,6 +251,132 @@ func (a *Authority) RunsList(ctx context.Context) ([]ports.RunSummary, error) {
+ 	return out, nil
+ }
+ 
++// RunsListForCase reads only the run records owned by ref. The adapter validates the full
++// authority frame before returning any rows so malformed ownership cannot cross the port.
++func (a *Authority) RunsListForCase(ctx context.Context, ref ports.CaseRef) (ports.RunListResult, error) {
++	req, err := NewRunListForCase(string(ref))
++	if err != nil {
++		return ports.RunListResult{}, err
++	}
++	resp, err := a.client.Do(ctx, req)
++	if err != nil {
++		var refusal *Refusal
++		if errors.As(err, &refusal) {
++			return ports.RunListResult{}, apperr.Wrap(apperr.KindUnavailable, "", "run_list", "the authority refused the scoped run list", err)
++		}
++		return ports.RunListResult{}, err
++	}
++	var view RunListView
++	if err := resp.Into(&view); err != nil {
++		if resp.Err != nil {
++			return ports.RunListResult{}, apperr.Wrap(apperr.KindUnavailable, "", "run_list", "the authority refused the scoped run list", resp.Err)
++		}
++		return ports.RunListResult{}, apperr.Wrap(apperr.KindUnavailable, "", "run_list", "the authority returned a malformed run list", err)
++	}
++	if view.Runs == nil || view.Unreadable == nil {
++		return ports.RunListResult{}, unavailableRunList("the authority omitted a required run list array")
++	}
++
++	result := ports.RunListResult{
++		Runs:          make([]ports.RunSummary, 0, len(view.Runs)),
++		UnreadableIDs: make([]string, 0, len(view.Unreadable)),
++	}
++	seen := make(map[string]struct{}, len(view.Runs)+len(view.Unreadable))
++	for _, row := range view.Runs {
++		run, err := scopedRunSummary(row, string(ref))
++		if err != nil {
++			return ports.RunListResult{}, err
++		}
++		if _, exists := seen[run.RunID]; exists {
++			return ports.RunListResult{}, unavailableRunList("the authority repeated a run id")
++		}
++		seen[run.RunID] = struct{}{}
++		result.Runs = append(result.Runs, run)
++	}
++	for _, id := range view.Unreadable {
++		if strings.TrimSpace(id) == "" {
++			return ports.RunListResult{}, unavailableRunList("the authority reported a blank unreadable run id")
++		}
++		if _, exists := seen[id]; exists {
++			return ports.RunListResult{}, unavailableRunList("the authority repeated or overlapped a run id")
++		}
++		seen[id] = struct{}{}
++		result.UnreadableIDs = append(result.UnreadableIDs, id)
++	}
++	return result, nil
++}
++
++func scopedRunSummary(row RunSummaryView, caseID string) (ports.RunSummary, error) {
++	if strings.TrimSpace(row.RunID) == "" {
++		return ports.RunSummary{}, unavailableRunList("the authority reported a blank run id")
++	}
++	if row.CaseID == nil || strings.TrimSpace(*row.CaseID) == "" || *row.CaseID != caseID {
++		return ports.RunSummary{}, unavailableRunList("the authority reported a missing or foreign run case id")
++	}
++	if row.PlanItemID == nil || strings.TrimSpace(*row.PlanItemID) == "" {
++		return ports.RunSummary{}, unavailableRunList("the authority reported a missing run plan item id")
++	}
++	if !validRunExecution(row.Execution) || !validRunSettlement(row.Settlement) {
++		return ports.RunSummary{}, unavailableRunList("the authority reported an unknown run standing")
++	}
++	if row.EvidenceCount < 0 {
++		return ports.RunSummary{}, unavailableRunList("the authority reported a negative run evidence count")
++	}
++	run := ports.RunSummary{
++		RunID:         row.RunID,
++		CaseID:        *row.CaseID,
++		PlanItemID:    *row.PlanItemID,
++		Execution:     row.Execution,
++		Settlement:    row.Settlement,
++		EvidenceCount: row.EvidenceCount,
++	}
++	if row.StartedAt != nil {
++		started, err := parseScopedRunTime(*row.StartedAt, "started_at")
++		if err != nil {
++			return ports.RunSummary{}, err
++		}
++		run.StartedAt, run.HasStarted = started, true
++	}
++	if row.FinishedAt != nil {
++		finished, err := parseScopedRunTime(*row.FinishedAt, "finished_at")
++		if err != nil {
++			return ports.RunSummary{}, err
++		}
++		run.FinishedAt, run.HasFinished = finished, true
++	}
++	return run, nil
++}
++
++func parseScopedRunTime(value, field string) (time.Time, error) {
++	parsed, err := time.Parse(time.RFC3339, value)
++	if err != nil {
++		return time.Time{}, apperr.Wrap(apperr.KindUnavailable, "", "run_list", "the authority reported a malformed run "+field, err)
++	}
++	return parsed, nil
++}
++
++func unavailableRunList(message string) error {
++	return apperr.New(apperr.KindUnavailable, "", "run_list", message)
++}
++
++func validRunExecution(value string) bool {
++	switch value {
++	case "pending", "enabled", "active", "completed", "failed", "terminated":
++		return true
++	default:
++		return false
++	}
++}
++
++func validRunSettlement(value string) bool {
++	switch value {
++	case "unsettled", "accepted", "rejected", "escalated":
++		return true
++	default:
++		return false
++	}
++}
++
+ // PendingApprovals implements ports.CaseAuthorityPort. An empty ref lists every case's approvals.
+ func (a *Authority) PendingApprovals(ctx context.Context, ref ports.CaseRef) ([]ports.ApprovalRecord, error) {
+ 	resp, err := a.client.Do(ctx, NewApprovalList(string(ref)))
+diff --git a/apps/godspeed-casework-go/internal/adapters/sfwp/frame.go b/apps/godspeed-casework-go/internal/adapters/sfwp/frame.go
+index 8ba53d0..d8b8879 100644
+--- a/apps/godspeed-casework-go/internal/adapters/sfwp/frame.go
++++ b/apps/godspeed-casework-go/internal/adapters/sfwp/frame.go
+@@ -295,6 +295,16 @@ func NewCaseList() *Request { return newRequest("case_list") }
+ // directory no case claims are reported by the authority rather than dropped.
+ func NewRunList() *Request { return newRequest("run_list") }
+ 
++// NewRunListForCase lists the governed run records (episodes) captured for one case.
++func NewRunListForCase(caseID string) (*Request, error) {
++	if strings.TrimSpace(caseID) == "" {
++		return nil, apperr.New(apperr.KindInvalid, "", "run_list", "case id must not be blank")
++	}
++	r := newRequest("run_list")
++	r.body["case_id"] = caseID
++	return r, nil
++}
++
+ // NewRunGet resolves one run's committed records, including its case, plan item, trace, and evidence.
+ func NewRunGet(runID string) *Request {
+ 	r := newRequest("run_get")
+diff --git a/apps/godspeed-casework-go/internal/ports/ports.go b/apps/godspeed-casework-go/internal/ports/ports.go
+index 964e7d8..7db884f 100644
+--- a/apps/godspeed-casework-go/internal/ports/ports.go
++++ b/apps/godspeed-casework-go/internal/ports/ports.go
+@@ -288,6 +288,13 @@ type RunSummary struct {
+ 	EvidenceCount int
+ }
+ 
++// RunListResult is the scoped authority view of readable runs and run IDs the authority could
++// not read. Unreadable IDs are factual reports, not inferred ownership.
++type RunListResult struct {
++	Runs          []RunSummary
++	UnreadableIDs []string
++}
++
+ // ApprovalRecord is one decision awaiting a resolver.
+ type ApprovalRecord struct {
+ 	ApprovalID  string
+@@ -444,6 +451,7 @@ type CaseAuthorityPort interface {
+ 	CaseHorizon(ctx context.Context, ref CaseRef) (CaseHorizon, error)
+ 	PendingApprovals(ctx context.Context, ref CaseRef) ([]ApprovalRecord, error)
+ 	RunsList(ctx context.Context) ([]RunSummary, error)
++	RunsListForCase(ctx context.Context, ref CaseRef) (RunListResult, error)
+ 	EntryOptions(ctx context.Context) ([]TemplateOption, error)
+ 	PreflightCase(ctx context.Context, draft CaseDraft) (PreflightReport, error)
+ 	GetArtifact(ctx context.Context, digest string) (ArtifactContent, error)
+diff --git a/apps/godspeed-casework-go/internal/projection/builder.go b/apps/godspeed-casework-go/internal/projection/builder.go
+index eca64ba..938cfd2 100644
+--- a/apps/godspeed-casework-go/internal/projection/builder.go
++++ b/apps/godspeed-casework-go/internal/projection/builder.go
+@@ -39,6 +39,8 @@ type CaseFacts struct {
+ 	Horizon   ports.CaseHorizon  // from case.get_horizon (per-item standing, depends_on)
+ 	Approvals []ports.ApprovalRecord
+ 	Runs      []ports.RunSummary
++	// UnreadableRunIDs are run IDs the scoped authority query reported but could not read.
++	UnreadableRunIDs []string
+ 	// Actor is the perspective the snapshot is rendered for (actor_id + kernel role spelling).
+ 	Actor ports.ActorClaim
+ 	// Cursor is the kernel event cursor this snapshot exists at ("" when unknown).
+@@ -91,6 +93,8 @@ func Build(facts CaseFacts) contract.CognitiveWorldSnapshot {
+ 	for _, item := range facts.Horizon.Items {
+ 		objects = append(objects, itemBuilder(item, byID, approvalsByItem, role, offer))
+ 	}
++	focus := attentionFor(objects, string(facts.Overview.Ref))
++	objects = append(objects, runChildren(facts, objects)...)
+ 
+ 	snapshot := contract.CognitiveWorldSnapshot{
+ 		WorldID:          "world-" + string(facts.Overview.Ref),
+@@ -101,7 +105,7 @@ func Build(facts CaseFacts) contract.CognitiveWorldSnapshot {
+ 		Summary:          summaryFor(facts),
+ 		VisibleObjects:   objects,
+ 		AvailableActions: []contract.ActionDescriptor{},
+-		AttentionFocus:   attentionFor(objects, string(facts.Overview.Ref)),
++		AttentionFocus:   focus,
+ 	}
+ 
+ 	// available_actions: the role-filtered union of every per-object action, plus the case-level
+@@ -124,6 +128,53 @@ func Build(facts CaseFacts) contract.CognitiveWorldSnapshot {
+ 	return snapshot
+ }
+ 
++func runChildren(facts CaseFacts, parentObjects []contract.CognitiveObject) []contract.CognitiveObject {
++	caseID := string(facts.Overview.Ref)
++	parentByID := make(map[string]ports.HorizonItem, len(facts.Horizon.Items))
++	parentCounts := make(map[string]int, len(facts.Horizon.Items))
++	for _, item := range facts.Horizon.Items {
++		parentCounts[item.ItemID]++
++		parentByID[item.ItemID] = item
++	}
++	objectCounts := make(map[string]int, len(parentObjects))
++	for _, object := range parentObjects {
++		objectCounts[object.ID]++
++	}
++	runCounts := make(map[string]int, len(facts.Runs))
++	for _, run := range facts.Runs {
++		runCounts[run.RunID]++
++	}
++	children := make([]contract.CognitiveObject, 0, len(facts.Runs))
++	for _, run := range facts.Runs {
++		if strings.TrimSpace(run.RunID) == "" || runCounts[run.RunID] != 1 || objectCounts[run.RunID] != 0 ||
++			run.CaseID != caseID || strings.TrimSpace(run.PlanItemID) == "" || parentCounts[run.PlanItemID] != 1 {
++			continue
++		}
++		parent, ok := parentByID[run.PlanItemID]
++		if !ok || !validCapturedExecution(run.Execution) || !validCapturedSettlement(run.Settlement) || run.EvidenceCount < 0 {
++			continue
++		}
++		standing := parent
++		standing.Execution = run.Execution
++		standing.Settlement = run.Settlement
++		status, badge := cognitiveStatus(standing)
++		parentID := run.PlanItemID
++		explanation := "Execution: " + run.Execution + "; settlement: " + run.Settlement + "."
++		children = append(children, contract.CognitiveObject{
++			ID:          run.RunID,
++			Kind:        "execution_trace",
++			Name:        run.RunID,
++			Status:      status,
++			Badge:       badge,
++			Explanation: &explanation,
++			Salience:    salienceFor(standing, false),
++			ParentID:    &parentID,
++			Actions:     []contract.ActionDescriptor{},
++		})
++	}
++	return children
++}
++
+ // itemBuilder renders one horizon item as a cognitive object: status, badge, plain-language
+ // explanation (the sentry reason), and the role-filtered action descriptors.
+ func itemBuilder(item ports.HorizonItem, byID map[string]ports.HorizonItem, approvals map[string][]ports.ApprovalRecord, role string, offer bool) contract.CognitiveObject {
+diff --git a/apps/godspeed-casework-go/internal/projection/live.go b/apps/godspeed-casework-go/internal/projection/live.go
+index 843d30e..27bced3 100644
+--- a/apps/godspeed-casework-go/internal/projection/live.go
++++ b/apps/godspeed-casework-go/internal/projection/live.go
+@@ -41,6 +41,9 @@ func NewLiveSource(auth ports.CaseAuthorityPort, gateway ports.ActorClaim) *Live
+ // Facts fetches one case's views. The case record comes from case.list (the list is the only
+ // surface carrying the operator-facing summary); its views are addressed by case id.
+ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.ActorClaim, cursor string) (CaseFacts, error) {
++	if strings.TrimSpace(caseID) == "" {
++		return CaseFacts{}, apperr.New(apperr.KindInvalid, "", "world", "case id must not be blank")
++	}
+ 	cases, err := s.auth.ListCases(ctx)
+ 	if err != nil {
+ 		return CaseFacts{}, err
+@@ -48,14 +51,12 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
+ 	var record *ports.CaseRecord
+ 	for i := range cases {
+ 		if string(cases[i].Ref) == caseID {
++			if record != nil {
++				return CaseFacts{}, unavailableCapturedRuns("the authority repeated the requested case record")
++			}
+ 			record = &cases[i]
+-			break
+ 		}
+ 	}
+-	if record == nil {
+-		return CaseFacts{}, apperr.New(apperr.KindInvalid, "", "world",
+-			"no case "+caseID+" exists on the authority")
+-	}
+ 	overview, err := s.auth.CaseOverview(ctx, ports.CaseRef(caseID))
+ 	if err != nil {
+ 		return CaseFacts{}, err
+@@ -68,22 +69,68 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
+ 	if err != nil {
+ 		return CaseFacts{}, err
+ 	}
+-	runs, err := s.auth.RunsList(ctx)
++	runList, err := s.auth.RunsListForCase(ctx, ports.CaseRef(caseID))
+ 	if err != nil {
+ 		return CaseFacts{}, err
+ 	}
+-	caseRuns := make([]ports.RunSummary, 0, len(runs))
+-	for _, r := range runs {
+-		if r.CaseID == caseID {
+-			caseRuns = append(caseRuns, r)
++	if record == nil {
++		if len(cases) > 0 {
++			return CaseFacts{}, unavailableCapturedRuns("the authority case list did not contain the requested case")
+ 		}
++		return CaseFacts{}, apperr.New(apperr.KindInvalid, "", "world",
++			"no case "+caseID+" exists on the authority")
++	}
++	if string(record.Ref) != caseID || string(overview.Ref) != caseID || string(horizon.Ref) != caseID {
++		return CaseFacts{}, unavailableCapturedRuns("the authority returned a case view for a different case")
++	}
++	horizonItems := make(map[string]struct{}, len(horizon.Items))
++	for _, item := range horizon.Items {
++		if strings.TrimSpace(item.ItemID) == "" {
++			return CaseFacts{}, unavailableCapturedRuns("the authority returned a blank horizon item id")
++		}
++		if _, exists := horizonItems[item.ItemID]; exists {
++			return CaseFacts{}, unavailableCapturedRuns("the authority repeated a horizon item id")
++		}
++		horizonItems[item.ItemID] = struct{}{}
++	}
++	seenRuns := make(map[string]struct{}, len(runList.Runs)+len(runList.UnreadableIDs))
++	for _, run := range runList.Runs {
++		if strings.TrimSpace(run.RunID) == "" {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a blank run id")
++		}
++		if _, exists := seenRuns[run.RunID]; exists {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority repeated a run id")
++		}
++		seenRuns[run.RunID] = struct{}{}
++		if run.CaseID != caseID {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a run owned by another case")
++		}
++		if strings.TrimSpace(run.PlanItemID) == "" {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a run without its plan item id")
++		}
++		if _, exists := horizonItems[run.PlanItemID]; !exists {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a run without an actual horizon parent")
++		}
++		if !validCapturedExecution(run.Execution) || !validCapturedSettlement(run.Settlement) || run.EvidenceCount < 0 {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a malformed run summary")
++		}
++	}
++	for _, id := range runList.UnreadableIDs {
++		if strings.TrimSpace(id) == "" {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority returned a blank unreadable run id")
++		}
++		if _, exists := seenRuns[id]; exists {
++			return CaseFacts{}, unavailableCapturedRuns("the scoped authority repeated or overlapped a run id")
++		}
++		seenRuns[id] = struct{}{}
+ 	}
+ 	facts := CaseFacts{
+ 		Record:    *record,
+ 		Overview:  overview,
+ 		Horizon:   horizon,
+ 		Approvals: approvals,
+-		Runs:      caseRuns,
++		Runs:             runList.Runs,
++		UnreadableRunIDs: runList.UnreadableIDs,
+ 		Actor:     actor,
+ 		Cursor:    cursor,
+ 	}
+@@ -95,6 +142,28 @@ func (s *LiveSource) Facts(ctx context.Context, caseID string, actor ports.Actor
+ 	return facts, nil
+ }
+ 
++func unavailableCapturedRuns(message string) error {
++	return apperr.New(apperr.KindUnavailable, "", "world", message)
++}
++
++func validCapturedExecution(value string) bool {
++	switch value {
++	case "pending", "enabled", "active", "completed", "failed", "terminated":
++		return true
++	default:
++		return false
++	}
++}
++
++func validCapturedSettlement(value string) bool {
++	switch value {
++	case "unsettled", "accepted", "rejected", "escalated":
++		return true
++	default:
++		return false
++	}
++}
++
+ // Snapshot fetches and builds one case's snapshot for the given perspective.
+ func (s *LiveSource) Snapshot(ctx context.Context, caseID string, actor ports.ActorClaim, cursor string) (contract.CognitiveWorldSnapshot, error) {
+ 	facts, err := s.Facts(ctx, caseID, actor, cursor)
+diff --git a/apps/godspeed-casework-go/internal/projection/store.go b/apps/godspeed-casework-go/internal/projection/store.go
+index 53e9d68..c118c81 100644
+--- a/apps/godspeed-casework-go/internal/projection/store.go
++++ b/apps/godspeed-casework-go/internal/projection/store.go
+@@ -268,6 +268,7 @@ func cloneFacts(in *CaseFacts) *CaseFacts {
+ 	}
+ 	out.Approvals = append([]ports.ApprovalRecord(nil), in.Approvals...)
+ 	out.Runs = append([]ports.RunSummary(nil), in.Runs...)
++	out.UnreadableRunIDs = append([]string(nil), in.UnreadableRunIDs...)
+ 	return &out
+ }
+ 
