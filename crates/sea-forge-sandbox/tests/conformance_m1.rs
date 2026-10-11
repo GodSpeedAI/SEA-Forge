@@ -12,6 +12,14 @@ fn temp_dir(name: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
+    // macOS clocks tick in microseconds, so parallel tests can share a nanosecond reading:
+    // add the process id and a process-wide counter so a directory is never reused.
+    static NEXT_TEMP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nonce = format!(
+        "{nonce}-{}-{}",
+        std::process::id(),
+        NEXT_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    );
     let path = std::env::temp_dir().join(format!("sea-forge-m1-{name}-{nonce}"));
     fs::create_dir_all(&path).unwrap();
     path

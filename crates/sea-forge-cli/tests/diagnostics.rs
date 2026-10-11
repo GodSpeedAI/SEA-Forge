@@ -33,6 +33,14 @@ fn malformed_policy_classes_fail_before_run_creation() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
+    // macOS clocks tick in microseconds, so parallel tests can share a nanosecond reading:
+    // add the process id and a process-wide counter so a directory is never reused.
+    static NEXT_TEMP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nonce = format!(
+        "{nonce}-{}-{}",
+        std::process::id(),
+        NEXT_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    );
     let parent = env::temp_dir().join(format!("sea-forge-config-errors-{nonce}"));
     fs::create_dir_all(&parent).unwrap();
     let cases = [
@@ -138,6 +146,14 @@ fn invalid_intents_exit_two_without_creating_a_run_root() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
+    // macOS clocks tick in microseconds, so parallel tests can share a nanosecond reading:
+    // add the process id and a process-wide counter so a directory is never reused.
+    static NEXT_TEMP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nonce = format!(
+        "{nonce}-{}-{}",
+        std::process::id(),
+        NEXT_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    );
     let parent = env::temp_dir().join(format!("sea-forge-input-errors-{nonce}"));
     fs::create_dir_all(&parent).unwrap();
     let policy = parent.join("policy.yaml");

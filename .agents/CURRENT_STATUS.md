@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 80
+**Status revision:** 81
 
 **Stage:** Casework live wiring: T09-T12 complete; PR #11 macOS CI follow-up; T13 not started
 
-**Summary:** Last macOS CI failure is self_model_cli rebuild_validate_show_round_trip (rebuild exits 1 with no visible reason; passes on Linux including 40 repeated runs and a symlinked TMPDIR). The test helper now appends stderr on failure so the next macOS run names the cause. Linux jobs (lint, test, package, workbench) are green on PR #11.
+**Summary:** macOS CI flakes traced to test temp directories keyed only on a nanosecond clock reading: macOS clocks tick in microseconds, so parallel tests in one binary could share a directory and one test's remove_dir_all deleted another's files (self_model_cli, then conformance_m2 'read plan proposal: No such file'). All 17 test files using that pattern now add the process id and a process-wide counter to the directory name.
 
 **Verified:**
 
@@ -38,6 +38,7 @@
 - just workbench-tauri-test passes locally; conformance_m5 passes on Linux (4 pass, 2 helper ignores); clippy clean for sea-forge-case-runner.
 - sea-forge-sandbox tests pass on Linux including destination_swapped_to_symlink_between_check_and_write_is_refused; conformance_m16 16 pass; just workbench-tauri-test passes with the updated lockfile. macOS result pending CI.
 - self_model_cli passes on Linux; 40 repeat runs without failure.
+- Rust workspace 1246 pass / 0 fail; clippy -D warnings clean.
 
 **Limits:**
 
@@ -67,8 +68,9 @@
 - DEBT M-53 still lists two failures on the old base: macOS conformance_m5 tests assume the Landlock jail, and workbench packaged_stack records_survive_the_kernel_being_stopped_and_started_again; PR #11 CI will show whether they persist.
 - The symlink guard fix is verified on Linux only; macOS is verified by CI.
 - The macOS self_model_cli failure is not yet explained.
+- The macOS fix is verified by CI only.
 
-**Next:** Read the macOS failure reason from PR #11 CI, fix it, then squash-merge when required checks are green.
+**Next:** Read PR #11 macOS result; squash-merge when required checks are green.
 
 **Evidence:**
 
