@@ -270,13 +270,14 @@ async fn records_survive_the_kernel_being_stopped_and_started_again() {
             "actor": {"actor_id": "operator_a", "role": "operator"},
             // A durable mutation is refused without a request_id (durable_locator_required).
             "request_id": "restart-proof-submit-1",
-            "plan": plan, "policy": policy,
+            // F-16: plan and policy references are cell-relative spellings, never absolute paths.
+            "plan": "plan.json", "policy": "deny.yaml",
             "entity": "operator_a", "process": "restart-proof", "timeout": 60,
         }),
     )
     .await;
     assert!(
-        submitted.get("error_class").is_none(),
+        submitted.get("error_class").is_none() && submitted.get("error").is_none(),
         "submit was refused: {submitted}"
     );
 

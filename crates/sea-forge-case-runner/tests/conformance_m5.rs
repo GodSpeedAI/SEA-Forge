@@ -84,6 +84,10 @@ fn self_invoke_noop_fail() {
 // ── 1. An accepted stage settles and completes the case ──
 
 #[test]
+#[cfg_attr(
+    not(target_os = "linux"),
+    ignore = "executes a real command, which needs the Linux Landlock jail backend"
+)]
 fn accepted_stage_settles_and_completes_case() {
     let root = tempfile::tempdir().unwrap();
     let policy_path = policy(root.path());
@@ -166,6 +170,10 @@ fn invalid_predecessor_chain_quarantines_the_stage() {
 // ── 4. A downstream sentry is blocked by a rejected predecessor ──
 
 #[test]
+#[cfg_attr(
+    not(target_os = "linux"),
+    ignore = "executes a real command, which needs the Linux Landlock jail backend"
+)]
 fn downstream_sentry_blocked_by_rejected_predecessor() {
     let root = tempfile::tempdir().unwrap();
     let policy_path = policy(root.path());

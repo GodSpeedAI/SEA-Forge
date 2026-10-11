@@ -86,6 +86,10 @@ paths = [
 description = "casework live-ladder run evidence (harness cells, trace zips)"
 paths = [
   '''^\.agents/evidence/casework-live-wiring/T10/.*''',
+  # T09 resume records that discuss gitleaks false positives. Matches are prose ("Unauthenticated, ..."),
+  # source file names and a test file name; the commit-pinned .gitleaksignore fingerprints for them
+  # cannot match in a shallow single-commit CI checkout.
+  '''^\.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/.*''',
 ]
 
 # Historical evidence from the godspeed-bounded-judgment gauntlet (immutable by repository rule, so the

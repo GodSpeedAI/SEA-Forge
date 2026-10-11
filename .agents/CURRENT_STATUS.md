@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 75
+**Status revision:** 76
 
-**Stage:** Casework live wiring: T09-T12 complete; remote casework/live-wiring (CEP migration #7-#9, a88eb3e) merged into the clean branch; PR #11 open; T13 not started
+**Stage:** Casework live wiring: T09-T12 complete; PR #11 CI repairs (gitleaks shallow scan, packaged_stack, macOS jail tests); T13 not started
 
-**Summary:** Merged origin/casework/live-wiring into casework/live-wiring-clean-2026-10-09. 14 conflicts resolved keeping the later and more complete side (this branch's observed-stack helpers, evidence children, login throttle, physicalAttempt run_get admission, append-only YAML+MD status contract and context-check alias; spec 0.2.6); gitleaksignore entries unioned; the case-colliding T09 raw capture renamed with an upper- prefix so macOS checkouts work. Remote-only changes (CEP world_ref migration, CI bun/Tauri/gitleaks/case fixes) came in unchanged.
+**Summary:** PR #11 CI follow-ups: scoped gitleaks path allowlist for T09 resume records (shallow-checkout fingerprints cannot match); workbench packaged_stack test updated for F-16 cell-relative plan/policy references and to fail on either error key; conformance_m5 jail tests ignored off Linux with a stated reason; DEBT M-53 marked resolved.
 
 **Verified:**
 
@@ -35,6 +35,7 @@
 - just status-check passes on a clean checkout of main.
 - just check (status, fmt, clippy, typecheck, cargo-deny, gitleaks) run on a clean checkout of main.
 - After the merge: Rust workspace 1246 pass / 0 fail; clippy -D warnings clean; Go vet and go test -p 1 ./... ok; UI typecheck clean, 373 tests pass.
+- just workbench-tauri-test passes locally; conformance_m5 passes on Linux (4 pass, 2 helper ignores); clippy clean for sea-forge-case-runner.
 
 **Limits:**
 
@@ -63,7 +64,7 @@
 - T13 not started; nothing published or merged.
 - DEBT M-53 still lists two failures on the old base: macOS conformance_m5 tests assume the Landlock jail, and workbench packaged_stack records_survive_the_kernel_being_stopped_and_started_again; PR #11 CI will show whether they persist.
 
-**Next:** Push the merge, read PR #11 CI, fix remaining failures (M-53), then merge the PR by squash with the conventional title once required checks pass.
+**Next:** Read PR #11 CI after the push; when required checks are green, squash-merge with the conventional title.
 
 **Evidence:**
 

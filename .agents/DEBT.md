@@ -414,7 +414,10 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
   paths would show the same symptom: `git ls-files | sort -f | uniq -di`.
 
 ### M-53 Two SEA-Forge CI jobs fail on the `casework/live-wiring` base for reasons outside this migration
-- **Status:** open. **Observed** (SEA-Forge #9, run 37330114391; lint, test and package pass).
+- **Status:** resolved on SEA-Forge #11 (2026-10-11): `conformance_m5` jail tests are `ignore`d off Linux with a stated reason (they
+  execute real commands and need the Landlock jail), and `packaged_stack` was a stale test (F-16 requires cell-relative
+  plan/policy references; the test passed absolute paths and checked only `error_class`, not `error`). Original report follows.
+- **Original status:** open. **Observed** (SEA-Forge #9, run 37330114391; lint, test and package pass).
 - Enabling CI for PRs into any base was what exposed them; the base had never been tested by CI.
 - `verify (macos)`: `sea-forge-case-runner` `conformance_m5` (`accepted_stage_settles_and_completes_case`,
   `downstream_sentry_blocked_by_rejected_predecessor`) assume the Linux Landlock jail and get "jail backend is
