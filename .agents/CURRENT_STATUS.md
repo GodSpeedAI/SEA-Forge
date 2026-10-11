@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 71
+**Status revision:** 72
 
-**Stage:** Casework live wiring: T09-T12 complete and merged to local main; T13 not started
+**Stage:** Casework live wiring: T09-T12 complete and merged to local main; delivery summary for docs/GTM added; T13 not started
 
-**Summary:** Committed the retained T10 live-ladder run evidence (runs, HARs, trace zips, cell snapshots), the T09 raw command captures, and the regenerated fixture-ladder evidence from the T12 fixture run. gitleaks flagged only idempotency keys in throwaway harness cells (no credentials); HARs carry no cookie or authorization headers. Branch fast-forwarded into main.
+**Summary:** Added .agents/reports/casework-live-wiring/delivery-summary.md: what shipped, evidence-backed claims, claims not to make, demo commands, documentation index.
 
 **Verified:**
 
@@ -59,7 +59,7 @@
 - just check must be run before any merge or publication; casework-live GitHub workflow has not been dispatched (CW-53).
 - T13 not started; nothing published or merged.
 
-**Next:** Operator: decide CW-47/49/51, dispatch casework-live workflow once (CW-53), authorize T13.
+**Next:** Operator: push authorization, CW-47/49/51, dispatch casework-live workflow once (CW-53), authorize T13.
 
 **Evidence:**
 
@@ -91,6 +91,7 @@
 - apps/godspeed-cognitive-ui/README.md
 - .agents/evidence/casework-live-wiring/T12/independent-confirmation.md
 - .agents/evidence/casework-live-wiring/T10
+- .agents/reports/casework-live-wiring/delivery-summary.md
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 
